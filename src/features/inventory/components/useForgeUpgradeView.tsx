@@ -1,11 +1,14 @@
 /**
- * useForgeUpgradeView — shared Craft + Upgrade UI for blacksmith / jewelcrafter.
+ * useForgeUpgradeView — shared Craft + Enhance UI for blacksmith / jewelcrafter.
  *
- * The component does NOT enforce station/slot rules itself; it only renders
- * actions the caller routes to the correct edge function. Server-side checks
- * in forge-craft-base / forge-apply-gem / forge-strip are authoritative.
+ * - craftBlock: pick a slot, then pick one of the available plain-base variants
+ *   (e.g. Iron Helm, Leather Hood, Bronze Circlet for "head").
+ * - upgradeBlock: pick an owned item, apply gems to add stats.
+ *
+ * Server enforces station/slot/ownership in forge-craft-base / forge-apply-gem /
+ * forge-strip.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
@@ -22,23 +25,30 @@ import {
   getItemStatCap,
   calculateItemStatCost,
 } from '@/shared/formulas/items';
+import { WEAPON_TAG_LABELS } from '@/lib/game-data';
 
 const STAT_LABELS: Record<string, string> = {
   str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
   hp: 'HP', mp: 'MP', cp: 'CP', ac: 'AC', damage: 'DMG', hp_regen: 'HP/turn',
 };
 
+interface PlainBase {
+  id: string;
+  name: string;
+  slot: string;
+  hands: number | null;
+  weapon_tag: string | null;
+}
+
 interface Props {
   characterId: string;
   characterLevel: number;
   gold: number;
   inventory: InventoryItem[];
-  /** Slots the current workstation can serve (subset of equipment slots). */
   slots: { value: string; label: string }[];
   onGoldChange: (g: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
-  /** "Plain Blade", "Plain Ring", … — the noun for the craft button. */
   craftNoun?: string;
 }
 
@@ -52,10 +62,36 @@ export function useForgeUpgradeView({
   for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
 
   const [craftSlot, setCraftSlot] = useState<string>('');
+  const [bases, setBases] = useState<PlainBase[]>([]);
+  const [loadingBases, setLoadingBases] = useState(false);
   const [working, setWorking] = useState<string | null>(null);
   const [selectedInvId, setSelectedInvId] = useState<string | null>(null);
 
-  // Eligible items = matching slot + not soulbound + not unique/soulforged.
+  // Load plain bases for the allowed slots once per slot-set change.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingBases(true);
+      const { data } = await supabase.from('items')
+        .select('id, name, slot, hands, weapon_tag')
+        .eq('origin_type', 'plain_base')
+        .in('slot', slots.map(s => s.value))
+        .order('weapon_tag', { nullsFirst: true })
+        .order('name');
+      if (!cancelled) {
+        setBases((data as PlainBase[]) || []);
+        setLoadingBases(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [slots]);
+
+  const basesForSlot = useMemo(
+    () => bases.filter(b => b.slot === craftSlot),
+    [bases, craftSlot],
+  );
+
+  // ── Enhance: eligible items = matching slot + not soulbound + not unique/soulforged.
   const slotSet = useMemo(() => new Set(slots.map(s => s.value)), [slots]);
   const eligible = useMemo(() => inventory.filter(i => {
     if (!slotSet.has(i.item.slot as string)) return false;
@@ -66,22 +102,21 @@ export function useForgeUpgradeView({
 
   const craftSalvage = 5 + characterLevel * 2;
   const craftGold = characterLevel * 5;
-  const canCraft = !!craftSlot && salvage >= craftSalvage && gold >= craftGold && !working;
+  const canAffordCraft = salvage >= craftSalvage && gold >= craftGold;
 
-  const handleCraft = async () => {
-    if (!canCraft) return;
-    setWorking('craft');
+  const handleCraft = async (base: PlainBase) => {
+    if (!canAffordCraft || working) return;
+    setWorking(`craft:${base.id}`);
     try {
       const { data, error } = await supabase.functions.invoke('forge-craft-base', {
-        body: { character_id: characterId, slot: craftSlot },
+        body: { character_id: characterId, item_id: base.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       onInventoryChange();
-      addLog(`🔨 Crafted ${data.base_name} (Lv${data.crafted_level}). Apply gems to add stats.`);
-      setSelectedInvId(data.inventory_id);
+      addLog(`🔨 Crafted ${data.base_name} (Lv${data.crafted_level}). Apply gems via the Enhance tab.`);
     } catch (e: any) {
       addLog(`❌ Craft failed: ${e.message || 'Unknown error'}`);
     }
@@ -142,7 +177,7 @@ export function useForgeUpgradeView({
       <div>
         <h3 className="t-label text-[11px] mb-1">🔨 Craft a Plain {craftNoun}</h3>
         <p className="text-[10px] text-muted-foreground italic mb-2">
-          Plain bases start with no stats. Apply gems to add attributes (subject to per-stat cap and the item's stat budget).
+          Pick a slot, then choose a base style. All plain bases start without stats — visit the Enhance tab to socket gems.
         </p>
       </div>
       <Select value={craftSlot} onValueChange={setCraftSlot}>
@@ -155,126 +190,174 @@ export function useForgeUpgradeView({
           ))}
         </SelectContent>
       </Select>
+
       <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-        <span>Cost:</span>
+        <span>Cost per craft:</span>
         <span className={`font-display ${salvage >= craftSalvage ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {craftSalvage}</span>
         <span>+</span>
         <span className={`font-display ${gold >= craftGold ? 'text-primary' : 'text-destructive'}`}>{craftGold}g</span>
       </div>
-      <Button size="sm" onClick={handleCraft} disabled={!canCraft}
-        className="font-display text-xs h-8 w-full">
-        {working === 'craft' ? <span className="animate-pulse">Crafting…</span> : `Craft Plain ${craftNoun}`}
-      </Button>
-    </div>
-  );
 
-  // ── Upgrade column ─────────────────────────────────────────────
-  let upgradeBlock: React.ReactNode;
-  if (eligible.length === 0) {
-    upgradeBlock = (
-      <ServicePanelEmpty>
-        Nothing to upgrade here — craft a plain base or bring eligible gear.
-      </ServicePanelEmpty>
-    );
-  } else {
-    upgradeBlock = (
-      <div className="gap-section">
-        <div>
-          <h3 className="t-label text-[11px] mb-1">💠 Upgrade with Gems</h3>
-          <p className="text-[10px] text-muted-foreground italic mb-1">
-            Pick an item, then spend gems to add +1 to a stat each. Cost: 1 gem + (2 + level) salvage + (level × 2)g.
-          </p>
-        </div>
-
+      {craftSlot && (
         <div className="gap-row">
-          {eligible.map(inv => {
-            const eff = getEffectiveStats(inv);
-            const level = effectiveItemLevel(inv.item.level, inv.crafted_level);
-            const budget = getItemStatBudget(level, inv.item.rarity || 'common', 1, 'equipment');
-            const used = calculateItemStatCost(eff);
-            const sel = inv.id === selectedInvId;
-            const statBits = Object.entries(eff).filter(([, v]) => (v as number) !== 0);
+          {loadingBases && <p className="text-[10px] text-muted-foreground italic">Loading bases…</p>}
+          {!loadingBases && basesForSlot.length === 0 && (
+            <p className="text-[10px] text-muted-foreground italic">No plain bases defined for this slot.</p>
+          )}
+          {basesForSlot.map(base => {
+            const tagBits: string[] = [];
+            if (base.weapon_tag) tagBits.push(WEAPON_TAG_LABELS[base.weapon_tag] || base.weapon_tag);
+            if (base.hands === 2) tagBits.push('Two-Handed');
             return (
-              <button key={inv.id} type="button"
-                onClick={() => setSelectedInvId(sel ? null : inv.id)}
-                className={`w-full text-left p-2 rounded border transition-colors ${
-                  sel ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-display">{inv.item.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    Lv{level} · {used}/{budget}pts
-                    {inv.equipped_slot && <span className="ml-1 text-elvish">·equipped</span>}
-                  </span>
-                </div>
-                {statBits.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {statBits.map(([k, v]) => (
-                      <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1 rounded">
-                        +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </button>
+              <Button key={base.id} size="sm" variant="outline"
+                onClick={() => handleCraft(base)}
+                disabled={!canAffordCraft || !!working}
+                className="font-display text-xs h-auto py-2 w-full justify-between gap-2">
+                <span className="text-left">
+                  <span className="block">{base.name}</span>
+                  {tagBits.length > 0 && (
+                    <span className="block text-[9px] text-muted-foreground capitalize">{tagBits.join(' · ')}</span>
+                  )}
+                </span>
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {working === `craft:${base.id}` ? '…' : 'Craft'}
+                </span>
+              </Button>
             );
           })}
         </div>
+      )}
+    </div>
+  );
 
-        {selectedInv && (() => {
-          const eff = getEffectiveStats(selectedInv);
-          const level = effectiveItemLevel(selectedInv.item.level, selectedInv.crafted_level);
-          const budget = getItemStatBudget(level, selectedInv.item.rarity || 'common', 1, 'equipment');
+  // ── Enhance column ─────────────────────────────────────────────
+  let enhanceLeft: React.ReactNode;
+  if (eligible.length === 0) {
+    enhanceLeft = (
+      <ServicePanelEmpty>
+        Nothing to enhance here — craft a plain base or bring eligible gear.
+      </ServicePanelEmpty>
+    );
+  } else {
+    enhanceLeft = (
+      <div className="gap-row">
+        {eligible.map(inv => {
+          const eff = getEffectiveStats(inv);
+          const level = effectiveItemLevel(inv.item.level, inv.crafted_level);
+          const budget = getItemStatBudget(level, inv.item.rarity || 'common', 1, 'equipment');
           const used = calculateItemStatCost(eff);
-          const room = budget - used;
-          const applySalvage = 2 + level;
-          const applyGold = level * 2;
-          const stripGold = level * 10;
-          const stripSalvage = level * 3;
+          const sel = inv.id === selectedInvId;
+          const statBits = Object.entries(eff).filter(([, v]) => (v as number) !== 0);
           return (
-            <div className="gap-group border-t border-border-subtle pt-2">
-              <div className="text-[10px] text-muted-foreground">
-                Per-gem cost: <span className="font-display">🔩 {applySalvage}</span> + <span className="font-display">{applyGold}g</span> + 1 gem ·
-                Room left: <span className="font-display">{room}pts</span>
+            <button key={inv.id} type="button"
+              onClick={() => setSelectedInvId(sel ? null : inv.id)}
+              className={`w-full text-left p-2 rounded border transition-colors ${
+                sel ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-display">{inv.item.name}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Lv{level} · {used}/{budget}pts
+                  {inv.equipped_slot && <span className="ml-1 text-elvish">·equipped</span>}
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {PRIMARY_GEM_KEYS.map(gk => {
-                  const def = GEM_CATALOG[gk];
-                  const attr = attrForGem(gk);
-                  const cap = getItemStatCap(attr, level, 'equipment');
-                  const current = eff[attr] || 0;
-                  const owned = ownedGems[gk] || 0;
-                  const wouldCost = used + 1;
-                  const atCap = current >= cap;
-                  const noBudget = wouldCost > budget;
-                  const disabled = !!working || owned < 1 || atCap || noBudget || gold < applyGold || salvage < applySalvage;
-                  return (
-                    <Button key={gk} size="sm" variant="outline"
-                      onClick={() => applyGem(gk)} disabled={disabled}
-                      className="font-display text-[10px] h-8 justify-between gap-1 px-2"
-                      title={atCap ? `${attr.toUpperCase()} at cap (${cap})` : noBudget ? 'No budget left' : owned < 1 ? `Need a ${def.name}` : `+1 ${attr.toUpperCase()} (now ${current}/${cap})`}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        <GemIcon color={def.color} size={10} />
-                        +1 {attr.toUpperCase()}
-                      </span>
-                      <span className="text-muted-foreground">×{owned}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-              <Button size="sm" variant="ghost" onClick={stripItem}
-                disabled={!!working || Object.values(selectedInv.applied_gems || {}).every(v => !v) || gold < stripGold || salvage < stripSalvage}
-                className="font-display text-[10px] h-7 w-full text-destructive hover:text-destructive">
-                🧹 Strip all gems ({stripSalvage} salvage + {stripGold}g — gems are destroyed)
-              </Button>
-            </div>
+              {statBits.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {statBits.map(([k, v]) => (
+                    <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1 rounded">
+                      +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </button>
           );
-        })()}
+        })}
       </div>
     );
   }
 
-  return { craftBlock, upgradeBlock };
+  let enhanceRight: React.ReactNode;
+  if (!selectedInv) {
+    enhanceRight = (
+      <ServicePanelEmpty>
+        Select an item on the left to view its stats and socket gems.
+      </ServicePanelEmpty>
+    );
+  } else {
+    const eff = getEffectiveStats(selectedInv);
+    const level = effectiveItemLevel(selectedInv.item.level, selectedInv.crafted_level);
+    const budget = getItemStatBudget(level, selectedInv.item.rarity || 'common', 1, 'equipment');
+    const used = calculateItemStatCost(eff);
+    const room = budget - used;
+    const applySalvage = 2 + level;
+    const applyGold = level * 2;
+    const stripGold = level * 10;
+    const stripSalvage = level * 3;
+    enhanceRight = (
+      <div className="gap-section">
+        <div>
+          <h3 className="t-label text-[11px] mb-1">{selectedInv.item.name}</h3>
+          <p className="text-[10px] text-muted-foreground">
+            Lv{level} · Budget {used}/{budget}pts · Room <span className="font-display">{room}</span>
+          </p>
+        </div>
+
+        <div className="gap-group">
+          <div className="t-label text-[10px]">Current stats</div>
+          {Object.entries(eff).filter(([, v]) => (v as number) !== 0).length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No stats yet — apply gems below.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(eff).filter(([, v]) => (v as number) !== 0).map(([k, v]) => (
+                <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1.5 py-0.5 rounded">
+                  +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="gap-group border-t border-border-subtle pt-2">
+          <div className="text-[10px] text-muted-foreground">
+            Per-gem cost: <span className="font-display">🔩 {applySalvage}</span> + <span className="font-display">{applyGold}g</span> + 1 gem
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {PRIMARY_GEM_KEYS.map(gk => {
+              const def = GEM_CATALOG[gk];
+              const attr = attrForGem(gk);
+              const cap = getItemStatCap(attr, level, 'equipment');
+              const current = eff[attr] || 0;
+              const owned = ownedGems[gk] || 0;
+              const wouldCost = used + 1;
+              const atCap = current >= cap;
+              const noBudget = wouldCost > budget;
+              const disabled = !!working || owned < 1 || atCap || noBudget || gold < applyGold || salvage < applySalvage;
+              return (
+                <Button key={gk} size="sm" variant="outline"
+                  onClick={() => applyGem(gk)} disabled={disabled}
+                  className="font-display text-[10px] h-8 justify-between gap-1 px-2"
+                  title={atCap ? `${attr.toUpperCase()} at cap (${cap})` : noBudget ? 'No budget left' : owned < 1 ? `Need a ${def.name}` : `+1 ${attr.toUpperCase()} (now ${current}/${cap})`}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <GemIcon color={def.color} size={10} />
+                    +1 {attr.toUpperCase()}
+                  </span>
+                  <span className="text-muted-foreground">×{owned}</span>
+                </Button>
+              );
+            })}
+          </div>
+          <Button size="sm" variant="ghost" onClick={stripItem}
+            disabled={!!working || Object.values(selectedInv.applied_gems || {}).every(v => !v) || gold < stripGold || salvage < stripSalvage}
+            className="font-display text-[10px] h-7 w-full text-destructive hover:text-destructive">
+            🧹 Strip all gems ({stripSalvage} salvage + {stripGold}g — gems are destroyed)
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return { craftBlock, enhanceLeft, enhanceRight };
 }
