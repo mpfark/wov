@@ -1,57 +1,82 @@
-# Rename Rogue → Assassin
+# Assassin Contract System
 
-The class key `rogue` is used as a Postgres enum value (`character_class`) and as a string literal across formulas, abilities, UI labels, AI prompts, and tests. The rename touches both the database and the code in lockstep — they must ship together so existing characters keep working.
+A simple bounty loop for the Assassin order: pick up a target at the class hall, hunt it down, get a small bonus on top of the normal kill reward, build a lifetime tally for a future leaderboard.
 
-## 1. Database migration
+## How it plays
 
-Single migration that:
+1. Talk to the Assassin Hall NPC → new dialogue topic **"Take a contract."**
+2. The NPC names a real creature in the world that is **L−2 to L+1** of the character, **not a boss**, and tells the player which **area** to look in (same style as the existing hunt direction line).
+3. Player goes there and kills the creature.
+4. On kill: a banner-style log line fires, the bonus is paid, the lifetime counter ticks, and the contract clears so a new one can be taken.
+5. One active contract at a time. The NPC offers **"Abandon contract"** if the player wants to reroll (no penalty, just clears it).
 
-- `ALTER TYPE public.character_class RENAME VALUE 'rogue' TO 'assassin'`
-  - This automatically rewrites all rows storing the value (3 existing `characters`, plus any `character_class_bonds`, `class_starting_gear`, and `nodes.class_hall` rows that referenced `rogue`). No data loss, no row updates needed.
-- Sanity check: re-run any `CHECK` constraints / RLS policies that hardcoded `'rogue'` (none expected — they reference the enum type) and any view definitions.
+Sample lines:
 
-After the migration the regenerated `types.ts` will replace `"rogue"` with `"assassin"` in the union for `character_class`, which is what forces the rest of the code rename.
+```text
+Hall NPC: Hunt a Frostwolf. They prowl in Hollow Glade, levels 4–6, north-west of here.
+On kill:  🗡 Contract fulfilled — Frostwolf put down. +15 XP, +3 gold, +1 Renown.
+```
 
-## 2. Code rename (key + label)
+## Reward formula
 
-Replace the **key** `rogue` → `assassin` and the **label** `Rogue` → `Assassin` everywhere it appears. The key change is mechanical; the label change is just user-facing text.
+Bonus = **125%** of the creature's normal kill reward for that single player, applied **only to the contract holder** (party-mates get nothing extra from someone else's contract). Computed off the same `calculateCreatureRewards` math the engine already uses, so it scales correctly with level, rarity and XP boosts.
 
-Files touched (key + label):
+| Field | Rule |
+|---|---|
+| XP bonus | 125% of the player's XP from that kill (after level penalty + boost) |
+| Gold bonus | 125% of the player's gold share |
+| Renown bonus | Only if the target was **rare** — 125% of the rare Renown drop (regular targets give no Renown bonus) |
+| Salvage | No bonus |
 
-- `src/shared/formulas/classes.ts` and its mirror `supabase/functions/_shared/formulas/classes.ts`
-  - `CLASS_BASE_HP`, `CLASS_BASE_AC`, `CLASS_LEVEL_BONUSES`, `CLASS_LABELS`, `CLASS_WEAPON_AFFINITY`, `CLASS_COMBAT_PROFILES`, `CLASS_CRIT_RANGE`
-- `src/shared/formulas/abilities.ts` + `supabase/functions/_shared/formulas/abilities.ts` — rogue ability table key
-- `src/shared/formulas/combat.ts` + mirror — any `'rogue'` branches
-- `src/lib/game-data.ts` — `CLASS_STATS.rogue`, `CLASS_DESCRIPTIONS.rogue`, labels
-- `src/features/combat/utils/class-abilities.ts` — ability bar entries
-- `src/features/combat/utils/combat-text.ts`
-- `src/features/combat/hooks/useCombatActions.ts`
-- `src/features/chat/components/OnlinePanel.tsx` — `CLASS_LABELS` map
-- `src/components/admin/users/constants.ts` (if it lists classes)
-- `src/components/admin/GameManual.tsx`
-- `src/components/admin/tools/ClassBondsInspector.tsx`
-- `supabase/functions/combat-tick/index.ts` — any `'rogue'` checks
-- `supabase/functions/ai-character-portrait/index.ts` and other AI prompts that mention "rogue" in flavor text → "assassin"
-- `supabase/functions/admin-users/index.ts`
-- `supabase/functions/seed-archetype-items/index.ts`
-- Tests: `src/shared/formulas/__tests__/formula-parity.test.ts`, `src/lib/__tests__/effective-caps.test.ts`
+Bosses are excluded from contracts entirely, so no boss-tier Renown shortcut.
 
-Mechanical rule: any string literal `'rogue'`/`"rogue"` becomes `'assassin'`, any object key `rogue:` becomes `assassin:`, any UI string `Rogue` becomes `Assassin`. Comments mentioning "rogue" updated where it would be misleading (e.g. "rogue 19 crit edge" → "assassin 19 crit edge").
+## Targeting rules
 
-## 3. Old migration files
+When the NPC generates a contract it picks a creature where:
 
-The historical SQL migrations under `supabase/migrations/*.sql` that reference `'rogue'` are **left untouched**. They represent past state and the new `RENAME VALUE` migration brings the database to the new name. Rewriting old migrations would break their checksums/history.
+- `creature.level ∈ [char.level − 2, char.level + 1]`
+- `creature.rarity ∈ ('regular', 'rare')` — no bosses
+- creature actually exists on at least one node with an `area_id`
+- prefers same region as the hall, then closest level match, then random tiebreak
+- the chosen creature + its anchor area + a cardinal hint are remembered on the character row
 
-## 4. Order / class-hall naming
+## Tracking & future leaderboard
 
-`nodes.class_hall` uses the same enum, so any "Rogue's Den" style node will automatically point at the renamed enum value. The node's **display name** (its `name` text) is authored content — I'll leave existing node names alone unless you want me to rename them too (see question).
+Two new columns on `characters`:
 
-## 5. Verification
+- `active_contract` (jsonb, nullable) — `{ creature_id, creature_name, area_id, area_name, target_level, rarity, issued_at }`
+- `contracts_completed` (int, default 0)
 
-- `bunx tsgo --noEmit` to confirm the new `types.ts` union matches every literal.
-- `rg -w rogue src supabase` should return zero matches after the rename (excluding old migration files).
-- Spot-check: load an existing rogue character (now `assassin`) — class label, ability bar, bond row should all read "Assassin".
+`contracts_completed` is the leaderboard metric. Later we can add a "Hall of Blades" panel in the Assassin hall that just `select character_name, contracts_completed from characters where class='assassin' order by contracts_completed desc limit 20`.
 
-## Question before I build
+## Where the kill is detected
 
-Do you also want me to rename any **node names** like "Rogue's Den" / "Rogues' Hall" in the world data (text rewrite of `nodes.name`), or only the class key + label and leave authored node names alone?
+Inside `combat-tick`'s reward loop (the only place that legitimately awards kill rewards, per the kill-resolution memory): after `resolveCreatureKill`, for each recipient whose class is `assassin` and whose `active_contract.creature_id` matches the killed creature, apply the bonus, increment `contracts_completed`, clear `active_contract`, and push a single `contract_complete` event into the player's event stream.
+
+## Technical breakdown (for the dev side)
+
+**DB migration**
+- Add `active_contract jsonb` and `contracts_completed integer not null default 0` to `public.characters`.
+- New RPC `assassin_take_contract(_character_id uuid)` — `SECURITY DEFINER`, `search_path = public`. Validates: caller owns character, class = 'assassin', no active contract. Picks an eligible creature using the rules above. Writes `active_contract`. Returns the chosen contract.
+- New RPC `assassin_abandon_contract(_character_id uuid)` — clears `active_contract`.
+
+**Dialogue layer**
+- New `TopicKind` value `assassin_contract` in `src/features/creatures/utils/dialogue-topics.ts`.
+- Resolver: if no active contract → "Take a contract" calls the RPC and renders the assignment line. If active → renders current target + adds an "Abandon" sub-action.
+- Author the topic on the existing Assassin Hall NPC via a one-row insert (no UI work needed for admins).
+
+**Combat-tick hook**
+- In `supabase/functions/combat-tick/index.ts`, after `resolveCreatureKill` returns per-member rewards, loop the recipients: for assassins with a matching `active_contract.creature_id`, compute bonus tokens from that recipient's `MemberReward`, apply via the existing character-update batch, push a `contract_complete` event into `events`, and unset `active_contract`, `contracts_completed = contracts_completed + 1`. Party-mates are skipped — only the contract holder gets paid.
+
+**No changes** to `reward-calculator.ts` or `kill-resolver.ts`. The bonus is layered on top in `combat-tick` so the shared resolver stays pure and party-mates' rewards are unaffected.
+
+**Verification**
+- Unit: add a `calculateCreatureRewards` parity test confirming bonus math is `floor(reward * 1.25)`.
+- Manual: roll an assassin character, take a contract, kill the named creature solo and in a party, confirm only the holder's tally increments.
+
+## Out of scope (deliberately)
+
+- No leaderboard UI yet — only the counter that feeds it later.
+- No timed contracts / expiry.
+- No multi-contract stacking.
+- No contracts for other classes (architecture leaves room: the dialogue topic + RPC are class-gated, easy to generalize later).
