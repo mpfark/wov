@@ -2233,7 +2233,7 @@ export type Database = {
         | "warrior"
         | "wizard"
         | "ranger"
-        | "rogue"
+        | "assassin"
         | "healer"
         | "bard"
         | "templar"
@@ -2403,7 +2403,7 @@ export const Constants = {
         "warrior",
         "wizard",
         "ranger",
-        "rogue",
+        "assassin",
         "healer",
         "bard",
         "templar",

@@ -12,7 +12,7 @@ interface Row {
   character_name?: string;
 }
 
-const CLASSES = ['warrior', 'wizard', 'ranger', 'rogue', 'healer', 'bard', 'templar'] as const;
+const CLASSES = ['warrior', 'wizard', 'ranger', 'assassin', 'healer', 'bard', 'templar'] as const;
 
 export default function ClassBondsInspector() {
   const [filter, setFilter] = useState('');

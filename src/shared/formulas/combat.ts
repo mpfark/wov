@@ -349,7 +349,7 @@ export interface AttackResult {
  *   Damage:  1d{weaponDie} + STR mod        (STR damage floor on non-crits)
  *
  * Class only influences:
- *   - crit threshold (rogue 19 vs 20 for everyone else)
+ *   - crit threshold (assassin 19 vs 20 for everyone else)
  *   - weapon affinity (matching class+weapon = +1 hit, x1.10 damage)
  */
 export function resolveAttackRoll(

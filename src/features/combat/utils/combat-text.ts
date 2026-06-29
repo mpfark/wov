@@ -121,7 +121,7 @@ const CLASS_ATTACK_VERBS: Record<string, { verbs: string[] }> = {
   bard:    { verbs: ['strike', 'attack'] },
   warrior: { verbs: ['swing at', 'strike', 'cleave'] },
   ranger:  { verbs: ['shoot', 'loose an arrow at', 'fire at'] },
-  rogue:   { verbs: ['strike from the shadows at', 'stab', 'slice'] },
+  assassin:   { verbs: ['strike from the shadows at', 'stab', 'slice'] },
 };
 
 const GENERIC_VERBS = ['strike', 'attack'];

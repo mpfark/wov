@@ -924,7 +924,7 @@ Deno.serve(async (req) => {
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
+        // Eviscerate (Assassin / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
         // Per-stack bonus scales with CHA showmanship. Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effCha = (c.cha || 10) + (eb.cha || 0);
@@ -1415,7 +1415,7 @@ Deno.serve(async (req) => {
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
       // Weapon-based: damage = 1d{weaponDie} + STR. Class only affects crit
-      // threshold (rogue 19) and weapon affinity. The 2H damage benefit is
+      // threshold (assassin 19) and weapon affinity. The 2H damage benefit is
       // baked into the weapon die — there is no longer a separate multiplier.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
@@ -1511,7 +1511,7 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          // Envenom (Rogue / dual-primary DEX+CHA): proc chance scales with DEX,
+          // Envenom (Assassin / dual-primary DEX+CHA): proc chance scales with DEX,
           // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
           const dexMod = sm((c.dex || 10) + (eb.dex || 0));
           const chaMod = sm((c.cha || 10) + (eb.cha || 0));

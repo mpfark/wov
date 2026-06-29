@@ -46,7 +46,7 @@ describe('Resource caps — fixed snapshots', () => {
     expect(getMaxHp('warrior', 10, 1)).toBe(24);
     expect(getMaxHp('warrior', 14, 10)).toBe(71);
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
-    expect(getMaxHp('rogue', 12, 5)).toBe(37);
+    expect(getMaxHp('assassin', 12, 5)).toBe(37);
   });
   it('CP', () => {
     expect(getMaxCp(1, 10)).toBe(30);
@@ -69,7 +69,7 @@ describe('AC — fixed snapshots', () => {
   it('Base', () => {
     expect(calculateAC('warrior', 10)).toBe(12);
     expect(calculateAC('wizard', 14)).toBe(11);
-    expect(calculateAC('rogue', 16)).toBe(13);
+    expect(calculateAC('assassin', 16)).toBe(13);
   });
   it('Effective with shield', () => {
     expect(getEffectiveAC('warrior', 10, { ac: 2 }, true)).toBe(15); // 12 + 2 + 1
@@ -183,7 +183,7 @@ describe('Barrels re-export the canonical implementation', () => {
     expect(gameData.getXpPenalty(20, 10)).toBe(getXpPenalty(20, 10));
   });
   it('@/lib/game-data forwards calculateAC identically', () => {
-    expect(gameData.calculateAC('rogue', 16)).toBe(calculateAC('rogue', 16));
+    expect(gameData.calculateAC('assassin', 16)).toBe(calculateAC('assassin', 16));
   });
   it('@/lib/game-data forwards getWisAntiCrit identically', () => {
     expect(gameData.getWisAntiCrit(20)).toBe(getWisAntiCrit(20));

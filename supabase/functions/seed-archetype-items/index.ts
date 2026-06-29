@@ -432,7 +432,7 @@ function buildCatalog(): SeedItem[] {
 
 const CLASS_STARTERS: Record<string, { archetype: string; noun: string; tag: string; hands: 1 | 2; primary: Stat }> = {
   warrior: { archetype: "Vanguard",   noun: "Sword",  tag: "sword",  hands: 1, primary: "str" },
-  rogue:   { archetype: "Shadow",     noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
+  assassin:   { archetype: "Shadow",     noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
   ranger:  { archetype: "Shadow",     noun: "Bow",    tag: "bow",    hands: 2, primary: "dex" },
   wizard:  { archetype: "Spellwoven", noun: "Staff",  tag: "staff",  hands: 2, primary: "int" },
   healer:  { archetype: "Sanctified", noun: "Mace",   tag: "mace",   hands: 1, primary: "wis" },

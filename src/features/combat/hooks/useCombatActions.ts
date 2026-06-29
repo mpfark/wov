@@ -368,7 +368,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
       p.addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`);
     } else if (ability.type === 'stealth_buff') {
-      // Shadowstep (Rogue): dual-primary — duration scales with DEX, ambush mult with CHA flair.
+      // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
       const dexMod = getStatModifier(p.character.dex);
       const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
@@ -442,7 +442,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      // Dual-primary (Rogue DEX+CHA): dodge magnitude = CHA (showmanship),
+      // Dual-primary (Assassin DEX+CHA): dodge magnitude = CHA (showmanship),
       // duration = DEX (footwork).
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
       const dodgeChance = getCloakDodge(chaMod);

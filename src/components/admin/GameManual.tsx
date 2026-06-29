@@ -191,7 +191,7 @@ export default function GameManual() {
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
                     <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (via INT modifier), spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
                     <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP (via WIS modifier), healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(15%, √mod × 3%)</code>.</p>
-                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +25%.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Assassins, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +25%.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
@@ -353,7 +353,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Attack Roll (To-Hit):</strong> <code className="text-primary">d20 + DEX mod + INT hit bonus + affinity</code> ≥ target AC → hit. <em>DEX governs accuracy for both melee and ranged autoattacks; STR governs damage and the minimum-damage floor — so high-STR / low-DEX builds (Warriors) hit hard but miss more often.</em></p>
                 <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All non-crit autoattacks deal at least <code className="text-primary">1 + min(3, floor(√STR_mod))</code> damage</p>
                 <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
-                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → <code className="text-primary">×1.5</code> damage. Most classes crit on natural 20; <strong className="text-foreground">rogue</strong> crits on 19-20. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> widens the range — max crit on 16-20.</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → <code className="text-primary">×1.5</code> damage. Most classes crit on natural 20; <strong className="text-foreground">assassin</strong> crits on 19-20. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> widens the range — max crit on 16-20.</p>
                 <p><strong className="text-foreground">Crit Resistance (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to downgrade an incoming crit to a normal hit. Shield adds +5%.</p>
                 <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">5% + √DEX_mod × 4.5%</code> chance to block, reducing damage by <code className="text-primary">round(11 + 2.5 × √STR_mod)</code> flat.</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod + <code className="text-primary">floor(level × 0.4)</code> attack bonus vs player AC</p>
@@ -431,7 +431,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words, Templar Judgment). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
+                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Assassin Backstab, Healer Smite, Bard Cutting Words, Templar Judgment). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
@@ -496,7 +496,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">🌿 Nature's Snare (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🦘 Disengage (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> 100% dodge for <code className="text-primary">min(8s, 5s + DEX_mod × 0.5s)</code>, next hit +50% damage</p>
 
-                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Rogue —</p>
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Assassin —</p>
                   <p><strong className="text-foreground">🌑 Shadowstep (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🐍 Envenom (T3 stance, 50 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 20% of max CP. Each hit has a 40% chance to apply a stackable poison DoT — <code className="text-primary">floor(softScale(DEX_mod, 'dot') × 1.2 × 0.67)</code> per stack per 2s tick (max 5 stacks, stacks last 25s, soft-scaled past +20). <em className="text-muted-foreground">Mutually exclusive with Ignite. Persists until dropped — CP not refunded.</em></p>
                   <p><strong className="text-foreground">🔪 Eviscerate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
@@ -779,7 +779,7 @@ export default function GameManual() {
                   <p className="text-muted-foreground">Example: A character with STR 14 (capacity 14) carrying 12 equipment + 9 potions has weight 12 + 3 = 15, paying 10 + (1 × 5) = 15 MP per move.</p>
                 </div>
 
-                <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
+                <p className="text-muted-foreground">DEX-focused classes like Rangers and Assassins naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
               </div>
             </AccordionContent>
           </AccordionItem>

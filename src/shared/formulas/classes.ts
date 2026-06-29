@@ -12,12 +12,12 @@
  */
 
 export const CLASS_BASE_HP: Record<string, number> = {
-  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16, templar: 22,
+  warrior: 24, wizard: 16, ranger: 20, assassin: 16, healer: 18, bard: 16, templar: 22,
   classless: 18,
 };
 
 export const CLASS_BASE_AC: Record<string, number> = {
-  warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9, templar: 12,
+  warrior: 12, wizard: 9, ranger: 10, assassin: 10, healer: 9, bard: 9, templar: 12,
   classless: 10,
 };
 
@@ -26,7 +26,7 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
   warrior: { str: 1, dex: 1 },
   wizard:  { int: 1, wis: 1 },
   ranger:  { dex: 1, wis: 1 },
-  rogue:   { dex: 1, cha: 1 },
+  assassin:   { dex: 1, cha: 1 },
   healer:  { wis: 1, con: 1 },
   bard:    { cha: 1, int: 1 },
   templar: { wis: 1, con: 1 },
@@ -35,14 +35,14 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
 
 export const CLASS_LABELS: Record<string, string> = {
   warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
-  rogue: 'Rogue', healer: 'Healer', bard: 'Bard', templar: 'Templar',
+  assassin: 'Assassin', healer: 'Healer', bard: 'Bard', templar: 'Templar',
   classless: 'Wayfarer',
 };
 
 export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
   warrior: ['sword', 'axe', 'mace'],
   ranger:  ['bow', 'dagger'],
-  rogue:   ['dagger', 'sword'],
+  assassin:   ['dagger', 'sword'],
   wizard:  ['staff', 'wand'],
   healer:  ['mace', 'staff'],
   bard:    ['sword', 'wand'],
@@ -68,13 +68,13 @@ export interface ClassAttackProfile {
  *      still read dice from here pending the T0 ability rewrite.
  *   2. Some UI/admin screens still display class profile info.
  *
- * Class crit edge (rogue 19) now lives in `CLASS_CRIT_RANGE` below.
+ * Class crit edge (assassin 19) now lives in `CLASS_CRIT_RANGE` below.
  */
 export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
   warrior: { stat: 'str', diceMin: 1, diceMax: 10, critRange: 20, emoji: '⚔️', verb: 'swings at' },
   wizard:  { stat: 'int', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🔥', verb: 'hurls flame at' },
   ranger:  { stat: 'dex', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🏹', verb: 'shoots' },
-  rogue:   { stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strikes' },
+  assassin:   { stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strikes' },
   healer:  { stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'smites' },
   bard:    { stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'mocks' },
   templar: { stat: 'wis', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '✝️', verb: 'smites with righteous steel' },
@@ -82,11 +82,11 @@ export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
 
 /**
  * Per-class natural-d20 crit threshold. A roll >= this number crits before
- * DEX/buff reductions are applied. Most classes crit on natural 20; rogue
+ * DEX/buff reductions are applied. Most classes crit on natural 20; assassin
  * keeps a slightly wider crit range (19-20) as a class identity perk.
  */
 export const CLASS_CRIT_RANGE: Record<string, number> = {
-  warrior: 20, wizard: 20, ranger: 20, rogue: 19, healer: 20, bard: 20, templar: 20,
+  warrior: 20, wizard: 20, ranger: 20, assassin: 19, healer: 20, bard: 20, templar: 20,
 };
 
 export function getClassCritRange(classKey: string): number {

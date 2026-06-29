@@ -15,7 +15,7 @@ const RACE_LABELS: Record<string, string> = {
   orc: "Orc", tiefling: "Tiefling", gnome: "Gnome", "half-elf": "Half-Elf",
 };
 const CLASS_LABELS: Record<string, string> = {
-  warrior: "Warrior", wizard: "Wizard", ranger: "Ranger", rogue: "Rogue",
+  warrior: "Warrior", wizard: "Wizard", ranger: "Ranger", assassin: "Assassin",
   healer: "Healer", bard: "Bard", templar: "Templar",
 };
 
