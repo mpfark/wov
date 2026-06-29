@@ -13,7 +13,7 @@ import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
-type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
+type BlacksmithTab = 'repair' | 'forge' | 'enhance' | 'soulforge';
 
 interface Props {
   open: boolean;
@@ -178,8 +178,8 @@ export default function BlacksmithPanel({
     <div className="text-xs text-muted-foreground text-center">Click an item's price to repair it.</div>
   );
 
-  // ── Forge (Craft + Upgrade) ───────────────────────────────────
-  const { craftBlock, upgradeBlock } = useForgeUpgradeView({
+  // ── Forge (Craft) + Enhance ───────────────────────────────────
+  const { craftBlock, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
@@ -215,6 +215,13 @@ export default function BlacksmithPanel({
     </div>
   );
 
+  const forgeRight = (
+    <div className="gap-section text-[11px] text-muted-foreground">
+      <p>Plain bases are blank gear — no stats, no flair. Pick a slot to see all variants the smith can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab to socket gems and add stats.</p>
+      <p>Weapons come in all types (sword, dagger, mace, axe, staff, bow, wand). Your class proficiencies still apply when you wield them.</p>
+    </div>
+  );
+
   // ── Render ────────────────────────────────────────────────────
   const subtitle = (
     <span className="inline-flex flex-col items-center gap-0.5">
@@ -241,15 +248,17 @@ export default function BlacksmithPanel({
 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
-      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Repair</TabsTrigger>
         <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">⚒️ Forge</TabsTrigger>
+        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary">💠 Enhance</TabsTrigger>
         {showSoulforge && (
           <TabsTrigger value="soulforge" className="t-label text-[11px] data-[state=active]:text-soulforged text-soulforged">⚒️ Soulforge</TabsTrigger>
         )}
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
+      <TabsContent value="enhance" className="hidden" />
       {showSoulforge && <TabsContent value="soulforge" className="hidden" />}
     </Tabs>
   );
@@ -273,10 +282,16 @@ export default function BlacksmithPanel({
     activeRightTitle = sf.rightTitle as string | undefined;
   } else if (tab === 'forge') {
     activeLeft = forgeLeft;
-    activeRight = upgradeBlock;
+    activeRight = forgeRight;
     activeFooter = null;
     activeLeftTitle = 'Craft & Pouch';
-    activeRightTitle = 'Upgrade Your Gear';
+    activeRightTitle = 'How the Forge Works';
+  } else if (tab === 'enhance') {
+    activeLeft = enhanceLeft;
+    activeRight = enhanceRight;
+    activeFooter = null;
+    activeLeftTitle = 'Eligible Gear';
+    activeRightTitle = 'Socket Gems';
   } else {
     activeLeft = repairLeft;
     activeRight = repairRight;

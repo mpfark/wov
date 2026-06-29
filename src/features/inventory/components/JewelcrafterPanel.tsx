@@ -14,7 +14,7 @@ import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from 
 import { GemIcon } from '@/components/icons/GemIcon';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
-type JewelcrafterTab = 'repair' | 'forge' | 'gems';
+type JewelcrafterTab = 'repair' | 'forge' | 'enhance' | 'gems';
 
 const JEWELRY_SLOTS = new Set(['ring', 'trinket']);
 const FORGE_SLOTS = [
@@ -195,8 +195,8 @@ export default function JewelcrafterPanel({
     <div className="text-xs text-muted-foreground text-center">Click an item's price to refurbish it.</div>
   );
 
-  // ── Forge (Craft + Upgrade) ───────────────────────────────────
-  const { craftBlock, upgradeBlock } = useForgeUpgradeView({
+  // ── Forge (Craft) + Enhance ───────────────────────────────────
+  const { craftBlock, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
@@ -301,15 +301,23 @@ export default function JewelcrafterPanel({
 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
-      <TabsList className="w-full grid grid-cols-3">
+      <TabsList className="w-full grid grid-cols-4">
         <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Refurbish</TabsTrigger>
         <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">💎 Forge</TabsTrigger>
+        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary">💠 Enhance</TabsTrigger>
         <TabsTrigger value="gems" className="t-label text-[11px] data-[state=active]:text-primary">💠 Gemcutter</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
+      <TabsContent value="enhance" className="hidden" />
       <TabsContent value="gems" className="hidden" />
     </Tabs>
+  );
+
+  const forgeRight = (
+    <div className="gap-section text-[11px] text-muted-foreground">
+      <p>Plain rings and trinkets are blank — no stats until you socket gems. Pick a slot to see the variants the jeweler can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab.</p>
+    </div>
   );
 
   let activeLeft: React.ReactNode;
@@ -320,10 +328,16 @@ export default function JewelcrafterPanel({
 
   if (tab === 'forge') {
     activeLeft = forgeLeft;
-    activeRight = upgradeBlock;
+    activeRight = forgeRight;
     activeFooter = null;
     activeLeftTitle = 'Craft & Pouch';
-    activeRightTitle = 'Upgrade Your Jewelry';
+    activeRightTitle = 'How the Forge Works';
+  } else if (tab === 'enhance') {
+    activeLeft = enhanceLeft;
+    activeRight = enhanceRight;
+    activeFooter = null;
+    activeLeftTitle = 'Eligible Jewelry';
+    activeRightTitle = 'Socket Gems';
   } else if (tab === 'gems') {
     activeLeft = gemsLeft;
     activeRight = gemsRight;

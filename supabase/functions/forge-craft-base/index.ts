@@ -46,15 +46,32 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
 
     const db = createClient(supabaseUrl, serviceKey);
-    const { character_id, slot } = await req.json();
-    if (!character_id || !slot) throw new Error("Missing character_id or slot");
+    const { character_id, item_id, slot: legacySlot } = await req.json();
+    if (!character_id) throw new Error("Missing character_id");
+    if (!item_id && !legacySlot) throw new Error("Missing item_id");
 
     const { data: char, error: charErr } = await db.from("characters")
       .select("id, user_id, level, gold, current_node_id").eq("id", character_id).single();
     if (charErr || !char) throw new Error("Character not found");
     if (char.user_id !== userId) throw new Error("Not authorized");
 
-    const station = BLACKSMITH_SLOTS.has(slot) ? "blacksmith" : JEWELER_SLOTS.has(slot) ? "jeweler" : null;
+    // Resolve the chosen plain base.
+    let base: { id: string; name: string; slot: string } | null = null;
+    if (item_id) {
+      const { data } = await db.from("items")
+        .select("id, name, slot, origin_type").eq("id", item_id).maybeSingle();
+      if (!data || data.origin_type !== "plain_base") throw new Error("Not a plain base item");
+      base = { id: data.id, name: data.name, slot: data.slot as string };
+    } else {
+      // Legacy callers passing slot — pick the first available base for back-compat.
+      const { data } = await db.from("items")
+        .select("id, name, slot").eq("origin_type", "plain_base").eq("slot", legacySlot)
+        .order("name").limit(1).maybeSingle();
+      if (!data) throw new Error("No plain base defined for that slot");
+      base = { id: data.id, name: data.name, slot: data.slot as string };
+    }
+
+    const station = BLACKSMITH_SLOTS.has(base.slot) ? "blacksmith" : JEWELER_SLOTS.has(base.slot) ? "jeweler" : null;
     if (!station) throw new Error("Invalid slot");
 
     const { data: node } = await db.from("nodes")
@@ -65,11 +82,6 @@ serve(async (req) => {
     if (station === "jeweler" && !node?.is_jewelcrafter) {
       throw new Error("You must be at a jewelcrafter to craft jewelry");
     }
-
-    // Find the plain base for this slot.
-    const { data: base } = await db.from("items")
-      .select("id, name").eq("origin_type", "plain_base").eq("slot", slot).maybeSingle();
-    if (!base) throw new Error("No plain base defined for that slot");
 
     const salvageCost = 5 + char.level * 2;
     const goldCost = char.level * 5;
