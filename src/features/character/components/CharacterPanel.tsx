@@ -130,7 +130,10 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
             weaponProgression={weaponProgression}
             classKey={classKey}
             durabilityPct={item.current_durability}
+            appliedGems={item.applied_gems}
+            statOverride={item.stat_override}
           />
+
         </TooltipContent>
       )}
     </Tooltip>
