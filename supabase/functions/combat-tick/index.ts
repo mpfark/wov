@@ -1077,13 +1077,21 @@ Deno.serve(async (req) => {
           verb = 'passes divine judgment upon';
         }
         const isPhysT0 = PHYSICAL_T0.has(pa.ability_type);
+        const isBackstab = pa.ability_type === 'backstab';
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
+        // Backstab reads better as a possessive sentence so the local "You"
+        // substitution conjugates naturally ("Your blade slips…"). The weapon
+        // tag suffix is omitted — the flavor already implies a blade strike.
+        const weaponSuffix = (t0Weapon && !isBackstab) ? tagSuffix(t0Weapon.tag) : '';
         const hit = rollAbilityHit(mod);
         if (!hit.hit) {
+          const missMsg = isBackstab
+            ? `${emoji} ${c.name}'s blade slips wide — ${target.name} is untouched.`
+            : `${emoji} ${c.name} ${verb} ${target.name} — misses!${weaponSuffix}`;
           events.push({
             type: 'ability_miss',
-            message: `${emoji} ${c.name} ${verb} ${target.name} — misses!${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
+            message: missMsg,
             character_id: member.id,
             ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
           });
@@ -1106,9 +1114,12 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
+        const hitMsg = isBackstab
+          ? `${emoji} ${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
+          : `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
         events.push({
           type: 'ability_hit',
-          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
+          message: hitMsg,
           character_id: member.id,
           ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
