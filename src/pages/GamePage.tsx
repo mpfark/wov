@@ -13,6 +13,7 @@ import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
+import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
@@ -168,8 +169,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
       bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
     }
-    // Salvage is owned by character_materials and updates via realtime —
-    // don't optimistically write it onto the legacy characters.salvage field.
+    // Salvage / gem drops live in character_materials. Realtime on that table
+    // is disabled, so explicitly notify any mounted useMaterials hooks.
+    notifyMaterialsChanged(character.id);
     updateCharacterLocal({
       xp: character.xp + totalXp,
       gold: character.gold + totalGold,

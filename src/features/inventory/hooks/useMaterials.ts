@@ -46,6 +46,19 @@ export function useMaterials(characterId: string | null | undefined) {
   useEffect(() => {
     if (!characterId) { setCounts({}); return; }
     void refresh();
+    // Realtime on character_materials was disabled to reduce DB activity.
+    // Any code path that mutates materials (combat rewards, forges, trades,
+    // sells) should dispatch `materials:changed` so all mounted hooks refetch.
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ characterId?: string }>).detail;
+      if (!detail?.characterId || detail.characterId === characterId) {
+        void refresh();
+      }
+    };
+    window.addEventListener('materials:changed', onChanged as EventListener);
+    return () => {
+      window.removeEventListener('materials:changed', onChanged as EventListener);
+    };
   }, [characterId, refresh]);
 
   const entries: MaterialEntry[] = catalog.map(m => ({ ...m, count: counts[m.key] ?? 0 }));
@@ -53,3 +66,11 @@ export function useMaterials(characterId: string | null | undefined) {
 
   return { catalog, counts, entries, byCategory, refresh };
 }
+
+export function notifyMaterialsChanged(characterId?: string | null) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('materials:changed', {
+    detail: { characterId: characterId ?? undefined },
+  }));
+}
+

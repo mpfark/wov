@@ -20,6 +20,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
@@ -710,7 +711,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
                 const updates: Record<string, number> = {};
                 if (myState.xp !== undefined) updates.xp = myState.xp;
                 if (myState.gold !== undefined) updates.gold = myState.gold;
-                // Salvage lives in character_materials — realtime updates the UI.
+                // Salvage / gem drops live in character_materials.
+                notifyMaterialsChanged(ext.current.character.id);
                 if (myState.bhp !== undefined) updates.bhp = myState.bhp;
                 if (myState.rp_total_earned !== undefined) updates.rp_total_earned = myState.rp_total_earned;
                 if (myState.level !== undefined) updates.level = myState.level;

@@ -13,7 +13,7 @@ import { Character } from '@/features/character';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
-import { useMaterials } from '../hooks/useMaterials';
+import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 
 type JewelcrafterTab = 'repair' | 'forge' | 'gems';
@@ -87,7 +87,7 @@ export default function JewelcrafterPanel({
   const [selling, setSelling] = useState(false);
   const [cutting, setCutting] = useState<string | null>(null);
   const weaponProgression = useWeaponProgression();
-  const { counts, byCategory, refresh: refreshMaterials } = useMaterials(characterId);
+  const { counts, byCategory } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
   for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
@@ -167,7 +167,7 @@ export default function JewelcrafterPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      void refreshMaterials();
+      notifyMaterialsChanged(characterId);
       onInventoryChange();
       onCharacterRefresh?.();
       const gemUsed: GemKey | undefined = data.gem_used;
@@ -196,7 +196,7 @@ export default function JewelcrafterPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      void refreshMaterials();
+      notifyMaterialsChanged(characterId);
       addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
       setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
@@ -215,7 +215,7 @@ export default function JewelcrafterPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      void refreshMaterials();
+      notifyMaterialsChanged(characterId);
       addLog(`💠 Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`);
     } catch (e: any) {
       addLog(`❌ Gem trade failed: ${e.message || 'Unknown error'}`);
@@ -239,7 +239,7 @@ export default function JewelcrafterPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      void refreshMaterials();
+      notifyMaterialsChanged(characterId);
       addLog(`💠 Fused ${data.consumed.map((c: any) => c.name).join(' + ')} → 1 ${data.gem_name}.`);
     } catch (e: any) {
       addLog(`❌ Gem fusion failed: ${e.message || 'Unknown error'}`);
