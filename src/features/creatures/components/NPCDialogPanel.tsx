@@ -48,6 +48,10 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
   async function takeContract() {
     if (!character) return;
     setBusy(true);
+    if (character.active_contract) {
+      const { error: abErr } = await supabase.rpc('assassin_abandon_contract', { _character_id: character.id });
+      if (abErr) { setBusy(false); toast.error(abErr.message); return; }
+    }
     const { data, error } = await supabase.rpc('assassin_take_contract', { _character_id: character.id });
     setBusy(false);
     if (error) {
@@ -58,6 +62,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
     toast.success(`Contract: ${c?.creature_name ?? 'target'} (lvl ${c?.target_level ?? '?'}) in ${c?.area_name ?? 'the field'}`);
     onContractChanged?.();
   }
+
 
   async function abandonContract() {
     if (!character) return;
