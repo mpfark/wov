@@ -28,7 +28,7 @@ export function useWeaponProgression(): WeaponProgressionConfig {
     })();
 
     const channel = supabase
-      .channel('weapon-progression-config')
+      .channel(`weapon-progression-config-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'weapon_progression_config' },
