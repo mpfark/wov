@@ -1,24 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Gem } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
-import ItemTooltipCard from '@/components/items/ItemTooltipCard';
-import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
-import { GemPouch, GemBadge } from './GemPouch';
+import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
-import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
+import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
+import { GemIcon } from '@/components/icons/GemIcon';
+import { ForgeUpgradeView } from './ForgeUpgradeView';
 
 type JewelcrafterTab = 'repair' | 'forge' | 'gems';
 
 const JEWELRY_SLOTS = new Set(['ring', 'trinket']);
+const FORGE_SLOTS = [
+  { value: 'ring', label: 'Ring' },
+  { value: 'trinket', label: 'Trinket' },
+];
 
 interface Props {
   open: boolean;
@@ -29,7 +31,6 @@ interface Props {
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
-  /** Refetch the authoritative character row (level, XP, max HP/CP/MP, stat points). */
   onCharacterRefresh?: () => void;
   addLog: (msg: string) => void;
   character?: Character;
@@ -44,87 +45,27 @@ const RARITY_COLORS: Record<string, string> = {
   unique: 'text-primary text-glow',
   soulforged: 'text-soulforged text-glow-soulforged',
 };
-
-const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
-  item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '');
-
-const FORGE_SLOTS = [
-  { value: 'ring', label: 'Ring' },
-  { value: 'trinket', label: 'Trinket' },
-];
-
-const STAT_LABELS: Record<string, string> = {
-  str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
-  hp: 'HP', mp: 'MP', cp: 'CP', ac: 'AC', damage: 'DMG',
-};
-
-interface ForgePoolItem {
-  id: string;
-  name: string;
-  rarity: string;
-  level: number;
-  stats: Record<string, number>;
-  description: string;
-  slot: string;
-  hands: number | null;
-  weapon_tag: string | null;
-  required_gem: GemKey | null;
-}
+const getItemColor = (it: { rarity: string; is_soulbound?: boolean }) =>
+  it.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[it.rarity] || '');
 
 export default function JewelcrafterPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh, addLog,
-  character, npcName, npcFlavor,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog,
+  character: _character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
-  const [forgeSlot, setForgeSlot] = useState<string>('');
-  const [forging, setForging] = useState(false);
-  const [browsing, setBrowsing] = useState(false);
-  const [forgePool, setForgePool] = useState<ForgePoolItem[]>([]);
-  const [selectedForgeItem, setSelectedForgeItem] = useState<string | null>(null);
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const [cutting, setCutting] = useState<string | null>(null);
-  const weaponProgression = useWeaponProgression();
-  const { counts, byCategory } = useMaterials(characterId);
+  const { counts } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
-  for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
+  for (const k of PRIMARY_GEM_KEYS) if ((counts[k] || 0) > 0) ownedGems[k] = counts[k];
 
-  // Only jewelry items at the jeweler
   const jewelryInventory = inventory.filter(i => JEWELRY_SLOTS.has(i.item.slot as string));
   const damagedItems = jewelryInventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
-
-  const salvageCost = 5 + level * 2;
-  const goldCost = level * 5;
-  const selectedItem = forgePool.find(i => i.id === selectedForgeItem) || null;
-  const selectedGem = selectedItem?.required_gem ?? null;
-  const hasGemForSelected = !!selectedGem && (ownedGems[selectedGem] || 0) > 0;
-  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && hasGemForSelected && !forging;
-
-  const browseSlot = useCallback(async (slot: string) => {
-    if (!slot) { setForgePool([]); return; }
-    setBrowsing(true);
-    setSelectedForgeItem(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('jewelcrafter-forge', {
-        body: { character_id: characterId, slot, mode: 'browse' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setForgePool(data.pool || []);
-    } catch (e: any) {
-      addLog(`❌ ${e.message || 'Failed to browse items'}`);
-      setForgePool([]);
-    }
-    setBrowsing(false);
-  }, [characterId, addLog]);
-
-  useEffect(() => {
-    if (open && forgeSlot) browseSlot(forgeSlot);
-  }, [open, forgeSlot, browseSlot]);
 
   const repairItem = async (inv: InventoryItem) => {
     if (isUnrepairable(inv.item.rarity)) return;
@@ -141,49 +82,20 @@ export default function JewelcrafterPanel({
   };
 
   const repairAll = async () => {
-    const repairableItems = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
-    const totalCost = repairableItems.reduce((sum, inv) =>
-      sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
+    const items = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
+    const totalCost = items.reduce((s, inv) =>
+      s + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
     if (gold < totalCost) { addLog('❌ Not enough gold to refurbish all!'); return; }
     setRepairing(true);
-    for (const inv of repairableItems) {
+    for (const inv of items) {
       await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
     }
     const newGold = gold - totalCost;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`💎 Refurbished ${repairableItems.length} items for ${totalCost} gold.`);
+    addLog(`💎 Refurbished ${items.length} items for ${totalCost} gold.`);
     setRepairing(false);
-  };
-
-  const handleForge = async () => {
-    if (!canForge) return;
-    setForging(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('jewelcrafter-forge', {
-        body: { character_id: characterId, slot: forgeSlot, item_id: selectedForgeItem, mode: 'forge' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      onGoldChange(data.gold_remaining);
-      notifyMaterialsChanged(characterId);
-      onInventoryChange();
-      onCharacterRefresh?.();
-      const gemUsed: GemKey | undefined = data.gem_used;
-      const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
-      const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
-      addLog(`💎 The jeweler crafted: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!${xpNote}`);
-      if (data?.xp_result?.leveled_up) {
-        addLog(`✨ You reached level ${data.xp_result.level}!`);
-      }
-      try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
-      if (forgeSlot) browseSlot(forgeSlot);
-      setSelectedForgeItem(null);
-    } catch (e: any) {
-      addLog(`❌ Crafting failed: ${e.message || 'Unknown error'}`);
-    }
-    setForging(false);
   };
 
   const handleSellSalvage = async () => {
@@ -223,33 +135,9 @@ export default function JewelcrafterPanel({
     setCutting(null);
   };
 
-  const handleCombineGem = async (hybridKey: GemKey) => {
-    if (cutting) return;
-    const recipe = hybridRecipe(hybridKey);
-    if (!recipe) return;
-    const [a, b] = recipe;
-    if ((ownedGems[a] || 0) < 1 || (ownedGems[b] || 0) < 1) {
-      addLog(`❌ Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}.`);
-      return;
-    }
-    setCutting(`combine:${hybridKey}`);
-    try {
-      const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
-        body: { character_id: characterId, mode: 'combine_gem', gem_key: hybridKey },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      notifyMaterialsChanged(characterId);
-      addLog(`💠 Fused ${data.consumed.map((c: any) => c.name).join(' + ')} → 1 ${data.gem_name}.`);
-    } catch (e: any) {
-      addLog(`❌ Gem fusion failed: ${e.message || 'Unknown error'}`);
-    }
-    setCutting(null);
-  };
-
   const totalRepairCost = damagedItems
     .filter(i => !isUnrepairable(i.item.rarity))
-    .reduce((sum, inv) => sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
+    .reduce((s, inv) => s + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
   const repairableCount = damagedItems.filter(i => !isUnrepairable(i.item.rarity)).length;
 
   const repairLeft = damagedItems.length === 0 ? (
@@ -278,13 +166,8 @@ export default function JewelcrafterPanel({
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${durPct}%`,
-                    backgroundColor: durPct > 50 ? 'hsl(var(--chart-2))' : durPct > 25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
-                  }}
-                />
+                <div className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${durPct}%`, backgroundColor: durPct > 50 ? 'hsl(var(--chart-2))' : durPct > 25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))' }} />
               </div>
               <span className="text-[10px] text-muted-foreground whitespace-nowrap">{inv.current_durability}%</span>
             </div>
@@ -297,68 +180,35 @@ export default function JewelcrafterPanel({
   const repairRight = (
     <div className="gap-section text-[11px] text-muted-foreground">
       <p>The jeweler refurbishes <span className="text-elvish font-display">rings and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
-      <p>Refurbish cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
       <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
-      {repairableCount > 0 && (
-        <div className="border-t border-border-subtle pt-2 text-foreground">
-          <span className="t-label text-[11px] data-[state=active]:text-primary">Pending refurbishes: </span>
-          <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
-          <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
-        </div>
-      )}
     </div>
   );
 
   const repairFooter = repairableCount > 1 ? (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-muted-foreground">
-        Refurbish all {repairableCount} damaged jewelry pieces at once.
-      </span>
-      <Button size="sm" onClick={repairAll} disabled={repairing || gold < totalRepairCost}
-        className="font-display text-xs h-8">
+      <span className="text-xs text-muted-foreground">Refurbish all {repairableCount} damaged jewelry pieces at once.</span>
+      <Button size="sm" onClick={repairAll} disabled={repairing || gold < totalRepairCost} className="font-display text-xs h-8">
         <Gem className="w-3 h-3 mr-1" /> Refurbish All ({totalRepairCost}g)
       </Button>
     </div>
   ) : (
-    <div className="text-xs text-muted-foreground text-center">
-      Click an item's price to refurbish it.
-    </div>
+    <div className="text-xs text-muted-foreground text-center">Click an item's price to refurbish it.</div>
   );
+
+  // ── Forge (Craft + Upgrade) ───────────────────────────────────
+  const { craftBlock, upgradeBlock } = ForgeUpgradeView({
+    characterId, characterLevel: level, gold, inventory,
+    slots: FORGE_SLOTS,
+    onGoldChange, onInventoryChange, addLog,
+    craftNoun: 'Jewelry',
+  });
 
   const forgeLeft = (
     <div className="gap-section">
       <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
-
-      <div className="gap-group">
-        <Select value={forgeSlot} onValueChange={v => { setForgeSlot(v); setForgePool([]); setSelectedForgeItem(null); }}>
-          <SelectTrigger className="font-display text-sm h-8">
-            <SelectValue placeholder="Choose slot..." />
-          </SelectTrigger>
-          <SelectContent>
-            {FORGE_SLOTS.map(s => (
-              <SelectItem key={s.value} value={s.value} className="font-display text-sm">{s.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {forgeSlot && (
-          <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-            <span>Cost:</span>
-            <span className={`font-display ${salvage >= salvageCost ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {salvageCost}</span>
-            <span>+</span>
-            <span className={`font-display ${gold >= goldCost ? 'text-primary' : 'text-destructive'}`}>{goldCost}g</span>
-            <span>+</span>
-            <span className="font-display">💠 1 gem</span>
-          </div>
-        )}
-
-        <p className="text-[10px] text-muted-foreground italic">
-          Only items whose required gem you own appear here. Common items need a primary gem; uncommon items need a hybrid gem.
-        </p>
-      </div>
-
+      {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
@@ -370,15 +220,9 @@ export default function JewelcrafterPanel({
               <span className="font-display text-dwarvish">🔩 {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>1</span>
-              <button type="button" className="text-primary hover:underline font-display" onClick={() => setSellAmount(salvage)}>
-                All ({salvage})
-              </button>
-            </div>
             <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || sellAmount < 1}
               className="w-full font-display text-xs h-7">
-              {selling ? <span className="animate-pulse">Selling...</span> : <><Coins className="w-3 h-3 mr-1" /> Sell Salvage</>}
+              {selling ? <span className="animate-pulse">Selling…</span> : <><Coins className="w-3 h-3 mr-1" /> Sell Salvage</>}
             </Button>
           </div>
         )}
@@ -386,101 +230,16 @@ export default function JewelcrafterPanel({
     </div>
   );
 
-  const forgeRight = (
-    <div className="gap-row">
-      {browsing && <p className="text-xs text-muted-foreground italic animate-pulse">Searching the jeweler's bench...</p>}
-      {!browsing && forgeSlot && forgePool.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">No items available for this slot at your level.</p>
-      )}
-      {!browsing && !forgeSlot && (
-        <p className="text-xs text-muted-foreground italic">Select a slot to browse items.</p>
-      )}
-      <TooltipProvider delayDuration={200}>
-        {forgePool.map(item => (
-          <Tooltip key={item.id}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => setSelectedForgeItem(item.id === selectedForgeItem ? null : item.id)}
-                className={`w-full text-left p-2 rounded border transition-colors ${
-                  item.id === selectedForgeItem
-                    ? 'border-primary bg-primary/10'
-                    : 'surface-row hover:bg-background/60'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-display ${item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground'}`}>{item.name}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <GemBadge gemKey={item.required_gem} />
-                    <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-0.5">
-                  {Object.entries(item.stats || {}).filter(([,v]) => (v as number) !== 0).map(([k, v]) => (
-                    <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1 rounded">
-                      +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
-                    </span>
-                  ))}
-                </div>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
-              {(() => {
-                const equipped = inventory.find(i => i.equipped_slot === item.slot);
-                const equippedStats = (equipped?.item?.stats || {}) as Record<string, number>;
-                const forgeStats = (item.stats || {}) as Record<string, number>;
-                const allKeys = new Set([...Object.keys(forgeStats), ...Object.keys(equippedStats)]);
-                const diffs: { key: string; diff: number }[] = [];
-                if (equipped) {
-                  for (const k of allKeys) {
-                    const d = (forgeStats[k] || 0) - (equippedStats[k] || 0);
-                    if (d !== 0) diffs.push({ key: k, diff: d });
-                  }
-                }
-                return (
-                  <ItemTooltipCard
-                    item={item as any}
-                    weaponProgression={weaponProgression}
-                    classKey={character?.class}
-                    comparison={equipped && diffs.length > 0 ? { label: equipped.item.name, diffs } : null}
-                  />
-                );
-              })()}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </TooltipProvider>
-    </div>
-  );
-
-  const forgeFooter = (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-muted-foreground">
-        {selectedItem
-          ? <>Crafting — <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span> + <span className="font-display">💠 1 {selectedGem ? GEM_CATALOG[selectedGem].name : 'gem'}</span>{!hasGemForSelected && <span className="text-destructive ml-1">(missing)</span>}</>
-          : 'Select an item from the jeweler\'s bench.'}
-      </span>
-      <Button
-        size="sm"
-        onClick={handleForge}
-        disabled={!canForge}
-        className="font-display text-xs h-8"
-      >
-        {forging ? <span className="animate-pulse">Crafting...</span> : <>💎 Craft Selected Item</>}
-      </Button>
-    </div>
-  );
-
-  const gemcutLeft = (
+  // ── Gems tab: trade salvage → primary gem (hybrid combine retired)
+  const gemsLeft = (
     <div className="gap-section">
       <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
-
       <div className="gap-group">
         <h3 className="t-label text-[11px]">🔩 Trade Salvage → Primary Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
-          {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Pick the attribute you need.
+          {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Apply gems to items via the Forge tab to add stats.
         </p>
         <div className="grid grid-cols-2 gap-1.5">
           {PRIMARY_GEM_KEYS.map(key => {
@@ -488,16 +247,11 @@ export default function JewelcrafterPanel({
             const owned = ownedGems[key] || 0;
             const disabled = salvage < GEM_SALVAGE_COST_PRIMARY || cutting !== null;
             return (
-              <Button
-                key={key}
-                size="sm"
-                variant="outline"
-                onClick={() => handleTradeGem(key)}
-                disabled={disabled}
-                className="font-display text-[11px] h-8 justify-between gap-1 px-2"
-              >
+              <Button key={key} size="sm" variant="outline"
+                onClick={() => handleTradeGem(key)} disabled={disabled}
+                className="font-display text-[11px] h-8 justify-between gap-1 px-2">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />
+                  <GemIcon color={def.color} size={12} title={def.name} />
                   {def.name}
                 </span>
                 <span className="text-muted-foreground">×{owned}</span>
@@ -509,59 +263,18 @@ export default function JewelcrafterPanel({
     </div>
   );
 
-  const gemcutRight = (
-    <div className="gap-group">
-      <div className="gap-row">
-        <h3 className="t-label text-[11px]">💠 Combine → Hybrid Gem</h3>
-        <p className="text-[10px] text-muted-foreground italic">
-          Fuse 1 of each matching primary into 1 hybrid (no salvage cost — the primaries are the price).
-        </p>
-      </div>
-      <div className="gap-row">
-        {HYBRID_GEM_KEYS.map(key => {
-          const def = GEM_CATALOG[key];
-          const recipe = hybridRecipe(key)!;
-          const [a, b] = recipe;
-          const aDef = GEM_CATALOG[a];
-          const bDef = GEM_CATALOG[b];
-          const aCount = ownedGems[a] || 0;
-          const bCount = ownedGems[b] || 0;
-          const owned = ownedGems[key] || 0;
-          const canFuse = aCount >= 1 && bCount >= 1 && cutting === null;
-          return (
-            <div key={key} className="flex items-center justify-between gap-2 p-2 rounded surface-row">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />
-                  <span className="t-label text-[11px] data-[state=active]:text-primary">{def.name}</span>
-                  <span className="text-[10px] text-muted-foreground">({def.stats.map(s => s.toUpperCase()).join('+')})</span>
-                  <span className="text-[10px] text-muted-foreground ml-auto">owned ×{owned}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                  <span className={aCount >= 1 ? '' : 'text-destructive'}>
-                    <span className="inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle" style={{ backgroundColor: aDef.color }} />
-                    {aDef.name} ×{aCount}
-                  </span>
-                  <span>+</span>
-                  <span className={bCount >= 1 ? '' : 'text-destructive'}>
-                    <span className="inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle" style={{ backgroundColor: bDef.color }} />
-                    {bDef.name} ×{bCount}
-                  </span>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCombineGem(key)}
-                disabled={!canFuse}
-                className="font-display text-[11px] h-8 shrink-0"
-              >
-                Fuse
-              </Button>
-            </div>
-          );
-        })}
-      </div>
+  const gemsRight = (
+    <div className="gap-section text-[11px] text-muted-foreground">
+      <p>Each <span className="text-foreground font-display">primary gem</span> grants <span className="text-elvish font-display">+1 to one attribute</span> when applied to a player-upgradeable item at the forge.</p>
+      <ul className="list-disc pl-4 gap-row">
+        <li><span className="font-display">Garnet</span> → STR</li>
+        <li><span className="font-display">Topaz</span> → DEX</li>
+        <li><span className="font-display">Emerald</span> → CON</li>
+        <li><span className="font-display">Sapphire</span> → INT</li>
+        <li><span className="font-display">Pearl</span> → WIS</li>
+        <li><span className="font-display">Amethyst</span> → CHA</li>
+      </ul>
+      <p>Apply gems repeatedly to stack the same stat (subject to the per-item cap and total stat budget).</p>
     </div>
   );
 
@@ -590,7 +303,7 @@ export default function JewelcrafterPanel({
     <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
       <TabsList className="w-full grid grid-cols-3">
         <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Refurbish</TabsTrigger>
-        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">💎 Craft</TabsTrigger>
+        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">💎 Forge</TabsTrigger>
         <TabsTrigger value="gems" className="t-label text-[11px] data-[state=active]:text-primary">💠 Gemcutter</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
@@ -599,24 +312,24 @@ export default function JewelcrafterPanel({
     </Tabs>
   );
 
-  let activeLeft: typeof repairLeft;
-  let activeRight: typeof repairRight | null;
-  let activeFooter: typeof repairFooter | null;
+  let activeLeft: React.ReactNode;
+  let activeRight: React.ReactNode | null;
+  let activeFooter: React.ReactNode | null;
   let activeLeftTitle: string | undefined;
   let activeRightTitle: string | undefined;
 
   if (tab === 'forge') {
     activeLeft = forgeLeft;
-    activeRight = forgeRight;
-    activeFooter = forgeFooter;
-    activeLeftTitle = 'Craft Options';
-    activeRightTitle = 'Available Jewelry';
+    activeRight = upgradeBlock;
+    activeFooter = null;
+    activeLeftTitle = 'Craft & Pouch';
+    activeRightTitle = 'Upgrade Your Jewelry';
   } else if (tab === 'gems') {
-    activeLeft = gemcutLeft;
-    activeRight = gemcutRight;
+    activeLeft = gemsLeft;
+    activeRight = gemsRight;
     activeFooter = null;
     activeLeftTitle = 'Trade Salvage';
-    activeRightTitle = 'Combine Hybrids';
+    activeRightTitle = 'How Gems Work';
   } else {
     activeLeft = repairLeft;
     activeRight = repairRight;
