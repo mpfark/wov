@@ -4,6 +4,8 @@ import { isShield } from '@/shared/formulas/classes';
 import { CLASS_WEAPON_AFFINITY } from '@/lib/game-data';
 import ItemIllustration from '@/components/items/ItemIllustration';
 import { itemSubtitle, statLabel, affinityLabelFor, type DisplayItem } from '@/lib/item-display';
+import { effectiveItemStats } from '@/shared/formulas/items';
+import { GEM_CATALOG, type GemKey } from '@/shared/formulas/gems';
 
 interface ItemLike extends DisplayItem {
   description?: string | null;
@@ -13,6 +15,7 @@ interface ItemLike extends DisplayItem {
   illustration_url?: string | null;
   procs?: any;
 }
+
 
 // Subtle, non-revealing flavor lines for items with chance-on-hit procs.
 const PROC_FLAVOR_LINES = [
@@ -66,7 +69,12 @@ interface Props {
   comparison?: ComparisonProp | null;
   flavorText?: string | null;
   showValue?: boolean;
+  /** Per-instance gem upgrades (gem key → count). Adds +1 to mapped stat per gem. */
+  appliedGems?: Record<string, number> | null;
+  /** Per-instance base stat override (replaces items.stats for display). */
+  statOverride?: Record<string, number> | null;
 }
+
 
 const Divider = () => <div className="divider-hairline" />;
 
@@ -74,9 +82,15 @@ export default function ItemTooltipCard({
   item, weaponProgression, classKey,
   durabilityPct, qty, isBroken,
   comparison, flavorText, showValue = true,
+  appliedGems, statOverride,
 }: Props) {
-  const stats = item.stats || {};
+  const stats = effectiveItemStats({
+    baseStats: item.stats,
+    statOverride,
+    appliedGems,
+  });
   const statEntries = Object.entries(stats).filter(([, v]) => (v as number) !== 0);
+  const gemEntries = Object.entries(appliedGems ?? {}).filter(([, v]) => (v as number) > 0);
   const subtitle = itemSubtitle(item);
   const isWeapon = !!item.weapon_tag && !isShield(item.weapon_tag);
   const die = isWeapon
@@ -87,7 +101,9 @@ export default function ItemTooltipCard({
   const hasStatsBlock = isWeapon || statEntries.length > 0 || (comparison && comparison.diffs.length > 0);
   const hasMetaBlock = durabilityPct != null || (showValue && item.value != null) || (qty && qty > 1) || isBroken;
   const effectiveFlavor = flavorText ?? (hasProcs(item.procs) ? procFlavorFor(item) : null);
+  const hasGemBlock = gemEntries.length > 0;
   const hasFlavorBlock = !!(effectiveFlavor || item.description);
+
 
 
   return (
@@ -161,6 +177,30 @@ export default function ItemTooltipCard({
           </div>
         </>
       )}
+
+      {/* 2b — Socketed gems (per-instance upgrades) */}
+      {hasGemBlock && (
+        <>
+          <Divider />
+          <div className="gap-row">
+            <div className="t-label mb-0.5">💠 Socketed</div>
+            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+              {gemEntries.map(([gemKey, count]) => {
+                const def = GEM_CATALOG[gemKey as GemKey];
+                if (!def) return null;
+                return (
+                  <span key={gemKey} className="t-meta inline-flex items-baseline gap-1">
+                    <span style={{ color: def.color }}>●</span>
+                    <span>{def.name}</span>
+                    <span className="t-numeric t-numeric-pos">×{count as number}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
 
       {/* 3 — Metadata (durability / value / qty / broken) */}
       {hasMetaBlock && (

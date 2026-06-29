@@ -2132,16 +2132,20 @@ export type Database = {
       inspect_character_equipment: {
         Args: { _character_id: string }
         Returns: {
+          applied_gems: Json
           description: string
           durability_pct: number
           hands: number
           illustration_url: string
+          is_soulbound: boolean
           item_level: number
           item_name: string
           item_type: string
           rarity: string
           slot: string
+          stat_override: Json
           stats: Json
+          weapon_tag: string
         }[]
       }
       is_overlord: { Args: never; Returns: boolean }
