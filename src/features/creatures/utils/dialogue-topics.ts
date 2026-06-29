@@ -139,15 +139,33 @@ function contractResponse(ctx: ResolverContext): string {
   const target = contract.creature_name ?? 'your mark';
   const lvl = contract.target_level;
   const rarity = contract.rarity === 'rare' ? ' (a rare quarry — Renown awaits)' : '';
-  // Direction hint via any node in the contract area.
+  // Anchor node for the contract area (deterministic by name).
   const anchor = ctx.nodes
     .filter(n => n.area_id === contract.area_id)
     .sort((a, b) => a.name.localeCompare(b.name))[0];
+
   let where = `Seek **${areaName}**.`;
-  if (ctx.fromNode && anchor && anchor.id !== ctx.fromNode.id) {
-    where = `It ${directionSentence(describeDirection(ctx.fromNode, anchor))} — in **${areaName}**.`;
-  } else if (ctx.fromNode && anchor && anchor.id === ctx.fromNode.id) {
-    where = `You stand in **${areaName}** already. Find the mark and strike.`;
+  if (anchor) {
+    const region = ctx.regions.find(r => r.id === anchor.region_id);
+    const regionName = region?.name ?? 'unknown lands';
+    if (ctx.fromNode && anchor.id === ctx.fromNode.id) {
+      where = `You stand in **${areaName}** already, within ${regionName}. Find the mark and strike.`;
+    } else {
+      // Position of the anchor within its region (relative to region centroid).
+      const regionNodes = ctx.nodes.filter(n => n.region_id === anchor.region_id);
+      let positional = ' within ';
+      if (regionNodes.length > 1) {
+        const xs = regionNodes.map(n => n.x);
+        const ys = regionNodes.map(n => n.y);
+        const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+        const hint = describeDirection({ x: cx, y: cy }, anchor);
+        positional = hint.compass === 'here'
+          ? ' in the heart of '
+          : ` in the ${hint.compass} of `;
+      }
+      where = `Look to **${regionName}** — **${areaName}** lies${positional}${regionName}.`;
+    }
   }
   return `Your contract stands: **${target}** (level ${lvl})${rarity}.\n${where}\nReturn when the deed is done — the reward is yours.`;
 }
