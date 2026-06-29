@@ -1,5 +1,5 @@
 /**
- * ForgeUpgradeView — shared Craft + Upgrade UI for blacksmith / jewelcrafter.
+ * useForgeUpgradeView — shared Craft + Upgrade UI for blacksmith / jewelcrafter.
  *
  * The component does NOT enforce station/slot rules itself; it only renders
  * actions the caller routes to the correct edge function. Server-side checks
@@ -42,7 +42,7 @@ interface Props {
   craftNoun?: string;
 }
 
-export function ForgeUpgradeView({
+export function useForgeUpgradeView({
   characterId, characterLevel, gold, inventory, slots,
   onGoldChange, onInventoryChange, addLog, craftNoun = 'Base',
 }: Props) {

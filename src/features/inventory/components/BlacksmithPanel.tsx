@@ -11,7 +11,7 @@ import { Character } from '@/features/character';
 import { useSoulforgeForge } from './SoulforgeTabContent';
 import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
-import { ForgeUpgradeView } from './ForgeUpgradeView';
+import { useForgeUpgradeView } from './useForgeUpgradeView';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
 
@@ -179,7 +179,7 @@ export default function BlacksmithPanel({
   );
 
   // ── Forge (Craft + Upgrade) ───────────────────────────────────
-  const { craftBlock, upgradeBlock } = ForgeUpgradeView({
+  const { craftBlock, upgradeBlock } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,

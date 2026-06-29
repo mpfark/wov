@@ -12,7 +12,7 @@ import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 import { GemIcon } from '@/components/icons/GemIcon';
-import { ForgeUpgradeView } from './ForgeUpgradeView';
+import { useForgeUpgradeView } from './useForgeUpgradeView';
 
 type JewelcrafterTab = 'repair' | 'forge' | 'gems';
 
@@ -196,7 +196,7 @@ export default function JewelcrafterPanel({
   );
 
   // ── Forge (Craft + Upgrade) ───────────────────────────────────
-  const { craftBlock, upgradeBlock } = ForgeUpgradeView({
+  const { craftBlock, upgradeBlock } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
