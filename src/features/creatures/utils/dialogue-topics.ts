@@ -12,7 +12,7 @@ import type { GameNode, Region, Area } from '@/features/world/hooks/useNodes';
 import { describeDirection, directionSentence } from '@/features/world/utils/directions';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 
-export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir';
+export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir' | 'assassin_contract';
 
 export interface DialogueTopic {
   id: string;
@@ -39,7 +39,10 @@ export interface ResolverContext {
   areas: Area[];
   /** Asking character's level — required for level-aware topics like hunt_dir. */
   characterLevel?: number;
+  /** Asking character — required for assassin contract topic. */
+  character?: { id: string; class: string; contracts_completed?: number; active_contract?: any } | null;
 }
+
 
 
 function regionName(regions: Region[], id: string): string {
