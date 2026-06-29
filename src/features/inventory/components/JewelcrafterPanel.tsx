@@ -167,7 +167,7 @@ export default function JewelcrafterPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      // Salvage + gem counts come from the character_materials realtime subscription.
+      void refreshMaterials();
       onInventoryChange();
       onCharacterRefresh?.();
       const gemUsed: GemKey | undefined = data.gem_used;
@@ -196,6 +196,7 @@ export default function JewelcrafterPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
+      void refreshMaterials();
       addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
       setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
@@ -214,7 +215,7 @@ export default function JewelcrafterPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      // character_materials realtime updates salvage + gem counts.
+      void refreshMaterials();
       addLog(`💠 Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`);
     } catch (e: any) {
       addLog(`❌ Gem trade failed: ${e.message || 'Unknown error'}`);
@@ -238,7 +239,7 @@ export default function JewelcrafterPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      // character_materials realtime updates the gem counts.
+      void refreshMaterials();
       addLog(`💠 Fused ${data.consumed.map((c: any) => c.name).join(' + ')} → 1 ${data.gem_name}.`);
     } catch (e: any) {
       addLog(`❌ Gem fusion failed: ${e.message || 'Unknown error'}`);
