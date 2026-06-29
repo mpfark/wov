@@ -69,7 +69,12 @@ interface Props {
   comparison?: ComparisonProp | null;
   flavorText?: string | null;
   showValue?: boolean;
+  /** Per-instance gem upgrades (gem key → count). Adds +1 to mapped stat per gem. */
+  appliedGems?: Record<string, number> | null;
+  /** Per-instance base stat override (replaces items.stats for display). */
+  statOverride?: Record<string, number> | null;
 }
+
 
 const Divider = () => <div className="divider-hairline" />;
 
