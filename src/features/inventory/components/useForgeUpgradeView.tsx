@@ -75,7 +75,7 @@ export function useForgeUpgradeView({
       const { data } = await supabase.from('items')
         .select('id, name, slot, hands, weapon_tag')
         .eq('origin_type', 'plain_base')
-        .in('slot', slots.map(s => s.value))
+        .in('slot', slots.map(s => s.value) as any)
         .order('weapon_tag', { nullsFirst: true })
         .order('name');
       if (!cancelled) {
