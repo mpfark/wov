@@ -2136,13 +2136,20 @@ Deno.serve(async (req) => {
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
 
     // ── PHASE A: Independent writes (parallel) ──────────────────
+    const contractPromises = contractCompletions.map(cid => {
+      const ch = [...members, ...gracedExtras].find(mm => mm.id === cid)?.c;
+      const newCount = (ch?.contracts_completed || 0) + 1;
+      return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
+    });
     await Promise.all([
       writeCreatureState(db, creatures, cHp, cKilled),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
       ...degradePromises,
+      ...contractPromises,
     ]);
+
 
     // ── PHASE B: Order-dependent writes (sequential) ────────────
     // Loot depends on killed creatures being persisted
