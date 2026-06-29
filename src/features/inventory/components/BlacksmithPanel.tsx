@@ -13,7 +13,7 @@ import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
-type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
+type BlacksmithTab = 'repair' | 'forge' | 'enhance' | 'soulforge';
 
 interface Props {
   open: boolean;
