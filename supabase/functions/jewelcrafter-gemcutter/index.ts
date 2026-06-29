@@ -3,8 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   GEM_CATALOG,
   PRIMARY_GEM_KEYS,
-  HYBRID_GEM_KEYS,
-  hybridRecipe,
   GEM_SALVAGE_COST_PRIMARY,
   type GemKey,
 } from "../_shared/formulas/gems.ts";
