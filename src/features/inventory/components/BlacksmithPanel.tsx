@@ -248,15 +248,17 @@ export default function BlacksmithPanel({
 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
-      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Repair</TabsTrigger>
         <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">⚒️ Forge</TabsTrigger>
+        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary">💠 Enhance</TabsTrigger>
         {showSoulforge && (
           <TabsTrigger value="soulforge" className="t-label text-[11px] data-[state=active]:text-soulforged text-soulforged">⚒️ Soulforge</TabsTrigger>
         )}
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
+      <TabsContent value="enhance" className="hidden" />
       {showSoulforge && <TabsContent value="soulforge" className="hidden" />}
     </Tabs>
   );
@@ -280,10 +282,16 @@ export default function BlacksmithPanel({
     activeRightTitle = sf.rightTitle as string | undefined;
   } else if (tab === 'forge') {
     activeLeft = forgeLeft;
-    activeRight = upgradeBlock;
+    activeRight = forgeRight;
     activeFooter = null;
     activeLeftTitle = 'Craft & Pouch';
-    activeRightTitle = 'Upgrade Your Gear';
+    activeRightTitle = 'How the Forge Works';
+  } else if (tab === 'enhance') {
+    activeLeft = enhanceLeft;
+    activeRight = enhanceRight;
+    activeFooter = null;
+    activeLeftTitle = 'Eligible Gear';
+    activeRightTitle = 'Socket Gems';
   } else {
     activeLeft = repairLeft;
     activeRight = repairRight;
