@@ -626,8 +626,11 @@ export default function CharacterPanel({
                                   qty={all.length}
                                   isBroken={isBroken}
                                   comparison={comparison}
+                                  appliedGems={inv.applied_gems}
+                                  statOverride={inv.stat_override}
                                 />
                               );
+
                             })()}
                           </TooltipContent>
                         </Tooltip>
