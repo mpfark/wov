@@ -476,7 +476,7 @@ export default function CharacterPanel({
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
-                                <ItemTooltipCard item={inv.item as any} qty={all.length} />
+                                <ItemTooltipCard item={inv.item as any} qty={all.length} appliedGems={inv.applied_gems} statOverride={inv.stat_override} />
                               </TooltipContent>
                             </Tooltip>
                             <div className="flex gap-0.5 shrink-0 ml-1">
