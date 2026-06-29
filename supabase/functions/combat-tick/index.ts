@@ -568,6 +568,8 @@ Deno.serve(async (req) => {
     const bondGainQueue: { memberId: string; creatureLevel: number; isBoss: boolean }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>();
+    const contractCompletions: string[] = [];
+
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     // Initialize reward maps for everyone who could collect XP this tick
