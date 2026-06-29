@@ -568,6 +568,8 @@ Deno.serve(async (req) => {
     const bondGainQueue: { memberId: string; creatureLevel: number; isBoss: boolean }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>();
+    const contractCompletions: string[] = [];
+
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     // Initialize reward maps for everyone who could collect XP this tick
@@ -724,7 +726,46 @@ Deno.serve(async (req) => {
         mGold[mr.memberId] += mr.gold;
         mBhp[mr.memberId] += mr.bhp;
         mSalvage[mr.memberId] += mr.salvage;
+
+        // ── Assassin contract bonus ────────────────────────────────
+        // 125% of this recipient's earned reward, paid only to the
+        // contract holder whose active_contract matches this kill.
+        // Renown bonus only materializes for rare targets (mr.bhp > 0).
+        const holder = members.find(mm => mm.id === mr.memberId)
+                    ?? gracedExtras.find(mm => mm.id === mr.memberId);
+        const contract = (holder?.c as any)?.active_contract;
+        if (
+          holder
+          && (holder.c as any).class === 'assassin'
+          && contract
+          && contract.creature_id === creature.id
+          && creature.rarity !== 'boss'
+        ) {
+          const bonusXp = Math.floor(mr.xp * 1.25);
+          const bonusGold = Math.floor(mr.gold * 1.25);
+          const bonusBhp = Math.floor(mr.bhp * 1.25);
+          mXp[mr.memberId] += bonusXp;
+          mGold[mr.memberId] += bonusGold;
+          mBhp[mr.memberId] += bonusBhp;
+
+          const tokens: string[] = [];
+          if (bonusXp > 0) tokens.push(`+${bonusXp} XP`);
+          if (bonusGold > 0) tokens.push(`+${bonusGold} gold`);
+          if (bonusBhp > 0) tokens.push(`+${bonusBhp} 🏛️ Renown`);
+          events.push({
+            type: 'contract_complete',
+            character_id: mr.memberId,
+            message: `🗡️ Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
+          });
+
+          // Clear contract + bump lifetime counter (separate update so it
+          // runs even if no other character columns change).
+          contractCompletions.push(mr.memberId);
+          // Wipe in-memory so a second kill in the same tick can't double-claim.
+          (holder.c as any).active_contract = null;
+        }
       }
+
 
       // Boss death cry: live combat broadcasts via a dedicated event type so
       // both the killer and any party-mates at other nodes can render the
@@ -2095,13 +2136,20 @@ Deno.serve(async (req) => {
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
 
     // ── PHASE A: Independent writes (parallel) ──────────────────
+    const contractPromises = contractCompletions.map(cid => {
+      const ch = [...members, ...gracedExtras].find(mm => mm.id === cid)?.c;
+      const newCount = (ch?.contracts_completed || 0) + 1;
+      return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
+    });
     await Promise.all([
       writeCreatureState(db, creatures, cHp, cKilled),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
       ...degradePromises,
+      ...contractPromises,
     ]);
+
 
     // ── PHASE B: Order-dependent writes (sequential) ────────────
     // Loot depends on killed creatures being persisted

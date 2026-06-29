@@ -12,7 +12,7 @@ import type { GameNode, Region, Area } from '@/features/world/hooks/useNodes';
 import { describeDirection, directionSentence } from '@/features/world/utils/directions';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 
-export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir';
+export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir' | 'assassin_contract';
 
 export interface DialogueTopic {
   id: string;
@@ -39,7 +39,10 @@ export interface ResolverContext {
   areas: Area[];
   /** Asking character's level — required for level-aware topics like hunt_dir. */
   characterLevel?: number;
+  /** Asking character — required for assassin contract topic. */
+  character?: { id: string; class: string; contracts_completed?: number; active_contract?: any } | null;
 }
+
 
 
 function regionName(regions: Region[], id: string): string {
@@ -122,6 +125,33 @@ function huntResponse(ctx: ResolverContext): string {
   return `If it's prey near your measure, try **${area.name}** (levels ${area.min_level}–${area.max_level}) — it ${directionSentence(hint)}${regionClause}.`;
 }
 
+function contractResponse(ctx: ResolverContext): string {
+  const ch = ctx.character;
+  if (!ch) return '...';
+  if (ch.class !== 'assassin') {
+    return "Contracts? Those are work for sharper hands than yours. Speak to the Assassin Order if you wish to learn.";
+  }
+  const contract = ch.active_contract;
+  if (!contract) {
+    return "I have no mark for you at this moment. Ask, and I'll pull a name from the ledger.";
+  }
+  const areaName = contract.area_name ?? 'an unmarked place';
+  const target = contract.creature_name ?? 'your mark';
+  const lvl = contract.target_level;
+  const rarity = contract.rarity === 'rare' ? ' (a rare quarry — Renown awaits)' : '';
+  // Direction hint via any node in the contract area.
+  const anchor = ctx.nodes
+    .filter(n => n.area_id === contract.area_id)
+    .sort((a, b) => a.name.localeCompare(b.name))[0];
+  let where = `Seek **${areaName}**.`;
+  if (ctx.fromNode && anchor && anchor.id !== ctx.fromNode.id) {
+    where = `It ${directionSentence(describeDirection(ctx.fromNode, anchor))} — in **${areaName}**.`;
+  } else if (ctx.fromNode && anchor && anchor.id === ctx.fromNode.id) {
+    where = `You stand in **${areaName}** already. Find the mark and strike.`;
+  }
+  return `Your contract stands: **${target}** (level ${lvl})${rarity}.\n${where}\nReturn when the deed is done — the reward is yours.`;
+}
+
 /** Resolve a topic into a player-facing label + response string. */
 export function resolveTopic(topic: DialogueTopic, ctx: ResolverContext): ResolvedTopic {
   switch (topic.kind) {
@@ -140,10 +170,13 @@ export function resolveTopic(topic: DialogueTopic, ctx: ResolverContext): Resolv
       };
     case 'hunt_dir':
       return { id: topic.id, label: topic.label, response: huntResponse(ctx) };
+    case 'assassin_contract':
+      return { id: topic.id, label: topic.label, response: contractResponse(ctx) };
     default:
       return { id: topic.id, label: topic.label, response: topic.response ?? '...' };
   }
 }
+
 
 
 /**

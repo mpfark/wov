@@ -388,6 +388,8 @@ const KIND_LABELS: Record<TopicKind, string> = {
   class_hall_dir: 'Class Hall Directions',
   class_hall_menu: 'Class Hall Menu (auto-lists all)',
   hunt_dir: 'Hunting Grounds (auto, level-matched)',
+  assassin_contract: 'Assassin Contract (take/abandon)',
+
 };
 
 

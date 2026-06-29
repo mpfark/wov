@@ -1521,9 +1521,22 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           npc={talkingToNPC}
           open={!!talkingToNPC}
           onClose={() => setTalkingToNPC(null)}
-          worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}
-
+          worldContext={{
+            fromNode: currentNode,
+            nodes,
+            regions,
+            areas,
+            characterLevel: character.level,
+            character: {
+              id: character.id,
+              class: character.class as string,
+              contracts_completed: (character as any).contracts_completed ?? 0,
+              active_contract: (character as any).active_contract ?? null,
+            },
+          }}
+          onContractChanged={() => { refetchCharacters?.(); }}
         />
+
       )}
 
       <OrderRecruiterDialog
