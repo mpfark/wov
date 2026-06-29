@@ -107,3 +107,44 @@ export function calculateRepairCost(_maxDurability: number, currentDurability: n
   // All items have a fixed max durability of 100
   return Math.max(1, Math.ceil((100 - currentDurability) * value * mult / 100));
 }
+
+// ───────────────────────────────────────────────────────────────────────
+// effectiveItemStats — per-instance stat resolution for the gem-upgrade
+// system. Combines:
+//   1. base stats          (stat_override if present, else items.stats)
+//   2. applied_gems        (each gem → +N to its single attribute)
+// All read paths (UI tooltips, inventory bonuses, combat-tick equipment
+// aggregation) should use this so player-applied gems are counted exactly
+// once, regardless of whether the underlying item template was migrated.
+// ───────────────────────────────────────────────────────────────────────
+
+/** Attribute granted by each primary gem key. */
+const GEM_TO_ATTR: Record<string, string> = {
+  garnet: 'str', topaz: 'dex', emerald: 'con',
+  sapphire: 'int', pearl: 'wis', amethyst: 'cha',
+};
+
+export interface EffectiveStatsInput {
+  baseStats?: Record<string, number> | null;
+  statOverride?: Record<string, number> | null;
+  appliedGems?: Record<string, number> | null;
+}
+
+export function effectiveItemStats(input: EffectiveStatsInput): Record<string, number> {
+  const base = input.statOverride ?? input.baseStats ?? {};
+  const out: Record<string, number> = { ...base };
+  const gems = input.appliedGems ?? {};
+  for (const [gem, count] of Object.entries(gems)) {
+    if (!count || count <= 0) continue;
+    const attr = GEM_TO_ATTR[gem];
+    if (!attr) continue;
+    out[attr] = (out[attr] ?? 0) + count;
+  }
+  return out;
+}
+
+/** Use the per-instance crafted_level if present, else the template level. */
+export function effectiveItemLevel(itemLevel: number | null | undefined, craftedLevel?: number | null): number {
+  return (craftedLevel ?? itemLevel ?? 1);
+}
+

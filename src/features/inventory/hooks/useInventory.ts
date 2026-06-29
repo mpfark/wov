@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { effectiveItemStats } from '@/shared/formulas/items';
 
 export interface InventoryItem {
   id: string;
@@ -8,6 +9,12 @@ export interface InventoryItem {
   equipped_slot: string | null;
   current_durability: number;
   is_pinned: boolean;
+  /** Per-instance gem upgrades — gem key → count. See effectiveItemStats(). */
+  applied_gems?: Record<string, number> | null;
+  /** When present, replaces items.stats as the base for effective stats. */
+  stat_override?: Record<string, number> | null;
+  /** Per-instance crafted level for stat budget/cap calc. */
+  crafted_level?: number | null;
   item: {
     id: string;
     name: string;
@@ -26,6 +33,15 @@ export interface InventoryItem {
     level?: number | null;
     procs?: any;
   };
+}
+
+/** Effective stats for an inventory instance (base + stat_override + applied_gems). */
+export function getEffectiveStats(inv: Pick<InventoryItem, 'applied_gems' | 'stat_override' | 'item'>): Record<string, number> {
+  return effectiveItemStats({
+    baseStats: inv.item?.stats,
+    statOverride: inv.stat_override,
+    appliedGems: inv.applied_gems,
+  });
 }
 
 interface UseInventoryOptions {
@@ -115,8 +131,9 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   const useConsumable = useCallback(async (inventoryId: string, _characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
     const inv = inventory.find(i => i.id === inventoryId);
     if (!inv || inv.item.item_type !== 'consumable') return null;
-    const hpRestore = (inv.item.stats?.hp as number) || 0;
-    const hpRegen = (inv.item.stats?.hp_regen as number) || 0;
+    const eff = getEffectiveStats(inv);
+    const hpRestore = (eff.hp as number) || 0;
+    const hpRegen = (eff.hp_regen as number) || 0;
     if (hpRestore <= 0 && hpRegen <= 0) return null;
     if (hpRestore > 0) {
       const newHp = Math.min(currentHp + hpRestore, maxHp);
@@ -130,8 +147,11 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
 
-  const equipmentBonuses = equipped.filter(i => i.current_durability > 0).reduce((acc, item) => {
-    const stats = item.item.stats || {};
+  const equipmentBonuses = equipped.filter(i => i.current_durability > 0).reduce((acc, inv) => {
+    // Effective stats = (stat_override ?? items.stats) + applied_gems → attrs.
+    // Player-applied gem upgrades must be counted exactly once here so the
+    // character panel and any downstream consumer of equipmentBonuses see them.
+    const stats = getEffectiveStats(inv);
     for (const [key, val] of Object.entries(stats)) {
       acc[key] = (acc[key] || 0) + (val as number);
     }

@@ -72,6 +72,7 @@ import {
 import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
 import { getEffectiveCombatMod } from "../_shared/formulas/effective.ts";
 import { bondMultiplier } from "../_shared/formulas/bond.ts";
+import { effectiveItemStats } from "../_shared/formulas/items.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
@@ -427,7 +428,7 @@ Deno.serve(async (req) => {
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes, bondsRes] = await Promise.all([
       db.from('character_inventory')
-        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs, level)')
+        .select('character_id, equipped_slot, applied_gems, stat_override, crafted_level, item:items(stats, weapon_tag, hands, procs, level)')
         .in('character_id', charIds)
         .not('equipped_slot', 'is', null),
       db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
@@ -475,7 +476,14 @@ Deno.serve(async (req) => {
       let ohRarity: string | null = null;
       const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
-        for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
+        // Effective stats = (stat_override ?? items.stats) + applied_gems → attrs.
+        // Player-applied gem upgrades must be counted exactly once here.
+        const eff = effectiveItemStats({
+          baseStats: (e.item as any)?.stats,
+          statOverride: (e as any).stat_override,
+          appliedGems: (e as any).applied_gems,
+        });
+        for (const [s, v] of Object.entries(eff)) {
           b[s] = (b[s] || 0) + (v as number);
         }
         if (e.equipped_slot === 'main_hand') {
