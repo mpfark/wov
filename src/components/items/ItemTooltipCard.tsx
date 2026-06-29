@@ -178,6 +178,30 @@ export default function ItemTooltipCard({
         </>
       )}
 
+      {/* 2b — Socketed gems (per-instance upgrades) */}
+      {hasGemBlock && (
+        <>
+          <Divider />
+          <div className="gap-row">
+            <div className="t-label mb-0.5">💠 Socketed</div>
+            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+              {gemEntries.map(([gemKey, count]) => {
+                const def = GEM_CATALOG[gemKey as GemKey];
+                if (!def) return null;
+                return (
+                  <span key={gemKey} className="t-meta inline-flex items-baseline gap-1">
+                    <span style={{ color: def.color }}>●</span>
+                    <span>{def.name}</span>
+                    <span className="t-numeric t-numeric-pos">×{count as number}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+
       {/* 3 — Metadata (durability / value / qty / broken) */}
       {hasMetaBlock && (
         <>
