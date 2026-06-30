@@ -1544,6 +1544,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
       )}
 
+      <MapItemDialog
+        open={!!openMapInvId}
+        inv={unequipped.find(i => i.id === openMapInvId) ?? null}
+        onClose={() => setOpenMapInvId(null)}
+        nodes={nodes}
+        areas={areas}
+        regions={regions}
+        currentNodeId={character.current_node_id}
+      />
+
+
       <OrderRecruiterDialog
         open={recruiterOpen}
         onClose={() => { setRecruiterOpen(false); setActiveServiceNpc(null); }}
