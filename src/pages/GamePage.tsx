@@ -6,6 +6,7 @@ import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
+import MapItemDialog from '@/features/inventory/components/MapItemDialog';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
 import JewelcrafterPanel from '@/features/inventory/components/JewelcrafterPanel';
 import StonebinderPanel from '@/features/inventory/components/StonebinderPanel';
