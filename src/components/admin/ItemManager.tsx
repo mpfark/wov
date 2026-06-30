@@ -43,6 +43,9 @@ interface Item {
   illustration_url: string | null;
   illustration_metadata: Record<string, string> | null;
   procs: ProcEntry[];
+  map_target_node_id: string | null;
+  map_region_id: string | null;
+  map_flavor: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
