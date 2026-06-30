@@ -12,7 +12,7 @@ import type { GameNode, Region, Area } from '@/features/world/hooks/useNodes';
 import { describeDirection, directionSentence } from '@/features/world/utils/directions';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 
-export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir' | 'assassin_contract';
+export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir' | 'assassin_contract' | 'give_item';
 
 export interface DialogueTopic {
   id: string;
