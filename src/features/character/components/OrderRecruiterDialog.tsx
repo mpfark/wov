@@ -86,47 +86,74 @@ export default function OrderRecruiterDialog({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md border-primary/30 bg-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-primary text-glow flex items-center gap-2">
-            🏰 {npc?.name ?? 'Recruiter'} — {hallLabel} Hall
+          <DialogTitle className="font-display text-primary text-glow text-center tracking-wide">
+            — {npc?.name ?? 'Recruiter'} —
           </DialogTitle>
-          {npc?.description && (
-            <DialogDescription className="text-xs italic">{npc.description}</DialogDescription>
-          )}
+          <DialogDescription className="text-xs italic text-center">
+            {hallLabel} Hall{npc?.description ? ` · ${npc.description}` : ''}
+          </DialogDescription>
         </DialogHeader>
 
-        {(npc?.dialogue || activeTopic) && (
-          <div className="p-3 bg-background/50 rounded border border-border">
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {activeTopic?.response ?? npc?.dialogue}
-            </p>
+        <div className="px-4 py-3 bg-background/40 rounded border border-border/60 min-h-[80px] relative">
+          <span aria-hidden className="absolute -top-1 left-2 font-display text-2xl text-primary/40 leading-none select-none">“</span>
+          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap italic font-display px-3">
+            {activeTopic?.response ?? npc?.dialogue ?? '...'}
+          </p>
+          <span aria-hidden className="absolute -bottom-3 right-2 font-display text-2xl text-primary/40 leading-none select-none">”</span>
+        </div>
+
+        {topics.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-2 text-muted-foreground/70">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[10px] uppercase tracking-[0.2em] font-display">— speak —</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <ul className="flex flex-col gap-0.5">
+              {topics.map((t, i) => {
+                const isActive = activeTopicId === t.id;
+                return (
+                  <li key={t.id}>
+                    <button
+                      onClick={() => setActiveTopicId(t.id)}
+                      className={[
+                        'group w-full text-left flex items-baseline gap-2 py-1.5 pl-2 pr-1',
+                        'font-display italic transition-all',
+                        isActive
+                          ? 'text-primary text-glow border-l-2 border-primary/70'
+                          : 'text-foreground/70 hover:text-primary border-l-2 border-transparent hover:border-primary/40',
+                      ].join(' ')}
+                    >
+                      <span className="text-xs text-muted-foreground/60 not-italic w-4 shrink-0">{i + 1}.</span>
+                      <span
+                        aria-hidden
+                        className={[
+                          'text-primary transition-opacity',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-80',
+                        ].join(' ')}
+                      >
+                        ›
+                      </span>
+                      <span className="text-sm leading-snug">“{t.label}”</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {activeTopicId && (
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={() => setActiveTopicId(null)}
+                  className="text-xs italic font-display text-muted-foreground hover:text-primary transition-colors"
+                >
+                  ‹ say nothing more
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {topics.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
-              Ask about
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {topics.map(t => (
-                <Button
-                  key={t.id}
-                  variant={activeTopicId === t.id ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="justify-start text-left h-auto py-2 font-normal"
-                  onClick={() => setActiveTopicId(t.id)}
-                >
-                  <span className="text-xs">“{t.label}”</span>
-                </Button>
-              ))}
-              {activeTopicId && (
-                <Button variant="ghost" size="sm" className="self-end text-xs" onClick={() => setActiveTopicId(null)}>
-                  ← Back
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+
 
 
         <div className="space-y-3">
