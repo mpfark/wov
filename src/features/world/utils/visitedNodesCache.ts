@@ -54,6 +54,21 @@ export async function markNodeVisited(characterId: string, nodeId: string): Prom
   if (error) {
     // Roll the local cache back so a retry can happen next time.
     set.delete(nodeId);
+    return;
+  }
+  // Reaching a node may consume any treasure-map quest items the player
+  // owns that point at this node. Fire-and-forget; if any rows were
+  // deleted, signal the inventory hook to refetch.
+  try {
+    const { data } = await supabase.rpc('consume_maps_for_node' as any, {
+      _character_id: characterId,
+      _node_id: nodeId,
+    });
+    if ((data as number | null) && (data as number) > 0) {
+      window.dispatchEvent(new CustomEvent('inventory:changed'));
+    }
+  } catch {
+    /* non-critical */
   }
 }
 
