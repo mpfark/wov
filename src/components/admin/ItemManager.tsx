@@ -356,6 +356,9 @@ export default function ItemManager() {
       illustration_url: form.illustration_url ?? '',
       illustration_metadata: form.illustration_metadata ?? {},
       procs: form.rarity === 'unique' ? (form.procs || []) : [],
+      map_target_node_id: form.item_type === 'quest' ? form.map_target_node_id : null,
+      map_region_id: form.item_type === 'quest' ? form.map_region_id : null,
+      map_flavor: form.item_type === 'quest' ? (form.map_flavor || null) : null,
     };
 
     let savedId = selectedId;
