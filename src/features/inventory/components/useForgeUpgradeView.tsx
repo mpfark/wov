@@ -24,6 +24,9 @@ import {
   getItemStatBudget,
   getItemStatCap,
   calculateItemStatCost,
+  getCraftableTierForLevel,
+  getCraftedLevelForTier,
+  GEAR_TIERS,
 } from '@/shared/formulas/items';
 import { WEAPON_TAG_LABELS } from '@/lib/game-data';
 
@@ -38,6 +41,7 @@ interface PlainBase {
   slot: string;
   hands: number | null;
   weapon_tag: string | null;
+  tier: number | null;
 }
 
 interface Props {
