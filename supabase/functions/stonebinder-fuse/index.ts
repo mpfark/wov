@@ -214,19 +214,16 @@ Deno.serve(async (req) => {
     }
     const inserted = { id: newInvId as string | null };
 
-    // Small static crafting XP (skipped at cap).
+    // Small static crafting XP (routes through apply_crafting_xp for level-ups).
     const CRAFT_XP = 25;
     let xpAwarded = 0;
-    {
-      const { data: charLvl } = await supabase
-        .from('characters').select('level, xp').eq('id', character_id).single();
-      if (charLvl && charLvl.level < 42) {
-        xpAwarded = CRAFT_XP;
-        await supabase
-          .from('characters')
-          .update({ xp: (charLvl.xp ?? 0) + CRAFT_XP })
-          .eq('id', character_id);
-      }
+    try {
+      const { data } = await supabase.rpc('apply_crafting_xp', {
+        p_character_id: character_id, p_xp: CRAFT_XP,
+      });
+      if (data) xpAwarded = CRAFT_XP;
+    } catch (xpErr) {
+      console.error('apply_crafting_xp failed:', xpErr);
     }
 
     // Activity log removed — feature deprecated.
