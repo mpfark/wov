@@ -142,7 +142,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
     );
   };
 
-  return (
+  const allocatorBlock = (
     <div className="gap-section">
       {/* Points remaining */}
       <div className="text-center font-display text-sm">
@@ -193,32 +193,6 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
         })}
       </div>
 
-      {/* Derived stats preview */}
-      {totalSpent > 0 && (
-        <div className="border-t border-border-subtle pt-3 gap-group">
-          <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
-
-          <div className="gap-row">
-            <CompRow label="Max HP" currentVal={derived.current.maxHp} plannedVal={derived.planned.maxHp} />
-            <CompRow label="HP Regen" currentVal={derived.current.hpRegen} plannedVal={derived.planned.hpRegen} format={v => `${v}/tick`} />
-            <CompRow label="Max CP" currentVal={derived.current.maxCp} plannedVal={derived.planned.maxCp} />
-            <CompRow label="CP Regen" currentVal={derived.current.cpRegen} plannedVal={derived.planned.cpRegen} format={v => `${v}/tick`} />
-            <CompRow label="Max Stamina" currentVal={derived.current.maxMp} plannedVal={derived.planned.maxMp} />
-            <CompRow label="Stamina Regen" currentVal={derived.current.mpRegen} plannedVal={derived.planned.mpRegen} format={v => `${v}/tick`} />
-          </div>
-
-          <div className="gap-row">
-            <CompRow label="AC" currentVal={derived.current.ac} plannedVal={derived.planned.ac} />
-            <CompRow label="Hit Bonus" currentVal={derived.current.totalHit} plannedVal={derived.planned.totalHit} format={v => `+${v}`} />
-            <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />
-            <CompRow label="Atk Speed" currentVal={derived.current.atkSpeed} plannedVal={derived.planned.atkSpeed} format={v => `${v.toFixed(1)}s`} lowerIsBetter />
-            <CompRow label="Min Damage" currentVal={derived.current.strFloor} plannedVal={derived.planned.strFloor} format={v => v > 0 ? `+${v}` : '–'} />
-            <CompRow label="Crit Resistance" currentVal={derived.current.wisAntiCrit} plannedVal={derived.planned.wisAntiCrit} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
-            <CompRow label="Vendor Discount" currentVal={derived.current.buyDisc} plannedVal={derived.planned.buyDisc} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
-          </div>
-        </div>
-      )}
-
       {/* Footer actions */}
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={totalSpent === 0}>
@@ -228,6 +202,81 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
           <Check className="w-3 h-3 mr-1" /> Commit {totalSpent} Point{totalSpent !== 1 ? 's' : ''}
         </Button>
       </div>
+
+      {/* Respec section (optional) */}
+      {onRequestRespec && (
+        <div className="border-t border-border-subtle pt-3 gap-row">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Respec Points</span>
+            <span className="font-display text-chart-5">{respecPoints ?? 0}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full font-display text-chart-5 border-chart-5/40 hover:bg-chart-5/10 text-[11px]"
+            disabled={!respecAvailable}
+            onClick={onRequestRespec}
+          >
+            {respecAvailable
+              ? 'Spend 1 Respec Point — Refund Manual Allocations'
+              : 'No Respec Points Available'}
+          </Button>
+          <p className="text-[10px] text-muted-foreground italic leading-relaxed">
+            Resets all manually allocated points back into your unspent pool. Class level bonuses and Renown training are preserved.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const previewBlock = (
+    <div className="gap-group">
+      <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
+      {totalSpent === 0 ? (
+        <p className="text-xs text-muted-foreground italic">
+          Allocate points on the left to preview how they affect your stats.
+        </p>
+      ) : (
+        <>
+          <div className="gap-row">
+            <CompRow label="Max HP" currentVal={derived.current.maxHp} plannedVal={derived.planned.maxHp} />
+            <CompRow label="HP Regen" currentVal={derived.current.hpRegen} plannedVal={derived.planned.hpRegen} format={v => `${v}/tick`} />
+            <CompRow label="Max CP" currentVal={derived.current.maxCp} plannedVal={derived.planned.maxCp} />
+            <CompRow label="CP Regen" currentVal={derived.current.cpRegen} plannedVal={derived.planned.cpRegen} format={v => `${v}/tick`} />
+            <CompRow label="Max Stamina" currentVal={derived.current.maxMp} plannedVal={derived.planned.maxMp} />
+            <CompRow label="Stamina Regen" currentVal={derived.current.mpRegen} plannedVal={derived.planned.mpRegen} format={v => `${v}/tick`} />
+          </div>
+          <div className="gap-row">
+            <CompRow label="AC" currentVal={derived.current.ac} plannedVal={derived.planned.ac} />
+            <CompRow label="Hit Bonus" currentVal={derived.current.totalHit} plannedVal={derived.planned.totalHit} format={v => `+${v}`} />
+            <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />
+            <CompRow label="Atk Speed" currentVal={derived.current.atkSpeed} plannedVal={derived.planned.atkSpeed} format={v => `${v.toFixed(1)}s`} lowerIsBetter />
+            <CompRow label="Min Damage" currentVal={derived.current.strFloor} plannedVal={derived.planned.strFloor} format={v => v > 0 ? `+${v}` : '–'} />
+            <CompRow label="Crit Resistance" currentVal={derived.current.wisAntiCrit} plannedVal={derived.planned.wisAntiCrit} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
+            <CompRow label="Vendor Discount" currentVal={derived.current.buyDisc} plannedVal={derived.planned.buyDisc} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  if (layout === 'split') {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-h-0">
+        <div className="min-h-0">{allocatorBlock}</div>
+        <div className="min-h-0 sm:border-l sm:border-[hsl(var(--gold)/0.2)] sm:pl-4">{previewBlock}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="gap-section">
+      {allocatorBlock}
+      {totalSpent > 0 && (
+        <div className="border-t border-border-subtle pt-3">
+          {previewBlock}
+        </div>
+      )}
     </div>
   );
 }
