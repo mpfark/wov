@@ -407,6 +407,12 @@ function TopicsEditor({
   topics: DialogueTopic[];
   onChange: (next: DialogueTopic[]) => void;
 }) {
+  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string }>>([]);
+  useEffect(() => {
+    supabase.from('items').select('id, name, item_type').order('name').then(({ data }) => {
+      if (data) setGiveItems(data as any);
+    });
+  }, []);
   const update = (idx: number, patch: Partial<DialogueTopic>) => {
     onChange(topics.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
   };
