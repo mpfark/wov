@@ -171,6 +171,8 @@ serve(async (req) => {
       gold_remaining: char.gold - goldCost,
       salvage_spent: salvageCost,
       gem_used: gemKey,
+      xp_awarded: CRAFT_XP,
+      xp_result: xpResult,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("forge-apply-gem error:", e);
