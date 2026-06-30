@@ -428,7 +428,9 @@ export default function TrainerPanel({
         tabs={tabsRow}
         singleColumn
         left={tabContent}
+        miniLog={miniLog}
       />
+
 
       {/* Respec confirmation */}
       <AlertDialog open={showRespecConfirm} onOpenChange={setShowRespecConfirm}>
