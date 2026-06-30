@@ -162,6 +162,18 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
               )}
             </div>
           )}
+          {isGiveItemTopic && character && giveItemId && (
+            <div className="mt-4 flex justify-end">
+              <button
+                disabled={busy}
+                onClick={receiveGiftedItem}
+                className="text-primary hover:text-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs font-display italic"
+              >
+                📜 Take what is offered
+              </button>
+            </div>
+          )}
+
           {isAssassinContractTopic && hasActiveContract && (
             <p className="mt-2 text-[10px] text-muted-foreground text-right">
               Lifetime contracts completed: <b>{character?.contracts_completed ?? 0}</b>
