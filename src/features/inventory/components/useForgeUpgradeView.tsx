@@ -182,7 +182,7 @@ export function useForgeUpgradeView({
     setWorking(null);
   };
 
-  // ── Craft column ───────────────────────────────────────────────
+  // ── Craft: left = slot picker + cost, right = base list under description.
   const craftBlock = (
     <div className="gap-section">
       <div>
@@ -193,7 +193,7 @@ export function useForgeUpgradeView({
           </span>
         </h3>
         <p className="text-[10px] text-muted-foreground italic mb-2">
-          Pick a slot, then choose a base style. All plain bases start without stats — socket gems via the Enhance tab. Uncommon (Fine) gear only drops from creatures.
+          Pick a slot, then choose a base style from the right column. All plain bases start without stats — socket gems via the Enhance tab. Uncommon (Fine) gear only drops from creatures.
         </p>
       </div>
       <Select value={craftSlot} onValueChange={setCraftSlot}>
@@ -213,13 +213,23 @@ export function useForgeUpgradeView({
         <span>+</span>
         <span className={`font-display ${gold >= craftGold ? 'text-primary' : 'text-destructive'}`}>{craftGold}g</span>
       </div>
+    </div>
+  );
 
-      {craftSlot && (
+  const craftBasesList = (
+    <div className="gap-group">
+      <div className="t-label text-[10px]">Available bases</div>
+      {!craftSlot && (
+        <p className="text-[10px] text-muted-foreground italic">Pick a slot on the left to see craftable bases.</p>
+      )}
+      {craftSlot && loadingBases && (
+        <p className="text-[10px] text-muted-foreground italic">Loading bases…</p>
+      )}
+      {craftSlot && !loadingBases && basesForSlot.length === 0 && (
+        <p className="text-[10px] text-muted-foreground italic">No plain bases defined for this slot.</p>
+      )}
+      {craftSlot && basesForSlot.length > 0 && (
         <div className="gap-row">
-          {loadingBases && <p className="text-[10px] text-muted-foreground italic">Loading bases…</p>}
-          {!loadingBases && basesForSlot.length === 0 && (
-            <p className="text-[10px] text-muted-foreground italic">No plain bases defined for this slot.</p>
-          )}
           {basesForSlot.map(base => {
             const tagBits: string[] = [];
             if (base.weapon_tag) tagBits.push(WEAPON_TAG_LABELS[base.weapon_tag] || base.weapon_tag);
