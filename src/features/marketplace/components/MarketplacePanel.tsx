@@ -483,6 +483,8 @@ export default function MarketplacePanel({
       left={left}
       right={right}
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }
