@@ -148,3 +148,38 @@ export function effectiveItemLevel(itemLevel: number | null | undefined, crafted
   return (craftedLevel ?? itemLevel ?? 1);
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// Tier helpers (Plain-Base catalog, 2026-07 overhaul).
+//
+// 5 tiers, each with its own crafted item level so weapon-die progression
+// (10/20/30 thresholds in formulas/weapons.ts) lines up cleanly:
+//
+//   Tier 1 "Worn"      → player unlock 1   →  item level 1
+//   Tier 2 "Sturdy"    → player unlock 10  →  item level 11  (+1 die)
+//   Tier 3 "Engraved"  → player unlock 20  →  item level 21  (+2 die)
+//   Tier 4 "Runed"     → player unlock 30  →  item level 31  (+3 die)
+//   Tier 5 "Ancient"   → player unlock 40  →  item level 41  (+3 die*)
+//   (*die cap is +3 in DEFAULT_WEAPON_PROGRESSION; T5 still gains stat
+//    budget via its higher item level.)
+// ───────────────────────────────────────────────────────────────────────
+
+export const GEAR_TIERS = [
+  { tier: 1, prefix: 'Worn',     unlockLevel: 1,  itemLevel: 1 },
+  { tier: 2, prefix: 'Sturdy',   unlockLevel: 10, itemLevel: 11 },
+  { tier: 3, prefix: 'Engraved', unlockLevel: 20, itemLevel: 21 },
+  { tier: 4, prefix: 'Runed',    unlockLevel: 30, itemLevel: 31 },
+  { tier: 5, prefix: 'Ancient',  unlockLevel: 40, itemLevel: 41 },
+] as const;
+
+/** Highest gear tier a character of the given player level can craft. */
+export function getCraftableTierForLevel(playerLevel: number): number {
+  let t = 1;
+  for (const row of GEAR_TIERS) if (playerLevel >= row.unlockLevel) t = row.tier;
+  return t;
+}
+
+/** The crafted_level snapshot we should stamp onto a freshly crafted base. */
+export function getCraftedLevelForTier(tier: number): number {
+  return GEAR_TIERS.find(r => r.tier === tier)?.itemLevel ?? 1;
+}
+
