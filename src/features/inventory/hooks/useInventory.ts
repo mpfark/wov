@@ -73,6 +73,12 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
     fetchInventory();
   }, [characterId, fetchInventory]);
 
+  useEffect(() => {
+    const handler = () => { fetchInventory(); };
+    window.addEventListener('inventory:changed', handler);
+    return () => window.removeEventListener('inventory:changed', handler);
+  }, [fetchInventory]);
+
   const syncResources = useCallback(async () => {
     if (!characterId) return;
     try {
