@@ -1022,6 +1022,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onDestroy: dropItem,
     onTogglePin: togglePin,
     onUseConsumable: handleUseConsumable,
+    onOpenMap: (invId: string) => setOpenMapInvId(invId),
     isAtInn: currentNode?.is_inn ?? false,
     regenTick,
     inCombat,
