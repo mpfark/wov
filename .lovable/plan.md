@@ -1,64 +1,90 @@
 ## Goal
 
-Stop generating hundreds of pre-statted item variants. World/forge drops become **plain bases** (slot, level, AC/HP only). Players choose stats by **socketing primary gems** at the forge. Hybrid gems are removed.
+Replace the 711-row archetype catalog with a clean, tiered pool of **plain base items** that players socket gems into. Both common and uncommon are plain bases — the only difference is that uncommon gives a larger stat budget. Uncommons are drop-only. Existing characters' gear is wiped (already refunded).
 
-## Rules
+## Tiers
 
-- **Gems**: only the 6 primary gems (garnet/topaz/emerald/sapphire/pearl/amethyst). Each = +1 to its stat per application.
-- **Upgrading**: applying a gem at the blacksmith (armor/weapons) or jewelcrafter (ring/trinket) consumes 1 gem + salvage + gold, and adds +1 to that stat on the item.
-- **Caps per item**: same as today (`getItemStatCap` from `formulas/items.ts`) — so a single stat can be maxed out, but total points are bounded by the item's stat budget (`getItemStatBudget`).
-- **Switching to a higher-level base = start over**: stats don't carry across bases. (Player crafts new base, re-applies gems.)
-- **Re-customize**: a "Reforge / Strip" action removes all gems for a salvage+gold cost; refunds NO gems (matches your answer "costs salvage/gold").
-- **Migration (existing inventory)**: strip stats off every owned item back to its base; refund the gem equivalent of the stripped stats into the player's gem pouch (1 stat point = 1 primary gem of that stat). Items keep their slot/level/AC/HP/durability.
+| Tier | Unlock level | Prefix    | Weapon damage |
+|------|--------------|-----------|---------------|
+| 1    | L1           | Worn      | base die      |
+| 2    | L10          | Sturdy    | +1 die step   |
+| 3    | L20          | Engraved  | +2 die steps  |
+| 4    | L30          | Runed     | +3 die steps  |
+| 5    | L40          | Ancient   | +4 die steps  |
 
-## Data model
+Stat budget = `getItemStatBudget(tier_unlock_level, rarity, hands)`. Uncommon naturally gets the existing 1.5× rarity multiplier (plus the +1 hybrid bonus at L30+), so a "Runed Fine Helm" (uncommon T4) has noticeably more sockets-worth of budget than "Runed Helm" (common T4). Per-attribute caps (`getItemStatCap`) are untouched.
 
-- Add columns to `character_inventory`:
-  - `applied_gems jsonb` — `{ "garnet": 2, "topaz": 1, ... }` per-instance stat additions.
-- Stats shown on an item instance = base item stats (AC/HP only on plain bases) + applied_gems mapped to stat points. UI and combat read effective stats through a single helper.
-- `items` table: world drops + forge pool become "plain" bases. Mark with `item_type='equipment'` and empty stat block (or AC/HP only). Existing rich variants get retired from drop tables.
-- Remove hybrid gems from `GEM_CATALOG`, `materials`, drop logic, and `gemForItem`. Convert any hybrid gems players own into 2 matching primaries.
+Weapon damage tier step uses the existing damage-tier helper in `_shared/formulas/combat.ts`. Each crafted/dropped weapon snapshots its `weapon_die` at craft time.
 
-## Forge UX
+## Naming grammar
 
-Blacksmith / Jewelcrafter panels get two tabs:
-1. **Craft Base** — pick slot, pay salvage+gold, receive a plain base at your level.
-2. **Upgrade** — pick an owned item, see current stats vs budget, click a gem to spend 1 gem + salvage + gold and add +1 to that stat. Disabled when stat cap or item budget is reached. "Strip" button clears all applied gems for a fixed cost.
+`[Tier Prefix] [Fine?] [Slot Type Noun]` — no archetype words, no stat-type words.
 
-## Cost model (initial tuning, adjustable)
+- Common: `Worn Helm`, `Sturdy Circlet`, `Engraved Cap`, `Runed Iron Sword`, `Ancient Oak Staff`.
+- Uncommon: inserts `Fine` — `Worn Fine Helm`, `Runed Fine Circlet`, `Ancient Fine Iron Sword`.
 
-- Craft base: same as today's forge cost (`salvage = 5 + level*2`, `gold = level*5`).
-- Apply gem: 1 gem + `2 + level` salvage + `level*2` gold per +1.
-- Strip: `level*10` gold + `level*3` salvage. Gems are destroyed.
+The 3 variants per non-weapon slot are **type flavors only** (mechanically identical at the same tier+rarity):
+- head: Helm / Circlet / Cap
+- chest: Plate / Vest / Robe
+- pants: Greaves / Leggings / Trousers
+- gloves: Gauntlets / Gloves / Wraps
+- ring: Band / Ring / Loop
+- trinket: Charm / Idol / Talisman
+- off_hand: Shield / Tome / Buckler
+
+Weapons keep their existing types (dagger / sword / axe / mace / bow / staff / wand) and don't take a slot-variant axis.
+
+Total ≈ (7 non-weapon slots × 3 variants + 7 weapons) × 5 tiers × 2 rarities ≈ **280 plain bases**, replacing 711 statted archetype seeds.
+
+## Drops
+
+Both commons and uncommons drop from any creature flagged for the standard world loot pool. The drop pipeline picks a tier matching the creature's level band and rolls common vs uncommon by the existing rarity-roll weights. The dropped item is a plain base — the player sockets it themselves at the smith. No `stat_override` is generated on drop.
+
+## Salvage gear → gems (partial refund)
+
+New `forge-salvage` edge function, accessible from the Enhance tab next to Strip:
+
+- Refund = **60 %** of applied gems (rounded down), returned as the matching primary gems.
+- Also refunds ~25 % of original craft salvage and gold (level-scaled approximation).
+- Item is destroyed. Soulbound / soulforged / unique / quest / consumables are not salvageable.
+- Uncommon drops with no applied gems return only the salvage/gold component.
+
+## Database changes
+
+1. `DELETE FROM items WHERE origin_type = 'archetype_seed'` (711 rows).
+2. `DROP TABLE public.forge_pool` (dead after rework).
+3. Cancel + delete marketplace listings referencing deleted items.
+4. `DELETE FROM character_inventory ci USING items i WHERE ci.item_id = i.id AND i.rarity IN ('common','uncommon') AND i.origin_type = 'archetype_seed'` — wipes legacy gear; keeps unique / soulforged / quest / consumables / already-crafted plain bases.
+5. `ALTER TABLE items ADD COLUMN tier smallint, ADD COLUMN weapon_die text`.
+6. Seed the ~280 new plain bases (`origin_type = 'plain_base'`). Uncommons reuse `origin_type = 'plain_base'` with `rarity = 'uncommon'` — they're still empty bases.
+7. Re-point `loot_pool_config` / `loot_table_entries` rows at the new bases by (slot, tier, rarity); drop any orphan rows.
+8. Run `sync_character_resources` for every affected character to recompute HP/CP/MP after gear wipe.
 
 ## Code changes
 
-- `src/shared/formulas/gems.ts` + `supabase/functions/_shared/formulas/gems.ts`: drop hybrid catalog, `hybridForPair`, `hybridRecipe`. `gemForItem` deleted (no longer used).
-- `src/shared/formulas/items.ts` (+ mirror): keep budget/cap helpers. Add `effectiveItemStats(baseStats, appliedGems)` helper used by both client and edge functions.
-- New edge functions:
-  - `forge-craft-base` — replaces current browse/forge mode; spawns plain base into inventory.
-  - `forge-apply-gem` — validates ownership, gem ownership, cap, budget; consumes resources; updates `applied_gems` atomically.
-  - `forge-strip` — clears `applied_gems`, charges cost.
-- Replace `blacksmith-forge` and `jewelcrafter-forge` with thin wrappers that route to the three new functions (or retire and update client to call the new ones directly).
-- `BlacksmithPanel.tsx` and `JewelcrafterPanel.tsx`: rewritten for Craft / Upgrade tabs; use existing `notifyMaterialsChanged` + `useInventory` refresh.
-- `ItemTooltipCard.tsx` / item display utils: show base stats + applied gem stats (e.g. `STR +2 (gem)`).
-- `seed-archetype-items`, `ai-item-forge`, drop tables, `forge_pool`: stop generating stat-rich items for common/uncommon; produce plain bases instead. Keep unique/soulforged path untouched (those keep their hand-crafted stats).
-- `useMaterials` already handles refresh signal — reuse.
+- **`forge-craft-base`**: only crafts `rarity='common'` plain bases. Filters by player tier (max tier where `unlock_level ≤ character.level`). Crafted instance carries `crafted_level = tier_unlock_level`.
+- **Drop pipeline** (`combat-tick` + `kill-resolver`): pick `plain_base` of the creature's tier; roll common vs uncommon via existing rarity weights; drop with no `stat_override`.
+- **New `forge-salvage`** edge function (above).
+- **`useForgeUpgradeView.tsx`**: split into Forge helpers (slot → variant list at player's current tier) and Enhance helpers (gem pouch + apply/strip/salvage).
+- **`BlacksmithPanel.tsx` / `JewelcrafterPanel.tsx`**:
+  - **Forge tab** — left: slot picker. Right: explainer text **plus** click-to-craft variant cards for the player's tier. Gem pouch removed from this tab.
+  - **Enhance tab** — gem pouch shown here. Item list left, socket UI right, Strip + new Salvage buttons.
+- **`items.ts` formulas** (both mirrors): add `getTierForLevel(level)`, `getTierUnlockLevel(tier)`, `getTierPrefix(tier)`, `getWeaponDieForTier(tier, weaponType)`.
+- **Delete legacy edge functions + admin UI buttons** that called them: `ai-item-forge`, `ai-item-rename`, `ai-item-rebalance`, `seed-archetype-items`, `rebuild-archetype-stats`. The item forge admin page itself is also removed — players craft their own gear now.
 
-## Migration SQL
+## Suggestions
 
-1. `ALTER TABLE character_inventory ADD COLUMN applied_gems jsonb NOT NULL DEFAULT '{}'::jsonb`.
-2. For each owned inventory row: refund each stat point on the item as 1 matching primary gem into `character_materials` (via existing `add_material`), then null/zero the item's stats on the **instance** (we'll keep `items.stats` intact for unique/soulforged; for common/uncommon, replace the item reference with a plain base of the same slot+level).
-3. For each owned hybrid gem in `character_materials`: convert to its 2 primaries, then delete hybrid rows.
-4. Retire hybrid material rows from `materials` table and drop hybrid entries from `forge_pool`.
+1. **Tier preview in the Forge tab** — small line showing "Next tier unlocks at L10 / L20 / L30 / L40".
+2. **`Fine` uncommon visual marker** — faint green frame on uncommon plain bases so players immediately recognize "this dropped, can't be crafted, more budget."
+3. **Salvage-on-upgrade prompt** — when crafting a higher-tier base of the same slot, offer a one-click "salvage old, refund gems."
+4. **`crafted_at` audit column** on `character_inventory` for future economy debugging.
 
-## Out of scope (won't change this pass)
+## Out of scope
 
-- Unique / Soulforged items keep their fixed stats and current crafting paths.
-- Stonebinder, marketplace listings of existing items (will keep displaying baked stats until stripped).
-- Combat math, ability scaling, stat caps formulas — unchanged.
+Unique, soulforged, quest, consumables, stonebinder, marketplace rules, combat math, gem catalog.
 
 ## Risks
 
-- Marketplace listings created with old pre-statted items remain valid; we'll let them expire naturally.
-- `effectiveItemStats` must be the single source of truth — any place still reading raw `items.stats` for common/uncommon will under-report. Audit `useInventory`, `effective.ts`, `combat-tick`, `CharacterPanel`, tooltip code.
+- Marketplace listings of deleted items need the cancellation sweep before the delete.
+- Any character with deleted equipped gear silently loses derived HP/CP/MP — mitigated by the post-wipe `sync_character_resources` loop.
+- Loot config rows referencing deleted item IDs must be re-pointed or removed in the same migration to avoid broken drops.

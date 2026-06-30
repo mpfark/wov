@@ -947,45 +947,6 @@ export type Database = {
           },
         ]
       }
-      forge_pool: {
-        Row: {
-          created_at: string
-          description: string
-          hands: number | null
-          id: string
-          level: number
-          name: string
-          rarity: Database["public"]["Enums"]["item_rarity"]
-          slot: Database["public"]["Enums"]["item_slot"]
-          stats: Json
-          value: number
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          hands?: number | null
-          id?: string
-          level?: number
-          name: string
-          rarity?: Database["public"]["Enums"]["item_rarity"]
-          slot: Database["public"]["Enums"]["item_slot"]
-          stats?: Json
-          value?: number
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          hands?: number | null
-          id?: string
-          level?: number
-          name?: string
-          rarity?: Database["public"]["Enums"]["item_rarity"]
-          slot?: Database["public"]["Enums"]["item_slot"]
-          stats?: Json
-          value?: number
-        }
-        Relationships: []
-      }
       issue_reports: {
         Row: {
           character_id: string | null
@@ -1045,7 +1006,9 @@ export type Database = {
           rarity: Database["public"]["Enums"]["item_rarity"]
           slot: Database["public"]["Enums"]["item_slot"] | null
           stats: Json
+          tier: number | null
           value: number
+          weapon_die: string | null
           weapon_tag: string | null
           world_drop: boolean
         }
@@ -1069,7 +1032,9 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
+          tier?: number | null
           value?: number
+          weapon_die?: string | null
           weapon_tag?: string | null
           world_drop?: boolean
         }
@@ -1093,7 +1058,9 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
+          tier?: number | null
           value?: number
+          weapon_die?: string | null
           weapon_tag?: string | null
           world_drop?: boolean
         }

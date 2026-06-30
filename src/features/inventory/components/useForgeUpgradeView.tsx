@@ -24,6 +24,9 @@ import {
   getItemStatBudget,
   getItemStatCap,
   calculateItemStatCost,
+  getCraftableTierForLevel,
+  getCraftedLevelForTier,
+  GEAR_TIERS,
 } from '@/shared/formulas/items';
 import { WEAPON_TAG_LABELS } from '@/lib/game-data';
 
@@ -38,6 +41,7 @@ interface PlainBase {
   slot: string;
   hands: number | null;
   weapon_tag: string | null;
+  tier: number | null;
 }
 
 interface Props {
@@ -61,20 +65,26 @@ export function useForgeUpgradeView({
   const ownedGems: Record<string, number> = {};
   for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
 
+  // Player's highest craftable tier (gates which plain bases appear).
+  const playerTier = getCraftableTierForLevel(characterLevel);
+  const tierItemLevel = getCraftedLevelForTier(playerTier);
+
   const [craftSlot, setCraftSlot] = useState<string>('');
   const [bases, setBases] = useState<PlainBase[]>([]);
   const [loadingBases, setLoadingBases] = useState(false);
   const [working, setWorking] = useState<string | null>(null);
   const [selectedInvId, setSelectedInvId] = useState<string | null>(null);
 
-  // Load plain bases for the allowed slots once per slot-set change.
+  // Load common plain bases for the player's tier, across the allowed slots.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoadingBases(true);
       const { data } = await supabase.from('items')
-        .select('id, name, slot, hands, weapon_tag')
+        .select('id, name, slot, hands, weapon_tag, tier')
         .eq('origin_type', 'plain_base')
+        .eq('rarity', 'common')
+        .eq('tier', playerTier)
         .in('slot', slots.map(s => s.value) as any)
         .order('weapon_tag', { nullsFirst: true })
         .order('name');
@@ -84,7 +94,7 @@ export function useForgeUpgradeView({
       }
     })();
     return () => { cancelled = true; };
-  }, [slots]);
+  }, [slots, playerTier]);
 
   const basesForSlot = useMemo(
     () => bases.filter(b => b.slot === craftSlot),
@@ -100,8 +110,9 @@ export function useForgeUpgradeView({
     return true;
   }), [inventory, slotSet]);
 
-  const craftSalvage = 5 + characterLevel * 2;
-  const craftGold = characterLevel * 5;
+  // Cost scales with the tier's item level (matches the server).
+  const craftSalvage = 5 + tierItemLevel * 2;
+  const craftGold = tierItemLevel * 5;
   const canAffordCraft = salvage >= craftSalvage && gold >= craftGold;
 
   const handleCraft = async (base: PlainBase) => {
@@ -175,9 +186,14 @@ export function useForgeUpgradeView({
   const craftBlock = (
     <div className="gap-section">
       <div>
-        <h3 className="t-label text-[11px] mb-1">🔨 Craft a Plain {craftNoun}</h3>
+        <h3 className="t-label text-[11px] mb-1">
+          🔨 Craft a Plain {craftNoun}
+          <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+            Tier {playerTier} · {GEAR_TIERS.find(t => t.tier === playerTier)?.prefix} (item Lv{tierItemLevel})
+          </span>
+        </h3>
         <p className="text-[10px] text-muted-foreground italic mb-2">
-          Pick a slot, then choose a base style. All plain bases start without stats — visit the Enhance tab to socket gems.
+          Pick a slot, then choose a base style. All plain bases start without stats — socket gems via the Enhance tab. Uncommon (Fine) gear only drops from creatures.
         </p>
       </div>
       <Select value={craftSlot} onValueChange={setCraftSlot}>

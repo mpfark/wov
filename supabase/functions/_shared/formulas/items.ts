@@ -116,3 +116,23 @@ export function effectiveItemLevel(itemLevel: number | null | undefined, crafted
   return (craftedLevel ?? itemLevel ?? 1);
 }
 
+// Tier helpers — mirror of src/shared/formulas/items.ts (2026-07 overhaul).
+export const GEAR_TIERS = [
+  { tier: 1, prefix: 'Worn',     unlockLevel: 1,  itemLevel: 1 },
+  { tier: 2, prefix: 'Sturdy',   unlockLevel: 10, itemLevel: 11 },
+  { tier: 3, prefix: 'Engraved', unlockLevel: 20, itemLevel: 21 },
+  { tier: 4, prefix: 'Runed',    unlockLevel: 30, itemLevel: 31 },
+  { tier: 5, prefix: 'Ancient',  unlockLevel: 40, itemLevel: 41 },
+] as const;
+
+export function getCraftableTierForLevel(playerLevel: number): number {
+  let t = 1;
+  for (const row of GEAR_TIERS) if (playerLevel >= row.unlockLevel) t = row.tier;
+  return t;
+}
+
+export function getCraftedLevelForTier(tier: number): number {
+  return GEAR_TIERS.find(r => r.tier === tier)?.itemLevel ?? 1;
+}
+
+
