@@ -26,6 +26,12 @@ interface BodyProps {
   onCommit: (allocations: Record<string, number>) => void;
   /** Fired after a successful commit so callers can dismiss outer container. */
   onAfterCommit?: () => void;
+  /** Layout mode: 'stacked' (default, preview below) or 'split' (preview to the right). */
+  layout?: 'stacked' | 'split';
+  /** Respec integration — when provided, a small Respec section is rendered under the allocator. */
+  respecAvailable?: boolean;
+  respecPoints?: number;
+  onRequestRespec?: () => void;
 }
 
 /**
