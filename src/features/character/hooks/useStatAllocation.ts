@@ -47,7 +47,10 @@ export function useStatAllocation({ character, updateCharacter, addLog, onResour
 
   const handleFullRespec = useCallback(async () => {
     if ((character.respec_points || 0) <= 0) return;
-    const creationStats = calculateStats(character.race, character.class);
+    // Characters are created as 'classless' and never receive a class stat
+    // bonus when they pick an Order at the recruiter. The respec baseline
+    // must therefore use the classless starting stats, NOT the current class.
+    const creationStats = calculateStats(character.race, 'classless');
     const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
     let totalRefunded = 0;
     const updates: Partial<Character> = {

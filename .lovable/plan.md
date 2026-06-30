@@ -1,44 +1,44 @@
-## Diagnosis
+## Why Camdria has 6 unspent points at L3
 
-You're right — this is fallout from the gear rework.
+Camdria is a **halfling assassin, level 3, 6 unspent stat points**. Expected at L3 = **2** (one per level-up). The extra 4 came from a recent backfill migration that miscounted the starting-stat budget for non-classless characters.
 
-**What's happening on Calikon (max_cp 255 / max_mp 228 on server, ~315 / ~278 on client):**
+### Root cause
 
-- After the gem-socket rework, almost every equipped item has `items.stats = {}` (a plain base). All real stats live in `character_inventory.applied_gems` (and sometimes `stat_override`).
-- **Client** computes `equipmentBonuses` via `effectiveItemStats(...)`, which correctly merges `stat_override ?? base + applied_gems → attrs`. So the UI shows the gem-boosted max.
-- **Server** RPC `public.sync_character_resources()` aggregates only `i.stats` from the `items` table. It reads `0` for every gemmed piece, so the persisted `max_cp` / `max_mp` are too low.
-- Net effect: client optimistic regen ticks fill toward the higher client-computed cap (315 CP, 278 MP), then the next realtime echo from the server snaps the bar back down to the real persisted cap (255 / 228, ~60 CP and ~30 MP gap).
+New characters are now created as **classless** (`STARTING_CLASS = 'classless'` in `CharacterCreation.tsx`), and the class stat bonus (e.g. assassin: +3 DEX, +1 INT, +2 CHA = 6 pts) is **never granted** when the player later picks a class at the Order Hall (`join_order` only sets `class` + `is_classless = false`).
 
-The same bug under-counts `max_hp` for anyone whose CON comes from gems.
+The backfill migration `20260630083258_…sql` (and its sibling `20260630083700`) computes the expected stat budget as:
 
-## Fix
+```
+48 + race_sum + class_sum + (level-1)/3 * class_level_bonus_sum + (level-1)
+```
 
-Rewrite `public.sync_character_resources(p_character_id uuid)` so its equipment aggregation mirrors `effectiveItemStats`:
+It assumes the class stat bonus was applied at creation. For every non-classless character it then top-ups `unspent_stat_points` by the "missing" amount — over-granting by exactly the class-stat sum (4–6 points depending on class).
 
-For each equipped row with `current_durability > 0`:
+Camdria check:
+- Halfling classless baseline: 8 + race = `6/11/9/8/9/10` = sum 53
+- Current stats: `7/12/9/8/9/10` = sum 55 (player allocated +1 STR, +1 DEX from the two L1→L3 points)
+- Backfill thought baseline should be 53 + assassin class bonus (6) + 2 level-ups = 61, saw 55, granted 6.
+- Correct value should have been 0 unspent (player already spent both).
 
-1. **Base stats** = `COALESCE(NULLIF(ci.stat_override, '{}'::jsonb), i.stats, '{}'::jsonb)` — use `stat_override` only when it has keys, otherwise fall back to `items.stats`.
-2. **Add applied_gems → attribute totals** using the canonical map:
-   - `garnet→str, topaz→dex, emerald→con, sapphire→int, pearl→wis, amethyst→cha`
-3. Sum across all equipped rows into `_bonus_hp, _bonus_con, _bonus_wis, _bonus_dex` (HP comes from base stats only; gems never grant flat HP).
+### Affected characters
+Every character whose class is **not** `classless` and that existed when the backfill ran. They all received the class-stat sum (warrior 6, wizard 6, ranger 7, assassin 6, healer 7, bard 5, templar 7) too many points.
 
-Rest of the function (HP/CP/MP cap formulas, clamps, trusted-rpc UPDATE) stays identical — only the aggregation block changes.
+### Plan
 
-After deploy, run `sync_character_resources` once per character so persisted `max_hp/max_cp/max_mp` are corrected immediately (otherwise it self-heals on the next gear change).
+1. **Reverse the over-grant** with a corrective migration:
+   - For every character, recompute the correct expected budget using the **classless** baseline (`48 + race_sum + (level-1)`) plus per-3-level class bonuses earned since reaching their class.
+   - Compare against `current_stat_sum + unspent_stat_points`, subtract any positive overage from `unspent_stat_points` (floor at 0, never touch already-spent stats so nobody loses a stat they put a point in).
+   - Skip `classless` characters entirely; their budget is already correct.
 
-## Why this is the right scope
+2. **Fix `useStatAllocation.handleFullRespec`** so it doesn't restore stats to a baseline that includes a class bonus the character never received:
+   - Compute `creationStats` with `'classless'` instead of `character.class` (level-up class bonuses every 3 levels are still added separately and remain correct).
 
-- Pure server-side correction; no client logic changes needed because the client was already correct.
-- Removes the jumpy bar without disabling realtime echoes or weakening the server-as-authority rule.
-- Mirrors the existing TS canonical helper, so future gem/override paths stay consistent.
+3. **Add a regression test** (or at least a comment) on the budget formula noting that the class stat bonus is **not** applied on Order-Hall recruitment, so all server/client math must start from the classless baseline.
 
-## Out of scope
+### Out of scope
+- No change to how class bonuses are granted at level milestones (every 3rd level via `CLASS_LEVEL_BONUSES`) — that path is correct.
+- No retroactive grant of the class stat bonus on join_order (would be a separate design decision; current design intentionally keeps recruitment cosmetic).
 
-- No change to `effectiveItemStats`, `equipmentBonuses`, or any client hook.
-- No change to `combat-tick` (it already reads `applied_gems` via `effectiveItemStats` in shared formulas).
-- No schema changes.
-
-## Files touched
-
-- New migration: redefine `public.sync_character_resources` with the gem/override-aware aggregation.
-- One-shot SQL after deploy: `SELECT public.sync_character_resources(id) FROM public.characters;` to backfill persisted maxima.
+### Files touched
+- New migration `…_fix_stat_point_overgrant.sql` (corrective top-down recompute).
+- `src/features/character/hooks/useStatAllocation.ts` (respec baseline fix).
