@@ -191,7 +191,8 @@ export default function ItemManager() {
 
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
-  const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id?: string | null }[]>([]);
+  const [allRegions, setAllRegions] = useState<{ id: string; name: string }[]>([]);
   const [itemUsage, setItemUsage] = useState<{
     creatures: { id: string; name: string; chance: number }[];
     searchNodes: { id: string; name: string; chance: number }[];
