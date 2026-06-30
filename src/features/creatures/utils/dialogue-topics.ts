@@ -190,6 +190,12 @@ export function resolveTopic(topic: DialogueTopic, ctx: ResolverContext): Resolv
       return { id: topic.id, label: topic.label, response: huntResponse(ctx) };
     case 'assassin_contract':
       return { id: topic.id, label: topic.label, response: contractResponse(ctx) };
+    case 'give_item':
+      return {
+        id: topic.id,
+        label: topic.label,
+        response: topic.response ?? '*A folded parchment is pressed into your hand.*',
+      };
     default:
       return { id: topic.id, label: topic.label, response: topic.response ?? '...' };
   }
