@@ -349,7 +349,6 @@ export default function TrainerPanel({
 
   const tabContent =
     tab === 'allocate' ? allocateContent
-    : tab === 'respec' ? respecContent
     : tab === 'renown' ? renownContent
     : leaderboardContent;
 
