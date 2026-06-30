@@ -179,7 +179,7 @@ export default function BlacksmithPanel({
   );
 
   // ── Forge (Craft) + Enhance ───────────────────────────────────
-  const { craftBlock, enhanceLeft, enhanceRight } = useForgeUpgradeView({
+  const { craftBlock, craftBasesList, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
@@ -216,9 +216,14 @@ export default function BlacksmithPanel({
   );
 
   const forgeRight = (
-    <div className="gap-section text-[11px] text-muted-foreground">
-      <p>Plain bases are blank gear — no stats, no flair. Pick a slot to see all variants the smith can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab to socket gems and add stats.</p>
-      <p>Weapons come in all types (sword, dagger, mace, axe, staff, bow, wand). Your class proficiencies still apply when you wield them.</p>
+    <div className="gap-section">
+      <div className="text-[11px] text-muted-foreground gap-row">
+        <p>Plain bases are blank gear — no stats, no flair. Pick a slot on the left to see all variants the smith can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab to socket gems and add stats.</p>
+        <p>Weapons come in all types (sword, dagger, mace, axe, staff, bow, wand). Your class proficiencies still apply when you wield them.</p>
+      </div>
+      <div className="border-t border-border-subtle pt-2">
+        {craftBasesList}
+      </div>
     </div>
   );
 
