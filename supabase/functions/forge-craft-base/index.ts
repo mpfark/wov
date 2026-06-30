@@ -15,6 +15,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+import { GEAR_TIERS, getCraftableTierForLevel, getCraftedLevelForTier } from "../_shared/formulas/items.ts";
+
 const BLACKSMITH_SLOTS = new Set(["main_hand", "off_hand", "head", "chest", "gloves", "pants"]);
 const JEWELER_SLOTS = new Set(["ring", "trinket"]);
 
