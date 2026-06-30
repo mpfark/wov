@@ -149,6 +149,18 @@ serve(async (req) => {
     await db.from("characters").update({ gold: char.gold - goldCost }).eq("id", character_id);
     await db.from("character_inventory").update({ applied_gems: appliedGems }).eq("id", inventory_id);
 
+    // Crafting XP — routes through apply_crafting_xp so level-ups / stat awards trigger.
+    const CRAFT_XP = 25;
+    let xpResult: any = null;
+    try {
+      const { data } = await db.rpc("apply_crafting_xp", {
+        p_character_id: character_id, p_xp: CRAFT_XP,
+      });
+      xpResult = data;
+    } catch (xpErr) {
+      console.error("apply_crafting_xp failed:", xpErr);
+    }
+
     return new Response(JSON.stringify({
       inventory_id,
       applied_gems: appliedGems,
@@ -159,6 +171,8 @@ serve(async (req) => {
       gold_remaining: char.gold - goldCost,
       salvage_spent: salvageCost,
       gem_used: gemKey,
+      xp_awarded: CRAFT_XP,
+      xp_result: xpResult,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("forge-apply-gem error:", e);
