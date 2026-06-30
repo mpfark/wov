@@ -51,7 +51,7 @@ interface Props {
   npcFlavor?: string;
 }
 
-type TrainerTab = 'allocate' | 'respec' | 'renown' | 'leaderboard';
+type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
   open, onClose, character, equipmentBonuses, updateCharacter, addLog: parentAddLog,
