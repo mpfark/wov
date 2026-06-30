@@ -22,7 +22,7 @@ import {
 import {
   effectiveItemLevel,
   getItemStatBudget,
-  getItemStatCap,
+  getEffectiveStatCap,
   calculateItemStatCost,
   getCraftableTierForLevel,
   getCraftedLevelForTier,
@@ -353,7 +353,7 @@ export function useForgeUpgradeView({
             {PRIMARY_GEM_KEYS.map(gk => {
               const def = GEM_CATALOG[gk];
               const attr = attrForGem(gk);
-              const cap = getItemStatCap(attr, level, 'equipment');
+              const cap = getEffectiveStatCap(attr, level, budget, 'equipment');
               const current = eff[attr] || 0;
               const owned = ownedGems[gk] || 0;
               const wouldCost = used + 1;

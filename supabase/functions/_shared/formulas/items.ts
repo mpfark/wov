@@ -72,6 +72,18 @@ export function getItemStatCap(statKey: string, level: number = 1, itemType: str
   return 13;
 }
 
+export const SINGLE_STAT_BUDGET_RATIO = 0.6;
+export function getEffectiveStatCap(
+  statKey: string, level: number, budget: number, itemType: string = 'equipment',
+): number {
+  const baseCap = getItemStatCap(statKey, level, itemType);
+  if (itemType === 'consumable') return baseCap;
+  const isPrimary = ['str','dex','con','int','wis','cha'].includes(statKey);
+  if (!isPrimary) return baseCap;
+  const ratioCap = Math.max(1, Math.floor(budget * SINGLE_STAT_BUDGET_RATIO));
+  return Math.min(baseCap, ratioCap);
+}
+
 export function suggestItemGoldValue(level: number, rarity: string): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   return Math.round(level * 2.5 * mult * mult);

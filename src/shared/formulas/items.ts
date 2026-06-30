@@ -92,6 +92,25 @@ export function getItemStatCap(statKey: string, level: number = 1, itemType: str
   return 13;
 }
 
+/**
+ * Max points of a single primary attribute on this item.
+ * Anti-stacking rule: no more than 60% of the item's budget can go into one
+ * primary stat (str/dex/con/int/wis/cha). Defensive stats (ac/hp/hp_regen)
+ * keep their original level-based cap.
+ */
+export const SINGLE_STAT_BUDGET_RATIO = 0.6;
+export function getEffectiveStatCap(
+  statKey: string, level: number, budget: number, itemType: string = 'equipment',
+): number {
+  const baseCap = getItemStatCap(statKey, level, itemType);
+  if (itemType === 'consumable') return baseCap;
+  const isPrimary = ['str','dex','con','int','wis','cha'].includes(statKey);
+  if (!isPrimary) return baseCap;
+  // Floor of 1 so even a tiny 2-pt item still allows at least 1 primary point.
+  const ratioCap = Math.max(1, Math.floor(budget * SINGLE_STAT_BUDGET_RATIO));
+  return Math.min(baseCap, ratioCap);
+}
+
 export function suggestItemGoldValue(level: number, rarity: string): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   return Math.round(level * 2.5 * mult * mult);
