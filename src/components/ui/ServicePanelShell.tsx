@@ -143,12 +143,20 @@ export function ServicePanelShell({
             )}
           </div>
 
+          {/* === Mini event log (in-panel feedback) === */}
+          {miniLog && (
+            <div className="shrink-0 border-t border-border-subtle px-5 py-2 bg-surface-1/30">
+              <ServicePanelMiniLog entries={miniLog} />
+            </div>
+          )}
+
           {/* === Footer === */}
           {footer && (
             <div className="shrink-0 border-t border-border-subtle px-5 py-3 bg-surface-1/40">
               {footer}
             </div>
           )}
+
         </div>
       </DialogContent>
     </Dialog>
