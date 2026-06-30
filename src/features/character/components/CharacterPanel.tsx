@@ -35,6 +35,7 @@ interface Props {
   onDestroy?: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
   onTogglePin?: (inventoryId: string) => void;
+  onOpenMap?: (inventoryId: string) => void;
   
   // Regen info
   isAtInn?: boolean;
