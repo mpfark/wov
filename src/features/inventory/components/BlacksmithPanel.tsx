@@ -320,6 +320,8 @@ export default function BlacksmithPanel({
       left={activeLeft}
       right={activeRight ?? undefined}
       footer={activeFooter ?? undefined}
+      miniLog={miniLog}
+
     />
   );
 }
