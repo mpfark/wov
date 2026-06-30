@@ -130,7 +130,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       inventory_id: inserted.id,
       base_name: base.name,
-      crafted_level: char.level,
+      crafted_level: craftedLevel,
       gold_remaining: char.gold - goldCost,
       salvage_spent: salvageCost,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
