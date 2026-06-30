@@ -1,6 +1,10 @@
 import { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ServicePanelMiniLog, type MiniLogEntry } from '@/components/ui/ServicePanelMiniLog';
+export { useMiniLog } from '@/components/ui/ServicePanelMiniLog';
+export type { MiniLogEntry } from '@/components/ui/ServicePanelMiniLog';
+
 
 /**
  * ServicePanelShell — unified parchment-style container for service dialogs
