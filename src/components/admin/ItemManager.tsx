@@ -316,6 +316,9 @@ export default function ItemManager() {
       illustration_url: (item as any).illustration_url ?? null,
       illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
       procs: Array.isArray((item as any).procs) ? (item as any).procs : [],
+      map_target_node_id: (item as any).map_target_node_id ?? null,
+      map_region_id: (item as any).map_region_id ?? null,
+      map_flavor: (item as any).map_flavor ?? null,
     });
     loadItemUsage(item.id, item.rarity);
   };
