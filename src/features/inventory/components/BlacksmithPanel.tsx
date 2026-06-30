@@ -53,9 +53,11 @@ const FORGE_SLOTS = [
 
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog: parentAddLog,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [tab, setTab] = useState<BlacksmithTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
