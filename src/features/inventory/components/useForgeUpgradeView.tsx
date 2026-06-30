@@ -385,5 +385,5 @@ export function useForgeUpgradeView({
     );
   }
 
-  return { craftBlock, enhanceLeft, enhanceRight };
+  return { craftBlock, craftBasesList, enhanceLeft, enhanceRight };
 }
