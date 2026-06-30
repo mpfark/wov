@@ -43,6 +43,9 @@ interface Item {
   illustration_url: string | null;
   illustration_metadata: Record<string, string> | null;
   procs: ProcEntry[];
+  map_target_node_id: string | null;
+  map_region_id: string | null;
+  map_flavor: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
@@ -69,6 +72,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
   appearance_key: null, illustration_url: null, illustration_metadata: {},
   procs: [],
+  map_target_node_id: null, map_region_id: null, map_flavor: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -187,7 +191,8 @@ export default function ItemManager() {
 
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
-  const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id?: string | null }[]>([]);
+  const [allRegions, setAllRegions] = useState<{ id: string; name: string }[]>([]);
   const [itemUsage, setItemUsage] = useState<{
     creatures: { id: string; name: string; chance: number }[];
     searchNodes: { id: string; name: string; chance: number }[];
@@ -288,7 +293,8 @@ export default function ItemManager() {
     loadItems();
     loadUsedItemIds();
     supabase.from('creatures').select('id, name').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
-    supabase.from('nodes').select('id, name').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+    supabase.from('nodes').select('id, name, region_id').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+    supabase.from('regions').select('id, name').order('name').then(({ data }) => { if (data) setAllRegions(data); });
   }, []);
 
   const openNew = () => {
@@ -312,6 +318,9 @@ export default function ItemManager() {
       illustration_url: (item as any).illustration_url ?? null,
       illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
       procs: Array.isArray((item as any).procs) ? (item as any).procs : [],
+      map_target_node_id: (item as any).map_target_node_id ?? null,
+      map_region_id: (item as any).map_region_id ?? null,
+      map_flavor: (item as any).map_flavor ?? null,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -349,6 +358,9 @@ export default function ItemManager() {
       illustration_url: form.illustration_url ?? '',
       illustration_metadata: form.illustration_metadata ?? {},
       procs: form.rarity === 'unique' ? (form.procs || []) : [],
+      map_target_node_id: form.item_type === 'quest' ? form.map_target_node_id : null,
+      map_region_id: form.item_type === 'quest' ? form.map_region_id : null,
+      map_flavor: form.item_type === 'quest' ? (form.map_flavor || null) : null,
     };
 
     let savedId = selectedId;
@@ -653,6 +665,55 @@ export default function ItemManager() {
               </div>
 
               <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} itemType={form.item_type} />
+
+              {form.item_type === 'quest' && (
+                <AdminFormSection title="Treasure Map (optional)" description="If a target node is set, this quest item is treated as a map. Players can open it to see a region map with an X, and it is auto-removed when they reach the target.">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Region</label>
+                      <Select
+                        value={form.map_region_id || ''}
+                        onValueChange={v => setForm(f => ({ ...f, map_region_id: v || null, map_target_node_id: null }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick region" /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-64">
+                          {allRegions.map(r => (
+                            <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Target Node (X)</label>
+                      <Select
+                        value={form.map_target_node_id || ''}
+                        onValueChange={v => setForm(f => ({ ...f, map_target_node_id: v || null }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick node" /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-64">
+                          {allNodes
+                            .filter(n => !form.map_region_id || n.region_id === form.map_region_id)
+                            .map(n => (
+                              <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Flavor Line</label>
+                    <Textarea
+                      className="text-xs"
+                      rows={2}
+                      placeholder='e.g. "Follow the river east, past the broken bridge…"'
+                      value={form.map_flavor ?? ''}
+                      maxLength={500}
+                      onChange={e => setForm(f => ({ ...f, map_flavor: e.target.value }))}
+                    />
+                  </div>
+                </AdminFormSection>
+              )}
+
 
               {form.item_type === 'equipment' && (
                 <div>

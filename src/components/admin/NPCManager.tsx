@@ -389,7 +389,7 @@ const KIND_LABELS: Record<TopicKind, string> = {
   class_hall_menu: 'Class Hall Menu (auto-lists all)',
   hunt_dir: 'Hunting Grounds (auto, level-matched)',
   assassin_contract: 'Assassin Contract (take/abandon)',
-
+  give_item: 'Give Item / Map',
 };
 
 
@@ -407,6 +407,12 @@ function TopicsEditor({
   topics: DialogueTopic[];
   onChange: (next: DialogueTopic[]) => void;
 }) {
+  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string }>>([]);
+  useEffect(() => {
+    supabase.from('items').select('id, name, item_type').order('name').then(({ data }) => {
+      if (data) setGiveItems(data as any);
+    });
+  }, []);
   const update = (idx: number, patch: Partial<DialogueTopic>) => {
     onChange(topics.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
   };
@@ -494,6 +500,40 @@ function TopicsEditor({
             <p className="text-[10px] text-muted-foreground italic">
               Auto-picks an area whose level range covers the asking character's level, preferring the player's current region.
             </p>
+          )}
+
+          {t.kind === 'give_item' && (
+            <div className="space-y-1.5">
+              <Textarea
+                className="text-xs"
+                placeholder="What the NPC says when handing over the item (e.g. *Take this map. Burn it after you arrive.*)"
+                value={t.response ?? ''}
+                maxLength={1000}
+                rows={2}
+                onChange={e => update(idx, { response: e.target.value })}
+              />
+              <Select
+                value={String(t.params?.item_id ?? '')}
+                onValueChange={v => update(idx, { params: { ...(t.params ?? {}), item_id: v } })}
+              >
+                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick item to give" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50 max-h-64">
+                  {giveItems.map(it => (
+                    <SelectItem key={it.id} value={it.id} className="text-xs">
+                      {it.name} <span className="text-muted-foreground">({it.item_type})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={(t.params?.once_per_character ?? true) as boolean}
+                  onChange={e => update(idx, { params: { ...(t.params ?? {}), once_per_character: e.target.checked } })}
+                />
+                Only give once per character
+              </label>
+            </div>
           )}
 
         </div>

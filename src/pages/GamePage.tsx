@@ -6,6 +6,7 @@ import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
+import MapItemDialog from '@/features/inventory/components/MapItemDialog';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
 import JewelcrafterPanel from '@/features/inventory/components/JewelcrafterPanel';
 import StonebinderPanel from '@/features/inventory/components/StonebinderPanel';
@@ -196,6 +197,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { npcs } = useNPCs(character.current_node_id);
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
+  const [openMapInvId, setOpenMapInvId] = useState<string | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
   const {
@@ -1020,6 +1022,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onDestroy: dropItem,
     onTogglePin: togglePin,
     onUseConsumable: handleUseConsumable,
+    onOpenMap: (invId: string) => setOpenMapInvId(invId),
     isAtInn: currentNode?.is_inn ?? false,
     regenTick,
     inCombat,
@@ -1540,6 +1543,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
 
       )}
+
+      <MapItemDialog
+        open={!!openMapInvId}
+        inv={unequipped.find(i => i.id === openMapInvId) ?? null}
+        onClose={() => setOpenMapInvId(null)}
+        nodes={nodes}
+        areas={areas}
+        regions={regions}
+        currentNodeId={character.current_node_id}
+      />
+
 
       <OrderRecruiterDialog
         open={recruiterOpen}

@@ -376,6 +376,52 @@ export type Database = {
           },
         ]
       }
+      character_npc_gifts: {
+        Row: {
+          character_id: string
+          granted_at: string
+          id: string
+          item_id: string
+          npc_id: string
+        }
+        Insert: {
+          character_id: string
+          granted_at?: string
+          id?: string
+          item_id: string
+          npc_id: string
+        }
+        Update: {
+          character_id?: string
+          granted_at?: string
+          id?: string
+          item_id?: string
+          npc_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_npc_gifts_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_npc_gifts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_npc_gifts_npc_id_fkey"
+            columns: ["npc_id"]
+            isOneToOne: false
+            referencedRelation: "npcs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_visited_nodes: {
         Row: {
           character_id: string
@@ -998,6 +1044,9 @@ export type Database = {
           is_soulbound: boolean
           item_type: string
           level: number
+          map_flavor: string | null
+          map_region_id: string | null
+          map_target_node_id: string | null
           max_durability: number
           name: string
           origin_id: string | null
@@ -1024,6 +1073,9 @@ export type Database = {
           is_soulbound?: boolean
           item_type?: string
           level?: number
+          map_flavor?: string | null
+          map_region_id?: string | null
+          map_target_node_id?: string | null
           max_durability?: number
           name: string
           origin_id?: string | null
@@ -1050,6 +1102,9 @@ export type Database = {
           is_soulbound?: boolean
           item_type?: string
           level?: number
+          map_flavor?: string | null
+          map_region_id?: string | null
+          map_target_node_id?: string | null
           max_durability?: number
           name?: string
           origin_id?: string | null
@@ -1070,6 +1125,20 @@ export type Database = {
             columns: ["appearance_key"]
             isOneToOne: false
             referencedRelation: "appearance_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_map_region_id_fkey"
+            columns: ["map_region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_map_target_node_id_fkey"
+            columns: ["map_target_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
             referencedColumns: ["id"]
           },
         ]
@@ -1990,6 +2059,10 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
+      consume_maps_for_node: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: number
+      }
       consume_material: {
         Args: { _character_id: string; _delta: number; _key: string }
         Returns: boolean
@@ -2060,6 +2133,15 @@ export type Database = {
         }[]
       }
       get_renown_rank: { Args: { _character_id: string }; Returns: number }
+      grant_npc_gift: {
+        Args: {
+          _character_id: string
+          _item_id: string
+          _npc_id: string
+          _once_per_character?: boolean
+        }
+        Returns: Json
+      }
       grant_searched_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean

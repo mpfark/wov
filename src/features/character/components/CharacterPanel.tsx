@@ -35,6 +35,7 @@ interface Props {
   onDestroy?: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
   onTogglePin?: (inventoryId: string) => void;
+  onOpenMap?: (inventoryId: string) => void;
   
   // Regen info
   isAtInn?: boolean;
@@ -330,7 +331,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
 }
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin, onOpenMap,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
   inCombat = false,
@@ -487,6 +488,17 @@ export default function CharacterPanel({
                                   onClick={() => onUseConsumable(all[0].id)}>
                                   <Heart className="w-3 h-3 text-blood" />
                                 </Button>
+                              )}
+                              {inv.item.item_type === 'quest' && (inv.item as any).map_target_node_id && onOpenMap && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                      onClick={() => onOpenMap(all[0].id)}>
+                                      <span className="text-xs">🗺️</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">Open map</TooltipContent>
+                                </Tooltip>
                               )}
                               {!inv.item.is_soulbound && onTogglePin && (
                                 <Tooltip>

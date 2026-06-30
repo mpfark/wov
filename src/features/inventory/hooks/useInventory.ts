@@ -32,6 +32,9 @@ export interface InventoryItem {
     illustration_url?: string | null;
     level?: number | null;
     procs?: any;
+    map_target_node_id?: string | null;
+    map_region_id?: string | null;
+    map_flavor?: string | null;
   };
 }
 
@@ -69,6 +72,12 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   useEffect(() => {
     fetchInventory();
   }, [characterId, fetchInventory]);
+
+  useEffect(() => {
+    const handler = () => { fetchInventory(); };
+    window.addEventListener('inventory:changed', handler);
+    return () => window.removeEventListener('inventory:changed', handler);
+  }, [fetchInventory]);
 
   const syncResources = useCallback(async () => {
     if (!characterId) return;
