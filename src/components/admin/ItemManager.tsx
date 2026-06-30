@@ -72,6 +72,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
   appearance_key: null, illustration_url: null, illustration_metadata: {},
   procs: [],
+  map_target_node_id: null, map_region_id: null, map_flavor: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
