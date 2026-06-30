@@ -22,7 +22,7 @@ import {
 import {
   effectiveItemLevel,
   getItemStatBudget,
-  getItemStatCap,
+  getEffectiveStatCap,
   calculateItemStatCost,
   getCraftableTierForLevel,
   getCraftedLevelForTier,
