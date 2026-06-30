@@ -1,44 +1,64 @@
-## Why Camdria has 6 unspent points at L3
+# Treasure Map Quest Items
 
-Camdria is a **halfling assassin, level 3, 6 unspent stat points**. Expected at L3 = **2** (one per level-up). The extra 4 came from a recent backfill migration that miscounted the starting-stat budget for non-classless characters.
+Quest items that show an auto-rendered mini-map of a region with an X on a target node. NPCs hand them out via dialogue, and the map removes itself once the player discovers the target node.
 
-### Root cause
+## Data model
 
-New characters are now created as **classless** (`STARTING_CLASS = 'classless'` in `CharacterCreation.tsx`), and the class stat bonus (e.g. assassin: +3 DEX, +1 INT, +2 CHA = 6 pts) is **never granted** when the player later picks a class at the Order Hall (`join_order` only sets `class` + `is_classless = false`).
+**New item type: `map`**
+- Reuses `items` table. `item_type = 'map'`, `rarity = 'quest'` (soulbound, not sellable, not equippable).
+- New columns on `items`:
+  - `map_target_node_id uuid` — the X location.
+  - `map_region_id uuid` — region shown in the rendered map (defaults to the target node's region).
+  - `map_flavor text` — short in-world description shown above the map ("Silra's directions to the Hall of Shadows").
 
-The backfill migration `20260630083258_…sql` (and its sibling `20260630083700`) computes the expected stat budget as:
+**Inventory carries it like any other item** — no schema change to `character_inventory`.
 
+## NPC hand-off
+
+Extend `dialogue_topics` with a new action type `give_item`:
+
+```text
+{ type: 'give_item', item_id: '<map item uuid>', once_per_character: true }
 ```
-48 + race_sum + class_sum + (level-1)/3 * class_level_bonus_sum + (level-1)
-```
 
-It assumes the class stat bonus was applied at creation. For every non-classless character it then top-ups `unspent_stat_points` by the "missing" amount — over-granting by exactly the class-stat sum (4–6 points depending on class).
+- Admin authors a topic on any NPC, e.g. Silra Vane → "I need directions to the Hall of Shadows" → action gives the map item.
+- `once_per_character: true` prevents stacking duplicates; checked against current inventory + a lightweight `character_npc_gifts(character_id, npc_id, item_id)` ledger so deleting the map doesn't let the player re-farm it.
+- NPC dialog UI (`NPCDialogPanel.tsx`) renders a confirmation line in the existing immersive style: *"Silra presses a folded parchment into your hand."*
 
-Camdria check:
-- Halfling classless baseline: 8 + race = `6/11/9/8/9/10` = sum 53
-- Current stats: `7/12/9/8/9/10` = sum 55 (player allocated +1 STR, +1 DEX from the two L1→L3 points)
-- Backfill thought baseline should be 53 + assassin class bonus (6) + 2 level-ups = 61, saw 55, granted 6.
-- Correct value should have been 0 unspent (player already spent both).
+## Auto-render mini-map
 
-### Affected characters
-Every character whose class is **not** `classless` and that existed when the backfill ran. They all received the class-stat sum (warrior 6, wizard 6, ranger 7, assassin 6, healer 7, bard 5, templar 7) too many points.
+New component `RegionMiniMap.tsx` (read-only, no interaction):
+- Input: `regionId`, `highlightNodeId`.
+- Reuses existing nodes/areas data from `useNodes` and the same SVG layout math as the world map.
+- Strips player/creature/party overlays. Renders area outlines (via existing `area-colors` + `outline-geometry` utils), node dots, connection lines, and a glowing red **X** marker on the target node.
+- Shows only **discovered** nodes plus the target X — undiscovered nodes appear as faint dots so the map feels like a hand-drawn guide, not a satellite view.
 
-### Plan
+## Map viewer
 
-1. **Reverse the over-grant** with a corrective migration:
-   - For every character, recompute the correct expected budget using the **classless** baseline (`48 + race_sum + (level-1)`) plus per-3-level class bonuses earned since reaching their class.
-   - Compare against `current_stat_sum + unspent_stat_points`, subtract any positive overage from `unspent_stat_points` (floor at 0, never touch already-spent stats so nobody loses a stat they put a point in).
-   - Skip `classless` characters entirely; their budget is already correct.
+New dialog `MapItemDialog.tsx`:
+- Opens when the player clicks a map item in inventory (same click path as a consumable).
+- Parchment-styled dialog: flavor text on top, `RegionMiniMap` filling the body, "Close" footer.
+- No XP, no charges — purely informational.
 
-2. **Fix `useStatAllocation.handleFullRespec`** so it doesn't restore stats to a baseline that includes a class bonus the character never received:
-   - Compute `creationStats` with `'classless'` instead of `character.class` (level-up class bonuses every 3 levels are still added separately and remain correct).
+## Auto-remove on discovery
 
-3. **Add a regression test** (or at least a comment) on the budget formula noting that the class stat bonus is **not** applied on Order-Hall recruitment, so all server/client math must start from the classless baseline.
+- Hook into the existing "node discovered" path (`character_visited_nodes` insert) inside the visit RPC / handler.
+- New RPC `consume_maps_for_node(_character_id, _node_id)`:
+  - Deletes any inventory rows whose item is `item_type = 'map'` and `map_target_node_id = _node_id`.
+  - Emits a short event log line: *"Your map crumbles — the path is known."*
+- Called server-side right after a successful node visit, so it works whether the player walks, teleports, or summons there.
 
-### Out of scope
-- No change to how class bonuses are granted at level milestones (every 3rd level via `CLASS_LEVEL_BONUSES`) — that path is correct.
-- No retroactive grant of the class stat bonus on join_order (would be a separate design decision; current design intentionally keeps recruitment cosmetic).
+## Admin UI
 
-### Files touched
-- New migration `…_fix_stat_point_overgrant.sql` (corrective top-down recompute).
-- `src/features/character/hooks/useStatAllocation.ts` (respec baseline fix).
+- **Item editor** (`AdminPage` items section): when `item_type = 'map'` is selected, show node picker (region → node) for `map_target_node_id` and a flavor text field. Map items skip the stat editor.
+- **NPC dialogue editor**: new action option `give_item` with item dropdown filtered to `item_type = 'map'` first, then all items; checkbox for `once_per_character`.
+
+## Files touched
+
+- DB migration: add `map_target_node_id`, `map_region_id`, `map_flavor` to `items`; create `character_npc_gifts` ledger + RPC `consume_maps_for_node`; extend dialogue topic types.
+- New: `src/features/world/components/RegionMiniMap.tsx`, `src/features/inventory/components/MapItemDialog.tsx`.
+- Edit: `src/features/inventory/hooks/useConsumableActions.ts` (route map clicks to the dialog), `useInventory.ts` (carry new fields), `NPCDialogPanel.tsx` (handle `give_item` action), node-visit handler (call `consume_maps_for_node`), admin item + NPC dialogue editors.
+
+## Out of scope
+
+- No multi-X maps, no map trading, no expiration timers, no fog-of-war beyond the existing discovery system.
