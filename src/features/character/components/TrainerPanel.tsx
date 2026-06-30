@@ -54,9 +54,11 @@ interface Props {
 type TrainerTab = 'allocate' | 'respec' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
-  open, onClose, character, equipmentBonuses, updateCharacter, addLog,
+  open, onClose, character, equipmentBonuses, updateCharacter, addLog: parentAddLog,
   onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [tab, setTab] = useState<TrainerTab>('allocate');
   const [training, setTraining] = useState(false);
   const [showRespecConfirm, setShowRespecConfirm] = useState(false);
