@@ -197,6 +197,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { npcs } = useNPCs(character.current_node_id);
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
+  const [openMapInvId, setOpenMapInvId] = useState<string | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
   const {
