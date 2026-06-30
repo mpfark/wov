@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Coins, Tag, Search, Plus, AlertTriangle, HandCoins } from 'lucide-react';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
 import { useGlobalBroadcastSender } from '@/hooks/useGlobalBroadcast';
