@@ -17,7 +17,7 @@ import {
   effectiveItemLevel,
   calculateItemStatCost,
   getItemStatBudget,
-  getItemStatCap,
+  getEffectiveStatCap,
 } from "../_shared/formulas/items.ts";
 import {
   PRIMARY_GEM_KEYS, attrForGem, GEM_CATALOG, type GemKey,
