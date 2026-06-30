@@ -68,11 +68,10 @@ export default function TrainerPanel({
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(false);
 
-  // Default tab: prefer Allocate if points pending, else Respec if respec available, else Renown.
+  // Default tab: prefer Allocate if points pending or respec available, else Renown.
   useEffect(() => {
     if (!open) return;
-    if (character.unspent_stat_points > 0) setTab('allocate');
-    else if ((character.respec_points || 0) > 0) setTab('respec');
+    if (character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) setTab('allocate');
     else setTab('renown');
   }, [open, character.unspent_stat_points, character.respec_points]);
 
