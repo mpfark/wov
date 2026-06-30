@@ -196,7 +196,7 @@ export default function JewelcrafterPanel({
   );
 
   // ── Forge (Craft) + Enhance ───────────────────────────────────
-  const { craftBlock, enhanceLeft, enhanceRight } = useForgeUpgradeView({
+  const { craftBlock, craftBasesList, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
