@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
