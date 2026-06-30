@@ -315,8 +315,13 @@ export default function JewelcrafterPanel({
   );
 
   const forgeRight = (
-    <div className="gap-section text-[11px] text-muted-foreground">
-      <p>Plain rings and trinkets are blank — no stats until you socket gems. Pick a slot to see the variants the jeweler can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab.</p>
+    <div className="gap-section">
+      <div className="text-[11px] text-muted-foreground">
+        <p>Plain rings and trinkets are blank — no stats until you socket gems. Pick a slot on the left to see the variants the jeweler can craft for you, then head to the <span className="text-primary font-display">Enhance</span> tab.</p>
+      </div>
+      <div className="border-t border-border-subtle pt-2">
+        {craftBasesList}
+      </div>
     </div>
   );
 
