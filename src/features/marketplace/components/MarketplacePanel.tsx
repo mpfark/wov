@@ -60,8 +60,10 @@ function statSummary(stats: Record<string, number> | undefined): string {
 }
 
 export default function MarketplacePanel({
-  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog, atMarketplace = true,
+  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog: parentAddLog, atMarketplace = true,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const { listings, uncollectedSales, loading, list, buy, collect } = useMarketplace(characterId);
   const sendGlobal = useGlobalBroadcastSender();
   const [tab, setTab] = useState<'browse' | 'mine' | 'create'>('browse');
