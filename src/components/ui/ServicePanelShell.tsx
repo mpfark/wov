@@ -1,6 +1,10 @@
 import { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ServicePanelMiniLog, type MiniLogEntry } from '@/components/ui/ServicePanelMiniLog';
+export { useMiniLog } from '@/components/ui/ServicePanelMiniLog';
+export type { MiniLogEntry } from '@/components/ui/ServicePanelMiniLog';
+
 
 /**
  * ServicePanelShell — unified parchment-style container for service dialogs
@@ -41,7 +45,10 @@ export interface ServicePanelShellProps {
   /** Optional left/right column titles rendered as sticky sub-headers. */
   leftTitle?: ReactNode;
   rightTitle?: ReactNode;
+  /** Optional in-panel mini event log (rendered above footer). */
+  miniLog?: MiniLogEntry[];
 }
+
 
 export function ServicePanelShell({
   open,
@@ -58,7 +65,9 @@ export function ServicePanelShell({
   singleColumn = false,
   leftTitle,
   rightTitle,
+  miniLog,
 }: ServicePanelShellProps) {
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
@@ -134,12 +143,20 @@ export function ServicePanelShell({
             )}
           </div>
 
+          {/* === Mini event log (in-panel feedback) === */}
+          {miniLog && (
+            <div className="shrink-0 border-t border-border-subtle px-5 py-2 bg-surface-1/30">
+              <ServicePanelMiniLog entries={miniLog} />
+            </div>
+          )}
+
           {/* === Footer === */}
           {footer && (
             <div className="shrink-0 border-t border-border-subtle px-5 py-3 bg-surface-1/40">
               {footer}
             </div>
           )}
+
         </div>
       </DialogContent>
     </Dialog>

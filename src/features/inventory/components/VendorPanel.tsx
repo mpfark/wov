@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, ArrowUpFromLine } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -60,7 +60,9 @@ function statSummary(stats?: Record<string, number>): string {
   return parts.join(', ');
 }
 
-export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog, npcName, npcFlavor }: Props) {
+export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog: parentAddLog, npcName, npcFlavor }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const effectiveCha = cha + (equipmentBonuses.cha || 0);
   const buyDiscount = getChaBuyDiscount(effectiveCha);
   const sellMultiplier = getChaSellMultiplier(effectiveCha);
@@ -406,6 +408,8 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       left={left}
       right={right}
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }

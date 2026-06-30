@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -53,9 +53,11 @@ const FORGE_SLOTS = [
 
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog: parentAddLog,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [tab, setTab] = useState<BlacksmithTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
@@ -318,6 +320,8 @@ export default function BlacksmithPanel({
       left={activeLeft}
       right={activeRight ?? undefined}
       footer={activeFooter ?? undefined}
+      miniLog={miniLog}
+
     />
   );
 }

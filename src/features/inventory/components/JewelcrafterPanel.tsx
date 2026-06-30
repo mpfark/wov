@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Gem } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -50,9 +50,11 @@ const getItemColor = (it: { rarity: string; is_soulbound?: boolean }) =>
 
 export default function JewelcrafterPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog: parentAddLog,
   character: _character, npcName, npcFlavor,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
@@ -370,6 +372,8 @@ export default function JewelcrafterPanel({
       left={activeLeft}
       right={activeRight ?? undefined}
       footer={activeFooter ?? undefined}
+      miniLog={miniLog}
+
     />
   );
 }

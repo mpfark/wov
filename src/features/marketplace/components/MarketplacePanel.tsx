@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Coins, Tag, Search, Plus, AlertTriangle, HandCoins } from 'lucide-react';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
 import { useGlobalBroadcastSender } from '@/hooks/useGlobalBroadcast';
@@ -60,8 +60,10 @@ function statSummary(stats: Record<string, number> | undefined): string {
 }
 
 export default function MarketplacePanel({
-  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog, atMarketplace = true,
+  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog: parentAddLog, atMarketplace = true,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const { listings, uncollectedSales, loading, list, buy, collect } = useMarketplace(characterId);
   const sendGlobal = useGlobalBroadcastSender();
   const [tab, setTab] = useState<'browse' | 'mine' | 'create'>('browse');
@@ -481,6 +483,8 @@ export default function MarketplacePanel({
       left={left}
       right={right}
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }

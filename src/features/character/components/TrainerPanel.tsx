@@ -6,7 +6,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { Character } from '@/features/character';
 import { getMaxHp, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,9 +54,11 @@ interface Props {
 type TrainerTab = 'allocate' | 'respec' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
-  open, onClose, character, equipmentBonuses, updateCharacter, addLog,
+  open, onClose, character, equipmentBonuses, updateCharacter, addLog: parentAddLog,
   onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [tab, setTab] = useState<TrainerTab>('allocate');
   const [training, setTraining] = useState(false);
   const [showRespecConfirm, setShowRespecConfirm] = useState(false);
@@ -426,7 +428,9 @@ export default function TrainerPanel({
         tabs={tabsRow}
         singleColumn
         left={tabContent}
+        miniLog={miniLog}
       />
+
 
       {/* Respec confirmation */}
       <AlertDialog open={showRespecConfirm} onOpenChange={setShowRespecConfirm}>

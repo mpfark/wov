@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
+import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
 import { Sparkles } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -58,8 +58,10 @@ interface PreviewResult {
 }
 
 export default function StonebinderPanel({
-  open, onClose, characterId, inventory, onInventoryChange, addLog,
+  open, onClose, characterId, inventory, onInventoryChange, addLog: parentAddLog,
 }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const [stoneA, setStoneA] = useState<string | null>(null);
   const [stoneB, setStoneB] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -254,6 +256,8 @@ export default function StonebinderPanel({
       right={right}
       rightTitle="The Binding"
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }
