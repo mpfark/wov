@@ -331,7 +331,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
 }
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin, onOpenMap,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
   inCombat = false,
