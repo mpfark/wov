@@ -256,6 +256,8 @@ export default function StonebinderPanel({
       right={right}
       rightTitle="The Binding"
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }
