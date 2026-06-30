@@ -186,9 +186,14 @@ export function useForgeUpgradeView({
   const craftBlock = (
     <div className="gap-section">
       <div>
-        <h3 className="t-label text-[11px] mb-1">🔨 Craft a Plain {craftNoun}</h3>
+        <h3 className="t-label text-[11px] mb-1">
+          🔨 Craft a Plain {craftNoun}
+          <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+            Tier {playerTier} · {GEAR_TIERS.find(t => t.tier === playerTier)?.prefix} (item Lv{tierItemLevel})
+          </span>
+        </h3>
         <p className="text-[10px] text-muted-foreground italic mb-2">
-          Pick a slot, then choose a base style. All plain bases start without stats — visit the Enhance tab to socket gems.
+          Pick a slot, then choose a base style. All plain bases start without stats — socket gems via the Enhance tab. Uncommon (Fine) gear only drops from creatures.
         </p>
       </div>
       <Select value={craftSlot} onValueChange={setCraftSlot}>
