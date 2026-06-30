@@ -65,7 +65,9 @@ export function ServicePanelShell({
   singleColumn = false,
   leftTitle,
   rightTitle,
+  miniLog,
 }: ServicePanelShellProps) {
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
