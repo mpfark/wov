@@ -42,8 +42,33 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
 
   const character = worldContext?.character;
   const isAssassinContractTopic = activeTopic?.raw.kind === 'assassin_contract';
+  const isGiveItemTopic = activeTopic?.raw.kind === 'give_item';
+  const giveItemId = (activeTopic?.raw.params as any)?.item_id as string | undefined;
+  const giveOnce = (activeTopic?.raw.params as any)?.once_per_character ?? true;
   const isAssassin = character?.class === 'assassin';
   const hasActiveContract = !!character?.active_contract;
+
+  async function receiveGiftedItem() {
+    if (!character || !npc || !giveItemId) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('grant_npc_gift', {
+      _character_id: character.id,
+      _npc_id: npc.id,
+      _item_id: giveItemId,
+      _once_per_character: !!giveOnce,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    const res = data as any;
+    if (res?.ok) {
+      toast.success(res.already_in_inventory ? 'You already carry one of these.' : 'Item received.');
+      window.dispatchEvent(new CustomEvent('inventory:changed'));
+    } else if (res?.reason === 'already_gifted') {
+      toast.message('They already gave you this once.');
+    } else {
+      toast.error('Could not receive item.');
+    }
+  }
 
   async function takeContract() {
     if (!character) return;
