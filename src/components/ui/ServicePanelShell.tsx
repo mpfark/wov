@@ -45,7 +45,10 @@ export interface ServicePanelShellProps {
   /** Optional left/right column titles rendered as sticky sub-headers. */
   leftTitle?: ReactNode;
   rightTitle?: ReactNode;
+  /** Optional in-panel mini event log (rendered above footer). */
+  miniLog?: MiniLogEntry[];
 }
+
 
 export function ServicePanelShell({
   open,
