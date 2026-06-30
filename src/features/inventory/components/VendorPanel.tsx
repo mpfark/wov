@@ -60,7 +60,9 @@ function statSummary(stats?: Record<string, number>): string {
   return parts.join(', ');
 }
 
-export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog, npcName, npcFlavor }: Props) {
+export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog: parentAddLog, npcName, npcFlavor }: Props) {
+  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+
   const effectiveCha = cha + (equipmentBonuses.cha || 0);
   const buyDiscount = getChaBuyDiscount(effectiveCha);
   const sellMultiplier = getChaSellMultiplier(effectiveCha);
