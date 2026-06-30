@@ -666,6 +666,55 @@ export default function ItemManager() {
 
               <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} itemType={form.item_type} />
 
+              {form.item_type === 'quest' && (
+                <AdminFormSection title="Treasure Map (optional)" description="If a target node is set, this quest item is treated as a map. Players can open it to see a region map with an X, and it is auto-removed when they reach the target.">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Region</label>
+                      <Select
+                        value={form.map_region_id || ''}
+                        onValueChange={v => setForm(f => ({ ...f, map_region_id: v || null, map_target_node_id: null }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick region" /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-64">
+                          {allRegions.map(r => (
+                            <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Target Node (X)</label>
+                      <Select
+                        value={form.map_target_node_id || ''}
+                        onValueChange={v => setForm(f => ({ ...f, map_target_node_id: v || null }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick node" /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-64">
+                          {allNodes
+                            .filter(n => !form.map_region_id || n.region_id === form.map_region_id)
+                            .map(n => (
+                              <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Flavor Line</label>
+                    <Textarea
+                      className="text-xs"
+                      rows={2}
+                      placeholder='e.g. "Follow the river east, past the broken bridge…"'
+                      value={form.map_flavor ?? ''}
+                      maxLength={500}
+                      onChange={e => setForm(f => ({ ...f, map_flavor: e.target.value }))}
+                    />
+                  </div>
+                </AdminFormSection>
+              )}
+
+
               {form.item_type === 'equipment' && (
                 <div>
                   <label className="text-[10px] text-muted-foreground">Equipment Slot</label>
