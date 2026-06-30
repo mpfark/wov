@@ -372,6 +372,8 @@ export default function JewelcrafterPanel({
       left={activeLeft}
       right={activeRight ?? undefined}
       footer={activeFooter ?? undefined}
+      miniLog={miniLog}
+
     />
   );
 }
