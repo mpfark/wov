@@ -66,6 +66,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
+    // Wait for auth to settle before deciding profile state. Otherwise the
+    // initial (user=null) pass briefly sets profileLoading=false with
+    // hasCompletedOnboarding=false, causing Index.tsx to flash the
+    // OnboardingGatePage for one render right after sign-in.
+    if (authLoading) return;
     if (!user) {
       setProfileLoading(false);
       setHasCompletedOnboarding(false);
@@ -83,7 +88,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     );
     setProfileFullName(data?.full_name ?? null);
     setProfileLoading(false);
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
