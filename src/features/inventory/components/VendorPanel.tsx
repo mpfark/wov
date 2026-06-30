@@ -408,6 +408,8 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       left={left}
       right={right}
       footer={footer}
+      miniLog={miniLog}
+
     />
   );
 }
