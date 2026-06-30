@@ -502,6 +502,40 @@ function TopicsEditor({
             </p>
           )}
 
+          {t.kind === 'give_item' && (
+            <div className="space-y-1.5">
+              <Textarea
+                className="text-xs"
+                placeholder="What the NPC says when handing over the item (e.g. *Take this map. Burn it after you arrive.*)"
+                value={t.response ?? ''}
+                maxLength={1000}
+                rows={2}
+                onChange={e => update(idx, { response: e.target.value })}
+              />
+              <Select
+                value={String(t.params?.item_id ?? '')}
+                onValueChange={v => update(idx, { params: { ...(t.params ?? {}), item_id: v } })}
+              >
+                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick item to give" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50 max-h-64">
+                  {giveItems.map(it => (
+                    <SelectItem key={it.id} value={it.id} className="text-xs">
+                      {it.name} <span className="text-muted-foreground">({it.item_type})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={(t.params?.once_per_character ?? true) as boolean}
+                  onChange={e => update(idx, { params: { ...(t.params ?? {}), once_per_character: e.target.checked } })}
+                />
+                Only give once per character
+              </label>
+            </div>
+          )}
+
         </div>
       ))}
       <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={add}>
