@@ -38,7 +38,7 @@ interface BodyProps {
  * Pure body of the stat planner — usable inside any container (dialog, panel,
  * service shell). Use <StatPlannerDialog> for the standalone modal version.
  */
-export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit }: BodyProps) {
+export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit, layout = 'stacked', respecAvailable, respecPoints, onRequestRespec }: BodyProps) {
   const [planned, setPlanned] = useState<Record<string, number>>({});
 
   const totalSpent = Object.values(planned).reduce((s, v) => s + v, 0);
