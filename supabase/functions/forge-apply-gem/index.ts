@@ -115,13 +115,13 @@ serve(async (req) => {
     });
     const level = effectiveItemLevel(it.level, inv.crafted_level);
 
-    // Per-stat cap.
-    const cap = getItemStatCap(attr, level, "equipment");
-    if ((after[attr] || 0) > cap) {
-      throw new Error(`${attr.toUpperCase()} is at the item's cap (${cap})`);
-    }
-    // Total budget.
+    // Total budget (computed first so per-stat cap can use it).
     const budget = getItemStatBudget(level, it.rarity || "common", 1, "equipment");
+    // Per-stat cap: min(level cap, 60% of budget) for primary attributes.
+    const cap = getEffectiveStatCap(attr, level, budget, "equipment");
+    if ((after[attr] || 0) > cap) {
+      throw new Error(`${attr.toUpperCase()} is at this item's per-stat cap (${cap})`);
+    }
     const cost = calculateItemStatCost(after);
     if (cost > budget) {
       throw new Error(`No room left — this item's stat budget is full (${budget} pts)`);
