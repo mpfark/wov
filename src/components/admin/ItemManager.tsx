@@ -293,7 +293,8 @@ export default function ItemManager() {
     loadItems();
     loadUsedItemIds();
     supabase.from('creatures').select('id, name').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
-    supabase.from('nodes').select('id, name').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+    supabase.from('nodes').select('id, name, region_id').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+    supabase.from('regions').select('id, name').order('name').then(({ data }) => { if (data) setAllRegions(data); });
   }, []);
 
   const openNew = () => {
