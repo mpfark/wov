@@ -121,7 +121,7 @@ export function useParty(characterId: string | null) {
   // `onResync` on every successful (re)subscribe to catch up on missed events.
   const useResilientChannel = (
     enabled: boolean,
-    build: () => ReturnType<typeof supabase.channel>,
+    build: (instanceId: string) => ReturnType<typeof supabase.channel>,
     onResync: () => void,
     deps: unknown[],
   ) => {
@@ -135,7 +135,7 @@ export function useParty(characterId: string | null) {
 
       const connect = () => {
         if (cancelled) return;
-        const ch = build();
+        const ch = build(`${Date.now()}-${attempt}-${Math.random().toString(36).slice(2)}`);
         currentChannel = ch;
         ch.subscribe((status) => {
           if (cancelled) return;
@@ -186,8 +186,8 @@ export function useParty(characterId: string | null) {
   // Per-character channel: invites + parties structure changes
   useResilientChannel(
     !!characterId,
-    () => supabase
-      .channel(`party-${characterId}`)
+    (instanceId) => supabase
+      .channel(`party-${characterId}-${instanceId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
         filter: `character_id=eq.${characterId}`,
@@ -203,8 +203,8 @@ export function useParty(characterId: string | null) {
   // safety-net interval remains as final backstop.
   useResilientChannel(
     !!party?.id,
-    () => supabase
-      .channel(`party-roster-${party!.id}`)
+    (instanceId) => supabase
+      .channel(`party-roster-${party!.id}-${instanceId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
         filter: `party_id=eq.${party!.id}`,

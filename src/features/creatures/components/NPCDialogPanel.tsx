@@ -124,13 +124,13 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
 
         <div className="px-4 py-3 bg-background/40 rounded border border-border/60 min-h-[80px] relative">
           <span aria-hidden className="absolute -top-1 left-2 font-display text-2xl text-primary/40 leading-none select-none">“</span>
-          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap italic font-display px-3">
+          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap italic font-body normal-case px-3">
             {spokenLine}
           </p>
           <span aria-hidden className="absolute -bottom-3 right-2 font-display text-2xl text-primary/40 leading-none select-none">”</span>
 
           {isAssassinContractTopic && isAssassin && (
-            <div className="mt-4 flex justify-end items-center gap-3 text-xs font-display">
+            <div className="mt-4 flex justify-end items-center gap-3 text-xs font-body normal-case">
               {!hasActiveContract && (
                 <button
                   disabled={busy}
@@ -167,7 +167,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
               <button
                 disabled={busy}
                 onClick={receiveGiftedItem}
-                className="text-primary hover:text-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs font-display italic"
+                className="text-primary hover:text-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs font-body italic normal-case"
               >
                 📜 Take what is offered
               </button>
@@ -185,7 +185,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
           <div className="space-y-2 pt-1">
             <div className="flex items-center gap-2 text-muted-foreground/70">
               <span className="h-px flex-1 bg-border" />
-              <span className="text-[10px] tracking-[0.15em] font-display text-muted-foreground/70">— speak —</span>
+              <span className="text-[10px] font-body italic normal-case text-muted-foreground/70">— speak —</span>
               <span className="h-px flex-1 bg-border" />
             </div>
             <ul className="flex flex-col gap-0.5">
@@ -197,7 +197,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
                       onClick={() => setActiveTopicId(t.id)}
                       className={[
                         'group w-full text-left flex items-baseline gap-2 py-1.5 pl-2 pr-1',
-                        'font-display italic transition-all',
+                        'font-body italic normal-case transition-all',
                         isActive
                           ? 'text-primary text-glow border-l-2 border-primary/70'
                           : 'text-foreground/70 hover:text-primary border-l-2 border-transparent hover:border-primary/40',
@@ -223,7 +223,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
               <div className="flex justify-end pt-1">
                 <button
                   onClick={() => setActiveTopicId(null)}
-                  className="text-xs italic font-display text-muted-foreground hover:text-primary transition-colors"
+                  className="text-xs italic font-body normal-case text-muted-foreground hover:text-primary transition-colors"
                 >
                   ‹ say nothing more
                 </button>
