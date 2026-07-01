@@ -106,7 +106,7 @@ export default function OrderRecruiterDialog({
           <div className="space-y-2 pt-1">
             <div className="flex items-center gap-2 text-muted-foreground/70">
               <span className="h-px flex-1 bg-border" />
-              <span className="text-[10px] uppercase tracking-[0.2em] font-display">— speak —</span>
+              <span className="text-[10px] tracking-[0.15em] font-display text-muted-foreground/70">— speak —</span>
               <span className="h-px flex-1 bg-border" />
             </div>
             <ul className="flex flex-col gap-0.5">
