@@ -121,7 +121,7 @@ export function useParty(characterId: string | null) {
   // `onResync` on every successful (re)subscribe to catch up on missed events.
   const useResilientChannel = (
     enabled: boolean,
-    build: () => ReturnType<typeof supabase.channel>,
+    build: (instanceId: string) => ReturnType<typeof supabase.channel>,
     onResync: () => void,
     deps: unknown[],
   ) => {
@@ -132,35 +132,47 @@ export function useParty(characterId: string | null) {
       let attempt = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
       let currentChannel: ReturnType<typeof supabase.channel> | null = null;
+      let intentionallyClosing = false;
+
+      const scheduleReconnect = () => {
+        if (cancelled || retryTimer) return;
+        const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
+        attempt += 1;
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          connect();
+        }, delay);
+      };
 
       const connect = () => {
         if (cancelled) return;
-        const ch = build();
+        const ch = build(`${Date.now()}-${attempt}-${Math.random().toString(36).slice(2)}`);
         currentChannel = ch;
         ch.subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || intentionallyClosing) return;
           if (status === 'SUBSCRIBED') {
             attempt = 0;
             onResync();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            if (currentChannel) {
-              supabase.removeChannel(currentChannel);
-              currentChannel = null;
-            }
-            const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
-            attempt += 1;
-            retryTimer = setTimeout(connect, delay);
+            if (currentChannel === ch) currentChannel = null;
+            scheduleReconnect();
           }
         });
       };
 
       const forceReconnect = () => {
         if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
-        if (currentChannel) {
-          supabase.removeChannel(currentChannel);
-          currentChannel = null;
-        }
         attempt = 0;
+        if (currentChannel) {
+          intentionallyClosing = true;
+          const channelToRemove = currentChannel;
+          currentChannel = null;
+          supabase.removeChannel(channelToRemove).finally(() => {
+            intentionallyClosing = false;
+            if (!cancelled) connect();
+          });
+          return;
+        }
         connect();
       };
 
@@ -186,8 +198,8 @@ export function useParty(characterId: string | null) {
   // Per-character channel: invites + parties structure changes
   useResilientChannel(
     !!characterId,
-    () => supabase
-      .channel(`party-${characterId}`)
+    (instanceId) => supabase
+      .channel(`party-${characterId}-${instanceId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
         filter: `character_id=eq.${characterId}`,
@@ -203,8 +215,8 @@ export function useParty(characterId: string | null) {
   // safety-net interval remains as final backstop.
   useResilientChannel(
     !!party?.id,
-    () => supabase
-      .channel(`party-roster-${party!.id}`)
+    (instanceId) => supabase
+      .channel(`party-roster-${party!.id}-${instanceId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
         filter: `party_id=eq.${party!.id}`,
