@@ -132,35 +132,47 @@ export function useParty(characterId: string | null) {
       let attempt = 0;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
       let currentChannel: ReturnType<typeof supabase.channel> | null = null;
+      let intentionallyClosing = false;
+
+      const scheduleReconnect = () => {
+        if (cancelled || retryTimer) return;
+        const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
+        attempt += 1;
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          connect();
+        }, delay);
+      };
 
       const connect = () => {
         if (cancelled) return;
         const ch = build(`${Date.now()}-${attempt}-${Math.random().toString(36).slice(2)}`);
         currentChannel = ch;
         ch.subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || intentionallyClosing) return;
           if (status === 'SUBSCRIBED') {
             attempt = 0;
             onResync();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            if (currentChannel) {
-              supabase.removeChannel(currentChannel);
-              currentChannel = null;
-            }
-            const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
-            attempt += 1;
-            retryTimer = setTimeout(connect, delay);
+            if (currentChannel === ch) currentChannel = null;
+            scheduleReconnect();
           }
         });
       };
 
       const forceReconnect = () => {
         if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
-        if (currentChannel) {
-          supabase.removeChannel(currentChannel);
-          currentChannel = null;
-        }
         attempt = 0;
+        if (currentChannel) {
+          intentionallyClosing = true;
+          const channelToRemove = currentChannel;
+          currentChannel = null;
+          supabase.removeChannel(channelToRemove).finally(() => {
+            intentionallyClosing = false;
+            if (!cancelled) connect();
+          });
+          return;
+        }
         connect();
       };
 
