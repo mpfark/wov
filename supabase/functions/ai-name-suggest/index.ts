@@ -87,6 +87,19 @@ Region: ${context.region_name || "unknown"}.
 Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_jewelcrafter && "jewelcrafter", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
 Nearby locations: ${context.nearby_nodes || "none"}.
 ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
+    } else if (type === "node_description") {
+      if (!context.node_name || !String(context.node_name).trim()) {
+        return new Response(JSON.stringify({ error: "node_name is required for node_description" }), { status: 400, headers: corsHeaders });
+      }
+      userPrompt = `Generate ONLY an atmospheric description for an existing location (node). Do not invent a new name — use the given one.
+Node name: ${context.node_name}
+Area: ${context.area_name || "unknown"} (${context.area_type || "unknown"} type).
+Region: ${context.region_name || "unknown"}.
+Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_jewelcrafter && "jewelcrafter", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
+Nearby locations: ${context.nearby_nodes || "none"}.
+${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}
+
+Return a single atmospheric description under 200 characters that fits the node's name, area type, and region.`;
     } else if (type === "lock_hint") {
       if (!context.lock_key) {
         return new Response(JSON.stringify({ error: "lock_key is required for lock_hint" }), { status: 400, headers: corsHeaders });
