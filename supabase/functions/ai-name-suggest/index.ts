@@ -114,7 +114,7 @@ Region: ${context.region_name || "unknown"}
 
 The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perceptive adventurer would notice. Do not name the key item directly.`;
     } else {
-      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node, lock_hint" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node, node_description, lock_hint" }), { status: 400, headers: corsHeaders });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
