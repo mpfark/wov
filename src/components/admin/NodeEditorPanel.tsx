@@ -1071,8 +1071,18 @@ export default function NodeEditorPanel({
                   onSuggestion={(name, desc) => setForm(f => ({ ...f, name, description: desc }))}
                 />
               </div>
-              <Textarea placeholder="Description" value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs" />
+              <div className="flex gap-2 items-start">
+                <Textarea placeholder="Description" value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs flex-1" />
+                <AiSuggestNodeDescriptionButton
+                  form={form}
+                  selectedRegionId={selectedRegionId}
+                  regions={regions}
+                  allAreas={allAreas}
+                  allNodesGlobal={allNodesGlobal}
+                  onSuggestion={(desc) => setForm(f => ({ ...f, description: desc }))}
+                />
+              </div>
               <ItemPickerList label="Searchable Items" value={form.searchable_items}
                 onChange={v => setForm(f => ({ ...f, searchable_items: v }))} />
 
