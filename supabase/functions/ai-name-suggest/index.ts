@@ -150,6 +150,22 @@ The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perc
               },
             },
           },
+        ] : type === "node_description" ? [
+          {
+            type: "function",
+            function: {
+              name: "suggest_description",
+              description: "Return an atmospheric description for the given node, without changing its name.",
+              parameters: {
+                type: "object",
+                properties: {
+                  description: { type: "string", description: "An atmospheric description under 200 characters" },
+                },
+                required: ["description"],
+                additionalProperties: false,
+              },
+            },
+          },
         ] : [
           {
             type: "function",
@@ -168,7 +184,7 @@ The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perc
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: type === "lock_hint" ? "suggest_hint" : "suggest_name" } },
+        tool_choice: { type: "function", function: { name: type === "lock_hint" ? "suggest_hint" : type === "node_description" ? "suggest_description" : "suggest_name" } },
       }),
     });
 
