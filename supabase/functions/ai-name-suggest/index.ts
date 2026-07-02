@@ -87,6 +87,19 @@ Region: ${context.region_name || "unknown"}.
 Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_jewelcrafter && "jewelcrafter", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
 Nearby locations: ${context.nearby_nodes || "none"}.
 ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
+    } else if (type === "node_description") {
+      if (!context.node_name || !String(context.node_name).trim()) {
+        return new Response(JSON.stringify({ error: "node_name is required for node_description" }), { status: 400, headers: corsHeaders });
+      }
+      userPrompt = `Generate ONLY an atmospheric description for an existing location (node). Do not invent a new name — use the given one.
+Node name: ${context.node_name}
+Area: ${context.area_name || "unknown"} (${context.area_type || "unknown"} type).
+Region: ${context.region_name || "unknown"}.
+Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_jewelcrafter && "jewelcrafter", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
+Nearby locations: ${context.nearby_nodes || "none"}.
+${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}
+
+Return a single atmospheric description under 200 characters that fits the node's name, area type, and region.`;
     } else if (type === "lock_hint") {
       if (!context.lock_key) {
         return new Response(JSON.stringify({ error: "lock_key is required for lock_hint" }), { status: 400, headers: corsHeaders });
@@ -101,7 +114,7 @@ Region: ${context.region_name || "unknown"}
 
 The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perceptive adventurer would notice. Do not name the key item directly.`;
     } else {
-      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node, lock_hint" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node, node_description, lock_hint" }), { status: 400, headers: corsHeaders });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -137,6 +150,22 @@ The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perc
               },
             },
           },
+        ] : type === "node_description" ? [
+          {
+            type: "function",
+            function: {
+              name: "suggest_description",
+              description: "Return an atmospheric description for the given node, without changing its name.",
+              parameters: {
+                type: "object",
+                properties: {
+                  description: { type: "string", description: "An atmospheric description under 200 characters" },
+                },
+                required: ["description"],
+                additionalProperties: false,
+              },
+            },
+          },
         ] : [
           {
             type: "function",
@@ -155,7 +184,7 @@ The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perc
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: type === "lock_hint" ? "suggest_hint" : "suggest_name" } },
+        tool_choice: { type: "function", function: { name: type === "lock_hint" ? "suggest_hint" : type === "node_description" ? "suggest_description" : "suggest_name" } },
       }),
     });
 

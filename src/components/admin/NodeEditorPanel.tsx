@@ -528,6 +528,72 @@ function AiSuggestNodeButton({ form, selectedRegionId, regions, allAreas, allNod
   );
 }
 
+/* ─── AI Suggest Description-Only Button ────────────────── */
+function AiSuggestNodeDescriptionButton({ form, selectedRegionId, regions, allAreas, allNodesGlobal, onSuggestion }: {
+  form: { name: string; area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_jewelcrafter?: boolean; is_teleport: boolean; connections: string };
+  selectedRegionId: string;
+  regions: any[];
+  allAreas: any[];
+  allNodesGlobal: any[];
+  onSuggestion: (description: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const disabled = !form.name.trim();
+
+  const suggest = async () => {
+    if (disabled) {
+      toast.error('Enter a node name first');
+      return;
+    }
+    setLoading(true);
+    try {
+      const region = regions.find((r: any) => r.id === selectedRegionId);
+      const area = allAreas.find((a: any) => a.id === form.area_id);
+      let nearbyNodes: string[] = [];
+      try {
+        const conns = JSON.parse(form.connections) as any[];
+        nearbyNodes = conns.map(c => {
+          const n = allNodesGlobal.find((nd: any) => nd.id === c.node_id);
+          return n?.name?.trim() || '';
+        }).filter(Boolean);
+      } catch {}
+
+      const { data, error } = await supabase.functions.invoke('ai-name-suggest', {
+        body: {
+          type: 'node_description',
+          context: {
+            node_name: form.name,
+            area_name: area?.name || '',
+            area_type: area?.area_type || '',
+            area_description: area?.description || '',
+            region_name: region?.name || '',
+            is_vendor: form.is_vendor,
+            is_inn: form.is_inn,
+            is_blacksmith: form.is_blacksmith,
+            is_jewelcrafter: form.is_jewelcrafter,
+            is_teleport: form.is_teleport,
+            nearby_nodes: nearbyNodes.join(', ') || 'none',
+          },
+        },
+      });
+      if (error) throw error;
+      onSuggestion(data.description);
+      toast.success('AI description applied');
+    } catch (e: any) {
+      toast.error(e.message || 'AI suggestion failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={suggest} disabled={loading || disabled}
+      title={disabled ? 'Enter a node name first' : 'AI Suggest description (keeps current name)'} className="h-8 shrink-0">
+      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+    </Button>
+  );
+}
+
 /* ─── Main component ────────────────────────────────── */
 
 export default function NodeEditorPanel({
@@ -1005,8 +1071,18 @@ export default function NodeEditorPanel({
                   onSuggestion={(name, desc) => setForm(f => ({ ...f, name, description: desc }))}
                 />
               </div>
-              <Textarea placeholder="Description" value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs" />
+              <div className="flex gap-2 items-start">
+                <Textarea placeholder="Description" value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs flex-1" />
+                <AiSuggestNodeDescriptionButton
+                  form={form}
+                  selectedRegionId={selectedRegionId}
+                  regions={regions}
+                  allAreas={allAreas}
+                  allNodesGlobal={allNodesGlobal}
+                  onSuggestion={(desc) => setForm(f => ({ ...f, description: desc }))}
+                />
+              </div>
               <ItemPickerList label="Searchable Items" value={form.searchable_items}
                 onChange={v => setForm(f => ({ ...f, searchable_items: v }))} />
 
