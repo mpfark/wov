@@ -1,62 +1,39 @@
-## Goal
+## Problem
 
-Produce a clear reference for how a brand-new user goes from the sign-up screen all the way to standing in Hearthvale Square for the first time — no code changes.
+The wimp system auto-flees in your **configured** compass direction whenever your HP is at/under your threshold. It has no idea that you already chose to flee manually in a different direction. Concrete case that just happened:
 
-## Deliverables
+1. HP got low, you manually walked **northeast** away from the creature.
+2. Combat was still active (HP still ≤ threshold on the next update).
+3. Wimp fired for the first time and moved you **southwest** (your configured wimp direction) — back into the creature. You died.
 
-1. **Mermaid flowchart artifact** saved to `/mnt/documents/login-flow.mmd` and embedded via `<lov-artifact>` so it renders inline. Covers both the new-user and returning-user branches side-by-side so you can see where they diverge and re-converge.
-2. **Written walkthrough** in chat that narrates each stage, names the component/hook responsible, and calls out the state that gates each transition.
+Root cause: `useWimp.ts` has a `firedRef` latch that only resets when combat ends. It's never set when the player moves themselves, so wimp still has its "one free flee" available even after you've already escaped manually.
 
-## Stages to cover
+## Fix
 
-Based on `src/pages/Index.tsx`, `GameContext`, `useAuth`, `useCharacter`, and `useFirstEntryWelcome`:
+Treat any **player-initiated movement while in combat** as "the player is handling it" and suppress wimp for the remainder of that combat session. Same latch, just tripped from a second source.
 
-```text
-AuthPage (sign up / sign in / forgot password)
-   │
-   ▼
-Supabase auth session established  ── useAuth ──► GameContext.user set
-   │
-   ▼
-Profile fetch (authLoading gate prevents the old login-flash)
-   │
-   ├── has_accepted_oath + full_name missing ──► OnboardingGatePage
-   │                                                │
-   │                                                ▼
-   │                                        refetchProfile → onboarding complete
-   ▼
-Character list load (useCharacter)
-   │
-   ├── characters.length === 0 ──► CharacterCreation (needs startingNode)
-   │                                    │
-   │                                    ▼
-   │                            createCharacter → selectCharacterAfterCreate
-   │
-   └── characters.length > 0 ──► CharacterSelect ──► selectCharacter
-   │
-   ▼
-character set in context → Index.tsx effect navigates to /game
-   │
-   ▼
-GameRoute / GamePage mounts
-   │
-   ▼
-useFirstEntryWelcome
-   ├── first ever entry (level ≤ 1, no localStorage flag) ──► staggered intro lines
-   └── otherwise ──► "Welcome back, Wayfarer!"
-```
+### Changes
 
-The diagram will use the same nodes but with proper Mermaid `flowchart TD` syntax, decision diamonds for the gates (auth? onboarding? has characters? first entry?), and grouped subgraphs for **Auth**, **Profile/Onboarding**, **Character**, and **World Entry**.
+**`src/features/combat/hooks/useWimp.ts`**
+- Expose a new imperative method on `WimpApi`: `notifyPlayerMoved()` — sets `firedRef.current = true` (and clears `warnedNoPathRef` so nothing surprising logs).
+- Keep the existing reset-on-combat-end effect so a fresh fight re-enables wimp.
 
-## Written walkthrough sections
+**`src/features/world/hooks/useMovementActions.ts`**
+- In `handleMove`, when the move succeeds and `options?.wimpFlee` is **not** set (i.e. the player initiated it) and combat is active, call the new `wimp.notifyPlayerMoved()`.
+- Wiring: `useMovementActions` doesn't currently know about the wimp API. Simplest path is to accept an optional `onPlayerCombatMove?: () => void` callback in its params and have `GamePage.tsx` pass `() => wimpRef.current?.notifyPlayerMoved()`.
 
-- **1. Gateway** — `AuthPage` sign-up path, password rules, email confirmation toast.
-- **2. Session hydration** — `useAuth` listener + `getSession`, and why `GameContext.fetchProfile` waits on `authLoading` (prevents the login-screen flicker you reported earlier).
-- **3. Onboarding gate** — `OnboardingGatePage` triggers when `has_accepted_oath` is false or `full_name` is empty; `refetchProfile` re-runs the check.
-- **4. Character stage** — Empty roster jumps straight to `CharacterCreation`; otherwise `CharacterSelect`. Note the `startingNode` (Hearthvale Square) requirement.
-- **5. Handoff to game** — `Index.tsx` effect that navigates to `/game` once a character is selected.
-- **6. First entry** — `useFirstEntryWelcome` fires the 7-line staggered intro only for level ≤ 1 characters without the per-character localStorage flag; returning characters get the short greeting.
+**`src/pages/GamePage.tsx`**
+- Mirror the existing `wimpFleeRef` pattern with a `wimpNotifyRef` (needed because `useMovementActions` is created before `useWimp`).
+- Pass the callback into `useMovementActions`, and populate the ref in the same effect that already wires `wimpFleeRef`.
 
-## Out of scope
+### Explicitly out of scope
 
-No code changes. No new components. Purely documentation.
+- No changes to threshold logic, wimp direction UI, opportunity-attack rules, or death-penalty math.
+- Not changing Holy Shield / mutual-kill behavior (previous discussion).
+- No new preference toggle — the "manual move suppresses wimp" behavior is on by default; if you ever want it configurable we can add a checkbox later.
+
+### Verification
+
+- Set wimp threshold high enough to trigger, engage a creature, drop below threshold, manually move once → wimp does not subsequently fire in this combat. Confirm no `⚠️ Wimp flee …` log after the manual move.
+- End combat and re-engage → wimp fires normally again on the next low-HP tick.
+- Do nothing manually while low HP → wimp still fires as before (regression check).

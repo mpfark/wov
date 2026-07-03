@@ -697,6 +697,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Ref to break circular dependency: useCombatDriver needs the wimp pre-flee
   // hook, but useWimp is initialised AFTER useCombatDriver (it needs handleMove).
   const wimpFleeRef = useRef<((newHp: number) => boolean) | null>(null);
+  // Same forward-declaration pattern for the "player moved manually" notifier —
+  // useMovementActions is created before useWimp exists.
+  const wimpNotifyRef = useRef<(() => void) | null>(null);
 
   const combat = useCombatDriver({
     character, creatures,
@@ -800,6 +803,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     degradeEquipment: combatActions.degradeEquipment,
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
+    onPlayerCombatMove: () => wimpNotifyRef.current?.(),
   });
 
   const consumableActions = useConsumableActions({
@@ -822,6 +826,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
   useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
+  useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({

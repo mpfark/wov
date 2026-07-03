@@ -205,6 +205,8 @@ export interface UseMovementActionsParams {
   degradeEquipment: () => Promise<void>;
   unlockedConnections?: Map<string, number>;
   onUnlockPath?: (direction: string, nodeId: string, expires: number) => void;
+  /** Called when the player initiates a move while in combat (not wimp-flee). */
+  onPlayerCombatMove?: () => void;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -282,6 +284,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
         p.addLog(`⚠️ Wimp flee${dirText}!`);
       } else {
         p.addLog(`🏃 You flee${dirText}!`);
+        // Player took manual action — suppress wimp for the rest of this combat.
+        p.onPlayerCombatMove?.();
       }
       p.fleeStopCombat();
     }
