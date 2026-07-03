@@ -697,6 +697,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Ref to break circular dependency: useCombatDriver needs the wimp pre-flee
   // hook, but useWimp is initialised AFTER useCombatDriver (it needs handleMove).
   const wimpFleeRef = useRef<((newHp: number) => boolean) | null>(null);
+  // Same forward-declaration pattern for the "player moved manually" notifier —
+  // useMovementActions is created before useWimp exists.
+  const wimpNotifyRef = useRef<(() => void) | null>(null);
 
   const combat = useCombatDriver({
     character, creatures,
