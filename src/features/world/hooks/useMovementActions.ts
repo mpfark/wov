@@ -284,6 +284,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
         p.addLog(`⚠️ Wimp flee${dirText}!`);
       } else {
         p.addLog(`🏃 You flee${dirText}!`);
+        // Player took manual action — suppress wimp for the rest of this combat.
+        p.onPlayerCombatMove?.();
       }
       p.fleeStopCombat();
     }
