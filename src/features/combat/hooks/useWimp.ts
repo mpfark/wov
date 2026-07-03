@@ -94,5 +94,13 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     return attemptFlee(newHp);
   }, [attemptFlee]);
 
-  return { tryFleeForIncomingHp };
+  // Manual-move suppression: once the player moves themselves in combat, trip
+  // the same latch used after a wimp flee so wimp won't fire for the rest of
+  // this combat session.
+  const notifyPlayerMoved = useCallback(() => {
+    firedRef.current = true;
+    warnedNoPathRef.current = true;
+  }, []);
+
+  return { tryFleeForIncomingHp, notifyPlayerMoved };
 }
