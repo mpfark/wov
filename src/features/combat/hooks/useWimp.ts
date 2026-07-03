@@ -24,6 +24,13 @@ export interface WimpApi {
    * Returns `true` if a flee was initiated for this tick.
    */
   tryFleeForIncomingHp: (newHp: number) => boolean;
+  /**
+   * Notify the wimp system that the player moved themselves during combat.
+   * Suppresses further wimp auto-flees until this combat ends — the player
+   * has clearly taken control of their retreat and we don't want the wimp
+   * to yank them in a different (potentially fatal) direction.
+   */
+  notifyPlayerMoved: () => void;
 }
 
 /**
