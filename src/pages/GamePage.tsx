@@ -803,6 +803,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     degradeEquipment: combatActions.degradeEquipment,
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
+    onPlayerCombatMove: () => wimpNotifyRef.current?.(),
   });
 
   const consumableActions = useConsumableActions({
