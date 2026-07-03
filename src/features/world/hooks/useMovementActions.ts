@@ -205,6 +205,8 @@ export interface UseMovementActionsParams {
   degradeEquipment: () => Promise<void>;
   unlockedConnections?: Map<string, number>;
   onUnlockPath?: (direction: string, nodeId: string, expires: number) => void;
+  /** Called when the player initiates a move while in combat (not wimp-flee). */
+  onPlayerCombatMove?: () => void;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
