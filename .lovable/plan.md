@@ -1,64 +1,62 @@
-# Treasure Map Quest Items
+## Goal
 
-Quest items that show an auto-rendered mini-map of a region with an X on a target node. NPCs hand them out via dialogue, and the map removes itself once the player discovers the target node.
+Produce a clear reference for how a brand-new user goes from the sign-up screen all the way to standing in Hearthvale Square for the first time — no code changes.
 
-## Data model
+## Deliverables
 
-**New item type: `map`**
-- Reuses `items` table. `item_type = 'map'`, `rarity = 'quest'` (soulbound, not sellable, not equippable).
-- New columns on `items`:
-  - `map_target_node_id uuid` — the X location.
-  - `map_region_id uuid` — region shown in the rendered map (defaults to the target node's region).
-  - `map_flavor text` — short in-world description shown above the map ("Silra's directions to the Hall of Shadows").
+1. **Mermaid flowchart artifact** saved to `/mnt/documents/login-flow.mmd` and embedded via `<lov-artifact>` so it renders inline. Covers both the new-user and returning-user branches side-by-side so you can see where they diverge and re-converge.
+2. **Written walkthrough** in chat that narrates each stage, names the component/hook responsible, and calls out the state that gates each transition.
 
-**Inventory carries it like any other item** — no schema change to `character_inventory`.
+## Stages to cover
 
-## NPC hand-off
-
-Extend `dialogue_topics` with a new action type `give_item`:
+Based on `src/pages/Index.tsx`, `GameContext`, `useAuth`, `useCharacter`, and `useFirstEntryWelcome`:
 
 ```text
-{ type: 'give_item', item_id: '<map item uuid>', once_per_character: true }
+AuthPage (sign up / sign in / forgot password)
+   │
+   ▼
+Supabase auth session established  ── useAuth ──► GameContext.user set
+   │
+   ▼
+Profile fetch (authLoading gate prevents the old login-flash)
+   │
+   ├── has_accepted_oath + full_name missing ──► OnboardingGatePage
+   │                                                │
+   │                                                ▼
+   │                                        refetchProfile → onboarding complete
+   ▼
+Character list load (useCharacter)
+   │
+   ├── characters.length === 0 ──► CharacterCreation (needs startingNode)
+   │                                    │
+   │                                    ▼
+   │                            createCharacter → selectCharacterAfterCreate
+   │
+   └── characters.length > 0 ──► CharacterSelect ──► selectCharacter
+   │
+   ▼
+character set in context → Index.tsx effect navigates to /game
+   │
+   ▼
+GameRoute / GamePage mounts
+   │
+   ▼
+useFirstEntryWelcome
+   ├── first ever entry (level ≤ 1, no localStorage flag) ──► staggered intro lines
+   └── otherwise ──► "Welcome back, Wayfarer!"
 ```
 
-- Admin authors a topic on any NPC, e.g. Silra Vane → "I need directions to the Hall of Shadows" → action gives the map item.
-- `once_per_character: true` prevents stacking duplicates; checked against current inventory + a lightweight `character_npc_gifts(character_id, npc_id, item_id)` ledger so deleting the map doesn't let the player re-farm it.
-- NPC dialog UI (`NPCDialogPanel.tsx`) renders a confirmation line in the existing immersive style: *"Silra presses a folded parchment into your hand."*
+The diagram will use the same nodes but with proper Mermaid `flowchart TD` syntax, decision diamonds for the gates (auth? onboarding? has characters? first entry?), and grouped subgraphs for **Auth**, **Profile/Onboarding**, **Character**, and **World Entry**.
 
-## Auto-render mini-map
+## Written walkthrough sections
 
-New component `RegionMiniMap.tsx` (read-only, no interaction):
-- Input: `regionId`, `highlightNodeId`.
-- Reuses existing nodes/areas data from `useNodes` and the same SVG layout math as the world map.
-- Strips player/creature/party overlays. Renders area outlines (via existing `area-colors` + `outline-geometry` utils), node dots, connection lines, and a glowing red **X** marker on the target node.
-- Shows only **discovered** nodes plus the target X — undiscovered nodes appear as faint dots so the map feels like a hand-drawn guide, not a satellite view.
-
-## Map viewer
-
-New dialog `MapItemDialog.tsx`:
-- Opens when the player clicks a map item in inventory (same click path as a consumable).
-- Parchment-styled dialog: flavor text on top, `RegionMiniMap` filling the body, "Close" footer.
-- No XP, no charges — purely informational.
-
-## Auto-remove on discovery
-
-- Hook into the existing "node discovered" path (`character_visited_nodes` insert) inside the visit RPC / handler.
-- New RPC `consume_maps_for_node(_character_id, _node_id)`:
-  - Deletes any inventory rows whose item is `item_type = 'map'` and `map_target_node_id = _node_id`.
-  - Emits a short event log line: *"Your map crumbles — the path is known."*
-- Called server-side right after a successful node visit, so it works whether the player walks, teleports, or summons there.
-
-## Admin UI
-
-- **Item editor** (`AdminPage` items section): when `item_type = 'map'` is selected, show node picker (region → node) for `map_target_node_id` and a flavor text field. Map items skip the stat editor.
-- **NPC dialogue editor**: new action option `give_item` with item dropdown filtered to `item_type = 'map'` first, then all items; checkbox for `once_per_character`.
-
-## Files touched
-
-- DB migration: add `map_target_node_id`, `map_region_id`, `map_flavor` to `items`; create `character_npc_gifts` ledger + RPC `consume_maps_for_node`; extend dialogue topic types.
-- New: `src/features/world/components/RegionMiniMap.tsx`, `src/features/inventory/components/MapItemDialog.tsx`.
-- Edit: `src/features/inventory/hooks/useConsumableActions.ts` (route map clicks to the dialog), `useInventory.ts` (carry new fields), `NPCDialogPanel.tsx` (handle `give_item` action), node-visit handler (call `consume_maps_for_node`), admin item + NPC dialogue editors.
+- **1. Gateway** — `AuthPage` sign-up path, password rules, email confirmation toast.
+- **2. Session hydration** — `useAuth` listener + `getSession`, and why `GameContext.fetchProfile` waits on `authLoading` (prevents the login-screen flicker you reported earlier).
+- **3. Onboarding gate** — `OnboardingGatePage` triggers when `has_accepted_oath` is false or `full_name` is empty; `refetchProfile` re-runs the check.
+- **4. Character stage** — Empty roster jumps straight to `CharacterCreation`; otherwise `CharacterSelect`. Note the `startingNode` (Hearthvale Square) requirement.
+- **5. Handoff to game** — `Index.tsx` effect that navigates to `/game` once a character is selected.
+- **6. First entry** — `useFirstEntryWelcome` fires the 7-line staggered intro only for level ≤ 1 characters without the per-character localStorage flag; returning characters get the short greeting.
 
 ## Out of scope
 
-- No multi-X maps, no map trading, no expiration timers, no fog-of-war beyond the existing discovery system.
+No code changes. No new components. Purely documentation.
