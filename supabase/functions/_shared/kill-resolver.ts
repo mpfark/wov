@@ -229,7 +229,7 @@ export function resolveCreatureKill(
       lootTableId: creature.loot_table_id,
       itemId: null,
       creatureName: creature.name,
-      dropChance,
+      dropChance: legacyDropChance,
       mode: 'legacy',
     });
   } else {
