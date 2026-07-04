@@ -152,7 +152,7 @@ export default function WorldBuilderRulebook() {
             <li>Only <strong>boss creatures</strong> should be assigned <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> — humanoids use the automatic item pool.</li>
             <li>If no suitable loot table exists, the creature gets <code className="text-[10px] bg-muted px-1 rounded">loot_table_id: null</code> — the AI never invents IDs.</li>
             <li>Loot table IDs are <strong>validated server-side</strong> — any non-existent ID is silently set to null.</li>
-            <li>Drop chance: <strong>0.1 – 0.5</strong> — stored as the creature's <code className="text-[10px] bg-muted px-1 rounded">drop_chance</code> field.</li>
+            <li>Drop chance: optional per-creature override in <code className="text-[10px] bg-muted px-1 rounded">drop_chance</code>. When null, the item_pool falls back to the per-rarity defaults set in Pool Rules (regular / rare / boss).</li>
             <li>Pool rules (level offsets, rarity weights, consumable chances) are managed via the global <code className="text-[10px] bg-muted px-1 rounded">loot_pool_config</code> table in the Admin Loot Manager.</li>
           </ul>
         </Card>
