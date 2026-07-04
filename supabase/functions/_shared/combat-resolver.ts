@@ -255,13 +255,20 @@ export async function processLootDrops(
     try {
       // ── item_pool mode ──────────────────────────────────────────
       if (drop.mode === 'item_pool') {
-        if (Math.random() > drop.dropChance) continue;
-
         // Lazy-load pool config
         if (!poolConfig) {
           const { data } = await db.from('loot_pool_config').select('*').eq('id', 1).single();
-          poolConfig = data || { equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15, consumable_level_min_offset: -5, consumable_level_max_offset: 0 };
+          poolConfig = data || { equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15, consumable_level_min_offset: -5, consumable_level_max_offset: 0, drop_chance_regular: 0.35, drop_chance_rare: 0.60, drop_chance_boss: 1.00 };
         }
+
+        // Resolve effective drop chance: per-creature override wins, else per-rarity default.
+        const rarityKey = drop.creatureRarity === 'boss' ? 'drop_chance_boss'
+          : drop.creatureRarity === 'rare' ? 'drop_chance_rare'
+          : 'drop_chance_regular';
+        const rarityDefault = Number(poolConfig[rarityKey] ?? 0.5);
+        const effectiveDropChance = drop.dropChance >= 0 ? drop.dropChance : rarityDefault;
+        if (Math.random() > effectiveDropChance) continue;
+
 
         const creatureLevel = drop.creatureLevel || 1;
 
