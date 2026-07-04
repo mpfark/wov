@@ -1,39 +1,63 @@
-## Problem
+# Per-Rarity World Drop Chance
 
-The wimp system auto-flees in your **configured** compass direction whenever your HP is at/under your threshold. It has no idea that you already chose to flee manually in a different direction. Concrete case that just happened:
+Right now the "world drop chance" for a creature comes from `creatures.drop_chance` and, when that is null, a hardcoded `0.5` fallback in the loot resolver. There's no way to tune the default from the admin UI, and every rarity (regular / rare / boss) shares the same fallback.
 
-1. HP got low, you manually walked **northeast** away from the creature.
-2. Combat was still active (HP still ≤ threshold on the next update).
-3. Wimp fired for the first time and moved you **southwest** (your configured wimp direction) — back into the creature. You died.
+This change moves the fallback into `loot_pool_config` and splits it by creature rarity, editable from the existing Pool Rules tab. Per-creature `drop_chance` overrides continue to win when set.
 
-Root cause: `useWimp.ts` has a `firedRef` latch that only resets when combat ends. It's never set when the player moves themselves, so wimp still has its "one free flee" available even after you've already escaped manually.
+## Scope
 
-## Fix
+- World drop pool (item_pool mode) only. Legacy per-creature loot tables are untouched.
+- Rarities: `regular`, `rare`, `boss` (the three values actually used by `creatures.rarity`).
+- Per-creature `drop_chance` remains an optional override; nothing about the Creature Manager UI changes.
 
-Treat any **player-initiated movement while in combat** as "the player is handling it" and suppress wimp for the remainder of that combat session. Same latch, just tripped from a second source.
+## Changes
 
-### Changes
+### 1. Schema — `loot_pool_config`
+Add three columns with sensible defaults:
 
-**`src/features/combat/hooks/useWimp.ts`**
-- Expose a new imperative method on `WimpApi`: `notifyPlayerMoved()` — sets `firedRef.current = true` (and clears `warnedNoPathRef` so nothing surprising logs).
-- Keep the existing reset-on-combat-end effect so a fresh fight re-enables wimp.
+- `drop_chance_regular numeric NOT NULL DEFAULT 0.35`
+- `drop_chance_rare numeric NOT NULL DEFAULT 0.60`
+- `drop_chance_boss numeric NOT NULL DEFAULT 1.00`
 
-**`src/features/world/hooks/useMovementActions.ts`**
-- In `handleMove`, when the move succeeds and `options?.wimpFlee` is **not** set (i.e. the player initiated it) and combat is active, call the new `wimp.notifyPlayerMoved()`.
-- Wiring: `useMovementActions` doesn't currently know about the wimp API. Simplest path is to accept an optional `onPlayerCombatMove?: () => void` callback in its params and have `GamePage.tsx` pass `() => wimpRef.current?.notifyPlayerMoved()`.
+Single-row table (id = 1), no RLS/grant changes needed.
 
-**`src/pages/GamePage.tsx`**
-- Mirror the existing `wimpFleeRef` pattern with a `wimpNotifyRef` (needed because `useMovementActions` is created before `useWimp`).
-- Pass the callback into `useMovementActions`, and populate the ref in the same effect that already wires `wimpFleeRef`.
+### 2. Resolver fallback
+In `supabase/functions/_shared/combat-resolver.ts` (`pushCreatureLoot`) and `supabase/functions/_shared/kill-resolver.ts`, replace the hardcoded `?? 0.5` with a helper that picks the pool-config default matching `creature.rarity`:
 
-### Explicitly out of scope
+```text
+effectiveDropChance =
+  creature.drop_chance
+  ?? poolConfig.drop_chance_{rarity}
+  ?? 0.5   // safety net if config row missing
+```
 
-- No changes to threshold logic, wimp direction UI, opportunity-attack rules, or death-penalty math.
-- Not changing Holy Shield / mutual-kill behavior (previous discussion).
-- No new preference toggle — the "manual move suppresses wimp" behavior is on by default; if you ever want it configurable we can add a checkbox later.
+`pushCreatureLoot` currently doesn't have `poolConfig` in scope — it only stores `dropChance` on the queue entry. Two options; I'll take (a):
 
-### Verification
+  a. Pass the rarity through on the queue entry (`creatureRarity`) and compute the effective drop chance in `processLootDrops`, where `poolConfig` is already lazy-loaded. Same behavior, one place to change.
+  b. Load pool config earlier. More churn, no benefit.
 
-- Set wimp threshold high enough to trigger, engage a creature, drop below threshold, manually move once → wimp does not subsequently fire in this combat. Confirm no `⚠️ Wimp flee …` log after the manual move.
-- End combat and re-engage → wimp fires normally again on the next low-HP tick.
-- Do nothing manually while low HP → wimp still fires as before (regression check).
+`kill-resolver.ts` already loads its own pool config path — extend it the same way.
+
+Update the inline `poolConfig` default object (line 259) and the corresponding one in `kill-resolver.ts` to include the three new fields so old rows keep working.
+
+### 3. Admin UI — `src/components/admin/loot/PoolRulesTab.tsx`
+Add a new "World Drop Chance by Rarity" section above the Equipment Pool section, with three number inputs (0–1, step 0.01) for regular / rare / boss, each showing the `%` in the helper text. Include the new fields in `PoolConfig`, `DEFAULT_CONFIG`, load, and save.
+
+Copy line under the section: "Default drop chance when a creature has no per-creature override. Applies to item_pool creatures only."
+
+### 4. Docs
+Update `WorldBuilderRulebook.tsx` / `GameManual.tsx` drop-chance references to note the rarity-tiered defaults (short paragraph, no math changes).
+
+## Out of scope
+
+- No changes to per-creature `drop_chance` editing, rarity assignment, consumable drop chance, level offsets, or common/uncommon split.
+- No changes to legacy loot tables, salvage rules, or unique-item dedup.
+- No migration of existing `creatures.drop_chance` values.
+
+## Verification
+
+- Set regular = 0.1, rare = 0.5, boss = 1.0 in the UI, save, reload — values persist.
+- Kill a regular creature with `drop_chance = null` in DB → drop rate matches ~10%.
+- Kill a boss with `drop_chance = null` → item always drops (subject to pool having a matching item).
+- Kill a creature with an explicit per-creature `drop_chance` → override still wins, rarity default ignored.
+- Legacy-table creatures unaffected (regression check).
