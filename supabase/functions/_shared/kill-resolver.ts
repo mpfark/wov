@@ -215,7 +215,7 @@ export function resolveCreatureKill(
       lootTableId: null,
       itemId: null,
       creatureName: creature.name,
-      dropChance,
+      dropChance: itemPoolDropChance,
       mode: 'item_pool',
       creatureLevel: creature.level,
       creatureRarity: creature.rarity ?? null,
