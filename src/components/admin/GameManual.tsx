@@ -585,7 +585,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
-                <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has a <code className="text-primary">drop_chance</code> (0.0–1.0) and a linked <code className="text-primary">loot_table_id</code>. On kill, if the drop roll succeeds, one item is selected from the table using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
+                <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has an optional <code className="text-primary">drop_chance</code> (0.0–1.0) override and a linked <code className="text-primary">loot_table_id</code>. For item_pool creatures, if <code className="text-primary">drop_chance</code> is null the resolver uses the per-rarity default configured in Loot Pool Rules (regular / rare / boss). On kill, if the drop roll succeeds, one item is selected from the pool using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
               </div>
 
               <Card className="bg-card/30 border-primary/20">

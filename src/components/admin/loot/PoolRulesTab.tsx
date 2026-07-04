@@ -13,6 +13,9 @@ interface PoolConfig {
   consumable_drop_chance: number;
   consumable_level_min_offset: number;
   consumable_level_max_offset: number;
+  drop_chance_regular: number;
+  drop_chance_rare: number;
+  drop_chance_boss: number;
 }
 
 const DEFAULT_CONFIG: PoolConfig = {
@@ -23,6 +26,9 @@ const DEFAULT_CONFIG: PoolConfig = {
   consumable_drop_chance: 0.15,
   consumable_level_min_offset: -5,
   consumable_level_max_offset: 0,
+  drop_chance_regular: 0.35,
+  drop_chance_rare: 0.60,
+  drop_chance_boss: 1.00,
 };
 
 export default function PoolRulesTab() {
@@ -46,6 +52,9 @@ export default function PoolRulesTab() {
       consumable_drop_chance: config.consumable_drop_chance,
       consumable_level_min_offset: config.consumable_level_min_offset,
       consumable_level_max_offset: config.consumable_level_max_offset,
+      drop_chance_regular: config.drop_chance_regular,
+      drop_chance_rare: config.drop_chance_rare,
+      drop_chance_boss: config.drop_chance_boss,
     } as any).eq('id', 1);
     setLoading(false);
     if (error) return toast.error(error.message);
@@ -65,6 +74,36 @@ export default function PoolRulesTab() {
           <div className="p-2 bg-background/50 border border-border rounded text-xs">
             <strong>Non-Humanoid</strong>
             <p className="text-muted-foreground">🔩 Salvage only (no item drops)</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-display text-sm text-primary">World Drop Chance by Rarity</h3>
+          <p className="text-[10px] text-muted-foreground">Default drop chance when a creature has no per-creature override. Applies to item_pool creatures only.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-[10px] text-muted-foreground">Regular</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_regular}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_regular: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_regular * 100)}% chance</p>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Rare</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_rare}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_rare: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_rare * 100)}% chance</p>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Boss</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_boss}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_boss: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_boss * 100)}% chance</p>
           </div>
         </div>
       </div>

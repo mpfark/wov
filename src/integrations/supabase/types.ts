@@ -1149,6 +1149,9 @@ export type Database = {
           consumable_drop_chance: number
           consumable_level_max_offset: number
           consumable_level_min_offset: number
+          drop_chance_boss: number
+          drop_chance_rare: number
+          drop_chance_regular: number
           equip_level_max_offset: number
           equip_level_min_offset: number
           id: number
@@ -1159,6 +1162,9 @@ export type Database = {
           consumable_drop_chance?: number
           consumable_level_max_offset?: number
           consumable_level_min_offset?: number
+          drop_chance_boss?: number
+          drop_chance_rare?: number
+          drop_chance_regular?: number
           equip_level_max_offset?: number
           equip_level_min_offset?: number
           id?: number
@@ -1169,6 +1175,9 @@ export type Database = {
           consumable_drop_chance?: number
           consumable_level_max_offset?: number
           consumable_level_min_offset?: number
+          drop_chance_boss?: number
+          drop_chance_rare?: number
+          drop_chance_regular?: number
           equip_level_max_offset?: number
           equip_level_min_offset?: number
           id?: number

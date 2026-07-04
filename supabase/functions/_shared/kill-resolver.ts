@@ -204,7 +204,10 @@ export function resolveCreatureKill(
   const lootQueue: LootQueueEntry[] = [];
   const lootMode = creature.loot_mode || 'legacy_table';
   const lootTableEntries = (creature.loot_table || []) as any[];
-  const dropChance = creature.drop_chance ?? 0.5;
+  // For item_pool mode, sentinel -1 signals processLootDrops to use per-rarity pool defaults.
+  // Legacy mode keeps the historical 0.5 fallback when no per-creature override is set.
+  const itemPoolDropChance = creature.drop_chance ?? -1;
+  const legacyDropChance = creature.drop_chance ?? 0.5;
 
   if (lootMode === 'item_pool') {
     lootQueue.push({
@@ -212,9 +215,10 @@ export function resolveCreatureKill(
       lootTableId: null,
       itemId: null,
       creatureName: creature.name,
-      dropChance,
+      dropChance: itemPoolDropChance,
       mode: 'item_pool',
       creatureLevel: creature.level,
+      creatureRarity: creature.rarity ?? null,
     });
   } else if (lootMode === 'salvage_only') {
     // Intentionally no item loot — salvage-only creatures only grant the
@@ -225,7 +229,7 @@ export function resolveCreatureKill(
       lootTableId: creature.loot_table_id,
       itemId: null,
       creatureName: creature.name,
-      dropChance,
+      dropChance: legacyDropChance,
       mode: 'legacy',
     });
   } else {
