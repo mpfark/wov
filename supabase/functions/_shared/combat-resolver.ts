@@ -196,9 +196,12 @@ function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQue
       lootTableId: null,
       itemId: null,
       creatureName: creature.name,
-      dropChance: creature.drop_chance ?? 0.5,
+      // Per-creature drop_chance is an explicit override. When null, processLootDrops
+      // falls back to the pool config's per-rarity default.
+      dropChance: creature.drop_chance ?? -1,
       mode: 'item_pool',
       creatureLevel: creature.level,
+      creatureRarity: creature.rarity ?? null,
     });
     return;
   }
