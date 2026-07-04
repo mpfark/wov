@@ -52,6 +52,9 @@ export default function PoolRulesTab() {
       consumable_drop_chance: config.consumable_drop_chance,
       consumable_level_min_offset: config.consumable_level_min_offset,
       consumable_level_max_offset: config.consumable_level_max_offset,
+      drop_chance_regular: config.drop_chance_regular,
+      drop_chance_rare: config.drop_chance_rare,
+      drop_chance_boss: config.drop_chance_boss,
     } as any).eq('id', 1);
     setLoading(false);
     if (error) return toast.error(error.message);
