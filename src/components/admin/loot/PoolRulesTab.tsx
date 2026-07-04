@@ -79,6 +79,36 @@ export default function PoolRulesTab() {
       </div>
 
       <div className="space-y-3">
+        <div>
+          <h3 className="font-display text-sm text-primary">World Drop Chance by Rarity</h3>
+          <p className="text-[10px] text-muted-foreground">Default drop chance when a creature has no per-creature override. Applies to item_pool creatures only.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-[10px] text-muted-foreground">Regular</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_regular}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_regular: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_regular * 100)}% chance</p>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Rare</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_rare}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_rare: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_rare * 100)}% chance</p>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Boss</label>
+            <Input type="number" step={0.01} min={0} max={1} value={config.drop_chance_boss}
+              onChange={e => setConfig(c => ({ ...c, drop_chance_boss: Math.min(1, Math.max(0, +e.target.value)) }))}
+              className="h-7 text-xs" />
+            <p className="text-[9px] text-muted-foreground mt-0.5">{Math.round(config.drop_chance_boss * 100)}% chance</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
         <h3 className="font-display text-sm text-primary">Equipment Pool</h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
