@@ -13,6 +13,9 @@ interface PoolConfig {
   consumable_drop_chance: number;
   consumable_level_min_offset: number;
   consumable_level_max_offset: number;
+  drop_chance_regular: number;
+  drop_chance_rare: number;
+  drop_chance_boss: number;
 }
 
 const DEFAULT_CONFIG: PoolConfig = {
@@ -23,6 +26,9 @@ const DEFAULT_CONFIG: PoolConfig = {
   consumable_drop_chance: 0.15,
   consumable_level_min_offset: -5,
   consumable_level_max_offset: 0,
+  drop_chance_regular: 0.35,
+  drop_chance_rare: 0.60,
+  drop_chance_boss: 1.00,
 };
 
 export default function PoolRulesTab() {
