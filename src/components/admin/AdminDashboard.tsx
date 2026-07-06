@@ -11,6 +11,7 @@ import {
   Bug,
   Layers,
 } from 'lucide-react';
+import { WorldSlumberCard } from './WorldSlumberCard';
 
 interface AdminDashboardProps {
   onNavigate: (tab: string) => void;
@@ -78,6 +79,8 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         <h2 className="t-display-lg text-base mb-1">Welcome back</h2>
         <p className="text-sm text-muted-foreground">Quick overview of the world state.</p>
       </div>
+
+      <WorldSlumberCard />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {CARDS.map((card) => (

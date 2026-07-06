@@ -1931,6 +1931,27 @@ export type Database = {
         }
         Relationships: []
       }
+      world_slumber_log: {
+        Row: {
+          awake_characters: number
+          changed_at: string
+          id: number
+          state: string
+        }
+        Insert: {
+          awake_characters?: number
+          changed_at?: string
+          id?: number
+          state: string
+        }
+        Update: {
+          awake_characters?: number
+          changed_at?: string
+          id?: number
+          state?: string
+        }
+        Relationships: []
+      }
       xp_boost: {
         Row: {
           activated_by: string | null
@@ -2254,6 +2275,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_world_state: { Args: never; Returns: undefined }
       regen_creature_hp: { Args: never; Returns: undefined }
       request_family_membership: { Args: { _display: string }; Returns: Json }
       resolve_family_request: {
