@@ -1,18 +1,24 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { APP_VERSION } from '@/lib/version';
 import logo from '@/assets/logo.png';
 
+const ADMIN_SESSION_KEY = 'lovable.adminOnlySession';
+
 export default function AuthPage() {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, signOut } = useAuth();
 
   const validatePassword = (pw: string): string | null => {
     if (pw.length < 10) return 'Password must be at least 10 characters.';
@@ -31,7 +37,33 @@ export default function AuthPage() {
         if (error) throw error;
         toast.success('Password reset email sent! Check your inbox.');
         setIsForgotPassword(false);
+      } else if (isAdminMode) {
+        // Mark session BEFORE sign-in so the GamePage heartbeat guard
+        // catches any accidental /game navigation from the start.
+        sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+        const { error } = await signIn(email, password);
+        if (error) {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          throw error;
+        }
+        // Verify admin role
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          throw new Error('Sign-in failed');
+        }
+        const [{ data: isOverlord }, { data: isSteward }] = await Promise.all([
+          supabase.rpc('has_role', { _user_id: user.id, _role: 'overlord' as any }),
+          supabase.rpc('has_role', { _user_id: user.id, _role: 'steward' as any }),
+        ]);
+        if (!isOverlord && !isSteward) {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          await signOut();
+          throw new Error('This account does not have admin access.');
+        }
+        navigate('/admin', { replace: true });
       } else if (isLogin) {
+        sessionStorage.removeItem(ADMIN_SESSION_KEY);
         const { error } = await signIn(email, password);
         if (error) throw error;
       } else {
@@ -50,23 +82,29 @@ export default function AuthPage() {
 
   const heading = isForgotPassword
     ? 'Reset Password'
-    : isLogin
-      ? 'Enter the Realm'
-      : 'Join the Fellowship';
+    : isAdminMode
+      ? 'Steward\u2019s Gate'
+      : isLogin
+        ? 'Enter the Realm'
+        : 'Join the Fellowship';
 
   const subtitle = isForgotPassword
     ? 'Send a raven to recover your path.'
-    : isLogin
-      ? 'The realm remembers you.'
-      : 'Begin your tale among the Wayfarers.';
+    : isAdminMode
+      ? 'Sign in without waking the world.'
+      : isLogin
+        ? 'The realm remembers you.'
+        : 'Begin your tale among the Wayfarers.';
 
   const submitLabel = loading
     ? 'Journeying...'
     : isForgotPassword
       ? 'Send Reset Link'
-      : isLogin
-        ? 'Enter the Realm'
-        : 'Create Account';
+      : isAdminMode
+        ? 'Enter the Admin Vault'
+        : isLogin
+          ? 'Enter the Realm'
+          : 'Create Account';
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gateway-bg p-4 overflow-hidden">
@@ -128,10 +166,10 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={isLogin ? 6 : 10}
+                  minLength={isLogin || isAdminMode ? 6 : 10}
                   className="mt-1 gateway-input"
                 />
-                {!isLogin && (
+                {!isLogin && !isAdminMode && (
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     At least 10 characters, with letters and numbers.
                   </p>
@@ -148,7 +186,7 @@ export default function AuthPage() {
           </form>
 
           <div className="mt-5 flex flex-col items-center gap-2">
-            {isLogin && !isForgotPassword && (
+            {isLogin && !isForgotPassword && !isAdminMode && (
               <button
                 type="button"
                 onClick={() => setIsForgotPassword(true)}
@@ -157,17 +195,32 @@ export default function AuthPage() {
                 Forgot your password?
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => { setIsLogin(!isLogin); setIsForgotPassword(false); }}
-              className="text-xs gateway-link"
-            >
-              {isForgotPassword
-                ? 'Back to sign in'
-                : isLogin
-                  ? 'No account? Join the Fellowship'
-                  : 'Already have an account? Enter'}
-            </button>
+            {!isAdminMode && (
+              <button
+                type="button"
+                onClick={() => { setIsLogin(!isLogin); setIsForgotPassword(false); }}
+                className="text-xs gateway-link"
+              >
+                {isForgotPassword
+                  ? 'Back to sign in'
+                  : isLogin
+                    ? 'No account? Join the Fellowship'
+                    : 'Already have an account? Enter'}
+              </button>
+            )}
+            {!isForgotPassword && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdminMode(!isAdminMode);
+                  setIsLogin(true);
+                  setIsForgotPassword(false);
+                }}
+                className="text-[11px] gateway-link opacity-70 hover:opacity-100 mt-1"
+              >
+                {isAdminMode ? '← Back to player sign in' : 'Admin login →'}
+              </button>
+            )}
           </div>
         </div>
 
