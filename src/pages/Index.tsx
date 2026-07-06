@@ -39,6 +39,11 @@ const Index = () => {
 
   if (!user) return <AuthPage />;
 
+  // Admin-only session: skip character load entirely and route to /admin.
+  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('lovable.adminOnlySession') === '1') {
+    return <Navigate to="/admin" replace />;
+  }
+
   // Onboarding gate — wait for profile to load, then check
   if (profileLoading) {
     return (
