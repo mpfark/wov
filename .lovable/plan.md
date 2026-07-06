@@ -1,63 +1,58 @@
-# Per-Rarity World Drop Chance
+## Goal
 
-Right now the "world drop chance" for a creature comes from `creatures.drop_chance` and, when that is null, a hardcoded `0.5` fallback in the loot resolver. There's no way to tune the default from the admin UI, and every rarity (regular / rare / boss) shares the same fallback.
+Make the "slumber" state (nobody online in the last 5 min → cron jobs no-op) visible, both in-app for admins and in the DB logs.
 
-This change moves the fallback into `loot_pool_config` and splits it by creature rarity, editable from the existing Pool Rules tab. Per-creature `drop_chance` overrides continue to win when set.
+## What to add
 
-## Scope
+### 1. Lightweight slumber event log (DB)
 
-- World drop pool (item_pool mode) only. Legacy per-creature loot tables are untouched.
-- Rarities: `regular`, `rare`, `boss` (the three values actually used by `creatures.rarity`).
-- Per-creature `drop_chance` remains an optional override; nothing about the Creature Manager UI changes.
+New table `public.world_slumber_log`:
+- `state` text ('awake' | 'asleep')
+- `awake_characters` int (count that triggered the transition)
+- `changed_at` timestamptz default now()
 
-## Changes
+Grants + RLS: service_role full; authenticated `SELECT` only for admins (via `has_role(auth.uid(),'admin')`).
 
-### 1. Schema — `loot_pool_config`
-Add three columns with sensible defaults:
+New SQL helper `public.record_world_state()`:
+- Reads current `world_is_awake()` → `now_state`.
+- Reads last row from `world_slumber_log` → `prev_state`.
+- If different (or table empty), INSERT a row with the current awake-character count.
+- Idempotent — safe to call every tick.
 
-- `drop_chance_regular numeric NOT NULL DEFAULT 0.35`
-- `drop_chance_rare numeric NOT NULL DEFAULT 0.60`
-- `drop_chance_boss numeric NOT NULL DEFAULT 1.00`
+Wire into existing gated cron functions so we log at natural checkpoints without adding a new job:
+- `tick_creatures()` — call `record_world_state()` unconditionally at the top, then keep the existing `world_is_awake()` early return.
+- `guarded_return_unique_items()` — same.
 
-Single-row table (id = 1), no RLS/grant changes needed.
+Result: transitions get recorded within 2 minutes of happening, at zero extra cron cost.
 
-### 2. Resolver fallback
-In `supabase/functions/_shared/combat-resolver.ts` (`pushCreatureLoot`) and `supabase/functions/_shared/kill-resolver.ts`, replace the hardcoded `?? 0.5` with a helper that picks the pool-config default matching `creature.rarity`:
+### 2. Admin UI indicator
 
-```text
-effectiveDropChance =
-  creature.drop_chance
-  ?? poolConfig.drop_chance_{rarity}
-  ?? 0.5   // safety net if config row missing
+In the Admin page header/status area (wherever the existing admin dashboard lives — e.g. `src/pages/AdminPage.tsx`), add a small pill:
+
+```
+🌙 World asleep · last awake 3h 12m ago
+☀️ World awake · 2 players online
 ```
 
-`pushCreatureLoot` currently doesn't have `poolConfig` in scope — it only stores `dropChance` on the queue entry. Two options; I'll take (a):
+Data source: a tiny hook `useWorldSlumberState()` that:
+- Queries `world_is_awake()` via RPC (or a `SELECT ... FROM characters WHERE last_online > now() - '5 min'` count).
+- Queries the last row of `world_slumber_log` for "last change" timestamp.
+- Polls every 30 s (admin page only — not injected globally).
 
-  a. Pass the rarity through on the queue entry (`creatureRarity`) and compute the effective drop chance in `processLootDrops`, where `poolConfig` is already lazy-loaded. Same behavior, one place to change.
-  b. Load pool config earlier. More churn, no benefit.
+Pill styling matches existing dark-fantasy parchment tokens (no hardcoded colors). Muted/desaturated when asleep, warm glow when awake.
 
-`kill-resolver.ts` already loads its own pool config path — extend it the same way.
+### 3. Optional: recent transitions list
 
-Update the inline `poolConfig` default object (line 259) and the corresponding one in `kill-resolver.ts` to include the three new fields so old rows keep working.
-
-### 3. Admin UI — `src/components/admin/loot/PoolRulesTab.tsx`
-Add a new "World Drop Chance by Rarity" section above the Equipment Pool section, with three number inputs (0–1, step 0.01) for regular / rare / boss, each showing the `%` in the helper text. Include the new fields in `PoolConfig`, `DEFAULT_CONFIG`, load, and save.
-
-Copy line under the section: "Default drop chance when a creature has no per-creature override. Applies to item_pool creatures only."
-
-### 4. Docs
-Update `WorldBuilderRulebook.tsx` / `GameManual.tsx` drop-chance references to note the rarity-tiered defaults (short paragraph, no math changes).
+Under the pill, a collapsible "Recent slumber activity" showing the last 20 rows of `world_slumber_log` (state, timestamp, awake_characters). Read-only, admin-only.
 
 ## Out of scope
 
-- No changes to per-creature `drop_chance` editing, rarity assignment, consumable drop chance, level offsets, or common/uncommon split.
-- No changes to legacy loot tables, salvage rules, or unique-item dedup.
-- No migration of existing `creatures.drop_chance` values.
+- No changes to cron schedules or gating logic (already working correctly).
+- No changes to `combat-tick` edge function (client-driven, already dormant when no players).
+- No pruning job yet — table grows by ~2 rows per awake/sleep cycle, negligible. Can add later if needed.
 
-## Verification
+## Technical notes
 
-- Set regular = 0.1, rare = 0.5, boss = 1.0 in the UI, save, reload — values persist.
-- Kill a regular creature with `drop_chance = null` in DB → drop rate matches ~10%.
-- Kill a boss with `drop_chance = null` → item always drops (subject to pool having a matching item).
-- Kill a creature with an explicit per-creature `drop_chance` → override still wins, rarity default ignored.
-- Legacy-table creatures unaffected (regression check).
+- `world_is_awake()` already exists and uses `characters.last_online > now() - interval '5 minutes'` — reused as the single source of truth.
+- Migration is schema + function changes only; safe and reversible.
+- Admin-only visibility uses the existing `has_role(auth.uid(),'admin')` pattern from user-roles memory.
