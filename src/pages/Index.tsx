@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useGameContext } from '@/contexts/GameContext';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
