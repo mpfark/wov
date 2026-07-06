@@ -35,12 +35,8 @@ export function useWorldSlumberState(enabled: boolean, intervalMs = 30_000): Wor
     let cancelled = false;
 
     const load = async () => {
-      const since = new Date(Date.now() - 5 * 60_000).toISOString();
-      const [charsRes, logRes] = await Promise.all([
-        supabase
-          .from('characters')
-          .select('id', { count: 'exact', head: true })
-          .gt('last_online', since),
+      const [awakeRes, logRes] = await Promise.all([
+        supabase.rpc('world_is_awake' as any),
         supabase
           .from('world_slumber_log')
           .select('id, state, awake_characters, changed_at')
@@ -50,9 +46,11 @@ export function useWorldSlumberState(enabled: boolean, intervalMs = 30_000): Wor
 
       if (cancelled) return;
 
-      const awakeNow = charsRes.count ?? 0;
-      const currentState: 'awake' | 'asleep' = awakeNow > 0 ? 'awake' : 'asleep';
       const recent = (logRes.data ?? []) as SlumberLogRow[];
+      const isAwake = awakeRes.data === true;
+      const currentState: 'awake' | 'asleep' = isAwake ? 'awake' : 'asleep';
+      // awake_characters count from most recent log entry when awake, else 0
+      const awakeNow = isAwake ? (recent.find((r) => r.state === 'awake')?.awake_characters ?? 0) : 0;
       const lastChangeAt = recent[0]?.changed_at ?? null;
 
       setState({ currentState, awakeNow, lastChangeAt, recent, loading: false });
