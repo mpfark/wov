@@ -553,6 +553,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // hurting "last seen" precision (all readers use ≥30 min granularity).
   useEffect(() => {
     const updateOnline = () => {
+      // Skip heartbeat in admin-only sessions so admins poking around
+      // /admin don't wake the world.
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('lovable.adminOnlySession') === '1') return;
       supabase.from('characters').update({ last_online: new Date().toISOString() } as any).eq('id', character.id).then(() => {});
     };
     let interval: ReturnType<typeof setInterval> | null = null;

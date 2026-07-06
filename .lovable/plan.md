@@ -1,58 +1,56 @@
-## Goal
+# Admin-only login (does not wake the world)
 
-Make the "slumber" state (nobody online in the last 5 min → cron jobs no-op) visible, both in-app for admins and in the DB logs.
+Goal: an admin can sign in through a dedicated entry that never selects a character and never counts toward the world's awake state, so `tick-creatures`, `return-unique-items`, etc. keep short-circuiting. Admins can still play the game normally through the regular login — they just don't count as "awake" on their own.
 
-## What to add
+## 1. Auth page — "Admin login" link
 
-### 1. Lightweight slumber event log (DB)
+- On `AuthPage.tsx`, add a small secondary link below the main sign-in form: **"Admin login →"**.
+- Clicking it toggles the form into "admin mode": same email/password fields, but the submit handler sets `sessionStorage.setItem('lovable.adminOnlySession', '1')` before calling `signInWithPassword`.
+- On successful sign-in in admin mode:
+  1. Verify the user has `overlord` or `steward` role via `has_role`. If not → sign out immediately and show "Not an admin account".
+  2. Navigate straight to `/admin`, bypassing the onboarding gate and character select.
+- Google sign-in button is hidden in admin mode (email/password only) to keep the flow explicit.
+- Regular sign-in flow is unchanged — admins who want to play just log in normally.
 
-New table `public.world_slumber_log`:
-- `state` text ('awake' | 'asleep')
-- `awake_characters` int (count that triggered the transition)
-- `changed_at` timestamptz default now()
+## 2. Never touch `last_online` in an admin-only session
 
-Grants + RLS: service_role full; authenticated `SELECT` only for admins (via `has_role(auth.uid(),'admin')`).
+- `GamePage.tsx` is the only writer of `characters.last_online`. Admin-only sessions never mount it, so this is already safe.
+- Add a defensive guard in `GamePage` heartbeat: if `sessionStorage.lovable.adminOnlySession === '1'`, skip the `last_online` update entirely. Protects against an admin manually navigating to `/game` mid admin-only session.
+- `AdminRoute` and `AdminDashboard` do not need changes.
 
-New SQL helper `public.record_world_state()`:
-- Reads current `world_is_awake()` → `now_state`.
-- Reads last row from `world_slumber_log` → `prev_state`.
-- If different (or table empty), INSERT a row with the current awake-character count.
-- Idempotent — safe to call every tick.
+## 3. Server-side exclusion in `world_is_awake()`
 
-Wire into existing gated cron functions so we log at natural checkpoints without adding a new job:
-- `tick_creatures()` — call `record_world_state()` unconditionally at the top, then keep the existing `world_is_awake()` early return.
-- `guarded_return_unique_items()` — same.
+Client discipline isn't enough — we want DB truth to also ignore admin activity even if an admin is playing normally.
 
-Result: transitions get recorded within 2 minutes of happening, at zero extra cron cost.
+New migration:
 
-### 2. Admin UI indicator
+- Update `public.world_is_awake()` to exclude characters whose owning user has role `overlord` or `steward`:
 
-In the Admin page header/status area (wherever the existing admin dashboard lives — e.g. `src/pages/AdminPage.tsx`), add a small pill:
+  ```sql
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.characters c
+    WHERE c.last_online > now() - interval '5 minutes'
+      AND NOT public.has_role(c.user_id, 'overlord')
+      AND NOT public.has_role(c.user_id, 'steward')
+  );
+  ```
 
-```
-🌙 World asleep · last awake 3h 12m ago
-☀️ World awake · 2 players online
-```
+- Update the matching `awake_characters` count used inside `record_world_state()` and the slumber log to use the same filter, so the indicator/history stays consistent.
+- `useWorldSlumberState` mirrors the same filter (join `user_roles`, exclude admin user_ids) so the admin pill matches server truth.
 
-Data source: a tiny hook `useWorldSlumberState()` that:
-- Queries `world_is_awake()` via RPC (or a `SELECT ... FROM characters WHERE last_online > now() - '5 min'` count).
-- Queries the last row of `world_slumber_log` for "last change" timestamp.
-- Polls every 30 s (admin page only — not injected globally).
+### Does the game still work for an admin playing?
 
-Pill styling matches existing dark-fantasy parchment tokens (no hardcoded colors). Muted/desaturated when asleep, warm glow when awake.
-
-### 3. Optional: recent transitions list
-
-Under the pill, a collapsible "Recent slumber activity" showing the last 20 rows of `world_slumber_log` (state, timestamp, awake_characters). Read-only, admin-only.
+Yes. Regular sign-in flow, character select, combat, movement, everything — all unchanged. The only behavioral difference is that an admin playing alone will not, by themselves, wake the world for cron jobs. The moment any non-admin player is active in the last 5 minutes, `world_is_awake()` returns true for everyone (admins included), and creature ticks / respawns / uniques return resume normally.
 
 ## Out of scope
 
-- No changes to cron schedules or gating logic (already working correctly).
-- No changes to `combat-tick` edge function (client-driven, already dormant when no players).
-- No pruning job yet — table grows by ~2 rows per awake/sleep cycle, negligible. Can add later if needed.
+- No changes to cron cadence, `tick-creatures`, `combat-tick`, or pruning jobs.
+- No new role, no schema changes beyond the two function bodies.
+- No changes to how normal players log in.
 
 ## Technical notes
 
-- `world_is_awake()` already exists and uses `characters.last_online > now() - interval '5 minutes'` — reused as the single source of truth.
-- Migration is schema + function changes only; safe and reversible.
-- Admin-only visibility uses the existing `has_role(auth.uid(),'admin')` pattern from user-roles memory.
+- Files touched: `src/pages/AuthPage.tsx`, `src/pages/GamePage.tsx` (heartbeat guard only), `src/hooks/useWorldSlumberState.ts`, and one new migration replacing `world_is_awake()` + the count expression inside `record_world_state()`.
+- `sessionStorage` (not `localStorage`) so the flag dies with the tab and doesn't bleed into normal logins.
+- Admin role check reuses the existing `has_role(auth.uid(), 'overlord' | 'steward')` RPC pattern.
