@@ -49,6 +49,9 @@ export function useAuth() {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('lovable.adminOnlySession');
+    }
     return supabase.auth.signOut();
   }, []);
 
