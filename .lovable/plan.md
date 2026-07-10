@@ -1,56 +1,58 @@
-# Admin-only login (does not wake the world)
 
-Goal: an admin can sign in through a dedicated entry that never selects a character and never counts toward the world's awake state, so `tick-creatures`, `return-unique-items`, etc. keep short-circuiting. Admins can still play the game normally through the regular login — they just don't count as "awake" on their own.
+## Goal
+Cut WoV daily run-usage credits by copying the patterns that dropped Frokost from ~1.86 → ~0.35/day.
 
-## 1. Auth page — "Admin login" link
+## What Frokost does differently (evidence)
+- **3 cron jobs total.** Email queue is a 1-min *safety net* that no-ops (pure SQL check on pgmq queues) when there's nothing to send — the real send is triggered event-driven from `enqueue_email` via `net.http_post`.
+- **Working-hours schedules** (`*/30 5-17 * * 1-5`) instead of 24/7 cadence.
+- **Trigger-driven (re)scheduling**: the weekly reminder cron is `cron.schedule`d only when settings enable it, and `cron.unschedule`d otherwise.
+- **Minimal realtime publication** (they don't broadcast hot tables at all).
 
-- On `AuthPage.tsx`, add a small secondary link below the main sign-in form: **"Admin login →"**.
-- Clicking it toggles the form into "admin mode": same email/password fields, but the submit handler sets `sessionStorage.setItem('lovable.adminOnlySession', '1')` before calling `signInWithPassword`.
-- On successful sign-in in admin mode:
-  1. Verify the user has `overlord` or `steward` role via `has_role`. If not → sign out immediately and show "Not an admin account".
-  2. Navigate straight to `/admin`, bypassing the onboarding gate and character select.
-- Google sign-in button is hidden in admin mode (email/password only) to keep the flow explicit.
-- Regular sign-in flow is unchanged — admins who want to play just log in normally.
+## What WoV does today
+- 5 cron jobs, all 24/7:
+  - `tick-creatures` every 2 min (720 runs/day)
+  - `expire-king-slayer`, `expire-marketplace-listings` every 15 min (96 each)
+  - `return-unique-items` every 30 min
+  - `prune-logs` hourly
+- Even when the world is asleep, every `tick-creatures` still runs `record_world_state()` which scans `characters` + does role checks (720 seq-scans/day for nothing).
+- Realtime publication includes hot/heavy tables: `characters` (51 cols, written on every heartbeat / HP-CP-MP tick), `creatures`, `party_combat_log`. Every UPDATE hits the WAL replication slot even with 0 subscribers online.
+- Email queue kick already exists (good).
 
-## 2. Never touch `last_online` in an admin-only session
+## Plan
 
-- `GamePage.tsx` is the only writer of `characters.last_online`. Admin-only sessions never mount it, so this is already safe.
-- Add a defensive guard in `GamePage` heartbeat: if `sessionStorage.lovable.adminOnlySession === '1'`, skip the `last_online` update entirely. Protects against an admin manually navigating to `/game` mid admin-only session.
-- `AdminRoute` and `AdminDashboard` do not need changes.
+### 1. Make crons truly event-driven (biggest win)
+- Add `schedule_world_crons()` / `unschedule_world_crons()` SECURITY DEFINER functions that call `cron.schedule` / `cron.unschedule` for `tick-creatures`.
+- Add an AFTER UPDATE trigger on `characters.last_online` that:
+  - Calls `schedule_world_crons()` when a non-admin's `last_online` crosses into the "active" window and no job exists.
+  - This is the wake-up path; login-time already updates `last_online`.
+- Extend `record_world_state()` so when it flips `awake → asleep` it calls `unschedule_world_crons()`.
+- Keep one lightweight watchdog cron (`*/5 * * * *`) that only checks state and unschedules if stale — safety net matching Frokost's pattern.
+- Net effect: **0 cron work while nobody is playing** (currently 720+ no-op runs/day).
 
-## 3. Server-side exclusion in `world_is_awake()`
+### 2. Consolidate & slow down remaining crons
+- Merge `expire-king-slayer` + `expire-marketplace-listings` into a single `expire-timed-state` job every 15 min. (2 jobs → 1, halves per-run overhead.)
+- Move `return-unique-items` from `*/30` to hourly — unique-item return is not time-critical.
+- Gate all of them behind `world_is_awake()` (already done) and skip the `record_world_state` insert on the fast path.
 
-Client discipline isn't enough — we want DB truth to also ignore admin activity even if an admin is playing normally.
+### 3. Trim realtime publication
+- Drop `party_combat_log` from `supabase_realtime` — panel already receives log lines via the party broadcast channel, and inserts are batched (250 ms / 20 rows) purely for read-back.
+- Drop `xp_boost` from the publication — usage is low enough that a manual broadcast on grant/expire is cheaper than always-on WAL replication.
+- Keep `characters` for now (client depends on it) but plan a follow-up to split hot cols (`last_online`, `current_hp/cp/mp`, `current_node_id`) into a sibling table so the 51-col row isn't WAL-replicated on every heartbeat.
 
-New migration:
+### 4. Reduce heartbeat WAL churn
+- Confirm the `last_online`/resource writes are already throttled to 12 s (previous work). Add a guard so identical resource values don't UPDATE at all (skip write when nothing changed) — avoids WAL rows for idle characters staring at the map.
 
-- Update `public.world_is_awake()` to exclude characters whose owning user has role `overlord` or `steward`:
-
-  ```sql
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.characters c
-    WHERE c.last_online > now() - interval '5 minutes'
-      AND NOT public.has_role(c.user_id, 'overlord')
-      AND NOT public.has_role(c.user_id, 'steward')
-  );
-  ```
-
-- Update the matching `awake_characters` count used inside `record_world_state()` and the slumber log to use the same filter, so the indicator/history stays consistent.
-- `useWorldSlumberState` mirrors the same filter (join `user_roles`, exclude admin user_ids) so the admin pill matches server truth.
-
-### Does the game still work for an admin playing?
-
-Yes. Regular sign-in flow, character select, combat, movement, everything — all unchanged. The only behavioral difference is that an admin playing alone will not, by themselves, wake the world for cron jobs. The moment any non-admin player is active in the last 5 minutes, `world_is_awake()` returns true for everyone (admins included), and creature ticks / respawns / uniques return resume normally.
-
-## Out of scope
-
-- No changes to cron cadence, `tick-creatures`, `combat-tick`, or pruning jobs.
-- No new role, no schema changes beyond the two function bodies.
-- No changes to how normal players log in.
+### 5. Verify after deploy
+- `SELECT jobname, schedule FROM cron.job` shows fewer jobs.
+- With no players online: `cron.job_run_details` for `tick-creatures` should stop appearing entirely (job unscheduled), not just no-op.
+- `supabase--db_health` WAL size should trend down over a day.
 
 ## Technical notes
+- All schedule/unschedule wrappers use `SECURITY DEFINER SET search_path = public, cron` and are callable only by service-role / triggers.
+- Trigger uses `pg_trigger_depth() = 0` guard to avoid recursive fires.
+- Migration is additive; existing jobs are unscheduled and re-created inside the migration so no manual dashboard steps.
+- No frontend/gameplay changes; combat, party, chat, marketplace behavior identical when the world is awake.
 
-- Files touched: `src/pages/AuthPage.tsx`, `src/pages/GamePage.tsx` (heartbeat guard only), `src/hooks/useWorldSlumberState.ts`, and one new migration replacing `world_is_awake()` + the count expression inside `record_world_state()`.
-- `sessionStorage` (not `localStorage`) so the flag dies with the tab and doesn't bleed into normal logins.
-- Admin role check reuses the existing `has_role(auth.uid(), 'overlord' | 'steward')` RPC pattern.
+## Out of scope (call out, don't do)
+- Splitting the `characters` table (larger refactor — separate plan).
+- Removing `characters`/`creatures` from the realtime publication (would require rewriting several hooks to use manual broadcasts).
