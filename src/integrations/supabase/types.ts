@@ -2183,6 +2183,7 @@ export type Database = {
       }
       guarded_expire_king_slayer: { Args: never; Returns: undefined }
       guarded_expire_marketplace_listings: { Args: never; Returns: undefined }
+      guarded_expire_timed_state: { Args: never; Returns: undefined }
       guarded_return_unique_items: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -2288,6 +2289,7 @@ export type Database = {
         Args: { _family_id: string; _user_id: string }
         Returns: Json
       }
+      schedule_tick_creatures: { Args: never; Returns: undefined }
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
@@ -2318,11 +2320,13 @@ export type Database = {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
       }
+      unschedule_tick_creatures: { Args: never; Returns: undefined }
       update_party_member_hp: {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
       }
       world_is_awake: { Args: never; Returns: boolean }
+      world_watchdog: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "player" | "steward" | "overlord"
