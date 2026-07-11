@@ -1056,7 +1056,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn</p>
+                <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn.</p>
                 <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP</p>
                 <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death</p>
               </div>
