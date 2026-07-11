@@ -1117,6 +1117,10 @@ Deno.serve(async (req) => {
         } else {
           dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
         }
+        // Templar Judgment: scaling reduced 20% vs shared smite baseline.
+        if (pa.ability_type === 'smite' && c.class === 'templar') {
+          dmg = Math.max(1, Math.floor(dmg * 0.8));
+        }
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
@@ -1377,7 +1381,8 @@ Deno.serve(async (req) => {
             const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
             const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
             const returnDmgBase = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
-            const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
+            // Holy Shield retaliation: scaling reduced 20% for balance.
+            const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1) * 0.8));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
