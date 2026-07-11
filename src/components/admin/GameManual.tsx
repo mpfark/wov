@@ -714,6 +714,53 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Equipment Slots */}
+          <AccordionItem value="equipment-slots" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🎽 Equipment Slots (9-Slot Paper Doll)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Characters have <strong className="text-foreground">9 equipment slots</strong> arranged in the Character Panel's paper doll:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><strong className="text-foreground">Head</strong>, <strong className="text-foreground">Trinket</strong>, <strong className="text-foreground">Chest</strong>, <strong className="text-foreground">Gloves</strong>, <strong className="text-foreground">Pants</strong></li>
+                  <li><strong className="text-foreground">Main Hand</strong>, <strong className="text-foreground">Off Hand</strong> (weapon or shield)</li>
+                  <li><strong className="text-foreground">Ring</strong>, <strong className="text-foreground">Ring 2</strong> — two ring slots for stacking milestone Soulforged Rings alongside a world ring.</li>
+                </ul>
+                <p className="mt-1"><strong className="text-foreground">Removed slots:</strong> Amulet, Shoulders, Belt, and Boots no longer exist. The old <strong>belt-potion quick-slot system</strong> is also gone — potions are used directly from the inventory.</p>
+                <p><strong className="text-foreground">Locked in combat:</strong> Equipment cannot be swapped mid-fight. Unequip and equip actions are blocked while an active combat session is running on your node.</p>
+                <p><strong className="text-foreground">2H weapons:</strong> Equipping a two-handed weapon in Main Hand disables the Off Hand slot.</p>
+                <p><strong className="text-foreground">Portrait tab:</strong> Character Panel has a Portrait tab that regenerates an AI-generated portrait once per 24h based on your equipped gear and class.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Gems & Stonebinder */}
+          <AccordionItem value="gems" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              💠 Gems & Stonebinder
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Gems drive both the <strong className="text-foreground">forge-gating</strong> system (what item type the forge will produce) and the <strong className="text-foreground">Enhance</strong> system (which stats you add to plain gear).</p>
+
+                <p className="font-display text-primary">Primary Gems (6 — one per attribute)</p>
+                <p>
+                  <span style={{ color: 'hsl(0,70%,55%)' }}>Garnet → STR</span> · <span style={{ color: 'hsl(50,90%,55%)' }}>Topaz → DEX</span> · <span style={{ color: 'hsl(140,60%,45%)' }}>Emerald → CON</span> · <span style={{ color: 'hsl(220,70%,60%)' }}>Sapphire → INT</span> · <span className="text-foreground">Pearl → WIS</span> · <span style={{ color: 'hsl(280,60%,65%)' }}>Amethyst → CHA</span>
+                </p>
+                <p><strong className="text-foreground">Drop rate:</strong> Every creature has a <code className="text-primary">10%</code> chance per kill to drop one primary gem (uniformly random from the 6).</p>
+                <p><strong className="text-foreground">Trade at Jewelcrafter:</strong> Buy a chosen primary for <code className="text-primary">25 salvage</code> as bad-luck protection.</p>
+
+                <p className="font-display text-primary mt-2">Hybrid Gems (6 — one per attribute pair)</p>
+                <p>Fuse <strong>1 of each primary</strong> in the pair at the Jewelcrafter — no salvage cost, the two primaries are the price. Used to forge Uncommon items and to socket hybrid stats on plain gear.</p>
+
+                <p className="font-display text-primary mt-2">🪨 Stonebinder — Ascended (Turning) Stones</p>
+                <p>An advanced Jewelcrafter recipe. Fuse <strong>two different primary Turning Stones</strong> into the matching <strong className="text-foreground">Ascended Stone</strong>. Ascended Stones follow <strong>world-unique exclusivity</strong> — only one instance of each Ascended stone can exist in the world at a time, and once used to forge, the pool is empty until it's destroyed / returned.</p>
+                <p><strong className="text-foreground">No salvage cost</strong> — the sacrifice of two Turning Stones is the entire cost. Recipes are stat-identity based, so the Ascended Stone always matches the two primaries' combined identity.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* ── Weapon Affinity ── */}
           <AccordionItem value="weapon-affinity" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
