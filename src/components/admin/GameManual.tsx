@@ -864,6 +864,52 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Teleports */}
+          <AccordionItem value="teleports" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🌀 Teleports — Recall & Public Nodes
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Arcane Recall (level 22+):</strong> From any non-combat node, open the Teleport dialog to jump to a discovered teleport node. CP cost scales with grid distance.</p>
+                <p><strong className="text-foreground">Discovered teleports:</strong> A teleport node normally appears in your Recall list only after you have physically visited it.</p>
+                <p><strong className="text-foreground">Public teleports (Overlord-tagged):</strong> Nodes flagged <code className="text-primary">is_public_teleport</code> in the Node Editor are <strong>always visible</strong> in every player's Recall list, even before discovery. Use this to advertise class halls, capital cities, event hubs, or anywhere new players should be able to find without a guide.</p>
+                <p><strong className="text-foreground">Summon Player (level 26+):</strong> Type a player's name in the teleport dialog to bring them to your node. Same distance-based CP cost as Recall. No party requirement.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Treasure Maps */}
+          <AccordionItem value="treasure-maps" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🗺️ Treasure Maps
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Treasure Maps are <strong className="text-foreground">quest items</strong> that reveal the location of a specific node inside a region. Great for pointing players at class halls, hidden dungeons, or event nodes without a written guide.</p>
+                <p><strong className="text-foreground">Authoring:</strong> In the Item Editor, choose the <code className="text-primary">treasure_map</code> item type and pick a target region + target node. The map stores <code className="text-primary">map_data.region_id</code> and <code className="text-primary">map_data.target_node_id</code>.</p>
+                <p><strong className="text-foreground">In-game use:</strong> Right-click the map in inventory to open the Map dialog, which renders the region's mini-map with a red ✕ over the target node. The map is <strong>not consumed</strong> on open — players can re-check it as often as they like.</p>
+                <p><strong className="text-foreground">Handing maps out:</strong> Any NPC can grant a map via the <code className="text-primary">grant_npc_gift</code> RPC hooked into a dialogue topic — the standard flow for class-hall directions given by an in-world NPC.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Assassin Contracts */}
+          <AccordionItem value="contracts" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🗡️ Assassin Contracts
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The Assassin class has an exclusive contract system run by <strong className="text-foreground">Silra Vane</strong> in the Assassin class hall.</p>
+                <p><strong className="text-foreground">Taking a contract:</strong> Talk to Silra and pick up a contract. It writes to <code className="text-primary">characters.active_contract</code> with the target creature, area, and level. Only one contract can be active at a time.</p>
+                <p><strong className="text-foreground">Fulfilling:</strong> Kill the marked creature anywhere in the world. The contract is resolved on the killing blow, awarding gold and Renown (rare marks pay a bonus).</p>
+                <p><strong className="text-foreground">Abandoning:</strong> Talk to Silra again to drop the current contract via <code className="text-primary">assassin_abandon_contract</code> — no penalty beyond losing that contract slot.</p>
+                <p>Non-Assassin classes never see the contract topic in dialogue.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* Chat */}
           <AccordionItem value="chat" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
