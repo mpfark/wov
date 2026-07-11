@@ -222,23 +222,23 @@ export function rollBlock(dex: number, str: number): { blocked: boolean; amount:
 // ── Shield Wall (Templar block_buff stance) dual-primary scaling ─
 //
 // Templar primaries are WIS + CON. Shield Wall adds:
-//   WIS → bonus block chance (replaces the old flat +50%)
-//        = 0.30 + diminishingFloat(wisMod, 0.05, 0.25)
-//        → floor +30%, up to +55% at high WIS. Final block chance is
-//          still clamped to 95% at the call site.
-//   CON → bonus block amount (new — hardens each block)
-//        = 5 + diminishing(conMod, 6)
-//        → floor +5, up to +11 flat damage absorbed per block.
+//   WIS → bonus block chance (values reduced 15% from prior tuning)
+//        = 0.255 + diminishingFloat(wisMod, 0.0425, 0.2125)
+//        → floor +25.5%, up to +46.75% at high WIS. Final block chance
+//          is still clamped to 95% at the call site.
+//   CON → bonus block amount (values reduced 15% from prior tuning)
+//        = 4.25 + diminishing(conMod, 5.1)
+//        → floor +~4, up to ~+9 flat damage absorbed per block.
 //
 // Mirrored byte-for-byte in supabase/functions/_shared/formulas/combat.ts.
 export function getShieldWallChanceBonus(wis: number): number {
   const mod = Math.max(getStatModifier(wis), 0);
-  return 0.30 + diminishingFloat(mod, 0.05, 0.25);
+  return 0.255 + diminishingFloat(mod, 0.0425, 0.2125);
 }
 
 export function getShieldWallAmountBonus(con: number): number {
   const mod = Math.max(getStatModifier(con), 0);
-  return 5 + diminishing(mod, 6);
+  return 4.25 + diminishing(mod, 5.1);
 }
 
 // ── Creature damage ──────────────────────────────────────────────
