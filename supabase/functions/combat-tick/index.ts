@@ -2317,6 +2317,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Prince/Princess ascension world broadcast (Level 42) ────
+    if (princeAscensions.length > 0) {
+      try {
+        const worldChannel = db.channel('world-global');
+        for (const p of princeAscensions) {
+          const titleWord = p.gender === 'female' ? 'Princess' : 'Prince';
+          await worldChannel.send({
+            type: 'broadcast',
+            event: 'world',
+            payload: {
+              kind: 'prince_ascended',
+              icon: '👑',
+              text: `${p.characterName} has ascended to the peak of mortal strength and is now ${titleWord} of the realm.`,
+              actor: p.characterName,
+              nonce: `prince:${p.characterId}:${Date.now()}`,
+            },
+          });
+        }
+      } catch (e) {
+        console.error('[combat-tick] prince ascension broadcast failed', e);
+      }
+
 
     return json({
       events, creature_states, member_states: memberStates,
