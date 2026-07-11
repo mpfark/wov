@@ -384,6 +384,22 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Wimp / Auto-Flee */}
+          <AccordionItem value="wimp" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏃‍♂️ Wimp (Auto-Flee)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The Wimp system automatically flees combat when your HP drops too low. Configured per character from the world panel (compass control).</p>
+                <p><strong className="text-foreground">HP threshold (<code>wimp_hp_threshold</code>):</strong> When your HP reaches this value or lower during combat, the client fires a single flee attempt. Set to <code className="text-primary">0</code> to disable Wimp.</p>
+                <p><strong className="text-foreground">Direction (<code>wimp_direction</code>):</strong> The compass direction (N, NE, E, SE, S, SW, W, NW) to attempt to flee toward when the threshold trips. Movement respects normal MP cost, cooldowns, and opportunity-attack rules.</p>
+                <p><strong className="text-foreground">One-shot per trigger:</strong> Wimp fires at most once per HP-drop event to avoid spamming movement while HP oscillates.</p>
+                <p><strong className="text-foreground">Manual-move override:</strong> If you manually move in combat, the client calls <code className="text-primary">notifyPlayerMoved()</code>, which suppresses Wimp for the rest of that engagement — a deliberate manual move never gets fought by the auto-flee logic.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* 4b. XP & Creature Rewards */}
           <AccordionItem value="xp-rewards" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
