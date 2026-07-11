@@ -685,6 +685,7 @@ Deno.serve(async (req) => {
     // janitor). At most one king world-wide at any time.
     const KING_ALDRIC_ID = 'e1789e02-aa86-49a2-af02-148ac53503bc';
     const kingCrownings: { characterId: string; characterName: string; gender: string }[] = [];
+    const princeAscensions: { characterId: string; characterName: string; gender: string; charClass: string }[] = [];
 
     const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
