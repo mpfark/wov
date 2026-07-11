@@ -10,21 +10,29 @@ import XpBoostPanel from './XpBoostPanel';
 
 const MANUAL_SECTIONS: { id: string; label: string }[] = [
   { id: 'levels', label: '📊 Level Progression' },
+  { id: 'characters', label: '🧙 Character Slots' },
   { id: 'stats', label: '🎭 Character Stats' },
   { id: 'hp-ac', label: '❤️ HP, AC & Regen' },
   { id: 'cp-system', label: '🔮 Concentration (CP)' },
   { id: 'combat', label: '⚔️ Combat' },
+  { id: 'wimp', label: '🏃‍♂️ Wimp (Auto-Flee)' },
   { id: 'xp-rewards', label: '🏆 XP & Rewards' },
   { id: 'abilities', label: '✨ Class Abilities' },
   { id: 'creatures', label: '🐉 Creature Scaling' },
-  { id: 'items', label: '🎒 Items & Economy' },
+  { id: 'items', label: '🎒 Items & Gear Rework' },
+  { id: 'equipment-slots', label: '🎽 Equipment Slots' },
+  { id: 'gems', label: '💠 Gems & Stonebinder' },
   { id: 'weapon-affinity', label: '⚔️ Weapon Tags' },
   { id: 'stamina', label: '🏃 Stamina' },
   { id: 'milestones', label: '🏆 Milestone Rewards' },
+  { id: 'teleports', label: '🌀 Teleports (Public & Recall)' },
+  { id: 'treasure-maps', label: '🗺️ Treasure Maps' },
+  { id: 'contracts', label: '🗡️ Assassin Contracts' },
   { id: 'chat', label: '💬 Chat' },
   { id: 'renown', label: '🏛️ Renown' },
   { id: 'economy', label: '💰 Economy' },
   { id: 'death', label: '💀 Death & Respawn' },
+  { id: 'slumber', label: '🌙 World Slumber' },
 ];
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
