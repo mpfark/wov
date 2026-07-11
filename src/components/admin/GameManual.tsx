@@ -178,6 +178,22 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Character Slots */}
+          <AccordionItem value="characters" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🧙 Character Slots & Multi-Character System
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Each account can own multiple characters. The character list is the first screen after login.</p>
+                <p><strong className="text-foreground">Naming:</strong> Character names must be a <strong>single word</strong> — no spaces, no titles. Titles (Lord, Baron, King…) are earned in-game and displayed automatically at the appropriate milestone.</p>
+                <p><strong className="text-foreground">Sort order:</strong> Characters are sorted <strong>alphabetically</strong> in the picker for a stable list.</p>
+                <p><strong className="text-foreground">Optimistic deletion:</strong> Deleting a character removes it from the picker immediately, then runs a <strong>hard-delete cascade</strong> on the server via <code className="text-primary">delete_character_cascade</code>. Every character-owned row (inventory, marketplace listings, materials, visited nodes, party membership, contracts, activity, etc.) is purged in a single transaction. There is no soft-delete or restore.</p>
+                <p><strong className="text-foreground">First entry:</strong> On a brand-new character, the "Your journey begins…" intro plays once. Existing (level 2+) characters skip the intro and enter the world directly at their last saved node.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* 2. Character Stats & Creation */}
           <AccordionItem value="stats" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
