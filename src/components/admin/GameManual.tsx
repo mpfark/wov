@@ -582,11 +582,22 @@ export default function GameManual() {
           {/* 7. Items & Economy */}
           <AccordionItem value="items" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🎒 Items & Economy
+              🎒 Items & Gear Rework
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
+              <Card className="bg-primary/5 border-primary/30">
+                <CardContent className="p-3 space-y-1 text-xs text-muted-foreground">
+                  <p className="text-xs font-display text-primary">🛠️ Gear Rework — Plain Bases + Enhance</p>
+                  <p>World and forge <strong className="text-foreground">Common / Uncommon</strong> gear now drops as <strong>plain bases with no rolled stats</strong>. Players choose which stats to add themselves by <strong className="text-foreground">socketing gems</strong> via the new <strong>Enhance</strong> tab at the Blacksmith and Jewelcrafter.</p>
+                  <p><strong className="text-foreground">Enhance tab flow:</strong> pick an owned item on the left → select an eligible gem on the right → the gem is consumed and its stat is added to the item. Each socket costs salvage + gold, same scale as forging.</p>
+                  <p><strong className="text-foreground">60% single-attribute cap:</strong> No single attribute may exceed <strong>60%</strong> of the item's total stat budget. This prevents monolithic all-STR / all-WIS bricks and keeps distributed builds competitive.</p>
+                  <p><strong className="text-foreground">Rare / Unique / Soulforged gear:</strong> Not affected — those still drop or are forged with pre-rolled stats (no sockets).</p>
+                </CardContent>
+              </Card>
+
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus) — slope 0.24 (−20% squish v2).</p>
+                <p className="text-xs font-display text-primary mt-1">Stat Budget (used by Rare+ pre-rolled gear and by the enhance cap)</p>
+                <p><strong className="text-foreground">Formula:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus).</p>
                 <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5 (unique 2h = 1.35)</p>
                 <p><strong className="text-foreground">Late-game taper:</strong> 1.0 (L≤30) · 0.90 (L31–35) · 0.80 (L36–40) · 0.72 (L41–42)</p>
                 <p><strong className="text-foreground">Hybrid bonus:</strong> +1 budget point on uncommon items at L30+</p>
@@ -594,7 +605,10 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
                 <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has an optional <code className="text-primary">drop_chance</code> (0.0–1.0) override and a linked <code className="text-primary">loot_table_id</code>. For item_pool creatures, if <code className="text-primary">drop_chance</code> is null the resolver uses the per-rarity default configured in Loot Pool Rules (regular / rare / boss). On kill, if the drop roll succeeds, one item is selected from the pool using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
+                <p className="mt-1"><strong className="text-foreground">Unique proc-on-hit:</strong> Some Unique weapons carry procs — <strong>lifesteal</strong>, <strong>elemental damage</strong>, <strong>weaken</strong>, <strong>heal pulse</strong> — that fire on autoattack hits.</p>
+                <p><strong className="text-soulforged">Soulforged tier:</strong> Endgame player-forged items (magenta glow) claimed at the Soulforge from level 30 onward. Higher stat budgets, and unlike Unique items, <em>duplicates are allowed</em> — each player forges their own.</p>
               </div>
+
 
               <Card className="bg-card/30 border-primary/20">
                 <CardContent className="p-3 space-y-2">
