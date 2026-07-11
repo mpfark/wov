@@ -1057,8 +1057,24 @@ export default function GameManual() {
             <AccordionContent className="px-4">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn.</p>
-                <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP</p>
-                <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death</p>
+                <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP.</p>
+                <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death.</p>
+                <p className="mt-2 text-amber-400"><strong>Wake-up carryover (hybrid combat):</strong> Persistent DoTs and debuffs (bleed, poison, ignite burn, curse) that were on you when you died are re-applied on respawn, so a low-HP respawn can immediately tick down again if you don't clear the effect (e.g. rest at an inn, use a heal, or wait it out).</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* World Slumber */}
+          <AccordionItem value="slumber" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🌙 World Slumber
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The world <strong className="text-foreground">sleeps</strong> when no non-admin players have been active in the last <strong className="text-foreground">5 minutes</strong>. While asleep, gameplay crons (creature ticks, expirations) are paused to save server credits.</p>
+                <p>The world <strong className="text-foreground">wakes automatically</strong> the moment any player logs in or moves. There is no waiting period on the player side.</p>
+                <p><strong className="text-foreground">Admin-only login:</strong> Signing in with an Overlord / Steward role does <em>not</em> wake the world — you can inspect the admin panel without incurring the run cost of a live tick loop. Admin heartbeats are suppressed for slumber purposes.</p>
+                <p>Overlords can see the current sleep/wake state and recent transitions on the <strong className="text-foreground">Admin Dashboard → World Slumber</strong> card.</p>
               </div>
             </AccordionContent>
           </AccordionItem>
