@@ -10,21 +10,29 @@ import XpBoostPanel from './XpBoostPanel';
 
 const MANUAL_SECTIONS: { id: string; label: string }[] = [
   { id: 'levels', label: '📊 Level Progression' },
+  { id: 'characters', label: '🧙 Character Slots' },
   { id: 'stats', label: '🎭 Character Stats' },
   { id: 'hp-ac', label: '❤️ HP, AC & Regen' },
   { id: 'cp-system', label: '🔮 Concentration (CP)' },
   { id: 'combat', label: '⚔️ Combat' },
+  { id: 'wimp', label: '🏃‍♂️ Wimp (Auto-Flee)' },
   { id: 'xp-rewards', label: '🏆 XP & Rewards' },
   { id: 'abilities', label: '✨ Class Abilities' },
   { id: 'creatures', label: '🐉 Creature Scaling' },
-  { id: 'items', label: '🎒 Items & Economy' },
+  { id: 'items', label: '🎒 Items & Gear Rework' },
+  { id: 'equipment-slots', label: '🎽 Equipment Slots' },
+  { id: 'gems', label: '💠 Gems & Stonebinder' },
   { id: 'weapon-affinity', label: '⚔️ Weapon Tags' },
   { id: 'stamina', label: '🏃 Stamina' },
   { id: 'milestones', label: '🏆 Milestone Rewards' },
+  { id: 'teleports', label: '🌀 Teleports (Public & Recall)' },
+  { id: 'treasure-maps', label: '🗺️ Treasure Maps' },
+  { id: 'contracts', label: '🗡️ Assassin Contracts' },
   { id: 'chat', label: '💬 Chat' },
   { id: 'renown', label: '🏛️ Renown' },
   { id: 'economy', label: '💰 Economy' },
   { id: 'death', label: '💀 Death & Respawn' },
+  { id: 'slumber', label: '🌙 World Slumber' },
 ];
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -167,6 +175,22 @@ export default function GameManual() {
                   </p>
                 </CardContent>
               </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Character Slots */}
+          <AccordionItem value="characters" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🧙 Character Slots & Multi-Character System
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Each account can own multiple characters. The character list is the first screen after login.</p>
+                <p><strong className="text-foreground">Naming:</strong> Character names must be a <strong>single word</strong> — no spaces, no titles. Titles (Lord, Baron, King…) are earned in-game and displayed automatically at the appropriate milestone.</p>
+                <p><strong className="text-foreground">Sort order:</strong> Characters are sorted <strong>alphabetically</strong> in the picker for a stable list.</p>
+                <p><strong className="text-foreground">Optimistic deletion:</strong> Deleting a character removes it from the picker immediately, then runs a <strong>hard-delete cascade</strong> on the server via <code className="text-primary">delete_character_cascade</code>. Every character-owned row (inventory, marketplace listings, materials, visited nodes, party membership, contracts, activity, etc.) is purged in a single transaction. There is no soft-delete or restore.</p>
+                <p><strong className="text-foreground">First entry:</strong> On a brand-new character, the "Your journey begins…" intro plays once. Existing (level 2+) characters skip the intro and enter the world directly at their last saved node.</p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
@@ -376,6 +400,22 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Wimp / Auto-Flee */}
+          <AccordionItem value="wimp" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏃‍♂️ Wimp (Auto-Flee)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The Wimp system automatically flees combat when your HP drops too low. Configured per character from the world panel (compass control).</p>
+                <p><strong className="text-foreground">HP threshold (<code>wimp_hp_threshold</code>):</strong> When your HP reaches this value or lower during combat, the client fires a single flee attempt. Set to <code className="text-primary">0</code> to disable Wimp.</p>
+                <p><strong className="text-foreground">Direction (<code>wimp_direction</code>):</strong> The compass direction (N, NE, E, SE, S, SW, W, NW) to attempt to flee toward when the threshold trips. Movement respects normal MP cost, cooldowns, and opportunity-attack rules.</p>
+                <p><strong className="text-foreground">One-shot per trigger:</strong> Wimp fires at most once per HP-drop event to avoid spamming movement while HP oscillates.</p>
+                <p><strong className="text-foreground">Manual-move override:</strong> If you manually move in combat, the client calls <code className="text-primary">notifyPlayerMoved()</code>, which suppresses Wimp for the rest of that engagement — a deliberate manual move never gets fought by the auto-flee logic.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* 4b. XP & Creature Rewards */}
           <AccordionItem value="xp-rewards" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
@@ -506,7 +546,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">💚 Heal (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Restore = <code className="text-primary">max(3, WIS_mod × 3 + level)</code></p>
                   <p><strong className="text-foreground">💉 Transfer Health (T2, 25 CP):</strong> <span className="text-dwarvish">⏳</span> Sacrifice own HP to heal ally = <code className="text-primary">WIS_mod × 3 + level</code> (capped by own HP − 1)</p>
                   <p><strong className="text-foreground">🌟 Purifying Light (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🛡️ Divine Aegis (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">lasts until absorbed</code></p>
+                  <p><strong className="text-foreground">🛡️ Divine Aegis (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> Places an absorb shield on a targeted ally (or self). Pool = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>. <strong>Now timed</strong> — the shield lasts up to <code className="text-primary">60s</code>, duration scales with CON, and expires whether or not it was fully absorbed.</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Bard —</p>
                   <p><strong className="text-foreground">🎶 Inspire (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Flat HP & CP regen for self + party, magnitude scales with CHA, duration scales with INT (60–180s). Recast to refresh — keeps the stronger HP/CP regen values.</p>
@@ -518,7 +558,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">✝️ Judgment (T0, 10 CP):</strong> <span className="text-dwarvish">⏳</span> Holy damage = <code className="text-primary">floor((5 + 2·WIS_mod + floor(level/3)) × 0.8)</code> — 20% reduced vs the shared smite baseline for balance.</p>
                   <p><strong className="text-foreground">⚡ Holy Shield (T1 stance, 15 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 10% of max CP. Each attacker that strikes you takes <code className="text-primary">floor((2 + WIS_mod + CON_kicker + floor(level/4)) × 0.8)</code> holy damage in return (max once per attacker per 2s tick). Retaliation scaling reduced 20%. <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
                   <p><strong className="text-foreground">🛡️ Shield Wall (T2 Stance, 15% max CP reserved):</strong> <span className="text-soulforged">⚓</span> Dual-primary scaling — WIS adds bonus block chance (+25.5% floor, scaling up to +46.75% at high WIS); CON adds bonus block amount (+~4 floor, scaling up to +~9 at high CON). Stacks on top of base block (DEX→chance, STR→amount); final chance capped at 95%. <strong>Requires a shield equipped.</strong> Click again to drop — reserved CP is NOT refunded.</p>
-                  <p><strong className="text-foreground">🔆 Consecrate (T3, 40 CP):</strong> Sanctifies the ground — heals party allies on-node and burns engaged creatures each tick.</p>
+                  <p><strong className="text-foreground">🔆 Consecrate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Sanctifies the ground for a limited number of ticks. Each tick <strong>heals all party members on this node</strong> and <strong>burns creatures currently engaged</strong>. Heal / burn per tick scales with <strong>WIS</strong>. Number of ticks scales with <strong>CON</strong>: 3 base, +1 at CON ≥ 3 mod, +1 at CON ≥ 6 mod (cap 5 ticks / 10s).</p>
                   <p><strong className="text-foreground">⚜️ Divine Challenge (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> 17% flat damage reduction (up to 34% at high WIS) from all sources for 30s. Stacks multiplicatively with Battle Cry / WIS dampen.</p>
 
                   <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +5. Lv 39+ milestone: all CP costs −10%.</p>
@@ -574,11 +614,22 @@ export default function GameManual() {
           {/* 7. Items & Economy */}
           <AccordionItem value="items" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🎒 Items & Economy
+              🎒 Items & Gear Rework
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
+              <Card className="bg-primary/5 border-primary/30">
+                <CardContent className="p-3 space-y-1 text-xs text-muted-foreground">
+                  <p className="text-xs font-display text-primary">🛠️ Gear Rework — Plain Bases + Enhance</p>
+                  <p>World and forge <strong className="text-foreground">Common / Uncommon</strong> gear now drops as <strong>plain bases with no rolled stats</strong>. Players choose which stats to add themselves by <strong className="text-foreground">socketing gems</strong> via the new <strong>Enhance</strong> tab at the Blacksmith and Jewelcrafter.</p>
+                  <p><strong className="text-foreground">Enhance tab flow:</strong> pick an owned item on the left → select an eligible gem on the right → the gem is consumed and its stat is added to the item. Each socket costs salvage + gold, same scale as forging.</p>
+                  <p><strong className="text-foreground">60% single-attribute cap:</strong> No single attribute may exceed <strong>60%</strong> of the item's total stat budget. This prevents monolithic all-STR / all-WIS bricks and keeps distributed builds competitive.</p>
+                  <p><strong className="text-foreground">Rare / Unique / Soulforged gear:</strong> Not affected — those still drop or are forged with pre-rolled stats (no sockets).</p>
+                </CardContent>
+              </Card>
+
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus) — slope 0.24 (−20% squish v2).</p>
+                <p className="text-xs font-display text-primary mt-1">Stat Budget (used by Rare+ pre-rolled gear and by the enhance cap)</p>
+                <p><strong className="text-foreground">Formula:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus).</p>
                 <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5 (unique 2h = 1.35)</p>
                 <p><strong className="text-foreground">Late-game taper:</strong> 1.0 (L≤30) · 0.90 (L31–35) · 0.80 (L36–40) · 0.72 (L41–42)</p>
                 <p><strong className="text-foreground">Hybrid bonus:</strong> +1 budget point on uncommon items at L30+</p>
@@ -586,7 +637,10 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
                 <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has an optional <code className="text-primary">drop_chance</code> (0.0–1.0) override and a linked <code className="text-primary">loot_table_id</code>. For item_pool creatures, if <code className="text-primary">drop_chance</code> is null the resolver uses the per-rarity default configured in Loot Pool Rules (regular / rare / boss). On kill, if the drop roll succeeds, one item is selected from the pool using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
+                <p className="mt-1"><strong className="text-foreground">Unique proc-on-hit:</strong> Some Unique weapons carry procs — <strong>lifesteal</strong>, <strong>elemental damage</strong>, <strong>weaken</strong>, <strong>heal pulse</strong> — that fire on autoattack hits.</p>
+                <p><strong className="text-soulforged">Soulforged tier:</strong> Endgame player-forged items (magenta glow) claimed at the Soulforge from level 30 onward. Higher stat budgets, and unlike Unique items, <em>duplicates are allowed</em> — each player forges their own.</p>
               </div>
+
 
               <Card className="bg-card/30 border-primary/20">
                 <CardContent className="p-3 space-y-2">
@@ -689,6 +743,53 @@ export default function GameManual() {
                   <PoolRulesTab />
                 </div>
               )}
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Equipment Slots */}
+          <AccordionItem value="equipment-slots" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🎽 Equipment Slots (9-Slot Paper Doll)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Characters have <strong className="text-foreground">9 equipment slots</strong> arranged in the Character Panel's paper doll:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><strong className="text-foreground">Head</strong>, <strong className="text-foreground">Trinket</strong>, <strong className="text-foreground">Chest</strong>, <strong className="text-foreground">Gloves</strong>, <strong className="text-foreground">Pants</strong></li>
+                  <li><strong className="text-foreground">Main Hand</strong>, <strong className="text-foreground">Off Hand</strong> (weapon or shield)</li>
+                  <li><strong className="text-foreground">Ring</strong>, <strong className="text-foreground">Ring 2</strong> — two ring slots for stacking milestone Soulforged Rings alongside a world ring.</li>
+                </ul>
+                <p className="mt-1"><strong className="text-foreground">Removed slots:</strong> Amulet, Shoulders, Belt, and Boots no longer exist. The old <strong>belt-potion quick-slot system</strong> is also gone — potions are used directly from the inventory.</p>
+                <p><strong className="text-foreground">Locked in combat:</strong> Equipment cannot be swapped mid-fight. Unequip and equip actions are blocked while an active combat session is running on your node.</p>
+                <p><strong className="text-foreground">2H weapons:</strong> Equipping a two-handed weapon in Main Hand disables the Off Hand slot.</p>
+                <p><strong className="text-foreground">Portrait tab:</strong> Character Panel has a Portrait tab that regenerates an AI-generated portrait once per 24h based on your equipped gear and class.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Gems & Stonebinder */}
+          <AccordionItem value="gems" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              💠 Gems & Stonebinder
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Gems drive both the <strong className="text-foreground">forge-gating</strong> system (what item type the forge will produce) and the <strong className="text-foreground">Enhance</strong> system (which stats you add to plain gear).</p>
+
+                <p className="font-display text-primary">Primary Gems (6 — one per attribute)</p>
+                <p>
+                  <span style={{ color: 'hsl(0,70%,55%)' }}>Garnet → STR</span> · <span style={{ color: 'hsl(50,90%,55%)' }}>Topaz → DEX</span> · <span style={{ color: 'hsl(140,60%,45%)' }}>Emerald → CON</span> · <span style={{ color: 'hsl(220,70%,60%)' }}>Sapphire → INT</span> · <span className="text-foreground">Pearl → WIS</span> · <span style={{ color: 'hsl(280,60%,65%)' }}>Amethyst → CHA</span>
+                </p>
+                <p><strong className="text-foreground">Drop rate:</strong> Every creature has a <code className="text-primary">10%</code> chance per kill to drop one primary gem (uniformly random from the 6).</p>
+                <p><strong className="text-foreground">Trade at Jewelcrafter:</strong> Buy a chosen primary for <code className="text-primary">25 salvage</code> as bad-luck protection.</p>
+
+                <p className="font-display text-primary mt-2">Hybrid Gems (6 — one per attribute pair)</p>
+                <p>Fuse <strong>1 of each primary</strong> in the pair at the Jewelcrafter — no salvage cost, the two primaries are the price. Used to forge Uncommon items and to socket hybrid stats on plain gear.</p>
+
+                <p className="font-display text-primary mt-2">🪨 Stonebinder — Ascended (Turning) Stones</p>
+                <p>An advanced Jewelcrafter recipe. Fuse <strong>two different primary Turning Stones</strong> into the matching <strong className="text-foreground">Ascended Stone</strong>. Ascended Stones follow <strong>world-unique exclusivity</strong> — only one instance of each Ascended stone can exist in the world at a time, and once used to forge, the pool is empty until it's destroyed / returned.</p>
+                <p><strong className="text-foreground">No salvage cost</strong> — the sacrifice of two Turning Stones is the entire cost. Recipes are stat-identity based, so the Ascended Stone always matches the two primaries' combined identity.</p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
@@ -852,6 +953,52 @@ export default function GameManual() {
                     <TableRow><TableCell className="text-xs">—</TableCell><TableCell className="text-xs">👑 King / Queen</TableCell><TableCell className="text-xs">Killing blow on King Aldric. Lost after 30 min offline.</TableCell></TableRow>
                   </TableBody>
                 </Table>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Teleports */}
+          <AccordionItem value="teleports" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🌀 Teleports — Recall & Public Nodes
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Arcane Recall (level 22+):</strong> From any non-combat node, open the Teleport dialog to jump to a discovered teleport node. CP cost scales with grid distance.</p>
+                <p><strong className="text-foreground">Discovered teleports:</strong> A teleport node normally appears in your Recall list only after you have physically visited it.</p>
+                <p><strong className="text-foreground">Public teleports (Overlord-tagged):</strong> Nodes flagged <code className="text-primary">is_public_teleport</code> in the Node Editor are <strong>always visible</strong> in every player's Recall list, even before discovery. Use this to advertise class halls, capital cities, event hubs, or anywhere new players should be able to find without a guide.</p>
+                <p><strong className="text-foreground">Summon Player (level 26+):</strong> Type a player's name in the teleport dialog to bring them to your node. Same distance-based CP cost as Recall. No party requirement.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Treasure Maps */}
+          <AccordionItem value="treasure-maps" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🗺️ Treasure Maps
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Treasure Maps are <strong className="text-foreground">quest items</strong> that reveal the location of a specific node inside a region. Great for pointing players at class halls, hidden dungeons, or event nodes without a written guide.</p>
+                <p><strong className="text-foreground">Authoring:</strong> In the Item Editor, choose the <code className="text-primary">treasure_map</code> item type and pick a target region + target node. The map stores <code className="text-primary">map_data.region_id</code> and <code className="text-primary">map_data.target_node_id</code>.</p>
+                <p><strong className="text-foreground">In-game use:</strong> Right-click the map in inventory to open the Map dialog, which renders the region's mini-map with a red ✕ over the target node. The map is <strong>not consumed</strong> on open — players can re-check it as often as they like.</p>
+                <p><strong className="text-foreground">Handing maps out:</strong> Any NPC can grant a map via the <code className="text-primary">grant_npc_gift</code> RPC hooked into a dialogue topic — the standard flow for class-hall directions given by an in-world NPC.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Assassin Contracts */}
+          <AccordionItem value="contracts" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🗡️ Assassin Contracts
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The Assassin class has an exclusive contract system run by <strong className="text-foreground">Silra Vane</strong> in the Assassin class hall.</p>
+                <p><strong className="text-foreground">Taking a contract:</strong> Talk to Silra and pick up a contract. It writes to <code className="text-primary">characters.active_contract</code> with the target creature, area, and level. Only one contract can be active at a time.</p>
+                <p><strong className="text-foreground">Fulfilling:</strong> Kill the marked creature anywhere in the world. The contract is resolved on the killing blow, awarding gold and Renown (rare marks pay a bonus).</p>
+                <p><strong className="text-foreground">Abandoning:</strong> Talk to Silra again to drop the current contract via <code className="text-primary">assassin_abandon_contract</code> — no penalty beyond losing that contract slot.</p>
+                <p>Non-Assassin classes never see the contract topic in dialogue.</p>
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -1048,9 +1195,25 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn</p>
-                <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP</p>
-                <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death</p>
+                <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn.</p>
+                <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP.</p>
+                <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death.</p>
+                <p className="mt-2 text-amber-400"><strong>Wake-up carryover (hybrid combat):</strong> Persistent DoTs and debuffs (bleed, poison, ignite burn, curse) that were on you when you died are re-applied on respawn, so a low-HP respawn can immediately tick down again if you don't clear the effect (e.g. rest at an inn, use a heal, or wait it out).</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* World Slumber */}
+          <AccordionItem value="slumber" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🌙 World Slumber
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>The world <strong className="text-foreground">sleeps</strong> when no non-admin players have been active in the last <strong className="text-foreground">5 minutes</strong>. While asleep, gameplay crons (creature ticks, expirations) are paused to save server credits.</p>
+                <p>The world <strong className="text-foreground">wakes automatically</strong> the moment any player logs in or moves. There is no waiting period on the player side.</p>
+                <p><strong className="text-foreground">Admin-only login:</strong> Signing in with an Overlord / Steward role does <em>not</em> wake the world — you can inspect the admin panel without incurring the run cost of a live tick loop. Admin heartbeats are suppressed for slumber purposes.</p>
+                <p>Overlords can see the current sleep/wake state and recent transitions on the <strong className="text-foreground">Admin Dashboard → World Slumber</strong> card.</p>
               </div>
             </AccordionContent>
           </AccordionItem>
