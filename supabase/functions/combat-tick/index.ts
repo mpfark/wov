@@ -1117,6 +1117,10 @@ Deno.serve(async (req) => {
         } else {
           dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
         }
+        // Templar Judgment: scaling reduced 20% vs shared smite baseline.
+        if (pa.ability_type === 'smite' && c.class === 'templar') {
+          dmg = Math.max(1, Math.floor(dmg * 0.8));
+        }
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
