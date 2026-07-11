@@ -1973,6 +1973,7 @@ Deno.serve(async (req) => {
               character_id: m.id,
               message: '🌋 The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
             });
+            princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
           }
 
           const fInt = (updates.int ?? c.int) + (eb.int || 0);
