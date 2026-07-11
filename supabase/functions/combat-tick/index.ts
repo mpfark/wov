@@ -2084,6 +2084,9 @@ Deno.serve(async (req) => {
             updates.respec_points = (c.respec_points || 0) + 1;
             events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
           }
+          if (newLevel === 42) {
+            princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
+          }
           const fInt = (updates.int ?? c.int) + (eb.int || 0);
           const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
           const fDex = (updates.dex ?? c.dex) + (eb.dex || 0);
