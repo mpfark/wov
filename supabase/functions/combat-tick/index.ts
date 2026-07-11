@@ -685,6 +685,7 @@ Deno.serve(async (req) => {
     // janitor). At most one king world-wide at any time.
     const KING_ALDRIC_ID = 'e1789e02-aa86-49a2-af02-148ac53503bc';
     const kingCrownings: { characterId: string; characterName: string; gender: string }[] = [];
+    const princeAscensions: { characterId: string; characterName: string; gender: string; charClass: string }[] = [];
 
     const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
@@ -1972,6 +1973,7 @@ Deno.serve(async (req) => {
               character_id: m.id,
               message: '🌋 The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
             });
+            princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
           }
 
           const fInt = (updates.int ?? c.int) + (eb.int || 0);
@@ -2081,6 +2083,9 @@ Deno.serve(async (req) => {
           if ([10, 20, 30, 40].includes(newLevel)) {
             updates.respec_points = (c.respec_points || 0) + 1;
             events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
+          }
+          if (newLevel === 42) {
+            princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
           }
           const fInt = (updates.int ?? c.int) + (eb.int || 0);
           const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
@@ -2311,6 +2316,28 @@ Deno.serve(async (req) => {
         console.error('[combat-tick] king crowning failed', e);
       }
     }
+
+    // ── Prince/Princess ascension world broadcast (Level 42) ────
+    if (princeAscensions.length > 0) {
+      try {
+        const worldChannel = db.channel('world-global');
+        for (const p of princeAscensions) {
+          const titleWord = p.gender === 'female' ? 'Princess' : 'Prince';
+          await worldChannel.send({
+            type: 'broadcast',
+            event: 'world',
+            payload: {
+              kind: 'prince_ascended',
+              icon: '👑',
+              text: `${p.characterName} has ascended to the peak of mortal strength and is now ${titleWord} of the realm.`,
+              actor: p.characterName,
+              nonce: `prince:${p.characterId}:${Date.now()}`,
+            },
+          });
+        }
+      } catch (e) {
+        console.error('[combat-tick] prince ascension broadcast failed', e);
+      }
 
 
     return json({
