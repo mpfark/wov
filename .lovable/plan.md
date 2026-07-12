@@ -1,58 +1,39 @@
+## Problem
 
-## Goal
-Cut WoV daily run-usage credits by copying the patterns that dropped Frokost from ~1.86 → ~0.35/day.
+Today the world-awake check in the database explicitly ignores any character whose owner is a Steward or Overlord:
 
-## What Frokost does differently (evidence)
-- **3 cron jobs total.** Email queue is a 1-min *safety net* that no-ops (pure SQL check on pgmq queues) when there's nothing to send — the real send is triggered event-driven from `enqueue_email` via `net.http_post`.
-- **Working-hours schedules** (`*/30 5-17 * * 1-5`) instead of 24/7 cadence.
-- **Trigger-driven (re)scheduling**: the weekly reminder cron is `cron.schedule`d only when settings enable it, and `cron.unschedule`d otherwise.
-- **Minimal realtime publication** (they don't broadcast hot tables at all).
+- `world_is_awake()` — filters out admin-owned characters entirely.
+- `record_world_state()` — same filter, so it also drives the `schedule_tick_creatures` / `unschedule_tick_creatures` decisions.
 
-## What WoV does today
-- 5 cron jobs, all 24/7:
-  - `tick-creatures` every 2 min (720 runs/day)
-  - `expire-king-slayer`, `expire-marketplace-listings` every 15 min (96 each)
-  - `return-unique-items` every 30 min
-  - `prune-logs` hourly
-- Even when the world is asleep, every `tick-creatures` still runs `record_world_state()` which scans `characters` + does role checks (720 seq-scans/day for nothing).
-- Realtime publication includes hot/heavy tables: `characters` (51 cols, written on every heartbeat / HP-CP-MP tick), `creatures`, `party_combat_log`. Every UPDATE hits the WAL replication slot even with 0 subscribers online.
-- Email queue kick already exists (good).
+Effect: when an admin enters the world with a real character, their `last_online` heartbeat does **not** count as activity. The world stays "asleep", `tick-creatures` stays unscheduled, and — critically — since they never flipped it awake, nothing ever triggers a sleep transition when they leave either. Combat, DoTs, and spawn ticks silently don't run for admin-played characters.
+
+You wanted the opposite: admin-only sessions (admin panel, no character) should not wake the world, but an admin *playing* a character should behave exactly like any other player — wake on entry, let the 5-minute idle window put the world back to sleep on exit.
+
+## Why this is safe to change
+
+The "admin-only login" path already avoids waking the world by construction, not by SQL filter:
+
+- `Index.tsx` checks `sessionStorage.lovable.adminOnlySession === '1'` and hard-redirects to `/admin`.
+- `AdminRoute` / `AdminPage` never mount `GamePage`, so no character heartbeat runs and no `characters.last_online` update fires.
+
+So the SQL-level admin exemption is redundant for the admin-only case and actively wrong for the "admin plays a character" case. Removing it lets the existing heartbeat-driven activity window do its job for everyone.
 
 ## Plan
 
-### 1. Make crons truly event-driven (biggest win)
-- Add `schedule_world_crons()` / `unschedule_world_crons()` SECURITY DEFINER functions that call `cron.schedule` / `cron.unschedule` for `tick-creatures`.
-- Add an AFTER UPDATE trigger on `characters.last_online` that:
-  - Calls `schedule_world_crons()` when a non-admin's `last_online` crosses into the "active" window and no job exists.
-  - This is the wake-up path; login-time already updates `last_online`.
-- Extend `record_world_state()` so when it flips `awake → asleep` it calls `unschedule_world_crons()`.
-- Keep one lightweight watchdog cron (`*/5 * * * *`) that only checks state and unschedules if stale — safety net matching Frokost's pattern.
-- Net effect: **0 cron work while nobody is playing** (currently 720+ no-op runs/day).
+Single migration, two function replacements — no frontend changes.
 
-### 2. Consolidate & slow down remaining crons
-- Merge `expire-king-slayer` + `expire-marketplace-listings` into a single `expire-timed-state` job every 15 min. (2 jobs → 1, halves per-run overhead.)
-- Move `return-unique-items` from `*/30` to hourly — unique-item return is not time-critical.
-- Gate all of them behind `world_is_awake()` (already done) and skip the `record_world_state` insert on the fast path.
+1. `public.world_is_awake()` — drop the two `NOT has_role(...)` clauses; keep the 5-minute `last_online` window.
+2. `public.record_world_state()` — same: drop the admin exemption from the `count(*)` query. Keep the transition logic that calls `schedule_tick_creatures` / `unschedule_tick_creatures` and writes to `world_slumber_log`.
 
-### 3. Trim realtime publication
-- Drop `party_combat_log` from `supabase_realtime` — panel already receives log lines via the party broadcast channel, and inserts are batched (250 ms / 20 rows) purely for read-back.
-- Drop `xp_boost` from the publication — usage is low enough that a manual broadcast on grant/expire is cheaper than always-on WAL replication.
-- Keep `characters` for now (client depends on it) but plan a follow-up to split hot cols (`last_online`, `current_hp/cp/mp`, `current_node_id`) into a sibling table so the 51-col row isn't WAL-replicated on every heartbeat.
+Everything else stays: SECURITY DEFINER, `search_path`, the wake/sleep scheduling wrappers, the watchdog cron, and the admin-panel dashboard card that reads these functions.
 
-### 4. Reduce heartbeat WAL churn
-- Confirm the `last_online`/resource writes are already throttled to 12 s (previous work). Add a guard so identical resource values don't UPDATE at all (skip write when nothing changed) — avoids WAL rows for idle characters staring at the map.
+## Result
 
-### 5. Verify after deploy
-- `SELECT jobname, schedule FROM cron.job` shows fewer jobs.
-- With no players online: `cron.job_run_details` for `tick-creatures` should stop appearing entirely (job unscheduled), not just no-op.
-- `supabase--db_health` WAL size should trend down over a day.
+- Admin logs into admin panel only → no character heartbeat → world stays asleep (unchanged).
+- Admin (or anyone) enters the world with a character → `last_online` updates → next `record_world_state()` tick flips to awake, `tick-creatures` gets scheduled.
+- Admin logs out / goes idle 5 min → activity window empties → world flips back to asleep, `tick-creatures` gets unscheduled (this is what's missing today).
 
-## Technical notes
-- All schedule/unschedule wrappers use `SECURITY DEFINER SET search_path = public, cron` and are callable only by service-role / triggers.
-- Trigger uses `pg_trigger_depth() = 0` guard to avoid recursive fires.
-- Migration is additive; existing jobs are unscheduled and re-created inside the migration so no manual dashboard steps.
-- No frontend/gameplay changes; combat, party, chat, marketplace behavior identical when the world is awake.
+## Out of scope
 
-## Out of scope (call out, don't do)
-- Splitting the `characters` table (larger refactor — separate plan).
-- Removing `characters`/`creatures` from the realtime publication (would require rewriting several hooks to use manual broadcasts).
+- No changes to `AdminLayout`, admin-only session storage flag, or the slumber dashboard card.
+- No change to the watchdog cron cadence.
