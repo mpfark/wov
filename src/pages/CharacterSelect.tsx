@@ -23,6 +23,8 @@ interface Props {
 export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut, onProfile }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<Character | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { state: worldState, waking, wake } = useWorldState();
+  const isAsleep = worldState === 'asleep';
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -36,6 +38,23 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
       setDeleting(false);
       setDeleteTarget(null);
     }
+  };
+
+  const handleWake = async () => {
+    try {
+      await wake();
+      toast.success('The realm stirs. You may now enter.');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to wake the realm.');
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    if (isAsleep) {
+      toast.error('The realm slumbers. Awaken it first.');
+      return;
+    }
+    onSelect(id);
   };
 
   return (
