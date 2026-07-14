@@ -1952,6 +1952,27 @@ export type Database = {
         }
         Relationships: []
       }
+      world_state: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: number
+          state: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          state?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          state?: string
+        }
+        Relationships: []
+      }
       xp_boost: {
         Row: {
           activated_by: string | null
@@ -2210,6 +2231,7 @@ export type Database = {
             }
             Returns: number
           }
+      idle_shutdown_check: { Args: never; Returns: undefined }
       inspect_character_equipment: {
         Args: { _character_id: string }
         Returns: {
@@ -2294,6 +2316,7 @@ export type Database = {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
       }
+      shutdown_world: { Args: never; Returns: undefined }
       stonebinder_commit_fuse: {
         Args: {
           p_ascended_item_id: string
@@ -2325,6 +2348,7 @@ export type Database = {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
       }
+      wake_world: { Args: never; Returns: Json }
       world_is_awake: { Args: never; Returns: boolean }
       world_watchdog: { Args: never; Returns: undefined }
     }
