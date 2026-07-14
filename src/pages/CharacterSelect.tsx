@@ -7,8 +7,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Character } from '@/features/character';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { Trash2, Plus, UserCircle } from 'lucide-react';
+import { Trash2, Plus, UserCircle, Flame, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWorldState } from '@/hooks/useWorldState';
 
 interface Props {
   characters: Character[];
