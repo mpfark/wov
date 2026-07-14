@@ -1,54 +1,53 @@
+
 ## Goal
 
-Temporarily silence all background activity on the database so we can measure baseline cost with zero cron/realtime churn. Fully reversible — nothing deleted, just paused.
+Keep the world fully paused by default (current state). Any player can wake it on demand from the character-select screen. A lightweight watchdog checks every 30 minutes and, if no player has been online in that window, tears everything back down to the paused baseline.
 
-## What gets disabled
+## Flow
 
-Single migration that unschedules (not drops) every `cron.job` currently running, and drops the always-on Realtime publications. Everything is recorded so we can restore it verbatim when you say.
+```text
+Character Select
+   ├─ world asleep? → show [ Start World ] banner
+   │       └─ click → RPC wake_world() → re-arm crons, realtime, triggers
+   │                                    → sets world_state='awake', wake_watchdog schedules
+   └─ world awake?  → normal "Enter World" per character
 
-### 1. Pause every cron job
+Every 30 min (cron 'idle-shutdown-check'):
+   └─ no character.last_online in last 30 min?
+          → RPC shutdown_world(): unschedule all crons, drop realtime, disable wake triggers
+          → cron self-unschedules (nothing left to check until next wake)
+```
 
-Enumerate `cron.job` and call `cron.unschedule(jobname)` for each. Current known jobs:
+## Backend (single migration)
 
-- `world-watchdog` (every 5 min)
-- `expire-timed-state` (every 15 min)
-- `prune-logs` (hourly)
-- `return-unique-items` (hourly)
-- `process-email-queue` (30 s)
-- `tick-creatures` (only when awake — likely already unscheduled, safe to attempt)
-- any other job present at run time
+1. **`world_state` table** — one row: `state text` (`awake`|`asleep`), `changed_at`, `changed_by`. Seeded `asleep`.
+2. **`public.wake_world()`** SECURITY DEFINER, callable by any authenticated user with a character:
+   - Re-add tables to `supabase_realtime` publication (characters, creatures, marketplace_listings, node_ground_loot, parties, party_members, summon_requests).
+   - Re-enable the two wake triggers on `characters` and `pgmq` email queues.
+   - Re-schedule crons: `world-watchdog` (5 min), `expire-timed-state` (15 min), `prune-logs` (hourly), `return-unique-items` (hourly), and new `idle-shutdown-check` (30 min).
+   - Set `world_state='awake'`, stamp `changed_by = auth.uid()`.
+3. **`public.shutdown_world()`** SECURITY DEFINER, called only by the idle-shutdown cron:
+   - Mirror the current manual-pause migration: unschedule every cron (including itself and `tick-creatures` / `process-email-queue`), disable wake triggers, drop all 7 tables from realtime publication.
+   - Set `world_state='asleep'`.
+4. **`public.idle_shutdown_check()`** SECURITY DEFINER:
+   - If `NOT EXISTS (SELECT 1 FROM characters WHERE last_online > now() - interval '30 minutes')` → `PERFORM shutdown_world()`.
+   - Otherwise no-op.
+5. Grants: `EXECUTE ON wake_world` to `authenticated`; `shutdown_world` / `idle_shutdown_check` to `postgres` only.
 
-Job definitions are stored in `cron.job`, so re-scheduling later is a one-liner per job — we'll snapshot the `schedule` + `command` columns into a temp text log in the migration description for easy restore.
+## Frontend
 
-### 2. Drop Realtime publications
+- **`src/hooks/useWorldState.ts`** — subscribes to `world_state` (single-row realtime via a small polling fetch on mount + a 60s interval; realtime is off while asleep so polling is required). Returns `{ state, wake, waking }`.
+- **`src/pages/CharacterSelect.tsx`** — when `state === 'asleep'`, render a parchment banner above the character grid: "The realm slumbers. Rouse it to begin your journey." with a single **Awaken the Realm** button. Clicking calls `supabase.rpc('wake_world')`, shows a 2–5s spinner ("The realm stirs..."), then re-enables character selection. Character cards stay clickable while asleep but selecting one shows a toast prompting to wake first (or we simply gate the click). Chosen behavior: gate — cards are dimmed and non-interactive until awake.
+- **No change to `GameRoute`** — once awake, entry flow is unchanged; the existing `last_online` heartbeat keeps the idle-shutdown timer from firing.
 
-`ALTER PUBLICATION supabase_realtime DROP TABLE` for every table currently in it:
-`characters`, `creatures`, `marketplace_listings`, `node_ground_loot`, `parties`, `party_members`, `summon_requests` (and any others discovered at run time).
+## Idle-shutdown behavior
 
-This stops the WAL → Realtime fan-out entirely. Client subscriptions will just sit idle.
+- The 30-min cron uses `characters.last_online`, which the game already updates via existing heartbeat.
+- On shutdown, the cron unschedules itself as part of `shutdown_world()`; the world stays fully paused until the next Awaken click.
+- Admin-only panel sessions do not update `last_online` (already the case), so an admin browsing `/admin` won't keep the world awake.
 
-### 3. Leave alone
+## Out of scope
 
-- No frontend changes.
-- No edge function deletions.
-- No table drops, no data changes.
-- `world_is_awake()` / `record_world_state()` stay as-is — with no watchdog calling them they're inert anyway.
-
-## Expected effect
-
-- Database goes fully idle: no periodic SELECTs, no WAL replication traffic, no HTTP calls from `pg_net`.
-- App still loads, but live updates (combat ticks, marketplace, party sync, emails) will NOT flow until we restore. Effectively the game is offline for players during the test.
-- You watch the Cloud usage graph for a day or two to see the true floor.
-
-## Restore path (for later, on your say-so)
-
-One follow-up migration re-creates:
-- Each `cron.schedule(...)` from the snapshot.
-- `ALTER PUBLICATION supabase_realtime ADD TABLE ...` for the tables above.
-
-I'll keep the exact restore SQL in the pause migration's description so it's trivially reversible.
-
-## Confirm before I write the migration
-
-- OK that players effectively can't play (no realtime, no combat ticks, no emails) during the test window?
-- Want me to also pause `process-email-queue` (signup confirmation emails will queue but not send until restore)?
+- No UI change inside the game itself.
+- No change to admin manual-pause SQL — the new `shutdown_world()` function is the reusable version of it.
+- No countdown UI ("world sleeps in X min"); can be added later if wanted.
