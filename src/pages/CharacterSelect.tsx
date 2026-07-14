@@ -7,8 +7,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Character } from '@/features/character';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { Trash2, Plus, UserCircle } from 'lucide-react';
+import { Trash2, Plus, UserCircle, Flame, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWorldState } from '@/hooks/useWorldState';
 
 interface Props {
   characters: Character[];
@@ -22,6 +23,8 @@ interface Props {
 export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut, onProfile }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<Character | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { state: worldState, waking, wake } = useWorldState();
+  const isAsleep = worldState === 'asleep';
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -37,6 +40,23 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
     }
   };
 
+  const handleWake = async () => {
+    try {
+      await wake();
+      toast.success('The realm stirs. You may now enter.');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to wake the realm.');
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    if (isAsleep) {
+      toast.error('The realm slumbers. Awaken it first.');
+      return;
+    }
+    onSelect(id);
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center parchment-bg p-4">
       <div className="w-full max-w-2xl space-y-6">
@@ -45,12 +65,33 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
           <p className="text-sm text-muted-foreground">Select a character or forge a new one</p>
         </div>
 
+        {isAsleep && (
+          <Card className="ornate-border bg-card/80 backdrop-blur">
+            <CardContent className="py-5 flex flex-col items-center text-center gap-3">
+              <Flame className="h-6 w-6 text-primary" />
+              <div>
+                <p className="font-display text-lg text-primary text-glow">The realm slumbers</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  No wayfarers walk the world. Rouse it to begin your journey.
+                </p>
+              </div>
+              <Button onClick={handleWake} disabled={waking} className="font-display">
+                {waking ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> The realm stirs...</>) : 'Awaken the Realm'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[...characters].sort((a, b) => a.name.localeCompare(b.name)).map(char => (
             <Card
               key={char.id}
-              className="ornate-border bg-card/90 backdrop-blur cursor-pointer transition-all hover:border-primary hover:shadow-lg hover:shadow-primary/10 group"
-              onClick={() => onSelect(char.id)}
+              className={`ornate-border bg-card/90 backdrop-blur transition-all group ${
+                isAsleep
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/10'
+              }`}
+              onClick={() => handleSelect(char.id)}
             >
               <CardHeader className="pb-2 flex flex-row items-start justify-between">
                 <div>
