@@ -2172,7 +2172,11 @@ Deno.serve(async (req) => {
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
     await Promise.all([
-      writeCreatureState(db, creatures, cHp, cKilled),
+      writeCreatureState(db, creatures, cHp, cKilled, {
+        useEncounter: readEncounterFlag(combatNodeId),
+        sourceCharacterId: session.character_id,
+        sourceKind: 'autoattack',
+      }),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
