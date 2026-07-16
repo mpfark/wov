@@ -110,11 +110,13 @@ function findEarliestLethalTime(snapshot: OffscreenSnapshot): {
 
 export interface UseOffscreenDotWakeupParams {
   currentNodeId: string | null;
+  characterId: string;
   eventBus: GameEventBus;
 }
 
 export function useOffscreenDotWakeup({
   currentNodeId,
+  characterId,
   eventBus,
 }: UseOffscreenDotWakeupParams) {
   const trackedRef = useRef<Map<string, TrackedNode>>(new Map());
