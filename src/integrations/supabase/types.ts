@@ -2348,6 +2348,42 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      encounter_apply_damage: {
+        Args: {
+          _amount: number
+          _creature_id: string
+          _source_character_id: string
+          _source_kind: string
+        }
+        Returns: {
+          caused_kill: boolean
+          encounter_id: string
+          new_hp: number
+          old_hp: number
+          turned_aggressive: boolean
+        }[]
+      }
+      encounter_apply_damage_dry_run: {
+        Args: { _amount: number; _creature_id: string }
+        Returns: {
+          caused_kill: boolean
+          new_hp: number
+          old_hp: number
+        }[]
+      }
+      encounter_apply_heal: {
+        Args: {
+          _amount: number
+          _creature_id: string
+          _source_character_id: string
+          _source_kind: string
+        }
+        Returns: {
+          encounter_id: string
+          new_hp: number
+          old_hp: number
+        }[]
+      }
       encounter_detach_creature: {
         Args: { _creature_id: string; _encounter_id: string }
         Returns: undefined
