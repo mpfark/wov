@@ -33,3 +33,29 @@ export function readEncounterFlagMode(nodeId: string | null | undefined): Encoun
 export function readEncounterFlag(nodeId: string | null | undefined): boolean {
   return readEncounterFlagMode(nodeId) === 'on';
 }
+
+/**
+ * M3 flag — character HP/CP/MP writes via encounter delta RPCs.
+ *
+ * Env `ENCOUNTER_CHAR_WRITES`:
+ *   • `off`    — legacy PATCH path only. (default)
+ *   • `shadow` — legacy PATCH authoritative; RPC dry-runs execute in parallel
+ *                and any divergence is logged. No gameplay impact.
+ *   • `on`     — `encounter_apply_character_*` RPCs are authoritative;
+ *                legacy hp/cp/mp fields are stripped from the PATCH payload.
+ *
+ * Optional allowlist `ENCOUNTER_CHAR_WRITES_NODE_IDS` (comma-separated node
+ * ids) scopes the non-`off` state during rollout.
+ */
+export function readEncounterCharWritesMode(
+  nodeId: string | null | undefined,
+): EncounterFlagMode {
+  const raw = (Deno.env.get('ENCOUNTER_CHAR_WRITES') ?? 'off').toLowerCase();
+  const mode: EncounterFlagMode = raw === 'on' ? 'on' : raw === 'shadow' ? 'shadow' : 'off';
+  if (mode === 'off') return 'off';
+
+  const allow = (Deno.env.get('ENCOUNTER_CHAR_WRITES_NODE_IDS') ?? '').trim();
+  if (!allow) return mode;
+  if (!nodeId) return 'off';
+  return allow.split(',').map((s) => s.trim()).includes(nodeId) ? mode : 'off';
+}
