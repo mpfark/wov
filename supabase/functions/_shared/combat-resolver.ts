@@ -458,6 +458,9 @@ export async function processLootDrops(
  */
 export interface WriteCreatureStateOpts {
   useEncounter?: boolean;
+  /** When true, run the encounter dry-run RPC alongside the legacy write and
+   *  log any divergence. Ignored when `useEncounter` is true. */
+  shadowEncounter?: boolean;
   sourceCharacterId?: string | null;
   sourceKind?: 'autoattack' | 'ability' | 'dot' | 'proc';
 }
@@ -511,7 +514,61 @@ export async function writeCreatureState(
     promises.push(db.from('creatures').update({ is_aggressive: true }).in('id', turnAggressiveIds));
   }
   await Promise.all(promises);
+
+  // ── Shadow mode ─────────────────────────────────────────────────
+  // After legacy writes complete, run the dry-run RPC per damaged creature
+  // and log any divergence. Never throws; never blocks gameplay.
+  if (opts.shadowEncounter) {
+    const sourceCharacterId = opts.sourceCharacterId ?? null;
+    const sourceKind = opts.sourceKind ?? 'autoattack';
+    const checks: Promise<void>[] = [];
+    for (const cr of creatures) {
+      const intended = cKilled.has(cr.id) ? 0 : cHp[cr.id];
+      if (intended === undefined) continue;
+      const delta = cr.hp - intended;
+      if (delta <= 0) continue;
+      const expectedKill = cKilled.has(cr.id) || intended === 0;
+      checks.push((async () => {
+        try {
+          const { data, error } = await db.rpc('encounter_apply_damage_dry_run', {
+            _creature_id: cr.id,
+            _amount: delta,
+            _source_character_id: sourceCharacterId,
+            _source_kind: sourceKind,
+          });
+          if (error) {
+            console.log('[encounter-shadow] rpc error', { creature_id: cr.id, error: error.message });
+            return;
+          }
+          const row = Array.isArray(data) ? data[0] : data;
+          if (!row) return;
+          const legacyHp = expectedKill ? 0 : intended;
+          const divergedHp = row.new_hp !== legacyHp;
+          const divergedKill = !!row.caused_kill !== expectedKill;
+          if (divergedHp || divergedKill) {
+            console.log('[encounter-shadow] divergence', {
+              creature_id: cr.id,
+              source_kind: sourceKind,
+              source_character_id: sourceCharacterId,
+              delta,
+              snapshot_hp: cr.hp,
+              legacy_new_hp: legacyHp,
+              encounter_new_hp: row.new_hp,
+              legacy_kill: expectedKill,
+              encounter_kill: !!row.caused_kill,
+              encounter_old_hp: row.old_hp,
+            });
+          }
+        } catch (e: any) {
+          console.log('[encounter-shadow] exception', { creature_id: cr.id, message: e?.message });
+        }
+      })());
+    }
+    // Fire-and-forget: don't await, so shadow work never delays the tick.
+    Promise.all(checks).catch(() => {});
+  }
 }
+
 
 // ── cleanupEffects ───────────────────────────────────────────────
 /**
