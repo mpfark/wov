@@ -2035,8 +2035,42 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── Split writes: HP/CP/MP go through encounter delta RPCs (when the
+      // M3 flag is engaged), XP/level/stance/max_* stay on the direct PATCH.
+      // Absolute HP/max_hp writes from a level-up remain on the PATCH so they
+      // stay atomic with the new max_hp/max_cp/max_mp values.
+      const leveledUp = updates.level !== undefined;
+      const charWriteMode = readEncounterCharWritesMode(combatNodeId);
+      const resourceOps: CharResourceOp[] = [];
+      if (!leveledUp && charWriteMode !== 'off') {
+        if (updates.hp !== undefined) {
+          const hpDelta = (updates.hp as number) - c.hp;
+          if (hpDelta !== 0) resourceOps.push({ field: 'hp', delta: hpDelta, expectedNew: updates.hp as number });
+        }
+        if (updates.cp !== undefined) {
+          const cpDelta = (updates.cp as number) - (c.cp ?? 0);
+          if (cpDelta !== 0) resourceOps.push({ field: 'cp', delta: cpDelta, expectedNew: updates.cp as number });
+        }
+        if (charWriteMode === 'on') {
+          delete updates.hp;
+          delete updates.cp;
+        }
+      }
+
       if (Object.keys(updates).length > 0) {
         memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
+      }
+      if (resourceOps.length > 0) {
+        memberUpdatePromises.push(
+          applyCharacterResourceOps({
+            db,
+            characterId: m.id,
+            ops: resourceOps,
+            nodeId: combatNodeId,
+            sourceKind: 'combat-tick',
+            modeOverride: charWriteMode,
+          }),
+        );
       }
 
       memberStates.push({
