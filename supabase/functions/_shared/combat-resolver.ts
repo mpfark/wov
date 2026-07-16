@@ -442,15 +442,61 @@ export async function processLootDrops(
 
 // ── writeCreatureState ───────────────────────────────────────────
 /**
- * Persist creature HP changes and kills via the `damage_creature` RPC.
+ * Persist creature HP changes and kills.
+ *
+ * Two exclusive branches:
+ *   • Legacy (default): calls `damage_creature` with an absolute new_hp
+ *     value computed from the tick's invocation snapshot.
+ *   • Encounter (M2, feature-flagged): converts the intended new_hp back
+ *     into a positive damage delta and applies it through
+ *     `encounter_apply_damage`, which locks the encounter, applies the
+ *     delta against current DB HP, flips aggression, ledgers the
+ *     contribution, and detaches on kill in a single transaction.
+ *
+ * The `opts` argument is optional so existing call sites can migrate
+ * incrementally; when omitted the legacy path runs.
  */
+export interface WriteCreatureStateOpts {
+  useEncounter?: boolean;
+  sourceCharacterId?: string | null;
+  sourceKind?: 'autoattack' | 'ability' | 'dot' | 'proc';
+}
+
 export async function writeCreatureState(
   db: any,
   creatures: any[],
   cHp: Record<string, number>,
   cKilled: Set<string>,
+  opts: WriteCreatureStateOpts = {},
 ): Promise<void> {
+  const useEncounter = !!opts.useEncounter;
   const promises: Promise<any>[] = [];
+
+  if (useEncounter) {
+    const sourceCharacterId = opts.sourceCharacterId ?? null;
+    const sourceKind = opts.sourceKind ?? 'autoattack';
+
+    for (const cr of creatures) {
+      const intended = cKilled.has(cr.id) ? 0 : cHp[cr.id];
+      if (intended === undefined) continue;
+      const delta = cr.hp - intended;
+      // Negative delta would be a heal — not produced by current tick logic.
+      // Zero delta means nothing to write. Skip both.
+      if (delta <= 0) continue;
+      promises.push(
+        db.rpc('encounter_apply_damage', {
+          _creature_id: cr.id,
+          _amount: delta,
+          _source_character_id: sourceCharacterId,
+          _source_kind: sourceKind,
+        }),
+      );
+    }
+    await Promise.all(promises);
+    return;
+  }
+
+  // Legacy path — unchanged behavior.
   const turnAggressiveIds: string[] = [];
   for (const cr of creatures) {
     if (cKilled.has(cr.id)) {
