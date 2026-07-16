@@ -528,6 +528,7 @@ Deno.serve(async (req) => {
             split_count: recipientChars.length,
             primary_level: primaryChar.level,
             source_character_name: primaryChar.name || null,
+            source_character_id: primarySourceId,
             boss_death_cry_text: outcome.bossDeathCryText,
           });
         }
