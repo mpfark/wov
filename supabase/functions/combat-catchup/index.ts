@@ -233,7 +233,11 @@ Deno.serve(async (req) => {
 
     // ── Write creature state + cleanup effects in parallel ──────
     await Promise.all([
-      writeCreatureState(db, creatures, cHp, cKilled),
+      writeCreatureState(db, creatures, cHp, cKilled, {
+        useEncounter: readEncounterFlag(node_id),
+        sourceCharacterId: null,
+        sourceKind: 'dot',
+      }),
       cleanupEffects(db, result.expiredIds, cKilled),
     ]);
 
