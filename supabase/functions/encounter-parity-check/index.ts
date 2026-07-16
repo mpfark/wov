@@ -24,7 +24,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-type Scenario = 'solo' | 'party_race' | 'dot_wakeup' | 'kill_respawn';
+type Scenario =
+  | 'solo' | 'party_race' | 'dot_wakeup' | 'kill_respawn'
+  | 'char_solo' | 'char_party_race' | 'char_dot_heal_interleave' | 'char_death_clamp';
 
 interface Divergence {
   scenario: Scenario;
@@ -265,6 +267,171 @@ Deno.serve(async (req) => {
         divergences,
       });
       await restore();
+    }
+
+    // ── Character-resource scenarios (M3) ───────────────────
+    let charId: string | null = body?.character_id ?? null;
+    if (!charId) {
+      const { data: pickChar } = await db
+        .from('characters')
+        .select('id, hp, max_hp')
+        .gt('hp', damage * 4)
+        .limit(1);
+      charId = pickChar?.[0]?.id ?? null;
+    }
+
+    if (charId) {
+      const { data: cSnap, error: cSnapErr } = await db
+        .from('characters')
+        .select('id, hp, max_hp, cp, max_cp, mp, max_mp, active_effects, current_node_id')
+        .eq('id', charId)
+        .maybeSingle();
+
+      if (!cSnapErr && cSnap) {
+        const cRestore = async () => {
+          await db
+            .from('characters')
+            .update({
+              hp: cSnap.hp,
+              cp: cSnap.cp,
+              mp: cSnap.mp,
+              active_effects: cSnap.active_effects,
+            })
+            .eq('id', charId);
+          await db.from('encounter_participants').delete().eq('character_id', charId);
+        };
+        const cSetHp = async (hp: number) => {
+          await db.from('characters').update({ hp }).eq('id', charId);
+          await db.from('encounter_participants').delete().eq('character_id', charId);
+        };
+        const readChar = async () => {
+          const { data } = await db
+            .from('characters')
+            .select('hp, cp, mp')
+            .eq('id', charId)
+            .maybeSingle();
+          return data!;
+        };
+
+        // 5. CHAR_SOLO — dry_run vs live parity on one damage
+        {
+          const divergences: Divergence[] = [];
+          const startHp = cSnap.hp;
+          await cSetHp(startHp);
+          const dry = await db.rpc('encounter_apply_character_damage_dry_run', {
+            _character_id: charId, _amount: damage,
+          });
+          const dryRow = Array.isArray(dry.data) ? dry.data[0] : dry.data;
+
+          await cSetHp(startHp);
+          const live = await db.rpc('encounter_apply_character_damage', {
+            _character_id: charId, _amount: damage,
+            _source_kind: 'creature', _source_creature_id: null,
+          });
+          const liveRow = Array.isArray(live.data) ? live.data[0] : live.data;
+          const after = await readChar();
+
+          if (dryRow?.new_hp !== liveRow?.new_hp)
+            divergences.push({ scenario: 'char_solo', field: 'new_hp', legacy: dryRow?.new_hp, encounter: liveRow?.new_hp });
+          if (after.hp !== startHp - damage)
+            divergences.push({ scenario: 'char_solo', field: 'persisted_hp', legacy: startHp - damage, encounter: after.hp });
+
+          reports.push({
+            scenario: 'char_solo', ok: divergences.length === 0,
+            details: { start_hp: startHp, damage, dry: dryRow, live: liveRow, final_hp: after.hp },
+            divergences,
+          });
+          await cRestore();
+        }
+
+        // 6. CHAR_PARTY_RACE — two concurrent damages, both preserved
+        {
+          const divergences: Divergence[] = [];
+          const startHp = cSnap.hp;
+          await cSetHp(startHp);
+          await Promise.all([
+            db.rpc('encounter_apply_character_damage', {
+              _character_id: charId, _amount: damage,
+              _source_kind: 'creature', _source_creature_id: null,
+            }),
+            db.rpc('encounter_apply_character_damage', {
+              _character_id: charId, _amount: damage,
+              _source_kind: 'creature', _source_creature_id: null,
+            }),
+          ]);
+          const after = await readChar();
+          const expected = Math.max(startHp - 2 * damage, 0);
+          if (after.hp !== expected)
+            divergences.push({ scenario: 'char_party_race', field: 'hp', legacy: expected, encounter: after.hp, note: 'concurrent damages did not stack' });
+
+          reports.push({
+            scenario: 'char_party_race', ok: divergences.length === 0,
+            details: { start_hp: startHp, damage, expected_hp: expected, final_hp: after.hp },
+            divergences,
+          });
+          await cRestore();
+        }
+
+        // 7. CHAR_DOT_HEAL_INTERLEAVE — dot + heal in same tick window
+        {
+          const divergences: Divergence[] = [];
+          const startHp = Math.max(damage * 2, Math.min(cSnap.hp, cSnap.max_hp - damage));
+          await cSetHp(startHp);
+          await Promise.all([
+            db.rpc('encounter_apply_character_damage', {
+              _character_id: charId, _amount: damage,
+              _source_kind: 'dot', _source_creature_id: null,
+            }),
+            db.rpc('encounter_apply_character_heal', {
+              _character_id: charId, _amount: damage, _source_kind: 'potion',
+            }),
+          ]);
+          const after = await readChar();
+          if (after.hp !== startHp)
+            divergences.push({ scenario: 'char_dot_heal_interleave', field: 'hp', legacy: startHp, encounter: after.hp, note: 'dot + equal heal should net zero' });
+
+          reports.push({
+            scenario: 'char_dot_heal_interleave', ok: divergences.length === 0,
+            details: { start_hp: startHp, damage, final_hp: after.hp },
+            divergences,
+          });
+          await cRestore();
+        }
+
+        // 8. CHAR_DEATH_CLAMP — overkill clamps at 0, second call no-op
+        {
+          const divergences: Divergence[] = [];
+          const lowHp = Math.max(1, Math.min(damage - 1, cSnap.hp));
+          const overkill = damage * 5;
+          await cSetHp(lowHp);
+          const killRes = await db.rpc('encounter_apply_character_damage', {
+            _character_id: charId, _amount: overkill,
+            _source_kind: 'creature', _source_creature_id: null,
+          });
+          const killRow = Array.isArray(killRes.data) ? killRes.data[0] : killRes.data;
+          const afterKill = await readChar();
+
+          const noopRes = await db.rpc('encounter_apply_character_damage', {
+            _character_id: charId, _amount: 1,
+            _source_kind: 'creature', _source_creature_id: null,
+          });
+          const noopRow = Array.isArray(noopRes.data) ? noopRes.data[0] : noopRes.data;
+
+          if (afterKill.hp !== 0)
+            divergences.push({ scenario: 'char_death_clamp', field: 'hp', legacy: 0, encounter: afterKill.hp });
+          if (!killRow?.caused_death)
+            divergences.push({ scenario: 'char_death_clamp', field: 'caused_death', legacy: true, encounter: killRow?.caused_death });
+          if (noopRow?.caused_death)
+            divergences.push({ scenario: 'char_death_clamp', field: 'second_call_caused_death', legacy: false, encounter: true });
+
+          reports.push({
+            scenario: 'char_death_clamp', ok: divergences.length === 0,
+            details: { low_hp: lowHp, overkill, kill_row: killRow, after_kill_hp: afterKill.hp, noop_row: noopRow },
+            divergences,
+          });
+          await cRestore();
+        }
+      }
     }
 
     const allDivergences = reports.flatMap((r) => r.divergences);
