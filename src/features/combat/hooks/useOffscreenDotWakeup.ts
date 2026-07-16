@@ -149,6 +149,9 @@ export function useOffscreenDotWakeup({
           if (catchupData?.kill_rewards && Array.isArray(catchupData.kill_rewards) && catchupData.kill_rewards.length > 0) {
             console.log(`[offscreen-dot] delayed catchup found ${catchupData.kill_rewards.length} kills at node=${departedNodeId}`);
             for (const reward of catchupData.kill_rewards) {
+              // Only render the local kill line if we are the DoT source.
+              // Non-source party members receive the identical line via party_combat_msg broadcast.
+              if (reward.source_character_id && reward.source_character_id !== characterId) continue;
               eventBus.emit('combat:kill', {
                 creatureName: reward.creature_name,
                 creatureLevel: reward.creature_level,
