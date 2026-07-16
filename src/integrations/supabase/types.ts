@@ -908,6 +908,205 @@ export type Database = {
         }
         Relationships: []
       }
+      encounter_cast_events: {
+        Row: {
+          ability_key: string | null
+          cast_key: string
+          encounter_id: string
+          id: string
+          payload: Json
+          resolved_at: string
+          started_at: string | null
+        }
+        Insert: {
+          ability_key?: string | null
+          cast_key: string
+          encounter_id: string
+          id?: string
+          payload?: Json
+          resolved_at?: string
+          started_at?: string | null
+        }
+        Update: {
+          ability_key?: string | null
+          cast_key?: string
+          encounter_id?: string
+          id?: string
+          payload?: Json
+          resolved_at?: string
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_cast_events_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encounter_contributions: {
+        Row: {
+          character_id: string
+          damage_dealt: number
+          encounter_id: string
+          first_hit_at: string | null
+          healing_done: number
+          last_hit_at: string | null
+        }
+        Insert: {
+          character_id: string
+          damage_dealt?: number
+          encounter_id: string
+          first_hit_at?: string | null
+          healing_done?: number
+          last_hit_at?: string | null
+        }
+        Update: {
+          character_id?: string
+          damage_dealt?: number
+          encounter_id?: string
+          first_hit_at?: string | null
+          healing_done?: number
+          last_hit_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_contributions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_contributions_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encounter_creatures: {
+        Row: {
+          attached_at: string
+          creature_id: string
+          encounter_id: string
+        }
+        Insert: {
+          attached_at?: string
+          creature_id: string
+          encounter_id: string
+        }
+        Update: {
+          attached_at?: string
+          creature_id?: string
+          encounter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_creatures_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: true
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_creatures_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encounter_participants: {
+        Row: {
+          character_id: string
+          encounter_id: string
+          joined_at: string
+          last_action_at: string
+        }
+        Insert: {
+          character_id: string
+          encounter_id: string
+          joined_at?: string
+          last_action_at?: string
+        }
+        Update: {
+          character_id?: string
+          encounter_id?: string
+          joined_at?: string
+          last_action_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_participants_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_participants_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encounters: {
+        Row: {
+          created_at: string
+          encounter_key: string
+          ended_at: string | null
+          id: string
+          last_activity_at: string
+          node_id: string
+          started_at: string
+          state: Json
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          encounter_key?: string
+          ended_at?: string | null
+          id?: string
+          last_activity_at?: string
+          node_id: string
+          started_at?: string
+          state?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          encounter_key?: string
+          ended_at?: string | null
+          id?: string
+          last_activity_at?: string
+          node_id?: string
+          started_at?: string
+          state?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounters_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -2149,6 +2348,17 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      encounter_detach_creature: {
+        Args: { _creature_id: string; _encounter_id: string }
+        Returns: undefined
+      }
+      encounter_end: { Args: { _encounter_id: string }; Returns: undefined }
+      encounter_ensure_for_creature: {
+        Args: { _creature_id: string }
+        Returns: string
+      }
+      encounter_lock_key: { Args: { _encounter_id: string }; Returns: number }
+      encounter_snapshot: { Args: { _node_id: string }; Returns: Json }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
