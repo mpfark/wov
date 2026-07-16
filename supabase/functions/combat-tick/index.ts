@@ -19,7 +19,7 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { readEncounterFlag } from "../_shared/encounter-flag.ts";
+import { readEncounterFlagMode } from "../_shared/encounter-flag.ts";
 import { formatProcMessage } from "../_shared/proc-log-format.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
@@ -2172,11 +2172,15 @@ Deno.serve(async (req) => {
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
     await Promise.all([
-      writeCreatureState(db, creatures, cHp, cKilled, {
-        useEncounter: readEncounterFlag(combatNodeId),
-        sourceCharacterId: session.character_id,
-        sourceKind: 'autoattack',
-      }),
+      (() => {
+        const _mode = readEncounterFlagMode(combatNodeId);
+        return writeCreatureState(db, creatures, cHp, cKilled, {
+          useEncounter: _mode === 'on',
+          shadowEncounter: _mode === 'shadow',
+          sourceCharacterId: session.character_id,
+          sourceKind: 'autoattack',
+        });
+      })(),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
