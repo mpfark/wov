@@ -24,7 +24,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-type Scenario = 'solo' | 'party_race' | 'dot_wakeup' | 'kill_respawn';
+type Scenario =
+  | 'solo' | 'party_race' | 'dot_wakeup' | 'kill_respawn'
+  | 'char_solo' | 'char_party_race' | 'char_dot_heal_interleave' | 'char_death_clamp';
 
 interface Divergence {
   scenario: Scenario;
