@@ -2387,6 +2387,7 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('[combat-tick] prince ascension broadcast failed', e);
       }
+    }
 
 
     return json({
