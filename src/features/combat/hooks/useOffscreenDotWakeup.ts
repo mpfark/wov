@@ -110,11 +110,13 @@ function findEarliestLethalTime(snapshot: OffscreenSnapshot): {
 
 export interface UseOffscreenDotWakeupParams {
   currentNodeId: string | null;
+  characterId: string;
   eventBus: GameEventBus;
 }
 
 export function useOffscreenDotWakeup({
   currentNodeId,
+  characterId,
   eventBus,
 }: UseOffscreenDotWakeupParams) {
   const trackedRef = useRef<Map<string, TrackedNode>>(new Map());
@@ -147,6 +149,9 @@ export function useOffscreenDotWakeup({
           if (catchupData?.kill_rewards && Array.isArray(catchupData.kill_rewards) && catchupData.kill_rewards.length > 0) {
             console.log(`[offscreen-dot] delayed catchup found ${catchupData.kill_rewards.length} kills at node=${departedNodeId}`);
             for (const reward of catchupData.kill_rewards) {
+              // Only render the local kill line if we are the DoT source.
+              // Non-source party members receive the identical line via party_combat_msg broadcast.
+              if (reward.source_character_id && reward.source_character_id !== characterId) continue;
               eventBus.emit('combat:kill', {
                 creatureName: reward.creature_name,
                 creatureLevel: reward.creature_level,
@@ -206,7 +211,7 @@ export function useOffscreenDotWakeup({
             effects,
           };
 
-          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
+          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus, characterId);
         } catch (err) {
           console.error(`[offscreen-dot] delayed departure check failed for node=${departedNodeId}:`, err);
         }
@@ -243,7 +248,7 @@ export function useOffscreenDotWakeup({
         if (entry.predictedDeathTime && now >= entry.predictedDeathTime) {
           if (entry.timerId) clearTimeout(entry.timerId);
           console.log(`[offscreen-dot] visibility-resume immediate wake for node=${nodeId}`);
-          scheduleWakeup(trackedRef.current, entry.snapshot, entry.rescheduleCount, eventBus);
+          scheduleWakeup(trackedRef.current, entry.snapshot, entry.rescheduleCount, eventBus, characterId);
         }
       }
     };
@@ -270,6 +275,7 @@ function scheduleWakeup(
   snapshot: OffscreenSnapshot,
   rescheduleCount: number,
   eventBus: GameEventBus,
+  characterId: string,
 ) {
   const { predictedTime, lethalCreatureIds } = findEarliestLethalTime(snapshot);
 
@@ -318,6 +324,8 @@ function scheduleWakeup(
       // Emit kill reward events via event bus
       if (data?.kill_rewards && Array.isArray(data.kill_rewards)) {
         for (const reward of data.kill_rewards) {
+          // Only render locally if we're the DoT source; others get the broadcast.
+          if (reward.source_character_id && reward.source_character_id !== characterId) continue;
           eventBus.emit('combat:kill', {
             creatureName: reward.creature_name,
             creatureLevel: reward.creature_level,
@@ -394,7 +402,7 @@ function scheduleWakeup(
         })),
       };
 
-      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus);
+      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus, characterId);
     } catch (err) {
       console.error(`[offscreen-dot] wake-up error for node=${snapshot.nodeId}:`, err);
       tracked.delete(snapshot.nodeId);
