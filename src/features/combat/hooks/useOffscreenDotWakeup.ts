@@ -323,6 +323,8 @@ function scheduleWakeup(
       // Emit kill reward events via event bus
       if (data?.kill_rewards && Array.isArray(data.kill_rewards)) {
         for (const reward of data.kill_rewards) {
+          // Only render locally if we're the DoT source; others get the broadcast.
+          if (reward.source_character_id && reward.source_character_id !== characterId) continue;
           eventBus.emit('combat:kill', {
             creatureName: reward.creature_name,
             creatureLevel: reward.creature_level,
