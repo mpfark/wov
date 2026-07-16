@@ -211,7 +211,7 @@ export function useOffscreenDotWakeup({
             effects,
           };
 
-          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
+          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus, characterId);
         } catch (err) {
           console.error(`[offscreen-dot] delayed departure check failed for node=${departedNodeId}:`, err);
         }
@@ -248,7 +248,7 @@ export function useOffscreenDotWakeup({
         if (entry.predictedDeathTime && now >= entry.predictedDeathTime) {
           if (entry.timerId) clearTimeout(entry.timerId);
           console.log(`[offscreen-dot] visibility-resume immediate wake for node=${nodeId}`);
-          scheduleWakeup(trackedRef.current, entry.snapshot, entry.rescheduleCount, eventBus);
+          scheduleWakeup(trackedRef.current, entry.snapshot, entry.rescheduleCount, eventBus, characterId);
         }
       }
     };
@@ -402,7 +402,7 @@ function scheduleWakeup(
         })),
       };
 
-      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus);
+      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus, characterId);
     } catch (err) {
       console.error(`[offscreen-dot] wake-up error for node=${snapshot.nodeId}:`, err);
       tracked.delete(snapshot.nodeId);
