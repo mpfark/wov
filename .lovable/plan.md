@@ -1,203 +1,183 @@
-# Hybrid Encounter Architecture — Revised Roadmap (rev. 2)
+# M2 — Delta Creature-HP RPCs (Feature-Flagged)
 
-Same overall direction as the previously approved plan. This revision closes the character-HP authority gap and folds in the eight refinements. Still planning-only.
+Goal: route creature HP mutations through encounter-owned delta RPCs while keeping the legacy `damage_creature` path fully intact behind an exclusive flag. No character-HP changes yet (that is M4). No client changes. No behavior change when flag is off.
 
-## 1. Naming & Initial Scope (unchanged)
+## 1. Scope
 
-- Table: **`encounters`**, node-scoped initial schema.
-- Identity: `UNIQUE (node_id, encounter_key) WHERE status = 'active'`.
-- No `scope`/`scope_id` columns yet — added additively when a real region/world event exists.
+In scope:
+- New SQL: `encounter_apply_damage`, `encounter_apply_heal`, `encounter_apply_damage_dry_run` (parity harness).
+- Attach-on-first-hit inside the RPC (idempotent via `encounter_ensure_for_creature`).
+- Kill-path detach in the same transaction as the killing delta.
+- Rewrite of `writeCreatureState` in `supabase/functions/_shared/combat-resolver.ts` to compute per-creature deltas from its invocation snapshot and dispatch through the encounter path when the flag is on.
+- Feature flag plumbing (env var, read once per tick in `combat-tick` and `combat-catchup`).
+- Vitest parity harness for the two-parties-same-creature race.
 
-## 2. Creature-HP Ownership Invariant (simplified)
+Out of scope (deferred to later milestones):
+- Character HP writes (M4).
+- Client `useEncounter` subscription (M5).
+- Cast lifecycle / boss abilities (M6).
+- Removal of legacy `damage_creature` (M7).
+- Effect tick or reward math moving into PL/pgSQL.
 
-**Invariant:** *at most one active encounter owns HP writes for any given live creature.*
+## 2. Feature Flag
 
-Simplification per feedback — no conditional/partial index on parent status:
+Exclusive, server-only, read once per invocation:
 
-- `encounter_creatures` rows exist **only while the attachment is active**. Detachment = row delete.
-- `UNIQUE (creature_id)` on the table (plain, not partial). Enforces the invariant directly and is queryable without joining to the parent.
-- `encounter_ensure_for_creature(creature_id) → encounter_id` — atomic upsert that either returns the existing owner or creates the `default` encounter and inserts the attachment row.
+- Env var: `ENCOUNTER_HP_WRITES` = `off` (default) | `on`.
+- Read at the top of the tick handler into a local `useEncounterHpWrites: boolean`.
+- Passed as a parameter into `writeCreatureState(db, creatures, cHp, cKilled, { useEncounter, nodeId })`.
+- Never both paths in the same tick. When on, legacy `damage_creature` is not called for HP mutations. When off, encounter RPCs are not called.
+- Rollout: off in prod → shadow parity tests → on for a single test node via a temporary `nodeId` allowlist env (`ENCOUNTER_HP_WRITES_NODE_IDS`, comma-separated) → global on → M3 begins.
 
-### Detachment vs kill-resolver dependency
+## 3. SQL — New RPCs
 
-Before designing detachment, verify what `resolveCreatureKill` (and its callers) actually reads:
+All RPCs: `SECURITY DEFINER`, `SET search_path = public`, take `pg_advisory_xact_lock(encounter_lock_key(_encounter_id))`, all writes inside one transaction.
 
-- `resolveCreatureKill` in `supabase/functions/_shared/kill-resolver.ts` is **pure**. Its inputs are `KillCreatureInput`, `recipients`, and `KillContext` — none of them reference `encounter_creatures`, encounter id, or attachment metadata.
-- Callers in `combat-tick` / `combat-catchup` derive `recipients` from `combat_sessions` membership, not from encounter attachment.
-
-Therefore the kill flow does **not** need the attachment row to survive the kill. Order of operations inside the kill RPC path:
-1. Delta-damage RPC returns `caused_kill = true` and full creature snapshot needed for `resolveCreatureKill`.
-2. Edge Function calls `resolveCreatureKill` in TypeScript.
-3. Edge Function calls `encounter_detach_creature(encounter_id, creature_id)` (or the damage RPC does it in the same transaction when `caused_kill` is true — preferred, so respawn can safely re-attach immediately).
-
-If a future feature needs post-kill attachment history, add an `encounter_creature_history` append-only table rather than keeping the primary row alive.
-
-## 3. Delta HP RPCs — Semantics
-
-Applies to **both** `creatures.hp` and `characters.hp`:
-
-- Callers compute their intended delta from **their own invocation-time snapshot** (`intended_new_hp - snapshot_hp`, or a direct `amount` for abilities).
-- The RPC applies that delta against **current DB HP** inside a single `UPDATE ... RETURNING` statement, clamped to `[0, max_hp]`.
-- No `_expected_hp` / optimistic-version checks in the write path. This is what makes overlapping writers converge instead of clobber.
-- Transition detection (`caused_kill`, `caused_downed`) uses the pre/post values from the same `UPDATE`.
-
-### Advisory lock keys
-
-Robust 64-bit derivation from the encounter UUID, not a hashed string prefix:
-
-```sql
--- pseudocode helper
-CREATE FUNCTION encounter_lock_key(_encounter_id uuid) RETURNS bigint
-LANGUAGE sql IMMUTABLE AS $$
-  SELECT ('x' || substr(replace(_encounter_id::text,'-',''), 1, 16))::bit(64)::bigint
-$$;
-```
-
-All encounter-scoped RPCs take `pg_advisory_xact_lock(encounter_lock_key(encounter_id))`. No string concatenation, no `hashtext` collisions across encounters.
-
-## 4. Character HP Authority (new — resolves before M5)
-
-**Problem:** telegraphed boss casts damage characters across many parties/solo sessions simultaneously. If a session tick writes `characters.hp` from its own stale snapshot after the cast resolves, it silently reverts the boss's damage.
-
-**Rule:** during an active encounter, `characters.hp` for any character present at the node is written via **encounter-owned delta RPCs only**. Session ticks route their character HP writes through the same primitive.
-
-### Two RPCs, delta-only
-
-- `encounter_apply_character_damage(encounter_id, character_id, amount, source, source_cast_key?) → { new_hp, downed, caused_downed, version }`
-- `encounter_apply_character_heal(encounter_id, character_id, amount, source) → { new_hp, version }`
-
-Both:
-- Take `pg_advisory_xact_lock(encounter_lock_key(encounter_id))`.
-- Verify the character is in `encounter_participants` (see §5) — reject if not, so a departed player cannot be hit by a resolving cast.
-- Apply delta against current DB HP, clamp, detect downed transition.
-- Do **not** issue per-target broadcasts; the batched RPC (below) is authoritative for cast events.
-
-### `encounter_cast_resolve` is one-shot, batched, transactional
-
-Room-wide casts are resolved in a **single** RPC call, not fan-out:
+### 3.1 `encounter_apply_damage`
 
 ```
-encounter_cast_resolve(encounter_id, cast_key)
-  ├─ advisory lock encounter
-  ├─ atomically claim the cast row (UPDATE ... WHERE status='pending' RETURNING) — one caller wins
-  ├─ read encounter_participants at claim time → eligible_characters
-  ├─ for each eligible character: apply computed damage/heal via the same
-  │   internal delta-write used by encounter_apply_character_damage
-  │   (all inside this transaction, under the single advisory lock)
-  ├─ if eligible_characters is empty AND cast has empty_room_heal_pct:
-  │     apply healing to the boss creature via the creature delta-write
-  ├─ write cast result (resolved_at, per-target outcomes) to a cast_events row
-  ├─ mark cast status='resolved'
-  └─ return { resolved: true, target_outcomes[], boss_heal_applied }
+encounter_apply_damage(
+  _creature_id uuid,
+  _amount int,          -- always positive; damage
+  _source_character_id uuid,
+  _source_kind text     -- 'autoattack' | 'ability' | 'dot' | 'proc'
+) RETURNS TABLE (
+  encounter_id uuid,
+  new_hp int,
+  old_hp int,
+  caused_kill boolean,
+  turned_aggressive boolean
+)
 ```
 
-No per-target external RPC calls. The Edge Function gets one result payload it can broadcast as a single `encounter_cast_resolved` event. If the caller loses the atomic claim, the RPC returns `{ resolved: false, reason: 'already_resolved' }` and does nothing.
+Steps (single transaction):
+1. `encounter_id := encounter_ensure_for_creature(_creature_id)` — idempotent; creates the `default` encounter and inserts the `encounter_creatures` row on first hit.
+2. Advisory lock on `encounter_lock_key(encounter_id)`.
+3. `UPDATE creatures SET hp = GREATEST(hp - _amount, 0), is_aggressive = TRUE WHERE id = _creature_id AND is_alive = TRUE RETURNING hp AS new_hp, (hp + _amount) AS old_hp, (NOT is_aggressive) AS turned_aggressive_prev` — clamp at 0, transitions read from RETURNING.
+4. If `new_hp = 0`: `UPDATE creatures SET is_alive = FALSE, ... WHERE id = _creature_id`; `caused_kill := TRUE`; `DELETE FROM encounter_creatures WHERE creature_id = _creature_id` (frees the `UNIQUE (creature_id)` slot for respawn — kill-resolver runs in TS after the RPC returns and does not need this row).
+5. Upsert `encounter_contributions` (increment `damage_dealt`, set `first_hit_at`/`last_hit_at`).
+6. Return the row.
 
-Session ticks that need to damage a single character (a creature's autoattack against one party member) still use `encounter_apply_character_damage` directly — same primitive, single-target case.
+### 3.2 `encounter_apply_heal`
 
-## 5. Presence, Observers, and Contribution (separated)
+Symmetric, positive `_amount`, no kill path, clamps at `max_hp`. Does not upsert contributions (no healing target for creatures in M2; kept for symmetry).
 
-Three distinct concerns, three storage locations:
+### 3.3 `encounter_apply_damage_dry_run`
 
-- **Node observers** — existing per-node presence (`node-<id>` channel presence / `nodes.current_occupants` derived state). Unchanged. Used for chat, "who's here," ambient UI. **Not** a source of truth for encounter targeting.
-- **`encounter_participants`** — actual encounter participation. A row is written when a character:
-  - performs a hostile action into the encounter (attack, ability, heal on a participant), OR
-  - opts in via an explicit "join encounter" transition (future).
-  Rows are removed on node-leave, death-out, disconnect timeout, or encounter end. This is the set `encounter_cast_resolve` reads for eligibility. Merely standing at the node is **not** enough.
-- **`encounter_contributions`** — reward attribution ledger. Incrementally upserted by damage/heal RPCs. Used for future weighted loot / diagnostics. Never the sole source of truth for reward recipient sets; live/offscreen recipient rules stay as documented in `.lovable/memory/tech/combat-architecture/kill-resolution.md`.
+Same signature as `encounter_apply_damage` but read-only:
+- Computes the would-be `new_hp`, `caused_kill`, `turned_aggressive` from current DB state without any writes.
+- Used by the parity harness to compare against the legacy `damage_creature` outcome. Never invoked in production.
 
-## 6. Data Model
+### 3.4 `damage_creature` — unchanged
 
-- `public.encounters` — as before (`node_id`, `encounter_key`, `status`, `state jsonb`, timestamps, `version`).
-- `public.encounter_creatures (encounter_id, creature_id PK)` + `UNIQUE (creature_id)`. Row deleted on detach.
-- `public.encounter_participants (encounter_id, character_id PK)` + `UNIQUE (character_id)` while active (same simple-row-delete model).
-- `public.encounter_contributions (encounter_id, character_id, damage_dealt, healing_done, first_hit_at, last_hit_at)`.
-- `public.encounter_cast_events (encounter_id, cast_key, resolved_at, payload jsonb)` — append-only audit + client-catchup source.
-- All tables: RLS by node presence, standard GRANTs, service-role write via RPCs.
+Left in place. Not deprecated in M2. M7 removes it once callers are migrated.
 
-`combat_sessions` unchanged. `engaged_creature_ids` explicitly retained (not derivable from encounter participants).
+## 4. TypeScript — `writeCreatureState` rewrite
 
-## 7. Typed Transition RPCs (unchanged intent)
+File: `supabase/functions/_shared/combat-resolver.ts` (lines 447–468 today).
 
-No unrestricted `jsonb` patching. Typed set:
-- `encounter_phase_set`, `encounter_cast_start`, `encounter_cast_resolve` (see §4), `encounter_hazard_add/remove`, `encounter_summon`.
-- Read helper: `encounter_snapshot(node_id)`.
+New signature:
 
-## 8. Revised Incremental Milestones
+```ts
+writeCreatureState(
+  db, creatures, cHp, cKilled,
+  opts: { useEncounter: boolean; sourceCharacterId: string; sourceKind: 'autoattack'|'ability'|'dot'|'proc' }
+)
+```
 
-Character-HP authority lands **before** the boss feature.
+Behavior when `opts.useEncounter === false` — unchanged from today (legacy `damage_creature` + bulk `is_aggressive` update).
 
-### M1 — Schema foundation (no behavior change)
-Create all tables from §6 with FKs, RLS, GRANTs. Ship `encounter_ensure_for_creature`, `encounter_detach_creature`, `encounter_snapshot`, `encounter_end` stubs. `encounter_lock_key` helper.
+Behavior when `opts.useEncounter === true`:
+1. For each creature in the invocation snapshot: `delta := cr.hp - (cKilled.has(cr.id) ? 0 : cHp[cr.id])`. Skip if `delta <= 0` and not killed. Negative deltas (healing) are not produced by current tick logic; assert and skip.
+2. Dispatch `db.rpc('encounter_apply_damage', { _creature_id: cr.id, _amount: delta, _source_character_id, _source_kind })` in parallel via `Promise.all`.
+3. Do not send `is_aggressive` writes from TS — the RPC handles it.
+4. `cKilled` remains the tick's local kill set; the RPC's `caused_kill` is the authoritative truth. Log and drop the (extremely rare) case where they disagree — this only happens if another writer killed the creature between snapshot and delta apply, and the correct behavior is to accept the DB outcome.
 
-### M2 — Delta creature-HP RPCs behind a feature flag
-- Implement `encounter_apply_damage` / `encounter_apply_heal` for creatures.
-- Rewrite `writeCreatureState` to compute deltas from its invocation snapshot and submit via the encounter RPC **when the flag is on**.
-- **Flag is exclusive**: on = new path only, off = legacy path only. Never both in the same tick. Shadow comparison, if run, uses read-only parity harness (dry-run RPC returning would-be new_hp without mutating), not a second write.
-- Parity tests include the two-party-same-creature race.
+Callers passing `sourceKind`:
+- Autoattack path in `combat-tick`: `'autoattack'`, `sourceCharacterId = member.character_id`.
+- Ability path: `'ability'`.
+- DoT tick path (also used by `combat-catchup`): `'dot'`, `sourceCharacterId = eff.source_id`.
+- Proc-on-hit path: `'proc'`, `sourceCharacterId = member.character_id`.
 
-### M3 — combat-catchup routes through encounter creature RPCs
-TypeScript effect math (`resolveEffectTicks`) and `resolveCreatureKill` stay put. Only the HP mutation call changes to the encounter path. Introduce `encounter_reconcile(node_id)` for housekeeping (stale participants, end-empty encounters, `last_activity_at`).
+Note: `writeCreatureState` today is called once per tick with an aggregate `cHp` map. In M2 we keep that shape but tag the *entire batch* with a dominant `sourceKind`. Per-hit attribution granularity is a M8 concern; contributions in M2 are coarse (aggregate damage per tick per attacker) and that's fine for the ledger role we've defined.
 
-### M4 — Character-HP authority (**new milestone, prerequisite to M5**)
-- Implement `encounter_apply_character_damage` / `encounter_apply_character_heal`.
-- Implement `encounter_participants` maintenance in `combat-tick` (join on hostile action, leave on node change / death / disconnect timeout).
-- Rewrite the session tick's character-HP writes to delta-only via the encounter RPC when the flag is on. Legacy absolute write remains behind the flag off.
-- Parity harness: simulated overlapping "boss AoE + session tick" scenario must not lose the AoE damage under the new path and must lose it under the old path.
+## 5. Exact code touchpoints
 
-### M5 — Client encounter subscription
-`useEncounter(nodeId)` + `encounter_snapshot` hydration. Broadcast `encounter_transition` alongside postgres_changes. Minimal display; no gameplay change.
+### 5.1 `supabase/functions/combat-tick/index.ts`
+- Top of handler (near existing env reads): add
+  ```ts
+  const useEncounterHpWrites = readEncounterFlag(node_id);
+  ```
+  `readEncounterFlag` is a small helper in `_shared/` that returns `ENCOUNTER_HP_WRITES === 'on'` AND (`ENCOUNTER_HP_WRITES_NODE_IDS` empty OR includes `node_id`).
+- Line 2174 (`writeCreatureState(db, creatures, cHp, cKilled)`) becomes:
+  ```ts
+  writeCreatureState(db, creatures, cHp, cKilled, {
+    useEncounter: useEncounterHpWrites,
+    sourceCharacterId: session.character_id, // leader for party ticks
+    sourceKind: 'autoattack',                // dominant; DoT-only ticks pass 'dot'
+  }),
+  ```
+  If the tick processed only DoT damage (no autoattack/ability writes this tick), pass `'dot'`. This is trivially derivable from whether autoattack/ability code ran; a boolean tracked next to `cHp`.
+- No other lines in `combat-tick` change in M2. `mHp`, effect processing, kill resolution, reward math, broadcasts — all unchanged.
 
-### M6 — First consumer: Telegraphed Boss Abilities (v3 spec on new primitives)
-- `encounter_cast_start` / `encounter_cast_resolve` (batched, see §4) handle the full lifecycle.
-- Empty-room heal is a boss creature-HP delta applied inside `encounter_cast_resolve`, same transaction, same lock.
-- No new schema; all built on M1–M4 primitives.
+### 5.2 `supabase/functions/combat-catchup/index.ts`
+- Same env read at the top.
+- Same signature change at the `writeCreatureState` call site (`sourceKind: 'dot'`, `sourceCharacterId = session.character_id`).
+- No other changes.
 
-### M7 — Narrow session responsibilities (only what has moved)
-Remove any remaining code that writes `creatures.hp` or `characters.hp` outside encounter RPCs. Update `.lovable/memory/tech/combat-architecture/*` to codify §2–§5 invariants. `engaged_creature_ids` stays.
+### 5.3 `supabase/functions/_shared/combat-resolver.ts`
+- Extend `writeCreatureState` as in §4. Keep the legacy branch verbatim.
 
-### M8 — Optional hardening (future)
-Region/world scope columns, PL/pgSQL effect ticks, `encounter_events` timeline UI, orphaned-encounter TTL sweep.
+### 5.4 `combat_sessions` table
+- No schema change. `engaged_creature_ids` stays exactly as-is. The session tick still owns membership, cooldowns, mHp, and the autoattack/ability roll logic. Only the final HP write is rerouted.
+- No new columns on `combat_sessions` in M2. (`encounter_id` on the session is deferred; encounter identity is derivable from `encounter_creatures` when needed.)
 
-## 9. Commit / Defer
+## 6. Parity harness (Vitest, run in CI)
 
-**Commit now (expensive to change later):**
-- Table `encounters`, node-scoped identity.
-- All shared HP writes (creature and character) go through encounter RPCs during active encounters.
-- Delta-only writes computed from invocation snapshot, applied against current DB HP.
-- `UNIQUE (creature_id)` on `encounter_creatures`.
-- Advisory lock key derived from encounter UUID via `encounter_lock_key`.
-- Room-wide cast resolution is one transactional RPC, not per-target fan-out.
-- Feature flag is exclusive: never both write paths in one tick.
+New file: `src/test/combat/encounter-hp-parity.test.ts` (client-side unit test using a mocked db shim mirroring the pg RPC contracts).
 
-**Defer:**
-- Region/world encounter scopes.
-- Moving effect ticks / reward math into PL/pgSQL.
-- Whether contributions ever drive reward attribution.
-- Whether `engaged_creature_ids` eventually goes away.
+Cases:
+1. **Single-writer damage** — legacy `damage_creature(new_hp = old - X)` and `encounter_apply_damage(amount = X)` produce identical `new_hp`, `caused_kill`.
+2. **Two-parties-same-creature race** — two ticks compute cHp against `hp=100`, each intending to apply `20` damage. Legacy path (both call `damage_creature(new_hp=80)`) results in `hp=80` (lost update). Encounter path applies both deltas → `hp=60`. Test asserts encounter path preserves total damage.
+3. **Kill transition** — final blow returns `caused_kill=true` exactly once even when two callers cross zero simultaneously.
+4. **Overheal clamp** on `encounter_apply_heal`.
+5. **Detach on kill** — after `caused_kill`, `encounter_creatures` row is gone and a subsequent `encounter_ensure_for_creature` on the respawned creature id succeeds without unique violation.
 
-## 10. Risks & Mitigations
+Additionally, an integration script (Deno, `scripts/encounter-parity-shadow.ts`, not wired into CI) that iterates recent live ticks against `encounter_apply_damage_dry_run` and reports any divergence >0 HP. Used only during the shadow window.
+
+## 7. Rollout / rollback
+
+1. Ship SQL + code with flag `off`. Assert no production behavior change.
+2. Enable dry-run shadow script on a scratch node for 24 hours. Confirm zero divergence.
+3. Add test node id to `ENCOUNTER_HP_WRITES_NODE_IDS`. Play through a party fight + DoT wakeup + respawn. Confirm no stuck aggressive flags, no orphaned `encounter_creatures` rows, no lost damage.
+4. Remove the allowlist (global on).
+5. Rollback = set env `ENCOUNTER_HP_WRITES=off`. No data migration needed; `encounter_creatures` rows are harmless when the flag is off (nothing reads them yet).
+
+## 8. Risks & Mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Boss AoE overwritten by session tick | M4 lands before M6; character HP is delta-only through encounter RPC |
-| Cast resolves inconsistently across targets | Single transactional RPC applies all target deltas under one advisory lock |
-| Stale attachment blocks respawn | Kill path detaches creature in the same transaction as the killing delta |
-| Observer vs participant confusion | Presence and `encounter_participants` are separate tables; cast eligibility reads participants only |
-| Silent HP drift during flag flip | Exclusive flag + dry-run parity harness; no dual-write mode |
-| Advisory-lock collisions | 64-bit key derived from encounter UUID hex |
+| Lost update between snapshot and delta apply | Delta-only + advisory lock inside the RPC |
+| Orphaned `encounter_creatures` row blocks respawn | Kill path deletes the row in the same transaction as the killing UPDATE |
+| Aggression flag drift when RPC vs bulk update disagree | Only the RPC writes `is_aggressive` when the flag is on; bulk update is skipped |
+| Contribution over-counting on retry | `encounter_apply_damage` is not idempotent by design; combat-tick already dedupes ticks by session cooldown, so retries are rare. Accepted for M2; revisit if metrics show drift. |
+| Flag misconfig runs both paths | Exclusive branch in `writeCreatureState` — structurally impossible to hit both in one call |
 
-## 11. Out of Scope
+## 9. Deliverables Checklist
 
-Continuous server-side combat loop; rewriting `useCombatDriver` / `useCombatLifecycle`; porting effect/reward math to PL/pgSQL; dropping `engaged_creature_ids`; region/world scopes in initial schema.
+- [ ] Migration: `encounter_apply_damage`, `encounter_apply_heal`, `encounter_apply_damage_dry_run`
+- [ ] `_shared/combat-resolver.ts` — extended `writeCreatureState`
+- [ ] `_shared/encounter-flag.ts` — `readEncounterFlag(nodeId)`
+- [ ] `combat-tick/index.ts` — flag read + call-site update
+- [ ] `combat-catchup/index.ts` — flag read + call-site update
+- [ ] `src/test/combat/encounter-hp-parity.test.ts`
+- [ ] `scripts/encounter-parity-shadow.ts` (shadow-only, not CI-wired)
+- [ ] Env vars documented in project README section for backend env
+- [ ] `.lovable/plan.md` M2 row marked done after rollout
 
-## 12. Deliverables Checklist (post-approval)
+## 10. Definition of Done
 
-- [ ] M1 schema + snapshot + attach/detach + lock-key helper
-- [ ] M2 creature delta HP RPCs (exclusive flag, dry-run parity)
-- [ ] M3 catch-up routed through encounter creature RPCs
-- [ ] M4 character HP delta RPCs + participants maintenance + parity harness
-- [ ] M5 `useEncounter` + transition broadcast
-- [ ] M6 Telegraphed Boss Abilities on batched `encounter_cast_resolve`
-- [ ] M7 legacy HP paths removed, memory docs updated
-- [ ] M8 (deferred)
+- Flag off: prod behavior byte-identical to today (verified by shadow script over 24h).
+- Flag on: two-parties-same-creature race test passes; live party fight + solo DoT wakeup + respawn all behave correctly on the test node.
+- No new client code shipped.
+- No changes to `damage_creature`, `combat_sessions` schema, kill-resolver, or reward math.
