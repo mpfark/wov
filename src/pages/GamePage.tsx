@@ -762,6 +762,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({
     currentNodeId: character.current_node_id,
+    characterId: character.id,
     eventBus: bus,
   });
 
