@@ -19,6 +19,7 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
+import { readEncounterFlag } from "../_shared/encounter-flag.ts";
 import { formatProcMessage } from "../_shared/proc-log-format.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
