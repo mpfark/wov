@@ -275,6 +275,7 @@ function scheduleWakeup(
   snapshot: OffscreenSnapshot,
   rescheduleCount: number,
   eventBus: GameEventBus,
+  characterId: string,
 ) {
   const { predictedTime, lethalCreatureIds } = findEarliestLethalTime(snapshot);
 
