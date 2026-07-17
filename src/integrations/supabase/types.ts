@@ -2454,7 +2454,9 @@ export type Database = {
         Args: { _creature_id: string; _encounter_id: string }
         Returns: undefined
       }
+      encounter_disengage: { Args: { _character_id: string }; Returns: number }
       encounter_end: { Args: { _encounter_id: string }; Returns: undefined }
+      encounter_engage: { Args: { _character_id: string }; Returns: string }
       encounter_ensure_for_character: {
         Args: { _character_id: string }
         Returns: string
