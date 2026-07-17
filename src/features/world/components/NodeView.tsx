@@ -57,6 +57,7 @@ interface Props {
   sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
   rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
+  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; emoji: string; startedAt: number; expiresAt: number; castMs: number; amount?: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
