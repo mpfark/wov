@@ -2206,7 +2206,7 @@ Deno.serve(async (req) => {
       const newCount = (ch?.contracts_completed || 0) + 1;
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
-    await Promise.all([
+    const [authoritativeCreatureHp] = await Promise.all([
       (() => {
         const _mode = readEncounterFlagMode(combatNodeId);
         return writeCreatureState(db, creatures, cHp, cKilled, {
@@ -2316,8 +2316,8 @@ Deno.serve(async (req) => {
       .filter(cr => cHp[cr.id] !== cr.hp || cKilled.has(cr.id))
       .map(cr => ({
         id: cr.id,
-        hp: cHp[cr.id],
-        alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
+        hp: authoritativeCreatureHp?.[cr.id] ?? cHp[cr.id],
+        alive: !cKilled.has(cr.id) && (authoritativeCreatureHp?.[cr.id] ?? cHp[cr.id]) > 0,
       }));
 
 
