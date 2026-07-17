@@ -2344,10 +2344,6 @@ export type Database = {
         Returns: boolean
       }
       crown_king_slayer: { Args: { _character_id: string }; Returns: undefined }
-      damage_creature: {
-        Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
-        Returns: undefined
-      }
       damage_party_member: {
         Args: { _character_id: string; _damage: number }
         Returns: number
@@ -2388,26 +2384,10 @@ export type Database = {
           old_hp: number
         }[]
       }
-      encounter_apply_character_damage_dry_run: {
-        Args: { _amount: number; _character_id: string }
-        Returns: {
-          caused_death: boolean
-          new_hp: number
-          old_hp: number
-        }[]
-      }
       encounter_apply_character_heal: {
         Args: { _amount: number; _character_id: string; _source_kind: string }
         Returns: {
           encounter_id: string
-          hit_max: boolean
-          new_hp: number
-          old_hp: number
-        }[]
-      }
-      encounter_apply_character_heal_dry_run: {
-        Args: { _amount: number; _character_id: string }
-        Returns: {
           hit_max: boolean
           new_hp: number
           old_hp: number
@@ -2428,15 +2408,6 @@ export type Database = {
           old_value: number
         }[]
       }
-      encounter_apply_character_resource_dry_run: {
-        Args: { _character_id: string; _delta: number; _resource: string }
-        Returns: {
-          hit_max: boolean
-          hit_zero: boolean
-          new_value: number
-          old_value: number
-        }[]
-      }
       encounter_apply_damage: {
         Args: {
           _amount: number
@@ -2450,14 +2421,6 @@ export type Database = {
           new_hp: number
           old_hp: number
           turned_aggressive: boolean
-        }[]
-      }
-      encounter_apply_damage_dry_run: {
-        Args: { _amount: number; _creature_id: string }
-        Returns: {
-          caused_kill: boolean
-          new_hp: number
-          old_hp: number
         }[]
       }
       encounter_apply_heal: {
