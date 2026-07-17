@@ -11,7 +11,7 @@ The server is the single source of truth. The client MUST NOT simulate or guess 
 | Data | Owner | Notes |
 |------|-------|-------|
 | Character HP, XP, gold, level, stats | Database (characters table) | Updated via `updateCharacter` |
-| Creature HP | Database (creatures table) | Updated via `damage_creature` RPC |
+| Creature HP | Database (creatures table) | Updated via `encounter_apply_damage` RPC |
 | Active effects / DoTs | Database (active_effects table) | Server ticks effects; client syncs display |
 | Combat sessions | Database (combat_sessions table) | Server creates/manages via combat-tick |
 | Inventory contents | Database (character_inventory) | Fetched, not locally simulated |

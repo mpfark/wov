@@ -29,7 +29,7 @@ import {
   writeCreatureState,
   cleanupEffects,
 } from "../_shared/combat-resolver.ts";
-import { readEncounterFlagMode } from "../_shared/encounter-flag.ts";
+
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 
 
@@ -234,15 +234,10 @@ Deno.serve(async (req) => {
 
     // ── Write creature state + cleanup effects in parallel ──────
     const [authoritativeCreatureHp] = await Promise.all([
-      (() => {
-        const _mode = readEncounterFlagMode(node_id);
-        return writeCreatureState(db, creatures, cHp, cKilled, {
-          useEncounter: _mode === 'on',
-          shadowEncounter: _mode === 'shadow',
-          sourceCharacterId: null,
-          sourceKind: 'dot',
-        });
-      })(),
+      writeCreatureState(db, creatures, cHp, cKilled, {
+        sourceCharacterId: null,
+        sourceKind: 'dot',
+      }),
       cleanupEffects(db, result.expiredIds, cKilled),
     ]);
 
