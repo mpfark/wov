@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Write creature state + cleanup effects in parallel ──────
-    await Promise.all([
+    const [authoritativeCreatureHp] = await Promise.all([
       (() => {
         const _mode = readEncounterFlagMode(node_id);
         return writeCreatureState(db, creatures, cHp, cKilled, {
@@ -538,7 +538,7 @@ Deno.serve(async (req) => {
     // Build final creature list: alive creatures with updated HP
     const finalCreatures = creatures
       .filter(cr => !cKilled.has(cr.id))
-      .map(cr => ({ ...cr, hp: cHp[cr.id] ?? cr.hp }));
+      .map(cr => ({ ...cr, hp: authoritativeCreatureHp?.[cr.id] ?? cHp[cr.id] ?? cr.hp }));
 
     recentReconcileMap.set(node_id, Date.now());
 
