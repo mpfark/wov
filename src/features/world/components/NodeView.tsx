@@ -412,6 +412,16 @@ export default function NodeView({
                             )}
                           </div>
                         </div>
+                        {activeCast && (
+                          <BossCastTelegraph
+                            key={activeCast.castEventId}
+                            label={activeCast.label}
+                            emoji={activeCast.emoji}
+                            startedAt={activeCast.startedAt}
+                            expiresAt={activeCast.expiresAt}
+                            amount={activeCast.amount}
+                          />
+                        )}
                       </div>
                     );
                   })}
