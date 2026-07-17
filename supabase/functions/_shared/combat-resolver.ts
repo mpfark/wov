@@ -442,25 +442,15 @@ export async function processLootDrops(
 
 // ── writeCreatureState ───────────────────────────────────────────
 /**
- * Persist creature HP changes and kills.
+ * Persist creature HP changes and kills through the encounter delta RPC
+ * (`encounter_apply_damage`). This is the sole write path — the legacy
+ * `damage_creature` RPC and its shadow/dry-run parity harness were removed
+ * in M7 once the encounter path was authoritative in production.
  *
- * Two exclusive branches:
- *   • Legacy (default): calls `damage_creature` with an absolute new_hp
- *     value computed from the tick's invocation snapshot.
- *   • Encounter (M2, feature-flagged): converts the intended new_hp back
- *     into a positive damage delta and applies it through
- *     `encounter_apply_damage`, which locks the encounter, applies the
- *     delta against current DB HP, flips aggression, ledgers the
- *     contribution, and detaches on kill in a single transaction.
- *
- * The `opts` argument is optional so existing call sites can migrate
- * incrementally; when omitted the legacy path runs.
+ * Returns a map of creature_id → authoritative post-write HP so callers can
+ * reconcile in-memory tick state with what actually landed in the DB.
  */
 export interface WriteCreatureStateOpts {
-  useEncounter?: boolean;
-  /** When true, run the encounter dry-run RPC alongside the legacy write and
-   *  log any divergence. Ignored when `useEncounter` is true. */
-  shadowEncounter?: boolean;
   sourceCharacterId?: string | null;
   sourceKind?: 'autoattack' | 'ability' | 'dot' | 'proc';
 }
@@ -472,118 +462,40 @@ export async function writeCreatureState(
   cKilled: Set<string>,
   opts: WriteCreatureStateOpts = {},
 ): Promise<Record<string, number>> {
-  const useEncounter = !!opts.useEncounter;
-  const promises: Promise<any>[] = [];
+  const sourceCharacterId = opts.sourceCharacterId ?? null;
+  const sourceKind = opts.sourceKind ?? 'autoattack';
   const authoritativeHp: Record<string, number> = {};
+  const promises: Promise<any>[] = [];
 
-  if (useEncounter) {
-    const sourceCharacterId = opts.sourceCharacterId ?? null;
-    const sourceKind = opts.sourceKind ?? 'autoattack';
-
-    for (const cr of creatures) {
-      const intended = cKilled.has(cr.id) ? 0 : cHp[cr.id];
-      if (intended === undefined) continue;
-      const delta = cr.hp - intended;
-      // Negative delta would be a heal — not produced by current tick logic.
-      // Zero delta means nothing to write. Skip both.
-      if (delta <= 0) continue;
-      promises.push(
-        db.rpc('encounter_apply_damage', {
-          _creature_id: cr.id,
-          _amount: delta,
-          _source_character_id: sourceCharacterId,
-          _source_kind: sourceKind,
-        }).then((result: any) => ({ creatureId: cr.id, result })),
-      );
-    }
-    const results = await Promise.all(promises);
-    for (const entry of results) {
-      const error = entry?.result?.error;
-      if (error) {
-        console.error('[encounter_apply_damage] failed', { creature_id: entry.creatureId, message: error.message });
-        continue;
-      }
-      const row = Array.isArray(entry?.result?.data) ? entry.result.data[0] : null;
-      if (row && typeof row.new_hp === 'number') {
-        authoritativeHp[entry.creatureId] = row.new_hp;
-      }
-    }
-    return authoritativeHp;
-  }
-
-  // Legacy path — unchanged behavior.
-  const turnAggressiveIds: string[] = [];
   for (const cr of creatures) {
-    if (cKilled.has(cr.id)) {
-      promises.push(db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true }));
-    } else if (cHp[cr.id] !== cr.hp) {
-      promises.push(db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] }));
-      // Any creature damaged by a player and surviving becomes aggressive until killed.
-      if (!cr.is_aggressive && cHp[cr.id] < cr.hp) turnAggressiveIds.push(cr.id);
-    }
-  }
-  if (turnAggressiveIds.length > 0) {
-    promises.push(db.from('creatures').update({ is_aggressive: true }).in('id', turnAggressiveIds));
-  }
-  await Promise.all(promises);
-  for (const cr of creatures) {
-    if (cKilled.has(cr.id)) authoritativeHp[cr.id] = 0;
-    else if (cHp[cr.id] !== undefined && cHp[cr.id] !== cr.hp) authoritativeHp[cr.id] = cHp[cr.id];
-  }
-
-  // ── Shadow mode ─────────────────────────────────────────────────
-  // After legacy writes complete, run the dry-run RPC per damaged creature
-  // and log any divergence. Never throws; never blocks gameplay.
-  if (opts.shadowEncounter) {
-    const sourceCharacterId = opts.sourceCharacterId ?? null;
-    const sourceKind = opts.sourceKind ?? 'autoattack';
-    const checks: Promise<void>[] = [];
-    for (const cr of creatures) {
-      const intended = cKilled.has(cr.id) ? 0 : cHp[cr.id];
-      if (intended === undefined) continue;
-      const delta = cr.hp - intended;
-      if (delta <= 0) continue;
-      const expectedKill = cKilled.has(cr.id) || intended === 0;
-      checks.push((async () => {
-        try {
-          const { data, error } = await db.rpc('encounter_apply_damage_dry_run', {
-            _creature_id: cr.id,
-            _amount: delta,
-            _source_character_id: sourceCharacterId,
-            _source_kind: sourceKind,
-          });
-          if (error) {
-            console.log('[encounter-shadow] rpc error', { creature_id: cr.id, error: error.message });
-            return;
-          }
-          const row = Array.isArray(data) ? data[0] : data;
-          if (!row) return;
-          const legacyHp = expectedKill ? 0 : intended;
-          const divergedHp = row.new_hp !== legacyHp;
-          const divergedKill = !!row.caused_kill !== expectedKill;
-          if (divergedHp || divergedKill) {
-            console.log('[encounter-shadow] divergence', {
-              creature_id: cr.id,
-              source_kind: sourceKind,
-              source_character_id: sourceCharacterId,
-              delta,
-              snapshot_hp: cr.hp,
-              legacy_new_hp: legacyHp,
-              encounter_new_hp: row.new_hp,
-              legacy_kill: expectedKill,
-              encounter_kill: !!row.caused_kill,
-              encounter_old_hp: row.old_hp,
-            });
-          }
-        } catch (e: any) {
-          console.log('[encounter-shadow] exception', { creature_id: cr.id, message: e?.message });
-        }
-      })());
-    }
-    // Fire-and-forget: don't await, so shadow work never delays the tick.
-    Promise.all(checks).catch(() => {});
+    const intended = cKilled.has(cr.id) ? 0 : cHp[cr.id];
+    if (intended === undefined) continue;
+    const delta = cr.hp - intended;
+    // Negative delta would be a heal — not produced by current tick logic.
+    // Zero delta means nothing to write. Skip both.
+    if (delta <= 0) continue;
+    promises.push(
+      db.rpc('encounter_apply_damage', {
+        _creature_id: cr.id,
+        _amount: delta,
+        _source_character_id: sourceCharacterId,
+        _source_kind: sourceKind,
+      }).then((result: any) => ({ creatureId: cr.id, result })),
+    );
   }
 
+  const results = await Promise.all(promises);
+  for (const entry of results) {
+    const error = entry?.result?.error;
+    if (error) {
+      console.error('[encounter_apply_damage] failed', { creature_id: entry.creatureId, message: error.message });
+      continue;
+    }
+    const row = Array.isArray(entry?.result?.data) ? entry.result.data[0] : null;
+    if (row && typeof row.new_hp === 'number') {
+      authoritativeHp[entry.creatureId] = row.new_hp;
+    }
+  }
   return authoritativeHp;
 }
 
