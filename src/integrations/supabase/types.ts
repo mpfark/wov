@@ -2466,6 +2466,15 @@ export type Database = {
         Returns: string
       }
       encounter_lock_key: { Args: { _encounter_id: string }; Returns: number }
+      encounter_reconcile: {
+        Args: { _node_id: string }
+        Returns: {
+          encounter_id: string
+          participants_purged: number
+          sessions_reset: number
+          status_after: string
+        }[]
+      }
       encounter_snapshot: { Args: { _node_id: string }; Returns: Json }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
