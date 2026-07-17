@@ -1234,6 +1234,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               sunderDebuff={sunderDebuff}
               rootDebuff={rootDebuff}
               bleedStacks={bleedStacks}
+              bossCasts={bossCasts}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);
