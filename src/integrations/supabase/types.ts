@@ -915,36 +915,59 @@ export type Database = {
         Row: {
           ability_key: string | null
           cast_key: string
+          creature_id: string | null
           encounter_id: string
+          expires_at: string | null
           id: string
+          node_id: string | null
           payload: Json
-          resolved_at: string
+          resolved_at: string | null
           started_at: string | null
         }
         Insert: {
           ability_key?: string | null
           cast_key: string
+          creature_id?: string | null
           encounter_id: string
+          expires_at?: string | null
           id?: string
+          node_id?: string | null
           payload?: Json
-          resolved_at?: string
+          resolved_at?: string | null
           started_at?: string | null
         }
         Update: {
           ability_key?: string | null
           cast_key?: string
+          creature_id?: string | null
           encounter_id?: string
+          expires_at?: string | null
           id?: string
+          node_id?: string | null
           payload?: Json
-          resolved_at?: string
+          resolved_at?: string | null
           started_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "encounter_cast_events_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "encounter_cast_events_encounter_id_fkey"
             columns: ["encounter_id"]
             isOneToOne: false
             referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_cast_events_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
             referencedColumns: ["id"]
           },
         ]
@@ -2448,6 +2471,33 @@ export type Database = {
           encounter_id: string
           new_hp: number
           old_hp: number
+        }[]
+      }
+      encounter_boss_resolve_cast: {
+        Args: { _cast_event_id: string }
+        Returns: {
+          amount: number
+          caused_death: boolean
+          character_id: string
+          new_hp: number
+          old_hp: number
+        }[]
+      }
+      encounter_boss_start_cast: {
+        Args: {
+          _ability_key: string
+          _cast_key: string
+          _cast_ms: number
+          _creature_id: string
+          _encounter_id: string
+          _node_id: string
+          _payload?: Json
+        }
+        Returns: {
+          cast_event_id: string
+          expires_at: string
+          skipped: boolean
+          started_at: string
         }[]
       }
       encounter_detach_creature: {

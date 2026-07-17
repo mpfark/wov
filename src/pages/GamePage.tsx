@@ -21,7 +21,7 @@ import { useNodeChannel } from '@/features/world';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
-import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
+import { useCreatureBroadcast, useMergedCreatureHpOverrides, useBossCasts } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
@@ -778,6 +778,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
+  const bossCasts = useBossCasts(character.current_node_id);
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
@@ -1233,6 +1234,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               sunderDebuff={sunderDebuff}
               rootDebuff={rootDebuff}
               bleedStacks={bleedStacks}
+              bossCasts={bossCasts}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);

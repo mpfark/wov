@@ -12,6 +12,8 @@ export { useCreatureBroadcast } from './hooks/useCreatureBroadcast';
 export { useBuffState } from './hooks/useBuffState';
 export type { BuffState, BuffSetters } from './hooks/useBuffState';
 export { useMergedCreatureHpOverrides } from './hooks/useMergedCreatureState';
+export { useBossCasts } from './hooks/useBossCasts';
+export type { BossCast } from './hooks/useBossCasts';
 
 // Combat predictor
 export { predictConservativeDamage, applyPredictedDamage } from './utils/combat-predictor';

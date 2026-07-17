@@ -8,6 +8,7 @@ import { getCharacterTitle } from '@/lib/game-data';
 import { ClassAbility } from '@/features/combat';
 import { getStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
+import { BossCastTelegraph } from './BossCastTelegraph';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
@@ -57,6 +58,7 @@ interface Props {
   sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
   rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
+  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; emoji: string; startedAt: number; expiresAt: number; castMs: number; amount?: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -77,6 +79,7 @@ export default function NodeView({
   sunderDebuff,
   rootDebuff = null,
   bleedStacks = {},
+  bossCasts = {},
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
@@ -297,6 +300,7 @@ export default function NodeView({
                     const creatureBleed = bleedStacks[c.id];
                     const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
+                    const activeCast = bossCasts[c.id];
                     return (
                       <div
                         key={c.id}
@@ -409,6 +413,16 @@ export default function NodeView({
                             )}
                           </div>
                         </div>
+                        {activeCast && (
+                          <BossCastTelegraph
+                            key={activeCast.castEventId}
+                            label={activeCast.label}
+                            emoji={activeCast.emoji}
+                            startedAt={activeCast.startedAt}
+                            expiresAt={activeCast.expiresAt}
+                            amount={activeCast.amount}
+                          />
+                        )}
                       </div>
                     );
                   })}
