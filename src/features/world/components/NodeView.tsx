@@ -299,6 +299,7 @@ export default function NodeView({
                     const creatureBleed = bleedStacks[c.id];
                     const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
+                    const activeCast = bossCasts[c.id];
                     return (
                       <div
                         key={c.id}
