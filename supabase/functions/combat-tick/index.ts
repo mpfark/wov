@@ -1865,8 +1865,180 @@ Deno.serve(async (req) => {
       }
     } // end tick loop
 
+    // ── M6: Telegraphed boss casts ───────────────────────────────
+    // Resolve any casts that have expired, then (30% chance/invocation) start
+    // a new one for each engaged boss that has no active cast and is off
+    // cooldown. All state lives in encounter_cast_events; casts are broadcast
+    // on a node-scoped channel so every client at the node can render the
+    // telegraph regardless of party membership.
+    try {
+      const BOSS_CAST_COOLDOWN_MS = 20000;
+      const BOSS_CAST_MS = 4000;
+      const BOSS_CAST_START_CHANCE = 0.30;
+
+      // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
+      const cooldownCutoff = new Date(now - BOSS_CAST_COOLDOWN_MS).toISOString();
+      const { data: nodeCasts } = await db
+        .from('encounter_cast_events')
+        .select('id, creature_id, encounter_id, cast_key, ability_key, started_at, expires_at, resolved_at, payload, node_id')
+        .eq('node_id', combatNodeId)
+        .or(`resolved_at.is.null,resolved_at.gte.${cooldownCutoff}`);
+
+      const activeByCreature = new Map<string, any>();
+      const lastCastAtByCreature = new Map<string, number>();
+      for (const cst of nodeCasts || []) {
+        if (!cst.resolved_at) {
+          activeByCreature.set(cst.creature_id, cst);
+        } else {
+          const t = new Date(cst.resolved_at).getTime();
+          const prev = lastCastAtByCreature.get(cst.creature_id) ?? 0;
+          if (t > prev) lastCastAtByCreature.set(cst.creature_id, t);
+        }
+      }
+
+      const castBroadcasts: any[] = [];
+
+      // 1) Resolve expired casts.
+      for (const cst of activeByCreature.values()) {
+        const expiresMs = new Date(cst.expires_at).getTime();
+        if (expiresMs > now) continue;
+
+        const { data: hits, error: resolveErr } = await db.rpc(
+          'encounter_boss_resolve_cast',
+          { _cast_event_id: cst.id },
+        );
+        if (resolveErr) {
+          console.error('[boss-cast] resolve failed', cst.id, resolveErr.message);
+          continue;
+        }
+
+        const creature = creatures.find(c => c.id === cst.creature_id);
+        const creatureName = creature?.name ?? 'The boss';
+        const label = (cst.payload as any)?.label ?? cst.cast_key;
+        const emoji = (cst.payload as any)?.emoji ?? '☄️';
+
+        // Apply damage to our in-memory member HP for members who were hit.
+        for (const h of (hits || [])) {
+          if (mHp[h.character_id] !== undefined) {
+            mHp[h.character_id] = h.new_hp;
+          }
+          const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
+          events.push({
+            type: 'boss_cast_hit',
+            character_id: h.character_id,
+            creature_id: cst.creature_id,
+            damage: h.amount,
+            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName} for ${h.amount}!`,
+          });
+        }
+        activeByCreature.delete(cst.creature_id);
+        lastCastAtByCreature.set(cst.creature_id, now);
+
+        castBroadcasts.push({
+          event: 'cast_resolved',
+          payload: {
+            cast_event_id: cst.id,
+            creature_id: cst.creature_id,
+            cast_key: cst.cast_key,
+            node_id: combatNodeId,
+            hits: (hits || []).map((h: any) => ({
+              character_id: h.character_id,
+              amount: h.amount,
+              caused_death: h.caused_death,
+            })),
+          },
+        });
+      }
+
+      // 2) Start new casts for engaged bosses that are idle and off cooldown.
+      for (const creature of creatures) {
+        if (creature.rarity !== 'boss') continue;
+        if (creature.is_alive === false) continue;
+        if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
+        if (!sessionEngaged.has(creature.id)) continue;
+        if (activeByCreature.has(creature.id)) continue;
+
+        const lastCastAt = lastCastAtByCreature.get(creature.id) ?? 0;
+        if (now - lastCastAt < BOSS_CAST_COOLDOWN_MS) continue;
+        if (Math.random() > BOSS_CAST_START_CHANCE) continue;
+
+        // Ensure encounter exists (idempotent, cheap).
+        const { data: encId, error: encErr } = await db.rpc(
+          'encounter_ensure_for_creature',
+          { _creature_id: creature.id },
+        );
+        if (encErr || !encId) {
+          console.error('[boss-cast] encounter_ensure failed', creature.id, encErr?.message);
+          continue;
+        }
+
+        // Cataclysm — flat AoE that scales with creature level.
+        const castKey = 'cataclysm';
+        const label = 'Cataclysm';
+        const emoji = '☄️';
+        const amount = 8 + Math.floor((creature.level || 1) * 1.5);
+        const payload = { label, emoji, amount, cast_ms: BOSS_CAST_MS };
+
+        const { data: startRows, error: startErr } = await db.rpc(
+          'encounter_boss_start_cast',
+          {
+            _encounter_id: encId,
+            _creature_id: creature.id,
+            _node_id: combatNodeId,
+            _cast_key: castKey,
+            _ability_key: castKey,
+            _cast_ms: BOSS_CAST_MS,
+            _payload: payload,
+          },
+        );
+        if (startErr) {
+          console.error('[boss-cast] start failed', creature.id, startErr.message);
+          continue;
+        }
+        const row = Array.isArray(startRows) ? startRows[0] : startRows;
+        if (!row || row.skipped) continue;
+
+        events.push({
+          type: 'boss_cast_start',
+          creature_id: creature.id,
+          message: `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
+        });
+
+        castBroadcasts.push({
+          event: 'cast_started',
+          payload: {
+            cast_event_id: row.cast_event_id,
+            creature_id: creature.id,
+            creature_name: creature.name,
+            cast_key: castKey,
+            ability_key: castKey,
+            label,
+            emoji,
+            node_id: combatNodeId,
+            started_at: row.started_at,
+            expires_at: row.expires_at,
+            cast_ms: BOSS_CAST_MS,
+            amount,
+          },
+        });
+      }
+
+      // Fire node-scoped broadcasts (best-effort — clients also hydrate on join).
+      if (castBroadcasts.length > 0) {
+        const nodeChannel = db.channel(`encounter-node-${combatNodeId}`);
+        for (const b of castBroadcasts) {
+          await nodeChannel.send({ type: 'broadcast', event: b.event, payload: b.payload });
+        }
+        // Realtime v2: unsubscribing releases the socket immediately.
+        try { await nodeChannel.unsubscribe(); } catch { /* ignore */ }
+      }
+    } catch (e) {
+      console.error('[boss-cast] block failed:', (e as Error).message);
+    }
+
     // ── Deterministic last_tick_at update ────────────────────────
     const newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
+
 
     // ── Report consumed one-shot buffs ──────────────────────────
     const consumedBuffsList: any[] = [];
