@@ -8,6 +8,7 @@ import { getCharacterTitle } from '@/lib/game-data';
 import { ClassAbility } from '@/features/combat';
 import { getStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
+import { BossCastTelegraph } from './BossCastTelegraph';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
