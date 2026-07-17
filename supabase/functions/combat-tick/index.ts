@@ -2205,24 +2205,35 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Split writes: HP/CP/MP go through encounter delta RPCs (when the
-      // M3 flag is engaged), XP/level/stance/max_* stay on the direct PATCH.
-      // Absolute HP/max_hp writes from a level-up remain on the PATCH so they
-      // stay atomic with the new max_hp/max_cp/max_mp values.
+      // ── Split writes: HP/CP go through encounter delta RPCs so concurrent
+      // writers (party ticks, DoT catch-up, heals) can't lose updates.
+      // XP/level/stance/max_* stay on the direct PATCH. Absolute HP writes
+      // from a level-up ride the PATCH so they stay atomic with new max_*.
       const leveledUp = updates.level !== undefined;
-      const charWriteMode = readEncounterCharWritesMode(combatNodeId);
-      const resourceOps: CharResourceOp[] = [];
-      if (!leveledUp && charWriteMode !== 'off') {
+      const resourceRpcs: Promise<any>[] = [];
+      if (!leveledUp) {
         if (updates.hp !== undefined) {
           const hpDelta = (updates.hp as number) - c.hp;
-          if (hpDelta !== 0) resourceOps.push({ field: 'hp', delta: hpDelta, expectedNew: updates.hp as number });
+          if (hpDelta < 0) {
+            resourceRpcs.push(db.rpc('encounter_apply_character_damage', {
+              _character_id: m.id, _amount: -hpDelta,
+              _source_kind: 'combat-tick', _source_creature_id: null,
+            }));
+          } else if (hpDelta > 0) {
+            resourceRpcs.push(db.rpc('encounter_apply_character_heal', {
+              _character_id: m.id, _amount: hpDelta, _source_kind: 'combat-tick',
+            }));
+          }
+          delete updates.hp;
         }
         if (updates.cp !== undefined) {
           const cpDelta = (updates.cp as number) - (c.cp ?? 0);
-          if (cpDelta !== 0) resourceOps.push({ field: 'cp', delta: cpDelta, expectedNew: updates.cp as number });
-        }
-        if (charWriteMode === 'on') {
-          delete updates.hp;
+          if (cpDelta !== 0) {
+            resourceRpcs.push(db.rpc('encounter_apply_character_resource', {
+              _character_id: m.id, _resource: 'cp', _delta: cpDelta,
+              _source_kind: 'combat-tick',
+            }));
+          }
           delete updates.cp;
         }
       }
@@ -2230,17 +2241,8 @@ Deno.serve(async (req) => {
       if (Object.keys(updates).length > 0) {
         memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
       }
-      if (resourceOps.length > 0) {
-        memberUpdatePromises.push(
-          applyCharacterResourceOps({
-            db,
-            characterId: m.id,
-            ops: resourceOps,
-            nodeId: combatNodeId,
-            sourceKind: 'combat-tick',
-            modeOverride: charWriteMode,
-          }),
-        );
+      if (resourceRpcs.length > 0) {
+        memberUpdatePromises.push(Promise.all(resourceRpcs));
       }
 
       memberStates.push({
