@@ -78,6 +78,7 @@ export default function NodeView({
   sunderDebuff,
   rootDebuff = null,
   bleedStacks = {},
+  bossCasts = {},
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
