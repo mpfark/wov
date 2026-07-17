@@ -19,8 +19,6 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { readEncounterFlagMode, readEncounterCharWritesMode } from "../_shared/encounter-flag.ts";
-import { applyCharacterResourceOps, type CharResourceOp } from "../_shared/encounter-char-writes.ts";
 import { formatProcMessage } from "../_shared/proc-log-format.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
