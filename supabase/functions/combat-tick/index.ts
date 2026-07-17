@@ -2304,15 +2304,23 @@ Deno.serve(async (req) => {
 
 
     // ── Response ─────────────────────────────────────────────────
-    const combatCreatureStates = creatures.map(cr => ({
-      id: cr.id,
-      hp: cHp[cr.id],
-      alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
-    }));
-    const nonCombatAlive = allCreatures
-      .filter(cr => !creatures.some(cc => cc.id === cr.id))
-      .map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-    const creature_states = [...combatCreatureStates, ...nonCombatAlive];
+    // Only emit HP for creatures the tick actually simulated. Emitting stale
+    // snapshot HP for non-combat creatures caused client overrides to snap the
+    // HP bar back up mid-fight when concurrent writers (DoT wake-up, another
+    // player's tick) had already lowered the DB HP between our snapshot and
+    // this response.
+    // Only include creatures whose HP actually changed this tick, or that we
+    // killed. Echoing the snapshot HP for unchanged creatures caused the client
+    // to override its (fresher) realtime HP with our older tick-start value.
+    const creature_states = creatures
+      .filter(cr => cHp[cr.id] !== cr.hp || cKilled.has(cr.id))
+      .map(cr => ({
+        id: cr.id,
+        hp: cHp[cr.id],
+        alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
+      }));
+
+
 
     // ── Diagnostics ───────────────────────────────────────────────
     const requestDurationMs = Date.now() - _requestT0;
