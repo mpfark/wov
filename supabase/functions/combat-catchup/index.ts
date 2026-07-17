@@ -29,7 +29,7 @@ import {
   writeCreatureState,
   cleanupEffects,
 } from "../_shared/combat-resolver.ts";
-import { readEncounterFlagMode } from "../_shared/encounter-flag.ts";
+
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 
 
