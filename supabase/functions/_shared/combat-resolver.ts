@@ -471,9 +471,10 @@ export async function writeCreatureState(
   cHp: Record<string, number>,
   cKilled: Set<string>,
   opts: WriteCreatureStateOpts = {},
-): Promise<void> {
+): Promise<Record<string, number>> {
   const useEncounter = !!opts.useEncounter;
   const promises: Promise<any>[] = [];
+  const authoritativeHp: Record<string, number> = {};
 
   if (useEncounter) {
     const sourceCharacterId = opts.sourceCharacterId ?? null;
@@ -492,11 +493,22 @@ export async function writeCreatureState(
           _amount: delta,
           _source_character_id: sourceCharacterId,
           _source_kind: sourceKind,
-        }),
+        }).then((result: any) => ({ creatureId: cr.id, result })),
       );
     }
-    await Promise.all(promises);
-    return;
+    const results = await Promise.all(promises);
+    for (const entry of results) {
+      const error = entry?.result?.error;
+      if (error) {
+        console.error('[encounter_apply_damage] failed', { creature_id: entry.creatureId, message: error.message });
+        continue;
+      }
+      const row = Array.isArray(entry?.result?.data) ? entry.result.data[0] : null;
+      if (row && typeof row.new_hp === 'number') {
+        authoritativeHp[entry.creatureId] = row.new_hp;
+      }
+    }
+    return authoritativeHp;
   }
 
   // Legacy path — unchanged behavior.
@@ -514,6 +526,10 @@ export async function writeCreatureState(
     promises.push(db.from('creatures').update({ is_aggressive: true }).in('id', turnAggressiveIds));
   }
   await Promise.all(promises);
+  for (const cr of creatures) {
+    if (cKilled.has(cr.id)) authoritativeHp[cr.id] = 0;
+    else if (cHp[cr.id] !== undefined && cHp[cr.id] !== cr.hp) authoritativeHp[cr.id] = cHp[cr.id];
+  }
 
   // ── Shadow mode ─────────────────────────────────────────────────
   // After legacy writes complete, run the dry-run RPC per damaged creature
@@ -567,6 +583,8 @@ export async function writeCreatureState(
     // Fire-and-forget: don't await, so shadow work never delays the tick.
     Promise.all(checks).catch(() => {});
   }
+
+  return authoritativeHp;
 }
 
 
