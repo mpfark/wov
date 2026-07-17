@@ -778,6 +778,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
+  const bossCasts = useBossCasts(character.current_node_id);
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
