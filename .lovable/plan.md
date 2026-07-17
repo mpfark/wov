@@ -1,103 +1,122 @@
-# M3 — Character Resource Authority (Feature-Flagged)
+# M4 — Participant Lifecycle
 
-Creature HP writes now go through `encounter_apply_damage` globally (`ENCOUNTER_HP_WRITES=on`). M3 does the same for **character** HP/CP/MP so that all in-combat resource mutations are atomic, delta-based, and encounter-scoped — closing the last lost-update surface in party combat.
+Before starting: play a short fight and confirm HP no longer snaps back and edge logs are free of `23505 duplicate key value violates encounters_active_key_uidx`. If clean, proceed with M4 below.
 
-## 1. Scope
+## Goal
+
+Make `encounter_participants` the single source of truth for "who is fighting whom, right now, at this node." Right now nothing writes to it in a meaningful lifecycle way, so:
+
+- Non-aggressive creatures never formally "disengage" when a player leaves the node → they linger in combat state and reset to full HP on next tick.
+- Characters who walked past an aggressive creature months ago are still treated as engaged → summon block, stale `combat_sessions`, phantom in-combat flags.
+- Rogue "double kill" — creature is marked dead in one path but participant row isn't cleared, so the next tick treats it as re-engaged.
+
+M4 makes engage/disengage explicit, atomic, and node-scoped.
+
+## Scope
 
 In scope
-- New RPCs: `encounter_apply_character_damage`, `encounter_apply_character_heal`, `encounter_apply_character_resource` (CP/MP spend + regen).
-- Delta semantics under `pg_advisory_xact_lock(encounter_lock_key(encounter_id))`, clamped to `[0, max_*]`.
-- Encounter attach on first character write (mirrors creature attach), participant upsert.
-- Rewrite of character-resource writes in `combat-tick` (autoattack damage taken, ability CP/MP spend, class regen ticks, hp-drain procs, force-shield damage-absorb).
-- New flag `ENCOUNTER_CHAR_WRITES` = `off | shadow | on` with the same rollout model as M2.
-- Client-side write suppression during combat is already in place (see memory index — "HP Authority"). Confirm and extend it so client PATCHes of `characters.hp/cp/mp` are blocked whenever the combat driver is engaged, regardless of flag state.
-- Parity harness extension: two-writer character-HP race, DoT + heal interleave, overkill clamp, dead-target no-op.
+- Formal `engage` and `disengage` transitions on `encounter_participants` (both character and creature rows).
+- Auto-disengage on: node departure, character death, creature death, wimp flee, teleport, summon accept, logout.
+- Non-aggressive creatures release their participant row when the last engaged character leaves the node.
+- `combat_sessions` becomes derived: created when a participant row is inserted at a node, ended when the last character participant leaves.
+- `characters.in_combat` (or the equivalent flag consumed by summon/teleport) becomes a **read from `encounter_participants`**, not a persisted column write.
+- Backfill migration that clears every orphan participant + orphan session.
 
 Out of scope
-- Cast lifecycle / telegraphed boss abilities (M6).
-- Removing legacy character PATCH writes from non-combat paths (rest, level-up, teleport cost).
-- Removing legacy `damage_creature` (M7).
-- Effect ticks or reward math moving into PL/pgSQL.
+- Cast lifecycle (M6).
+- Removing `combat_sessions` table entirely (M7).
+- Wizard force-shield regen fix (separate track).
 
-## 2. Flag
-
-`ENCOUNTER_CHAR_WRITES` — server-only, read once per tick invocation.
-- `off` (default): character resources continue to be written via the existing PATCH/UPDATE path.
-- `shadow`: legacy path is authoritative; RPC dry-run runs in parallel and any HP/CP/MP divergence is logged as `[encounter-char-shadow] divergence …`.
-- `on`: RPCs are authoritative; legacy PATCH path is skipped.
-
-Rollout: off → shadow (≥ 15 min real play across solo, party, DoT, death, revive, class regen) → on (global) → M4 planning.
-
-## 3. SQL — new RPCs
+## SQL — new RPCs
 
 All `SECURITY DEFINER`, `SET search_path = public`, single transaction, `pg_advisory_xact_lock(encounter_lock_key(encounter_id))`.
 
 ```
-encounter_apply_character_damage(
-  _character_id uuid,
-  _amount int,             -- positive
-  _source_kind text,       -- 'creature' | 'dot' | 'proc' | 'environment'
-  _source_creature_id uuid -- nullable
-) RETURNS TABLE (encounter_id uuid, new_hp int, old_hp int, caused_death boolean)
+encounter_engage_character(_character_id uuid, _node_id uuid)
+  → upserts participant row, ensures encounter, creates session if none
 
-encounter_apply_character_heal(
-  _character_id uuid,
-  _amount int,
-  _source_kind text        -- 'regen' | 'potion' | 'ability' | 'lifesteal'
-) RETURNS TABLE (encounter_id uuid, new_hp int, old_hp int, hit_max boolean)
+encounter_disengage_character(_character_id uuid, _reason text)
+  → 'left_node' | 'died' | 'fled' | 'teleport' | 'summoned' | 'logout'
+  → removes participant row, cascades: if 0 character participants left,
+    releases all creature participants and closes the session
 
-encounter_apply_character_resource(
-  _character_id uuid,
-  _resource text,          -- 'cp' | 'mp'
-  _delta int,              -- signed; negative = spend, positive = regen
-  _source_kind text
-) RETURNS TABLE (encounter_id uuid, new_value int, old_value int, hit_max boolean, hit_zero boolean)
+encounter_disengage_creature(_creature_id uuid, _reason text)
+  → 'died' | 'released' | 'despawned'
+  → removes creature participant row
+
+encounter_release_orphans(_node_id uuid)
+  → sweep: any creature participant at node with 0 engaged characters
+    → disengage (respects aggressive flag: aggressive stays engaged until
+    the aggro target actually leaves the node area, non-aggressive
+    releases immediately)
 ```
 
-Behavior
-- Attach the character to the current node's encounter (`encounter_ensure_for_node`) and upsert `encounter_participants` on first write.
-- Damage clamps at 0 and sets `caused_death := TRUE` on the crossing edge only. Death write also clears `active_effects` for the character (mirrors current tick logic) inside the same transaction.
-- Heal clamps at `max_hp` from `characters` row (read within the lock).
-- Resource RPC handles both directions; `hit_zero` flag lets callers block ability casts atomically ("insufficient CP" is now server-truth).
+Character-side view:
+```
+character_is_engaged(_character_id uuid) RETURNS boolean
+  → EXISTS on encounter_participants; used by accept_summon, teleport,
+    wimp checks, and any client "in combat" gate
+```
 
-Dry-run twin for each RPC (`*_dry_run`) — read-only, used by shadow-mode divergence logger.
-
-## 4. TypeScript touchpoints
+## TypeScript touchpoints
 
 `supabase/functions/combat-tick/index.ts`
-- Replace direct `characters` UPDATEs for HP/CP/MP with `writeCharacterResource(db, characterId, {hp?, cp?, mp?}, meta)` helper.
-- Helper reads `ENCOUNTER_CHAR_WRITES` once per invocation (passed down) and dispatches: legacy PATCH, shadow (PATCH + dry-run + diff log), or RPC-only.
-- Class regen tick, autoattack damage taken, ability CP/MP spend, HP-drain proc, and force-shield damage-absorb are the five call sites.
+- On session open: call `encounter_engage_character` for each party member present at the node.
+- On tick, when a creature reaches 0 HP: `encounter_disengage_creature(..., 'died')` in the same transaction as the kill write.
+- On character death: `encounter_disengage_character(..., 'died')`.
+- On session close (no engaged creatures left): iterate remaining character participants → `encounter_disengage_character(..., 'left_node')`.
 
 `supabase/functions/combat-catchup/index.ts`
-- Same helper; offscreen DoT damage to characters (party members standing on the node with an active bleed) routes through `encounter_apply_character_damage` with `_source_kind = 'dot'`.
+- On DoT resolution that kills a creature: `encounter_disengage_creature(..., 'died')`.
+- After sweep, call `encounter_release_orphans(node_id)`.
 
-`supabase/functions/_shared/encounter-flag.ts`
-- Add `getEncounterCharWritesMode()` mirroring existing `getEncounterHpWritesMode()`.
+`src/features/world/hooks/useMovementActions.ts`
+- After a successful move, call `encounter_disengage_character(character_id, 'left_node')`. Fire-and-forget, non-blocking.
 
-Client
-- Audit `useCharacter`, `useCombatDriver`, and force-shield regen paths to confirm no client-side HP/CP/MP PATCH fires while `combatEngaged === true`. Any offender is either removed or gated behind `!combatEngaged`.
+`src/features/world/hooks/useKeyboardMovement.ts` / teleport / summon accept / wimp flee
+- Same disengage call with the appropriate reason.
 
-## 5. Parity harness extension
+`src/hooks/useAuth.ts` (or wherever sign-out lives)
+- Disengage on sign-out with reason `logout`.
 
-`encounter-parity-check` gains four scenarios, snapshot/restore around a real character row (admin-selectable):
-1. `char_solo` — one hit, legacy vs delta HP match.
-2. `char_party_race` — two simultaneous damage sources on the same character, delta preserves both.
-3. `char_dot_heal_interleave` — DoT tick + potion heal in the same tick window; final HP matches sum of deltas.
-4. `char_death_clamp` — overkill clamps at 0, `caused_death = true`, second call is a no-op.
+`accept_summon` RPC (existing)
+- Replace the "self-heal orphan sessions" logic with a straight
+  `character_is_engaged(target)` check. If false, allow. If true, block
+  with the current combat message. The disengage-on-move path means
+  orphans should stop appearing entirely, so this becomes a simple guard.
 
-Restore restores hp/cp/mp/active_effects and removes any test-only participant row.
+Client "in combat" gates (teleport, summon, world map fast-travel, wimp)
+- Replace any read of `characters.in_combat` with a read of
+  `character_is_engaged` (or a cached selector derived from the
+  encounter_participants realtime subscription).
 
-## 6. Rollout checklist
+## Backfill migration
 
-1. Ship SQL + helper + parity extension, flag `off`. Prod behavior unchanged.
-2. Flip `shadow`. Play the five call sites. Query `function_edge_logs` for `[encounter-char-shadow] divergence`. Zero divergences for ≥ 15 minutes = ready.
-3. Flip `on`. Watch a live party fight for a few minutes for anomalies.
-4. Declare M3 done and start M4 (participant lifecycle: presence, disengage, node departure) planning.
+Single migration, runs once:
+1. `DELETE FROM encounter_participants` where the referenced character is not at the encounter's node OR the referenced creature is dead.
+2. `DELETE FROM combat_sessions` where there is no matching participant row.
+3. Clear any `characters.in_combat = true` rows whose character has no participant row.
+
+## Rollout
+
+1. Ship the SQL RPCs + backfill migration first (safe: no callers yet).
+2. Ship the TS wiring (engage on tick, disengage on move/death/logout).
+3. Flip the "in combat" gate on `accept_summon` / teleport / wimp to use `character_is_engaged`.
+4. Watch edge logs for one play session across: leave-node during fight, kill creature, die to creature, teleport mid-fight, summon accept, sign out mid-fight, DoT kill offscreen.
+5. Declare M4 done → move to M5 (encounter reconciliation, which cleans up the duplicate DoT reward bug).
+
+## Expected bug outcomes after M4
+
+| Bug | Fix path |
+|---|---|
+| Non-aggressive creature resets on player leave | `encounter_release_orphans` releases the participant row → next tick has no engaged character → creature stays at damaged HP, does not regen back to full mid-fight |
+| Character stuck "in combat" after walking past aggressive creature | Disengage-on-move + backfill migration |
+| Rogue "double kill" | Disengage-on-death happens in the same transaction as the HP write, so the next tick can't re-engage |
+| Duplicate DoT reward for party member | Still needs M5 — participant lifecycle alone won't dedupe the reward path |
 
 ## Technical notes
 
-- Character death currently triggers side effects in TS (buff clear, boss-hunter/party reward suppression). Those stay in TS; the RPC only reports `caused_death` so the caller decides.
-- `force_shield_hp` is a wizard-only column that already regenerates via `apply_force_shield_regen` RPC — leave it out of M3; it will be folded into a later "wizard resources" pass.
-- `sync_character_resources` (cap enforcement on gear/level change) is untouched; it writes absolute values outside combat and remains the correct authority for max-value changes.
-- Character participants get their own `encounter_lock_key` bucket via the shared encounter id, so a party fight serializes all character + creature writes on one lock — this is intentional and matches the M2 model.
+- Participant rows are cheap; the design deliberately keeps `combat_sessions` alive as a compatibility shim so the client tick loop and party-authority code don't need rewriting yet. M7 will collapse them.
+- Disengage-on-move is fire-and-forget from the client, but the RPC is idempotent so a lost call just means the next tick's `release_orphans` sweep catches it.
+- `encounter_release_orphans` must respect the aggressive flag — an aggressive creature whose target is still at the node stays engaged even if a non-target character walks away. That prevents an exploit where a bystander steps in and out to force disengage.
+- Everything runs under the existing `encounter_lock_key(encounter_id)` advisory lock, so no new lock hierarchy.
