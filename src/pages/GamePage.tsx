@@ -21,7 +21,7 @@ import { useNodeChannel } from '@/features/world';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
-import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
+import { useCreatureBroadcast, useMergedCreatureHpOverrides, useBossCasts } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
