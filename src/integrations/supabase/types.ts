@@ -740,6 +740,7 @@ export type Database = {
           is_aggressive: boolean
           is_alive: boolean
           is_humanoid: boolean
+          last_damaged_at: string | null
           level: number
           loot_mode: string
           loot_table: Json
@@ -766,6 +767,7 @@ export type Database = {
           is_aggressive?: boolean
           is_alive?: boolean
           is_humanoid?: boolean
+          last_damaged_at?: string | null
           level?: number
           loot_mode?: string
           loot_table?: Json
@@ -792,6 +794,7 @@ export type Database = {
           is_aggressive?: boolean
           is_alive?: boolean
           is_humanoid?: boolean
+          last_damaged_at?: string | null
           level?: number
           loot_mode?: string
           loot_table?: Json
