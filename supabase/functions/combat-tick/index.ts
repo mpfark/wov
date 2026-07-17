@@ -2379,15 +2379,10 @@ Deno.serve(async (req) => {
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
     const [authoritativeCreatureHp] = await Promise.all([
-      (() => {
-        const _mode = readEncounterFlagMode(combatNodeId);
-        return writeCreatureState(db, creatures, cHp, cKilled, {
-          useEncounter: _mode === 'on',
-          shadowEncounter: _mode === 'shadow',
-          sourceCharacterId: session.character_id,
-          sourceKind: 'autoattack',
-        });
-      })(),
+      writeCreatureState(db, creatures, cHp, cKilled, {
+        sourceCharacterId: session.character_id,
+        sourceKind: 'autoattack',
+      }),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
