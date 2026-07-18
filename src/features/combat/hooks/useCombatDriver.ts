@@ -462,7 +462,31 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
 
     if (result.aliveEngagedIds.length === 0) {
-      setTimeout(() => stopCombat(), 250);
+      // Before ending the fight, look for another aggressive creature still
+      // on the node. If one exists, roll straight into it — this avoids a
+      // brief inCombat=false frame that would otherwise fire the re-engage
+      // aggro flavor ("charges at you") mid-fight.
+      setTimeout(() => {
+        const p = ext.current;
+        const killed = recentlyKilledRef.current;
+        const nextAggro = p.creatures.find(
+          c => c.is_aggressive && c.is_alive && c.hp > 0 && !killed.has(c.id)
+        );
+        if (nextAggro && !p.isDead && p.character.hp > 0 && (!p.party || p.isLeader)) {
+          aggroProcessedRef.current.add(nextAggro.id);
+          p.addLocalLog(`⚠️ ${nextAggro.name} joins the fight!`);
+          setEngagedCreatureIds(prev => {
+            if (prev.includes(nextAggro.id)) return prev;
+            const next = [...prev, nextAggro.id];
+            engagedCreatureIdsRef.current = next;
+            return next;
+          });
+          setActiveCombatCreatureId(nextAggro.id);
+          // Keep inCombat true; the running tick interval picks up the new target.
+          return;
+        }
+        stopCombat();
+      }, 250);
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
