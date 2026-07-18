@@ -490,6 +490,7 @@ export type Database = {
           max_cp: number
           max_hp: number
           max_mp: number
+          movement_locked_until: string | null
           mp: number
           name: string
           portrait_generated_at: string | null
@@ -543,6 +544,7 @@ export type Database = {
           max_cp?: number
           max_hp?: number
           max_mp?: number
+          movement_locked_until?: string | null
           mp?: number
           name: string
           portrait_generated_at?: string | null
@@ -596,6 +598,7 @@ export type Database = {
           max_cp?: number
           max_hp?: number
           max_mp?: number
+          movement_locked_until?: string | null
           mp?: number
           name?: string
           portrait_generated_at?: string | null
@@ -2445,6 +2448,7 @@ export type Database = {
           amount: number
           caused_death: boolean
           character_id: string
+          locked_until: string
           new_hp: number
           old_hp: number
         }[]
