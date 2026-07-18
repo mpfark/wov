@@ -259,7 +259,15 @@ export default function CreatureManager() {
         }))
         .filter(f => f.text.length > 0),
       boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
-    };
+      boss_cast: form.rarity === 'boss' && form.boss_cast_enabled ? {
+        label: form.boss_cast_label.trim() || 'Cataclysm',
+        emoji: form.boss_cast_emoji.trim() || '☄️',
+        amount: Math.max(1, Math.floor(form.boss_cast_amount)),
+        cast_ms: Math.max(500, Math.floor(form.boss_cast_ms)),
+        cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
+        chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
+      } : null,
+    } as any;
 
     let savedId = selectedId;
     if (selectedId) {
