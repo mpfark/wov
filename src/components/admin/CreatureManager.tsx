@@ -745,6 +745,17 @@ export default function CreatureManager() {
                             className="h-7 text-xs"
                           />
                         </label>
+                        <label className="text-[10px] text-muted-foreground col-span-2">
+                          Lock after resolve (ms) — players hit are stuck at the node this long. 0 = no lock.
+                          <Input
+                            type="number"
+                            min={0}
+                            step={250}
+                            value={form.boss_cast_lock_ms}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ms: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
                       </div>
                     </>
                   )}
