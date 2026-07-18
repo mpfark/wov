@@ -59,6 +59,11 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     if (observedHp <= 0) return false;
     if (observedHp > threshold) return false;
 
+    // Boss cast stagger — can't flee while locked.
+    const lockUntilIso = (character as any).movement_locked_until as string | null | undefined;
+    if (lockUntilIso && new Date(lockUntilIso).getTime() > Date.now()) return false;
+
+
     const conn = (currentNode?.connections as any[] | undefined)?.find(
       (c: any) => c.direction === direction,
     );

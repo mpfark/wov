@@ -222,6 +222,18 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
     if (p.isDead) return;
 
+    // ── Boss cast stagger lock ──
+    const lockUntilIso = (p.character as any).movement_locked_until as string | null | undefined;
+    if (lockUntilIso) {
+      const lockUntil = new Date(lockUntilIso).getTime();
+      const remaining = lockUntil - Date.now();
+      if (remaining > 0) {
+        p.addLog(`💫 You're staggered — can't move for ${(remaining / 1000).toFixed(1)}s.`);
+        return;
+      }
+    }
+
+
     // ── Locked connection check ──
     if (p.currentNode) {
       // Find the connection — by direction if provided, otherwise by target node_id

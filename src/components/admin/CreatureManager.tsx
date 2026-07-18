@@ -99,6 +99,7 @@ const defaultForm = () => ({
   boss_cast_ms: 4000,
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
+  boss_cast_lock_ms: 3000,
 });
 
 export default function CreatureManager() {
@@ -192,6 +193,7 @@ export default function CreatureManager() {
       boss_cast_ms: Number((c as any).boss_cast?.cast_ms) || 4000,
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
+      boss_cast_lock_ms: Number((c as any).boss_cast?.lock_ms) || 3000,
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
@@ -266,6 +268,7 @@ export default function CreatureManager() {
         cast_ms: Math.max(500, Math.floor(form.boss_cast_ms)),
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
+        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
       } : null,
     } as any;
 
@@ -739,6 +742,17 @@ export default function CreatureManager() {
                             step={500}
                             value={form.boss_cast_cooldown_ms}
                             onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ms: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground col-span-2">
+                          Lock after resolve (ms) — players hit are stuck at the node this long. 0 = no lock.
+                          <Input
+                            type="number"
+                            min={0}
+                            step={250}
+                            value={form.boss_cast_lock_ms}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ms: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
                         </label>
