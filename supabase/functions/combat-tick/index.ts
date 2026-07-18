@@ -1972,6 +1972,7 @@ Deno.serve(async (req) => {
           cast_ms?: number;
           cooldown_ms?: number;
           chance?: number;
+          lock_ms?: number;
         };
         const castMs = Number.isFinite(cfg.cast_ms as number) && (cfg.cast_ms as number) > 0
           ? Math.floor(cfg.cast_ms as number) : DEFAULT_BOSS_CAST_MS;
@@ -1981,6 +1982,8 @@ Deno.serve(async (req) => {
           ? Math.max(0, Math.min(1, cfg.chance as number)) : DEFAULT_BOSS_CAST_START_CHANCE;
         const amount = Number.isFinite(cfg.amount as number) && (cfg.amount as number) > 0
           ? Math.floor(cfg.amount as number) : 8 + Math.floor((creature.level || 1) * 1.5);
+        const lockMs = Number.isFinite(cfg.lock_ms as number) && (cfg.lock_ms as number) > 0
+          ? Math.floor(cfg.lock_ms as number) : 0;
         const label = (cfg.label && cfg.label.trim()) || 'Cataclysm';
         const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
 
