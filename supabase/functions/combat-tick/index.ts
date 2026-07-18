@@ -1870,9 +1870,10 @@ Deno.serve(async (req) => {
     // on a node-scoped channel so every client at the node can render the
     // telegraph regardless of party membership.
     try {
-      const BOSS_CAST_COOLDOWN_MS = 20000;
-      const BOSS_CAST_MS = 4000;
-      const BOSS_CAST_START_CHANCE = 0.30;
+      // Default cast settings, used when a boss has no boss_cast config.
+      const DEFAULT_BOSS_CAST_COOLDOWN_MS = 20000;
+      const DEFAULT_BOSS_CAST_MS = 4000;
+      const DEFAULT_BOSS_CAST_START_CHANCE = 0.30;
 
       // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
       const cooldownCutoff = new Date(now - BOSS_CAST_COOLDOWN_MS).toISOString();
