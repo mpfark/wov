@@ -2002,7 +2002,8 @@ Deno.serve(async (req) => {
         }
 
         const castKey = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'cast';
-        const payload = { label, emoji, amount, cast_ms: castMs };
+        const payload: Record<string, unknown> = { label, emoji, amount, cast_ms: castMs };
+        if (lockMs > 0) payload.lock_ms = lockMs;
 
         const { data: startRows, error: startErr } = await db.rpc(
           'encounter_boss_start_cast',
