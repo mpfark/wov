@@ -268,6 +268,7 @@ export default function CreatureManager() {
         cast_ms: Math.max(500, Math.floor(form.boss_cast_ms)),
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
+        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
       } : null,
     } as any;
 
