@@ -74,6 +74,8 @@ export interface Character {
   wimp_hp_threshold?: number;
   /** Compass direction to flee toward when wimp triggers (N/S/E/W/NE/NW/SE/SW). */
   wimp_direction?: string | null;
+  /** ISO timestamp — while in the future, the character cannot move (boss cast stagger). */
+  movement_locked_until?: string | null;
 }
 
 export function useCharacter(user: User | null) {
