@@ -99,6 +99,7 @@ const defaultForm = () => ({
   boss_cast_ms: 4000,
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
+  boss_cast_lock_ms: 3000,
 });
 
 export default function CreatureManager() {
