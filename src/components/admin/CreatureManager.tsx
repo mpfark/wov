@@ -92,6 +92,13 @@ const defaultForm = () => ({
   loot_mode: 'legacy_table' as string,
   boss_crit_flavors: [] as BossCritFlavor[],
   boss_death_cry: '',
+  boss_cast_enabled: false,
+  boss_cast_label: 'Cataclysm',
+  boss_cast_emoji: '☄️',
+  boss_cast_amount: 20,
+  boss_cast_ms: 4000,
+  boss_cast_cooldown_ms: 20000,
+  boss_cast_chance: 0.3,
 });
 
 export default function CreatureManager() {
