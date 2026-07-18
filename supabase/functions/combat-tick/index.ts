@@ -1876,7 +1876,14 @@ Deno.serve(async (req) => {
       const DEFAULT_BOSS_CAST_START_CHANCE = 0.30;
 
       // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
-      const cooldownCutoff = new Date(now - BOSS_CAST_COOLDOWN_MS).toISOString();
+      // Widest cooldown any engaged boss might use — used to bound recent cast lookback.
+      let maxCooldownMs = DEFAULT_BOSS_CAST_COOLDOWN_MS;
+      for (const cr of creatures) {
+        if (cr.rarity !== 'boss') continue;
+        const cd = Number((cr as any).boss_cast?.cooldown_ms);
+        if (Number.isFinite(cd) && cd > maxCooldownMs) maxCooldownMs = cd;
+      }
+      const cooldownCutoff = new Date(now - maxCooldownMs).toISOString();
       const { data: nodeCasts } = await db
         .from('encounter_cast_events')
         .select('id, creature_id, encounter_id, cast_key, ability_key, started_at, expires_at, resolved_at, payload, node_id')
