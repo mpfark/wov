@@ -529,7 +529,7 @@ export default function CreatureManager() {
             <div className="p-3 space-y-3">
               <Input placeholder="Creature name" value={form.name} maxLength={100}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
-              <Textarea placeholder="Description" value={form.description} maxLength={500}
+              <Textarea placeholder="Description" value={form.description} maxLength={2000}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
 
               <div className="grid grid-cols-2 gap-2">
