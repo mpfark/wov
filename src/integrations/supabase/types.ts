@@ -729,6 +729,7 @@ export type Database = {
         Row: {
           ac: number
           base_aggressive: boolean
+          boss_cast: Json | null
           boss_crit_flavors: Json
           boss_death_cry: string
           created_at: string
@@ -756,6 +757,7 @@ export type Database = {
         Insert: {
           ac?: number
           base_aggressive?: boolean
+          boss_cast?: Json | null
           boss_crit_flavors?: Json
           boss_death_cry?: string
           created_at?: string
@@ -783,6 +785,7 @@ export type Database = {
         Update: {
           ac?: number
           base_aggressive?: boolean
+          boss_cast?: Json | null
           boss_crit_flavors?: Json
           boss_death_cry?: string
           created_at?: string
