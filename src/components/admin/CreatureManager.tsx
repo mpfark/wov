@@ -664,6 +664,92 @@ export default function CreatureManager() {
                 </div>
               )}
 
+              {/* Boss Cast — telegraphed AoE ability */}
+              {form.rarity === 'boss' && (
+                <div className="space-y-1.5 p-2 border border-border rounded bg-background/50">
+                  <div className="flex items-center justify-between">
+                    <p className="font-display text-xs text-primary">Telegraphed Boss Cast</p>
+                    <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={form.boss_cast_enabled}
+                        onChange={e => setForm(f => ({ ...f, boss_cast_enabled: e.target.checked }))}
+                      />
+                      Enabled
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    When engaged, this boss periodically channels a visible cast. Players who leave the node before it resolves avoid the damage.
+                  </p>
+                  {form.boss_cast_enabled && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={form.boss_cast_emoji}
+                          onChange={e => setForm(f => ({ ...f, boss_cast_emoji: e.target.value }))}
+                          placeholder="☄️"
+                          className="w-10 h-7 text-xs px-1 text-center"
+                        />
+                        <Input
+                          value={form.boss_cast_label}
+                          onChange={e => setForm(f => ({ ...f, boss_cast_label: e.target.value }))}
+                          placeholder="Cataclysm"
+                          className="flex-1 h-7 text-xs"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        <label className="text-[10px] text-muted-foreground">
+                          Damage (flat)
+                          <Input
+                            type="number"
+                            min={1}
+                            value={form.boss_cast_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Chance (0–1) per tick
+                          <Input
+                            type="number"
+                            step={0.05}
+                            min={0}
+                            max={1}
+                            value={form.boss_cast_chance}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_chance: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Cast time (ms)
+                          <Input
+                            type="number"
+                            min={500}
+                            step={250}
+                            value={form.boss_cast_ms}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_ms: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Cooldown (ms)
+                          <Input
+                            type="number"
+                            min={1000}
+                            step={500}
+                            value={form.boss_cast_cooldown_ms}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ms: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+
+
               {/* Boss Crit Flavors */}
               <div className="space-y-1.5">
                 <p className="font-display text-xs text-primary">Boss Crit Flavors</p>
