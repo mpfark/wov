@@ -185,6 +185,13 @@ export default function CreatureManager() {
       loot_mode: (c as any).loot_mode || 'legacy_table',
       boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
       boss_death_cry: typeof (c as any).boss_death_cry === 'string' ? (c as any).boss_death_cry : '',
+      boss_cast_enabled: !!((c as any).boss_cast),
+      boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
+      boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
+      boss_cast_amount: Number((c as any).boss_cast?.amount) || 20,
+      boss_cast_ms: Number((c as any).boss_cast?.cast_ms) || 4000,
+      boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
+      boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
