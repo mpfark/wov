@@ -1870,12 +1870,20 @@ Deno.serve(async (req) => {
     // on a node-scoped channel so every client at the node can render the
     // telegraph regardless of party membership.
     try {
-      const BOSS_CAST_COOLDOWN_MS = 20000;
-      const BOSS_CAST_MS = 4000;
-      const BOSS_CAST_START_CHANCE = 0.30;
+      // Default cast settings, used when a boss has no boss_cast config.
+      const DEFAULT_BOSS_CAST_COOLDOWN_MS = 20000;
+      const DEFAULT_BOSS_CAST_MS = 4000;
+      const DEFAULT_BOSS_CAST_START_CHANCE = 0.30;
 
       // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
-      const cooldownCutoff = new Date(now - BOSS_CAST_COOLDOWN_MS).toISOString();
+      // Widest cooldown any engaged boss might use — used to bound recent cast lookback.
+      let maxCooldownMs = DEFAULT_BOSS_CAST_COOLDOWN_MS;
+      for (const cr of creatures) {
+        if (cr.rarity !== 'boss') continue;
+        const cd = Number((cr as any).boss_cast?.cooldown_ms);
+        if (Number.isFinite(cd) && cd > maxCooldownMs) maxCooldownMs = cd;
+      }
+      const cooldownCutoff = new Date(now - maxCooldownMs).toISOString();
       const { data: nodeCasts } = await db
         .from('encounter_cast_events')
         .select('id, creature_id, encounter_id, cast_key, ability_key, started_at, expires_at, resolved_at, payload, node_id')
@@ -1956,9 +1964,29 @@ Deno.serve(async (req) => {
         if (!sessionEngaged.has(creature.id)) continue;
         if (activeByCreature.has(creature.id)) continue;
 
+        // Per-boss cast config (falls back to defaults when unset).
+        const cfg = ((creature as any).boss_cast ?? {}) as {
+          label?: string;
+          emoji?: string;
+          amount?: number;
+          cast_ms?: number;
+          cooldown_ms?: number;
+          chance?: number;
+        };
+        const castMs = Number.isFinite(cfg.cast_ms as number) && (cfg.cast_ms as number) > 0
+          ? Math.floor(cfg.cast_ms as number) : DEFAULT_BOSS_CAST_MS;
+        const cooldownMs = Number.isFinite(cfg.cooldown_ms as number) && (cfg.cooldown_ms as number) > 0
+          ? Math.floor(cfg.cooldown_ms as number) : DEFAULT_BOSS_CAST_COOLDOWN_MS;
+        const chance = Number.isFinite(cfg.chance as number)
+          ? Math.max(0, Math.min(1, cfg.chance as number)) : DEFAULT_BOSS_CAST_START_CHANCE;
+        const amount = Number.isFinite(cfg.amount as number) && (cfg.amount as number) > 0
+          ? Math.floor(cfg.amount as number) : 8 + Math.floor((creature.level || 1) * 1.5);
+        const label = (cfg.label && cfg.label.trim()) || 'Cataclysm';
+        const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
+
         const lastCastAt = lastCastAtByCreature.get(creature.id) ?? 0;
-        if (now - lastCastAt < BOSS_CAST_COOLDOWN_MS) continue;
-        if (Math.random() > BOSS_CAST_START_CHANCE) continue;
+        if (now - lastCastAt < cooldownMs) continue;
+        if (Math.random() > chance) continue;
 
         // Ensure encounter exists (idempotent, cheap).
         const { data: encId, error: encErr } = await db.rpc(
@@ -1970,12 +1998,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Cataclysm — flat AoE that scales with creature level.
-        const castKey = 'cataclysm';
-        const label = 'Cataclysm';
-        const emoji = '☄️';
-        const amount = 8 + Math.floor((creature.level || 1) * 1.5);
-        const payload = { label, emoji, amount, cast_ms: BOSS_CAST_MS };
+        const castKey = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'cast';
+        const payload = { label, emoji, amount, cast_ms: castMs };
 
         const { data: startRows, error: startErr } = await db.rpc(
           'encounter_boss_start_cast',
@@ -1985,7 +2009,7 @@ Deno.serve(async (req) => {
             _node_id: combatNodeId,
             _cast_key: castKey,
             _ability_key: castKey,
-            _cast_ms: BOSS_CAST_MS,
+            _cast_ms: castMs,
             _payload: payload,
           },
         );
@@ -2015,7 +2039,7 @@ Deno.serve(async (req) => {
             node_id: combatNodeId,
             started_at: row.started_at,
             expires_at: row.expires_at,
-            cast_ms: BOSS_CAST_MS,
+            cast_ms: castMs,
             amount,
           },
         });
