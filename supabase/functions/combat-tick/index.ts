@@ -1444,8 +1444,9 @@ Deno.serve(async (req) => {
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
         const bm = mBondMult[m.id] ?? 1;
-        const healAmt = Math.max(1, Math.floor((2 + consWis) * bm));
-        const burnAmt = Math.max(1, Math.floor((2 + consWis) * bm));
+        // Consecrate strength reduced by 35% (balance pass).
+        const healAmt = Math.max(1, Math.floor((2 + consWis) * bm * 0.65));
+        const burnAmt = Math.max(1, Math.floor((2 + consWis) * bm * 0.65));
 
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
