@@ -308,13 +308,19 @@ export function useParty(characterId: string | null) {
   const toggleFollow = useCallback(async (following: boolean) => {
     if (!party || !characterId) return;
 
-    // If enabling follow, check that we're on the same node as the leader
+    // If enabling follow, verify same node against fresh DB state — the local
+    // `members` cache can go stale (e.g. leader died and returned) and would
+    // silently block the toggle until a page refresh.
     if (following) {
-      const leaderMember = members.find(m => m.character_id === party.leader_id);
-      const myMember = members.find(m => m.character_id === characterId);
-      if (leaderMember?.character?.current_node_id && myMember?.character?.current_node_id &&
-          leaderMember.character.current_node_id !== myMember.character.current_node_id) {
-        // Can't follow — not at same location
+      const { data: fresh } = await supabase
+        .from('characters')
+        .select('id, current_node_id')
+        .in('id', [party.leader_id, characterId]);
+      const leaderNode = fresh?.find(c => c.id === party.leader_id)?.current_node_id ?? null;
+      const myNode = fresh?.find(c => c.id === characterId)?.current_node_id ?? null;
+      if (leaderNode && myNode && leaderNode !== myNode) {
+        // Refresh member stats so UI reflects real positions, then bail.
+        fetchMemberStatsCore();
         return;
       }
     }
@@ -323,7 +329,7 @@ export function useParty(characterId: string | null) {
       .eq('party_id', party.id)
       .eq('character_id', characterId);
     fetchParty();
-  }, [party, characterId, members, fetchParty]);
+  }, [party, characterId, fetchParty, fetchMemberStatsCore]);
 
   const isLeader = party?.leader_id === characterId;
   const effectiveTankId = party ? (party.tank_id ?? party.leader_id) : null;
