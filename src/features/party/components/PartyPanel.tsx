@@ -36,7 +36,7 @@ interface Props {
 export default function PartyPanel({
   character, party, members, pendingInvites, isLeader, isTank: _isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
-  onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
+  onLeave, onKick, onSetTank, onToggleFollow, onSummonMember, canSummon, currentNodeId, activeBuffs,
   abilityTargetId, onSetAbilityTarget, showTargetSelector,
 }: Props) {
   // Players at same node who aren't in the party
