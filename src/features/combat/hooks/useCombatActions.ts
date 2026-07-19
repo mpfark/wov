@@ -23,7 +23,7 @@ import {
   getBattleCryDR,
   getCloakDodge,
   getDisengageMult,
-  getDivineChallengeReduction,
+  getDivineChallengeFlat,
 } from '@/shared/formulas/abilities';
 import { getEffectiveCombatMod } from '@/shared/formulas/effective';
 
