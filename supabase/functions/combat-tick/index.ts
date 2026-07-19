@@ -1327,13 +1327,15 @@ Deno.serve(async (req) => {
           events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
         }
 
-        // 7b. Divine Challenge (Templar) — bond multiplier scales DR.
+        // 7b. Divine Challenge (Templar) — flat damage reduction, bond multiplier scales magnitude.
         if (mb.divine_challenge && (mb.divine_challenge.expires_at ?? 0) > now) {
           const bondM = mBondMult[targetId] ?? 1;
-          const dr = Math.min(0.95, (mb.divine_challenge.reduction || 0.30) * bondM);
-          const preDmg = dmg;
-          dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-          events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
+          const flat = Math.max(0, Math.floor((mb.divine_challenge.flat || 0) * bondM));
+          if (flat > 0 && dmg > 0) {
+            const preDmg = dmg;
+            dmg = Math.max(dmg - flat, 1);
+            events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
+          }
         }
 
         // 7c. Item-buff damage reduction (from buff_resist procs)
