@@ -3,7 +3,7 @@ import { PlayerPresence } from '@/features/world';
 import { Character } from '@/features/character';
 import { Button } from '@/components/ui/button';
 import { getCharacterTitle } from '@/lib/game-data';
-import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
+import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair, Sparkles } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { ActiveBuffs } from '@/features/world/components/MapPanel';
 
