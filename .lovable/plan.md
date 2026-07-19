@@ -1,50 +1,42 @@
-## Goal
+# Fix: phantom "joins the fight!" on a lone creature
 
-If a player is still at the boss's node when a telegraphed cast resolves, apply a short **movement lock** so they can't immediately walk out afterward. Leaving before resolution still avoids everything (damage + lock), preserving the "flee the node" fantasy.
+## Root cause
 
-## Behavior
+`combat-tick` was recently optimized to return only creatures whose HP changed this tick in `creature_states`. `interpretCombatTickResult` still computes `aliveEngagedIds` purely from `data.creature_states`:
 
-- Cast resolves → for each character still at the node:
-  - Take the damage (unchanged).
-  - Receive a `cast_lock` effect for a configurable duration (default 3000ms).
-- While `cast_lock` is active:
-  - Movement attempts are blocked with a log line: *"You're staggered by <Cast Label> — can't move for Xs."*
-  - Wimp auto-flee is also blocked (it just tried and failed anyway; this keeps it from spamming).
-- Lock ends automatically; no cleanse, no dispel. Purely a short punish window.
-- Players who left before resolution are unaffected — the resolve RPC already filters by "still at node".
+```ts
+aliveEngagedIds = data.creature_states
+  .filter(cs => cs.alive && currentEngagedIds.includes(cs.id))
+  .map(cs => cs.id);
+```
 
-## Admin control
+On a tick with no HP changes (both sides miss, cooldown-only tick, etc.), `creature_states` is empty → `aliveEngagedIds` is empty → in `useCombatDriver` the "still alive" branch (lines 490–502) filters `engagedCreatureIds` down to `[]`, dropping the live target from the engaged list for a frame.
 
-Extend the Boss Cast section in `CreatureManager` with one new field:
-- **Lock after resolve (ms)** — number input, default 3000, 0 disables.
+Next render, `useCombatAggroEffects`'s mid-fight-join effect sees an aggressive/alive creature that is no longer in `engagedCreatureIdsRef` and re-adds it, logging `⚠️ <name> joins the fight!`. The 250 ms cleanup path in `useCombatDriver` (kill-rollover branch) also gets tripped on some no-op ticks, which is the "lost attack tick" the user feels.
 
-Stored inside the existing `creatures.boss_cast` JSON as `lock_ms`. No schema migration needed.
+Confirms the user's report: one creature on the node, still alive, message fires mid-fight.
 
-## Server changes
+## Fix
 
-`encounter_boss_resolve_cast` RPC (in Postgres):
-- After applying damage to each eligible character, insert an `active_effects` row:
-  - `effect_key = 'cast_lock'`
-  - `expires_at = now() + lock_ms`
-  - `source = creature_id`, `payload = { label, emoji }`
-- Skip insert when `lock_ms <= 0`.
+Treat "missing from `creature_states`" as "unchanged", not "gone". The only authoritative "creature is no longer engaged" signal is `killedCreatureIds` (and the server's `session_ended` when nothing is left).
 
-`combat-tick` / cast starter passes `lock_ms` through from `boss_cast` config into the resolve payload so the RPC knows the duration.
+### `src/features/combat/hooks/useCombatDriver.ts` — around lines 464–502
 
-## Client changes
+Replace the "aliveEngagedIds.length === 0" branch logic with:
 
-- `useMovementActions` (and any other movement entrypoint): before moving, check `activeEffects` for a non-expired `cast_lock`; if found, emit a log and abort. This mirrors the existing root/snare guard pattern.
-- `useWimp`: same guard — treat active `cast_lock` as "no path" so it doesn't repeatedly try.
-- `BossCastTelegraph` / status bar: show the lock as a normal debuff via the existing active-effect chip (no new UI component).
+1. Compute `remainingEngaged = engagedCreatureIdsRef.current.filter(id => !result.killedCreatureIds.includes(id))`.
+2. If `remainingEngaged.length === 0` **and** `result.killedCreatureIds.length > 0` → existing kill-rollover path (look for next aggressive creature, else `stopCombat`).
+3. If `remainingEngaged.length === 0` **and** no kills → this was a no-op tick before the engaged list was ever populated; just return without touching state.
+4. Otherwise → keep `inCombat = true`, set `engagedCreatureIds = remainingEngaged`, and only change `activeCombatCreatureId` when the current active id was killed this tick.
 
-## Technical details
+This preserves the live target across no-op ticks and prevents the false "joins the fight!" re-add.
 
-- Reuse `active_effects` — no new table. `cast_lock` becomes another entry alongside `root_debuff`, matching how snares/roots already block movement.
-- Movement guard lives client-side (fast feedback) **and** server-side in the movement RPC if one exists, so a modified client can't bypass it. Confirm during implementation whether movement is currently server-validated; if it is only client-side, add a check in the character-move path or accept client-authority parity with existing root debuffs.
-- Lock duration is authoritative on the server (written by the resolve RPC from the boss's config), never trusted from the client.
+### No other files need to change
 
-## Out of scope
+`interpretCombatTickResult` can stay as-is — the driver, not the interpreter, is where engagement state is owned. Aggro effects continue to work correctly because `engagedCreatureIdsRef` will no longer be transiently cleared.
 
-- Cleanses, immunities, or diminishing returns on repeated locks.
-- Different lock durations per player (e.g., CON-based reduction).
-- Visual "chains" overlay — reuse the existing debuff chip styling.
+## Verification
+
+- Enter a node with one aggressive creature. Watch a fight through several ticks — no "joins the fight!" line should appear, and there should be no ~250 ms pause between ticks.
+- Kill the creature on a node with a second aggressive creature present → "joins the fight!" still fires for the actual second creature (kill-rollover path unchanged).
+- Party leader/client tick handling is shared, so both solo and party combat get the fix.
