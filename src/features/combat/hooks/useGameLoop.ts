@@ -67,7 +67,7 @@ export interface HolyShieldBuff { wisMod: number; expiresAt: number }
 /** Consecrate — node-wide ground effect: heal allies, burn engaged creatures. */
 export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number }
 /** Divine Challenge — flat damage reduction. */
-export interface DivineChallengeBuff { reduction: number; expiresAt: number }
+export interface DivineChallengeBuff { flat: number; expiresAt: number }
 
 // ─── Local type aliases ───────────────────────────────────────────
 interface EquippedItem {
