@@ -37,7 +37,7 @@ export interface StatusBarsStripProps {
   holyShieldBuff?: { wisMod: number; expiresAt: number } | null;
   
   consecrateBuff?: { wisMod: number; expiresAt: number; durationMs?: number } | null;
-  divineChallengeBuff?: { reduction: number; expiresAt: number } | null;
+  divineChallengeBuff?: { flat: number; expiresAt: number } | null;
   /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
   reservedCp?: number;
   /** CP currently locked by active CP-reservation stances (display-only). */
