@@ -145,31 +145,14 @@ export function resolveCreatureKill(
   if (renownEach > 0) tokens.push(`+${renownEach} 🏛️ Renown`);
   if (salvageEach > 0) tokens.push(`+${salvageEach} 🔩 salvage`);
 
-  // Build modifier suffixes (parenthesized, joined with spaces)
-  const modifiers: string[] = [];
-  if (!allCapped && displayReward.xpPenaltyApplied < 1) {
-    modifiers.push(`${Math.round(displayReward.xpPenaltyApplied * 100)}% XP — level penalty`);
-  }
-  if (!allCapped && ctx.xpBoostMultiplier > 1) {
-    modifiers.push(`⚡${ctx.xpBoostMultiplier}x XP boost`);
-  }
-  if (result.partyBonus > 1) {
-    modifiers.push(`🤝 +${Math.round((result.partyBonus - 1) * 100)}% party bonus`);
-  }
-  if (!allCapped && uncapped.length < recipients.length) {
-    modifiers.push(`XP shared by ${uncapped.length}/${recipients.length}`);
-  }
-  const modifierSuffix = modifiers.length > 0 ? ` (${modifiers.join(' · ')})` : '';
-
-  // Assemble the line
-  const transcendsNote = allCapped ? ' Power transcends experience.' : '';
+  // Assemble the line — only the rewards gained, no penalty/bonus explanations
   const rewardsBody = tokens.length > 0
     ? ` ${tokens.join(', ')}${eachSuffix}.`
     : '';
 
   events.push({
     type: 'creature_kill',
-    message: `☠️ ${creature.name} has been slain${killerSuffix}!${transcendsNote}${rewardsBody}${modifierSuffix}`,
+    message: `☠️ ${creature.name} has been slain${killerSuffix}!${rewardsBody}`,
     creature_id: creature.id,
     creature_name: creature.name,
   });
