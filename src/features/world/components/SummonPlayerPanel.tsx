@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { calculateTeleportCpCost } from '@/lib/game-data';
 import type { OnlinePlayer } from '@/hooks/useGlobalPresence';
+import { useSummonPlayer } from '@/features/world/hooks/useSummonPlayer';
 
 interface Props {
   characterId: string;
@@ -22,13 +22,16 @@ export default function SummonPlayerPanel({
   getRegionForNode, onlinePlayers, addLog, inCombat, isDead,
 }: Props) {
   const [targetName, setTargetName] = useState('');
-  const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  const { summon, loading } = useSummonPlayer({
+    characterId, currentNodeId, currentRegionMinLevel, playerCp,
+    getRegionForNode, addLog, inCombat, isDead,
+  });
+
   // Subscribe to realtime status changes on outgoing summon requests
   useEffect(() => {
-    // Clean up any previous channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
@@ -66,77 +69,18 @@ export default function SummonPlayerPanel({
 
   const handleSummon = useCallback(async () => {
     if (!targetName.trim()) { setFeedback({ type: 'error', msg: 'Enter a character name.' }); return; }
-    if (inCombat) { setFeedback({ type: 'error', msg: 'Cannot summon while in combat.' }); return; }
-    if (isDead) return;
 
-    // Check target is online
     const online = onlinePlayers.find(p => p.name.toLowerCase() === targetName.trim().toLowerCase());
     if (!online) { setFeedback({ type: 'error', msg: 'Player not found or offline.' }); return; }
-    if (online.id === characterId) { setFeedback({ type: 'error', msg: 'Cannot summon yourself.' }); return; }
 
-    // Look up target's node for cost calculation
-    const { data: targetChar } = await supabase
-      .from('characters')
-      .select('id, current_node_id')
-      .ilike('name', targetName.trim())
-      .single();
-
-    if (!targetChar?.current_node_id) { setFeedback({ type: 'error', msg: 'Player not found.' }); return; }
-
-    const targetRegion = getRegionForNode(targetChar.current_node_id);
-    const sameRegion = targetRegion && currentRegionMinLevel !== undefined
-      ? targetRegion.min_level === currentRegionMinLevel
-      : false;
-    const cpCost = calculateTeleportCpCost(
-      currentRegionMinLevel,
-      targetRegion?.min_level ?? 0,
-      sameRegion,
-    );
-
-    if (playerCp < cpCost) {
-      setFeedback({ type: 'error', msg: `Not enough CP (need ${cpCost}).` });
-      return;
+    const res = await summon(online.id, online.name, { requireOnline: true, targetIsOnline: true });
+    if (!res.ok) {
+      setFeedback({ type: 'error', msg: res.message });
+    } else {
+      setFeedback({ type: 'info', msg: res.message });
+      setTargetName('');
     }
-
-    // Check for existing pending request to same target
-    const { data: existing } = await supabase
-      .from('summon_requests')
-      .select('id')
-      .eq('summoner_id', characterId)
-      .eq('target_id', targetChar.id)
-      .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString())
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      setFeedback({ type: 'error', msg: 'Summon request already pending.' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('summon_requests')
-        .insert({
-          summoner_id: characterId,
-          target_id: targetChar.id,
-          summoner_node_id: currentNodeId,
-          cp_cost: cpCost,
-        });
-
-      if (error) {
-        setFeedback({ type: 'error', msg: error.message });
-      } else {
-        addLog(`🌀 Summon request sent to ${targetName.trim()} (${cpCost} CP). Awaiting response...`);
-        setFeedback({ type: 'info', msg: `Request sent to ${targetName.trim()}! Waiting...` });
-        setTargetName('');
-      }
-    } catch (e: any) {
-      setFeedback({ type: 'error', msg: e.message || 'Summon failed.' });
-    } finally {
-      setLoading(false);
-    }
-  }, [targetName, characterId, currentNodeId, currentRegionMinLevel, playerCp, getRegionForNode, onlinePlayers, addLog, inCombat, isDead]);
+  }, [targetName, onlinePlayers, summon]);
 
   return (
     <div className="space-y-1">
@@ -161,3 +105,4 @@ export default function SummonPlayerPanel({
     </div>
   );
 }
+
