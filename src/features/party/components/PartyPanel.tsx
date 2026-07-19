@@ -24,6 +24,9 @@ interface Props {
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
+  onSummonMember?: (charId: string, name: string) => void;
+  canSummon?: boolean;
+  currentNodeId?: string | null;
   activeBuffs?: ActiveBuffs;
   abilityTargetId?: string | null;
   onSetAbilityTarget?: (charId: string | null) => void;
