@@ -466,6 +466,7 @@ export type Database = {
           bhp_trained: Json
           cha: number
           class: Database["public"]["Enums"]["character_class"]
+          combat_trace_enabled: boolean
           con: number
           contracts_completed: number
           cp: number
@@ -520,6 +521,7 @@ export type Database = {
           bhp_trained?: Json
           cha?: number
           class: Database["public"]["Enums"]["character_class"]
+          combat_trace_enabled?: boolean
           con?: number
           contracts_completed?: number
           cp?: number
@@ -574,6 +576,7 @@ export type Database = {
           bhp_trained?: Json
           cha?: number
           class?: Database["public"]["Enums"]["character_class"]
+          combat_trace_enabled?: boolean
           con?: number
           contracts_completed?: number
           cp?: number
@@ -663,6 +666,47 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat_audit_log: {
+        Row: {
+          character_id: string
+          character_name: string | null
+          created_at: string
+          event_type: string | null
+          id: number
+          message: string
+          node_id: string | null
+          payload: Json | null
+        }
+        Insert: {
+          character_id: string
+          character_name?: string | null
+          created_at?: string
+          event_type?: string | null
+          id?: number
+          message: string
+          node_id?: string | null
+          payload?: Json | null
+        }
+        Update: {
+          character_id?: string
+          character_name?: string | null
+          created_at?: string
+          event_type?: string | null
+          id?: number
+          message?: string
+          node_id?: string | null
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat_audit_log_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
@@ -2636,6 +2680,7 @@ export type Database = {
         Args: { p_character_id: string; p_loot_id: string }
         Returns: boolean
       }
+      prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -2662,6 +2707,10 @@ export type Database = {
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
+      }
+      set_character_combat_trace: {
+        Args: { _character_id: string; _enabled: boolean }
+        Returns: undefined
       }
       shutdown_world: { Args: never; Returns: undefined }
       stonebinder_commit_fuse: {
