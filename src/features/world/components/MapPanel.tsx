@@ -661,6 +661,9 @@ export default function MapPanel({
           onKick={onKick}
           onSetTank={onSetTank}
           onToggleFollow={onToggleFollow}
+          onSummonMember={handleSummonMember}
+          canSummon={canSummonFromParty}
+          currentNodeId={currentNodeId}
           activeBuffs={activeBuffs}
           abilityTargetId={abilityTargetId}
           onSetAbilityTarget={onSetAbilityTarget}
