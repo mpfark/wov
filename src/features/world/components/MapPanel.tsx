@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import SummonPlayerPanel from '@/features/world/components/SummonPlayerPanel';
+import { useSummonPlayer } from '@/features/world/hooks/useSummonPlayer';
 import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
 import type { SummonRequest } from '@/features/world/hooks/useSummonRequests';
 import { Region, GameNode, Area } from '@/features/world';
@@ -126,6 +127,22 @@ export default function MapPanel({
   pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
   appVersion, xpMultiplier = 1, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
 }: Props) {
+  const canSummonFromParty = characterLevel >= 26 && !!summonAddLog && !!getRegionForNode && !!currentNodeId;
+  const summonHook = useSummonPlayer({
+    characterId: character.id,
+    currentNodeId,
+    currentRegionMinLevel,
+    playerCp: character.cp ?? 0,
+    getRegionForNode: getRegionForNode ?? (() => undefined),
+    addLog: summonAddLog ?? (() => {}),
+    inCombat: summonInCombat ?? false,
+    isDead: summonIsDead ?? false,
+  });
+  const handleSummonMember = useCallback(async (charId: string, name: string) => {
+    if (!canSummonFromParty) return;
+    const res = await summonHook.summon(charId, name);
+    if (!res.ok && summonAddLog) summonAddLog(`🌀 ${res.message}`);
+  }, [canSummonFromParty, summonHook, summonAddLog]);
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
@@ -644,6 +661,9 @@ export default function MapPanel({
           onKick={onKick}
           onSetTank={onSetTank}
           onToggleFollow={onToggleFollow}
+          onSummonMember={handleSummonMember}
+          canSummon={canSummonFromParty}
+          currentNodeId={currentNodeId}
           activeBuffs={activeBuffs}
           abilityTargetId={abilityTargetId}
           onSetAbilityTarget={onSetAbilityTarget}

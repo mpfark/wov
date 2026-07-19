@@ -3,7 +3,7 @@ import { PlayerPresence } from '@/features/world';
 import { Character } from '@/features/character';
 import { Button } from '@/components/ui/button';
 import { getCharacterTitle } from '@/lib/game-data';
-import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
+import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair, Sparkles } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { ActiveBuffs } from '@/features/world/components/MapPanel';
 
@@ -24,6 +24,9 @@ interface Props {
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
+  onSummonMember?: (charId: string, name: string) => void;
+  canSummon?: boolean;
+  currentNodeId?: string | null;
   activeBuffs?: ActiveBuffs;
   abilityTargetId?: string | null;
   onSetAbilityTarget?: (charId: string | null) => void;
@@ -33,7 +36,7 @@ interface Props {
 export default function PartyPanel({
   character, party, members, pendingInvites, isLeader, isTank: _isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
-  onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
+  onLeave, onKick, onSetTank, onToggleFollow, onSummonMember, canSummon, currentNodeId, activeBuffs,
   abilityTargetId, onSetAbilityTarget, showTargetSelector,
 }: Props) {
   // Players at same node who aren't in the party
@@ -106,6 +109,14 @@ export default function PartyPanel({
                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as ability target"
                         onClick={() => onSetAbilityTarget(abilityTargetId === m.character_id ? null : m.character_id)}>
                         <Crosshair className={`w-3 h-3 ${abilityTargetId === m.character_id ? 'text-elvish' : 'text-muted-foreground'}`} />
+                      </Button>
+                    )}
+                    {canSummon && onSummonMember && !isMe && currentNodeId
+                      && m.character.current_node_id
+                      && m.character.current_node_id !== currentNodeId && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title={`Summon ${m.character.name}`}
+                        onClick={() => onSummonMember(m.character_id, m.character.name)}>
+                        <Sparkles className="w-3 h-3 text-primary" />
                       </Button>
                     )}
                     {isLeader && !isMe && (
