@@ -461,11 +461,21 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // Ignore session_ended — next tick will create a fresh session
     }
 
-    if (result.aliveEngagedIds.length === 0) {
-      // Before ending the fight, look for another aggressive creature still
-      // on the node. If one exists, roll straight into it — this avoids a
-      // brief inCombat=false frame that would otherwise fire the re-engage
-      // aggro flavor ("charges at you") mid-fight.
+    // Engagement lifecycle: the server only tells us authoritatively about
+    // creatures that changed HP this tick (creature_states is filtered).
+    // "Missing from creature_states" therefore means "unchanged", NOT "gone".
+    // The only authoritative "no longer engaged" signal is killedCreatureIds.
+    const killedThisTick = new Set(result.killedCreatureIds);
+    const remainingEngaged = engagedCreatureIdsRef.current.filter(id => !killedThisTick.has(id));
+
+    if (remainingEngaged.length === 0) {
+      if (killedThisTick.size === 0) {
+        // No-op tick before any engagement was established — nothing to do.
+        return;
+      }
+      // A creature died and nothing is left engaged — try to roll into another
+      // aggressive creature on the node. Keeps inCombat true so we don't fire
+      // the re-engage aggro flavor line.
       setTimeout(() => {
         const p = ext.current;
         const killed = recentlyKilledRef.current;
@@ -482,23 +492,22 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             return next;
           });
           setActiveCombatCreatureId(nextAggro.id);
-          // Keep inCombat true; the running tick interval picks up the new target.
           return;
         }
         stopCombat();
       }, 250);
-    } else {
-      if (!inCombatRef.current) {
-        inCombatRef.current = true;
-        setInCombat(true);
-      }
-      setActiveCombatCreatureId(result.aliveEngagedIds[0]);
-      setEngagedCreatureIds(prev => {
-        const aliveSet = new Set(result.aliveEngagedIds);
-        const filtered = prev.filter(id => aliveSet.has(id));
-        engagedCreatureIdsRef.current = filtered;
-        return filtered;
-      });
+      return;
+    }
+
+    if (!inCombatRef.current) {
+      inCombatRef.current = true;
+      setInCombat(true);
+    }
+    // Only shift active target if the current one died this tick.
+    setActiveCombatCreatureId(prev => (prev && killedThisTick.has(prev) ? remainingEngaged[0] : (prev ?? remainingEngaged[0])));
+    if (remainingEngaged.length !== engagedCreatureIdsRef.current.length) {
+      engagedCreatureIdsRef.current = remainingEngaged;
+      setEngagedCreatureIds(remainingEngaged);
     }
   }, [stopCombat, recentlyKilledRef]);
 
