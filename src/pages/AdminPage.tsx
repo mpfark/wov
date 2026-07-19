@@ -399,11 +399,14 @@ export default function AdminPage({ isValar }: AdminPageProps) {
       case 'tools':
       case 'item-coverage':
       case 'archetype-maintenance':
+      case 'class-bonds':
+      case 'combat-audit':
       case 'unique-reclaim':
       case 'credit-drain': {
         const toolKey = activeTab === 'tools' ? 'item-coverage' : activeTab;
         return <ToolsPanel onDataChanged={loadData} defaultTool={toolKey} />;
       }
+
 
       case 'races-classes':
         return <RaceClassManager />;

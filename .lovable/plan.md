@@ -1,47 +1,67 @@
-# Divine Challenge: Flat Damage Reduction
+# Overlord Combat Audit Log
 
-Templar's Divine Challenge currently multiplies incoming damage by `(1 - reduction%)`, which scales with the size of the hit and becomes very strong against big attacks. Change it to a **flat** reduction that subtracts a fixed number from each incoming hit, still scaled off WIS (magnitude) and CON (duration).
+An overlord can flip a "trace" flag on any character. While traced, every combat event that character emits is persisted to a durable audit table. A new tab in **Admin → Tools** lets the overlord pick a traced character and read their combat log. A prune job keeps the table at ~20,000 rows globally.
 
-## Formula
+## What gets built
 
-New WIS-scaled flat mitigation (replaces `getDivineChallengeReduction`):
+### 1. Schema (`combat_audit_log` + trace flag)
 
-```
-flat = round( 3 + diminishing(wisMod, step=0.9, cap=9) )
-     → floor 3, soft cap ~12 at very high WIS
-```
+- Add `characters.combat_trace_enabled BOOLEAN NOT NULL DEFAULT false`.
+- New table `public.combat_audit_log`:
+  - `id BIGSERIAL PK`
+  - `created_at TIMESTAMPTZ DEFAULT now()`
+  - `character_id UUID` (indexed, FK → characters, ON DELETE CASCADE)
+  - `character_name TEXT` (denormalized so log survives if character renamed)
+  - `node_id UUID NULL`
+  - `event_type TEXT` (attack, ability, dot_tick, kill, buff, cast, etc.)
+  - `message TEXT` (the same formatted line the player sees)
+  - `payload JSONB NULL` (raw structured event for deep audit)
+- Indexes: `(character_id, created_at DESC)`, `(created_at)` for prune.
+- GRANTs: `SELECT` to `authenticated` (RLS restricts to overlord); `ALL` to `service_role`.
+- RLS: `SELECT` policy `has_role(auth.uid(), 'overlord')`; no client insert/update/delete.
 
-- CON continues to drive duration (unchanged path).
-- Bond multiplier (`bondM`) still applies, multiplying the flat value.
-- Floor: incoming damage still can't be reduced below 1 (existing rule).
+### 2. Server-side write path
 
-We can tune the floor/cap numbers if you want a different feel — happy to adjust before/after implementing.
+- In `combat-tick` (and `combat-catchup`), after building the per-character formatted event lines, check a small in-memory cache of traced character ids (refreshed each invocation from `characters` where `combat_trace_enabled = true`). For each traced character, insert its events into `combat_audit_log` in one batched insert per tick.
+- Writes use the service-role client already present in the function.
+- No-op when no traced characters exist (single `SELECT` returns empty).
 
-## Changes
+### 3. Prune
 
-1. **Formulas** (`src/shared/formulas/abilities.ts` + mirror in `supabase/functions/_shared/formulas/abilities.ts`)
-   - Rename `getDivineChallengeReduction` → `getDivineChallengeFlat`, returning an integer.
+- pg_cron job `combat_audit_prune`, hourly, gated by `world_is_awake()`:
+  ```sql
+  DELETE FROM public.combat_audit_log
+  WHERE id IN (
+    SELECT id FROM public.combat_audit_log
+    ORDER BY id DESC OFFSET 20000
+  );
+  ```
+- Fast because of the descending id index; only runs when there's activity.
 
-2. **Buff payload** — repurpose the field as `flat` (integer) instead of `reduction` (fraction):
-   - `useGameLoop.ts` — `DivineChallengeBuff { flat: number; expiresAt: number }`.
-   - `useCombatDriver.ts` — `divine_challenge?: { flat: number; expires_at: number }`.
-   - `useBuffState.ts` — write `{ flat, expires_at }` into the outgoing buff bag.
-   - `useCombatActions.ts` — call new formula and set `flat` on the buff.
+### 4. Admin UI
 
-3. **Damage pipeline** (`supabase/functions/combat-tick/index.ts`, step 7b)
-   - Replace the multiplicative branch with:
-     ```
-     const flat = Math.max(0, Math.floor((mb.divine_challenge.flat || 0) * bondM));
-     if (flat > 0) { dmg = Math.max(dmg - flat, 1); }
-     ```
-   - Keep the existing `divine_challenge_dr` log line (still shows amount absorbed).
+- New `CombatAuditPanel` under `src/components/admin/tools/`.
+- Registered in `ToolsPanel.tsx` as a new entry `{ key: 'combat-audit', label: 'Combat Audit', icon: ScrollText }`.
+- Only visible to overlord (existing `useRole().isValar` gate on the Tools tab entry).
+- UI:
+  - Left column: list of characters with `combat_trace_enabled = true` + a search-to-add control (pick any character, toggle trace on/off).
+  - Right column: virtualized list of the selected character's `combat_audit_log` rows, newest first, with node id, event type, message. Filter by event_type. "Refresh" button + optional realtime subscription on `combat_audit_log` filtered by character_id.
+  - Footer shows current row count vs 20,000 cap.
 
-4. **Tooltip / description** in `src/features/combat/utils/class-abilities.ts`
-   - Update Divine Challenge text: "Reduces each incoming hit by a flat amount. Reduction scales with WIS (min 3, up to ~12), duration scales with CON."
+### 5. Toggle RPC
 
-5. **Manual** (`src/components/admin/GameManual.tsx`) — update the Divine Challenge entry to describe flat mitigation.
+- `set_character_combat_trace(_character_id uuid, _enabled boolean)` SECURITY DEFINER, checks `has_role(auth.uid(), 'overlord')`, updates the flag. Client calls this from the panel.
 
-## Notes
+## Technical notes
 
-- No DB migration needed; the buff payload is only carried in in-memory/edge-function state.
-- Existing in-flight buffs from before the change will read `flat = 0` and simply do nothing until they expire (a few minutes at most).
+- Trace check in the edge function is a single query per invocation returning a `Set<uuid>`; negligible cost when empty.
+- We reuse the exact formatted string built by `interpretCombatTickResult` logic on the server side (server already formats events before returning them), so audit log matches what the player sees.
+- Denormalizing `character_name` avoids joining `characters` for display and keeps the log intact after deletes (cascade removes rows anyway; the name is useful for exports).
+- 20k rows at ~200 bytes each ≈ 4 MB — well within budget.
+- Cron gated by `world_is_awake()` so the sleep-optimization work isn't undone.
+
+## Out of scope
+
+- No global "audit everyone" mode (per your choice: opt-in only).
+- No export/download button in v1 (can add later; overlord can query directly).
+- No edits to how the player's live Event Log renders.

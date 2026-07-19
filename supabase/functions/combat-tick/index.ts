@@ -2596,6 +2596,35 @@ Deno.serve(async (req) => {
     }
 
 
+
+    // ── Combat Audit Log (overlord-only opt-in per character) ────
+    try {
+      const tracedIds = new Set(
+        members.filter(m => (m.c as any)?.combat_trace_enabled).map(m => m.id)
+      );
+      if (tracedIds.size > 0 && events.length > 0) {
+        const rows: any[] = [];
+        for (const ev of events) {
+          const cid = (ev as any).character_id;
+          if (!cid || !tracedIds.has(cid)) continue;
+          const member = members.find(m => m.id === cid);
+          rows.push({
+            character_id: cid,
+            character_name: member?.c?.name ?? null,
+            node_id: node_id ?? null,
+            event_type: (ev as any).type ?? null,
+            message: (ev as any).message ?? '',
+            payload: ev,
+          });
+        }
+        if (rows.length > 0) {
+          await db.from('combat_audit_log').insert(rows);
+        }
+      }
+    } catch (e) {
+      console.error('[combat-tick] audit log write failed', e);
+    }
+
     return json({
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
@@ -2605,6 +2634,7 @@ Deno.serve(async (req) => {
       ticks_processed: ticks,
       buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,
     });
+
   } catch (err) {
     console.error('Combat tick error:', err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
