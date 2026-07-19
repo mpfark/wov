@@ -1380,11 +1380,11 @@ Deno.serve(async (req) => {
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
             // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
+            // WIS contribution is now reduced by 20% (CON/level portions remain unchanged).
             const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
             const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
-            const returnDmgBase = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
-            // Holy Shield retaliation: scaling reduced 20% for balance.
-            const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1) * 0.8));
+            const returnDmgBase = Math.max(1, Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)));
+            const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
