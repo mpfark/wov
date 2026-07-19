@@ -61,7 +61,7 @@ export interface MemberBuffState {
   holy_shield?: { wis_mod: number; expires_at: number };
   
   consecrate?: { wis_mod: number; expires_at: number };
-  divine_challenge?: { reduction: number; expires_at: number };
+  divine_challenge?: { flat: number; expires_at: number };
 }
 
 export interface UseCombatDriverParams {

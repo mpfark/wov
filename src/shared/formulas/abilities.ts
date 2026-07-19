@@ -102,8 +102,8 @@ export function getBarragePerArrowRatio(dexMod: number): number {
 
 // ── Templar Divine Challenge ─────────────────────────────────────
 
-/** Divine Challenge damage reduction (templar, WIS magnitude / CON duration).
- *  Values reduced 15% from prior tuning: floor 17%, scales with WIS up to 34%. */
-export function getDivineChallengeReduction(wisMod: number): number {
-  return 0.17 + diminishingFloat(Math.max(0, wisMod), 0.0255, 0.17);
+/** Divine Challenge flat damage reduction (templar, WIS magnitude / CON duration).
+ *  Subtracts a flat amount from each incoming hit. Floor 3, scales with WIS up to ~12. */
+export function getDivineChallengeFlat(wisMod: number): number {
+  return Math.round(3 + diminishingFloat(Math.max(0, wisMod), 0.9, 9));
 }

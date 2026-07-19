@@ -23,7 +23,7 @@ import {
   getBattleCryDR,
   getCloakDodge,
   getDisengageMult,
-  getDivineChallengeReduction,
+  getDivineChallengeFlat,
 } from '@/shared/formulas/abilities';
 import { getEffectiveCombatMod } from '@/shared/formulas/effective';
 
@@ -551,9 +551,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
-      const reduction = getDivineChallengeReduction(wisMod);
-      p.buffSetters.setDivineChallengeBuff({ reduction, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Divine Challenge! You take ${Math.round(reduction * 100)}% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
+      const flat = getDivineChallengeFlat(wisMod);
+      p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Divine Challenge! You mitigate ${flat} damage from each incoming hit for ${Math.round(durationMs / 1000)}s.`);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick

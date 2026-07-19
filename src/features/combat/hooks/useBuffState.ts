@@ -207,7 +207,7 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.consecrate = { wis_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt };
     }
     if (divineChallengeBuff && now < divineChallengeBuff.expiresAt) {
-      buffs.divine_challenge = { reduction: divineChallengeBuff.reduction, expires_at: divineChallengeBuff.expiresAt };
+      buffs.divine_challenge = { flat: divineChallengeBuff.flat, expires_at: divineChallengeBuff.expiresAt };
     }
     return buffs;
   }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, consecrateBuff, divineChallengeBuff]);

@@ -37,7 +37,7 @@ export interface StatusBarsStripProps {
   holyShieldBuff?: { wisMod: number; expiresAt: number } | null;
   
   consecrateBuff?: { wisMod: number; expiresAt: number; durationMs?: number } | null;
-  divineChallengeBuff?: { reduction: number; expiresAt: number } | null;
+  divineChallengeBuff?: { flat: number; expiresAt: number } | null;
   /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
   reservedCp?: number;
   /** CP currently locked by active CP-reservation stances (display-only). */
@@ -173,7 +173,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (divineChallengeActive) {
     const dur = BUFF_DURATIONS['Divine Challenge'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((divineChallengeBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '⚜️', label: 'Divine Challenge', detail: `${Math.round(divineChallengeBuff!.reduction * 100)}% damage reduction`, color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ emoji: '⚜️', label: 'Divine Challenge', detail: `−${divineChallengeBuff!.flat} damage per hit`, color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   return (
