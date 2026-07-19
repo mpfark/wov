@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import SummonPlayerPanel from '@/features/world/components/SummonPlayerPanel';
+import { useSummonPlayer } from '@/features/world/hooks/useSummonPlayer';
 import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
 import type { SummonRequest } from '@/features/world/hooks/useSummonRequests';
 import { Region, GameNode, Area } from '@/features/world';
