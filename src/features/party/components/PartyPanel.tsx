@@ -111,6 +111,14 @@ export default function PartyPanel({
                         <Crosshair className={`w-3 h-3 ${abilityTargetId === m.character_id ? 'text-elvish' : 'text-muted-foreground'}`} />
                       </Button>
                     )}
+                    {canSummon && onSummonMember && !isMe && currentNodeId
+                      && m.character.current_node_id
+                      && m.character.current_node_id !== currentNodeId && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title={`Summon ${m.character.name}`}
+                        onClick={() => onSummonMember(m.character_id, m.character.name)}>
+                        <Sparkles className="w-3 h-3 text-primary" />
+                      </Button>
+                    )}
                     {isLeader && !isMe && (
                       <>
                         <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as Tank"
