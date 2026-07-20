@@ -1,58 +1,41 @@
-## Root cause of the "cast starts but never lands" bug
 
-Every telegraph resolution has been failing silently. Edge function logs confirm it:
+## Problem
+Two symptoms reported on Warrior character Cithrawiel:
+1. Respawn countdown gets stuck (does not resolve to hp=1 / return to starting node).
+2. Combat log appears to show ~2× the expected number of attack lines per tick.
 
-```
-[boss-cast] resolve failed 7f3bdda7-… column ep.left_at does not exist
-```
+Both are unconfirmed root-causes — the plan is scoped as **investigate → fix**, not "apply this fix." I will only patch what the reads confirm.
 
-The `encounter_boss_resolve_cast` SQL function filters `encounter_participants ep` on `ep.left_at IS NULL`, but that table only has `encounter_id, character_id, joined_at, last_action_at` — there is no `left_at` column. So every resolve attempt errors, no damage/lock/broadcast is applied, and the cast row stays with `resolved_at = NULL` forever. That matches what's in the DB right now: 8 open cast rows going back two days (Khar-Zul, Ithrak, Thrum, Rot-King, Rell Vane, Maelor, Aelthir, Ser Caldris), zero `boss_cast_hit` entries in the audit log. Not specific to Cithrawiel / Calikon — it's every boss, every player.
+## Investigation steps
 
-Note: your two names came through as `cithrawiel` and `calikon`; the character on file is `Cithrawiel` and I couldn't find `Calikon`. Same fix applies regardless — this is systemic.
+### A. Respawn stuck
+1. Pull recent `combat_audit_log` and `combat-tick` edge logs for Cithrawiel around the death event.
+2. Check whether `combat-tick` continues to write `hp = 0` after the client’s respawn `updateCharacter({ hp: 1, current_node_id: … })` runs. HP-authority memory says combat-tick is sole HP writer during combat, so if the session is still open when the client tries to respawn, the server will clobber `hp=1` back to `0` and the countdown effect will re-fire (or never clear `isDead`).
+3. Verify `useGameLoop`'s death effect (`src/features/combat/hooks/useGameLoop.ts` ~L303–327):
+   - Does `stopCombat` actually run before `updateCharacter({ hp: 1 })`? (`useCombatDriver` L780 stops combat when `character.hp <= 0`, but only if `inCombatRef.current` — need to confirm death path always ends the session server-side.)
+   - Confirm no other code path is holding `isDead` true.
+4. Check whether `combat-tick` clears the encounter/session when the last player dies, and whether creatures continue attacking a `hp=0` character (turning the respawn into an immediate re-death loop).
 
-## Fix plan
+### B. Doubled attack log lines
+1. Read `useCombatDriver` broadcast subscription (already confirmed: followers-only, leader skips). Confirm solo path never subscribes to its own broadcast.
+2. Check `processTickResult` / `interpretCombatTickResult` for whether the same events list can be walked twice (e.g. duplicate `formattedLogMessages` push, or event-log echo via `useEventLogDisplay`).
+3. Inspect `combat-tick` per-tick attack emission for warriors: recent changes may emit both an auto-attack event and a stance/ability event that reads as a second swing.
+4. Check `useEventLogDisplay` / `EventLogPanel` for duplicate keying that visually stacks the same line twice.
+5. Also confirm the Cithrawiel character isn't in a party with an active broadcast leader loopback (would produce exact duplicates).
 
-### 1. Repair the resolve RPC (migration)
+## Likely fixes (apply only what investigation confirms)
 
-Rewrite `public.encounter_boss_resolve_cast` to select participants using the columns that actually exist. Replace the `ep.left_at IS NULL` filter with the presence check we really want: character is still in the encounter and still on the node.
-
-```sql
-FROM public.encounter_participants ep
-JOIN public.characters c ON c.id = ep.character_id
-WHERE ep.encounter_id = v_enc
-  AND c.current_node_id = v_node
-  AND c.hp > 0
-```
-
-Everything else in the function stays the same (advisory lock, `resolved_at = now()`, optional `movement_locked_until`, damage via `encounter_apply_character_damage`).
-
-### 2. Clean up the 8 stranded cast rows
-
-One-shot data update in the same migration: mark all currently-unresolved cast rows as `resolved_at = now()` so they don't get picked up and "resolve into the past" the next time each boss's node ticks.
-
-### 3. Redeploy `combat-tick`
-
-No code change needed there — the JS already calls the RPC correctly. Just needs a redeploy to make sure it's on the current bundle after the migration lands.
-
-### 4. Replace the cast progress bar with a glow
-
-Right now `BossCastTelegraph` renders a second bar under the HP bar. You want the creature's existing HP bar to glow instead while a telegraph is active.
-
-- Delete `src/features/world/components/BossCastTelegraph.tsx` and its import in `NodeView.tsx`.
-- In the creature row in `NodeView.tsx` (around lines 388–426), when `activeCast` is set:
-  - Add a pulsing destructive-colored ring/glow around the HP bar container (`ring-2 ring-destructive/70 shadow-[0_0_12px_hsl(var(--destructive)/0.6)] animate-pulse`).
-  - Keep a compact inline tag above/right of the HP bar: `☄️ Cataclysm · 3.2s · FLEE` — emoji, label, live countdown, and the "flee" hint. No progress bar.
-  - Countdown ticks via a lightweight `useEffect` + `requestAnimationFrame` (same pattern the current component used) but only updates the seconds text, not a width.
-
-The `useBossCasts` hook and its `activeCast` shape are unchanged.
-
-## Verification
-
-- After migration + redeploy: enter combat with any configured boss, wait for a telegraph. Expect a `boss_cast_hit` event in the combat log, `resolved_at` populated on the cast row, and `movement_locked_until` bumped if the boss has `lock_ms > 0`.
-- Visually: HP bar glows red and shows `emoji label · Xs · FLEE` while the cast is in flight; glow disappears the moment the cast resolves or the player leaves the node.
-- Check edge-function logs: no more `column ep.left_at does not exist`.
+- **Respawn**: on death, force `session_ended = true` in `combat-tick` when the last living player at the node hits `hp <= 0`, and/or make the client respawn write happen only after `stopCombat` resolves; guard `useGameLoop` death effect so the respawn `updateCharacter` retries if the server re-writes `hp=0` within the 3s window.
+- **Doubled log**: dedupe the offending event type in `interpretCombatTickResult` (mirroring the existing `ignite_proc` skip), or fix the double-emit at the `combat-tick` source.
 
 ## Out of scope
+- No combat balance changes.
+- No changes to kill-resolution, loot, or rewards.
+- No schema changes unless the investigation surfaces a missing column.
 
-- No changes to boss cast tuning (amounts, chances, cooldowns) or to the admin editor.
-- No changes to combat balance or to how movement lock is computed.
+## Technical notes
+- Files likely touched: `src/features/combat/hooks/useGameLoop.ts`, `src/features/combat/hooks/useCombatDriver.ts`, `src/features/combat/utils/interpretCombatTickResult.ts`, `supabase/functions/combat-tick/index.ts`.
+- Reference memories: `mem://tech/combat-architecture/hp-authority`, `mem://tech/combat-architecture/kill-resolution`.
+
+## Clarifying question (optional — I can start without an answer)
+- Is Cithrawiel currently in a party when this happens, or soloing? (Party leader loopback vs. solo double-emit have different fixes.)
