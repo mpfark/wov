@@ -325,7 +325,10 @@ Deno.serve(async (req) => {
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
       if (!char || char.user_id !== userId) throw new Error('Not authorized');
       if (char.hp <= 0) {
-        return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
+        // Solo character is dead — clean up any lingering session so the client
+        // stops polling and doesn't re-apply stale HP=0 after respawn.
+        await db.from('combat_sessions').delete().eq('character_id', character_id);
+        return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
       }
       members = [{ id: character_id, c: char }];
       sessionKey = { character_id };
