@@ -363,6 +363,26 @@ Deno.serve(async (req) => {
       session = null; // fall through to creation below
     }
 
+    // ── Stale session: abandoned combat left an old last_tick_at behind ──
+    // If the session hasn't been touched for well over a tick (e.g. player
+    // closed the tab / disconnected / died without cleanup) and the client
+    // is now re-engaging, delete the row so the recreation branch below
+    // starts fresh with last_tick_at = now - TICK_RATE. Without this, the
+    // first request of the new fight would compress up to TICK_CAP ticks of
+    // catchup into a single response — the "stall then 3-tick burst" bug.
+    const STALE_SESSION_MS = 4 * TICK_RATE; // 8s: longer than normal net gaps, shorter than any real abandonment
+    if (
+      session &&
+      (now - session.last_tick_at) > STALE_SESSION_MS &&
+      engagedIds.length > 0
+    ) {
+      const prevEngaged = (session.engaged_creature_ids || []).length;
+      const staleMs = now - session.last_tick_at;
+      await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'stale_reuse', session_id: session.id, stale_ms: staleMs, prev_engaged: prevEngaged }));
+      session = null;
+    }
+
     if (!session && (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0)) {
       // Create new session — set last_tick_at to one tick ago so the first request
       // immediately processes one combat round instead of returning ticks_processed=0.
