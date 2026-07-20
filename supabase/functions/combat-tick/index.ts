@@ -2608,6 +2608,24 @@ Deno.serve(async (req) => {
       if (tracedIds.size > 0 && events.length > 0) {
         const rows: any[] = [];
         for (const ev of events) {
+          const evType = (ev as any).type ?? null;
+          // Emit tick_separator rows for EVERY traced character so the audit
+          // panel can visually break each simulated sub-tick apart. These
+          // events have no character_id on their own.
+          if (evType === 'tick_separator') {
+            for (const tid of tracedIds) {
+              const member = members.find(m => m.id === tid);
+              rows.push({
+                character_id: tid,
+                character_name: member?.c?.name ?? null,
+                node_id: node_id ?? null,
+                event_type: 'tick_separator',
+                message: '---tick---',
+                payload: ev,
+              });
+            }
+            continue;
+          }
           const cid = (ev as any).character_id;
           if (!cid || !tracedIds.has(cid)) continue;
           const member = members.find(m => m.id === cid);
@@ -2615,7 +2633,7 @@ Deno.serve(async (req) => {
             character_id: cid,
             character_name: member?.c?.name ?? null,
             node_id: node_id ?? null,
-            event_type: (ev as any).type ?? null,
+            event_type: evType,
             message: (ev as any).message ?? '',
             payload: ev,
           });
