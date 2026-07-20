@@ -1,37 +1,48 @@
-## What I confirmed
+## Root cause (confirmed in edge logs)
 
-Pulled Cithrawiel's audit log. Two real things are happening:
+The recent `combat-tick` logs show the exact symptom:
+```
+elapsed_ms: 1,311,283  ticks_processed: 3  ticks_capped: true  session_just_created: false
+elapsed_ms: 1,315,851  ticks_processed: 3  ticks_capped: true  session_just_created: false
+```
 
-**1. "Double attacks per tick" is a display artifact, not doubled combat.**
-When `combat-tick` catches up more than one heartbeat in a single request (`ticks_processed: 2` or `3`), every event in that request is batch-inserted into `combat_audit_log` with the SAME `created_at`. So 2 separate ticks look like 2 hits at the exact same second. In the audit log I see clusters of attack lines all sharing `08:27:50.599369+00`, `08:23:01.790933+00`, etc. The server does not actually swing twice per tick — it's simulating 2+ ticks and stamping them all with the insert time.
+Two ticks in a row came back reporting ~22 minutes of elapsed time and hit the `TICK_CAP = 3` clamp. That's the "stall + 3-tick burst" the user feels: the very first request on entering a fight runs three simulated combat rounds server-side before returning any events, so the client sits waiting ~1s while three swings pile up in one payload.
 
-The in-game combat log already gets `---tick---` separator events between sub-ticks; the audit panel drops them because `tick_separator` has no `character_id`.
+Why the session was stale even though `combat-tick` deletes the session when combat ends (line 2487):
 
-**2. Respawn countdown can stall on solo death.**
-When the player hits 0 HP mid-fight, `combat-tick` returns `session_ended: false` (creatures are still alive) and does NOT delete the `combat_sessions` row. The client stops polling via the `character.hp <= 0` guard, but the server-side session lingers. When `useGameLoop` writes the respawn `{ hp: 1, current_node_id: startingNode }` 3 seconds later, any tick response that was in-flight during death still carries `member_states.hp = 0` and the client re-applies it — that clobbers the respawn write and re-fires the death effect. Additionally, at the very next tick call `combat-tick` line 327 returns `ticks_processed: 0` (no `session_ended`) when the char is still dead, so nothing tells the driver combat is truly over.
+- Session is only deleted through the normal end-of-combat return path or on a node-change / auth / death cleanup.
+- If the player closes the tab, loses connection, or is killed mid-fight before the "no engaged creatures" return runs, the row survives with an old `last_tick_at`.
+- Next visit to the same node re-uses that row (line 356: `session = existingSession`) because `session.node_id === node_id`, so `elapsedMs = now - session.last_tick_at` is huge and the loop compresses `TICK_CAP` ticks into the first response.
 
-## Changes
+`session_just_created: false` in the logs confirms this reuse.
 
-### Backend — `supabase/functions/combat-tick/index.ts`
-1. **Solo death early-return** (line 327): also delete the stale `combat_sessions` row for that character and return `session_ended: true` so the client stops polling.
-2. **Audit log tick markers**: when a traced character is in the tick, emit `tick_separator` rows into `combat_audit_log` as well (with the traced character's id) so the Overlord audit panel visually breaks each simulated sub-tick apart.
+## Fix
 
-### Client — `src/features/combat/utils/interpretCombatTickResult.ts`
-3. **Don't accept stale HP=0 for a respawned character**: expose a small guard so `characterUpdates.hp` from a tick is dropped when the local character is currently in the death/respawn window. Simplest: interpret returns `hp: 0` as normal, but `useCombatDriver.processTickResult` skips the character update when `p.isDead` is already true AND the incoming hp equals 0 (nothing new to learn — we already know we're dead).
+Small, surgical changes in `supabase/functions/combat-tick/index.ts`. No client changes needed.
 
-### Client — `src/features/combat/hooks/useGameLoop.ts`
-4. **Make the respawn effect resilient**: drop the `[character.hp]` dependency retrigger by using an `isDeadRef` gate that only re-arms on a *rising* edge (hp goes from >0 to 0). Keep the countdown interval alive until the respawn write resolves; then clear it. Also ensure the setInterval stops at 0 explicitly.
+1. **Stale-session reset on reuse.** After we load `existingSession` but before computing `elapsedMs`, if the session's `last_tick_at` is older than a stale threshold (e.g. `4 * TICK_RATE = 8s`, more than any legitimate network gap or backgrounded-tab catchup we want to honor), rewrite `session.last_tick_at = now - TICK_RATE` in memory. That guarantees the first tick of a re-entered fight processes exactly one round, not three.
+   - Do NOT do this on the normal in-combat path — background-tab catchups within a live fight should still process multiple ticks so DoTs and creature swings stay correct while the tab was throttled. The stale-threshold check gates this to only sessions that were clearly abandoned (no client heartbeat for ≥8s while `session.engaged_creature_ids` is present or empty).
 
-### Admin — `src/components/admin/CombatAuditPanel.tsx` (small)
-5. Render `tick_separator` rows as a thin divider between groups so overlords can see each simulated sub-tick as its own block. No behavior change to combat.
+2. **Delete-and-recreate when the stale session has no engaged creatures.** If `existingSession.engaged_creature_ids` is empty AND `elapsedMs > stale threshold`, delete the row and fall into the `!session` branch so a fresh session is created with `last_tick_at: now - TICK_RATE` and `sessionJustCreated: true`. Cleaner than mutating in place, and matches the intent that this is a brand-new fight.
 
-## Not changed
+3. **Log the reset** — add a `session_reset_reason: 'stale_reuse'` field in the console.log next to the existing tick log so we can see in edge logs whether the fix is triggering.
 
-- No formula/damage changes — the "doubled" attacks are real ticks, just batched.
-- No changes to party combat driver — the same session-cleanup + stale-HP guard fixes cover it.
+## What stays unchanged
+
+- Legitimate in-combat catchup (backgrounded tab during a real fight) still processes up to `TICK_CAP` ticks — the reset only fires when the session has been silent past the threshold, which only happens when combat wasn't cleanly ended.
+- `TICK_RATE`, `TICK_CAP`, client heartbeat interval, and `useCombatDriver` are untouched.
+- Party path uses the same session logic, so the fix applies there too automatically.
 
 ## Verification
 
-- Read `combat_audit_log` after a solo death: confirm session is gone (`select * from combat_sessions where character_id=…`) and only one death event per fight.
-- Kill Cithrawiel in test, watch respawn: countdown should tick 3→2→1→0 without stalling, then hp jumps to 1 at the starting node.
-- Trigger a multi-tick catch-up (backgrounded tab); audit panel should show `---tick---` dividers between the batch's sub-ticks.
+1. Simulate the bug: pick a fight, kill the tab mid-combat, reopen after 1+ minute, engage another creature on the same node.
+   - Before: first tick returns after ~1s with 3 batched swings.
+   - After: first tick returns quickly with a single swing; subsequent ticks stream at 2s cadence.
+2. Check `combat-tick` edge logs for `ticks_processed: 3, ticks_capped: true, session_just_created: false` — should be gone in normal play.
+3. Backgrounded-tab test: start a real fight, switch tabs for 10s, return — should still catch up multiple ticks (regression guard).
+
+## Technical section
+
+- File: `supabase/functions/combat-tick/index.ts`, around lines 355–395 (session load → elapsedMs calc).
+- Threshold constant `STALE_SESSION_MS = 4 * TICK_RATE` (8s). Small enough that any real "player rejoining after abandoning combat" resets, large enough to allow normal mobile backgrounding within a live fight.
+- Preferred implementation: if `session && (now - session.last_tick_at) > STALE_SESSION_MS && (!session.engaged_creature_ids || session.engaged_creature_ids.length === 0 || engagedIds.length > 0)`, delete + null out `session`, then let the existing `!session && (action === 'start' || engagedIds.length > 0 …)` branch recreate it. The extra `engagedIds.length > 0` clause covers the specific "player re-engages after abandoning" case even if the abandoned session still held stale engaged ids.
