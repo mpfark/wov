@@ -395,6 +395,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     // Character state
     if (result.characterUpdates) {
       const updates = { ...result.characterUpdates };
+      // Stale-death guard: if we already know the character is dead (respawn
+      // countdown is running) and this tick still reports hp=0, drop the hp
+      // field so it can't clobber the client's respawn write of hp=1 that
+      // happens 3s later.
+      if (
+        typeof updates.hp === 'number' &&
+        updates.hp <= 0 &&
+        (ext.current.isDead || ext.current.character.hp <= 0)
+      ) {
+        delete updates.hp;
+      }
       // CP reconciliation: if the server agrees with the value the client
       // already optimistically committed, drop the field so we don't repaint
       // the bar (avoids the "CP returned then deducted" flicker).
