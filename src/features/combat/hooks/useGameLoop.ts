@@ -308,23 +308,35 @@ export function useGameLoop(params: UseGameLoopParams) {
     // Emit global death event so GamePage can broadcast a death cry
     try { bus?.emit('player:death', { goldLost: Math.floor(deathGoldRef.current * 0.1) }); } catch {/* no-op */}
     const countdownInterval = setInterval(() => {
-      setDeathCountdown(prev => Math.max(prev - 1, 0));
+      setDeathCountdown(prev => {
+        const next = Math.max(prev - 1, 0);
+        if (next === 0) clearInterval(countdownInterval);
+        return next;
+      });
     }, 1000);
     const goldLost = Math.floor(deathGoldRef.current * 0.1);
     const respawnTimeout = setTimeout(async () => {
-      await updateCharRef.current({
-        hp: 1,
-        gold: deathGoldRef.current - goldLost,
-        current_node_id: deathNodeRef.current,
-      });
-      addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
-      
-      isDeadRef.current = false;
-      setIsDead(false);
-      clearInterval(countdownInterval);
+      try {
+        await updateCharRef.current({
+          hp: 1,
+          gold: deathGoldRef.current - goldLost,
+          current_node_id: deathNodeRef.current,
+        });
+        addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+      } finally {
+        clearInterval(countdownInterval);
+        isDeadRef.current = false;
+        setIsDead(false);
+      }
     }, 3000);
-    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); isDeadRef.current = false; };
+    // NOTE: no cleanup that resets isDeadRef on hp change — the guard on
+    // `character.hp > 0 || isDeadRef.current` at the top already ensures the
+    // effect only re-arms after a full clean respawn (hp>0 first, then a new
+    // drop to 0). Clearing the ref in cleanup previously allowed re-entry
+    // when in-flight ticks briefly re-wrote hp during the countdown.
+    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); };
   }, [character.hp]);
+
 
   // ── Crescendo / Purifying Light party regen ────────────────
   useEffect(() => {
