@@ -204,17 +204,28 @@ export default function CombatAuditPanel() {
               No log entries yet. Combat events will appear here once the character fights.
             </div>
           )}
-          {displayRows.map(r => (
-            <div key={r.id} className="flex gap-2 py-0.5 border-b border-border/30">
-              <span className="text-muted-foreground shrink-0 w-24">
-                {new Date(r.created_at).toLocaleTimeString(undefined, { hour12: false })}
-              </span>
-              <span className="text-primary/70 shrink-0 w-32 truncate" title={r.event_type ?? ''}>
-                {r.event_type ?? ''}
-              </span>
-              <span className="flex-1 whitespace-pre-wrap break-words">{r.message}</span>
-            </div>
-          ))}
+          {displayRows.map(r => {
+            if (r.event_type === 'tick_separator') {
+              return (
+                <div key={r.id} className="flex items-center gap-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                  <span className="flex-1 border-t border-border/40" />
+                  <span>tick</span>
+                  <span className="flex-1 border-t border-border/40" />
+                </div>
+              );
+            }
+            return (
+              <div key={r.id} className="flex gap-2 py-0.5 border-b border-border/30">
+                <span className="text-muted-foreground shrink-0 w-24">
+                  {new Date(r.created_at).toLocaleTimeString(undefined, { hour12: false })}
+                </span>
+                <span className="text-primary/70 shrink-0 w-32 truncate" title={r.event_type ?? ''}>
+                  {r.event_type ?? ''}
+                </span>
+                <span className="flex-1 whitespace-pre-wrap break-words">{r.message}</span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="p-2 border-t border-border text-[11px] text-muted-foreground flex items-center justify-between">
