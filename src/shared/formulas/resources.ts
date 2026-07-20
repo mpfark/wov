@@ -10,11 +10,13 @@
 import { getStatModifier } from './stats';
 import { CLASS_BASE_HP } from './classes';
 
-/** Max HP = base class HP + CON modifier + (level-1)*5
+/** Max HP = base class HP + 2 × CON modifier + (level-1)*5
+ *  CON modifier is doubled (each +2 CON above 10 gives +2 HP) so CON feels
+ *  like a real defensive investment rather than cosmetic.
  *  Returns the BASE max — gear bonuses are layered on by `getEffectiveMaxHp`. */
 export function getMaxHp(charClass: string, con: number, level: number): number {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
-  return baseHP + getStatModifier(con) + (level - 1) * 5;
+  return baseHP + getStatModifier(con) * 2 + (level - 1) * 5;
 }
 
 /** Max Concentration Points — scales with WIS only.
