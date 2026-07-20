@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { RefreshCw, Crown } from 'lucide-react';
 
-const OFFLINE_THRESHOLD_MIN = 90; // matches return_unique_items()
+const OFFLINE_THRESHOLD_MIN = 20; // matches return_unique_items()
 
 interface Holding {
   inv_id: string;
