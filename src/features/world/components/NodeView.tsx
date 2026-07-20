@@ -390,7 +390,13 @@ export default function NodeView({
                             {isSelected && !isActiveTarget && !isEngaged && (
                               <span className="text-[10px] text-primary">🎯</span>
                             )}
-                            <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
+                            <div
+                              className={`w-[120px] h-2 bg-background rounded-full overflow-hidden border ${
+                                activeCast
+                                  ? 'border-destructive ring-2 ring-destructive/70 shadow-[0_0_10px_hsl(var(--destructive)/0.7)] animate-pulse'
+                                  : 'border-border'
+                              }`}
+                            >
                               <div
                                 className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
                                 style={{
@@ -414,14 +420,15 @@ export default function NodeView({
                           </div>
                         </div>
                         {activeCast && (
-                          <BossCastTelegraph
-                            key={activeCast.castEventId}
-                            label={activeCast.label}
-                            emoji={activeCast.emoji}
-                            startedAt={activeCast.startedAt}
-                            expiresAt={activeCast.expiresAt}
-                            amount={activeCast.amount}
-                          />
+                          <div className="mt-1 px-1">
+                            <BossCastTelegraph
+                              key={activeCast.castEventId}
+                              label={activeCast.label}
+                              emoji={activeCast.emoji}
+                              expiresAt={activeCast.expiresAt}
+                              amount={activeCast.amount}
+                            />
+                          </div>
                         )}
                       </div>
                     );
