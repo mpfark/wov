@@ -1960,7 +1960,7 @@ Deno.serve(async (req) => {
             character_id: h.character_id,
             creature_id: cst.creature_id,
             damage: h.amount,
-            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName} for ${h.amount}!`,
+            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${h.amount}]`,
           });
         }
         activeByCreature.delete(cst.creature_id);
