@@ -314,14 +314,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (error) { p.addLog(`${ability.emoji} Failed to transfer health: ${error.message}`); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
-      p.addLog(`${ability.emoji} ${p.character.name} sacrifices ${actualTransfer} HP to heal ${targetName} for ${restored ?? actualTransfer} HP!`);
+      p.addLog(`${ability.emoji} ${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`);
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`); }
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and mend your wounds! [${restored}]`); }
       else p.addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
     } else if (ability.type === 'self_heal') {
       const conMod = getStatModifier(p.character.con);
@@ -329,7 +329,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and catch your breath! [${restored}]`); }
       else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
     } else if (ability.type === 'regen_buff') {
       // Inspire — additive flat HP/CP regen.
@@ -356,9 +356,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       });
       const durSec = Math.round(durationMs / 1000);
       if (wasActive) {
-        p.addLog(`${ability.emoji} ${p.character.name} renews the inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen, ${durSec}s remaining)`);
+        p.addLog(`${ability.emoji} ${p.character.name} renews the inspiring song! (${durSec}s remaining) [+${mergedHp}HP +${mergedCp}CP]`);
       } else {
-        p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen for ${durSec}s)`);
+        p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`);
       }
     } else if (ability.type === 'crit_buff') {
       // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
@@ -428,7 +428,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
           maxHp: creature.max_hp, lastKnownHp: p.creatureHpOverrides[creature.id] ?? creature.hp,
         },
       }));
-      p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds for ${dmgPerTick} damage every ${intervalMs / 1000}s for ${durationMs / 1000}s.`);
+      p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds every ${intervalMs / 1000}s for ${durationMs / 1000}s. [${dmgPerTick}/tick]`);
     } else if (ability.type === 'poison_buff') {
       if (p.buffState.poisonBuff && p.buffState.poisonBuff.expiresAt > Date.now()) {
         p.addLog(`⚠️ ${ability.emoji} Envenom is already active.`);
@@ -479,7 +479,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const shieldHp = Math.max(1, wisMod + Math.floor(p.character.level * 0.5));
       const durationMs = Math.min(15000, 8000 + intMod * 1000);
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Force Shield! An arcane ward wraps you for ${Math.round(durationMs / 1000)}s. [${shieldHp}]`);
 
     } else if (ability.type === 'party_regen') {
       // Dual-primary split:
@@ -497,7 +497,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
       const abilityName = isHealer ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
-      p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} ${abilityName} heals ${who} every 3s for ${Math.round(durationMs / 1000)}s. [${healPerTick}/tick]`);
     } else if (ability.type === 'ally_absorb') {
       // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
@@ -509,9 +509,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (targetId && targetId !== p.character.id) {
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
         const targetName = targetMember?.character.name || 'ally';
-        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP for up to ${durSec}s.`);
+        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} for up to ${durSec}s. [${shieldHp}]`);
       } else {
-        p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for up to ${durSec}s.`);
+        p.addLog(`${ability.emoji} Divine Aegis! An absorb shield wraps you for up to ${durSec}s. [${shieldHp}]`);
       }
     } else if (ability.type === 'sunder_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
@@ -553,7 +553,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
       const flat = getDivineChallengeFlat(wisMod);
       p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Divine Challenge! You mitigate ${flat} damage from each incoming hit for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Divine Challenge! You mitigate incoming blows for ${Math.round(durationMs / 1000)}s. [${flat}]`);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick
