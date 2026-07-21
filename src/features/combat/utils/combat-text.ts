@@ -28,13 +28,23 @@ export function setStoredDisplayMode(mode: CombatLogDisplayMode) {
 }
 
 /**
- * Strip the trailing ` [N]` or ` [N/tick]` suffix (with optional terminal
- * punctuation) so a canonical "flavor [N]" line can be rendered without the
- * number in flavor-only mode. Pure — leaves the input untouched if no match.
+ * Strip trailing numeric annotations so canonical "flavor + numbers" lines
+ * can be rendered without the raw values in flavor-only mode.
+ *
+ * Strips (terminal punctuation `.` or `!` preserved):
+ *  - ` [ ... ]` bracket suffix starting with `+` or a digit
+ *    (e.g. `[42]`, `[7/tick]`, `[+3HP +5CP]`).
+ *  - ` ( ... )` parenthetical suffix containing at least one digit
+ *    (proc suffixes like `(+5 HP)`, `(30% weaken)`, `(+2 AC, 30s)`).
+ *
+ * Pure — leaves the input untouched if no match.
  */
-const FLAVOR_NUMBER_TAIL_RE = /\s\[\d+(?:\/\w+)?\]([.!])?$/;
+const FLAVOR_BRACKET_TAIL_RE = /\s\[[+\d][^\]]*\]([.!])?$/;
+const FLAVOR_PAREN_TAIL_RE = /\s\([^)]*\d[^)]*\)([.!])?$/;
 export function stripFlavorNumber(line: string): string {
-  return line.replace(FLAVOR_NUMBER_TAIL_RE, (_m, punct) => (punct ?? ''));
+  let out = line.replace(FLAVOR_BRACKET_TAIL_RE, (_m, punct) => (punct ?? ''));
+  out = out.replace(FLAVOR_PAREN_TAIL_RE, (_m, punct) => (punct ?? ''));
+  return out;
 }
 
 // ── Damage impact tiers (absolute ranges, no verb overlap) ──────
