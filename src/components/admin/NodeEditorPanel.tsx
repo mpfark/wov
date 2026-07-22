@@ -1322,11 +1322,11 @@ export default function NodeEditorPanel({
               const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
               const hasHeraldryNpc = npcs.some(n => n.service_role === 'heraldry');
               const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer' | 'heraldry'; enabled: boolean; has: boolean; label: string; desc: string }> = [
+                { key: 'heraldry', enabled: !!(form as any).is_heraldry, has: hasHeraldryNpc, label: 'Herald', desc: 'Generates a herald who records family names and lineages.' },
+                { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
                 { key: 'vendor', enabled: form.is_vendor, has: hasVendorNpc, label: 'Shopkeeper', desc: 'Generates a named shopkeeper that fits this node\u2019s tone.' },
                 { key: 'blacksmith', enabled: form.is_blacksmith, has: hasBlacksmithNpc, label: 'Smith', desc: 'Generates a named smith that fits this node\u2019s tone.' },
                 { key: 'jewelcrafter', enabled: form.is_jewelcrafter, has: hasJewelcrafterNpc, label: 'Jeweler', desc: 'Generates a refined jeweler / lapidary suited to this node.' },
-                { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
-                { key: 'heraldry', enabled: !!(form as any).is_heraldry, has: hasHeraldryNpc, label: 'Herald', desc: 'Generates a herald who records family names and lineages.' },
               ];
               const anyEnabled = roleConfigs.some(r => r.enabled);
               return (

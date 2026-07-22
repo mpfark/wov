@@ -20,7 +20,7 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
-import OrderRosterPanel from './OrderRosterPanel';
+
 import { describeAdjacentLandmarks } from '@/features/world/utils/adjacency-description';
 
 
@@ -184,7 +184,38 @@ export default function NodeView({
                 const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
                 return (
                   <>
-                    {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
+                    {/* Order & Lineage */}
+                    {node.class_hall && (() => {
+                      const hasRecruiter = npcs.some(n => n.service_role === 'recruiter');
+                      return (
+                        <span
+                          className={`text-[10px] ${hasRecruiter ? 'text-glow' : 'opacity-70'}`}
+                          title={hasRecruiter ? `Order Hall — recruits ${node.class_hall}` : `Order Hall (${node.class_hall}) — no recruiter on duty`}
+                        >
+                          🏰
+                        </span>
+                      );
+                    })()}
+                    {(node as any).is_heraldry && (
+                      <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>
+                    )}
+                    {node.is_trainer && (
+                      <span
+                        className={`text-[10px] ${hasTrainerNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasTrainerNpc ? 'Renown Trainer — staffed' : 'Renown Trainer (no trainer on duty)'}
+                      >
+                        🏛️
+                      </span>
+                    )}
+                    {/* Trade & Craft */}
+                    {node.is_vendor && (
+                      <span
+                        className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasVendorNpc ? 'Vendor — shopkeeper present' : 'Vendor (no shopkeeper)'}
+                      >
+                        🪙
+                      </span>
+                    )}
                     {node.is_blacksmith && (
                       <span
                         className={`text-[10px] ${hasBlacksmithNpc ? 'text-glow' : 'opacity-70'}`}
@@ -207,37 +238,9 @@ export default function NodeView({
                     {(node as any).is_stonebinder && (
                       <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Ioun Stones">⚜</span>
                     )}
-                    {(node as any).is_heraldry && (
-                      <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>
-                    )}
-                    {node.is_vendor && (
-                      <span
-                        className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasVendorNpc ? 'Vendor — shopkeeper present' : 'Vendor (no shopkeeper)'}
-                      >
-                        🪙
-                      </span>
-                    )}
+                    {/* Environment */}
+                    {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
                     {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
-                    {node.is_trainer && (
-                      <span
-                        className={`text-[10px] ${hasTrainerNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasTrainerNpc ? 'Renown Trainer — staffed' : 'Renown Trainer (no trainer on duty)'}
-                      >
-                        🏛️
-                      </span>
-                    )}
-                    {node.class_hall && (() => {
-                      const hasRecruiter = npcs.some(n => n.service_role === 'recruiter');
-                      return (
-                        <span
-                          className={`text-[10px] ${hasRecruiter ? 'text-glow' : 'opacity-70'}`}
-                          title={hasRecruiter ? `Order Hall — recruits ${node.class_hall}` : `Order Hall (${node.class_hall}) — no recruiter on duty`}
-                        >
-                          🏰
-                        </span>
-                      );
-                    })()}
                   </>
                 );
               })()}
@@ -261,9 +264,6 @@ export default function NodeView({
             );
           })()}
 
-          {node.class_hall && (
-            <OrderRosterPanel hallClass={node.class_hall} selfCharacterId={character.id} />
-          )}
 
           
         </div>
@@ -422,7 +422,12 @@ export default function NodeView({
                       </div>
                     );
                   })}
-                  {npcs.map(npc => {
+                  {[...npcs].sort((a, b) => {
+                    const order: Record<string, number> = { recruiter: 0, heraldry: 1, trainer: 2, vendor: 3, blacksmith: 4, jewelcrafter: 5 };
+                    const ao = a.service_role ? order[a.service_role] ?? 90 : 99;
+                    const bo = b.service_role ? order[b.service_role] ?? 90 : 99;
+                    return ao - bo;
+                  }).map(npc => {
                     const roleIcon = npc.service_role === 'vendor' ? '🪙'
                       : npc.service_role === 'blacksmith' ? '🔨'
                       : npc.service_role === 'jewelcrafter' ? '💎'

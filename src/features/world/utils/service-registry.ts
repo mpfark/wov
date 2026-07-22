@@ -18,13 +18,16 @@ export interface ServiceDef {
 }
 
 export const SERVICES: ServiceDef[] = [
-  { key: 'is_blacksmith',   label: 'blacksmith',     generic: "a blacksmith's forge" },
-  { key: 'is_vendor',       label: 'vendor',         generic: 'a vendor stall' },
-  { key: 'is_jewelcrafter', label: 'jewelcrafter',   generic: "a jeweler's bench" },
+  // Order & Lineage
+  { key: 'is_heraldry',     label: 'heraldry',       generic: 'a heraldry hall' },
   { key: 'is_trainer',      label: 'renown trainer', generic: "a renown trainer's hall" },
-  { key: 'is_inn',          label: 'inn',            generic: 'an inn' },
-  { key: 'is_teleport',     label: 'teleport',       generic: 'a teleport circle' },
+  // Trade & Craft
+  { key: 'is_vendor',       label: 'vendor',         generic: 'a vendor stall' },
+  { key: 'is_blacksmith',   label: 'blacksmith',     generic: "a blacksmith's forge" },
+  { key: 'is_jewelcrafter', label: 'jewelcrafter',   generic: "a jeweler's bench" },
   { key: 'is_soulforge',    label: 'soulforge',      generic: 'a soulforge' },
   { key: 'is_stonebinder',  label: 'stonebinder',    generic: 'a stonebinder shrine' },
-  { key: 'is_heraldry',     label: 'heraldry',       generic: 'a heraldry hall' },
+  // Environment
+  { key: 'is_inn',          label: 'inn',            generic: 'an inn' },
+  { key: 'is_teleport',     label: 'teleport',       generic: 'a teleport circle' },
 ];
