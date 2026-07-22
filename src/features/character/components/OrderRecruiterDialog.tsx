@@ -25,6 +25,14 @@ interface Props {
 }
 
 interface BondRow { class: string; bond: number }
+interface RosterRow {
+  character_id: string;
+  name: string;
+  family_name: string | null;
+  level: number;
+  class: string;
+  bond: number;
+}
 
 export default function OrderRecruiterDialog({
   open, onClose, npc, hallClass, characterId, currentClass, onJoined, worldContext,
