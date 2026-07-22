@@ -20,7 +20,7 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
-import OrderRosterPanel from './OrderRosterPanel';
+
 import { describeAdjacentLandmarks } from '@/features/world/utils/adjacency-description';
 
 
@@ -261,9 +261,6 @@ export default function NodeView({
             );
           })()}
 
-          {node.class_hall && (
-            <OrderRosterPanel hallClass={node.class_hall} selfCharacterId={character.id} />
-          )}
 
           
         </div>
