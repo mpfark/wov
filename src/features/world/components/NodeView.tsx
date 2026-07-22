@@ -419,7 +419,12 @@ export default function NodeView({
                       </div>
                     );
                   })}
-                  {npcs.map(npc => {
+                  {[...npcs].sort((a, b) => {
+                    const order: Record<string, number> = { recruiter: 0, heraldry: 1, trainer: 2, vendor: 3, blacksmith: 4, jewelcrafter: 5 };
+                    const ao = a.service_role ? order[a.service_role] ?? 90 : 99;
+                    const bo = b.service_role ? order[b.service_role] ?? 90 : 99;
+                    return ao - bo;
+                  }).map(npc => {
                     const roleIcon = npc.service_role === 'vendor' ? '🪙'
                       : npc.service_role === 'blacksmith' ? '🔨'
                       : npc.service_role === 'jewelcrafter' ? '💎'
