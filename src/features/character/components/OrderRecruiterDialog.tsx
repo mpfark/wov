@@ -41,6 +41,9 @@ export default function OrderRecruiterDialog({
   const [loading, setLoading] = useState(false);
   const [acting, setActing] = useState(false);
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+  const [roster, setRoster] = useState<RosterRow[] | null>(null);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [rosterError, setRosterError] = useState<string | null>(null);
 
   const topics = useMemo(() => {
     if (!npc || !worldContext) return [];
@@ -192,6 +195,59 @@ export default function OrderRecruiterDialog({
               </ul>
             </details>
           )}
+
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={async () => {
+                const next = !rosterOpen;
+                setRosterOpen(next);
+                if (next && roster === null && hallClass) {
+                  setRosterError(null);
+                  const { data, error } = await supabase.rpc('get_order_roster', { _class: hallClass as any });
+                  if (error) { setRosterError(error.message); setRoster([]); return; }
+                  setRoster((data || []) as RosterRow[]);
+                }
+              }}
+              className="w-full flex items-center justify-between text-[11px] font-display text-muted-foreground hover:text-primary transition-colors"
+            >
+              <span>🏰 View order roster — by renown</span>
+              <span className="text-[10px]">{rosterOpen ? '▾' : '▸'}</span>
+            </button>
+            {rosterOpen && (
+              <div className="mt-1.5 p-2 rounded border border-primary/20 bg-background/40">
+                {roster === null && !rosterError && (
+                  <p className="text-[11px] text-muted-foreground italic">Consulting the order registry...</p>
+                )}
+                {rosterError && (
+                  <p className="text-[11px] text-destructive">Could not load roster: {rosterError}</p>
+                )}
+                {roster && roster.length === 0 && !rosterError && (
+                  <p className="text-[11px] text-muted-foreground italic">No sworn members yet — be the first to bond with this order.</p>
+                )}
+                {roster && roster.length > 0 && (
+                  <ol className="space-y-0.5 max-h-56 overflow-y-auto">
+                    {roster.map((r, i) => {
+                      const isSelf = characterId === r.character_id;
+                      return (
+                        <li
+                          key={r.character_id}
+                          className={`flex items-center gap-2 px-1.5 py-0.5 rounded text-xs ${isSelf ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}
+                        >
+                          <span className="w-5 text-right text-[10px] text-muted-foreground tabular-nums">{i + 1}.</span>
+                          <span className={`flex-1 truncate font-display ${isSelf ? 'text-primary text-glow' : 'text-foreground'}`}>
+                            {r.name}{r.family_name ? ` ${r.family_name}` : ''}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">L{r.level} {r.class}</span>
+                          <span className="text-[10px] text-dwarvish tabular-nums" title="Renown bond">★ {r.bond}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {currentClass && !isCurrent && (() => {
