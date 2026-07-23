@@ -790,7 +790,59 @@ export default function CreatureManager() {
                             className="h-7 text-xs"
                           />
                         </label>
+                        <div className="col-span-2 mt-1 pt-2 border-t border-border/50">
+                          <p className="font-display text-[11px] text-primary mb-1">Stored Power (Phase 2)</p>
+                          <p className="text-[10px] text-muted-foreground mb-2">
+                            While channeling, the boss stops auto-attacking. Damage that would have hit the primary target is accumulated as Stored Power and applied on resolve. Base amounts stack on top.
+                          </p>
+                        </div>
+                        <label className="text-[10px] text-muted-foreground">
+                          Base damage (primary)
+                          <Input
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Base damage (AoE)
+                          <Input
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_aoe_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_aoe_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Primary share (0–1)
+                          <Input
+                            type="number" min={0} max={2} step={0.05}
+                            value={form.boss_cast_primary_share}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_primary_share: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          AoE share (0–1)
+                          <Input
+                            type="number" min={0} max={2} step={0.05}
+                            value={form.boss_cast_aoe_share}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_aoe_share: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground col-span-2">
+                          Stored Power cap (0 = no cap)
+                          <Input
+                            type="number" min={0} step={10}
+                            value={form.boss_cast_sp_cap}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_sp_cap: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
                       </div>
+
                     </>
                   )}
                 </div>
