@@ -1934,6 +1934,75 @@ Deno.serve(async (req) => {
       }
     } // end tick loop
 
+    // ── Stored Power accumulation for channeling bosses ──────────
+    // For each boss currently channeling with `accumulate.enabled`,
+    // add one expected-mitigated-hit worth of Stored Power per tick
+    // that elapsed during this invocation. Skips resolved/ended casts.
+    const storedPowerBroadcasts: Array<{
+      encounter_id: string;
+      creature_id: string;
+      cast_event_id: string;
+      stored_power: number;
+      visual_max: number;
+    }> = [];
+    try {
+      for (const channel of channelingByCreature.values()) {
+        const acc = channel.payload?.accumulate;
+        if (!acc || acc.enabled === false) continue;
+        if (channel.expires_at <= previousLastTickAt) continue; // already expired before this invocation
+
+        const creature = creatures.find(c => c.id === channel.creature_id);
+        if (!creature) continue;
+
+        // How many ticks the cast was live during this invocation.
+        const castStartTick = Math.max(previousLastTickAt, channel.started_at);
+        const castEndTick = Math.min(previousLastTickAt + ticks * TICK_RATE, channel.expires_at);
+        const liveMs = Math.max(0, castEndTick - castStartTick);
+        const liveTicks = Math.min(ticks, Math.max(1, Math.floor(liveMs / TICK_RATE)));
+        if (liveTicks <= 0) continue;
+
+        // Expected mitigated hit against the current primary target.
+        const cs = creature.stats as any;
+        const cStr = sm(cs.str || 10);
+        const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+        const avgRaw = (1 + dmgDie) / 2 + cStr;
+        // Coarse mitigation heuristic (~40% avg reduction after AC/block/armor).
+        // Tuning-friendly; boss authors adjust base_amount/base_aoe_amount to taste.
+        const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
+        const delta = expectedPerTick * liveTicks;
+
+        const sourceId = tankAtNode && tankId ? tankId : null;
+        const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
+          _encounter_id: channel.encounter_id,
+          _delta: delta,
+          _reason: 'channel_tick',
+          _source_id: sourceId,
+        });
+        if (addErr) {
+          console.error('[stored-power] add failed', channel.cast_event_id, addErr.message);
+          continue;
+        }
+
+        // Visual max: cap when set, else predicted full-channel growth.
+        const totalCastTicks = Math.max(1, Math.round(((channel.expires_at - channel.started_at) || TICK_RATE) / TICK_RATE));
+        const predictedMax = expectedPerTick * totalCastTicks + (channel.payload?.base_amount ? Number(channel.payload.base_amount) : 0);
+        const cap = channel.payload?.stored_power?.cap;
+        const visualMax = Number.isFinite(cap) && (cap as number) > 0 ? Math.floor(cap as number) : predictedMax;
+
+        storedPowerBroadcasts.push({
+          encounter_id: channel.encounter_id,
+          creature_id: channel.creature_id,
+          cast_event_id: channel.cast_event_id,
+          stored_power: Number(newSp) || 0,
+          visual_max: visualMax,
+        });
+      }
+    } catch (e) {
+      console.error('[stored-power] block failed:', (e as Error).message);
+    }
+
+
+
     // ── M6: Telegraphed boss casts ───────────────────────────────
     // Resolve any casts that have expired, then (30% chance/invocation) start
     // a new one for each engaged boss that has no active cast and is off
