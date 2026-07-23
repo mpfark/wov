@@ -2261,6 +2261,21 @@ Deno.serve(async (req) => {
       }
 
 
+      // Push accumulated Stored Power updates onto the same broadcast batch.
+      for (const sp of storedPowerBroadcasts) {
+        castBroadcasts.push({
+          event: 'cast_tick',
+          payload: {
+            cast_event_id: sp.cast_event_id,
+            encounter_id: sp.encounter_id,
+            creature_id: sp.creature_id,
+            node_id: combatNodeId,
+            stored_power: sp.stored_power,
+            visual_max: sp.visual_max,
+          },
+        });
+      }
+
       // Fire node-scoped broadcasts (best-effort — clients also hydrate on join).
       if (castBroadcasts.length > 0) {
         const nodeChannel = db.channel(`encounter-node-${combatNodeId}`);
@@ -2270,6 +2285,7 @@ Deno.serve(async (req) => {
         // Realtime v2: unsubscribing releases the socket immediately.
         try { await nodeChannel.unsubscribe(); } catch { /* ignore */ }
       }
+
     } catch (e) {
       console.error('[boss-cast] block failed:', (e as Error).message);
     }
