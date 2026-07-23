@@ -1436,8 +1436,43 @@ Deno.serve(async (req) => {
       }
     };
 
+    // ── Pre-tick: load telegraphed casts channeling on this node ─────
+    // Populated once per invocation so we can (a) pause boss autoattacks
+    // while `accumulate.pause_autoattacks` is set on the cast, and (b) grow
+    // Stored Power per tick after the tick loop completes.
+    type ChannelingCast = {
+      cast_event_id: string;
+      encounter_id: string;
+      creature_id: string;
+      expires_at: number;
+      started_at: number;
+      payload: any;
+    };
+    const channelingByCreature = new Map<string, ChannelingCast>();
+    try {
+      const { data: preActive } = await db
+        .from('encounter_cast_events')
+        .select('id, creature_id, encounter_id, started_at, expires_at, payload')
+        .eq('node_id', combatNodeId)
+        .is('resolved_at', null);
+      for (const c of preActive || []) {
+        channelingByCreature.set(c.creature_id as string, {
+          cast_event_id: c.id as string,
+          encounter_id: c.encounter_id as string,
+          creature_id: c.creature_id as string,
+          started_at: c.started_at ? new Date(c.started_at as any).getTime() : now,
+          expires_at: c.expires_at ? new Date(c.expires_at as any).getTime() : now,
+          payload: c.payload || {},
+        });
+      }
+    } catch (e) {
+      console.error('[boss-cast] pre-tick fetch failed:', (e as Error).message);
+    }
+
     // ── Multi-tick loop (deterministic time-based) ────────────────
     const previousLastTickAt = session.last_tick_at;
+
+
 
     for (let t = 0; t < ticks; t++) {
       const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
