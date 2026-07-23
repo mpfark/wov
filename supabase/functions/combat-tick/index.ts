@@ -1436,8 +1436,43 @@ Deno.serve(async (req) => {
       }
     };
 
+    // ── Pre-tick: load telegraphed casts channeling on this node ─────
+    // Populated once per invocation so we can (a) pause boss autoattacks
+    // while `accumulate.pause_autoattacks` is set on the cast, and (b) grow
+    // Stored Power per tick after the tick loop completes.
+    type ChannelingCast = {
+      cast_event_id: string;
+      encounter_id: string;
+      creature_id: string;
+      expires_at: number;
+      started_at: number;
+      payload: any;
+    };
+    const channelingByCreature = new Map<string, ChannelingCast>();
+    try {
+      const { data: preActive } = await db
+        .from('encounter_cast_events')
+        .select('id, creature_id, encounter_id, started_at, expires_at, payload')
+        .eq('node_id', combatNodeId)
+        .is('resolved_at', null);
+      for (const c of preActive || []) {
+        channelingByCreature.set(c.creature_id as string, {
+          cast_event_id: c.id as string,
+          encounter_id: c.encounter_id as string,
+          creature_id: c.creature_id as string,
+          started_at: c.started_at ? new Date(c.started_at as any).getTime() : now,
+          expires_at: c.expires_at ? new Date(c.expires_at as any).getTime() : now,
+          payload: c.payload || {},
+        });
+      }
+    } catch (e) {
+      console.error('[boss-cast] pre-tick fetch failed:', (e as Error).message);
+    }
+
     // ── Multi-tick loop (deterministic time-based) ────────────────
     const previousLastTickAt = session.last_tick_at;
+
+
 
     for (let t = 0; t < ticks; t++) {
       const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
@@ -1872,7 +1907,17 @@ Deno.serve(async (req) => {
       // ── Creature counterattacks (skip in DoT-only mode) ───────
       for (const creature of creatures) {
         if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
+        // Pause boss autoattacks while a telegraphed cast is channeling
+        // and `accumulate.pause_autoattacks` is truthy (default true when
+        // the cast declares an accumulate block).
+        const channel = channelingByCreature.get(creature.id);
+        if (channel) {
+          const acc = channel.payload?.accumulate;
+          const pause = acc?.pause_autoattacks !== false && (acc?.enabled !== false);
+          if (pause) continue;
+        }
         const cs = creature.stats as any;
+
         const cStr = sm(cs.str || 10);
         const dmgDie = creatureDmgDie(creature.level, creature.rarity);
 
@@ -1888,6 +1933,75 @@ Deno.serve(async (req) => {
         }
       }
     } // end tick loop
+
+    // ── Stored Power accumulation for channeling bosses ──────────
+    // For each boss currently channeling with `accumulate.enabled`,
+    // add one expected-mitigated-hit worth of Stored Power per tick
+    // that elapsed during this invocation. Skips resolved/ended casts.
+    const storedPowerBroadcasts: Array<{
+      encounter_id: string;
+      creature_id: string;
+      cast_event_id: string;
+      stored_power: number;
+      visual_max: number;
+    }> = [];
+    try {
+      for (const channel of channelingByCreature.values()) {
+        const acc = channel.payload?.accumulate;
+        if (!acc || acc.enabled === false) continue;
+        if (channel.expires_at <= previousLastTickAt) continue; // already expired before this invocation
+
+        const creature = creatures.find(c => c.id === channel.creature_id);
+        if (!creature) continue;
+
+        // How many ticks the cast was live during this invocation.
+        const castStartTick = Math.max(previousLastTickAt, channel.started_at);
+        const castEndTick = Math.min(previousLastTickAt + ticks * TICK_RATE, channel.expires_at);
+        const liveMs = Math.max(0, castEndTick - castStartTick);
+        const liveTicks = Math.min(ticks, Math.max(1, Math.floor(liveMs / TICK_RATE)));
+        if (liveTicks <= 0) continue;
+
+        // Expected mitigated hit against the current primary target.
+        const cs = creature.stats as any;
+        const cStr = sm(cs.str || 10);
+        const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+        const avgRaw = (1 + dmgDie) / 2 + cStr;
+        // Coarse mitigation heuristic (~40% avg reduction after AC/block/armor).
+        // Tuning-friendly; boss authors adjust base_amount/base_aoe_amount to taste.
+        const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
+        const delta = expectedPerTick * liveTicks;
+
+        const sourceId = tankAtNode && tankId ? tankId : null;
+        const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
+          _encounter_id: channel.encounter_id,
+          _delta: delta,
+          _reason: 'channel_tick',
+          _source_id: sourceId,
+        });
+        if (addErr) {
+          console.error('[stored-power] add failed', channel.cast_event_id, addErr.message);
+          continue;
+        }
+
+        // Visual max: cap when set, else predicted full-channel growth.
+        const totalCastTicks = Math.max(1, Math.round(((channel.expires_at - channel.started_at) || TICK_RATE) / TICK_RATE));
+        const predictedMax = expectedPerTick * totalCastTicks + (channel.payload?.base_amount ? Number(channel.payload.base_amount) : 0);
+        const cap = channel.payload?.stored_power?.cap;
+        const visualMax = Number.isFinite(cap) && (cap as number) > 0 ? Math.floor(cap as number) : predictedMax;
+
+        storedPowerBroadcasts.push({
+          encounter_id: channel.encounter_id,
+          creature_id: channel.creature_id,
+          cast_event_id: channel.cast_event_id,
+          stored_power: Number(newSp) || 0,
+          visual_max: visualMax,
+        });
+      }
+    } catch (e) {
+      console.error('[stored-power] block failed:', (e as Error).message);
+    }
+
+
 
     // ── M6: Telegraphed boss casts ───────────────────────────────
     // Resolve any casts that have expired, then (30% chance/invocation) start
@@ -1995,11 +2109,31 @@ Deno.serve(async (req) => {
           label?: string;
           emoji?: string;
           amount?: number;
+          base_amount?: number;
+          base_aoe_amount?: number;
           cast_ms?: number;
           cooldown_ms?: number;
           chance?: number;
           lock_ms?: number;
+          enabled?: boolean;
+          stored_power?: {
+            consume_mode?: string;
+            consume_pct?: number;
+            consume_amount?: number;
+            primary_share?: number;
+            aoe_share?: number;
+            cap?: number;
+          };
+          accumulate?: {
+            enabled?: boolean;
+            source?: string;
+            method?: string;
+            pause_autoattacks?: boolean;
+            crit_during_cast?: string;
+          };
         };
+        // Enable gate: opt-in via cast_config.enabled (bosses backfilled to true).
+        if (cfg.enabled === false) continue;
         const castMs = Number.isFinite(cfg.cast_ms as number) && (cfg.cast_ms as number) > 0
           ? Math.floor(cfg.cast_ms as number) : DEFAULT_BOSS_CAST_MS;
         const cooldownMs = Number.isFinite(cfg.cooldown_ms as number) && (cfg.cooldown_ms as number) > 0
@@ -2028,7 +2162,31 @@ Deno.serve(async (req) => {
         }
 
         const castKey = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'cast';
-        const payload: Record<string, unknown> = { label, emoji, amount, cast_ms: castMs };
+        // Stored Power contract with approved defaults.
+        const spBlock = {
+          consume_mode: cfg.stored_power?.consume_mode ?? 'all',
+          consume_pct: cfg.stored_power?.consume_pct ?? 100,
+          consume_amount: cfg.stored_power?.consume_amount ?? 0,
+          primary_share: cfg.stored_power?.primary_share ?? 1.0,
+          aoe_share: cfg.stored_power?.aoe_share ?? 0.4,
+        };
+        const accumulateBlock = {
+          enabled: cfg.accumulate?.enabled ?? true,
+          source: cfg.accumulate?.source ?? 'primary_target',
+          method: cfg.accumulate?.method ?? 'expected',
+          pause_autoattacks: cfg.accumulate?.pause_autoattacks ?? true,
+          crit_during_cast: cfg.accumulate?.crit_during_cast ?? 'disabled',
+        };
+        const payload: Record<string, unknown> = {
+          label,
+          emoji,
+          amount,
+          cast_ms: castMs,
+          base_amount: cfg.base_amount ?? 0,
+          base_aoe_amount: cfg.base_aoe_amount ?? 0,
+          stored_power: spBlock,
+          accumulate: accumulateBlock,
+        };
         if (lockMs > 0) payload.lock_ms = lockMs;
 
         const { data: startRows, error: startErr } = await db.rpc(
@@ -2050,6 +2208,30 @@ Deno.serve(async (req) => {
         const row = Array.isArray(startRows) ? startRows[0] : startRows;
         if (!row || row.skipped) continue;
 
+        // Seed the encounter's primary-target pointer (tank if we have one).
+        // Use `_add` with delta 0 to write source without touching the pool.
+        const primaryId = tankAtNode && tankId ? tankId : null;
+        if (primaryId) {
+          await db.rpc('encounter_stored_power_add', {
+            _encounter_id: encId,
+            _delta: 0,
+            _reason: 'cast_start',
+            _source_id: primaryId,
+          });
+        }
+
+        // Compute visual_max for the client at cast start so it can freeze the scale.
+        const cs = creature.stats as any;
+        const cStr = sm(cs.str || 10);
+        const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+        const avgRaw = (1 + dmgDie) / 2 + cStr;
+        const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
+        const totalTicks = Math.max(1, Math.round(castMs / TICK_RATE));
+        const predictedMax = expectedPerTick * totalTicks + (payload.base_amount as number || 0);
+        const visualMax = cfg.stored_power?.cap && cfg.stored_power.cap > 0
+          ? Math.floor(cfg.stored_power.cap)
+          : predictedMax;
+
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
@@ -2060,6 +2242,7 @@ Deno.serve(async (req) => {
           event: 'cast_started',
           payload: {
             cast_event_id: row.cast_event_id,
+            encounter_id: encId,
             creature_id: creature.id,
             creature_name: creature.name,
             cast_key: castKey,
@@ -2071,6 +2254,24 @@ Deno.serve(async (req) => {
             expires_at: row.expires_at,
             cast_ms: castMs,
             amount,
+            stored_power: 0,
+            visual_max: visualMax,
+          },
+        });
+      }
+
+
+      // Push accumulated Stored Power updates onto the same broadcast batch.
+      for (const sp of storedPowerBroadcasts) {
+        castBroadcasts.push({
+          event: 'cast_tick',
+          payload: {
+            cast_event_id: sp.cast_event_id,
+            encounter_id: sp.encounter_id,
+            creature_id: sp.creature_id,
+            node_id: combatNodeId,
+            stored_power: sp.stored_power,
+            visual_max: sp.visual_max,
           },
         });
       }
@@ -2084,6 +2285,7 @@ Deno.serve(async (req) => {
         // Realtime v2: unsubscribing releases the socket immediately.
         try { await nodeChannel.unsubscribe(); } catch { /* ignore */ }
       }
+
     } catch (e) {
       console.error('[boss-cast] block failed:', (e as Error).message);
     }

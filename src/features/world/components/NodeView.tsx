@@ -58,7 +58,7 @@ interface Props {
   sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
   rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
-  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; emoji: string; startedAt: number; expiresAt: number; castMs: number; amount?: number }>;
+  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; emoji: string; startedAt: number; expiresAt: number; castMs: number; amount?: number; storedPower: number; visualMax: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -390,27 +390,50 @@ export default function NodeView({
                             {isSelected && !isActiveTarget && !isEngaged && (
                               <span className="text-[10px] text-primary">🎯</span>
                             )}
-                            <div
-                              className={`w-[120px] h-2 bg-background rounded-full overflow-hidden border ${
-                                activeCast
-                                  ? 'border-destructive ring-2 ring-destructive/70 shadow-[0_0_10px_hsl(var(--destructive)/0.7)] animate-pulse'
-                                  : 'border-border'
-                              }`}
-                            >
+                            <div className="flex flex-col items-stretch gap-[2px] w-[120px]">
                               <div
-                                className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
-                                style={{
-                                  width: `${hpPct}%`,
-                                  backgroundColor: isBleeding
-                                    ? 'hsl(var(--dot-bleed))'
-                                    : hasIgniteStacks
-                                    ? 'hsl(var(--dwarvish))'
-                                    : hasPoisonStacks
-                                    ? 'hsl(var(--elvish))'
-                                    : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
-                                }}
-                              />
+                                className={`w-[120px] h-2 bg-background rounded-full overflow-hidden border ${
+                                  activeCast
+                                    ? 'border-destructive ring-2 ring-destructive/70 shadow-[0_0_10px_hsl(var(--destructive)/0.7)] animate-pulse'
+                                    : 'border-border'
+                                }`}
+                              >
+                                <div
+                                  className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
+                                  style={{
+                                    width: `${hpPct}%`,
+                                    backgroundColor: isBleeding
+                                      ? 'hsl(var(--dot-bleed))'
+                                      : hasIgniteStacks
+                                      ? 'hsl(var(--dwarvish))'
+                                      : hasPoisonStacks
+                                      ? 'hsl(var(--elvish))'
+                                      : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
+                                  }}
+                                />
+                              </div>
+                              {/* Stored Power track — always mounted for bosses to reserve
+                                  its 4px slot and prevent layout shift. Fill only paints
+                                  while a cast is active; scale is frozen at cast start. */}
+                              {c.rarity === 'boss' && (
+                                <div
+                                  className="w-[120px] h-[4px] rounded-sm bg-background/60 overflow-hidden border border-border/40"
+                                  aria-hidden={!activeCast}
+                                >
+                                  {activeCast && activeCast.visualMax > 0 && (
+                                    <div
+                                      className="h-full rounded-sm transition-[width] duration-500 ease-out"
+                                      style={{
+                                        width: `${Math.max(0, Math.min(100, (activeCast.storedPower / Math.max(1, activeCast.visualMax)) * 100))}%`,
+                                        backgroundColor: 'hsl(var(--destructive))',
+                                        opacity: 0.85,
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              )}
                             </div>
+
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                             {!isActiveTarget && !isEngaged && !isSelected && (
                               <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); onAttack(c.id); }} className="font-display text-[10px] h-5 px-1.5">

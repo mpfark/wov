@@ -100,6 +100,13 @@ const defaultForm = () => ({
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
   boss_cast_lock_ms: 3000,
+  // Phase 2 — Stored Power configuration.
+  boss_cast_base_amount: 0,
+  boss_cast_base_aoe_amount: 0,
+  boss_cast_primary_share: 1.0,
+  boss_cast_aoe_share: 0.4,
+  boss_cast_sp_cap: 0, // 0 = no cap
+
 });
 
 export default function CreatureManager() {
@@ -194,6 +201,16 @@ export default function CreatureManager() {
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
       boss_cast_lock_ms: Number((c as any).boss_cast?.lock_ms) || 3000,
+      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || 0,
+      boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
+      boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
+        ? Number((c as any).boss_cast?.stored_power?.primary_share)
+        : 1.0,
+      boss_cast_aoe_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.aoe_share))
+        ? Number((c as any).boss_cast?.stored_power?.aoe_share)
+        : 0.4,
+      boss_cast_sp_cap: Number((c as any).boss_cast?.stored_power?.cap) || 0,
+
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
@@ -262,6 +279,7 @@ export default function CreatureManager() {
         .filter(f => f.text.length > 0),
       boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
       boss_cast: form.rarity === 'boss' && form.boss_cast_enabled ? {
+        enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         amount: Math.max(1, Math.floor(form.boss_cast_amount)),
@@ -269,7 +287,23 @@ export default function CreatureManager() {
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
         lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
+        base_amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
+        base_aoe_amount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
+        stored_power: {
+          consume_mode: 'all',
+          primary_share: Math.max(0, Number(form.boss_cast_primary_share)),
+          aoe_share: Math.max(0, Number(form.boss_cast_aoe_share)),
+          cap: Math.max(0, Math.floor(form.boss_cast_sp_cap)) || null,
+        },
+        accumulate: {
+          enabled: true,
+          source: 'primary_target',
+          method: 'expected',
+          pause_autoattacks: true,
+          crit_during_cast: 'disabled',
+        },
       } : null,
+
     } as any;
 
     let savedId = selectedId;
@@ -756,7 +790,59 @@ export default function CreatureManager() {
                             className="h-7 text-xs"
                           />
                         </label>
+                        <div className="col-span-2 mt-1 pt-2 border-t border-border/50">
+                          <p className="font-display text-[11px] text-primary mb-1">Stored Power (Phase 2)</p>
+                          <p className="text-[10px] text-muted-foreground mb-2">
+                            While channeling, the boss stops auto-attacking. Damage that would have hit the primary target is accumulated as Stored Power and applied on resolve. Base amounts stack on top.
+                          </p>
+                        </div>
+                        <label className="text-[10px] text-muted-foreground">
+                          Base damage (primary)
+                          <Input
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Base damage (AoE)
+                          <Input
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_aoe_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_aoe_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Primary share (0–1)
+                          <Input
+                            type="number" min={0} max={2} step={0.05}
+                            value={form.boss_cast_primary_share}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_primary_share: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          AoE share (0–1)
+                          <Input
+                            type="number" min={0} max={2} step={0.05}
+                            value={form.boss_cast_aoe_share}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_aoe_share: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground col-span-2">
+                          Stored Power cap (0 = no cap)
+                          <Input
+                            type="number" min={0} step={10}
+                            value={form.boss_cast_sp_cap}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_sp_cap: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
                       </div>
+
                     </>
                   )}
                 </div>
