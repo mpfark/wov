@@ -2109,11 +2109,31 @@ Deno.serve(async (req) => {
           label?: string;
           emoji?: string;
           amount?: number;
+          base_amount?: number;
+          base_aoe_amount?: number;
           cast_ms?: number;
           cooldown_ms?: number;
           chance?: number;
           lock_ms?: number;
+          enabled?: boolean;
+          stored_power?: {
+            consume_mode?: string;
+            consume_pct?: number;
+            consume_amount?: number;
+            primary_share?: number;
+            aoe_share?: number;
+            cap?: number;
+          };
+          accumulate?: {
+            enabled?: boolean;
+            source?: string;
+            method?: string;
+            pause_autoattacks?: boolean;
+            crit_during_cast?: string;
+          };
         };
+        // Enable gate: opt-in via cast_config.enabled (bosses backfilled to true).
+        if (cfg.enabled === false) continue;
         const castMs = Number.isFinite(cfg.cast_ms as number) && (cfg.cast_ms as number) > 0
           ? Math.floor(cfg.cast_ms as number) : DEFAULT_BOSS_CAST_MS;
         const cooldownMs = Number.isFinite(cfg.cooldown_ms as number) && (cfg.cooldown_ms as number) > 0
@@ -2142,7 +2162,31 @@ Deno.serve(async (req) => {
         }
 
         const castKey = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'cast';
-        const payload: Record<string, unknown> = { label, emoji, amount, cast_ms: castMs };
+        // Stored Power contract with approved defaults.
+        const spBlock = {
+          consume_mode: cfg.stored_power?.consume_mode ?? 'all',
+          consume_pct: cfg.stored_power?.consume_pct ?? 100,
+          consume_amount: cfg.stored_power?.consume_amount ?? 0,
+          primary_share: cfg.stored_power?.primary_share ?? 1.0,
+          aoe_share: cfg.stored_power?.aoe_share ?? 0.4,
+        };
+        const accumulateBlock = {
+          enabled: cfg.accumulate?.enabled ?? true,
+          source: cfg.accumulate?.source ?? 'primary_target',
+          method: cfg.accumulate?.method ?? 'expected',
+          pause_autoattacks: cfg.accumulate?.pause_autoattacks ?? true,
+          crit_during_cast: cfg.accumulate?.crit_during_cast ?? 'disabled',
+        };
+        const payload: Record<string, unknown> = {
+          label,
+          emoji,
+          amount,
+          cast_ms: castMs,
+          base_amount: cfg.base_amount ?? 0,
+          base_aoe_amount: cfg.base_aoe_amount ?? 0,
+          stored_power: spBlock,
+          accumulate: accumulateBlock,
+        };
         if (lockMs > 0) payload.lock_ms = lockMs;
 
         const { data: startRows, error: startErr } = await db.rpc(
@@ -2164,6 +2208,30 @@ Deno.serve(async (req) => {
         const row = Array.isArray(startRows) ? startRows[0] : startRows;
         if (!row || row.skipped) continue;
 
+        // Seed the encounter's primary-target pointer (tank if we have one).
+        // Use `_add` with delta 0 to write source without touching the pool.
+        const primaryId = tankAtNode && tankId ? tankId : null;
+        if (primaryId) {
+          await db.rpc('encounter_stored_power_add', {
+            _encounter_id: encId,
+            _delta: 0,
+            _reason: 'cast_start',
+            _source_id: primaryId,
+          });
+        }
+
+        // Compute visual_max for the client at cast start so it can freeze the scale.
+        const cs = creature.stats as any;
+        const cStr = sm(cs.str || 10);
+        const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+        const avgRaw = (1 + dmgDie) / 2 + cStr;
+        const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
+        const totalTicks = Math.max(1, Math.round(castMs / TICK_RATE));
+        const predictedMax = expectedPerTick * totalTicks + (payload.base_amount as number || 0);
+        const visualMax = cfg.stored_power?.cap && cfg.stored_power.cap > 0
+          ? Math.floor(cfg.stored_power.cap)
+          : predictedMax;
+
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
@@ -2174,6 +2242,7 @@ Deno.serve(async (req) => {
           event: 'cast_started',
           payload: {
             cast_event_id: row.cast_event_id,
+            encounter_id: encId,
             creature_id: creature.id,
             creature_name: creature.name,
             cast_key: castKey,
@@ -2185,9 +2254,12 @@ Deno.serve(async (req) => {
             expires_at: row.expires_at,
             cast_ms: castMs,
             amount,
+            stored_power: 0,
+            visual_max: visualMax,
           },
         });
       }
+
 
       // Fire node-scoped broadcasts (best-effort — clients also hydrate on join).
       if (castBroadcasts.length > 0) {
