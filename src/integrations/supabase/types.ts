@@ -1144,6 +1144,9 @@ export type Database = {
           started_at: string
           state: Json
           status: string
+          stored_power: number
+          stored_power_cap: number | null
+          stored_power_source_id: string | null
           updated_at: string
           version: number
         }
@@ -1157,6 +1160,9 @@ export type Database = {
           started_at?: string
           state?: Json
           status?: string
+          stored_power?: number
+          stored_power_cap?: number | null
+          stored_power_source_id?: string | null
           updated_at?: string
           version?: number
         }
@@ -1170,6 +1176,9 @@ export type Database = {
           started_at?: string
           state?: Json
           status?: string
+          stored_power?: number
+          stored_power_cap?: number | null
+          stored_power_source_id?: string | null
           updated_at?: string
           version?: number
         }
@@ -2540,6 +2549,24 @@ export type Database = {
         }[]
       }
       encounter_snapshot: { Args: { _node_id: string }; Returns: Json }
+      encounter_stored_power_add: {
+        Args: {
+          _delta: number
+          _encounter_id: string
+          _reason?: string
+          _source_id?: string
+        }
+        Returns: number
+      }
+      encounter_stored_power_consume: {
+        Args: {
+          _encounter_id: string
+          _fixed?: number
+          _mode: string
+          _pct?: number
+        }
+        Returns: number
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
