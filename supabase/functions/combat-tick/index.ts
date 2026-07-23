@@ -1907,7 +1907,17 @@ Deno.serve(async (req) => {
       // ── Creature counterattacks (skip in DoT-only mode) ───────
       for (const creature of creatures) {
         if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
+        // Pause boss autoattacks while a telegraphed cast is channeling
+        // and `accumulate.pause_autoattacks` is truthy (default true when
+        // the cast declares an accumulate block).
+        const channel = channelingByCreature.get(creature.id);
+        if (channel) {
+          const acc = channel.payload?.accumulate;
+          const pause = acc?.pause_autoattacks !== false && (acc?.enabled !== false);
+          if (pause) continue;
+        }
         const cs = creature.stats as any;
+
         const cStr = sm(cs.str || 10);
         const dmgDie = creatureDmgDie(creature.level, creature.rarity);
 
