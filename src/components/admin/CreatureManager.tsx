@@ -279,6 +279,7 @@ export default function CreatureManager() {
         .filter(f => f.text.length > 0),
       boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
       boss_cast: form.rarity === 'boss' && form.boss_cast_enabled ? {
+        enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         amount: Math.max(1, Math.floor(form.boss_cast_amount)),
@@ -286,7 +287,23 @@ export default function CreatureManager() {
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
         lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
+        base_amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
+        base_aoe_amount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
+        stored_power: {
+          consume_mode: 'all',
+          primary_share: Math.max(0, Number(form.boss_cast_primary_share)),
+          aoe_share: Math.max(0, Number(form.boss_cast_aoe_share)),
+          cap: Math.max(0, Math.floor(form.boss_cast_sp_cap)) || null,
+        },
+        accumulate: {
+          enabled: true,
+          source: 'primary_target',
+          method: 'expected',
+          pause_autoattacks: true,
+          crit_during_cast: 'disabled',
+        },
       } : null,
+
     } as any;
 
     let savedId = selectedId;
