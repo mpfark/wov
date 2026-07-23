@@ -201,6 +201,16 @@ export default function CreatureManager() {
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
       boss_cast_lock_ms: Number((c as any).boss_cast?.lock_ms) || 3000,
+      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || 0,
+      boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
+      boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
+        ? Number((c as any).boss_cast?.stored_power?.primary_share)
+        : 1.0,
+      boss_cast_aoe_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.aoe_share))
+        ? Number((c as any).boss_cast?.stored_power?.aoe_share)
+        : 0.4,
+      boss_cast_sp_cap: Number((c as any).boss_cast?.stored_power?.cap) || 0,
+
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
