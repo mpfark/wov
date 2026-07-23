@@ -100,6 +100,13 @@ const defaultForm = () => ({
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
   boss_cast_lock_ms: 3000,
+  // Phase 2 — Stored Power configuration.
+  boss_cast_base_amount: 0,
+  boss_cast_base_aoe_amount: 0,
+  boss_cast_primary_share: 1.0,
+  boss_cast_aoe_share: 0.4,
+  boss_cast_sp_cap: 0, // 0 = no cap
+
 });
 
 export default function CreatureManager() {
