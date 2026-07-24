@@ -442,3 +442,10 @@ export function applyDefensiveBuffs(
 
   return { finalDamage: Math.max(dmg, 0), absorbed, remainingShield, blocked };
 }
+
+
+/**
+ * Combat tick cadence in milliseconds. Boss casts and lock durations are
+ * admin-configured in ticks and multiplied by this constant on save.
+ */
+export const TICK_RATE_MS = 2000;

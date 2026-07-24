@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
+import { TICK_RATE_MS } from '@/shared/formulas/combat';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
@@ -96,10 +97,10 @@ const defaultForm = () => ({
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
   boss_cast_amount: 20,
-  boss_cast_ms: 4000,
+  boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
-  boss_cast_lock_ms: 3000,
+  boss_cast_lock_ticks: 2,      // post-resolve lock in combat ticks (× TICK_RATE_MS)
   // Phase 2 — Stored Power configuration.
   boss_cast_base_amount: 0,
   boss_cast_base_aoe_amount: 0,
@@ -197,10 +198,10 @@ export default function CreatureManager() {
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
       boss_cast_amount: Number((c as any).boss_cast?.amount) || 20,
-      boss_cast_ms: Number((c as any).boss_cast?.cast_ms) || 4000,
+      boss_cast_ticks: Math.max(1, Math.round((Number((c as any).boss_cast?.cast_ms) || 4000) / TICK_RATE_MS)),
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
-      boss_cast_lock_ms: Number((c as any).boss_cast?.lock_ms) || 3000,
+      boss_cast_lock_ticks: Math.max(0, Math.round((Number((c as any).boss_cast?.lock_ms) || 0) / TICK_RATE_MS)),
       boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || 0,
       boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
       boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
@@ -283,10 +284,10 @@ export default function CreatureManager() {
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         amount: Math.max(1, Math.floor(form.boss_cast_amount)),
-        cast_ms: Math.max(500, Math.floor(form.boss_cast_ms)),
+        cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
-        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
+        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS,
         base_amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         base_aoe_amount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
         stored_power: {
@@ -758,15 +759,16 @@ export default function CreatureManager() {
                           />
                         </label>
                         <label className="text-[10px] text-muted-foreground">
-                          Cast time (ms)
+                          Cast ticks
                           <Input
                             type="number"
-                            min={500}
-                            step={250}
-                            value={form.boss_cast_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_ms: Number(e.target.value) }))}
+                            min={1}
+                            step={1}
+                            value={form.boss_cast_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_ticks: Math.max(1, Math.floor(Number(e.target.value) || 1)) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">= {Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS} ms at {TICK_RATE_MS / 1000}s/tick</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
                           Cooldown (ms)
@@ -780,15 +782,16 @@ export default function CreatureManager() {
                           />
                         </label>
                         <label className="text-[10px] text-muted-foreground col-span-2">
-                          Lock after resolve (ms) — players hit are stuck at the node this long. 0 = no lock.
+                          Lock ticks after resolve — players hit are stuck at the node this long. 0 = no lock.
                           <Input
                             type="number"
                             min={0}
-                            step={250}
-                            value={form.boss_cast_lock_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ms: Number(e.target.value) }))}
+                            step={1}
+                            value={form.boss_cast_lock_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ticks: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS} ms</span>
                         </label>
                         <div className="col-span-2 mt-1 pt-2 border-t border-border/50">
                           <p className="font-display text-[11px] text-primary mb-1">Stored Power (Phase 2)</p>
