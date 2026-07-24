@@ -284,10 +284,10 @@ export default function CreatureManager() {
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         amount: Math.max(1, Math.floor(form.boss_cast_amount)),
-        cast_ms: Math.max(500, Math.floor(form.boss_cast_ms)),
+        cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
-        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ms)),
+        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS,
         base_amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         base_aoe_amount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
         stored_power: {
