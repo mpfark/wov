@@ -1,197 +1,53 @@
 
-# Telegraphed Casts v2 — Stored Power (Final, Approved)
+## The concern is real, but small — here's what actually happens today
 
-Defaults locked in per approval:
-- `consume_mode: all`, `primary_share: 1.0`, `aoe_share: 0.4`
-- `method: expected`, `pause_autoattacks: true`, `crit_during_cast: disabled`
-- `stored_power_cap: NULL` (uncapped) by default
-- `sampled` method remains opt-in, unused in the initial backfill
-- UI acceptance checks enforce zero meaningful layout shift with sub-pixel tolerance allowed
+Combat runs on a fixed **2000ms tick** (`TICK_RATE` in `combat-tick`). Boss casts are configured in **milliseconds** (`cast_ms`, `lock_ms`). Nothing forces `cast_ms` to be a multiple of the tick rate, and that mismatch causes three visible artifacts:
 
----
+1. **Resolution snaps to the next tick.** A cast expires at `started_at + cast_ms`, but it only resolves inside a tick where `now >= resolves_at`. A 5500ms cast resolves on the tick at 6000ms; a 3000ms cast resolves at 4000ms. Effective cast length is always `ceil(cast_ms / 2000) * 2000`.
+2. **Accumulation count depends on rounding.** Stored Power adds one "expected mitigated hit" per tick that fires during the channel. A 4000ms cast usually gets 2 ticks; a 5000ms cast may get 2 or 3 depending on where the cast starts inside the tick window. The visual bar denominator uses `Math.round(castMs / TICK_RATE)` (`combat-tick` line 2229), so the fill and the actual growth can disagree by one tick.
+3. **Player-facing cast time is a lie for odd values.** The client counts down to `resolves_at`, then the bar sits at "0.0s" for up to 2s while waiting for the next tick to resolve.
 
-## 1. Data model — dedicated encounter field, no generic framework
+None of this is broken — resolution is still atomic and idempotent — but "4000ms" and "5000ms" behave identically in practice, and admins can't tell why.
 
-### `encounters` — added columns
+## Proposed change: admins configure ticks, engine keeps ms internally
 
-- `stored_power` int NOT NULL DEFAULT 0
-- `stored_power_cap` int NULL (NULL = uncapped)
-- `stored_power_source_id` uuid NULL — character currently sampled/targeted
+Make the admin-facing unit **ticks**, keep the storage/runtime unit **milliseconds** so nothing downstream changes.
 
-No `stored_power_expiry_ms`. Lifecycle is driven entirely by the encounter row.
+### Admin UI (`CreatureManager.tsx`)
+- Replace the `Cast time (ms)` and `Lock time (ms)` number inputs with `Cast ticks` and `Lock ticks` integer inputs (min 1 / min 0).
+- Show a small helper: `= 4000 ms at 2s/tick`.
+- On save, write `cast_ms = ticks * TICK_RATE_MS` into the existing `boss_cast` JSONB. No schema change.
 
-Code is written cleanly enough that these three columns could later be extracted into a generic encounter-resource system, but no such abstraction is built now.
+### Shared constant
+- Add `TICK_RATE_MS = 2000` to `src/shared/formulas/combat.ts` (and mirror in `supabase/functions/_shared/formulas/combat.ts`) so admin UI, `combat-tick`, and `useBossCasts` all read the same number. Today `combat-tick` has a local `const TICK_RATE = 2000` — leave the runtime alone but import the shared value where it's used for conversions.
 
-### `encounter_cast_events.payload` — declarative per-cast contract
-
-```jsonc
-{
-  "label": "Cataclysm",
-  "emoji": "☄️",
-  "cast_ms": 4000,
-  "lock_ms": 1500,
-
-  "stored_power": {
-    "consume_mode": "all",   // all | percent | fixed | preserve | reset | ignore
-    "consume_pct": 100,
-    "consume_amount": 0,
-    "primary_share": 1.0,
-    "aoe_share": 0.4
-  },
-
-  "accumulate": {
-    "enabled": true,
-    "source": "primary_target",   // primary_target | all_engaged | none
-    "method": "expected",         // expected | sampled  (sampled = opt-in)
-    "pause_autoattacks": true,
-    "crit_during_cast": "disabled"
-  },
-
-  "base_amount": 30,
-  "base_aoe_amount": 8
-}
+### One-time backfill migration
+For every creature with `boss_cast.cast_ms` set:
 ```
-
-Resolve math applied inside `encounter_boss_resolve_cast`:
-
-| mode | at resolve |
-|---|---|
-| `all` | `used = stored_power; stored_power = 0` |
-| `percent` | `used = round(stored_power * consume_pct/100); stored_power -= used` |
-| `fixed` | `used = min(stored_power, consume_amount); stored_power -= used` |
-| `preserve` | `used = stored_power` for damage math, do not decrement |
-| `reset` | `used = 0; stored_power = 0` (vent, no hit) |
-| `ignore` | `used = 0` (cast pretends the pool isn't there) |
-
-Damage:
-
+cast_ms  := round(cast_ms  / 2000) * 2000
+lock_ms  := round(lock_ms  / 2000) * 2000   -- when present
 ```
-primary_damage   = base_amount     + round(used * primary_share)
-secondary_damage = base_aoe_amount + round(used * aoe_share)
-```
+Minimum `cast_ms = 2000`. This snaps existing bosses (4000, 5500, 6000, etc.) onto the tick grid so the "counts down to 0 then waits" gap disappears. Cast payloads that already sit on the grid (most of the 16 bosses use 4000/6000) are unchanged.
 
-## 2. RPCs — two, not three
+### Engine (`combat-tick`)
+No behavioural change. `castMs` and `lockMs` continue to be read from the payload; because they're now always multiples of 2000, `Math.round(castMs / TICK_RATE)` becomes exact and Stored Power accumulation is deterministic (`totalTicks` == actual accumulation ticks). Keep the current `resolves_at`/status-guarded resolve; the sub-tick edge cases are eliminated by the input, not by new code.
 
-- `encounter_stored_power_add(encounter_id, delta, reason, source_id) → int` — clamps to `[0, coalesce(stored_power_cap, 2^31-1)]`, logs to combat audit, returns new value.
-- `encounter_stored_power_consume(encounter_id, mode, pct, fixed) → int` — returns consumed amount.
+### Client (`useBossCasts.ts`, `NodeView.tsx`)
+No change. `castMs` still comes from the payload, the pulsing glow still uses `expiresAt`. Because `cast_ms` is now grid-aligned, the visible timer bottoms out on the same tick that resolves the cast.
 
-Both `SECURITY DEFINER`, `SET search_path = public`, granted to `authenticated` and `service_role`.
+## What this deliberately does NOT do
 
-**No `_snapshot` RPC.** Late joiners hydrate through the existing encounter read the same way `useBossCasts` already fetches cast rows — a single `SELECT id, creature_id, stored_power, stored_power_cap FROM encounters WHERE id = ANY(active_ids)` alongside the current `encounter_cast_events` fetch. Adding a snapshot RPC would only be justified by a real consistency/permission gap; none is anticipated. It's a trivial two-line addition later if one emerges.
+- Does not change `TICK_RATE` from 2000ms.
+- Does not touch storage columns or RPC signatures (`_cast_ms` stays ms).
+- Does not remove the ms fields from `boss_cast`; ticks are just the admin input.
+- Does not resample or re-tune damage — Stored Power caps and shares stay exactly as configured; only the number of accumulation ticks becomes predictable.
 
-## 3. Accumulation — expected mitigated damage (default)
+## Files touched
 
-Each tick, per channeling boss with `accumulate.enabled`, add one expected mitigated hit:
+- `src/components/admin/CreatureManager.tsx` — swap ms inputs for tick inputs + conversion on save/load.
+- `src/shared/formulas/combat.ts` + `supabase/functions/_shared/formulas/combat.ts` — export `TICK_RATE_MS`.
+- One SQL migration — snap existing `boss_cast.cast_ms` / `lock_ms` to the tick grid.
 
-```
-expected = round(
-    expected_raw_hit(boss)
-  * (1 - miss_chance(boss, tank))
-  * (1 - block_chance(tank))
-  * (1 - flat_mitigation_pct(tank))
-) - flat_armor_reduction(tank)
-```
+## Open decision before I build
 
-Deterministic, monotonic, cheap. `method: "sampled"` remains opt-in (uses existing `simulateCreatureHit`) but no boss uses it in the initial backfill. Reactive damage (Holy Shield, thorns) never contributes — the boss isn't swinging.
-
-Autoattack gate, crit-during-cast, and `source: all_engaged` behave as designed in the refined plan; unchanged.
-
-## 4. Lifecycle — driven by encounter row, no separate expiry timer
-
-Stored Power lives with the encounter and dies with it:
-
-- Encounter created → `stored_power = 0`.
-- Encounter alive (`ended_at IS NULL`, participants present) → Stored Power persists across casts per each cast's `consume_mode`.
-- Encounter closed via existing paths (`encounter_close_on_death`, `encounter_disengage`, combat-catchup sweep, respawn cleanup) → Stored Power discarded with the row.
-
-Cast-time edges:
-- Empty room at resolve → cast fizzles; boss heals `on_empty_room_heal_pct`; encounter still open → Stored Power **not** discarded merely because a cast fizzled.
-- Boss killed mid-channel → encounter closes → cast + Stored Power discarded together.
-- Tank leaves/dies mid-channel → accumulation switches to next primary target on next tick; existing pool untouched.
-- Mid-channel target switch → visible bar does **not** rescale (see §7).
-
-## 5. Future extensibility
-
-Rename `creatures.boss_cast` → `creatures.cast_config` (compatibility view for the current admin UI). Gate cast start on `cast_config.enabled === true` rather than rarity, so elites/rares can opt in without architectural work. Bosses backfill to `enabled: true`; elites/rares stay `false`.
-
-## 6. UI — restrained, MUD-inspired, zero meaningful layout shift
-
-### Placement
-
-A thin, **always-mounted, fixed-height** Stored Power track directly below the boss HP bar in `NodeView`'s creature card. Present at `stored_power = 0`, present between casts, present mid-cast, present after resolve — the element is never conditionally mounted/unmounted.
-
-### Fixed dimensions
-
-- Track height: exactly `4px` (Tailwind `h-1`, not `min-h-`).
-- Track width: equal to the HP bar width, same horizontal padding.
-- No numeric readout in the player-facing UI. Numeric value shown only in the Overlord Combat Audit panel for tuning.
-- No wrapper conditionally inserted between HP bar and rest of the card — flex column gap is fixed.
-
-### Visual states — opacity + fill only, never dimensions
-
-| State | Appearance |
-|---|---|
-| Encounter inactive / `stored_power = 0`, no cast | Track present, opacity ~0.15, empty fill — nearly invisible |
-| `stored_power > 0`, no active cast | Static muted-amber fill, opacity ~0.55, no animation |
-| Active cast accumulating or consuming | Same fill colour, opacity ~0.9, smooth fill-width transition |
-| Resolve | Fill width transitions to post-consume value over ~250ms — no drain flash, no shake |
-
-### Motion
-
-- Only `transition: width 250ms linear` on the inner bar. Nothing else animates.
-- Colour: single muted amber by default. Optional quiet amber→muted-red interpolation above ~75% of visual max — CSS `transition` only, no keyframes, no pulse.
-- Explicitly excluded: pulsing, bouncing, shaking, expanding, flashing, particles, animated gradients, screen shake, floating combat text, repeated warning icons, per-tick text mount/unmount, additional cast bar.
-
-### Visual scale — frozen per cast
-
-Denominator chosen once at cast start and held in a client `ref`:
-
-```
-visual_max_for_cast = coalesce(
-  stored_power_cap,
-  expected_full_channel_growth(boss, tank_at_cast_start, cast_ms)
-)
-```
-
-Mid-cast target switches, tank swaps, mitigation changes never rescale the bar. Between casts, the resting fill uses `stored_power_cap ?? last_frozen_max ?? sensible_fallback` for stability.
-
-### Accessibility & reduced motion
-
-- `@media (prefers-reduced-motion: reduce)` — width transition disabled; fill updates jump directly.
-- Fill length carries the primary signal; colour secondary. Legible with animation off.
-- `role="progressbar"`, `aria-valuenow`, `aria-valuemin=0`, `aria-valuemax=visual_max_for_cast`, `aria-label="Boss stored power"`.
-
-## 7. Broadcast & hydration
-
-- `combat-tick` emits `cast_tick` at ≤1 Hz per channeling boss: `{ encounter_id, creature_id, stored_power, visual_max }`. `visual_max` piggybacks so late joiners don't recompute the expected full-channel growth.
-- `useBossCasts` refactor:
-  - State: `Record<encounterId, { cast, storedPower, visualMax }>`.
-  - Hydration: on node change, one `SELECT id, creature_id, stored_power, stored_power_cap FROM encounters WHERE id = ANY(active_ids)` plus the existing `encounter_cast_events` fetch.
-  - `visualMax` frozen when a `cast_started` row appears; cleared on resolve.
-- Encounter realtime UPDATEs (already subscribed elsewhere) cover between-cast Stored Power changes without a second channel.
-
-## 8. Files & migration order
-
-1. **Migration** — add `stored_power`, `stored_power_cap`, `stored_power_source_id` on `encounters`. Create `encounter_stored_power_add` + `_consume`. Update `encounter_boss_resolve_cast` to read `payload.stored_power`, call `_consume`, apply primary/AoE damage. Backfill existing boss cast payloads with the approved defaults (`consume_mode: all`, `primary_share: 1.0`, `aoe_share: 0.4`, `method: expected`, `pause_autoattacks: true`, `crit_during_cast: disabled`).
-2. **`supabase/functions/combat-tick/index.ts`** — per channeling boss: compute expected mitigated hit (or dry-run for `sampled`), call `_add`, gate autoattacks on `pause_autoattacks`, emit throttled `cast_tick`.
-3. **`supabase/functions/_shared/combat-resolver.ts`** — extract `expectedMitigatedHit(boss, tank)`, keep `simulateCreatureHit` for `sampled`.
-4. **`src/features/combat/hooks/useBossCasts.ts`** — rekey by encounter; add `storedPower`/`visualMax`; hydrate via one `encounters` select; freeze `visualMax` on cast start.
-5. **`src/features/world/components/NodeView.tsx`** — always render the fixed 4px Stored Power track under the boss HP bar per §6.
-6. **`src/components/admin/CreatureManager.tsx`** — payload editors for `stored_power` and `accumulate`; `enabled` checkbox for future elite/rare opt-in.
-7. **Docs** — replace `docs/design/phase-2-stored-power.md` with this final plan; mark Phase 1 doc superseded.
-
-## 9. UI acceptance checks — sub-pixel tolerance permitted
-
-Verified with a Playwright pass on a live boss encounter, screenshots captured. `epsilon = 0.5px` allowed on all bounding-box comparisons to absorb browser sub-pixel rounding; anything above is a failure.
-
-1. **No layout shift on cast start** — boss card outer rect and every sibling card rect stable to within ±0.5px across the frame boundary.
-2. **No layout shift on resolve** — same check across `cast_resolved`.
-3. **No horizontal reflow** — no numeric text ever added/removed on the player card; DOM diff asserted.
-4. **No mount/unmount of the track** — stable `data-testid` present in the DOM at `stored_power = 0`, mid-cast, and post-resolve.
-5. **Target switch does not rescale** — tank swap mid-cast in a scripted encounter; `visualMax` unchanged, fill width monotonic within the cast.
-6. **All six consume modes** — `all`, `percent`, `fixed`, `preserve`, `reset`, `ignore` each pass end-to-end with surrounding UI dimensions stable across resolve.
-7. **Late-join hydration** — reload mid-cast; track appears already at correct fill without a visible zero → value snap (render gated on hydration; skeleton is a same-size empty track).
-8. **Reduced motion** — with `prefers-reduced-motion: reduce`, width transition disabled and state remains legible.
-9. **Encounter close discards Stored Power** — kill, full disengagement, and combat-catchup abandonment each end with the encounter row closed and no orphan client state.
-
-Implementation starts on approval to switch to build mode.
+Should `lock_ms` (the movement-lock after a failed telegraph) also be ticks, or stay free-form ms since it's not gated on the tick loop? My default is **ticks, for consistency in the admin UI** — but happy to leave it as ms if you'd rather keep fine-grained lock durations.
