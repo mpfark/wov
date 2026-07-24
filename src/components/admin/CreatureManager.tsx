@@ -759,15 +759,16 @@ export default function CreatureManager() {
                           />
                         </label>
                         <label className="text-[10px] text-muted-foreground">
-                          Cast time (ms)
+                          Cast ticks
                           <Input
                             type="number"
-                            min={500}
-                            step={250}
-                            value={form.boss_cast_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_ms: Number(e.target.value) }))}
+                            min={1}
+                            step={1}
+                            value={form.boss_cast_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_ticks: Math.max(1, Math.floor(Number(e.target.value) || 1)) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">= {Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS} ms at {TICK_RATE_MS / 1000}s/tick</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
                           Cooldown (ms)
@@ -781,15 +782,16 @@ export default function CreatureManager() {
                           />
                         </label>
                         <label className="text-[10px] text-muted-foreground col-span-2">
-                          Lock after resolve (ms) — players hit are stuck at the node this long. 0 = no lock.
+                          Lock ticks after resolve — players hit are stuck at the node this long. 0 = no lock.
                           <Input
                             type="number"
                             min={0}
-                            step={250}
-                            value={form.boss_cast_lock_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ms: Number(e.target.value) }))}
+                            step={1}
+                            value={form.boss_cast_lock_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ticks: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS} ms</span>
                         </label>
                         <div className="col-span-2 mt-1 pt-2 border-t border-border/50">
                           <p className="font-display text-[11px] text-primary mb-1">Stored Power (Phase 2)</p>
