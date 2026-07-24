@@ -61,65 +61,65 @@ export default function WimpControl({ character }: Props) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className={`${baseClass} px-1`}>
-            <ShieldAlert className="h-3 w-3 shrink-0" />
-            <input
-              type="number"
-              min={0}
-              max={character.max_hp}
-              value={threshold}
-              onChange={e => {
-                const v = Math.max(0, Math.min(character.max_hp, Number(e.target.value) || 0));
-                setThreshold(v);
-                persist(v, direction);
-              }}
-              className="w-9 h-4 px-0.5 bg-transparent border-0 text-right t-numeric focus:outline-none focus:ring-1 focus:ring-primary/40 rounded-sm"
-              aria-label="Wimp HP threshold"
-            />
-            <span className="opacity-60">HP</span>
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  className="h-4 w-5 ml-0.5 flex items-center justify-center rounded-sm border border-border/40 bg-background/60 hover:bg-muted/60 text-xs leading-none"
-                  aria-label="Wimp direction"
-                >
-                  {direction ? ARROW_FOR[direction] : '–'}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="center" className="w-auto p-1.5">
-                <div className="grid grid-cols-3 gap-0.5">
-                  {DIRECTIONS.map(d => {
-                    const selected = d.value === direction;
-                    return (
-                      <button
-                        key={d.label}
-                        title={d.label}
-                        onClick={() => {
-                          setDirection(d.value);
-                          persist(threshold, d.value);
-                          setOpen(false);
-                        }}
-                        className={`h-7 w-7 flex items-center justify-center rounded text-sm transition-colors ${
-                          selected
-                            ? 'bg-primary/25 border border-primary/60 text-primary'
-                            : 'bg-background/60 border border-border/40 text-foreground hover:bg-muted/60'
-                        }`}
-                      >
-                        {d.arrow}
-                      </button>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          Wimp: auto-flee when HP ≤ threshold (opportunity attacks still apply — use class abilities like Battle Cry or Disengage to mitigate)
-        </TooltipContent>
-      </Tooltip>
+      <div className={`${baseClass} px-1`}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <ShieldAlert className="h-3 w-3 shrink-0 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent side="top" align="start" className="text-xs max-w-[240px]">
+            Wimp: auto-flee when HP ≤ threshold (opportunity attacks still apply — use class abilities like Battle Cry or Disengage to mitigate)
+          </TooltipContent>
+        </Tooltip>
+        <input
+          type="number"
+          min={0}
+          max={character.max_hp}
+          value={threshold}
+          onChange={e => {
+            const v = Math.max(0, Math.min(character.max_hp, Number(e.target.value) || 0));
+            setThreshold(v);
+            persist(v, direction);
+          }}
+          className="w-9 h-4 px-0.5 bg-transparent border-0 text-right t-numeric focus:outline-none focus:ring-1 focus:ring-primary/40 rounded-sm"
+          aria-label="Wimp HP threshold"
+        />
+        <span className="opacity-60">HP</span>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="h-4 w-5 ml-0.5 flex items-center justify-center rounded-sm border border-border/40 bg-background/60 hover:bg-muted/60 text-xs leading-none"
+              aria-label="Wimp direction"
+            >
+              {direction ? ARROW_FOR[direction] : '–'}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="w-auto p-1.5">
+            <div className="grid grid-cols-3 gap-0.5">
+              {DIRECTIONS.map(d => {
+                const selected = d.value === direction;
+                return (
+                  <button
+                    key={d.label}
+                    title={d.label}
+                    onClick={() => {
+                      setDirection(d.value);
+                      persist(threshold, d.value);
+                      setOpen(false);
+                    }}
+                    className={`h-7 w-7 flex items-center justify-center rounded text-sm transition-colors ${
+                      selected
+                        ? 'bg-primary/25 border border-primary/60 text-primary'
+                        : 'bg-background/60 border border-border/40 text-foreground hover:bg-muted/60'
+                    }`}
+                  >
+                    {d.arrow}
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
     </TooltipProvider>
   );
 }
