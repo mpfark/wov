@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
+import { TICK_RATE_MS } from '@/shared/formulas/combat';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
