@@ -97,10 +97,10 @@ const defaultForm = () => ({
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
   boss_cast_amount: 20,
-  boss_cast_ms: 4000,
+  boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
-  boss_cast_lock_ms: 3000,
+  boss_cast_lock_ticks: 2,      // post-resolve lock in combat ticks (× TICK_RATE_MS)
   // Phase 2 — Stored Power configuration.
   boss_cast_base_amount: 0,
   boss_cast_base_aoe_amount: 0,
