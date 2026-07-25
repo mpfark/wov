@@ -2225,6 +2225,17 @@ Deno.serve(async (req) => {
         const row = Array.isArray(startRows) ? startRows[0] : startRows;
         if (!row || row.skipped) continue;
 
+        // Enforce Stored Power cap server-side. Note: cast damage is
+        // intentionally FLAT — it does NOT scale with the player-vs-boss
+        // level gap. Balance lives in cap + primary_share/aoe_share only.
+        const capCfg = cfg.stored_power?.cap;
+        const capInt = Number.isFinite(capCfg as number) && (capCfg as number) > 0
+          ? Math.floor(capCfg as number) : null;
+        await db.rpc('encounter_stored_power_set_cap', {
+          _encounter_id: encId,
+          _cap: capInt,
+        });
+
         // Seed the encounter's primary-target pointer (tank if we have one).
         // Use `_add` with delta 0 to write source without touching the pool.
         const primaryId = tankAtNode && tankId ? tankId : null;
