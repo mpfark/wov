@@ -440,6 +440,23 @@ Deno.serve(async (req) => {
         const ts = recentMap[cid]?.last_at_node_ms || 0;
         if (now - ts <= KILL_GRACE_MS) gracedExtras.push({ id: cid, c: ch });
       }
+    } else {
+      // Solo grace: the leader (== the only member) may have stepped off the
+      // node within KILL_GRACE_MS. `recent_member_ids` is written for solo
+      // sessions too, so we can rehydrate the departing character and still
+      // pay out XP/RP/salvage for a kill that lands within the grace window.
+      for (const cid of Object.keys(recentMap)) {
+        if (atNodeIds.has(cid)) continue;
+        const ts = recentMap[cid]?.last_at_node_ms || 0;
+        if (now - ts > KILL_GRACE_MS) continue;
+        const { data: ch } = await db
+          .from('characters')
+          .select('*')
+          .eq('id', cid)
+          .maybeSingle();
+        if (!ch || (ch.hp ?? 0) <= 0) continue;
+        gracedExtras.push({ id: cid, c: ch });
+      }
     }
     // Recipients eligible for kill rewards = active combatants + recently-departed
     const killRecipients: { id: string; c: any }[] = [...members, ...gracedExtras];
@@ -2207,6 +2224,17 @@ Deno.serve(async (req) => {
         }
         const row = Array.isArray(startRows) ? startRows[0] : startRows;
         if (!row || row.skipped) continue;
+
+        // Enforce Stored Power cap server-side. Note: cast damage is
+        // intentionally FLAT — it does NOT scale with the player-vs-boss
+        // level gap. Balance lives in cap + primary_share/aoe_share only.
+        const capCfg = cfg.stored_power?.cap;
+        const capInt = Number.isFinite(capCfg as number) && (capCfg as number) > 0
+          ? Math.floor(capCfg as number) : null;
+        await db.rpc('encounter_stored_power_set_cap', {
+          _encounter_id: encId,
+          _cap: capInt,
+        });
 
         // Seed the encounter's primary-target pointer (tank if we have one).
         // Use `_add` with delta 0 to write source without touching the pool.

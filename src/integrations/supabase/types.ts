@@ -2567,6 +2567,10 @@ export type Database = {
         }
         Returns: number
       }
+      encounter_stored_power_set_cap: {
+        Args: { _cap: number; _encounter_id: string }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
