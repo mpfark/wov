@@ -1988,7 +1988,12 @@ Deno.serve(async (req) => {
         const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
         const delta = expectedPerTick * liveTicks;
 
-        const sourceId = tankAtNode && tankId ? tankId : null;
+        // Prefer the tank; fall back to any live member so solo (and party
+        // without a designated tank) still register a primary target. The
+        // RPC COALESCEs — nulls don't clobber a source that was already set
+        // at cast start, but this keeps things consistent if the seed missed.
+        const fallbackMember = members.find(m => mHp[m.id] > 0);
+        const sourceId = (tankAtNode && tankId) ? tankId : (fallbackMember?.id ?? null);
         const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
           _encounter_id: channel.encounter_id,
           _delta: delta,
