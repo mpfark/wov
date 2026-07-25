@@ -285,7 +285,8 @@ export default function CreatureManager() {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
-        amount: Math.max(1, Math.floor(form.boss_cast_amount)),
+        // Mirror flat-damage into legacy `amount` so the two fields never drift.
+        amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
