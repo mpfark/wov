@@ -1,48 +1,54 @@
-# Boss cast damage + solo kill grace
+## Goal
 
-Investigation of Calikon vs. Aureth turned up two real bugs plus one confirmation.
+Merge the "Telegraphed Boss Cast" and "Stored Power (Phase 2)" sub-sections into a single Boss Cast card in the admin creature form, and remove the `amount` vs `base_amount` drift that caused Thrum's Granite Slam to deal 7 instead of ~30.
 
-## Findings
+## What "2 cards" means today
 
-**1. Cast damage varies too wildly (56 / 86) — Stored Power cap is not enforced.**
+`src/components/admin/CreatureManager.tsx` (~lines 705–852) renders one bordered container that visually splits into two labeled sections:
 
-The `boss_cast.stored_power.cap` (Aureth = 111) is only used to compute the client's *visual max* for the fill bar. The server never writes that number into `encounters.stored_power_cap`, so `encounter_stored_power_add` clamps against a NULL cap — i.e. no cap. The pool can grow well past 111, and `primary_dmg = round(used * 0.45)` can produce numbers like 56 and 86 that "shouldn't be possible" with cap 111 (max primary should be ~50).
+1. **Telegraphed Boss Cast** — emoji, label, `amount` (labeled "Damage (flat)"), chance, cast ticks, cooldown, lock ticks.
+2. **Stored Power (Phase 2)** — `base_amount`, `base_aoe_amount`, `primary_share`, `aoe_share`, `stored_power.cap`.
 
-**2. Cast damage does NOT scale with player-vs-boss level gap — and per your answer, we keep it that way.** No change required, but I'll add a code comment so this stays intentional.
+The resolver (`encounter_boss_resolve_cast`) uses `base_amount` + `used × primary_share`. The legacy `amount` field is written to the DB but ignored on resolve, so admins tuning "Damage (flat) = 30" see near-zero damage in practice.
 
-**3. Solo character got no XP/RP from Aureth's kill.**
+## Unified design
 
-`combat-tick` has a 3-second "just-left-the-node" grace window that keeps you eligible for a kill's XP/RP/salvage even if you moved a second before the boss died. Today that grace only runs inside `if (party_id) { ... }`, so a solo character who steps off the node right before the killing tick gets nothing. Loot still drops on the node (that's independent of recipients), which matches exactly what you saw.
+One card titled "Boss Cast", no internal split. Fields, in order:
 
-## Changes
+- Enabled toggle
+- Emoji, Label
+- **Flat damage (primary)** — writes both `amount` (kept for backwards compat / display) and `base_amount`
+- **Flat damage (AoE, non-primary targets)** — writes `base_aoe_amount`; helper text notes it only matters when `aoe_share > 0` or when other party members are on the node
+- Chance per tick, Cast ticks, Cooldown, Lock ticks
+- **Stored Power cap** — with helper text "0 = no cap"
+- **Primary share** — helper text "0–1 of the accumulated pool applied to the tank/primary target"
+- **AoE share** — helper text "0–1 of the accumulated pool applied to other party members"
 
-### A. Enforce Stored Power cap server-side
-`supabase/functions/combat-tick/index.ts` — at cast start (around line 2213, right after `encounter_boss_start_cast` succeeds): write the configured `cfg.stored_power?.cap` onto the encounter row via a small RPC (see below), and clear it back to NULL on resolve.
+Short intro paragraph above the fields explains the combined behavior in one sentence: "While channeling, the boss pauses auto-attacks and stores the mitigated damage into a pool. On resolve, primary target takes `Flat + pool × primary_share`, others take `Flat AoE + pool × aoe_share`."
 
-New migration adds:
-- `encounter_stored_power_set_cap(_encounter_id uuid, _cap int)` — sets `encounters.stored_power_cap` to the passed value (or NULL), also clamps existing `stored_power` down to the new cap. `SECURITY DEFINER`, `search_path = public`, granted to `service_role`.
-- `encounter_boss_resolve_cast` gets a one-line addition: after consumption, set `stored_power_cap = NULL` so a subsequent (uncapped) legacy cast on the same encounter isn't accidentally throttled.
+## Data / server changes
 
-Result: with Aureth cap = 111, primary_dmg is deterministically bounded to `base_amount + round(111 * 0.45) = 50`, aoe_dmg to `round(111 * 0.75) = 83`. Cast start also resets `stored_power` to 0 to guarantee a fresh channel (defensive — should already be 0 after a prior `all` consume).
+1. **Form state consolidation** in `CreatureManager.tsx`:
+   - Remove the separate "Damage (flat)" input; the new "Flat damage (primary)" input drives both `boss_cast_amount` and `boss_cast_base_amount` in state.
+   - On load, if `base_amount` is null/0 but `amount > 0`, seed both from `amount` so existing bosses open in a consistent state.
+   - On save, always write `amount = base_amount` in the JSONB so the two never drift again.
 
-### B. Extend the 3s kill-grace to solo characters
-`supabase/functions/combat-tick/index.ts` around lines 434-445: lift the `if (party_id)` gate. The `recent_member_ids` map on the session is already populated for solo sessions (the leader-broadcast path is a no-op for solo, but the recent-at-node timestamp is written by the same code path). Only requirement is `now - last_at_node_ms <= KILL_GRACE_MS` and `ch.hp > 0`.
+2. **One-time SQL migration**: for every boss where `boss_cast.base_amount` is null or 0 and `boss_cast.amount > 0`, set `base_amount = amount`. Leave `base_aoe_amount` alone (defaults to 0). No schema change.
 
-Also add a small comment noting that cast damage is intentionally flat (no level scaling) per this decision.
-
-### C. No UI changes
-Cast bar / glow behaviour is unchanged. Visual max already uses the cap correctly, so the client display stays identical — only the server-side pool now respects it.
+3. **Server fallback in `combat-tick`** (~line 2202 of `supabase/functions/combat-tick/index.ts`):
+   ```
+   base_amount: cfg.base_amount ?? cfg.amount ?? 0
+   ```
+   so any future boss configured with only the legacy field still resolves to flat damage.
 
 ## Verification
 
-- Re-query Aureth (and one non-capped boss for comparison) after the change; fight to a cast and confirm resolved damage lines never exceed the configured cap × share + base.
-- Simulate a solo leave-then-kill: start combat with a boss at ~5% HP, walk off, let bleed/ally finish it within 3s → confirm the leaving character receives XP/RP in the tick response's `member_states`.
-- `combat_audit_log` traces for the traced character should show the same reward line as before but now populated for solo departures.
+- Open Thrum in the admin: single card, "Flat damage (primary) = 30" prefilled, Stored Power fields visible below.
+- Trigger a cast in-game: `Granite Slam strikes … [~30 + pool]` in the combat log.
+- Aureth-style bosses (high stored-power accumulation) keep their current profile — cap, shares, and accumulation math are untouched.
 
-## Technical details (out-of-scope reference)
+## Not in scope
 
-- Files touched:
-  - `supabase/functions/combat-tick/index.ts` (kill-grace gate + cap set/clear + comment)
-  - New migration: `encounter_stored_power_set_cap` + `encounter_boss_resolve_cast` amend
-- No client changes; no schema changes beyond the new RPC.
-- Grace still requires `ch.hp > 0`, so dead-and-released characters don't get free kills.
+- No changes to accumulation math, cap enforcement, or level scaling (still flat).
+- No changes to combat log copy, tooltips, or the game manual.
+- No changes to the encounter/cast tables or RPCs beyond the fallback in `combat-tick`.
