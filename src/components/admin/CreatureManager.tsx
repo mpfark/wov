@@ -198,7 +198,7 @@ export default function CreatureManager() {
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
-      boss_cast_amount: Number((c as any).boss_cast?.amount) || 20,
+      
       boss_cast_ticks: Math.max(1, Math.round((Number((c as any).boss_cast?.cast_ms) || 4000) / TICK_RATE_MS)),
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
