@@ -1,53 +1,48 @@
+# Boss cast damage + solo kill grace
 
-## The concern is real, but small — here's what actually happens today
+Investigation of Calikon vs. Aureth turned up two real bugs plus one confirmation.
 
-Combat runs on a fixed **2000ms tick** (`TICK_RATE` in `combat-tick`). Boss casts are configured in **milliseconds** (`cast_ms`, `lock_ms`). Nothing forces `cast_ms` to be a multiple of the tick rate, and that mismatch causes three visible artifacts:
+## Findings
 
-1. **Resolution snaps to the next tick.** A cast expires at `started_at + cast_ms`, but it only resolves inside a tick where `now >= resolves_at`. A 5500ms cast resolves on the tick at 6000ms; a 3000ms cast resolves at 4000ms. Effective cast length is always `ceil(cast_ms / 2000) * 2000`.
-2. **Accumulation count depends on rounding.** Stored Power adds one "expected mitigated hit" per tick that fires during the channel. A 4000ms cast usually gets 2 ticks; a 5000ms cast may get 2 or 3 depending on where the cast starts inside the tick window. The visual bar denominator uses `Math.round(castMs / TICK_RATE)` (`combat-tick` line 2229), so the fill and the actual growth can disagree by one tick.
-3. **Player-facing cast time is a lie for odd values.** The client counts down to `resolves_at`, then the bar sits at "0.0s" for up to 2s while waiting for the next tick to resolve.
+**1. Cast damage varies too wildly (56 / 86) — Stored Power cap is not enforced.**
 
-None of this is broken — resolution is still atomic and idempotent — but "4000ms" and "5000ms" behave identically in practice, and admins can't tell why.
+The `boss_cast.stored_power.cap` (Aureth = 111) is only used to compute the client's *visual max* for the fill bar. The server never writes that number into `encounters.stored_power_cap`, so `encounter_stored_power_add` clamps against a NULL cap — i.e. no cap. The pool can grow well past 111, and `primary_dmg = round(used * 0.45)` can produce numbers like 56 and 86 that "shouldn't be possible" with cap 111 (max primary should be ~50).
 
-## Proposed change: admins configure ticks, engine keeps ms internally
+**2. Cast damage does NOT scale with player-vs-boss level gap — and per your answer, we keep it that way.** No change required, but I'll add a code comment so this stays intentional.
 
-Make the admin-facing unit **ticks**, keep the storage/runtime unit **milliseconds** so nothing downstream changes.
+**3. Solo character got no XP/RP from Aureth's kill.**
 
-### Admin UI (`CreatureManager.tsx`)
-- Replace the `Cast time (ms)` and `Lock time (ms)` number inputs with `Cast ticks` and `Lock ticks` integer inputs (min 1 / min 0).
-- Show a small helper: `= 4000 ms at 2s/tick`.
-- On save, write `cast_ms = ticks * TICK_RATE_MS` into the existing `boss_cast` JSONB. No schema change.
+`combat-tick` has a 3-second "just-left-the-node" grace window that keeps you eligible for a kill's XP/RP/salvage even if you moved a second before the boss died. Today that grace only runs inside `if (party_id) { ... }`, so a solo character who steps off the node right before the killing tick gets nothing. Loot still drops on the node (that's independent of recipients), which matches exactly what you saw.
 
-### Shared constant
-- Add `TICK_RATE_MS = 2000` to `src/shared/formulas/combat.ts` (and mirror in `supabase/functions/_shared/formulas/combat.ts`) so admin UI, `combat-tick`, and `useBossCasts` all read the same number. Today `combat-tick` has a local `const TICK_RATE = 2000` — leave the runtime alone but import the shared value where it's used for conversions.
+## Changes
 
-### One-time backfill migration
-For every creature with `boss_cast.cast_ms` set:
-```
-cast_ms  := round(cast_ms  / 2000) * 2000
-lock_ms  := round(lock_ms  / 2000) * 2000   -- when present
-```
-Minimum `cast_ms = 2000`. This snaps existing bosses (4000, 5500, 6000, etc.) onto the tick grid so the "counts down to 0 then waits" gap disappears. Cast payloads that already sit on the grid (most of the 16 bosses use 4000/6000) are unchanged.
+### A. Enforce Stored Power cap server-side
+`supabase/functions/combat-tick/index.ts` — at cast start (around line 2213, right after `encounter_boss_start_cast` succeeds): write the configured `cfg.stored_power?.cap` onto the encounter row via a small RPC (see below), and clear it back to NULL on resolve.
 
-### Engine (`combat-tick`)
-No behavioural change. `castMs` and `lockMs` continue to be read from the payload; because they're now always multiples of 2000, `Math.round(castMs / TICK_RATE)` becomes exact and Stored Power accumulation is deterministic (`totalTicks` == actual accumulation ticks). Keep the current `resolves_at`/status-guarded resolve; the sub-tick edge cases are eliminated by the input, not by new code.
+New migration adds:
+- `encounter_stored_power_set_cap(_encounter_id uuid, _cap int)` — sets `encounters.stored_power_cap` to the passed value (or NULL), also clamps existing `stored_power` down to the new cap. `SECURITY DEFINER`, `search_path = public`, granted to `service_role`.
+- `encounter_boss_resolve_cast` gets a one-line addition: after consumption, set `stored_power_cap = NULL` so a subsequent (uncapped) legacy cast on the same encounter isn't accidentally throttled.
 
-### Client (`useBossCasts.ts`, `NodeView.tsx`)
-No change. `castMs` still comes from the payload, the pulsing glow still uses `expiresAt`. Because `cast_ms` is now grid-aligned, the visible timer bottoms out on the same tick that resolves the cast.
+Result: with Aureth cap = 111, primary_dmg is deterministically bounded to `base_amount + round(111 * 0.45) = 50`, aoe_dmg to `round(111 * 0.75) = 83`. Cast start also resets `stored_power` to 0 to guarantee a fresh channel (defensive — should already be 0 after a prior `all` consume).
 
-## What this deliberately does NOT do
+### B. Extend the 3s kill-grace to solo characters
+`supabase/functions/combat-tick/index.ts` around lines 434-445: lift the `if (party_id)` gate. The `recent_member_ids` map on the session is already populated for solo sessions (the leader-broadcast path is a no-op for solo, but the recent-at-node timestamp is written by the same code path). Only requirement is `now - last_at_node_ms <= KILL_GRACE_MS` and `ch.hp > 0`.
 
-- Does not change `TICK_RATE` from 2000ms.
-- Does not touch storage columns or RPC signatures (`_cast_ms` stays ms).
-- Does not remove the ms fields from `boss_cast`; ticks are just the admin input.
-- Does not resample or re-tune damage — Stored Power caps and shares stay exactly as configured; only the number of accumulation ticks becomes predictable.
+Also add a small comment noting that cast damage is intentionally flat (no level scaling) per this decision.
 
-## Files touched
+### C. No UI changes
+Cast bar / glow behaviour is unchanged. Visual max already uses the cap correctly, so the client display stays identical — only the server-side pool now respects it.
 
-- `src/components/admin/CreatureManager.tsx` — swap ms inputs for tick inputs + conversion on save/load.
-- `src/shared/formulas/combat.ts` + `supabase/functions/_shared/formulas/combat.ts` — export `TICK_RATE_MS`.
-- One SQL migration — snap existing `boss_cast.cast_ms` / `lock_ms` to the tick grid.
+## Verification
 
-## Open decision before I build
+- Re-query Aureth (and one non-capped boss for comparison) after the change; fight to a cast and confirm resolved damage lines never exceed the configured cap × share + base.
+- Simulate a solo leave-then-kill: start combat with a boss at ~5% HP, walk off, let bleed/ally finish it within 3s → confirm the leaving character receives XP/RP in the tick response's `member_states`.
+- `combat_audit_log` traces for the traced character should show the same reward line as before but now populated for solo departures.
 
-Should `lock_ms` (the movement-lock after a failed telegraph) also be ticks, or stay free-form ms since it's not gated on the tick loop? My default is **ticks, for consistency in the admin UI** — but happy to leave it as ms if you'd rather keep fine-grained lock durations.
+## Technical details (out-of-scope reference)
+
+- Files touched:
+  - `supabase/functions/combat-tick/index.ts` (kill-grace gate + cap set/clear + comment)
+  - New migration: `encounter_stored_power_set_cap` + `encounter_boss_resolve_cast` amend
+- No client changes; no schema changes beyond the new RPC.
+- Grace still requires `ch.hp > 0`, so dead-and-released characters don't get free kills.
