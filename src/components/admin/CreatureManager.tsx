@@ -203,7 +203,8 @@ export default function CreatureManager() {
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
       boss_cast_lock_ticks: Math.max(0, Math.round((Number((c as any).boss_cast?.lock_ms) || 0) / TICK_RATE_MS)),
-      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || 0,
+      // Prefer new `base_amount`; fall back to legacy `amount` so pre-migration bosses open correctly.
+      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || Number((c as any).boss_cast?.amount) || 0,
       boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
       boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
         ? Number((c as any).boss_cast?.stored_power?.primary_share)
