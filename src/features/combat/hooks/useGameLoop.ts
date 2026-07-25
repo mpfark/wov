@@ -300,22 +300,32 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => { updateCharRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { addLogRef.current = addLog; }, [addLog]);
 
+  // Timers are held in refs so a mid-countdown hp change (optimistic write or
+  // realtime echo re-firing this effect) does NOT tear them down. Previously
+  // the effect's cleanup ran on every hp change, clearing both the countdown
+  // interval and the respawn timeout — leaving the overlay frozen at 1 or 2.
+  const deathIntervalRef = useRef<number | null>(null);
+  const deathTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
     if (character.hp > 0 || isDeadRef.current) return;
     isDeadRef.current = true;
     setIsDead(true);
     setDeathCountdown(3);
-    // Emit global death event so GamePage can broadcast a death cry
     try { bus?.emit('player:death', { goldLost: Math.floor(deathGoldRef.current * 0.1) }); } catch {/* no-op */}
-    const countdownInterval = setInterval(() => {
+    if (deathIntervalRef.current) clearInterval(deathIntervalRef.current);
+    if (deathTimeoutRef.current) clearTimeout(deathTimeoutRef.current);
+    deathIntervalRef.current = window.setInterval(() => {
       setDeathCountdown(prev => {
         const next = Math.max(prev - 1, 0);
-        if (next === 0) clearInterval(countdownInterval);
+        if (next === 0 && deathIntervalRef.current) {
+          clearInterval(deathIntervalRef.current);
+          deathIntervalRef.current = null;
+        }
         return next;
       });
     }, 1000);
     const goldLost = Math.floor(deathGoldRef.current * 0.1);
-    const respawnTimeout = setTimeout(async () => {
+    deathTimeoutRef.current = window.setTimeout(async () => {
       try {
         await updateCharRef.current({
           hp: 1,
@@ -324,18 +334,20 @@ export function useGameLoop(params: UseGameLoopParams) {
         });
         addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
       } finally {
-        clearInterval(countdownInterval);
+        if (deathIntervalRef.current) { clearInterval(deathIntervalRef.current); deathIntervalRef.current = null; }
+        deathTimeoutRef.current = null;
         isDeadRef.current = false;
         setIsDead(false);
       }
     }, 3000);
-    // NOTE: no cleanup that resets isDeadRef on hp change — the guard on
-    // `character.hp > 0 || isDeadRef.current` at the top already ensures the
-    // effect only re-arms after a full clean respawn (hp>0 first, then a new
-    // drop to 0). Clearing the ref in cleanup previously allowed re-entry
-    // when in-flight ticks briefly re-wrote hp during the countdown.
-    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); };
+    // No cleanup: mid-countdown re-runs must not cancel the timers. Unmount
+    // cleanup is handled below in its own effect.
   }, [character.hp]);
+
+  useEffect(() => () => {
+    if (deathIntervalRef.current) clearInterval(deathIntervalRef.current);
+    if (deathTimeoutRef.current) clearTimeout(deathTimeoutRef.current);
+  }, []);
 
 
   // ── Crescendo / Purifying Light party regen ────────────────
