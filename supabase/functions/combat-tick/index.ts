@@ -440,6 +440,23 @@ Deno.serve(async (req) => {
         const ts = recentMap[cid]?.last_at_node_ms || 0;
         if (now - ts <= KILL_GRACE_MS) gracedExtras.push({ id: cid, c: ch });
       }
+    } else {
+      // Solo grace: the leader (== the only member) may have stepped off the
+      // node within KILL_GRACE_MS. `recent_member_ids` is written for solo
+      // sessions too, so we can rehydrate the departing character and still
+      // pay out XP/RP/salvage for a kill that lands within the grace window.
+      for (const cid of Object.keys(recentMap)) {
+        if (atNodeIds.has(cid)) continue;
+        const ts = recentMap[cid]?.last_at_node_ms || 0;
+        if (now - ts > KILL_GRACE_MS) continue;
+        const { data: ch } = await db
+          .from('characters')
+          .select('*')
+          .eq('id', cid)
+          .maybeSingle();
+        if (!ch || (ch.hp ?? 0) <= 0) continue;
+        gracedExtras.push({ id: cid, c: ch });
+      }
     }
     // Recipients eligible for kill rewards = active combatants + recently-departed
     const killRecipients: { id: string; c: any }[] = [...members, ...gracedExtras];
