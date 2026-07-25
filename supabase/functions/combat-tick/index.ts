@@ -2199,7 +2199,9 @@ Deno.serve(async (req) => {
           emoji,
           amount,
           cast_ms: castMs,
-          base_amount: cfg.base_amount ?? 0,
+          // Fallback: pre-migration bosses only set legacy `amount`. Treat it
+          // as the primary flat damage so the resolver always has a base value.
+          base_amount: cfg.base_amount ?? cfg.amount ?? 0,
           base_aoe_amount: cfg.base_aoe_amount ?? 0,
           stored_power: spBlock,
           accumulate: accumulateBlock,

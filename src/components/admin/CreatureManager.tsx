@@ -96,13 +96,14 @@ const defaultForm = () => ({
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
-  boss_cast_amount: 20,
   boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
   boss_cast_lock_ticks: 2,      // post-resolve lock in combat ticks (× TICK_RATE_MS)
-  // Phase 2 — Stored Power configuration.
-  boss_cast_base_amount: 0,
+  // Unified Boss Cast (flat + Stored Power) — one card in the admin form.
+  // `boss_cast_base_amount` is the primary-target flat damage; on save it is
+  // mirrored to the legacy `amount` field so the two never drift.
+  boss_cast_base_amount: 20,
   boss_cast_base_aoe_amount: 0,
   boss_cast_primary_share: 1.0,
   boss_cast_aoe_share: 0.4,
@@ -197,12 +198,13 @@ export default function CreatureManager() {
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
-      boss_cast_amount: Number((c as any).boss_cast?.amount) || 20,
+      
       boss_cast_ticks: Math.max(1, Math.round((Number((c as any).boss_cast?.cast_ms) || 4000) / TICK_RATE_MS)),
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
       boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
       boss_cast_lock_ticks: Math.max(0, Math.round((Number((c as any).boss_cast?.lock_ms) || 0) / TICK_RATE_MS)),
-      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || 0,
+      // Prefer new `base_amount`; fall back to legacy `amount` so pre-migration bosses open correctly.
+      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || Number((c as any).boss_cast?.amount) || 0,
       boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
       boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
         ? Number((c as any).boss_cast?.stored_power?.primary_share)
@@ -283,7 +285,8 @@ export default function CreatureManager() {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
-        amount: Math.max(1, Math.floor(form.boss_cast_amount)),
+        // Mirror flat-damage into legacy `amount` so the two fields never drift.
+        amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
         cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
         chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
@@ -702,11 +705,11 @@ export default function CreatureManager() {
                 </div>
               )}
 
-              {/* Boss Cast — telegraphed AoE ability */}
+              {/* Boss Cast — telegraphed ability with Stored Power (unified card) */}
               {form.rarity === 'boss' && (
                 <div className="space-y-1.5 p-2 border border-border rounded bg-background/50">
                   <div className="flex items-center justify-between">
-                    <p className="font-display text-xs text-primary">Telegraphed Boss Cast</p>
+                    <p className="font-display text-xs text-primary">Boss Cast</p>
                     <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <input
                         type="checkbox"
@@ -717,7 +720,7 @@ export default function CreatureManager() {
                     </label>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    When engaged, this boss periodically channels a visible cast. Players who leave the node before it resolves avoid the damage.
+                    While channeling, this boss pauses its auto-attacks and stores what its mitigated hits would have dealt into a pool. On resolve, primary target takes <span className="font-mono">Flat + pool × primary_share</span>; other party members on the node take <span className="font-mono">Flat AoE + pool × aoe_share</span>. Leaving the node before resolve avoids the damage.
                   </p>
                   {form.boss_cast_enabled && (
                     <>
@@ -737,12 +740,20 @@ export default function CreatureManager() {
                       </div>
                       <div className="grid grid-cols-2 gap-1">
                         <label className="text-[10px] text-muted-foreground">
-                          Damage (flat)
+                          Flat damage (primary)
                           <Input
-                            type="number"
-                            min={1}
-                            value={form.boss_cast_amount}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_amount: Number(e.target.value) }))}
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_amount: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
+                          Flat damage (AoE)
+                          <Input
+                            type="number" min={0} step={1}
+                            value={form.boss_cast_base_aoe_amount}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_base_aoe_amount: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
                         </label>
@@ -759,6 +770,17 @@ export default function CreatureManager() {
                           />
                         </label>
                         <label className="text-[10px] text-muted-foreground">
+                          Cooldown (ms)
+                          <Input
+                            type="number"
+                            min={1000}
+                            step={500}
+                            value={form.boss_cast_cooldown_ms}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ms: Number(e.target.value) }))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="text-[10px] text-muted-foreground">
                           Cast ticks
                           <Input
                             type="number"
@@ -771,18 +793,7 @@ export default function CreatureManager() {
                           <span className="text-[9px] opacity-70">= {Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS} ms at {TICK_RATE_MS / 1000}s/tick</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
-                          Cooldown (ms)
-                          <Input
-                            type="number"
-                            min={1000}
-                            step={500}
-                            value={form.boss_cast_cooldown_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ms: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
-                        </label>
-                        <label className="text-[10px] text-muted-foreground col-span-2">
-                          Lock ticks after resolve — players hit are stuck at the node this long. 0 = no lock.
+                          Lock ticks after resolve
                           <Input
                             type="number"
                             min={0}
@@ -791,31 +802,7 @@ export default function CreatureManager() {
                             onChange={e => setForm(f => ({ ...f, boss_cast_lock_ticks: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
                             className="h-7 text-xs"
                           />
-                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS} ms</span>
-                        </label>
-                        <div className="col-span-2 mt-1 pt-2 border-t border-border/50">
-                          <p className="font-display text-[11px] text-primary mb-1">Stored Power (Phase 2)</p>
-                          <p className="text-[10px] text-muted-foreground mb-2">
-                            While channeling, the boss stops auto-attacking. Damage that would have hit the primary target is accumulated as Stored Power and applied on resolve. Base amounts stack on top.
-                          </p>
-                        </div>
-                        <label className="text-[10px] text-muted-foreground">
-                          Base damage (primary)
-                          <Input
-                            type="number" min={0} step={1}
-                            value={form.boss_cast_base_amount}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_base_amount: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
-                        </label>
-                        <label className="text-[10px] text-muted-foreground">
-                          Base damage (AoE)
-                          <Input
-                            type="number" min={0} step={1}
-                            value={form.boss_cast_base_aoe_amount}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_base_aoe_amount: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
+                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS} ms · 0 = no lock</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
                           Primary share (0–1)
@@ -845,7 +832,6 @@ export default function CreatureManager() {
                           />
                         </label>
                       </div>
-
                     </>
                   )}
                 </div>
