@@ -1988,7 +1988,12 @@ Deno.serve(async (req) => {
         const expectedPerTick = Math.max(1, Math.round(avgRaw * 0.6));
         const delta = expectedPerTick * liveTicks;
 
-        const sourceId = tankAtNode && tankId ? tankId : null;
+        // Prefer the tank; fall back to any live member so solo (and party
+        // without a designated tank) still register a primary target. The
+        // RPC COALESCEs — nulls don't clobber a source that was already set
+        // at cast start, but this keeps things consistent if the seed missed.
+        const fallbackMember = members.find(m => mHp[m.id] > 0);
+        const sourceId = (tankAtNode && tankId) ? tankId : (fallbackMember?.id ?? null);
         const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
           _encounter_id: channel.encounter_id,
           _delta: delta,
@@ -2081,17 +2086,23 @@ Deno.serve(async (req) => {
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
 
         // Apply damage to our in-memory member HP for members who were hit.
+        // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
+        // computed new_hp from characters.hp in the DB, which does NOT yet
+        // reflect any in-memory tick-loop changes (heals, procs, DoTs) that
+        // haven't been flushed. Applying the delta preserves those and keeps
+        // solo/party math identical.
         for (const h of (hits || [])) {
-          if (mHp[h.character_id] !== undefined) {
-            mHp[h.character_id] = h.new_hp;
+          const dmg = Number(h.amount) || 0;
+          if (dmg > 0 && mHp[h.character_id] !== undefined) {
+            mHp[h.character_id] = Math.max(0, mHp[h.character_id] - dmg);
           }
           const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
           events.push({
             type: 'boss_cast_hit',
             character_id: h.character_id,
             creature_id: cst.creature_id,
-            damage: h.amount,
-            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${h.amount}]`,
+            damage: dmg,
+            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`,
           });
         }
         activeByCreature.delete(cst.creature_id);
