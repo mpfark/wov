@@ -545,7 +545,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const ticks = Math.min(5, 3 + (conMod >= 3 ? 1 : 0) + (conMod >= 6 ? 1 : 0));
       const durationMs = ticks * 2_000;
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
-      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${ticks} ticks (${Math.round(durationMs / 1000)}s) — allies healed, enemies burned.`);
+      p.addLog(`${ability.emoji} You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`);
     } else if (ability.type === 'mitigation_buff') {
       // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
