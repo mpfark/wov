@@ -230,7 +230,7 @@ export function rollBlock(dex: number, str: number): { blocked: boolean; amount:
 //        = 4.25 + diminishing(conMod, 5.1)
 //        → floor +~4, up to ~+9 flat damage absorbed per block.
 //
-// Mirrored byte-for-byte from src/shared/formulas/combat.ts.
+// Mirrored byte-for-byte in supabase/functions/_shared/formulas/combat.ts.
 export function getShieldWallChanceBonus(wis: number): number {
   const mod = Math.max(getStatModifier(wis), 0);
   return 0.255 + diminishingFloat(mod, 0.0425, 0.2125);
@@ -299,6 +299,16 @@ export function getHitQuality(margin: number, isNat1: boolean, isCrit: boolean):
 export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
   miss: 0, glancing: 0.25, weak: 0.60, normal: 1.0, strong: 1.25,
 };
+
+/**
+ * Creature → player critical hit multiplier. Tuning dial.
+ *
+ * Deliberately LOWER than the player crit multiplier (1.5x, applied in
+ * `resolveAttackRoll`): creature STR modifiers scale hard with level, so a
+ * 1.5x crit on a boss autoattack was rivalling a telegraphed cast. Keep this
+ * below the boss cast damage envelope.
+ */
+export const CREATURE_CRIT_MULT = 1.25;
 
 /** Hard cap for glancing hits; also applies to weak hits when margin < -2 */
 export const GLANCING_WEAK_CAP = 3;
@@ -442,6 +452,7 @@ export function applyDefensiveBuffs(
 
   return { finalDamage: Math.max(dmg, 0), absorbed, remainingShield, blocked };
 }
+
 
 /**
  * Combat tick cadence in milliseconds. Boss casts and lock durations are
