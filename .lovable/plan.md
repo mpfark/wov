@@ -1,54 +1,33 @@
 ## Goal
 
-Merge the "Telegraphed Boss Cast" and "Stored Power (Phase 2)" sub-sections into a single Boss Cast card in the admin creature form, and remove the `amount` vs `base_amount` drift that caused Thrum's Granite Slam to deal 7 instead of ~30.
+Boss/creature autoattack crits currently spike close to a telegraphed cast's damage. Lower creature-vs-player crit damage so telegraphed casts stay the biggest single hit, without touching player crit damage (still 1.5x) or boss cast tuning.
 
-## What "2 cards" means today
+## Why crits spike so hard today
 
-`src/components/admin/CreatureManager.tsx` (~lines 705–852) renders one bordered container that visually splits into two labeled sections:
+In `supabase/functions/combat-tick/index.ts` the creature hit pipeline is:
 
-1. **Telegraphed Boss Cast** — emoji, label, `amount` (labeled "Damage (flat)"), chance, cast ticks, cooldown, lock ticks.
-2. **Stored Power (Phase 2)** — `base_amount`, `base_aoe_amount`, `primary_share`, `aoe_share`, `stored_power.cap`.
+```text
+base = 1d{damageDie} + creatureSTRmod
+→ hit-quality mult (strong = 1.25x)
+→ crit mult (1.5x)
+→ level-gap mult (+8%/level)
+→ block / absorb / DR
+```
 
-The resolver (`encounter_boss_resolve_cast`) uses `base_amount` + `used × primary_share`. The legacy `amount` field is written to the DB but ignored on resolve, so admins tuning "Damage (flat) = 30" see near-zero damage in practice.
+Boss STR is `round((8 + level*0.7) * 2.5)`, so the flat STR modifier alone dominates at higher levels; a strong crit stacks 1.25 x 1.5 on top of it. Lowering the crit step is the cleanest single lever.
 
-## Unified design
+## Changes
 
-One card titled "Boss Cast", no internal split. Fields, in order:
+1. **New shared constant** in `src/shared/formulas/combat.ts` (and its byte-mirror `supabase/functions/_shared/formulas/combat.ts`):
+   `CREATURE_CRIT_MULT = 1.25`, documented as a tuning dial and explicitly distinct from the player crit multiplier (1.5x, unchanged).
+2. **Use it in the creature pipeline** — replace the hardcoded `dmg * 1.5` at `combat-tick/index.ts:1316` with `CREATURE_CRIT_MULT`. This is the only creature-crit damage site (`combat-catchup` only resolves DoTs), so it applies immediately to every regular, rare and boss creature, including all 16 existing bosses — no migration or per-boss data change needed.
+3. **Keep everything else intact**: crit chance/threshold, WIS anti-crit deflection, shield anti-crit bonus, Battle Cry crit reduction, `CRITICAL!` log line and boss crit flavor text all stay as-is.
+4. **Docs**: note the creature crit multiplier in the combat section of `src/components/admin/GameManual.tsx` so the manual reflects that creature crits are 1.25x while player crits remain 1.5x.
 
-- Enabled toggle
-- Emoji, Label
-- **Flat damage (primary)** — writes both `amount` (kept for backwards compat / display) and `base_amount`
-- **Flat damage (AoE, non-primary targets)** — writes `base_aoe_amount`; helper text notes it only matters when `aoe_share > 0` or when other party members are on the node
-- Chance per tick, Cast ticks, Cooldown, Lock ticks
-- **Stored Power cap** — with helper text "0 = no cap"
-- **Primary share** — helper text "0–1 of the accumulated pool applied to the tank/primary target"
-- **AoE share** — helper text "0–1 of the accumulated pool applied to other party members"
+## Expected effect
 
-Short intro paragraph above the fields explains the combined behavior in one sentence: "While channeling, the boss pauses auto-attacks and stores the mitigated damage into a pool. On resolve, primary target takes `Flat + pool × primary_share`, others take `Flat AoE + pool × aoe_share`."
+A strong crit drops roughly 17% in damage (1.25 x 1.25 = 1.56x vs 1.25 x 1.5 = 1.875x over base), which restores clear headroom between a lucky autoattack and a telegraphed cast without making bosses feel soft.
 
-## Data / server changes
+## Follow-up (not in this change)
 
-1. **Form state consolidation** in `CreatureManager.tsx`:
-   - Remove the separate "Damage (flat)" input; the new "Flat damage (primary)" input drives both `boss_cast_amount` and `boss_cast_base_amount` in state.
-   - On load, if `base_amount` is null/0 but `amount > 0`, seed both from `amount` so existing bosses open in a consistent state.
-   - On save, always write `amount = base_amount` in the JSONB so the two never drift again.
-
-2. **One-time SQL migration**: for every boss where `boss_cast.base_amount` is null or 0 and `boss_cast.amount > 0`, set `base_amount = amount`. Leave `base_aoe_amount` alone (defaults to 0). No schema change.
-
-3. **Server fallback in `combat-tick`** (~line 2202 of `supabase/functions/combat-tick/index.ts`):
-   ```
-   base_amount: cfg.base_amount ?? cfg.amount ?? 0
-   ```
-   so any future boss configured with only the legacy field still resolves to flat damage.
-
-## Verification
-
-- Open Thrum in the admin: single card, "Flat damage (primary) = 30" prefilled, Stored Power fields visible below.
-- Trigger a cast in-game: `Granite Slam strikes … [~30 + pool]` in the combat log.
-- Aureth-style bosses (high stored-power accumulation) keep their current profile — cap, shares, and accumulation math are untouched.
-
-## Not in scope
-
-- No changes to accumulation math, cap enforcement, or level scaling (still flat).
-- No changes to combat log copy, tooltips, or the game manual.
-- No changes to the encounter/cast tables or RPCs beyond the fallback in `combat-tick`.
+If crits still read too close to casts after playtesting, the next dial is per-boss `base_amount` / stored-power shares — tune those from data rather than adding another code multiplier.

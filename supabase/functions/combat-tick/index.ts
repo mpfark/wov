@@ -37,6 +37,7 @@ import {
   getWeaponDieForItem,
   getHitQuality,
   HIT_QUALITY_MULT,
+  CREATURE_CRIT_MULT,
   GLANCING_WEAK_CAP,
   getCreatureAttackBonus as creatureAtkBonus,
   getShieldBlockChance,
@@ -1313,7 +1314,7 @@ Deno.serve(async (req) => {
         //           → 5. shield block → 6. absorb → 7. Battle Cry DR → 8. caps/clamps
         let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
         let dmg = Math.max(Math.floor(baseDmg * HIT_QUALITY_MULT[quality]), 1);
-        if (isCrit) dmg = Math.max(Math.floor(dmg * 1.5), 1);
+        if (isCrit) dmg = Math.max(Math.floor(dmg * CREATURE_CRIT_MULT), 1);
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 

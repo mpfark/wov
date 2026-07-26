@@ -300,6 +300,16 @@ export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
   miss: 0, glancing: 0.25, weak: 0.60, normal: 1.0, strong: 1.25,
 };
 
+/**
+ * Creature → player critical hit multiplier. Tuning dial.
+ *
+ * Deliberately LOWER than the player crit multiplier (1.5x, applied in
+ * `resolveAttackRoll`): creature STR modifiers scale hard with level, so a
+ * 1.5x crit on a boss autoattack was rivalling a telegraphed cast. Keep this
+ * below the boss cast damage envelope.
+ */
+export const CREATURE_CRIT_MULT = 1.25;
+
 /** Hard cap for glancing hits; also applies to weak hits when margin < -2 */
 export const GLANCING_WEAK_CAP = 3;
 
