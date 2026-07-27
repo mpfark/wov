@@ -795,6 +795,14 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       return label.length > 12 ? label.slice(0, 11) + '…' : label;
                     })()}
                   </text>
+                  <text
+                    x={pos.px} y={pos.py + 13}
+                    textAnchor="middle"
+                    className="fill-muted-foreground text-[7px] pointer-events-none select-none"
+                  >
+                    {node.x ?? 0},{node.y ?? 0}
+                  </text>
+
 
                   {isActive && !populateMode && (() => {
                     const usedDirs = new Set(node.connections.map(c => c.direction));
