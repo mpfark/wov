@@ -6,7 +6,7 @@
  */
 
 import { CLASS_COMBAT } from './class-abilities';
-import { interpolateTemplate } from '@shared/proc-log-format';
+import { renderFlavor, flavorHasDamageToken } from '@shared/proc-log-format';
 
 // ── Display mode ────────────────────────────────────────────────
 
