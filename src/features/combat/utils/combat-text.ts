@@ -320,15 +320,25 @@ function formatCreatureAttack(
 
   const dmgSuffix = damage > 0 ? ` [${damage}]` : '';
 
-  // Boss crit flavor: if present, use themed text instead of tier-word system
+  // Boss crit flavor: if present, use themed text instead of tier-word system.
+  // Uses the same placeholder renderer as boss casts ({creature}/{target}/{cast}/{damage},
+  // legacy %a/%e/%v still supported).
   if (isCrit && event.boss_flavor) {
     const bf = event.boss_flavor;
     const emoji = bf.emoji || '';
     const prefix = emoji ? `${emoji} ` : ICON;
     const targetLabel = isLocal ? 'you' : event.target_name!;
-    const interpolated = interpolateTemplate(bf.text, attacker, targetLabel, damage);
-    return `${prefix}${interpolated}!${dmgSuffix}`;
+    const interpolated = renderFlavor(bf.text, {
+      creature: attacker,
+      target: targetLabel,
+      cast: bf.name || '',
+      damage,
+    });
+    // Author inlined the number → don't append the canonical [N] suffix twice.
+    const suffix = flavorHasDamageToken(bf.text) ? '' : dmgSuffix;
+    return `${prefix}${interpolated}!${suffix}`;
   }
+
 
   const tierWord = getDamageTierWord(damage);
   const punct = isCrit ? '!' : '.';
