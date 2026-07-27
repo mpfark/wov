@@ -2148,7 +2148,10 @@ Deno.serve(async (req) => {
         const cfg = ((creature as any).boss_cast ?? {}) as {
           label?: string;
           emoji?: string;
+          cast_flavor?: string;
+          hit_flavor?: string;
           amount?: number;
+
           base_amount?: number;
           base_aoe_amount?: number;
           cast_ms?: number;
