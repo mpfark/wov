@@ -19,7 +19,7 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { formatProcMessage } from "../_shared/proc-log-format.ts";
+import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
