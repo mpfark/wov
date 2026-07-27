@@ -878,8 +878,10 @@ export default function CreatureManager() {
               <div className="space-y-1.5">
                 <p className="font-display text-xs text-primary">Boss Crit Flavors</p>
                 <p className="text-[10px] text-muted-foreground">
-                  Optional. Use template variables: <span className="font-mono">%a</span> = attacker, <span className="font-mono">%e</span> = enemy, <span className="font-mono">%v</span> = damage value. Example: "%a unleashes fire upon %e".
+                  Optional. Same placeholders as Boss Cast flavor: <span className="font-mono">{FLAVOR_TOKENS}</span> (legacy <span className="font-mono">%a/%e/%v</span> still works).
+                  Example: "{'{creature}'} unleashes fire upon {'{target}'}".
                 </p>
+
                 {form.boss_crit_flavors.map((flavor, idx) => (
                   <div key={idx} className="p-2 bg-background/50 rounded border border-border space-y-1">
                     <div className="flex items-center gap-1">
