@@ -2189,6 +2189,9 @@ Deno.serve(async (req) => {
           ? Math.floor(cfg.lock_ms as number) : 0;
         const label = (cfg.label && cfg.label.trim()) || 'Cataclysm';
         const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
+        const castFlavor = String(cfg.cast_flavor ?? '').trim();
+        const hitFlavorCfg = String(cfg.hit_flavor ?? '').trim();
+
 
         const lastCastAt = lastCastAtByCreature.get(creature.id) ?? 0;
         if (now - lastCastAt < cooldownMs) continue;
