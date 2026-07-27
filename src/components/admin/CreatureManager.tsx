@@ -749,6 +749,27 @@ export default function CreatureManager() {
                           className="flex-1 h-7 text-xs"
                         />
                       </div>
+                      <FlavorField
+                        label="Casting flavor (log line when the cast begins)"
+                        value={form.boss_cast_flavor}
+                        onChange={v => setForm(f => ({ ...f, boss_cast_flavor: v }))}
+                        placeholder="{creature} draws the sky down — {cast} gathers above the node!"
+                        emoji={form.boss_cast_emoji}
+                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm' }}
+                        hint="{target}/{damage} are empty here"
+                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'} begins channeling ${form.boss_cast_label || 'Cataclysm'}! Flee the node to avoid it. (default)`}
+                      />
+                      <FlavorField
+                        label="Impact flavor (log line when the cast lands)"
+                        value={form.boss_cast_hit_flavor}
+                        onChange={v => setForm(f => ({ ...f, boss_cast_hit_flavor: v }))}
+                        placeholder="{cast} breaks over {target} in a wave of ruin!"
+                        emoji={form.boss_cast_emoji}
+                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm', damage: 42 }}
+                        hint="damage is appended as [N] unless you write {damage}"
+                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'}'s ${form.boss_cast_label || 'Cataclysm'} strikes Hero! [42] (default)`}
+                      />
+
                       <div className="grid grid-cols-2 gap-1">
                         <label className="text-[10px] text-muted-foreground">
                           Flat damage (primary)
