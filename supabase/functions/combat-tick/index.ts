@@ -2300,11 +2300,17 @@ Deno.serve(async (req) => {
           ? Math.floor(cfg.stored_power.cap)
           : predictedMax;
 
+        const startRendered = castFlavor
+          ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
+          : '';
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
-          message: `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
+          message: startRendered
+            ? `${emoji} ${startRendered}`
+            : `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
         });
+
 
         castBroadcasts.push({
           event: 'cast_started',
