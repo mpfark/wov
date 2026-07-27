@@ -19,7 +19,7 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { formatProcMessage } from "../_shared/proc-log-format.ts";
+import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
@@ -2085,6 +2085,7 @@ Deno.serve(async (req) => {
         const creatureName = creature?.name ?? 'The boss';
         const label = (cst.payload as any)?.label ?? cst.cast_key;
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
+        const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
 
         // Apply damage to our in-memory member HP for members who were hit.
         // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
@@ -2098,14 +2099,24 @@ Deno.serve(async (req) => {
             mHp[h.character_id] = Math.max(0, mHp[h.character_id] - dmg);
           }
           const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
+          // Authored flavor wins; blank falls back to the default wording.
+          // If the author inlined {damage}/%v we skip the canonical [N] suffix
+          // so the number isn't printed twice.
+          const rendered = hitFlavor
+            ? renderFlavor(hitFlavor, { creature: creatureName, target: memberName, cast: label, damage: dmg })
+            : '';
+          const message = rendered
+            ? `${emoji} ${rendered}${flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`}`
+            : `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`;
           events.push({
             type: 'boss_cast_hit',
             character_id: h.character_id,
             creature_id: cst.creature_id,
             damage: dmg,
-            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`,
+            message,
           });
         }
+
         activeByCreature.delete(cst.creature_id);
         lastCastAtByCreature.set(cst.creature_id, now);
 
@@ -2137,7 +2148,10 @@ Deno.serve(async (req) => {
         const cfg = ((creature as any).boss_cast ?? {}) as {
           label?: string;
           emoji?: string;
+          cast_flavor?: string;
+          hit_flavor?: string;
           amount?: number;
+
           base_amount?: number;
           base_aoe_amount?: number;
           cast_ms?: number;
@@ -2175,6 +2189,9 @@ Deno.serve(async (req) => {
           ? Math.floor(cfg.lock_ms as number) : 0;
         const label = (cfg.label && cfg.label.trim()) || 'Cataclysm';
         const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
+        const castFlavor = String(cfg.cast_flavor ?? '').trim();
+        const hitFlavorCfg = String(cfg.hit_flavor ?? '').trim();
+
 
         const lastCastAt = lastCastAtByCreature.get(creature.id) ?? 0;
         if (now - lastCastAt < cooldownMs) continue;
@@ -2209,7 +2226,12 @@ Deno.serve(async (req) => {
         const payload: Record<string, unknown> = {
           label,
           emoji,
+          // Authored flavor travels with the cast so resolution (which may run
+          // in a later tick) renders the same text the admin configured.
+          cast_flavor: castFlavor || undefined,
+          hit_flavor: hitFlavorCfg || undefined,
           amount,
+
           cast_ms: castMs,
           // Fallback: pre-migration bosses only set legacy `amount`. Treat it
           // as the primary flat damage so the resolver always has a base value.
@@ -2278,11 +2300,17 @@ Deno.serve(async (req) => {
           ? Math.floor(cfg.stored_power.cap)
           : predictedMax;
 
+        const startRendered = castFlavor
+          ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
+          : '';
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
-          message: `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
+          message: startRendered
+            ? `${emoji} ${startRendered}`
+            : `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
         });
+
 
         castBroadcasts.push({
           event: 'cast_started',

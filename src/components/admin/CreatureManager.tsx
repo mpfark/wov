@@ -14,6 +14,9 @@ import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
+import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
+import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
+
 
 interface Creature {
   id: string;
@@ -96,6 +99,9 @@ const defaultForm = () => ({
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
+  boss_cast_flavor: '',        // log line when the boss begins the cast
+  boss_cast_hit_flavor: '',    // log line when the cast lands on a character
+
   boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
@@ -198,6 +204,10 @@ export default function CreatureManager() {
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
+      boss_cast_flavor: (c as any).boss_cast?.cast_flavor ?? '',
+      boss_cast_hit_flavor: (c as any).boss_cast?.hit_flavor ?? '',
+
+
       
       boss_cast_ticks: Math.max(1, Math.round((Number((c as any).boss_cast?.cast_ms) || 4000) / TICK_RATE_MS)),
       boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
@@ -285,6 +295,10 @@ export default function CreatureManager() {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
+        // Authored log flavor; blank → server default wording.
+        cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+        hit_flavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+
         // Mirror flat-damage into legacy `amount` so the two fields never drift.
         amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
@@ -738,6 +752,27 @@ export default function CreatureManager() {
                           className="flex-1 h-7 text-xs"
                         />
                       </div>
+                      <FlavorField
+                        label="Casting flavor (log line when the cast begins)"
+                        value={form.boss_cast_flavor}
+                        onChange={v => setForm(f => ({ ...f, boss_cast_flavor: v }))}
+                        placeholder="{creature} draws the sky down — {cast} gathers above the node!"
+                        emoji={form.boss_cast_emoji}
+                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm' }}
+                        hint="{target}/{damage} are empty here"
+                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'} begins channeling ${form.boss_cast_label || 'Cataclysm'}! Flee the node to avoid it. (default)`}
+                      />
+                      <FlavorField
+                        label="Impact flavor (log line when the cast lands)"
+                        value={form.boss_cast_hit_flavor}
+                        onChange={v => setForm(f => ({ ...f, boss_cast_hit_flavor: v }))}
+                        placeholder="{cast} breaks over {target} in a wave of ruin!"
+                        emoji={form.boss_cast_emoji}
+                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm', damage: 42 }}
+                        hint="damage is appended as [N] unless you write {damage}"
+                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'}'s ${form.boss_cast_label || 'Cataclysm'} strikes Hero! [42] (default)`}
+                      />
+
                       <div className="grid grid-cols-2 gap-1">
                         <label className="text-[10px] text-muted-foreground">
                           Flat damage (primary)
@@ -843,8 +878,10 @@ export default function CreatureManager() {
               <div className="space-y-1.5">
                 <p className="font-display text-xs text-primary">Boss Crit Flavors</p>
                 <p className="text-[10px] text-muted-foreground">
-                  Optional. Use template variables: <span className="font-mono">%a</span> = attacker, <span className="font-mono">%e</span> = enemy, <span className="font-mono">%v</span> = damage value. Example: "%a unleashes fire upon %e".
+                  Optional. Same placeholders as Boss Cast flavor: <span className="font-mono">{FLAVOR_TOKENS}</span> (legacy <span className="font-mono">%a/%e/%v</span> still works).
+                  Example: "{'{creature}'} unleashes fire upon {'{target}'}".
                 </p>
+
                 {form.boss_crit_flavors.map((flavor, idx) => (
                   <div key={idx} className="p-2 bg-background/50 rounded border border-border space-y-1">
                     <div className="flex items-center gap-1">
@@ -893,7 +930,7 @@ export default function CreatureManager() {
                         updated[idx] = { ...updated[idx], text: e.target.value };
                         setForm(f => ({ ...f, boss_crit_flavors: updated }));
                       }}
-                      placeholder="%a unleashes a searing breath upon %e"
+                      placeholder="{creature} unleashes a searing breath upon {target}"
                       className="h-7 text-xs"
                     />
                     <Input
@@ -908,14 +945,16 @@ export default function CreatureManager() {
                     />
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
-                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}{
-                          flavor.text
-                            .replace(/%a/g, form.name || 'Dragon')
-                            .replace(/%e/g, 'Hero')
-                            .replace(/%v/g, '25')
-                        }!
+                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}
+                        {renderFlavor(flavor.text, {
+                          creature: form.name || 'Dragon',
+                          target: 'Hero',
+                          cast: flavor.name || '',
+                          damage: 25,
+                        })}!
                       </p>
                     )}
+
                   </div>
                 ))}
                 <Button
