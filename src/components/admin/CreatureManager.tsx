@@ -292,6 +292,10 @@ export default function CreatureManager() {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
+        // Authored log flavor; blank → server default wording.
+        cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+        hit_flavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+
         // Mirror flat-damage into legacy `amount` so the two fields never drift.
         amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
         cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
