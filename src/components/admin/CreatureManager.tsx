@@ -930,7 +930,7 @@ export default function CreatureManager() {
                         updated[idx] = { ...updated[idx], text: e.target.value };
                         setForm(f => ({ ...f, boss_crit_flavors: updated }));
                       }}
-                      placeholder="%a unleashes a searing breath upon %e"
+                      placeholder="{creature} unleashes a searing breath upon {target}"
                       className="h-7 text-xs"
                     />
                     <Input
@@ -945,14 +945,16 @@ export default function CreatureManager() {
                     />
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
-                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}{
-                          flavor.text
-                            .replace(/%a/g, form.name || 'Dragon')
-                            .replace(/%e/g, 'Hero')
-                            .replace(/%v/g, '25')
-                        }!
+                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}
+                        {renderFlavor(flavor.text, {
+                          creature: form.name || 'Dragon',
+                          target: 'Hero',
+                          cast: flavor.name || '',
+                          damage: 25,
+                        })}!
                       </p>
                     )}
+
                   </div>
                 ))}
                 <Button
