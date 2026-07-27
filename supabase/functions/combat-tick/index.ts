@@ -2226,7 +2226,12 @@ Deno.serve(async (req) => {
         const payload: Record<string, unknown> = {
           label,
           emoji,
+          // Authored flavor travels with the cast so resolution (which may run
+          // in a later tick) renders the same text the admin configured.
+          cast_flavor: castFlavor || undefined,
+          hit_flavor: hitFlavorCfg || undefined,
           amount,
+
           cast_ms: castMs,
           // Fallback: pre-migration bosses only set legacy `amount`. Treat it
           // as the primary flat damage so the resolver always has a base value.
