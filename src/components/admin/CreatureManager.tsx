@@ -96,6 +96,9 @@ const defaultForm = () => ({
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
+  boss_cast_flavor: '',        // log line when the boss begins the cast
+  boss_cast_hit_flavor: '',    // log line when the cast lands on a character
+
   boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
   boss_cast_cooldown_ms: 20000,
   boss_cast_chance: 0.3,
