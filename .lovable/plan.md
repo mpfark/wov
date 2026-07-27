@@ -1,44 +1,46 @@
 ## Goal
 
-Produce a read-only Markdown reference pack describing the current world of Wayfarers of Varneth, so another AI can design new bosses, areas, nodes, creatures, and unique rewards that fit the existing systems — and return implementation-ready markup.
+Give boss telegraphed casts admin-authored flavor text (a "casting" line and a "lands" line), and make **boss crit flavors use the exact same placeholder system**, so all boss text is authored the same way.
 
-No game, database, migration, or code changes. Output goes to `/mnt/documents/world-export/` and is delivered as downloadable files.
+Current state:
+- Cast start/hit lines are hardcoded in `combat-tick`:
+  - `{emoji} {creature} begins channeling {label}! Flee the node to avoid it.`
+  - `{emoji} {creature}'s {label} strikes {member}! [{dmg}]`
+- `boss_crit_flavors` (jsonb array of `{name, text, emoji, weight, damage_type}`) is picked at random on a boss crit and passed through as static text — no substitution.
 
-## What the data currently looks like (verified by query)
+## Shared placeholder system
 
-- 9 regions, 58 areas, 762 nodes
-- 376 creatures: 16 bosses, 53 rares, 307 regular
-- 42 unique/soulforged items
-- 37 NPCs
-- 4 nodes with hidden connections, 3 nodes with locked (item-gated) connections, 2 nodes with searchable items
-- 2 creatures with no node (orphaned), 1 map item pointing at a target node
+One small `renderFlavor(template, vars)` helper, used by cast text and crit text alike:
 
-## Files to generate
+| Token | Meaning |
+| --- | --- |
+| `{creature}` | Boss name |
+| `{target}` | Character being hit (blank on cast-start) |
+| `{cast}` | Cast label (cast lines) / flavor name (crit lines) |
+| `{damage}` | Damage number |
 
-**1. `00-README-and-conventions.md`**
-How to read the pack, the confirmed / inferred / inactive / conflicting labelling convention, the hard world rules (stationary creatures, one boss per dedicated node, hidden paths via search, item-locked paths, no roaming), and the handoff contract for the proposed-content file the other AI will write back.
+Rules: trim, strip newlines, cap ~240 chars, unknown tokens left literal, `{damage}` respects the existing flavor-only/numbers setting via the canonical `[N]` suffix (no duplicate number when authored inline).
 
-**2. `01-world-structure.md`**
-Region → area → node hierarchy with real UUIDs and short IDs. Per region: level band, direction, sort order, area list with `area_type`, level range, creature types. Node index in compact tables (id, name, area, x/y, service flags). Connection graph: direction-labelled edges, plus dedicated sections for hidden connections, locked connections with the exact required `lock_key` item, and dead-end / single-path nodes (prime boss-node candidates).
+## What to build
 
-**3. `02-creatures-and-bosses.md`**
-- Full boss dossier for all 16: node + area placement, level, HP/AC/stats, aggression, `boss_cast` config (cast key, ability name, cast ticks, `base_amount`, `primary_share`, `aoe_share`, stored-power cap), crit flavors, death cry, loot mode and loot table, respawn.
-- Rare/elite roster grouped by area with level and drop config.
-- Regular creature roster summarised per area (level band, counts, humanoid vs not) rather than 307 individual dumps, with a full appendix table of id/name/level/node for reference.
-- Coverage matrix: creature and boss density per level band and region — the gap-finding tool.
+**1. Two new fields on `creatures.boss_cast` (JSONB, no migration)**
+- `cast_flavor` — emitted as the `boss_cast_start` message
+- `hit_flavor` — emitted per hit target on resolution
+- Blank → current default wording, so all 16 existing bosses are unaffected.
 
-**4. `03-items-and-rewards.md`**
-All 42 unique/soulforged items: name, level, slot, hands, rarity, stats, procs, weapon tag/die, soulbound flag, world-drop flag, and where they drop (loot table → creature → node) or that they are unobtainable. Slot × level-band coverage matrix. Key/quest items and which connection they unlock. Map items and their target nodes. Notes on the gem/soulforge/tier crafting economy so proposals don't collide with crafted gear.
+**2. Admin UI — `CreatureManager.tsx`**
+- Boss Cast card: two textareas (`cast_flavor`, `hit_flavor`) with placeholder help + live preview of the rendered line (falls back to showing the default when blank).
+- Boss Crit Flavors list: same placeholder help text and live preview per flavor row, so both cards read identically.
+- A single shared `FlavorField` component in the admin folder to avoid duplicated help/preview markup.
 
-**5. `04-progression-quests-and-services.md`**
-NPC roster with node, service role and dialogue topics; class halls; teleport nodes (public vs private); service nodes (vendor/inn/blacksmith/jewelcrafter/stonebinder/soulforge/marketplace/heraldry/trainer). Level-gated progression milestones, the Assassin contract system, class bond, and the level 40/42 milestone items — the constraints new content must slot between.
+**3. Edge function — `supabase/functions/combat-tick/index.ts`**
+- Add `renderFlavor`; apply it to cast start, cast hit, and the selected boss crit flavor `text` before it is attached to the crit event.
+- Mirror the helper location alongside the other shared combat utilities so client-side previews and the server agree.
 
-**6. `05-implementation-reference.md`**
-Field-by-field schema notes for `regions`, `areas`, `nodes` (including the `connections` and `searchable_items` JSON shapes), `creatures` (including the exact `boss_cast` JSON shape and stored-power semantics), `items`, `loot_tables`/`loot_table_entries`, `npcs`. Formula owners (`src/shared/formulas/*` and the Deno mirror), the 2000ms tick rate and tick-based cast durations, creature stat/AC generation formulas, item stat budget and caps, crit multipliers. Admin-tool references (CreatureManager, node editor, NPCManager) and the exact template the proposed-content file should follow so Lovable can implement it mechanically.
+**4. Docs**
+- Update the boss input template / manual notes with the placeholder table and the two new cast fields.
 
-**7. `06-gaps-and-inactive-content.md`**
-Confirmed gaps and loose ends only, no speculation: the 2 orphaned creatures, areas with no nodes, nodes with no creatures/services, unique items with no drop source, level bands with no boss, regions with thin content, disconnected or one-way connections, and any bosses missing cast configuration. Each entry tagged as inactive / incomplete / conflicting / missing-data.
+## Notes
 
-## Method
-
-Read-only SQL against the live database for all content facts; source-file reads for formulas, JSON shapes and admin-tool field names. Anything not directly readable is either omitted or explicitly marked as inferred. UUIDs are preserved verbatim everywhere so the return file can reference existing rows reliably.
+- Crit flavors keep their existing shape (name/emoji/weight/damage_type) — only the `text` gains substitution, so existing entries stay valid.
+- Cast-miss (all players fled, boss heals) keeps its current handling; say the word if you want a third `miss_flavor` field.
