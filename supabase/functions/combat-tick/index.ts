@@ -2085,6 +2085,7 @@ Deno.serve(async (req) => {
         const creatureName = creature?.name ?? 'The boss';
         const label = (cst.payload as any)?.label ?? cst.cast_key;
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
+        const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
 
         // Apply damage to our in-memory member HP for members who were hit.
         // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
@@ -2098,14 +2099,24 @@ Deno.serve(async (req) => {
             mHp[h.character_id] = Math.max(0, mHp[h.character_id] - dmg);
           }
           const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
+          // Authored flavor wins; blank falls back to the default wording.
+          // If the author inlined {damage}/%v we skip the canonical [N] suffix
+          // so the number isn't printed twice.
+          const rendered = hitFlavor
+            ? renderFlavor(hitFlavor, { creature: creatureName, target: memberName, cast: label, damage: dmg })
+            : '';
+          const message = rendered
+            ? `${emoji} ${rendered}${flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`}`
+            : `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`;
           events.push({
             type: 'boss_cast_hit',
             character_id: h.character_id,
             creature_id: cst.creature_id,
             damage: dmg,
-            message: `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`,
+            message,
           });
         }
+
         activeByCreature.delete(cst.creature_id);
         lastCastAtByCreature.set(cst.creature_id, now);
 
