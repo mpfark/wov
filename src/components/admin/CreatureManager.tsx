@@ -756,6 +756,23 @@ export default function CreatureManager() {
                           className="flex-1 h-7 text-xs"
                         />
                       </div>
+                      <label className="text-[10px] text-muted-foreground block">
+                        Damage type
+                        <Select
+                          value={form.boss_cast_damage_type || DAMAGE_TYPE_NONE}
+                          onValueChange={v => setForm(f => ({ ...f, boss_cast_damage_type: v === DAMAGE_TYPE_NONE ? '' : v }))}
+                        >
+                          <SelectTrigger className="h-7 text-xs mt-0.5">
+                            <SelectValue placeholder="Damage type (optional)" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">— No damage type —</SelectItem>
+                            {DAMAGE_TYPES.map(d => (
+                              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
                       <FlavorField
                         label="Casting flavor (log line when the cast begins)"
                         value={form.boss_cast_flavor}
