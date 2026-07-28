@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import ItemPicker from './ItemPicker';
 import { toast } from 'sonner';
 import { Plus, Trash2, MessageCircle } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
@@ -407,9 +408,9 @@ function TopicsEditor({
   topics: DialogueTopic[];
   onChange: (next: DialogueTopic[]) => void;
 }) {
-  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string }>>([]);
+  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string; rarity: string; level?: number; slot?: string | null }>>([]);
   useEffect(() => {
-    supabase.from('items').select('id, name, item_type').order('name').then(({ data }) => {
+    supabase.from('items').select('id, name, item_type, rarity, level, slot').order('name').then(({ data }) => {
       if (data) setGiveItems(data as any);
     });
   }, []);
@@ -512,19 +513,13 @@ function TopicsEditor({
                 rows={2}
                 onChange={e => update(idx, { response: e.target.value })}
               />
-              <Select
-                value={String(t.params?.item_id ?? '')}
-                onValueChange={v => update(idx, { params: { ...(t.params ?? {}), item_id: v } })}
-              >
-                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick item to give" /></SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50 max-h-64">
-                  {giveItems.map(it => (
-                    <SelectItem key={it.id} value={it.id} className="text-xs">
-                      {it.name} <span className="text-muted-foreground">({it.item_type})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ItemPicker
+                items={giveItems as any}
+                value={(t.params?.item_id as string) || null}
+                onChange={v => update(idx, { params: { ...(t.params ?? {}), item_id: v } })}
+                placeholder="Pick item to give"
+                allowNone
+              />
               <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <input
                   type="checkbox"
