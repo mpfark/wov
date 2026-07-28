@@ -605,6 +605,19 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         opacity={isCurrent ? 1 : 0.85}
                       />
 
+                      {/* Boss marker — discovered boss lair */}
+                      {nodeBosses.length > 0 && (
+                        <text
+                          x={p.px + NODE_R * 0.6} y={p.py - NODE_R * 0.55}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={9}
+                        >
+                          💀
+                        </text>
+                      )}
+
+
+
                       {/* Teleport icon */}
                       {isTeleportNode && onTeleport && !isCurrent && (
                         <text
