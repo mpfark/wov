@@ -15,6 +15,7 @@ import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
 import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
+import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
 
 
@@ -99,6 +100,7 @@ const defaultForm = () => ({
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
+  boss_cast_damage_type: '',   // canonical damage type for the cast
   boss_cast_flavor: '',        // log line when the boss begins the cast
   boss_cast_hit_flavor: '',    // log line when the cast lands on a character
 
@@ -204,6 +206,7 @@ export default function CreatureManager() {
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
+      boss_cast_damage_type: (c as any).boss_cast?.damage_type ?? '',
       boss_cast_flavor: (c as any).boss_cast?.cast_flavor ?? '',
       boss_cast_hit_flavor: (c as any).boss_cast?.hit_flavor ?? '',
 
@@ -296,6 +299,7 @@ export default function CreatureManager() {
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         // Authored log flavor; blank → server default wording.
+        damage_type: form.boss_cast_damage_type || null,
         cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
         hit_flavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
 
@@ -752,6 +756,23 @@ export default function CreatureManager() {
                           className="flex-1 h-7 text-xs"
                         />
                       </div>
+                      <label className="text-[10px] text-muted-foreground block">
+                        Damage type
+                        <Select
+                          value={form.boss_cast_damage_type || DAMAGE_TYPE_NONE}
+                          onValueChange={v => setForm(f => ({ ...f, boss_cast_damage_type: v === DAMAGE_TYPE_NONE ? '' : v }))}
+                        >
+                          <SelectTrigger className="h-7 text-xs mt-0.5">
+                            <SelectValue placeholder="Damage type (optional)" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">— No damage type —</SelectItem>
+                            {DAMAGE_TYPES.map(d => (
+                              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
                       <FlavorField
                         label="Casting flavor (log line when the cast begins)"
                         value={form.boss_cast_flavor}
@@ -933,16 +954,24 @@ export default function CreatureManager() {
                       placeholder="{creature} unleashes a searing breath upon {target}"
                       className="h-7 text-xs"
                     />
-                    <Input
-                      value={flavor.damage_type}
-                      onChange={e => {
+                    <Select
+                      value={flavor.damage_type || DAMAGE_TYPE_NONE}
+                      onValueChange={v => {
                         const updated = [...form.boss_crit_flavors];
-                        updated[idx] = { ...updated[idx], damage_type: e.target.value };
+                        updated[idx] = { ...updated[idx], damage_type: v === DAMAGE_TYPE_NONE ? '' : v };
                         setForm(f => ({ ...f, boss_crit_flavors: updated }));
                       }}
-                      placeholder="Damage type (optional, e.g. fire)"
-                      className="h-7 text-[10px] text-muted-foreground"
-                    />
+                    >
+                      <SelectTrigger className="h-7 text-[10px] text-muted-foreground">
+                        <SelectValue placeholder="Damage type (optional)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">— No damage type —</SelectItem>
+                        {DAMAGE_TYPES.map(d => (
+                          <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
                         Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}
