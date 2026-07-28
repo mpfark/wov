@@ -299,6 +299,7 @@ export default function CreatureManager() {
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
         // Authored log flavor; blank → server default wording.
+        damage_type: form.boss_cast_damage_type || null,
         cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
         hit_flavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
 
