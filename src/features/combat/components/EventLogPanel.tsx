@@ -11,11 +11,7 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { stripFlavorNumber } from '@/features/combat/utils/combat-text';
-import {
-  classifyLogLine,
-  splitLogTokens,
-  EVENT_STYLE,
-} from '@/features/combat/utils/event-log-styles';
+import EventLogLine from '@/features/combat/components/EventLogLine';
 import {
   FONT_SIZE_CLASS,
   type EventLogDisplay,
@@ -52,29 +48,11 @@ export default function EventLogPanel({
             }
             // Flavor mode: strip the trailing canonical [N] suffix server lines emit.
             const log = displayMode === 'flavor' ? stripFlavorNumber(rawLog) : rawLog;
-            const cls = classifyLogLine(log);
-            const style = EVENT_STYLE[cls.category];
-            const { icon, body, number } = splitLogTokens(log);
-            return (
-              <p
-                key={key}
-                className={cn(
-                  'event-log-line',
-                  style.textClass,
-                  style.emphasis === 'strong' && 'font-semibold',
-                  cls.isRemote && 'opacity-60 italic',
-                )}
-              >
-                {icon && <span className={cn('event-log-icon', style.iconClass)}>{icon}</span>}
-                <span className="event-log-body">{body}</span>
-                {number && (
-                  <span className={cn('event-log-number', style.numberClass)}>{` ${number}`}</span>
-                )}
-              </p>
-            );
+            return <EventLogLine key={key} log={log} />;
           })
         )}
       </div>
     </div>
   );
 }
+
