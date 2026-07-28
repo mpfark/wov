@@ -368,7 +368,8 @@ export type EventLogFamily =
   | 'threat'    // incoming attacks and damage
   | 'support'   // healing, regen, buffs, mitigation
   | 'ambient'   // movement, ordinary loot, narration, unknown/legacy
-  | 'notable'   // boss telegraphs, death, quests, rare loot, level gains, errors
+  | 'notable'   // death, quests, rare loot, level gains, errors
+  | 'telegraph' // boss telegraphed casts — distinct from holy/support
   | 'chat';     // speech + whispers (conversational, never combat-styled)
 
 /** Monochrome marker keys — mapped to lucide icons by the renderer. */
@@ -418,6 +419,11 @@ const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' |
     edgeClass: 'log-edge-notable',
     textClass: 'text-log-loot',
     numberClass: 'text-log-loot',
+  },
+  telegraph: {
+    edgeClass: 'log-edge-telegraph',
+    textClass: 'text-log-telegraph',
+    numberClass: 'text-log-telegraph',
   },
   chat: {
     edgeClass: 'log-edge-chat',
@@ -470,7 +476,9 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
   const isPlayerDeath = PLAYER_DEATH_RE.test(log);
 
   let family: EventLogFamily;
-  if (isQuest || isTelegraph || isError) {
+  if (isTelegraph) {
+    family = 'telegraph';
+  } else if (isQuest || isError) {
     family = 'notable';
   } else if (cls.category === 'crit') {
     // Crits are frequent — keep them in their source family, just emphasised.
@@ -480,7 +488,6 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
       // Bare "💥 CRITICAL!" lines carry no category glyph — infer the side.
       family = /\byou(?:r)?\b/i.test(log) && !/\bhits? you\b/i.test(log) ? 'action' : 'threat';
     }
-  
   } else {
     family = CATEGORY_FAMILY[cls.category] ?? 'ambient';
   }
@@ -493,7 +500,7 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
   else if (cls.isLevelUp) marker = 'level_up';
   else if (cls.category === 'loot') marker = 'loot_rare';
 
-  const strong = family === 'notable' || cls.isCrit;
+  const strong = family === 'notable' || family === 'telegraph' || cls.isCrit;
   const urgent = isTelegraph || isPlayerDeath;
 
   return { family, ...FAMILY_STYLE[family], strong, urgent, marker };

@@ -96,6 +96,7 @@ export default {
           buff: "hsl(var(--log-buff))",
           mitigation: "hsl(var(--log-mitigation))",
           loot: "hsl(var(--log-loot))",
+          telegraph: "hsl(var(--log-telegraph))",
           system: "hsl(var(--log-system))",
           "number-damage": "hsl(var(--log-number-damage))",
           "number-heal": "hsl(var(--log-number-heal))",
