@@ -2304,9 +2304,11 @@ Deno.serve(async (req) => {
           ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
           : '';
         // Authored prose stands alone — no cast name or flee hint appended.
+        // Leading 🌀 is a routing sentinel: stripped visually by the log
+        // renderer, but lets the client style every cast-start as a telegraph.
         const startMessage = startRendered
-          ? `${emoji} ${startRendered}`
-          : `${emoji} ${creature.name} begins channeling ${label}!`;
+          ? `🌀${emoji} ${startRendered}`
+          : `🌀${emoji} ${creature.name} begins channeling ${label}!`;
 
         events.push({
           type: 'boss_cast_start',
