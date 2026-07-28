@@ -548,9 +548,13 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   
                   const isSelected = selectedTeleportNode === node.id;
 
+                  const nodeBosses = bossesByNode.get(node.id) || [];
+
                   const buildNodeTooltip = (e: React.MouseEvent) => {
                     const lines: string[] = [];
                     if (area && area.name !== node.name) lines.push(area.name);
+                    for (const b of nodeBosses) lines.push(`💀 ${b.name} (Lv ${b.level})`);
+
                     const services: string[] = [];
                     if (node.is_teleport) services.push('🌀 Teleport');
                     if ((node as any).is_inn) services.push('🏨 Inn');
