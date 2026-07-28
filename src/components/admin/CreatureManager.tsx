@@ -100,6 +100,7 @@ const defaultForm = () => ({
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
   boss_cast_emoji: '☄️',
+  boss_cast_damage_type: '',   // canonical damage type for the cast
   boss_cast_flavor: '',        // log line when the boss begins the cast
   boss_cast_hit_flavor: '',    // log line when the cast lands on a character
 
