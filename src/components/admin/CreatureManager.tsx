@@ -933,16 +933,24 @@ export default function CreatureManager() {
                       placeholder="{creature} unleashes a searing breath upon {target}"
                       className="h-7 text-xs"
                     />
-                    <Input
-                      value={flavor.damage_type}
-                      onChange={e => {
+                    <Select
+                      value={flavor.damage_type || DAMAGE_TYPE_NONE}
+                      onValueChange={v => {
                         const updated = [...form.boss_crit_flavors];
-                        updated[idx] = { ...updated[idx], damage_type: e.target.value };
+                        updated[idx] = { ...updated[idx], damage_type: v === DAMAGE_TYPE_NONE ? '' : v };
                         setForm(f => ({ ...f, boss_crit_flavors: updated }));
                       }}
-                      placeholder="Damage type (optional, e.g. fire)"
-                      className="h-7 text-[10px] text-muted-foreground"
-                    />
+                    >
+                      <SelectTrigger className="h-7 text-[10px] text-muted-foreground">
+                        <SelectValue placeholder="Damage type (optional)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">— No damage type —</SelectItem>
+                        {DAMAGE_TYPES.map(d => (
+                          <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
                         Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}
