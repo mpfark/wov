@@ -488,7 +488,6 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
       // Bare "💥 CRITICAL!" lines carry no category glyph — infer the side.
       family = /\byou(?:r)?\b/i.test(log) && !/\bhits? you\b/i.test(log) ? 'action' : 'threat';
     }
-  
   } else {
     family = CATEGORY_FAMILY[cls.category] ?? 'ambient';
   }
