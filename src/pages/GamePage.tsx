@@ -34,6 +34,8 @@ import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarket
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
+import { classifyLogLine } from '@/features/combat/utils/event-log-styles';
+
 import { useCombatDriver } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
 import { CLASS_ABILITIES } from '@/features/combat';
