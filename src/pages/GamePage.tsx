@@ -1017,15 +1017,21 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onCycleTarget: handleCycleTarget,
   });
 
-  // Separate chat messages from event log for wide-screen chat panel
+  // Separate chat messages from event log for wide-screen chat panel.
+  // Routing uses the shared classifier (not literal emoji checks) so the
+  // split stays correct if emitters change their glyphs.
   const chatMessages = useMemo(() =>
-    eventLog.filter(log => log.startsWith('💬') || log.startsWith('🤫')),
+    eventLog.filter(log => classifyLogLine(log).category === 'speech' || classifyLogLine(log).category === 'whisper'),
     [eventLog]
   );
-  const filteredEventLog = useMemo(() =>
-    (isWideScreen && chatPanelOpen) ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
-    [eventLog, isWideScreen, chatPanelOpen]
-  );
+  const filteredEventLog = useMemo(() => {
+    if (!(isWideScreen && chatPanelOpen)) return eventLog;
+    return eventLog.filter(log => {
+      const cat = classifyLogLine(log).category;
+      return cat !== 'speech' && cat !== 'whisper';
+    });
+  }, [eventLog, isWideScreen, chatPanelOpen]);
+
 
   // ── Shared drop handler ────────────────────────────────────────
   const handleDropItem = useCallback(async (inventoryId: string) => {
