@@ -456,7 +456,8 @@ const CATEGORY_FAMILY: Record<EventLogCategory, EventLogFamily> = {
 };
 
 const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
-const TELEGRAPH_RE = /begins channeling|flee the node|begins to channel|telegraph/i;
+/** 🌀 is the server-emitted sentinel for boss cast starts (see combat-tick). */
+const TELEGRAPH_RE = /^🌀|begins channeling|flee the node|begins to channel|telegraph/i;
 const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
 const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
 
