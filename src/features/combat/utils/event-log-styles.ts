@@ -368,7 +368,8 @@ export type EventLogFamily =
   | 'threat'    // incoming attacks and damage
   | 'support'   // healing, regen, buffs, mitigation
   | 'ambient'   // movement, ordinary loot, narration, unknown/legacy
-  | 'notable'   // boss telegraphs, death, quests, rare loot, level gains, errors
+  | 'notable'   // death, quests, rare loot, level gains, errors
+  | 'telegraph' // boss telegraphed casts — distinct from holy/support
   | 'chat';     // speech + whispers (conversational, never combat-styled)
 
 /** Monochrome marker keys — mapped to lucide icons by the renderer. */
@@ -418,6 +419,11 @@ const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' |
     edgeClass: 'log-edge-notable',
     textClass: 'text-log-loot',
     numberClass: 'text-log-loot',
+  },
+  telegraph: {
+    edgeClass: 'log-edge-telegraph',
+    textClass: 'text-log-telegraph',
+    numberClass: 'text-log-telegraph',
   },
   chat: {
     edgeClass: 'log-edge-chat',
@@ -470,7 +476,9 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
   const isPlayerDeath = PLAYER_DEATH_RE.test(log);
 
   let family: EventLogFamily;
-  if (isQuest || isTelegraph || isError) {
+  if (isTelegraph) {
+    family = 'telegraph';
+  } else if (isQuest || isError) {
     family = 'notable';
   } else if (cls.category === 'crit') {
     // Crits are frequent — keep them in their source family, just emphasised.
