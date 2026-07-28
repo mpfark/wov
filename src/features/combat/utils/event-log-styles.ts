@@ -501,7 +501,7 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
   else if (cls.isLevelUp) marker = 'level_up';
   else if (cls.category === 'loot') marker = 'loot_rare';
 
-  const strong = family === 'notable' || cls.isCrit;
+  const strong = family === 'notable' || family === 'telegraph' || cls.isCrit;
   const urgent = isTelegraph || isPlayerDeath;
 
   return { family, ...FAMILY_STYLE[family], strong, urgent, marker };
