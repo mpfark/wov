@@ -355,3 +355,142 @@ export function splitLogTokens(log: string): LogTokens {
 
   return { icon, body: rest, number };
 }
+
+// ── Presentation layer ─────────────────────────────────────────
+//
+// The classifier above stays fine-grained (it is also what routing and
+// tests rely on). The *rendered* log collapses those categories into five
+// restrained visual families so the panel reads as a scannable narrative
+// rather than a colour chart.
+
+export type EventLogFamily =
+  | 'action'    // player attacks / abilities
+  | 'threat'    // incoming attacks and damage
+  | 'support'   // healing, regen, buffs, mitigation
+  | 'ambient'   // movement, ordinary loot, narration, unknown/legacy
+  | 'notable'   // boss telegraphs, death, quests, rare loot, level gains, errors
+  | 'chat';     // speech + whispers (conversational, never combat-styled)
+
+/** Monochrome marker keys — mapped to lucide icons by the renderer. */
+export type EventLogMarker =
+  | 'kill'
+  | 'level_up'
+  | 'loot_rare'
+  | 'quest'
+  | 'telegraph'
+  | 'error';
+
+export interface EventLogPresentation {
+  family: EventLogFamily;
+  /** Left-edge accent class (index.css). */
+  edgeClass: string;
+  textClass: string;
+  numberClass: string;
+  strong: boolean;
+  /** Brief, one-shot attention treatment. Never a looping pulse. */
+  urgent: boolean;
+  /** Only ever set for exceptional events; routine lines render icon-free. */
+  marker: EventLogMarker | null;
+}
+
+const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' | 'strong' | 'urgent' | 'marker'>> = {
+  action: {
+    edgeClass: 'log-edge-action',
+    textClass: 'text-log-player/90',
+    numberClass: 'text-log-number-damage',
+  },
+  threat: {
+    edgeClass: 'log-edge-threat',
+    textClass: 'text-log-enemy/90',
+    numberClass: 'text-log-number-damage',
+  },
+  support: {
+    edgeClass: 'log-edge-support',
+    textClass: 'text-log-heal/90',
+    numberClass: 'text-log-number-heal',
+  },
+  ambient: {
+    edgeClass: 'log-edge-ambient',
+    textClass: 'text-foreground/70',
+    numberClass: 'text-foreground/80',
+  },
+  notable: {
+    edgeClass: 'log-edge-notable',
+    textClass: 'text-log-loot',
+    numberClass: 'text-log-loot',
+  },
+  chat: {
+    edgeClass: 'log-edge-chat',
+    textClass: 'text-foreground',
+    numberClass: 'text-foreground',
+  },
+};
+
+const CATEGORY_FAMILY: Record<EventLogCategory, EventLogFamily> = {
+  player_attack: 'action',
+  passive: 'action',
+  enemy_attack: 'threat',
+  fire: 'threat',
+  poison: 'threat',
+  bleed: 'threat',
+  shadow: 'threat',
+  heal: 'support',
+  holy: 'support',
+  buff: 'support',
+  mitigation: 'support',
+  system: 'ambient',
+  xp: 'ambient',
+  neutral: 'ambient',
+  loot: 'notable',
+  level_up: 'notable',
+  kill: 'notable',
+  crit: 'action',
+  whisper: 'chat',
+  speech: 'chat',
+};
+
+const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
+const TELEGRAPH_RE = /begins channeling|flee the node|begins to channel|telegraph/i;
+const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
+const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
+
+/**
+ * Single source of truth for how a finished log line is rendered.
+ *
+ * Takes the raw string so every consumer (event log, chat panel, future
+ * filters) derives family/marker/emphasis the same way — no component
+ * should re-parse emoji or re-derive colours itself.
+ */
+export function toPresentation(log: string, classified?: ClassifiedLog): EventLogPresentation {
+  const cls = classified ?? classifyLogLine(log);
+
+  const isQuest = QUEST_RE.test(log);
+  const isTelegraph = TELEGRAPH_RE.test(log);
+  const isError = cls.baseCategory === 'enemy_attack' && log.startsWith('⚠️') && ERROR_RE.test(log);
+  const isPlayerDeath = PLAYER_DEATH_RE.test(log);
+
+  let family: EventLogFamily;
+  if (isQuest || isTelegraph || isError) {
+    family = 'notable';
+  } else if (cls.category === 'crit') {
+    // Crits are frequent — keep them in their source family, just emphasised.
+    family = CATEGORY_FAMILY[cls.baseCategory] ?? 'ambient';
+    if (family === 'chat') family = 'ambient';
+  } else {
+    family = CATEGORY_FAMILY[cls.category] ?? 'ambient';
+  }
+
+  let marker: EventLogMarker | null = null;
+  if (isTelegraph) marker = 'telegraph';
+  else if (isQuest) marker = 'quest';
+  else if (isError) marker = 'error';
+  else if (cls.isKill || isPlayerDeath) marker = 'kill';
+  else if (cls.isLevelUp) marker = 'level_up';
+  else if (cls.category === 'loot') marker = 'loot_rare';
+
+  const strong = family === 'notable' || cls.isCrit;
+  const urgent = isTelegraph || isPlayerDeath;
+
+  return { family, ...FAMILY_STYLE[family], strong, urgent, marker };
+}
+
