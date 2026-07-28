@@ -1,9 +1,15 @@
 /**
  * Owns: right-side viewport gutter panel showing chat messages (display-only).
+ *
+ * Shares the line renderer with the Event Log (EventLogLine) so emoji
+ * suppression and classification live in one place, but uses the `chat`
+ * variant so conversation keeps its own presentation — no combat colours,
+ * no left-edge accent, no markers.
  */
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
-import { getLogColor } from '@/features/combat/utils/combat-log-utils';
+import EventLogLine from '@/features/combat/components/EventLogLine';
+
 
 interface ChatPanelProps {
   messages: string[];
@@ -31,8 +37,9 @@ export default function ChatPanel({ messages, onClose }: ChatPanelProps) {
           <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
         ) : (
           messages.map((log, i) => (
-            <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
+            <EventLogLine key={i} log={log} variant="chat" className="text-xs" />
           ))
+
         )}
       </div>
     </div>

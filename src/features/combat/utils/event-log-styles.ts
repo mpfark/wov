@@ -168,10 +168,123 @@ export const EVENT_STYLE: Record<EventLogCategory, EventLogStyle> = {
 
 export interface ClassifiedLog {
   category: EventLogCategory;
+  /** Category before the crit/kill/level-up overrides are applied. */
+  baseCategory: EventLogCategory;
   isRemote: boolean;
   isCrit: boolean;
   isKill: boolean;
   isLevelUp: boolean;
+}
+
+/**
+ * Base categorisation from the line's leading glyph / wording, before the
+ * strong overrides (crit / kill / level-up) are applied.
+ */
+function baseCategoryOf(log: string): EventLogCategory {
+  // Loot / XP / rewards.
+  if (
+    log.startsWith('🏆') ||
+    log.includes('Legendary') ||
+    log.includes('Soulforged item') ||
+    log.includes('Unique item')
+  ) {
+    return 'loot';
+  }
+  if (log.startsWith('📈') || log.startsWith('💰') || log.includes('XP') || log.includes('gold')) {
+    return 'xp';
+  }
+
+  // Communication.
+  if (log.startsWith('🤫')) return 'whisper';
+  if (log.startsWith('💬')) return 'speech';
+
+  // System / travel / queueing.
+  if (log.startsWith('⏳') || log.startsWith('🧭') || log.startsWith('🗺️') || log.startsWith('🚪')) {
+    return 'system';
+  }
+
+  // Mitigation / shield / block.
+  if (
+    log.startsWith('🛡️') ||
+    log.includes('blocks') ||
+    log.includes('absorbs') ||
+    log.includes('parries') ||
+    log.includes('deflects')
+  ) {
+    return 'mitigation';
+  }
+
+  // Healing / restore.
+  if (
+    log.startsWith('💚') ||
+    log.startsWith('💪') ||
+    log.startsWith('💉') ||
+    log.includes('restore') ||
+    log.includes('recover') ||
+    log.includes('heals you')
+  ) {
+    return 'heal';
+  }
+
+  // Holy / radiance / consecration.
+  if (
+    log.startsWith('✨') ||
+    log.startsWith('🕊️') ||
+    log.startsWith('🌟') ||
+    log.startsWith('🔆') ||
+    log.startsWith('⚡') ||
+    log.includes('holy damage') ||
+    log.includes('Consecrate')
+  ) {
+    return 'holy';
+  }
+
+  // Elemental DoTs / effects.
+  if (log.startsWith('🔥') || log.startsWith('🌋')) return 'fire';
+  if (log.startsWith('🧪') || log.startsWith('🐍')) return 'poison';
+  if (log.startsWith('🩸')) return 'bleed';
+  if (log.startsWith('🌑') || log.startsWith('🌫️')) return 'shadow';
+
+  // Buffs / songs / stances.
+  if (
+    log.startsWith('🎶') ||
+    log.startsWith('🌿') ||
+    log.startsWith('🔄') ||
+    log.startsWith('📯') ||
+    log.startsWith('🦅') ||
+    log.startsWith('🦘') ||
+    log.startsWith('⚜️')
+  ) {
+    return 'buff';
+  }
+
+  // Damage warnings / DoT damage taken / creature attacks.
+  if (log.startsWith('⚠️') || log.startsWith('💔') || log.startsWith('👹')) {
+    return 'enemy_attack';
+  }
+
+  // Player attack glyphs (weapons + class fallbacks).
+  if (
+    log.startsWith('⚔️') ||
+    log.startsWith('🗡️') ||
+    log.startsWith('🏹') ||
+    log.startsWith('🪓') ||
+    log.startsWith('🔨') ||
+    log.startsWith('🪄') ||
+    log.startsWith('🎯') ||
+    log.startsWith('🔪') ||
+    log.startsWith('🦘')
+  ) {
+    return 'player_attack';
+  }
+
+  // Generic enemy attack heuristic — text without a leading emoji that
+  // mentions damage to "you".
+  if (log.includes('damage') && (log.includes(' you') || log.startsWith('You '))) {
+    return 'enemy_attack';
+  }
+
+  return 'neutral';
 }
 
 /**
@@ -189,118 +302,18 @@ export function classifyLogLine(log: string): ClassifiedLog {
     log.includes('struck down');
   const isLevelUp = log.startsWith('🎉') || log.includes('Level Up') || log.startsWith('✨') || log.startsWith('🌋');
 
-  // Strong-emphasis categories first.
-  if (isLevelUp) return { category: 'level_up', isRemote, isCrit, isKill, isLevelUp };
-  if (isKill) return { category: 'kill', isRemote, isCrit, isKill, isLevelUp };
-  if (isCrit) return { category: 'crit', isRemote, isCrit, isKill, isLevelUp };
+  const baseCategory = baseCategoryOf(log);
 
-  // Loot / XP / rewards.
-  if (
-    log.startsWith('🏆') ||
-    log.includes('Legendary') ||
-    log.includes('Soulforged item') ||
-    log.includes('Unique item')
-  ) {
-    return { category: 'loot', isRemote, isCrit, isKill, isLevelUp };
-  }
-  if (log.startsWith('📈') || log.startsWith('💰') || log.includes('XP') || log.includes('gold')) {
-    return { category: 'xp', isRemote, isCrit, isKill, isLevelUp };
-  }
+  // Strong-emphasis categories win over the base category.
+  const category: EventLogCategory =
+    isLevelUp ? 'level_up' :
+    isKill ? 'kill' :
+    isCrit ? 'crit' :
+    baseCategory;
 
-  // Communication.
-  if (log.startsWith('🤫')) return { category: 'whisper', isRemote, isCrit, isKill, isLevelUp };
-  if (log.startsWith('💬')) return { category: 'speech', isRemote, isCrit, isKill, isLevelUp };
-
-  // System / travel / queueing.
-  if (log.startsWith('⏳') || log.startsWith('🧭') || log.startsWith('🗺️') || log.startsWith('🚪')) {
-    return { category: 'system', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Mitigation / shield / block.
-  if (
-    log.startsWith('🛡️') ||
-    log.includes('blocks') ||
-    log.includes('absorbs') ||
-    log.includes('parries') ||
-    log.includes('deflects')
-  ) {
-    return { category: 'mitigation', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Healing / restore.
-  if (
-    log.startsWith('💚') ||
-    log.startsWith('💪') ||
-    log.startsWith('💉') ||
-    log.includes('restore') ||
-    log.includes('recover') ||
-    log.includes('heals you')
-  ) {
-    return { category: 'heal', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Holy / radiance / consecration.
-  if (
-    log.startsWith('✨') ||
-    log.startsWith('🕊️') ||
-    log.startsWith('🌟') ||
-    log.startsWith('🔆') ||
-    log.startsWith('⚡') ||
-    log.includes('holy damage') ||
-    log.includes('Consecrate')
-  ) {
-    return { category: 'holy', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Elemental DoTs / effects.
-  if (log.startsWith('🔥') || log.startsWith('🌋')) return { category: 'fire', isRemote, isCrit, isKill, isLevelUp };
-  if (log.startsWith('🧪') || log.startsWith('🐍')) return { category: 'poison', isRemote, isCrit, isKill, isLevelUp };
-  if (log.startsWith('🩸')) return { category: 'bleed', isRemote, isCrit, isKill, isLevelUp };
-  if (log.startsWith('🌑') || log.startsWith('🌫️')) {
-    return { category: 'shadow', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Buffs / songs / stances.
-  if (
-    log.startsWith('🎶') ||
-    log.startsWith('🌿') ||
-    log.startsWith('🔄') ||
-    log.startsWith('📯') ||
-    log.startsWith('🦅') ||
-    log.startsWith('🦘') ||
-    log.startsWith('⚜️')
-  ) {
-    return { category: 'buff', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Damage warnings / DoT damage taken / creature attacks.
-  if (log.startsWith('⚠️') || log.startsWith('💔') || log.startsWith('👹')) {
-    return { category: 'enemy_attack', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Player attack glyphs (weapons + class fallbacks).
-  if (
-    log.startsWith('⚔️') ||
-    log.startsWith('🗡️') ||
-    log.startsWith('🏹') ||
-    log.startsWith('🪓') ||
-    log.startsWith('🔨') ||
-    log.startsWith('🪄') ||
-    log.startsWith('🎯') ||
-    log.startsWith('🔪') ||
-    log.startsWith('🦘')
-  ) {
-    return { category: 'player_attack', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  // Generic enemy attack heuristic — text without a leading emoji that
-  // mentions damage to "you".
-  if (log.includes('damage') && (log.includes(' you') || log.startsWith('You '))) {
-    return { category: 'enemy_attack', isRemote, isCrit, isKill, isLevelUp };
-  }
-
-  return { category: 'neutral', isRemote, isCrit, isKill, isLevelUp };
+  return { category, baseCategory, isRemote, isCrit, isKill, isLevelUp };
 }
+
 
 // ── Token splitter ─────────────────────────────────────────────
 
@@ -342,3 +355,147 @@ export function splitLogTokens(log: string): LogTokens {
 
   return { icon, body: rest, number };
 }
+
+// ── Presentation layer ─────────────────────────────────────────
+//
+// The classifier above stays fine-grained (it is also what routing and
+// tests rely on). The *rendered* log collapses those categories into five
+// restrained visual families so the panel reads as a scannable narrative
+// rather than a colour chart.
+
+export type EventLogFamily =
+  | 'action'    // player attacks / abilities
+  | 'threat'    // incoming attacks and damage
+  | 'support'   // healing, regen, buffs, mitigation
+  | 'ambient'   // movement, ordinary loot, narration, unknown/legacy
+  | 'notable'   // boss telegraphs, death, quests, rare loot, level gains, errors
+  | 'chat';     // speech + whispers (conversational, never combat-styled)
+
+/** Monochrome marker keys — mapped to lucide icons by the renderer. */
+export type EventLogMarker =
+  | 'kill'
+  | 'level_up'
+  | 'loot_rare'
+  | 'quest'
+  | 'telegraph'
+  | 'error';
+
+export interface EventLogPresentation {
+  family: EventLogFamily;
+  /** Left-edge accent class (index.css). */
+  edgeClass: string;
+  textClass: string;
+  numberClass: string;
+  strong: boolean;
+  /** Brief, one-shot attention treatment. Never a looping pulse. */
+  urgent: boolean;
+  /** Only ever set for exceptional events; routine lines render icon-free. */
+  marker: EventLogMarker | null;
+}
+
+const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' | 'strong' | 'urgent' | 'marker'>> = {
+  action: {
+    edgeClass: 'log-edge-action',
+    textClass: 'text-log-player/90',
+    numberClass: 'text-log-number-damage',
+  },
+  threat: {
+    edgeClass: 'log-edge-threat',
+    textClass: 'text-log-enemy/90',
+    numberClass: 'text-log-number-damage',
+  },
+  support: {
+    edgeClass: 'log-edge-support',
+    textClass: 'text-log-heal/90',
+    numberClass: 'text-log-number-heal',
+  },
+  ambient: {
+    edgeClass: 'log-edge-ambient',
+    textClass: 'text-foreground/70',
+    numberClass: 'text-foreground/80',
+  },
+  notable: {
+    edgeClass: 'log-edge-notable',
+    textClass: 'text-log-loot',
+    numberClass: 'text-log-loot',
+  },
+  chat: {
+    edgeClass: 'log-edge-chat',
+    textClass: 'text-foreground',
+    numberClass: 'text-foreground',
+  },
+};
+
+const CATEGORY_FAMILY: Record<EventLogCategory, EventLogFamily> = {
+  player_attack: 'action',
+  passive: 'action',
+  enemy_attack: 'threat',
+  fire: 'threat',
+  poison: 'threat',
+  bleed: 'threat',
+  shadow: 'threat',
+  heal: 'support',
+  holy: 'support',
+  buff: 'support',
+  mitigation: 'support',
+  system: 'ambient',
+  xp: 'ambient',
+  neutral: 'ambient',
+  loot: 'notable',
+  level_up: 'notable',
+  kill: 'notable',
+  crit: 'action',
+  whisper: 'chat',
+  speech: 'chat',
+};
+
+const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
+const TELEGRAPH_RE = /begins channeling|flee the node|begins to channel|telegraph/i;
+const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
+const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
+
+/**
+ * Single source of truth for how a finished log line is rendered.
+ *
+ * Takes the raw string so every consumer (event log, chat panel, future
+ * filters) derives family/marker/emphasis the same way — no component
+ * should re-parse emoji or re-derive colours itself.
+ */
+export function toPresentation(log: string, classified?: ClassifiedLog): EventLogPresentation {
+  const cls = classified ?? classifyLogLine(log);
+
+  const isQuest = QUEST_RE.test(log);
+  const isTelegraph = TELEGRAPH_RE.test(log);
+  const isError = cls.baseCategory === 'enemy_attack' && log.startsWith('⚠️') && ERROR_RE.test(log);
+  const isPlayerDeath = PLAYER_DEATH_RE.test(log);
+
+  let family: EventLogFamily;
+  if (isQuest || isTelegraph || isError) {
+    family = 'notable';
+  } else if (cls.category === 'crit') {
+    // Crits are frequent — keep them in their source family, just emphasised.
+    family = CATEGORY_FAMILY[cls.baseCategory] ?? 'ambient';
+    if (family === 'chat') family = 'ambient';
+    if (family === 'ambient') {
+      // Bare "💥 CRITICAL!" lines carry no category glyph — infer the side.
+      family = /\byou(?:r)?\b/i.test(log) && !/\bhits? you\b/i.test(log) ? 'action' : 'threat';
+    }
+  
+  } else {
+    family = CATEGORY_FAMILY[cls.category] ?? 'ambient';
+  }
+
+  let marker: EventLogMarker | null = null;
+  if (isTelegraph) marker = 'telegraph';
+  else if (isQuest) marker = 'quest';
+  else if (isError) marker = 'error';
+  else if (cls.isKill || isPlayerDeath) marker = 'kill';
+  else if (cls.isLevelUp) marker = 'level_up';
+  else if (cls.category === 'loot') marker = 'loot_rare';
+
+  const strong = family === 'notable' || cls.isCrit;
+  const urgent = isTelegraph || isPlayerDeath;
+
+  return { family, ...FAMILY_STYLE[family], strong, urgent, marker };
+}
+
