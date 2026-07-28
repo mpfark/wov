@@ -15,6 +15,7 @@ import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
 import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
+import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
 
 
