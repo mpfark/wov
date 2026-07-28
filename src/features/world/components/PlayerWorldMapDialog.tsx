@@ -55,6 +55,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [creatureLevels, setCreatureLevels] = useState<Map<string, number[]>>(new Map());
+  const [bossesByNode, setBossesByNode] = useState<Map<string, Array<{ name: string; level: number }>>>(new Map());
 
   // Fetch creature levels per node when dialog opens
   useEffect(() => {
@@ -72,6 +73,24 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
         setCreatureLevels(m);
       });
   }, [open]);
+
+  // Fetch boss creatures per node (static discovery marker — includes slain bosses)
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('creatures').select('node_id, name, level').eq('rarity', 'boss')
+      .then(({ data }) => {
+        if (!data) return;
+        const m = new Map<string, Array<{ name: string; level: number }>>();
+        for (const c of data) {
+          if (!c.node_id) continue;
+          const arr = m.get(c.node_id) || [];
+          arr.push({ name: c.name, level: c.level });
+          m.set(c.node_id, arr);
+        }
+        setBossesByNode(m);
+      });
+  }, [open]);
+
 
   const computeTooltipPos = useCallback((clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -529,9 +548,13 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   
                   const isSelected = selectedTeleportNode === node.id;
 
+                  const nodeBosses = bossesByNode.get(node.id) || [];
+
                   const buildNodeTooltip = (e: React.MouseEvent) => {
                     const lines: string[] = [];
                     if (area && area.name !== node.name) lines.push(area.name);
+                    for (const b of nodeBosses) lines.push(`💀 ${b.name} (Lv ${b.level})`);
+
                     const services: string[] = [];
                     if (node.is_teleport) services.push('🌀 Teleport');
                     if ((node as any).is_inn) services.push('🏨 Inn');
@@ -581,6 +604,19 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         strokeWidth={isCurrent ? 2.5 : 1.5}
                         opacity={isCurrent ? 1 : 0.85}
                       />
+
+                      {/* Boss marker — discovered boss lair */}
+                      {nodeBosses.length > 0 && (
+                        <text
+                          x={p.px + NODE_R * 0.6} y={p.py - NODE_R * 0.55}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={9}
+                        >
+                          💀
+                        </text>
+                      )}
+
+
 
                       {/* Teleport icon */}
                       {isTeleportNode && onTeleport && !isCurrent && (
