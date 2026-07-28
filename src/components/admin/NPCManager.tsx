@@ -408,7 +408,7 @@ function TopicsEditor({
   topics: DialogueTopic[];
   onChange: (next: DialogueTopic[]) => void;
 }) {
-  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string }>>([]);
+  const [giveItems, setGiveItems] = useState<Array<{ id: string; name: string; item_type: string; rarity: string; level?: number; slot?: string | null }>>([]);
   useEffect(() => {
     supabase.from('items').select('id, name, item_type, rarity, level, slot').order('name').then(({ data }) => {
       if (data) setGiveItems(data as any);
