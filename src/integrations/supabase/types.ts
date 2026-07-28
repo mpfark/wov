@@ -2292,6 +2292,7 @@ export type Database = {
         Returns: undefined
       }
       accept_summon: { Args: { _request_id: string }; Returns: undefined }
+      activate_cheat_xp_boost: { Args: never; Returns: Json }
       activate_stance: {
         Args: { p_character_id: string; p_stance_key: string; p_tier: number }
         Returns: Json
