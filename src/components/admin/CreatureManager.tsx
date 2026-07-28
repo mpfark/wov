@@ -206,6 +206,7 @@ export default function CreatureManager() {
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
       boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
+      boss_cast_damage_type: (c as any).boss_cast?.damage_type ?? '',
       boss_cast_flavor: (c as any).boss_cast?.cast_flavor ?? '',
       boss_cast_hit_flavor: (c as any).boss_cast?.hit_flavor ?? '',
 
