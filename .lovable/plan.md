@@ -1,46 +1,20 @@
 ## Goal
 
-Give boss telegraphed casts admin-authored flavor text (a "casting" line and a "lands" line), and make **boss crit flavors use the exact same placeholder system**, so all boss text is authored the same way.
+In the player's world map dialog, any node the player has already discovered that hosts a **boss** creature gets a skull marker, with the boss name and level on hover. Rare and regular creatures are not marked.
 
-Current state:
-- Cast start/hit lines are hardcoded in `combat-tick`:
-  - `{emoji} {creature} begins channeling {label}! Flee the node to avoid it.`
-  - `{emoji} {creature}'s {label} strikes {member}! [{dmg}]`
-- `boss_crit_flavors` (jsonb array of `{name, text, emoji, weight, damage_type}`) is picked at random on a boss crit and passed through as static text — no substitution.
+## Behaviour
 
-## Shared placeholder system
+- Marker appears only on **visited** nodes (same discovery rule as the nodes themselves) — never on ghost/unvisited nodes.
+- Static marker: it does not change if the boss is currently slain and awaiting respawn.
+- Hover tooltip on the node gains a line like `💀 Vanguard of the Nightfall (Lv 24)`. If a node hosts more than one boss, each gets its own line.
+- Visual: a small skull glyph offset above-right of the node dot, drawn above the node circle so it stays readable at any zoom.
 
-One small `renderFlavor(template, vars)` helper, used by cast text and crit text alike:
+## Technical detail
 
-| Token | Meaning |
-| --- | --- |
-| `{creature}` | Boss name |
-| `{target}` | Character being hit (blank on cast-start) |
-| `{cast}` | Cast label (cast lines) / flavor name (crit lines) |
-| `{damage}` | Damage number |
+Single file: `src/features/world/components/PlayerWorldMapDialog.tsx`.
 
-Rules: trim, strip newlines, cap ~240 chars, unknown tokens left literal, `{damage}` respects the existing flavor-only/numbers setting via the canonical `[N]` suffix (no duplicate number when authored inline).
+1. Alongside the existing creature-levels fetch (which selects `node_id, level` where `is_alive = true`), add a second lightweight query on open: `creatures` → `node_id, name, level` where `rarity = 'boss'`, **without** the `is_alive` filter, so a temporarily dead boss still shows. Store as `Map<nodeId, {name, level}[]>`.
+2. In the `visibleNodes` render loop, when the boss map has an entry for `node.id`, render a `<text>` skull glyph near the node dot.
+3. In `buildNodeTooltip`, push one `💀 Name (Lv N)` line per boss before the existing creature-level range line.
 
-## What to build
-
-**1. Two new fields on `creatures.boss_cast` (JSONB, no migration)**
-- `cast_flavor` — emitted as the `boss_cast_start` message
-- `hit_flavor` — emitted per hit target on resolution
-- Blank → current default wording, so all 16 existing bosses are unaffected.
-
-**2. Admin UI — `CreatureManager.tsx`**
-- Boss Cast card: two textareas (`cast_flavor`, `hit_flavor`) with placeholder help + live preview of the rendered line (falls back to showing the default when blank).
-- Boss Crit Flavors list: same placeholder help text and live preview per flavor row, so both cards read identically.
-- A single shared `FlavorField` component in the admin folder to avoid duplicated help/preview markup.
-
-**3. Edge function — `supabase/functions/combat-tick/index.ts`**
-- Add `renderFlavor`; apply it to cast start, cast hit, and the selected boss crit flavor `text` before it is attached to the crit event.
-- Mirror the helper location alongside the other shared combat utilities so client-side previews and the server agree.
-
-**4. Docs**
-- Update the boss input template / manual notes with the placeholder table and the two new cast fields.
-
-## Notes
-
-- Crit flavors keep their existing shape (name/emoji/weight/damage_type) — only the `text` gains substitution, so existing entries stay valid.
-- Cast-miss (all players fled, boss heals) keeps its current handling; say the word if you want a third `miss_flavor` field.
+No database, RLS, or backend changes — `creatures` is already readable by the client and already queried by this dialog.
