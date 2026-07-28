@@ -84,6 +84,7 @@
     --log-buff: 280 30% 65%;         /* violet */
     --log-mitigation: 215 20% 60%;   /* dim blue-grey */
     --log-loot: 42 70% 60%;          /* soft gold */
+    --log-telegraph: 295 75% 55%;    /* vivid magenta-violet — boss casts */
     --log-system: 215 15% 55%;       /* dim blue-grey */
 
     --log-number-damage: 35 80% 70%; /* bright warm */
@@ -454,6 +455,7 @@
 .log-edge-support  { border-left-color: hsl(var(--log-heal) / 0.5); }
 .log-edge-ambient  { border-left-color: hsl(var(--border-subtle) / 0.35); }
 .log-edge-notable  { border-left-color: hsl(var(--gold, var(--log-loot)) / 0.9); }
+.log-edge-telegraph { border-left-color: hsl(var(--log-telegraph) / 0.9); }
 .log-edge-chat     { border-left-color: hsl(var(--border-subtle) / 0.35); }
 
 /* Urgent (boss telegraph, player death): one brief reveal, never a loop.
