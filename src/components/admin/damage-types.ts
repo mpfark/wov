@@ -8,6 +8,7 @@ export const DAMAGE_TYPES = [
   { value: 'frost', label: '❄️ Frost' },
   { value: 'lightning', label: '⚡ Lightning' },
   { value: 'poison', label: '🧪 Poison' },
+  { value: 'nature', label: '🌿 Nature' },
   { value: 'necrotic', label: '💀 Necrotic' },
   { value: 'holy', label: '✨ Holy' },
   { value: 'shadow', label: '🌑 Shadow' },
@@ -18,3 +19,4 @@ export const DAMAGE_TYPES = [
 export const DAMAGE_TYPE_NONE = 'none';
 
 export type DamageTypeValue = (typeof DAMAGE_TYPES)[number]['value'];
+
