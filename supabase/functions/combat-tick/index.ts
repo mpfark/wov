@@ -2303,13 +2303,22 @@ Deno.serve(async (req) => {
         const startRendered = castFlavor
           ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
           : '';
+        // Authored prose replaces the default sentence, but must never drop the
+        // information the fallback carries: the cast name and the flee hint.
+        const FLEE_HINT = 'Flee the node to avoid it.';
+        const startMessage = startRendered
+          ? `${emoji} ${startRendered}${
+              new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(startRendered)
+                ? ''
+                : ` (${label})`
+            }${/flee/i.test(startRendered) ? '' : ` ${FLEE_HINT}`}`
+          : `${emoji} ${creature.name} begins channeling ${label}! ${FLEE_HINT}`;
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
-          message: startRendered
-            ? `${emoji} ${startRendered}`
-            : `${emoji} ${creature.name} begins channeling ${label}! Flee the node to avoid it.`,
+          message: startMessage,
         });
+
 
 
         castBroadcasts.push({
