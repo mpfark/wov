@@ -911,6 +911,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!text) return;
     setChatInput('');
 
+    // Hidden cheat code: activates a 2x XP boost for 1 hour
+    if (text.toLowerCase() === 'iddqd') {
+      const { data, error } = await supabase.rpc('activate_cheat_xp_boost' as any);
+      const res = data as any;
+      if (error) {
+        addLocalLog('⚠️ The ancient words fizzle out.');
+      } else if (res?.ok) {
+        addLocalLog('✨ IDDQD — A surge of insight floods you! 2x XP for 1 hour.');
+      } else if (res?.error === 'already_active') {
+        addLocalLog('✨ The surge of insight already courses through the realm.');
+      } else {
+        addLocalLog('⚠️ The ancient words fizzle out.');
+      }
+      return;
+    }
+
+
     // Whisper shortcut
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
