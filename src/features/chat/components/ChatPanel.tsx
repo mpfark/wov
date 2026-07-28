@@ -37,8 +37,9 @@ export default function ChatPanel({ messages, onClose }: ChatPanelProps) {
           <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
         ) : (
           messages.map((log, i) => (
-            <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
+            <EventLogLine key={i} log={log} variant="chat" className="text-xs" />
           ))
+
         )}
       </div>
     </div>
