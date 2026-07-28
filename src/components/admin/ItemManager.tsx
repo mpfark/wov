@@ -13,6 +13,8 @@ import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyStat
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 import { ProcExpectancyPanel } from './ProcExpectancyPanel';
+import CreaturePicker from './CreaturePicker';
+import NodePicker from './NodePicker';
 
 
 interface ProcEntry {
@@ -190,8 +192,8 @@ export default function ItemManager() {
   };
 
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
-  const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
-  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id?: string | null }[]>([]);
+  const [allCreatures, setAllCreatures] = useState<{ id: string; name: string; level: number; rarity: string; node_id?: string | null; loot_table_id?: string | null }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id: string; area_id?: string | null; is_inn?: boolean; is_vendor?: boolean; is_blacksmith?: boolean; is_teleport?: boolean; is_trainer?: boolean }[]>([]);
   const [allRegions, setAllRegions] = useState<{ id: string; name: string }[]>([]);
   const [itemUsage, setItemUsage] = useState<{
     creatures: { id: string; name: string; chance: number }[];
@@ -292,8 +294,8 @@ export default function ItemManager() {
   useEffect(() => {
     loadItems();
     loadUsedItemIds();
-    supabase.from('creatures').select('id, name').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
-    supabase.from('nodes').select('id, name, region_id').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+    supabase.from('creatures').select('id, name, level, rarity, node_id, loot_table_id').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
+    supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name').then(({ data }) => { if (data) setAllNodes(data); });
     supabase.from('regions').select('id, name').order('name').then(({ data }) => { if (data) setAllRegions(data); });
   }, []);
 
@@ -685,19 +687,14 @@ export default function ItemManager() {
                     </div>
                     <div>
                       <label className="text-[10px] text-muted-foreground">Target Node (X)</label>
-                      <Select
-                        value={form.map_target_node_id || ''}
-                        onValueChange={v => setForm(f => ({ ...f, map_target_node_id: v || null }))}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick node" /></SelectTrigger>
-                        <SelectContent className="bg-popover border-border z-50 max-h-64">
-                          {allNodes
-                            .filter(n => !form.map_region_id || n.region_id === form.map_region_id)
-                            .map(n => (
-                              <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      <NodePicker
+                        nodes={allNodes.filter(n => !form.map_region_id || n.region_id === form.map_region_id)}
+                        regions={allRegions}
+                        value={form.map_target_node_id || null}
+                        onChange={v => setForm(f => ({ ...f, map_target_node_id: v }))}
+                        placeholder="Pick node"
+                        allowNone
+                      />
                     </div>
                   </div>
                   <div>
@@ -946,14 +943,26 @@ export default function ItemManager() {
                       <label className="text-[10px] text-muted-foreground">
                         {form.origin_type === 'creature' ? 'Source Creature' : form.origin_type === 'node' ? 'Source Node' : 'Source'}
                       </label>
-                      <Select value={form.origin_id || ''} onValueChange={v => setForm(f => ({ ...f, origin_id: v || null }))} disabled={!form.origin_type}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
-                        <SelectContent className="bg-popover border-border z-50 max-h-60">
-                          {(form.origin_type === 'creature' ? allCreatures : allNodes).map(e => (
-                            <SelectItem key={e.id} value={e.id} className="text-xs">{e.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {form.origin_type === 'creature' ? (
+                        <CreaturePicker
+                          creatures={allCreatures}
+                          value={form.origin_id || null}
+                          onChange={v => setForm(f => ({ ...f, origin_id: v }))}
+                          placeholder="Select creature…"
+                          allowNone
+                        />
+                      ) : form.origin_type === 'node' ? (
+                        <NodePicker
+                          nodes={allNodes}
+                          regions={allRegions}
+                          value={form.origin_id || null}
+                          onChange={v => setForm(f => ({ ...f, origin_id: v }))}
+                          placeholder="Select node…"
+                          allowNone
+                        />
+                      ) : (
+                        <Button variant="outline" disabled className="h-8 w-full justify-start text-xs font-normal">Select…</Button>
+                      )}
                     </div>
                   </div>
               </AdminFormSection>
