@@ -81,7 +81,8 @@ The only module permitted to inspect strings (emoji prefix, keywords, `🌀`, `�
 5. Abilities, crits, procs, DoTs, kills, deaths.
 6. Heal, regen, buffs, mitigation, absorb.
 7. Debuffs + crowd control (applications, resists, breaks, expiries) as native status events — SHIPPED.
-7b. Loot, rewards, XP, levels, quests, contracts.
+7b. Debuff break / resist / immunity / stacking interactions as native events with declared source-target orientation — SHIPPED.
+7c. Loot, rewards, XP, levels, quests, contracts.
 8. Movement, system, errors, then the remaining ~173 misc client emitters as the final separate batch.
 
 Phase 3 is not complete and emoji parsing is not removed until stage 8 ships.
