@@ -28,8 +28,6 @@ const ADAPTER_ALLOWLIST = new Set([
   'src/features/combat/events/index.ts',
   // The string classifier the adapter wraps.
   'src/features/combat/utils/event-log-styles.ts',
-  // Thin colour shim for callers that only have a string.
-  'src/features/combat/utils/combat-log-utils.ts',
   // Inbound boundaries: node-channel creature broadcasts + party_combat_log
   // rows that may still carry `message` text from older clients.
   'src/pages/GamePage.tsx',

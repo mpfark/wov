@@ -1,42 +1,42 @@
 ## Goal
+Delete files that nothing in the project references, to shrink the repo and reduce noise. Nothing user-visible changes.
 
-The event log currently lives only in React state in `GamePage.tsx`, capped at the last 100 events (`prev.slice(-99)`) and lost on reload. Server-side logs stay capped for cost reasons. This adds a per-character on-device archive with infinite scrollback in the log panel.
+## Confirmed unused (verified by repo-wide search)
 
-## How it works
+**Stray images in the project root** (~1.4 MB, zero references)
+- `chest_common.png` (791 KB)
+- `crown.png` (487 KB)
+- `main_hand_uncommon.png` (177 KB)
 
-- Every structured `GameLogEvent` that reaches the log is also written to IndexedDB, keyed by character.
-- The panel keeps rendering the live in-memory window; when the player scrolls up past the top of the loaded range, the next older page (200 events) is loaded from IndexedDB and prepended.
-- Retention: 100,000 events per character, oldest pruned in the background. Deleting a character clears its archive.
+**Unused paper-doll art** — `src/assets/paper-doll/` (17 PNGs, ~2.6 MB). No file in `src/` or `supabase/` references any of them, and there is no dynamic path building (`paper-doll`, `base_body` appear nowhere in code). This matches the equipment-panel rework that dropped boots/legs slots.
 
-## Technical details
+**Unused public assets** (~4.3 MB)
+- `public/images/Edhelard_WorldMap.png` (2.7 MB) — not referenced anywhere
+- `public/favicon.png` (1.5 MB) — `index.html` only uses `favicon-32.png` / `favicon-64.png`
+- `public/favicon.ico` (164 KB) — not referenced
+- `public/pwa-512x512.png` — manifest lists only the 192 icon
+- `public/placeholder.svg` — Lovable template leftover, unreferenced
+- `public/world-export.md` — unreferenced copy of the exported world doc
 
-**New: `src/features/combat/events/log-archive.ts`**
-- Thin IndexedDB wrapper (no new dependency): database `wov-log`, store `events`, auto-increment primary key, index on `characterId`.
-- `appendEvents(characterId, events[])` — batched writes (flush queued events every ~1s / on unmount) so combat ticks don't thrash the DB.
-- `loadPage(characterId, beforeKey, limit)` — reverse cursor read for scrollback paging.
-- `pruneCharacter(characterId, max = 100_000)` — runs on session start and every ~5 min; deletes oldest keys beyond the cap.
-- `clearCharacter(characterId)` — used on character deletion.
-- Graceful no-op fallback if IndexedDB is unavailable (private mode / quota errors) — logging must never break gameplay.
+**Orphaned source files** (no imports anywhere)
+- `src/components/admin/AreaManager.tsx`
+- `src/components/admin/NodeEditorDialog.tsx`
+- `src/components/admin/WorldBuilderPanel.tsx`
+- `src/features/inventory/components/ScrollPanel.tsx`
+- `src/features/combat/utils/combat-log-utils.ts`
 
-**New: `src/features/combat/hooks/useLogArchive.ts`**
-- Subscribes to appended events, queues them for `appendEvents`.
-- Exposes `loadOlder()` and `hasMore` for the panel.
+**Lockfile duplicates** — the project uses Bun (`bun.lock`). `package-lock.json` (299 KB) and the legacy binary `bun.lockb` (245 KB) are stale duplicates and can go.
 
-**`src/pages/GamePage.tsx`**
-- The existing `setEventLog(prev => [...prev.slice(-99), event])` calls funnel through a single `pushEvent` helper (they already share the shape) which both updates state and enqueues the archive write.
-- Passes archive paging props into `EventLogPanel`.
+## Deliberately kept
+- `src/assets/logo.png` (email templates + auth pages), `src/assets/vitruvian-man.png` (CharacterPanel)
+- `public/favicon-32/64.png`, `public/pwa-192x192.png`, `public/manifest.webmanifest`, `public/robots.txt`
+- `docs/design/*.md` — design records, harmless and useful
 
-**`src/features/combat/components/EventLogPanel.tsx`**
-- The list is newest-at-top with `flex-col`, so scrollback means detecting scroll near the *bottom* of the container (older side) and calling `loadOlder()`, preserving scroll offset after prepending.
-- Older entries render through the same `EventLogLine` (they are stored as structured events, so styling/flavor mode still work).
-- Small "loading older entries…" row, and an end-of-history marker.
+## Technical notes
+- Deleting `combat-log-utils.ts` requires removing its entry from `ADAPTER_ALLOWLIST` in `src/features/combat/events/__tests__/no-legacy-log-path.test.ts`; that test fails on stale allowlist entries.
+- If `public/favicon.ico` goes, confirm no `<link rel="icon" href="/favicon.ico">` remains in `index.html` (currently none).
+- Verification: run the test suite and a production build after deletion; both must pass before the turn ends.
+- Everything is a single commit, so the whole purge is revertible from chat history if any asset turns out to be wanted.
 
-**Character deletion**
-- `useCharacter.ts`'s delete path calls `clearCharacter(id)` after the cascade RPC so the local archive doesn't outlive the character.
-
-**Tests**
-- Unit test for the archive module against `fake-indexeddb` (dev dependency) covering append, paged reads, and pruning at the cap.
-
-## Out of scope
-
-No export-to-file button and no search dialog — the archive module is written so both can be added later.
+## Open question
+The 2.7 MB `Edhelard_WorldMap.png` and the paper-doll art look like work-in-progress art you may want later. Say the word and I'll keep either set (or move the large ones to CDN assets instead of deleting).
