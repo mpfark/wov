@@ -64,8 +64,9 @@ export interface TickInterpretation {
   creatureHpUpdates: Record<string, number>;
   /** IDs of creatures confirmed dead this tick */
   killedCreatureIds: string[];
-  /** Formatted log messages to display */
-  formattedLogMessages: string[];
+  /** Log lines to display — structured events (stage 2+) or legacy strings */
+  formattedLogMessages: TickLogLine[];
+
   /** Partial character updates to apply, or null */
   characterUpdates: Partial<Character> | null;
   /** Consumed buff entries for this character */
