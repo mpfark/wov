@@ -809,7 +809,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
-    character, updateCharacter, updateCharacterLocal, addLog,
+    character, updateCharacter, updateCharacterLocal, addLog, addLogEvent,
     equipped, equipmentBonuses,
     creatures, creatureHpOverrides,
     party, partyMembers,

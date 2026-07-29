@@ -39,6 +39,8 @@ import {
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
 import { getCastFlavor } from '@/features/combat/utils/cast-flavor';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
@@ -109,6 +111,8 @@ export interface UseCombatActionsParams {
   /** State-only mirror — must be used for fields the server already persisted (e.g. reserved_buffs via stance RPCs) to avoid racing redundant DB writes. */
   updateCharacterLocal?: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
+  /** Stage 9 — structured emitter for taunt / threat lines. */
+  addLogEvent?: (event: GameLogEvent) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
   creatures: any[];
@@ -553,7 +557,15 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
       const flat = getDivineChallengeFlat(wisMod);
       p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Divine Challenge! You mitigate incoming blows for ${Math.round(durationMs / 1000)}s. [${flat}]`);
+      // Stage 9 — Divine Challenge is a taunt: the player forcing attention
+      // onto themselves. Structured so presentation follows the actor, not the
+      // ability emoji.
+      const tauntEvent = buildTauntEvent(
+        `Divine Challenge! You mitigate incoming blows for ${Math.round(durationMs / 1000)}s. [${flat}]`,
+        { kind: 'player', id: p.character.id, name: p.character.name },
+      );
+      if (p.addLogEvent) p.addLogEvent(tauntEvent);
+      else p.addLog(tauntEvent.message);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick
