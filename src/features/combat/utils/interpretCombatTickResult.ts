@@ -12,9 +12,21 @@
 
 import type { Character } from '@/features/character';
 import { formatCombatEvent, type StructuredAttackEvent } from './combat-text';
+import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
+
+/**
+ * A line produced by a tick: either a structured event (server-authored,
+ * stage 2+) or a legacy string that the emit boundary adapts.
+ */
+export type TickLogLine = string | GameLogEvent;
 
 export interface CombatTickResponse {
-  events: { type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string }[];
+  events: {
+    type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string;
+    /** Stage 2+: server-authored structured event. Takes precedence over `message`. */
+    log_event?: unknown;
+  }[];
+
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: {
     character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number;
@@ -52,8 +64,9 @@ export interface TickInterpretation {
   creatureHpUpdates: Record<string, number>;
   /** IDs of creatures confirmed dead this tick */
   killedCreatureIds: string[];
-  /** Formatted log messages to display */
-  formattedLogMessages: string[];
+  /** Log lines to display — structured events (stage 2+) or legacy strings */
+  formattedLogMessages: TickLogLine[];
+
   /** Partial character updates to apply, or null */
   characterUpdates: Partial<Character> | null;
   /** Consumed buff entries for this character */
@@ -109,7 +122,7 @@ export function interpretCombatTickResult(
   }
 
   // ── Format log messages ──
-  const formattedLogMessages: string[] = [];
+  const formattedLogMessages: TickLogLine[] = [];
   const bossDeathCries: { creatureName: string; text: string }[] = [];
   if (data.events.length > 0) {
     formattedLogMessages.push('---tick---');
@@ -132,6 +145,19 @@ export function interpretCombatTickResult(
     if (ev.type === 'ignite_proc') {
       continue;
     }
+    // Stage 2+: server-authored structured event wins outright. No prose
+    // inspection, no You→name regex — the server authored both perspectives.
+    if (isGameLogEvent(ev.log_event)) {
+      const se = ev.log_event;
+      const mine = !ev.character_id || ev.character_id === characterId;
+      formattedLogMessages.push(createLogEvent({
+        ...se,
+        message: mine ? se.message : (se.remoteMessage ?? se.message),
+        observed: !mine,
+      }));
+      continue;
+    }
+
     // Try MUD-style formatting for structured attack events
     const structured = ev as StructuredAttackEvent;
     const hasStructuredData = structured.attacker_name && structured.target_name;

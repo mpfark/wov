@@ -2102,20 +2102,36 @@ Deno.serve(async (req) => {
           // Authored flavor wins; blank falls back to the default wording.
           // If the author inlined {damage}/%v we skip the canonical [N] suffix
           // so the number isn't printed twice.
-          const rendered = hitFlavor
-            ? renderFlavor(hitFlavor, { creature: creatureName, target: memberName, cast: label, damage: dmg })
-            : '';
-          const message = rendered
-            ? `${emoji} ${rendered}${flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`}`
-            : `${emoji} ${creatureName}'s ${label} strikes ${memberName}! [${dmg}]`;
+          const suffix = flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`;
+          const renderFor = (target: string) => hitFlavor
+            ? `${emoji} ${renderFlavor(hitFlavor, { creature: creatureName, target, cast: label, damage: dmg })}${suffix}`
+            : `${emoji} ${creatureName}'s ${label} strikes ${target}! [${dmg}]`;
+          const message = renderFor(memberName);
           events.push({
             type: 'boss_cast_hit',
             character_id: h.character_id,
             creature_id: cst.creature_id,
             damage: dmg,
             message,
+            // Stage 2: structured event — meaning, not styling. The client
+            // renders this directly; `message` stays for older clients.
+            log_event: {
+              v: 1,
+              id: crypto.randomUUID(),
+              ts: Date.now(),
+              type: 'boss_cast_hit',
+              message: renderFor('you'),
+              remoteMessage: message,
+              source: { kind: 'creature', id: cst.creature_id, name: creatureName },
+              target: { kind: 'player', id: h.character_id, name: memberName },
+              amount: dmg,
+              amountKind: 'damage',
+              effectType: label,
+              scope: 'node',
+            },
           });
         }
+
 
         activeByCreature.delete(cst.creature_id);
         lastCastAtByCreature.set(cst.creature_id, now);
@@ -2304,17 +2320,29 @@ Deno.serve(async (req) => {
           ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
           : '';
         // Authored prose stands alone — no cast name or flee hint appended.
-        // Leading 🌀 is a routing sentinel: stripped visually by the log
-        // renderer, but lets the client style every cast-start as a telegraph.
+        // Stage 2: the 🌀 routing sentinel is GONE. Telegraph styling is
+        // derived from the structured `log_event.type`, never from the text.
         const startMessage = startRendered
-          ? `🌀${emoji} ${startRendered}`
-          : `🌀${emoji} ${creature.name} begins channeling ${label}!`;
+          ? `${emoji} ${startRendered}`
+          : `${emoji} ${creature.name} begins channeling ${label}!`;
 
         events.push({
           type: 'boss_cast_start',
           creature_id: creature.id,
           message: startMessage,
+          log_event: {
+            v: 1,
+            id: crypto.randomUUID(),
+            ts: Date.now(),
+            type: 'boss_telegraph',
+            message: startMessage,
+            source: { kind: 'creature', id: creature.id, name: creature.name },
+            effectType: label,
+            severity: 'urgent',
+            scope: 'node',
+          },
         });
+
 
 
 

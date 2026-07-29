@@ -71,6 +71,9 @@ export interface UseCombatDriverParams {
   isLeader: boolean;
   isDead: boolean;
   addLocalLog: (msg: string) => void;
+  /** Structured-event emitter (stage 2+ server events bypass the string shim). */
+  addLocalLogEvent?: (event: import('@/features/combat/events/log-event').GameLogEvent) => void;
+
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   updateCharacterLocal?: (updates: Partial<Character>) => void;
   fetchGroundLoot: () => void;
@@ -390,7 +393,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
 
     // Log messages
-    for (const msg of result.formattedLogMessages) ext.current.addLocalLog(msg);
+    for (const line of result.formattedLogMessages) {
+      if (typeof line === 'string') ext.current.addLocalLog(line);
+      else ext.current.addLocalLogEvent?.(line);
+    }
+
 
     // Character state
     if (result.characterUpdates) {
