@@ -71,6 +71,9 @@ export interface UseCombatDriverParams {
   isLeader: boolean;
   isDead: boolean;
   addLocalLog: (msg: string) => void;
+  /** Structured-event emitter (stage 2+ server events bypass the string shim). */
+  addLocalLogEvent?: (event: import('@/features/combat/events/log-event').GameLogEvent) => void;
+
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   updateCharacterLocal?: (updates: Partial<Character>) => void;
   fetchGroundLoot: () => void;
