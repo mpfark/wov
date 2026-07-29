@@ -32,7 +32,7 @@ export type LogEventType =
   | 'taunt'
   /** An outcome that exists only because of where the actor is standing. */
   | 'positioning'
-
+  | 'level_up'
   | 'loot'
   | 'reward'
   | 'quest'
