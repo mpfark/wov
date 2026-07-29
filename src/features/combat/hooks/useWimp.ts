@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Character } from '@/features/character';
 import { GameNode } from '@/features/world';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 
 interface UseWimpParams {
   character: Character | null;
@@ -8,6 +10,8 @@ interface UseWimpParams {
   currentNode: GameNode | undefined;
   onMove: (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => void;
   addLog: (msg: string) => void;
+  /** Stage 9 — structured emitter for positioning outcomes. */
+  addLogEvent?: (event: GameLogEvent) => void;
 }
 
 const DIR_NAMES: Record<string, string> = {
@@ -38,7 +42,12 @@ export interface WimpApi {
  * direction when HP drops at or below `wimp_hp_threshold`. Fires at most
  * once per combat session. Wimp flees skip opportunity attacks (panic escape).
  */
-export function useWimp({ character, inCombat, currentNode, onMove, addLog }: UseWimpParams): WimpApi {
+export function useWimp({ character, inCombat, currentNode, onMove, addLog, addLogEvent }: UseWimpParams): WimpApi {
+  const emitNoEscape = useCallback((message: string) => {
+    const player = character ? { kind: 'player' as const, id: character.id, name: character.name } : undefined;
+    if (addLogEvent) addLogEvent(buildPositioningEvent('no_escape', message, player));
+    else addLog(message);
+  }, [addLog, addLogEvent, character]);
   const firedRef = useRef(false);
   const warnedNoPathRef = useRef(false);
 
@@ -69,14 +78,14 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     );
     if (!conn) {
       if (!warnedNoPathRef.current) {
-        addLog(`⚠️ Wimp wanted to flee ${DIR_NAMES[direction] || direction} but no path exists.`);
+        emitNoEscape(`Wimp wanted to flee ${DIR_NAMES[direction] || direction} but no path exists.`);
         warnedNoPathRef.current = true;
       }
       return false;
     }
     if (conn.locked) {
       if (!warnedNoPathRef.current) {
-        addLog(`⚠️ Wimp wanted to flee ${DIR_NAMES[direction] || direction} but the path is locked.`);
+        emitNoEscape(`Wimp wanted to flee ${DIR_NAMES[direction] || direction} but the path is locked.`);
         warnedNoPathRef.current = true;
       }
       return false;
@@ -85,7 +94,7 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     firedRef.current = true;
     onMove(conn.node_id, direction, { wimpFlee: true });
     return true;
-  }, [inCombat, character, currentNode, onMove, addLog]);
+  }, [inCombat, character, currentNode, onMove, emitNoEscape]);
 
   // Reactive trigger: fires when server-applied HP updates land via realtime.
   useEffect(() => {

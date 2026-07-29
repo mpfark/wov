@@ -27,6 +27,7 @@ import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 
 import { useCombatAggroEffects } from './useCombatAggroEffects';
+import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
 
 /** Ability types that are processed server-side in the combat-tick */
@@ -180,7 +181,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
     if (fizzling) {
-      ext.current.addLocalLog(`⚠️ ${fizzling.emoji} Your ${fizzling.label} fizzles as you move away.`);
+      const p = ext.current;
+      const fizzleEvent = buildPositioningEvent(
+        'fizzle',
+        `Your ${fizzling.label} fizzles as you move away.`,
+        { kind: 'player', id: p.character.id, name: p.character.name },
+      );
+      if (p.addLocalLogEvent) p.addLocalLogEvent(fizzleEvent);
+      else p.addLocalLog(fizzleEvent.message);
     }
     pendingAbilityRef.current = null;
     setPendingAbility(null);
@@ -298,6 +306,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     engagedCreatureIdsRef,
     startCombat: startCombatCore,
     addLocalLog: params.addLocalLog,
+    addLocalLogEvent: params.addLocalLogEvent,
     setEngagedCreatureIds,
   });
 
@@ -502,7 +511,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
         if (nextAggro && !p.isDead && p.character.hp > 0 && (!p.party || p.isLeader)) {
           aggroProcessedRef.current.add(nextAggro.id);
-          p.addLocalLog(`⚠️ ${nextAggro.name} joins the fight!`);
+          const joinEvent = buildAggroEvent(
+            'join',
+            { id: nextAggro.id, name: nextAggro.name },
+            { kind: 'player', id: p.character.id, name: p.character.name },
+          );
+          if (p.addLocalLogEvent) p.addLocalLogEvent(joinEvent);
+          else p.addLocalLog(joinEvent.message);
           setEngagedCreatureIds(prev => {
             if (prev.includes(nextAggro.id)) return prev;
             const next = [...prev, nextAggro.id];
