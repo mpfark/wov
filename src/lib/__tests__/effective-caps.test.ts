@@ -22,8 +22,8 @@ describe('Base max formulas — fixed snapshots (drift guard)', () => {
   it('warrior L1 con=10 → 24 HP', () => {
     expect(getMaxHp('warrior', 10, 1)).toBe(24);
   });
-  it('warrior L10 con=14 → 24 + 2 + 45 = 71 HP', () => {
-    expect(getMaxHp('warrior', 14, 10)).toBe(71);
+  it('warrior L10 con=14 → 24 + 4 + 45 = 73 HP', () => {
+    expect(getMaxHp('warrior', 14, 10)).toBe(73);
   });
   it('wizard L20 con=10 → 16 + 0 + 95 = 111 HP', () => {
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
@@ -47,10 +47,10 @@ describe('Gear-effective caps add bonuses correctly', () => {
     const base = getMaxHp('warrior', 10, 5);
     expect(getEffectiveMaxHp('warrior', 10, 5, { hp: 5 })).toBe(base + 5);
   });
-  it('+4 con gear raises HP by con-mod delta (+2 floor)', () => {
+  it('+4 con gear raises HP by con-mod delta (+4)', () => {
     const base = getMaxHp('warrior', 10, 5);
     const eff = getEffectiveMaxHp('warrior', 10, 5, { con: 4 });
-    expect(eff).toBe(base + 2);
+    expect(eff).toBe(base + 4);
   });
   it('+4 wis raises CP by wisMod_delta * 6 = 12', () => {
     const base = getMaxCp(5, 10);

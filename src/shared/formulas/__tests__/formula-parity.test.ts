@@ -44,7 +44,7 @@ import * as gameData from '@/lib/game-data';
 describe('Resource caps — fixed snapshots', () => {
   it('HP', () => {
     expect(getMaxHp('warrior', 10, 1)).toBe(24);
-    expect(getMaxHp('warrior', 14, 10)).toBe(71);
+    expect(getMaxHp('warrior', 14, 10)).toBe(73); // 24 + 4 (conMod 2 × 2) + 45
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
     expect(getMaxHp('assassin', 12, 5)).toBe(37);
   });
