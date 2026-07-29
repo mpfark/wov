@@ -50,6 +50,13 @@ const TYPE_SPEC: Record<LogEventType, TypeSpec> = {
   boss_telegraph: { family: 'telegraph', severity: 'urgent', marker: 'telegraph' },
   kill: { family: 'notable', severity: 'notable', marker: 'kill' },
   death: { family: 'notable', severity: 'urgent', marker: 'kill' },
+  // Stage 9 — who is on whom, and where everyone stands. A creature taking
+  // aim reads as incoming threat; the player picking a target or repositioning
+  // reads as their own action. Never inferred from wording.
+  aggro: { family: 'bySource', severity: 'routine' },
+  taunt: { family: 'bySource', severity: 'routine' },
+  positioning: { family: 'bySource', severity: 'routine' },
+
   level_up: { family: 'notable', severity: 'notable', marker: 'level_up' },
   loot: { family: 'notable', severity: 'notable', marker: 'loot_rare' },
   quest: { family: 'notable', severity: 'notable', marker: 'quest' },

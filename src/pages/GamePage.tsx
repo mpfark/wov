@@ -35,6 +35,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { buildEngageEvent } from '@/features/combat/events/threat-event-builder';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
 
 import { useCombatDriver } from '@/features/combat';
@@ -456,6 +457,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLog = useCallback((msg: string) => {
     bus.emit('log', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
   }, [bus]);
+  /** Structured emitter on the shared log path (stage 9+). */
+  const addLogEvent = useCallback((event: GameLogEvent) => {
+    bus.emit('log', { event });
+  }, [bus]);
 
   // First-entry immersive welcome (staggered) or short returning greeting.
   // Uses the local-only emitter — these are personal narrative and must not
@@ -804,7 +809,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
-    character, updateCharacter, updateCharacterLocal, addLog,
+    character, updateCharacter, updateCharacterLocal, addLog, addLogEvent,
     equipped, equipmentBonuses,
     creatures, creatureHpOverrides,
     party, partyMembers,
@@ -817,7 +822,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const movementActions = useMovementActions({
-    character, updateCharacter, addLog,
+    character, updateCharacter, addLog, addLogEvent,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
     creatures,
@@ -851,7 +856,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
-  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog, addLogEvent });
   useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
   useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
@@ -877,12 +882,20 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     else { addLog('📦 You pick up an item.'); fetchInventory(); }
   }, [isDead, groundLoot, pickUpItem, addLog, fetchInventory]);
 
+  /** Stage 9 — the player deliberately picking a target is a structured aggro event. */
+  const emitEngage = useCallback((creature: { id: string; name: string }) => {
+    addLogEvent(buildEngageEvent(
+      { id: creature.id, name: creature.name },
+      { kind: 'player', id: character.id, name: character.name },
+    ));
+  }, [addLogEvent, character.id, character.name]);
+
   const handleAttackFirst = useCallback(() => {
     if (isDead) return;
     if (selectedTargetId) {
       const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
       if (target) {
-        if (!target.is_aggressive) addLog(`⚔️ You start attacking ${target.name}.`);
+        if (!target.is_aggressive) emitEngage(target);
         startCombat(target.id);
         return;
       }
@@ -890,10 +903,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (inCombat) return;
     const firstCreature = creatures.find(c => c.is_alive);
     if (firstCreature) {
-      if (!firstCreature.is_aggressive) addLog(`⚔️ You start attacking ${firstCreature.name}.`);
+      if (!firstCreature.is_aggressive) emitEngage(firstCreature);
       startCombat(firstCreature.id);
     }
-  }, [isDead, inCombat, creatures, selectedTargetId, startCombat, addLog]);
+  }, [isDead, inCombat, creatures, selectedTargetId, startCombat, emitEngage]);
 
   const handleCycleTarget = useCallback(() => {
     if (isDead) return;
@@ -905,10 +918,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setSelectedTargetId(next.id);
     const engagedSet = new Set(engagedCreatureIds);
     if (next.is_aggressive || engagedSet.has(next.id)) {
-      if (!next.is_aggressive) addLog(`⚔️ You start attacking ${next.name}.`);
+      if (!next.is_aggressive) emitEngage(next);
       startCombat(next.id);
     }
-  }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat]);
+  }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat, emitEngage]);
 
   // Clear selected target when changing nodes
   useEffect(() => {

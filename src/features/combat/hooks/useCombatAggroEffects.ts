@@ -8,27 +8,14 @@
  * - Tracking which creatures have already been processed for aggro
  * - Immediate threat-feedback log lines (presentation only)
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { Character } from '@/features/character';
 import type { Creature } from '@/features/creatures';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { buildAggroEvent, type AggroKind } from '@/features/combat/events/threat-event-builder';
 
-// ── Immersive aggro phrases ────────────────────────────────────────
-const THREAT_PHRASES_INITIAL = [
-  (n: string) => `⚠️ ${n} lunges at you!`,
-  (n: string) => `⚠️ ${n} turns on you!`,
-  (n: string) => `⚠️ ${n} snarls and charges!`,
-  (n: string) => `⚠️ ${n} locks eyes on you!`,
-];
-
-const THREAT_PHRASES_REENGAGE = [
-  (n: string) => `⚠️ ${n} charges at you!`,
-  (n: string) => `⚠️ ${n} rushes toward you!`,
-  (n: string) => `⚠️ ${n} closes in on you!`,
-];
-
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+// Stage 9 — the aggro prose lives in the threat event builder; this hook only
+// decides WHEN a creature takes the player as its target.
 
 export interface UseCombatAggroEffectsParams {
   creatures: Creature[];
@@ -40,14 +27,24 @@ export interface UseCombatAggroEffectsParams {
   engagedCreatureIdsRef: React.MutableRefObject<string[]>;
   startCombat: (creatureId: string) => void;
   addLocalLog: (msg: string) => void;
+  /** Stage 9 — structured emitter for threat/aggro lines. */
+  addLocalLogEvent?: (event: GameLogEvent) => void;
   setEngagedCreatureIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
   const {
     creatures, inCombat, isLeader, party, isDead, character,
-    engagedCreatureIdsRef, startCombat, addLocalLog, setEngagedCreatureIds,
+    engagedCreatureIdsRef, startCombat, addLocalLog, addLocalLogEvent, setEngagedCreatureIds,
   } = params;
+
+  const emitAggro = useCallback((kind: AggroKind, creature: Creature) => {
+    const event = buildAggroEvent(kind, { id: creature.id, name: creature.name }, {
+      kind: 'player', id: character.id, name: character.name,
+    });
+    if (addLocalLogEvent) addLocalLogEvent(event);
+    else addLocalLog(event.message);
+  }, [addLocalLog, addLocalLogEvent, character.id, character.name]);
 
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
@@ -78,12 +75,12 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
       if (import.meta.env.DEV) {
         console.debug('[aggro] re-engage detected', { creatureId: nextAggro.id, ts: performance.now().toFixed(0) });
       }
-      addLocalLog(pickRandom(THREAT_PHRASES_REENGAGE)(nextAggro.name));
+      emitAggro('reengage', nextAggro);
       startCombat(nextAggro.id);
     } else {
       justStoppedRef.current = false;
     }
-  }, [creatures, inCombat, startCombat, isDead, party, isLeader, addLocalLog]);
+  }, [creatures, inCombat, startCombat, isDead, party, isLeader, emitAggro]);
 
   // Mid-fight: aggressive creatures join
   useEffect(() => {
@@ -97,10 +94,10 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
           engagedCreatureIdsRef.current = next;
           return next;
         });
-        addLocalLog(`⚠️ ${c.name} joins the fight!`);
+        emitAggro('join', c);
       }
     }
-  }, [creatures, inCombat, party, isLeader, engagedCreatureIdsRef, setEngagedCreatureIds, addLocalLog]);
+  }, [creatures, inCombat, party, isLeader, engagedCreatureIdsRef, setEngagedCreatureIds, emitAggro]);
 
   // Initial aggro on node entry
   useEffect(() => {
@@ -119,10 +116,10 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
       if (import.meta.env.DEV) {
         console.debug('[aggro] initial detected', { creatureId: firstAggro.id, ts: performance.now().toFixed(0) });
       }
-      addLocalLog(pickRandom(THREAT_PHRASES_INITIAL)(firstAggro.name));
+      emitAggro('initial', firstAggro);
       startCombat(firstAggro.id);
     }
-  }, [creatures, startCombat, isDead, character.hp, party, isLeader, addLocalLog]);
+  }, [creatures, startCombat, isDead, character.hp, party, isLeader, emitAggro]);
 
   return {
     pendingAggroRef,

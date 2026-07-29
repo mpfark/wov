@@ -9,3 +9,11 @@
 export * from './log-event';
 export { presentationForEvent } from './presentation';
 export { legacyStringToEvent, rewriteLegacyRemote } from './legacy-adapter';
+export {
+  buildAggroEvent,
+  buildEngageEvent,
+  buildTauntEvent,
+  buildPositioningEvent,
+  type AggroKind,
+  type PositioningKind,
+} from './threat-event-builder';
