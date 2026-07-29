@@ -448,6 +448,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLocalLog = useCallback((msg: string) => {
     bus.emit('log:local', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
   }, [bus]);
+  /** Structured emitter — no adapter, no string inspection (stage 2+). */
+  const addLocalLogEvent = useCallback((event: GameLogEvent) => {
+    bus.emit('log:local', { event });
+  }, [bus]);
+
   const addLog = useCallback((msg: string) => {
     bus.emit('log', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
   }, [bus]);
