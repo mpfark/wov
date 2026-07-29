@@ -38,7 +38,6 @@ export function useChat({ handle, nodeId: _nodeId, characterId, characterName, o
         message: `${payload.senderName}: ${payload.text}`,
         source: { kind: 'player', id: payload.senderId, name: payload.senderName },
         scope: 'node',
-        observed: true,
       }));
     };
     return () => { handle.onSay.current = null; };
@@ -55,7 +54,6 @@ export function useChat({ handle, nodeId: _nodeId, characterId, characterName, o
           message: `${payload.senderName} whispers: ${payload.text}`,
           source: { kind: 'player', id: payload.senderId, name: payload.senderName },
           scope: 'self',
-          observed: true,
         }));
       })
       .subscribe();
