@@ -13,7 +13,7 @@
  * 4. If the creature survives, reschedules (up to MAX_RESCHEDULES)
  */
 
-import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
+import { buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
@@ -169,11 +169,11 @@ export function useOffscreenDotWakeup({
               const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
               const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
 
-              eventBus.emit('log', { event: legacyStringToEvent(`☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`) });
+              eventBus.emit('log', { event: buildRewardEvent(`${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`, { effectType: 'offscreen_kill' }) });
 
               // Boss world emote — show locally for the source player too
               if (reward.boss_death_cry_text) {
-                eventBus.emit('log', { event: legacyStringToEvent(`🌫️ ${reward.boss_death_cry_text}`) });
+                eventBus.emit('log', { event: buildSystemEvent(reward.boss_death_cry_text, { effectType: 'boss_death_cry', severity: 'notable' }) });
               }
             }
           }
@@ -341,11 +341,11 @@ function scheduleWakeup(
           const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
           const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
 
-          eventBus.emit('log', { event: legacyStringToEvent(`☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`) });
+          eventBus.emit('log', { event: buildRewardEvent(`${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`, { effectType: 'offscreen_kill' }) });
 
           // Boss world emote — show locally for the source player too
           if (reward.boss_death_cry_text) {
-            eventBus.emit('log', { event: legacyStringToEvent(`🌫️ ${reward.boss_death_cry_text}`) });
+            eventBus.emit('log', { event: buildSystemEvent(reward.boss_death_cry_text, { effectType: 'boss_death_cry', severity: 'notable' }) });
           }
         }
       }
