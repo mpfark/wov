@@ -117,6 +117,18 @@ function resolveType(raw: string, cls: ClassifiedLog): { type: LogEventType; sou
  * Never call this with a value that already has structured metadata.
  */
 export function legacyStringToEvent(raw: string, opts: LegacyAdaptOptions = {}): GameLogEvent {
+  // Tick divider — a control string, not prose.
+  if (raw === '---tick---') {
+    return createLogEvent({
+      id: opts.id,
+      ts: opts.ts,
+      type: 'system',
+      effectType: 'tick_separator',
+      message: '',
+      legacy: { raw },
+    });
+  }
+
   const message = opts.remoteName ? rewriteLegacyRemote(raw, opts.remoteName) : raw;
   const cls = classifyLogLine(message);
   const { type, source, effectType, severity } = resolveType(message, cls);
@@ -130,6 +142,7 @@ export function legacyStringToEvent(raw: string, opts: LegacyAdaptOptions = {}):
     effectType,
     severity,
     crit: cls.isCrit || undefined,
+    observed: cls.isRemote || !!opts.remoteName || undefined,
     legacy: { raw: message },
   });
 }

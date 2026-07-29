@@ -88,6 +88,8 @@ export interface GameLogEvent {
   severity?: LogSeverity;
   crit?: boolean;
   scope?: LogScope;
+  /** True when the line describes another actor's deed as seen by us (party echo). */
+  observed?: boolean;
   /**
    * LEGACY COMPATIBILITY ONLY — set by legacy-adapter.ts for unstructured
    * strings so the renderer can reproduce today's exact text output
