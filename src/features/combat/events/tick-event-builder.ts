@@ -122,6 +122,45 @@ function stage7Severity(serverType: string): 'notable' | undefined {
   return STAGE7_CREATURE_SOURCED.has(serverType) ? 'notable' : undefined;
 }
 
+/**
+ * Stage 8 — status *interactions*: a debuff being resisted, blocked by
+ * immunity, diminished, broken, cleansed, refreshed, stacked or consumed.
+ *
+ * Orientation is the whole point of this stage. Each type declares who is
+ * resisting/removing (`actor`) and therefore which side the line is written
+ * from; nothing is inferred from the prose. `player` = the local side won the
+ * interaction (their control landed, or they shook one off), `creature` = the
+ * creature won it (our control failed, or theirs held).
+ */
+interface Stage8Spec {
+  effectType: string;
+  /** Which actor the line is *about* — becomes `source`; the other becomes `target`. */
+  actor: 'player' | 'creature';
+  /** Set when the interaction deserves emphasis over a routine status line. */
+  severity?: 'notable';
+  /** Interaction carries a stack count. */
+  stacks?: boolean;
+}
+
+const STAGE8_SPEC: Record<string, Stage8Spec> = {
+  // Player wins the interaction
+  debuff_resist: { effectType: 'resist', actor: 'player' },
+  debuff_immune: { effectType: 'immune', actor: 'player' },
+  debuff_cleansed: { effectType: 'cleanse', actor: 'player' },
+  cc_break: { effectType: 'cc_break', actor: 'player', severity: 'notable' },
+  cc_immune: { effectType: 'cc_immune', actor: 'player' },
+  cc_diminish: { effectType: 'cc_diminish', actor: 'player' },
+  // Creature wins the interaction — our control fails to land or is thrown off
+  creature_resist: { effectType: 'resist', actor: 'creature', severity: 'notable' },
+  creature_immune: { effectType: 'immune', actor: 'creature', severity: 'notable' },
+  // Stacking interactions — player-driven, carrying a stack count
+  debuff_stack: { effectType: 'stack', actor: 'player', stacks: true },
+  debuff_refreshed: { effectType: 'refresh', actor: 'player', stacks: true },
+  debuff_max_stacks: { effectType: 'max_stacks', actor: 'player', severity: 'notable', stacks: true },
+  stack_consumed: { effectType: 'stack_consumed', actor: 'player', stacks: true },
+};
+
+
 /** Amount semantics per stage-6 server type (used when the prose carries `[N]`). */
 const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
   consecrate_heal: 'heal',
