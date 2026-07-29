@@ -1,78 +1,94 @@
-# Event Log Redesign — Phases 1 & 2
+# Phase 3 — Structured Event Log (approved, with amendments)
 
-Presentation-layer only. No emitter rewrites, no schema/backend changes, no structured events, no filters.
+Goal: structured fields become the source of truth for category, styling, severity, routing and future filtering. Emojis become inert prose. No configurable filters in this phase.
 
-## Approach
-
-One shared module owns classification + presentation. Both `EventLogPanel` and `ChatPanel` consume it, but chat keeps its own conversational look (no left edge, no combat colours).
+## 1. Current data flow (verified)
 
 ```text
-raw log string
-      │
-      ▼
-event-log-styles.ts   (extended, single source of truth)
-  classifyLogLine()   → existing 20 fine-grained categories  (unchanged, keeps routing/tests safe)
-      │
-      ▼
-  toPresentation()    → { family, marker, hideIcon, edgeClass, textClass, numberClass, urgent }
-      │                  5 visual families only
-      ▼
-splitLogTokens()      → { icon, body, number }   (unchanged; leading-emoji run + numeric tail)
-      │
-      ├── <EventLogLine>  shared renderer → used by EventLogPanel
-      └── ChatPanel       uses classify + a chat-specific line style
+SERVER combat-tick / combat-catchup / kill-resolver
+  events[] = { type, message, character_id?, creature_id?, creature_name? }   // 41 types already exist
+        ▼ HTTP
+interpretCombatTickResult()  — DISCARDS type, keeps message, does name→You regex
+        ▼ string
+17 client files → addLog(string)  (173 call sites)
+        ▼
+bus 'log' / 'log:local'  { message: string }
+   ├─ setEventLog(string[])
+   ├─ party_combat_log INSERT (message text, client-generated row id)
+   └─ broadcast 'party_combat_msg' { id, message, node_id, character_name }
+              ▼ other client
+        processIncomingLog(): You→Name regex → setEventLog
+              ▼
+        GamePage chat split via classifyLogLine(string)
+              ▼
+        EventLogLine → classifyLogLine + toPresentation (emoji + keyword regex)
 ```
 
-## Visual families (5)
+## 2. Event schema (`src/features/combat/events/log-event.ts`)
 
-| Family | Covers | Left edge |
-|---|---|---|
-| `action` | player attacks, abilities, passive | muted steel |
-| `threat` | enemy attacks, incoming damage, bleed/fire/poison/shadow taken | dark ember |
-| `support` | heal, holy, buff, mitigation | muted verdant |
-| `ambient` | system, movement, xp, ordinary loot, neutral, unknown/legacy | faint parchment (near-invisible) |
-| `notable` | crit, kill/death, level_up, boss telegraph, unique/legendary loot, quest, errors | gold accent |
+```ts
+export interface GameLogEvent {
+  v: 1;
+  id: string;                 // generated ONCE at the authoritative emitter
+  ts: number;
+  type: LogEventType;
+  message: string;            // clean local/self-facing prose
+  remoteMessage?: string;     // clean party-observer prose (no regex rewriting)
+  source?: LogActor;          // { kind: 'player'|'creature'|'npc'|'world', id?, name? }
+  target?: LogActor;
+  amount?: number;
+  amountKind?: 'damage'|'heal'|'block'|'absorb'|'xp'|'gold'|'resource';
+  damageType?: string;
+  effectType?: string;
+  severity?: LogSeverity;     // only when it differs from the type default
+  crit?: boolean;
+  scope?: 'self'|'party'|'node'|'global';
+  legacy?: { raw: string };   // ADAPTER-ONLY, removed with the adapter
+}
+```
 
-Narrow left edge (2px) is the primary indicator. Body text stays close to current readable foreground with a family tint; numbers keep their current suffix position and get restrained weight + family colour. Colour is never the only signal — the marker glyph, wording and weight carry meaning too.
+No `family` on the event — presentation derives it. `severity` is omitted unless it deviates from the type default.
 
-## Icon policy
+### Perspective (amended)
 
-- **Hidden at render time**: every leading emoji run detected by `splitLogTokens` for routine families (`action`, `threat`, `support`, `ambient`). The string itself is untouched — classification, routing, dedup, broadcast and stored history all keep working exactly as today.
-- **Visible marker**: only for `notable`, and only as a monochrome `lucide-react` glyph chosen from the fine-grained category — `Skull` (death/kill), `ChevronsUp` (level up), `Sparkles` (rare/unique/legendary loot), `ScrollText` (quest), `Zap` (boss telegraph/urgent cast), `TriangleAlert` (important error). No colourful replacements.
-- **Embedded emoji** (mid-sentence, authored dialogue, boss flavour, item names) is never touched — only the leading run is suppressed, never a global strip.
-- **Multiple leading tokens** are already captured as one run by the existing regex; the whole run is suppressed together.
-- **Chat/whisper** keeps its `💬`/`🤫` prefix suppressed too but renders with the existing conversational styling.
-- **Historical / legacy / unclassifiable** lines fall through to `ambient` and render as plain readable text with no marker — a safe no-op.
+`perspective` is dropped. Emitters that read differently for observers author **both** strings: `message` (local) and `remoteMessage` (observer). No `You/your` regex on migrated events. The legacy adapter keeps the existing regex for old strings only.
 
-## Urgent treatment
+## 3. Presentation (`src/features/combat/events/presentation.ts`)
 
-`notable` + `urgent` (boss telegraph, death) gets a one-shot ~600ms fade-in of the left edge via a CSS keyframe (`animation-iteration-count: 1`), wrapped in `@media (prefers-reduced-motion: reduce)` to disable. No continuous pulsing. The existing continuous `.log-crit` text-shadow is replaced by this one-shot treatment.
+One map, keyed by `type`, giving `family`, default `severity`, and `marker`. `attack | ability | proc | debuff` resolve `action` vs `threat` from `source.kind` (player → action, creature/npc/world → threat) — never from wording. Markers only render when severity ≠ `routine`. Families unchanged: action / threat / support / ambient / notable / telegraph / chat.
 
-## Files changed
+## 4. Server type mapping
 
-| File | Change |
-|---|---|
-| `src/features/combat/utils/event-log-styles.ts` | Add `EventLogFamily`, `PRESENTATION` map, `toPresentation(classified)`, marker resolution. Keep `classifyLogLine` and `splitLogTokens` behaviour byte-identical. |
-| `src/features/combat/components/EventLogLine.tsx` *(new)* | Shared line renderer: edge + optional marker + body + number. Takes a `variant` (`log` \| `chat`). |
-| `src/features/combat/components/EventLogPanel.tsx` | Render via `EventLogLine`; keeps `stripFlavorNumber`, newest-at-top, tick divider, font-size classes. |
-| `src/features/chat/components/ChatPanel.tsx` | Render via `EventLogLine` with `variant="chat"` — no left edge, no combat tint, speech/whisper styling preserved. |
-| `src/features/combat/utils/combat-log-utils.ts` | `getLogColor` re-implemented on top of `toPresentation` so no second styling path exists. Signature unchanged. |
-| `src/index.css` | New `--log-edge-*` semantic tokens, `.event-log-edge`, one-shot `log-urgent` keyframe + reduced-motion guard. Keep existing `.event-log-*` layout classes. |
-| `tailwind.config.ts` | Map the new edge tokens (only if not already expressible). |
-| `src/features/combat/utils/__tests__/event-log-styles.test.ts` *(new)* | Cover: single leading emoji, multi-emoji run, embedded emoji preserved, legacy/unknown → ambient, notable families keep markers, `icon+body+number === input`. |
+`SERVER_EVENT_TYPE_MAP` covers all 41 known server types exhaustively (compile-time `Record<ServerEventType, LogEventType>`), with a test asserting completeness. Unknown structured types → `unknown` (ambient, `console.warn` once) — never message-parsed, never demoted to `legacy`. `legacy` is reserved for genuinely unstructured strings.
 
-Untouched: all emitters, `combat-tick`, `combat-catchup`, `proc-log-format.ts`, `useGameEvents`, `GamePage` routing/dedup/`processIncomingLog`, party broadcast, DB.
+## 5. Compatibility adapter (`legacy-adapter.ts`)
 
-## Phase 2 note on routing
+The only module permitted to inspect strings (emoji prefix, keywords, `🌀`, `💬`, `🤫`, `✨`, `🌋`, `🎉`). It emits normal structured events; explicit structured metadata always wins and never re-enters the adapter. Removal criteria documented in the file header: all 8 stages shipped, no emitter produces control-prefixed strings, and the compatibility `message` text has been retired after at least one full release.
 
-`GamePage`'s `startsWith('💬'|'🤫')` split is switched to `classifyLogLine(...).category === 'speech' | 'whisper'` — same outcome for every current message (those categories are defined by exactly those prefixes), but it removes the last behavioural dependency on emoji so a future emitter change can't break chat routing. Everything else about routing and ordering stays as-is.
+## 6. Transport & persistence
 
-## Verification
+- Bus payload becomes `{ event: GameLogEvent }`; `addLog(string)` remains as an adapter-backed shim during migration.
+- `party_combat_log` gains a nullable `event jsonb` column. `message` text stays, unencoded, for at least one full release after stage 8.
+- Broadcast payload carries `event` alongside `id` / `message`; receivers prefer `event`, fall back to the adapter.
+- `event.id` is generated once and reused across local display, DB row id, broadcast, self-echo dedup and catch-up. Ordering and dedup mechanisms are unchanged.
 
-- Vitest run for the new classifier/presentation tests plus the existing suite.
-- `tsgo` typecheck.
-- Playwright pass on the running app: enter the world, capture the event log at desktop and mobile viewports, confirm no routine emoji renders, markers appear only on notable lines, chat panel still reads as conversation, and both display modes (flavor / flavor+numbers) and all font sizes render correctly.
+## 7. Stages
 
-## Out of scope (later phases)
+1. **Foundation (behaviour-neutral)** — schema, server map, presentation map, adapter, event-log state, bus/transport carrier, JSONB migration, mixed persistence, tests.
+2. Boss telegraphs + cast resolution (drop the `🌀` sentinel from the server).
+3. Speech + whispers.
+4. Player/enemy attacks.
+5. Abilities, crits, procs, DoTs, kills, deaths.
+6. Heal, regen, buffs, mitigation, absorb.
+7. Loot, rewards, XP, levels, quests, contracts.
+8. Movement, system, errors, then the remaining ~173 misc client emitters as the final separate batch.
 
-Structured event payloads on the bus, configurable filters, server/client combat-sentence deduplication, moving numbers inline.
+Phase 3 is not complete and emoji parsing is not removed until stage 8 ships.
+
+## 8. Testing
+
+Per-stage regression: identical telegraph treatment across authored wordings/symbols; fire telegraph ≠ level-up ≠ fire DoT; `✨`/`🌋` inert in structured events; prefix-free speech/whisper routing; `event.id` stable through emit → persist → broadcast → self-echo → catch-up; exhaustive server-type mapping; unknown structured types safe + reported; local vs observer prose without regex; JSONB and text represent the same event; legacy strings still render; unknown legacy strings → neutral; embedded emoji visible; dedup + ordering; both display modes. Plus `tsgo` and Playwright desktop/mobile checks.
+
+## 9. Rollback
+
+Every stage is additive — the `message` string stays on the wire and in the DB, so reverting an emitter restores prior behaviour with no data migration.
