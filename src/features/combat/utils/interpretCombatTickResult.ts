@@ -14,6 +14,7 @@ import type { Character } from '@/features/character';
 import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } from './combat-text';
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTickLogEvent } from '@/features/combat/events/tick-event-builder';
+import { buildRewardLogEvent } from '@/features/combat/events/reward-event-builder';
 
 /**
  * A line produced by a tick: either a structured event (server-authored,
@@ -165,6 +166,15 @@ export function interpretCombatTickResult(
     const attackEvent = buildAttackLogEvent(ev as StructuredAttackEvent, characterId);
     if (attackEvent) {
       formattedLogMessages.push(attackEvent);
+      continue;
+    }
+
+    // Stage 10: loot, rewards, XP, level-ups, quests and contracts become
+    // native structured events. Category and emphasis come from the server
+    // event type; decorative leading glyphs are dropped.
+    const stage10Event = buildRewardLogEvent(ev as any, characterId, characterName);
+    if (stage10Event) {
+      formattedLogMessages.push(stage10Event);
       continue;
     }
 

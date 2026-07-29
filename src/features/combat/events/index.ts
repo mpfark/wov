@@ -17,3 +17,8 @@ export {
   type AggroKind,
   type PositioningKind,
 } from './threat-event-builder';
+export {
+  buildRewardLogEvent,
+  STAGE10_SERVER_TYPES,
+  type RewardEventInput,
+} from './reward-event-builder';
