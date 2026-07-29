@@ -201,6 +201,19 @@ export const SERVER_EVENT_TYPE_MAP: Record<ServerEventType, LogEventType> = {
   consecrate_heal: 'heal',
   contract_complete: 'quest',
   cc_break: 'debuff',
+  // Stage 8 — the player shrugging control off reads as mitigation; a
+  // creature shrugging OUR control off is a setback, so it stays a debuff
+  // line whose family follows the creature source.
+  cc_diminish: 'mitigation',
+  cc_immune: 'mitigation',
+  debuff_cleansed: 'mitigation',
+  debuff_immune: 'mitigation',
+  creature_immune: 'debuff',
+  creature_resist: 'debuff',
+  debuff_max_stacks: 'debuff',
+  debuff_refreshed: 'debuff',
+  debuff_stack: 'debuff',
+  stack_consumed: 'debuff',
   debuff_applied: 'debuff',
   debuff_expired: 'debuff',
   debuff_resist: 'mitigation',
