@@ -44,9 +44,9 @@ import * as gameData from '@/lib/game-data';
 describe('Resource caps — fixed snapshots', () => {
   it('HP', () => {
     expect(getMaxHp('warrior', 10, 1)).toBe(24);
-    expect(getMaxHp('warrior', 14, 10)).toBe(71);
+    expect(getMaxHp('warrior', 14, 10)).toBe(73); // 24 + 4 (conMod 2 × 2) + 45
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
-    expect(getMaxHp('assassin', 12, 5)).toBe(37);
+    expect(getMaxHp('assassin', 12, 5)).toBe(38); // 16 + 2 (conMod 1 × 2) + 20
   });
   it('CP', () => {
     expect(getMaxCp(1, 10)).toBe(30);
@@ -127,10 +127,10 @@ describe('XP — fixed snapshots', () => {
 
 describe('Item stat budget — fixed snapshots', () => {
   it('common L1', () => expect(getItemStatBudget(1, 'common')).toBe(2));
-  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(6));
+  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(5)); // 2 + 9 × 0.24 × 1.5 = 5.24
   // Unique 2H uses the reduced hands_mult of 1.35 (see items.ts header):
-  // 2 + 19 × 0.3 × 3.0 × 1.35 = 25.085 → floor 25.
-  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(25));
+  // 2 + 19 × 0.24 × 3.0 × 1.35 = 20.468 → floor 20.
+  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(20));
   it('consumable triples budget', () => {
     const eqp = getItemStatBudget(10, 'common', 1, 'equipment');
     const con = getItemStatBudget(10, 'common', 1, 'consumable');
