@@ -390,7 +390,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
 
     // Log messages
-    for (const msg of result.formattedLogMessages) ext.current.addLocalLog(msg);
+    for (const line of result.formattedLogMessages) {
+      if (typeof line === 'string') ext.current.addLocalLog(line);
+      else ext.current.addLocalLogEvent?.(line);
+    }
+
 
     // Character state
     if (result.characterUpdates) {
