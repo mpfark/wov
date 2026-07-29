@@ -47,8 +47,59 @@ const STAGE5_TYPES = new Set([
   'member_death',
 ]);
 
+/**
+ * Stage 6 — defensive and restorative outcomes: healing, buff consumption
+ * and every form of damage mitigation (block, absorb, dodge, flat DR).
+ * All resolve to `support` presentation regardless of who acted, so the
+ * source is always the protected/healed player.
+ */
+const STAGE6_TYPES = new Set([
+  // Heals / regen
+  'consecrate_heal',
+  // Buffs
+  'buff_consumed',
+  // Mitigation
+  'absorb',
+  'shield_block',
+  'evasion_dodge',
+  'awareness_resist',
+  'battle_cry_dr',
+  'divine_challenge_dr',
+  'item_buff_dr',
+]);
+
+/** Amount semantics per stage-6 server type (used when the prose carries `[N]`). */
+const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
+  consecrate_heal: 'heal',
+  shield_block: 'block',
+  absorb: 'absorb',
+  battle_cry_dr: 'block',
+  divine_challenge_dr: 'block',
+  item_buff_dr: 'block',
+};
+
+/** Effect label per stage-6 server type — structured, never parsed from prose. */
+const STAGE6_EFFECT_TYPE: Record<string, string> = {
+  consecrate_heal: 'consecrate',
+  buff_consumed: 'buff',
+  absorb: 'absorb',
+  shield_block: 'block',
+  evasion_dodge: 'dodge',
+  awareness_resist: 'resist',
+  battle_cry_dr: 'battle_cry',
+  divine_challenge_dr: 'divine_challenge',
+  item_buff_dr: 'item_ward',
+};
+
+/** Pull the canonical `[N]` suffix the server appends to mitigation prose. */
+function trailingAmount(message: string): number | undefined {
+  const m = message.match(/\[(\d+)\]\s*$/);
+  return m ? Number(m[1]) : undefined;
+}
+
 /** Types whose actor is the creature rather than the player. */
 const CREATURE_SOURCE_TYPES = new Set(['member_death']);
+
 
 export interface TickEventInput {
   type: string;
