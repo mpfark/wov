@@ -13,6 +13,7 @@
 import type { Character } from '@/features/character';
 import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } from './combat-text';
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
+import { buildTickLogEvent } from '@/features/combat/events/tick-event-builder';
 
 /**
  * A line produced by a tick: either a structured event (server-authored,
@@ -164,6 +165,15 @@ export function interpretCombatTickResult(
     const attackEvent = buildAttackLogEvent(ev as StructuredAttackEvent, characterId);
     if (attackEvent) {
       formattedLogMessages.push(attackEvent);
+      continue;
+    }
+
+    // Stage 5: abilities, procs, DoT ticks, kills and deaths become native
+    // structured events. Category comes from the server event type, never
+    // from the prose.
+    const stage5Event = buildTickLogEvent(ev as any, characterId, characterName);
+    if (stage5Event) {
+      formattedLogMessages.push(stage5Event);
       continue;
     }
 
