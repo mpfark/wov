@@ -1,15 +1,15 @@
 /**
- * Owns: rendering of a single log line (event log AND chat panel).
+ * Owns: rendering of a single structured log event (event log AND chat).
  *
- * All classification / colour / marker decisions come from
- * event-log-styles.toPresentation — no component parses emoji or picks
- * colours on its own.
+ * Family / colour / marker / urgency come exclusively from
+ * events/presentation.ts, derived from the event's structured fields. This
+ * component never inspects prose.
  *
- * Routine presentation emoji (the leading glyph run produced by the
- * emitters) is suppressed visually; the underlying string is never
- * modified, so routing, dedup, broadcasts and stored history are
- * unaffected. Emoji embedded later in a message — authored dialogue,
- * boss flavour, item names — is always preserved.
+ * Legacy events (produced by legacy-adapter.ts from historical strings)
+ * carry their original text in `legacy.raw`; only for those do we run the
+ * old leading-glyph suppression and trailing-number split so historical
+ * lines render exactly as before. Emoji embedded inside prose is always
+ * preserved.
  */
 import { cn } from '@/lib/utils';
 import {
@@ -21,12 +21,10 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  classifyLogLine,
-  splitLogTokens,
-  toPresentation,
-  type EventLogMarker,
-} from '@/features/combat/utils/event-log-styles';
+import { splitLogTokens, type EventLogMarker } from '@/features/combat/utils/event-log-styles';
+import { stripFlavorNumber, type CombatLogDisplayMode } from '@/features/combat/utils/combat-text';
+import { presentationForEvent } from '@/features/combat/events/presentation';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 const MARKER_ICON: Record<EventLogMarker, LucideIcon> = {
   kill: Skull,
@@ -47,17 +45,33 @@ const MARKER_LABEL: Record<EventLogMarker, string> = {
 };
 
 interface EventLogLineProps {
-  /** Already display-normalised (e.g. flavor-number stripped) log string. */
-  log: string;
+  event: GameLogEvent;
   /** `log` = event log styling; `chat` = conversational styling. */
   variant?: 'log' | 'chat';
+  displayMode?: CombatLogDisplayMode;
   className?: string;
 }
 
-export default function EventLogLine({ log, variant = 'log', className }: EventLogLineProps) {
-  const cls = classifyLogLine(log);
-  const pres = toPresentation(log, cls);
-  const { body, number } = splitLogTokens(log);
+function renderTokens(event: GameLogEvent, displayMode: CombatLogDisplayMode) {
+  const raw = event.legacy?.raw;
+  if (raw !== undefined) {
+    const src = displayMode === 'flavor' ? stripFlavorNumber(raw) : raw;
+    const { body, number } = splitLogTokens(src);
+    return { body, number };
+  }
+  const number =
+    displayMode !== 'flavor' && event.amount != null ? `[${event.amount}]` : '';
+  return { body: event.message, number };
+}
+
+export default function EventLogLine({
+  event,
+  variant = 'log',
+  displayMode = 'flavor_numbers',
+  className,
+}: EventLogLineProps) {
+  const pres = presentationForEvent(event);
+  const { body, number } = renderTokens(event, displayMode);
   const isChat = variant === 'chat';
   const Marker = !isChat && pres.marker ? MARKER_ICON[pres.marker] : null;
 
@@ -69,7 +83,7 @@ export default function EventLogLine({ log, variant = 'log', className }: EventL
         pres.textClass,
         pres.strong && !isChat && 'font-medium',
         pres.urgent && !isChat && 'event-log-urgent',
-        cls.isRemote && 'opacity-60 italic',
+        event.observed && 'opacity-60 italic',
         className,
       )}
     >
