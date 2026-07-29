@@ -63,10 +63,12 @@ const FILES = SCAN_DIRS.flatMap(d => walk(join(ROOT, d))).map(f =>
   relative(ROOT, f).split(sep).join('/'),
 );
 
+const SELF = 'src/features/combat/events/__tests__/no-legacy-log-path.test.ts';
+
 function offenders(pattern: RegExp, allow: Set<string> = new Set()): string[] {
   const hits: string[] = [];
   for (const file of FILES) {
-    if (allow.has(file)) continue;
+    if (file === SELF || allow.has(file)) continue;
     const lines = readFileSync(join(ROOT, file), 'utf8').split('\n');
     lines.forEach((line, i) => {
       if (pattern.test(line)) hits.push(`${file}:${i + 1}  ${line.trim()}`);
