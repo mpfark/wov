@@ -158,6 +158,15 @@ export function interpretCombatTickResult(
       continue;
     }
 
+    // Stage 4: attacks are native structured events. The client owns the
+    // tier/flavor prose, so it authors both perspectives here — no You→name
+    // rewriting and no string classification for attack lines.
+    const attackEvent = buildAttackLogEvent(ev as StructuredAttackEvent, characterId);
+    if (attackEvent) {
+      formattedLogMessages.push(attackEvent);
+      continue;
+    }
+
     // Try MUD-style formatting for structured attack events
     const structured = ev as StructuredAttackEvent;
     const hasStructuredData = structured.attacker_name && structured.target_name;
