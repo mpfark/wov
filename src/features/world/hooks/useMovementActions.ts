@@ -6,6 +6,8 @@
  *
  * State owned: waymarkNodeId, teleportOpen
  */
+import { buildPositioningEvent, type PositioningKind } from '@/features/combat/events/threat-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { useState, useCallback } from 'react';
 import { Character } from '@/features/character';
 import {
@@ -170,6 +172,23 @@ async function moveFollowers(
   }
 }
 
+/**
+ * Stage 9 — positioning outcomes are structured events. The string emitter
+ * stays as the fallback so callers that have not passed `addLogEvent` yet
+ * keep working unchanged.
+ */
+function emitPositioning(
+  p: { addLog: (msg: string) => void; addLogEvent?: (e: GameLogEvent) => void; character: { id: string; name: string } },
+  kind: PositioningKind,
+  message: string,
+) {
+  if (p.addLogEvent) {
+    p.addLogEvent(buildPositioningEvent(kind, message, { kind: 'player', id: p.character.id, name: p.character.name }));
+  } else {
+    p.addLog(message);
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Params interface
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -178,6 +197,8 @@ export interface UseMovementActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   addLog: (msg: string) => void;
+  /** Stage 9 — structured emitter for positioning-dependent outcomes. */
+  addLogEvent?: (event: GameLogEvent) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
@@ -228,7 +249,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const lockUntil = new Date(lockUntilIso).getTime();
       const remaining = lockUntil - Date.now();
       if (remaining > 0) {
-        p.addLog(`💫 You're staggered — can't move for ${(remaining / 1000).toFixed(1)}s.`);
+        emitPositioning(p, 'movement_locked', `You're staggered — can't move for ${(remaining / 1000).toFixed(1)}s.`);
         return;
       }
     }
@@ -293,9 +314,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       if (options?.wimpFlee) {
-        p.addLog(`⚠️ Wimp flee${dirText}!`);
+        emitPositioning(p, 'wimp_flee', `Wimp flee${dirText}!`);
       } else {
-        p.addLog(`🏃 You flee${dirText}!`);
+        emitPositioning(p, 'flee', `You flee${dirText}!`);
         // Player took manual action — suppress wimp for the rest of this combat.
         p.onPlayerCombatMove?.();
       }
