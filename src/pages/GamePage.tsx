@@ -171,7 +171,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
       if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
-      bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
+      bus.emit('log:local', { event: legacyStringToEvent(`☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.`) });
     }
     // Salvage / gem drops live in character_materials. Realtime on that table
     // is disabled, so explicitly notify any mounted useMaterials hooks.
@@ -189,7 +189,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const creatureNameResolver = useCallback((creatureId: string) => {
     return creaturesRef.current.find(c => c.id === creatureId)?.name;
   }, []);
-  const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
+  const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
   const { creatures, creaturesLoading, removeCreatureLocal } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
@@ -283,7 +283,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       // Resolve leader name for feedback
       const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
       if (leaderName) {
-        bus.emit('log', { message: `You hurry after ${leaderName}.` });
+        bus.emit('log', { event: legacyStringToEvent(`You hurry after ${leaderName}.`) });
       }
     } else {
       // Mismatch or grace expired — tolerate one miss before breaking
@@ -293,7 +293,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         missedFollowCountRef.current = 0;
         toggleFollow(false);
         const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
-        bus.emit('log', { message: `You lose track of ${leaderName ?? 'your leader'} and stop following.` });
+        bus.emit('log', { event: legacyStringToEvent(`You lose track of ${leaderName ?? 'your leader'} and stop following.`) });
       }
     }
   }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
