@@ -422,7 +422,9 @@ export function buildAttackLogEvent(
     amountKind: isMiss ? undefined : 'damage',
     crit: !!event.is_crit,
     scope: 'node',
-    observed: !isLocal,
+    // `observed` is applied by the broadcast receiver, not the emitter: a
+    // locally-driven party tick renders the actor's own line unstyled.
+
   });
 }
 
