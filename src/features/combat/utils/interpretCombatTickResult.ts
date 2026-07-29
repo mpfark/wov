@@ -11,7 +11,7 @@
  */
 
 import type { Character } from '@/features/character';
-import { formatCombatEvent, type StructuredAttackEvent } from './combat-text';
+import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } from './combat-text';
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 
 /**

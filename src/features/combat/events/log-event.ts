@@ -127,6 +127,8 @@ export const SERVER_EVENT_TYPES = [
   'consecrate_burn',
   'consecrate_heal',
   'contract_complete',
+  'creature_crit',
+  'creature_hit',
   'creature_miss',
   'divine_challenge_dr',
   'evasion_dodge',
