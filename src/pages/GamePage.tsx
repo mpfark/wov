@@ -65,6 +65,7 @@ import { useStatAllocation } from '@/features/character/hooks/useStatAllocation'
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import EventLogControls from '@/features/combat/components/EventLogControls';
 import { useEventLogDisplay } from '@/features/combat/hooks/useEventLogDisplay';
+import { useLogArchive } from '@/features/combat/hooks/useLogArchive';
 import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import OnlinePanel from '@/features/chat/components/OnlinePanel';
