@@ -10,12 +10,14 @@
  *   bus.emit('log', { message: 'Hello' });        // publish
  */
 import { useRef, useEffect, useMemo } from 'react';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 // ─── Event type map ────────────────────────────────────────────────
 export interface GameEvents {
-  // Logging
-  'log': { message: string };
-  'log:local': { message: string };
+  // Logging — structured events only. Unstructured strings must be run
+  // through legacy-adapter.ts before they reach the bus.
+  'log': { event: GameLogEvent };
+  'log:local': { event: GameLogEvent };
 
   // Combat broadcasts
   'creature:damage': {

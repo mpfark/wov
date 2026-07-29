@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface PartyHpEvent {
   character_id: string;
@@ -18,8 +19,12 @@ interface PartyMoveEvent {
 }
 
 interface PartyCombatMsgEvent {
+  /** Always `event.id` — never re-minted when crossing this boundary. */
   id: string;
+  /** Compatibility text for clients that predate structured events. */
   message: string;
+  /** Structured payload — preferred by receivers when present. */
+  event?: GameLogEvent;
   node_id: string | null;
   character_name: string | null;
   /** When set, the listener skips this message on the source player's client
@@ -153,13 +158,19 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
-  const broadcastCombatMsg = useCallback((id: string, message: string, nodeId: string | null, characterName: string | null) => {
+  const broadcastCombatMsg = useCallback((event: GameLogEvent, nodeId: string | null, characterName: string | null) => {
     if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_combat_msg');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_combat_msg',
-      payload: { id, message, node_id: nodeId, character_name: characterName } satisfies PartyCombatMsgEvent,
+      payload: {
+        id: event.id,
+        message: event.legacy?.raw ?? event.message,
+        event,
+        node_id: nodeId,
+        character_name: characterName,
+      } satisfies PartyCombatMsgEvent,
     });
   }, []);
 
