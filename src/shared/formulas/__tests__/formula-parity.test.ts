@@ -46,7 +46,7 @@ describe('Resource caps — fixed snapshots', () => {
     expect(getMaxHp('warrior', 10, 1)).toBe(24);
     expect(getMaxHp('warrior', 14, 10)).toBe(73); // 24 + 4 (conMod 2 × 2) + 45
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
-    expect(getMaxHp('assassin', 12, 5)).toBe(37);
+    expect(getMaxHp('assassin', 12, 5)).toBe(38); // 16 + 2 (conMod 1 × 2) + 20
   });
   it('CP', () => {
     expect(getMaxCp(1, 10)).toBe(30);
