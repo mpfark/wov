@@ -13,6 +13,8 @@ import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 import { GemIcon } from '@/components/icons/GemIcon';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
+import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 type JewelcrafterTab = 'repair' | 'forge' | 'enhance' | 'gems';
 
@@ -32,7 +34,7 @@ interface Props {
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
   onCharacterRefresh?: () => void;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   character?: Character;
   npcName?: string;
   npcFlavor?: string;
@@ -50,10 +52,10 @@ const getItemColor = (it: { rarity: string; is_soulbound?: boolean }) =>
 
 export default function JewelcrafterPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog: parentAddLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLogEvent: parentAddLogEvent,
   character: _character, npcName, npcFlavor,
 }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
@@ -72,14 +74,14 @@ export default function JewelcrafterPanel({
   const repairItem = async (inv: InventoryItem) => {
     if (isUnrepairable(inv.item.rarity)) return;
     const cost = calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
-    if (gold < cost) { addLog('❌ Not enough gold!'); return; }
+    if (gold < cost) { addEvent(buildErrorEvent('Not enough gold!')); return; }
     setRepairing(true);
     await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
     const newGold = gold - cost;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`💎 Refurbished ${inv.item.name} for ${cost} gold.`);
+    addEvent(buildSystemEvent(`Refurbished ${inv.item.name} for ${cost} gold.`));
     setRepairing(false);
   };
 
@@ -87,7 +89,7 @@ export default function JewelcrafterPanel({
     const items = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
     const totalCost = items.reduce((s, inv) =>
       s + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
-    if (gold < totalCost) { addLog('❌ Not enough gold to refurbish all!'); return; }
+    if (gold < totalCost) { addEvent(buildErrorEvent('Not enough gold to refurbish all!')); return; }
     setRepairing(true);
     for (const inv of items) {
       await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
@@ -96,7 +98,7 @@ export default function JewelcrafterPanel({
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`💎 Refurbished ${items.length} items for ${totalCost} gold.`);
+    addEvent(buildSystemEvent(`Refurbished ${items.length} items for ${totalCost} gold.`));
     setRepairing(false);
   };
 
@@ -111,17 +113,17 @@ export default function JewelcrafterPanel({
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
-      addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
+      addEvent(buildSystemEvent(`Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`));
       setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
-      addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Sale failed: ${e.message || 'Unknown error'}`));
     }
     setSelling(false);
   };
 
   const handleTradeGem = async (gemKey: GemKey) => {
     if (cutting) return;
-    if (salvage < GEM_SALVAGE_COST_PRIMARY) { addLog('❌ Not enough salvage.'); return; }
+    if (salvage < GEM_SALVAGE_COST_PRIMARY) { addEvent(buildErrorEvent('Not enough salvage.')); return; }
     setCutting(`trade:${gemKey}`);
     try {
       const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
@@ -130,9 +132,9 @@ export default function JewelcrafterPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       notifyMaterialsChanged(characterId);
-      addLog(`💠 Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`);
+      addEvent(buildSystemEvent(`Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`));
     } catch (e: any) {
-      addLog(`❌ Gem trade failed: ${e.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Gem trade failed: ${e.message || 'Unknown error'}`));
     }
     setCutting(null);
   };
@@ -201,7 +203,7 @@ export default function JewelcrafterPanel({
   const { craftBlock, craftBasesList, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
-    onGoldChange, onInventoryChange, addLog,
+    onGoldChange, onInventoryChange, addEvent,
     craftNoun: 'Jewelry',
   });
 

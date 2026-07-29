@@ -1,35 +1,38 @@
 import { useCallback, useRef, useState } from 'react';
-import { getLogColor } from '@/features/combat/utils/combat-log-utils';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { presentationForEvent } from '@/features/combat/events/presentation';
 
 /**
- * useMiniLog — wraps an existing `addLog` so messages also surface inside a
- * service panel via <ServicePanelMiniLog>. Keeps a small ring buffer (default 5),
- * newest first. Each entry gets a unique id so React can animate / key cleanly.
+ * useMiniLog — wraps the parent structured-event emitter so service-panel
+ * actions also surface inside the panel via <ServicePanelMiniLog>. Keeps a
+ * small ring buffer (default 5), newest first.
+ *
+ * Stage 11: entries are structured `GameLogEvent`s, so the mini log colours
+ * itself from the same presentation map as the main event log — no string
+ * inspection anywhere.
  *
  * Usage:
- *   const { entries, addLog } = useMiniLog(props.addLog);
- *   // pass `addLog` everywhere the panel logs, pass `entries` to the shell.
+ *   const { entries, addEvent } = useMiniLog(props.addLogEvent);
  */
 export interface MiniLogEntry {
   id: number;
-  text: string;
+  event: GameLogEvent;
   at: number;
 }
 
-export function useMiniLog(parentAddLog?: (msg: string) => void, max = 5) {
+export function useMiniLog(parentAddLogEvent?: (event: GameLogEvent) => void, max = 5) {
   const [entries, setEntries] = useState<MiniLogEntry[]>([]);
   const idRef = useRef(0);
 
-  const addLog = useCallback((msg: string) => {
-    parentAddLog?.(msg);
+  const addEvent = useCallback((event: GameLogEvent) => {
+    parentAddLogEvent?.(event);
     setEntries((prev) => {
       const id = ++idRef.current;
-      const next = [{ id, text: msg, at: Date.now() }, ...prev];
-      return next.slice(0, max);
+      return [{ id, event, at: Date.now() }, ...prev].slice(0, max);
     });
-  }, [parentAddLog, max]);
+  }, [parentAddLogEvent, max]);
 
-  return { entries, addLog };
+  return { entries, addEvent };
 }
 
 export function ServicePanelMiniLog({ entries }: { entries: MiniLogEntry[] }) {
@@ -45,11 +48,11 @@ export function ServicePanelMiniLog({ entries }: { entries: MiniLogEntry[] }) {
       {entries.map((e, i) => (
         <li
           key={e.id}
-          className={`truncate ${getLogColor(e.text)}`}
+          className={`truncate ${presentationForEvent(e.event).textClass}`}
           style={{ opacity: 1 - i * 0.15 }}
-          title={e.text}
+          title={e.event.message}
         >
-          {e.text}
+          {e.event.message}
         </li>
       ))}
     </ul>

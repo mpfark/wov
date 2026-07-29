@@ -29,6 +29,8 @@ import {
   GEAR_TIERS,
 } from '@/shared/formulas/items';
 import { WEAPON_TAG_LABELS } from '@/lib/game-data';
+import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 const STAT_LABELS: Record<string, string> = {
   str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
@@ -52,13 +54,13 @@ interface Props {
   slots: { value: string; label: string }[];
   onGoldChange: (g: number) => void;
   onInventoryChange: () => void;
-  addLog: (msg: string) => void;
+  addEvent: (event: GameLogEvent) => void;
   craftNoun?: string;
 }
 
 export function useForgeUpgradeView({
   characterId, characterLevel, gold, inventory, slots,
-  onGoldChange, onInventoryChange, addLog, craftNoun = 'Base',
+  onGoldChange, onInventoryChange, addEvent, craftNoun = 'Base',
 }: Props) {
   const { counts, byCategory } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
@@ -127,9 +129,9 @@ export function useForgeUpgradeView({
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       onInventoryChange();
-      addLog(`🔨 Crafted ${data.base_name} (Lv${data.crafted_level}). Apply gems via the Enhance tab.`);
+      addEvent(buildSystemEvent(`Crafted ${data.base_name} (Lv${data.crafted_level}). Apply gems via the Enhance tab.`));
     } catch (e: any) {
-      addLog(`❌ Craft failed: ${e.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Craft failed: ${e.message || 'Unknown error'}`));
     }
     setWorking(null);
   };
@@ -149,9 +151,9 @@ export function useForgeUpgradeView({
       notifyMaterialsChanged(characterId);
       onInventoryChange();
       const gemName = GEM_CATALOG[gemKey].name;
-      addLog(`💠 Applied ${gemName} to ${selectedInv.item.name} (+1 ${attrForGem(gemKey).toUpperCase()}).`);
+      addEvent(buildSystemEvent(`Applied ${gemName} to ${selectedInv.item.name} (+1 ${attrForGem(gemKey).toUpperCase()}).`));
     } catch (e: any) {
-      addLog(`❌ ${e.message || 'Could not apply gem'}`);
+      addEvent(buildErrorEvent(`${e.message || 'Could not apply gem'}`));
     }
     setWorking(null);
   };
@@ -162,7 +164,7 @@ export function useForgeUpgradeView({
     const goldCost = level * 10;
     const salvageCost = level * 3;
     if (gold < goldCost || salvage < salvageCost) {
-      addLog(`❌ Strip costs ${salvageCost} salvage + ${goldCost} gold.`);
+      addEvent(buildErrorEvent(`Strip costs ${salvageCost} salvage + ${goldCost} gold.`));
       return;
     }
     setWorking('strip');
@@ -175,9 +177,9 @@ export function useForgeUpgradeView({
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       onInventoryChange();
-      addLog(`🧹 Stripped all gems from ${selectedInv.item.name}. Gems destroyed.`);
+      addEvent(buildSystemEvent(`Stripped all gems from ${selectedInv.item.name}. Gems destroyed.`));
     } catch (e: any) {
-      addLog(`❌ ${e.message || 'Strip failed'}`);
+      addEvent(buildErrorEvent(`${e.message || 'Strip failed'}`));
     }
     setWorking(null);
   };

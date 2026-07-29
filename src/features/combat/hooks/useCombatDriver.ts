@@ -29,6 +29,8 @@ import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 import { useCombatAggroEffects } from './useCombatAggroEffects';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
+import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
+import { createLogEvent, mapServerEventType } from '@/features/combat/events/log-event';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set([
@@ -71,9 +73,8 @@ export interface UseCombatDriverParams {
   party: Party | null;
   isLeader: boolean;
   isDead: boolean;
-  addLocalLog: (msg: string) => void;
-  /** Structured-event emitter (stage 2+ server events bypass the string shim). */
-  addLocalLogEvent?: (event: import('@/features/combat/events/log-event').GameLogEvent) => void;
+  /** Structured-event emitter — the only local log path. */
+  addLocalLogEvent: (event: import('@/features/combat/events/log-event').GameLogEvent) => void;
 
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   updateCharacterLocal?: (updates: Partial<Character>) => void;
@@ -187,8 +188,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         `Your ${fizzling.label} fizzles as you move away.`,
         { kind: 'player', id: p.character.id, name: p.character.name },
       );
-      if (p.addLocalLogEvent) p.addLocalLogEvent(fizzleEvent);
-      else p.addLocalLog(fizzleEvent.message);
+      p.addLocalLogEvent(fizzleEvent);
     }
     pendingAbilityRef.current = null;
     setPendingAbility(null);
@@ -305,7 +305,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     character: params.character,
     engagedCreatureIdsRef,
     startCombat: startCombatCore,
-    addLocalLog: params.addLocalLog,
     addLocalLogEvent: params.addLocalLogEvent,
     setEngagedCreatureIds,
   });
@@ -403,8 +402,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
     // Log messages
     for (const line of result.formattedLogMessages) {
-      if (typeof line === 'string') ext.current.addLocalLog(line);
-      else ext.current.addLocalLogEvent?.(line);
+      ext.current.addLocalLogEvent(typeof line === 'string' ? legacyStringToEvent(line) : line);
     }
 
 
@@ -516,8 +514,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             { id: nextAggro.id, name: nextAggro.name },
             { kind: 'player', id: p.character.id, name: p.character.name },
           );
-          if (p.addLocalLogEvent) p.addLocalLogEvent(joinEvent);
-          else p.addLocalLog(joinEvent.message);
+          p.addLocalLogEvent(joinEvent);
           setEngagedCreatureIds(prev => {
             if (prev.includes(nextAggro.id)) return prev;
             const next = [...prev, nextAggro.id];
@@ -769,7 +766,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             if (killEvents.length > 0) {
               console.log(`[combat] processing ${killEvents.length} kill-related events from stale tick`);
               for (const ev of killEvents) {
-                ext.current.addLocalLog(ev.message);
+                ext.current.addLocalLogEvent(createLogEvent({ type: mapServerEventType(ev.type), message: ev.message }));
               }
               // Apply character state updates (XP, gold, etc.) from the kill
               const myState = staleResult.member_states?.find(m => m.character_id === ext.current.character.id);

@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';
+import { buildDeathEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 // ─── Buff / debuff types ──────────────────────────────────────────
 export interface RegenBuff { multiplier: number; expiresAt: number } // kept for type compat but unused
@@ -82,7 +84,7 @@ export interface UseGameLoopParams {
   equipped: EquippedItem[];
   equipmentBonuses: Record<string, number>;
   getNode: (id: string) => any;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   startingNodeId?: string;
   creatures: { id: string; name: string; level: number; rarity: string; hp: number; max_hp: number; loot_table: any; loot_table_id: string | null; drop_chance: number; node_id?: string | null; [k: string]: any }[];
   party: any;
@@ -100,7 +102,7 @@ export interface UseGameLoopParams {
 // ─── Hook ─────────────────────────────────────────────────────────
 export function useGameLoop(params: UseGameLoopParams) {
   const {
-    character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
+    character, updateCharacter, equipped, equipmentBonuses, getNode, addLogEvent,
     startingNodeId, creatures, party, partyMembers, bus,
     enabled = true,
     updateCharacterLocal,
@@ -294,11 +296,11 @@ export function useGameLoop(params: UseGameLoopParams) {
   const deathGoldRef = useRef(character.gold);
   const deathNodeRef = useRef(startingNodeId);
   const updateCharRef = useRef(updateCharacter);
-  const addLogRef = useRef(addLog);
+  const addLogEventRef = useRef(addLogEvent);
   useEffect(() => { deathGoldRef.current = character.gold; }, [character.gold]);
   useEffect(() => { deathNodeRef.current = startingNodeId; }, [startingNodeId]);
   useEffect(() => { updateCharRef.current = updateCharacter; }, [updateCharacter]);
-  useEffect(() => { addLogRef.current = addLog; }, [addLog]);
+  useEffect(() => { addLogEventRef.current = addLogEvent; }, [addLogEvent]);
 
   // Timers are held in refs so a mid-countdown hp change (optimistic write or
   // realtime echo re-firing this effect) does NOT tear them down. Previously
@@ -332,7 +334,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           gold: deathGoldRef.current - goldLost,
           current_node_id: deathNodeRef.current,
         });
-        addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+        addLogEventRef.current(buildDeathEvent(`You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`, { amount: goldLost, amountKind: 'gold' }));
       } finally {
         if (deathIntervalRef.current) { clearInterval(deathIntervalRef.current); deathIntervalRef.current = null; }
         deathTimeoutRef.current = null;
@@ -355,7 +357,6 @@ export function useGameLoop(params: UseGameLoopParams) {
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
     const isHealer = partyRegenBuff.source === 'healer';
     const abilityLabel = isHealer ? 'Purifying Light' : 'Crescendo';
-    const abilityEmoji = isHealer ? '🌟' : '✨';
     const interval = setInterval(async () => {
       if (Date.now() >= partyRegenBuff.expiresAt) {
         setPartyRegenBuff(null); clearInterval(interval); return;
@@ -377,16 +378,16 @@ export function useGameLoop(params: UseGameLoopParams) {
           });
         }
         if (membersHere.length > 0) {
-          addLog(`${abilityEmoji} ${abilityLabel} heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`);
+          addLogEvent(buildHealEvent(`${abilityLabel} heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
         } else {
-          addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
+          addLogEvent(buildHealEvent(`${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
         }
       } else {
-        addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
+        addLogEvent(buildHealEvent(`${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [partyRegenBuff, party, partyMembers, character, addLog, updateCharacter]);
+  }, [partyRegenBuff, party, partyMembers, character, addLogEvent, updateCharacter]);
 
   return {
     // Buff state (from useBuffState)

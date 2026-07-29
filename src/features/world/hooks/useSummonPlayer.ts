@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateTeleportCpCost } from '@/lib/game-data';
+import { buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 export interface UseSummonPlayerParams {
   characterId: string;
@@ -8,7 +10,7 @@ export interface UseSummonPlayerParams {
   currentRegionMinLevel: number | undefined;
   playerCp: number;
   getRegionForNode: (nodeId: string) => { id: string; min_level: number } | undefined;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   inCombat: boolean;
   isDead: boolean;
 }
@@ -27,7 +29,7 @@ export interface SummonResult {
 export function useSummonPlayer(params: UseSummonPlayerParams) {
   const {
     characterId, currentNodeId, currentRegionMinLevel, playerCp,
-    getRegionForNode, addLog, inCombat, isDead,
+    getRegionForNode, addLogEvent, inCombat, isDead,
   } = params;
 
   const [loading, setLoading] = useState(false);
@@ -91,12 +93,12 @@ export function useSummonPlayer(params: UseSummonPlayerParams) {
           cp_cost: cpCost,
         });
       if (error) return { ok: false, message: error.message, cpCost };
-      addLog(`🌀 Summon request sent to ${targetName} (${cpCost} CP). Awaiting response...`);
+      addLogEvent(buildSystemEvent(`Summon request sent to ${targetName} (${cpCost} CP). Awaiting response...`, { effectType: 'summon' }));
       return { ok: true, message: `Request sent to ${targetName}!`, cpCost };
     } finally {
       setLoading(false);
     }
-  }, [characterId, currentNodeId, currentRegionMinLevel, playerCp, getRegionForNode, addLog, inCombat, isDead]);
+  }, [characterId, currentNodeId, currentRegionMinLevel, playerCp, getRegionForNode, addLogEvent, inCombat, isDead]);
 
   return { summon, loading };
 }

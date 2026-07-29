@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import type { OnlinePlayer } from '@/hooks/useGlobalPresence';
 import { useSummonPlayer } from '@/features/world/hooks/useSummonPlayer';
+import { buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface Props {
   characterId: string;
@@ -12,14 +14,14 @@ interface Props {
   playerCp: number;
   getRegionForNode: (nodeId: string) => { id: string; min_level: number } | undefined;
   onlinePlayers: OnlinePlayer[];
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   inCombat: boolean;
   isDead: boolean;
 }
 
 export default function SummonPlayerPanel({
   characterId, currentNodeId, currentRegionMinLevel, playerCp,
-  getRegionForNode, onlinePlayers, addLog, inCombat, isDead,
+  getRegionForNode, onlinePlayers, addLogEvent, inCombat, isDead,
 }: Props) {
   const [targetName, setTargetName] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -27,7 +29,7 @@ export default function SummonPlayerPanel({
 
   const { summon, loading } = useSummonPlayer({
     characterId, currentNodeId, currentRegionMinLevel, playerCp,
-    getRegionForNode, addLog, inCombat, isDead,
+    getRegionForNode, addLogEvent, inCombat, isDead,
   });
 
   // Subscribe to realtime status changes on outgoing summon requests
@@ -50,12 +52,12 @@ export default function SummonPlayerPanel({
           const { data: name } = await supabase.rpc('get_character_name', { _character_id: row.target_id });
           const who = (name as string) || 'Player';
           setFeedback({ type: 'success', msg: `${who} accepted your summon!` });
-          addLog(`🌀 ${who} accepted your summon and has arrived!`);
+          addLogEvent(buildSystemEvent(`${who} accepted your summon and has arrived!`, { effectType: 'summon' }));
         } else if (row.status === 'declined') {
           const { data: name } = await supabase.rpc('get_character_name', { _character_id: row.target_id });
           const who = (name as string) || 'Player';
           setFeedback({ type: 'error', msg: `${who} declined your summon.` });
-          addLog(`🌀 ${who} declined your summon request.`);
+          addLogEvent(buildSystemEvent(`${who} declined your summon request.`, { effectType: 'summon' }));
         }
       })
       .subscribe();
@@ -65,7 +67,7 @@ export default function SummonPlayerPanel({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [characterId, addLog]);
+  }, [characterId, addLogEvent]);
 
   const handleSummon = useCallback(async () => {
     if (!targetName.trim()) { setFeedback({ type: 'error', msg: 'Enter a character name.' }); return; }

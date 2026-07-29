@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import type { SummonRequest } from '@/features/world/hooks/useSummonRequests';
+import { buildErrorEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface Props {
   pendingSummons: SummonRequest[];
   onAccept: (requestId: string) => Promise<string | null>;
   onDecline: (requestId: string) => Promise<string | null>;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   inCombat: boolean;
   onRefetch?: () => void;
 }
 
-export default function SummonRequestNotification({ pendingSummons, onAccept, onDecline, addLog, inCombat, onRefetch }: Props) {
+export default function SummonRequestNotification({ pendingSummons, onAccept, onDecline, addLogEvent, inCombat, onRefetch }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -25,13 +27,13 @@ export default function SummonRequestNotification({ pendingSummons, onAccept, on
   if (pendingSummons.length === 0) return null;
 
   const handleAccept = async (req: SummonRequest) => {
-    if (inCombat) { addLog('⚠️ Cannot accept summon while in combat.'); return; }
+    if (inCombat) { addLogEvent(buildErrorEvent('Cannot accept summon while in combat.')); return; }
     setLoading(req.id);
     const err = await onAccept(req.id);
     setLoading(null);
-    if (err) addLog(`⚠️ Summon failed: ${err}`);
+    if (err) addLogEvent(buildErrorEvent(`Summon failed: ${err}`));
     else {
-      addLog(`🌀 You were summoned by ${req.summoner_name}!`);
+      addLogEvent(buildMovementEvent(`You were summoned by ${req.summoner_name}!`, { effectType: 'summon' }));
       onRefetch?.();
     }
   };
@@ -40,7 +42,7 @@ export default function SummonRequestNotification({ pendingSummons, onAccept, on
     setLoading(req.id);
     await onDecline(req.id);
     setLoading(null);
-    addLog(`🌀 You declined the summon from ${req.summoner_name}.`);
+    addLogEvent(buildSystemEvent(`You declined the summon from ${req.summoner_name}.`, { effectType: 'summon' }));
   };
 
   // Use tick in remaining calculation to suppress lint warning

@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Coins, ArrowUpFromLine } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import { getChaSellMultiplier, getChaBuyDiscount, getStatModifier } from '@/lib/game-data';
+import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface VendorItem {
   id: string;
@@ -36,7 +38,7 @@ interface Props {
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   /** Optional shopkeeper framing. */
   npcName?: string;
   npcFlavor?: string;
@@ -60,8 +62,8 @@ function statSummary(stats?: Record<string, number>): string {
   return parts.join(', ');
 }
 
-export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog: parentAddLog, npcName, npcFlavor }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLogEvent: parentAddLogEvent, npcName, npcFlavor }: Props) {
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const effectiveCha = cha + (equipmentBonuses.cha || 0);
   const buyDiscount = getChaBuyDiscount(effectiveCha);
@@ -132,20 +134,20 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const buyItem = async (vi: VendorItem) => {
     const finalPrice = getDiscountedPrice(vi.price);
     if (gold < finalPrice) {
-      addLog('❌ Not enough gold!');
+      addEvent(buildErrorEvent('Not enough gold!'));
       return;
     }
     const { error } = await supabase.rpc('buy_vendor_item' as any, {
       p_character_id: characterId,
       p_vendor_item_id: vi.id,
     });
-    if (error) { addLog(`❌ ${error.message}`); return; }
+    if (error) { addEvent(buildErrorEvent(`${error.message}`)); return; }
 
     const newGold = gold - finalPrice;
     onGoldChange(newGold);
     onInventoryChange();
     const discountNote = buyDiscount > 0 ? ` (${Math.round(buyDiscount * 100)}% CHA discount)` : '';
-    addLog(`🪙 Purchased ${vi.item.name} for ${finalPrice} gold.${discountNote}`);
+    addEvent(buildSystemEvent(`Purchased ${vi.item.name} for ${finalPrice} gold.${discountNote}`));
 
     if (vi.stock > 0) {
       setVendorItems(prev => prev.map(v => v.id === vi.id ? { ...v, stock: v.stock - 1 } : v).filter(v => v.stock !== 0));
@@ -161,7 +163,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
         p_character_id: characterId,
         p_inventory_id: inv.id,
       });
-      if (error) { addLog(`❌ ${error.message}`); continue; }
+      if (error) { addEvent(buildErrorEvent(`${error.message}`)); continue; }
       totalEarned += (sellPrice as number) || 0;
       soldNames.push(inv.item.name);
     }
@@ -169,9 +171,9 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     onInventoryChange();
     const chaNote = chaMod > 0 ? ` (CHA bonus)` : '';
     if (soldNames.length === 1) {
-      addLog(`🪙 Sold ${soldNames[0]} for ${totalEarned} gold.${chaNote}`);
+      addEvent(buildSystemEvent(`Sold ${soldNames[0]} for ${totalEarned} gold.${chaNote}`));
     } else if (soldNames.length > 1) {
-      addLog(`🪙 Sold ${soldNames.length} items for ${totalEarned} gold.${chaNote}`);
+      addEvent(buildSystemEvent(`Sold ${soldNames.length} items for ${totalEarned} gold.${chaNote}`));
     }
     setSelectedSellItemIds(new Set());
   };

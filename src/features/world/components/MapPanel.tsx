@@ -19,6 +19,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import WimpControl from '@/features/world/components/WimpControl';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { buildErrorEvent } from '@/features/combat/events/client-event-builder';
 
 export interface ActiveBuffs {
   stealth?: boolean;
@@ -92,7 +94,7 @@ interface Props {
   unlockedConnections?: Map<string, number>;
   // Summon props
   onlinePlayers?: { id: string; name: string; race: string; class: string; level: number; gender: 'male' | 'female' }[];
-  addLog?: (msg: string) => void;
+  addLogEvent?: (event: GameLogEvent) => void;
   inCombat?: boolean;
   isDead?: boolean;
   getRegionForNode?: (nodeId: string) => { id: string; min_level: number } | undefined;
@@ -122,27 +124,27 @@ export default function MapPanel({
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenJewelcrafter, onOpenStonebinder, onOpenTeleport, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
   unlockedConnections, onMapTeleport,
-  onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
+  onlinePlayers: summonOnlinePlayers, addLogEvent: summonAddLogEvent, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
   pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
   appVersion, xpMultiplier = 1, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
 }: Props) {
-  const canSummonFromParty = characterLevel >= 26 && !!summonAddLog && !!getRegionForNode && !!currentNodeId;
+  const canSummonFromParty = characterLevel >= 26 && !!summonAddLogEvent && !!getRegionForNode && !!currentNodeId;
   const summonHook = useSummonPlayer({
     characterId: character.id,
     currentNodeId,
     currentRegionMinLevel,
     playerCp: character.cp ?? 0,
     getRegionForNode: getRegionForNode ?? (() => undefined),
-    addLog: summonAddLog ?? (() => {}),
+    addLogEvent: summonAddLogEvent ?? (() => {}),
     inCombat: summonInCombat ?? false,
     isDead: summonIsDead ?? false,
   });
   const handleSummonMember = useCallback(async (charId: string, name: string) => {
     if (!canSummonFromParty) return;
     const res = await summonHook.summon(charId, name);
-    if (!res.ok && summonAddLog) summonAddLog(`🌀 ${res.message}`);
-  }, [canSummonFromParty, summonHook, summonAddLog]);
+    if (!res.ok && summonAddLogEvent) summonAddLogEvent(buildErrorEvent(res.message));
+  }, [canSummonFromParty, summonHook, summonAddLogEvent]);
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
@@ -612,13 +614,13 @@ export default function MapPanel({
       />
 
       {/* Incoming summon requests — any level can be summoned */}
-      {summonAddLog && pendingSummons && pendingSummons.length > 0 && onAcceptSummon && onDeclineSummon && (
+      {summonAddLogEvent && pendingSummons && pendingSummons.length > 0 && onAcceptSummon && onDeclineSummon && (
         <div className="border-t border-border pt-2">
           <SummonRequestNotification
             pendingSummons={pendingSummons}
             onAccept={onAcceptSummon}
             onDecline={onDeclineSummon}
-            addLog={summonAddLog}
+            addLogEvent={summonAddLogEvent ?? (() => {})}
             inCombat={summonInCombat ?? false}
             onRefetch={onSummonRefetch}
           />
@@ -626,7 +628,7 @@ export default function MapPanel({
       )}
 
       {/* Outgoing summon panel — Level 26+ */}
-      {characterLevel >= 26 && summonAddLog && getRegionForNode && currentNodeId && (
+      {characterLevel >= 26 && summonAddLogEvent && getRegionForNode && currentNodeId && (
         <div className="border-t border-border pt-2">
           <SummonPlayerPanel
             characterId={character.id}
@@ -635,7 +637,7 @@ export default function MapPanel({
             playerCp={character.cp ?? 0}
             getRegionForNode={getRegionForNode}
             onlinePlayers={summonOnlinePlayers || []}
-            addLog={summonAddLog}
+            addLogEvent={summonAddLogEvent ?? (() => {})}
             inCombat={summonInCombat ?? false}
             isDead={summonIsDead ?? false}
           />

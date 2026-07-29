@@ -13,11 +13,13 @@ import { useCallback } from 'react';
 import { Character } from '@/features/character';
 import { calculateStats, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
+import { buildProgressionEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface UseStatAllocationArgs {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   /** Optional: called after sync_character_resources runs so callers can
    *  refetch the character row immediately instead of waiting for realtime. */
   onResourcesSynced?: () => void;
@@ -32,7 +34,7 @@ async function syncResources(characterId: string, onSynced?: () => void) {
   }
 }
 
-export function useStatAllocation({ character, updateCharacter, addLog, onResourcesSynced }: UseStatAllocationArgs) {
+export function useStatAllocation({ character, updateCharacter, addLogEvent, onResourcesSynced }: UseStatAllocationArgs) {
   const handleAllocateStat = useCallback(async (stat: string) => {
     if (character.unspent_stat_points <= 0) return;
     const currentVal = (character as any)[stat] ?? 10;
@@ -42,8 +44,8 @@ export function useStatAllocation({ character, updateCharacter, addLog, onResour
     };
     await updateCharacter(updates);
     await syncResources(character.id, onResourcesSynced);
-    addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
-  }, [character, updateCharacter, addLog, onResourcesSynced]);
+    addLogEvent(buildProgressionEvent(`+1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`, { effectType: 'stat_point' }));
+  }, [character, updateCharacter, addLogEvent, onResourcesSynced]);
 
   const handleFullRespec = useCallback(async () => {
     if ((character.respec_points || 0) <= 0) return;
@@ -68,8 +70,8 @@ export function useStatAllocation({ character, updateCharacter, addLog, onResour
     updates.unspent_stat_points = character.unspent_stat_points + totalRefunded;
     await updateCharacter(updates);
     await syncResources(character.id, onResourcesSynced);
-    addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
-  }, [character, updateCharacter, addLog, onResourcesSynced]);
+    addLogEvent(buildProgressionEvent(`Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`, { effectType: 'respec' }));
+  }, [character, updateCharacter, addLogEvent, onResourcesSynced]);
 
   const handleBatchAllocateStats = useCallback(async (allocations: Record<string, number>) => {
     const totalPoints = Object.values(allocations).reduce((s, v) => s + v, 0);
@@ -84,8 +86,8 @@ export function useStatAllocation({ character, updateCharacter, addLog, onResour
     await updateCharacter(updates);
     await syncResources(character.id, onResourcesSynced);
     const statList = Object.entries(allocations).map(([s, v]) => `+${v} ${s.toUpperCase()}`).join(', ');
-    addLog(`📊 Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`);
-  }, [character, updateCharacter, addLog, onResourcesSynced]);
+    addLogEvent(buildProgressionEvent(`Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`, { effectType: 'stat_point' }));
+  }, [character, updateCharacter, addLogEvent, onResourcesSynced]);
 
   return { handleAllocateStat, handleFullRespec, handleBatchAllocateStats };
 }
