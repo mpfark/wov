@@ -9,10 +9,11 @@
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 import EventLogLine from '@/features/combat/components/EventLogLine';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 
 interface ChatPanelProps {
-  messages: string[];
+  messages: GameLogEvent[];
   onClose: () => void;
 }
 
@@ -36,8 +37,8 @@ export default function ChatPanel({ messages, onClose }: ChatPanelProps) {
         {messages.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
         ) : (
-          messages.map((log, i) => (
-            <EventLogLine key={i} log={log} variant="chat" className="text-xs" />
+          messages.map((event, i) => (
+            <EventLogLine key={event.id || i} event={event} variant="chat" className="text-xs" />
           ))
 
         )}
