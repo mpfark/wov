@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { clampResourceUpdates } from '../utils/clampResources';
+import { clearCharacter } from '@/features/combat/events/log-archive';
 
 export interface Character {
   id: string;
@@ -206,6 +207,8 @@ export function useCharacter(user: User | null) {
       if (data) setCharacters(data as Character[]);
       throw error;
     }
+    // Purge the player's on-device log archive for this character too.
+    void clearCharacter(id);
   }, [user]);
 
   const createCharacter = async (charData: {

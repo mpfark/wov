@@ -65,6 +65,7 @@ import { useStatAllocation } from '@/features/character/hooks/useStatAllocation'
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import EventLogControls from '@/features/combat/components/EventLogControls';
 import { useEventLogDisplay } from '@/features/combat/hooks/useEventLogDisplay';
+import { useLogArchive } from '@/features/combat/hooks/useLogArchive';
 import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import OnlinePanel from '@/features/chat/components/OnlinePanel';
@@ -1058,6 +1059,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
 
+  // On-device archive: full personal log history with infinite scrollback.
+  const logArchive = useLogArchive(character.id, eventLog);
+  const filteredOlderEvents = useMemo(() => {
+    if (!(isWideScreen && chatPanelOpen)) return logArchive.olderEvents;
+    return logArchive.olderEvents.filter(e => e.type !== 'speech' && e.type !== 'whisper');
+  }, [logArchive.olderEvents, isWideScreen, chatPanelOpen]);
+
 
   // ── Shared drop handler ────────────────────────────────────────
   const handleDropItem = useCallback(async (inventoryId: string) => {
@@ -1316,6 +1324,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             filteredEventLog={filteredEventLog}
             display={eventLogDisplay}
             className="flex-[55]"
+            olderEvents={filteredOlderEvents}
+            hasMoreHistory={logArchive.hasMore}
+            loadingHistory={logArchive.loadingOlder}
+            onLoadOlder={logArchive.loadOlder}
           />
           <CommandInputBar
             chatInput={chatInput}
