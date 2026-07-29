@@ -188,7 +188,7 @@ export function applySelfPerspective(message: string, characterName: string): st
 }
 
 /**
- * Build a structured event for a stage-5/6 server event, or null when the
+ * Build a structured event for a stage-5/6/7 server event, or null when the
  * event belongs to another stage (caller then falls back to the legacy path).
  */
 export function buildTickLogEvent(
@@ -197,7 +197,8 @@ export function buildTickLogEvent(
   localCharacterName: string,
 ): GameLogEvent | null {
   const isStage6 = STAGE6_TYPES.has(ev.type);
-  if (!STAGE5_TYPES.has(ev.type) && !isStage6) return null;
+  const isStage7 = STAGE7_TYPES.has(ev.type);
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7) return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
@@ -215,7 +216,13 @@ export function buildTickLogEvent(
       ? { kind: 'creature', id: ev.creature_id, name: ev.creature_name }
       : undefined;
 
-  const creatureIsSource = CREATURE_SOURCE_TYPES.has(ev.type);
+  // Stage 7 control effects: the afflicted actor is always the target, the
+  // inflicting actor the source. Creature-sourced control (stagger, movement
+  // lock) flips the orientation, which is exactly what decides `threat` vs
+  // `action` presentation — no wording involved.
+  const creatureIsSource =
+    CREATURE_SOURCE_TYPES.has(ev.type) ||
+    (isStage7 && STAGE7_CREATURE_SOURCED.has(ev.type));
   // Stage 6 lines describe what happened TO the protected/healed player, so
   // the player is always the subject; the creature (if any) is the other side.
   const source = creatureIsSource
@@ -223,7 +230,7 @@ export function buildTickLogEvent(
     : isStage6
       ? playerActor
       : playerActor ?? creatureActor;
-  const target = creatureIsSource ? playerActor : isStage6 ? creatureActor : creatureActor;
+  const target = creatureIsSource ? playerActor : creatureActor;
 
   const hasDamage = typeof ev.damage === 'number' && ev.damage > 0;
 
@@ -240,6 +247,12 @@ export function buildTickLogEvent(
       amountKind = undefined;
     }
   }
+  // Status lines carry effect identity, not a damage number — any `[N]` in the
+  // prose belongs to the effect's own description, so nothing is re-attached.
+  if (isStage7) {
+    amount = undefined;
+    amountKind = undefined;
+  }
 
   return createLogEvent({
     type,
@@ -249,9 +262,15 @@ export function buildTickLogEvent(
     target,
     amount,
     amountKind,
-    effectType: isStage6 ? STAGE6_EFFECT_TYPE[ev.type] : undefined,
+    effectType: isStage7
+      ? STAGE7_EFFECT_TYPE[ev.type]
+      : isStage6
+        ? STAGE6_EFFECT_TYPE[ev.type]
+        : undefined,
+    severity: isStage7 ? stage7Severity(ev.type) : undefined,
     crit: ev.is_crit ? true : undefined,
     scope: 'node',
   });
 }
+
 
