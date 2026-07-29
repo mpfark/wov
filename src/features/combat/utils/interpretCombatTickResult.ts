@@ -11,7 +11,7 @@
  */
 
 import type { Character } from '@/features/character';
-import { formatCombatEvent, type StructuredAttackEvent } from './combat-text';
+import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } from './combat-text';
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 
 /**
@@ -155,6 +155,15 @@ export function interpretCombatTickResult(
         message: mine ? se.message : (se.remoteMessage ?? se.message),
         observed: !mine,
       }));
+      continue;
+    }
+
+    // Stage 4: attacks are native structured events. The client owns the
+    // tier/flavor prose, so it authors both perspectives here — no You→name
+    // rewriting and no string classification for attack lines.
+    const attackEvent = buildAttackLogEvent(ev as StructuredAttackEvent, characterId);
+    if (attackEvent) {
+      formattedLogMessages.push(attackEvent);
       continue;
     }
 
