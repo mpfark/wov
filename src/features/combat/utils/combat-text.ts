@@ -277,6 +277,7 @@ function formatPlayerAttack(
   event: StructuredAttackEvent,
   isLocal: boolean,
   emoji: string,
+  flavorIdx?: number,
 ): string {
   const target = event.target_name!;
   const isMiss = event.type === 'attack_miss' || event.type === 'offhand_miss';
@@ -291,9 +292,11 @@ function formatPlayerAttack(
   }
 
   const tierWord = getDamageTierWord(damage);
-  const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
+  const pool = DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit;
+  const flavor = flavorIdx === undefined ? pickRandom(pool) : pool[flavorIdx % pool.length];
   const punct = isCrit ? '!' : '.';
   const dmgSuffix = damage > 0 ? ` [${damage}]` : '';
+
 
   if (isLocal) {
     return `${emoji} You ${tierWord} ${target}, ${flavor}${punct}${dmgSuffix}`;
