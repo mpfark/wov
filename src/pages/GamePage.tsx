@@ -915,8 +915,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setSelectedTargetId(null);
   }, [character.current_node_id]);
 
-  const handleChatMessage = useCallback((formatted: string) => {
-    setEventLog(prev => [...prev.slice(-99), legacyStringToEvent(formatted)]);
+  const handleChatMessage = useCallback((event: GameLogEvent) => {
+    setEventLog(prev => [...prev.slice(-99), event]);
   }, []);
 
   const { sendSay, sendWhisper } = useChat({
