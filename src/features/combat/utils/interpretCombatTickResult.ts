@@ -12,9 +12,21 @@
 
 import type { Character } from '@/features/character';
 import { formatCombatEvent, type StructuredAttackEvent } from './combat-text';
+import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
+
+/**
+ * A line produced by a tick: either a structured event (server-authored,
+ * stage 2+) or a legacy string that the emit boundary adapts.
+ */
+export type TickLogLine = string | GameLogEvent;
 
 export interface CombatTickResponse {
-  events: { type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string }[];
+  events: {
+    type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string;
+    /** Stage 2+: server-authored structured event. Takes precedence over `message`. */
+    log_event?: unknown;
+  }[];
+
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: {
     character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number;
