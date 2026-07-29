@@ -53,15 +53,15 @@ interface EventLogLineProps {
 }
 
 function renderTokens(event: GameLogEvent, displayMode: CombatLogDisplayMode) {
-  const raw = event.legacy?.raw;
-  if (raw !== undefined) {
-    const src = displayMode === 'flavor' ? stripFlavorNumber(raw) : raw;
-    const { body, number } = splitLogTokens(src);
-    return { body, number };
-  }
-  const number =
-    displayMode !== 'flavor' && event.amount != null ? `[${event.amount}]` : '';
-  return { body: event.message, number };
+  // Both legacy strings and client-authored prose may still carry a leading
+  // glyph and/or an inline `[N]` tail. Strip both, then re-attach exactly one
+  // number token (inline wins over `amount`) so nothing renders twice.
+  const src = event.legacy?.raw ?? event.message;
+  const cleaned = displayMode === 'flavor' ? stripFlavorNumber(src) : src;
+  const { body, number: inline } = splitLogTokens(cleaned);
+  if (displayMode === 'flavor') return { body, number: '' };
+  const number = inline || (event.amount != null ? `[${event.amount}]` : '');
+  return { body, number };
 }
 
 export default function EventLogLine({
