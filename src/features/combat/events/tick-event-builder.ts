@@ -133,15 +133,16 @@ export function applySelfPerspective(message: string, characterName: string): st
 }
 
 /**
- * Build a structured event for a stage-5 server event, or null when the event
- * belongs to another stage (caller then falls back to the legacy path).
+ * Build a structured event for a stage-5/6 server event, or null when the
+ * event belongs to another stage (caller then falls back to the legacy path).
  */
 export function buildTickLogEvent(
   ev: TickEventInput,
   localCharacterId: string,
   localCharacterName: string,
 ): GameLogEvent | null {
-  if (!STAGE5_TYPES.has(ev.type)) return null;
+  const isStage6 = STAGE6_TYPES.has(ev.type);
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6) return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
@@ -160,10 +161,30 @@ export function buildTickLogEvent(
       : undefined;
 
   const creatureIsSource = CREATURE_SOURCE_TYPES.has(ev.type);
-  const source = creatureIsSource ? creatureActor : playerActor ?? creatureActor;
-  const target = creatureIsSource ? playerActor : creatureActor;
+  // Stage 6 lines describe what happened TO the protected/healed player, so
+  // the player is always the subject; the creature (if any) is the other side.
+  const source = creatureIsSource
+    ? creatureActor
+    : isStage6
+      ? playerActor
+      : playerActor ?? creatureActor;
+  const target = creatureIsSource ? playerActor : isStage6 ? creatureActor : creatureActor;
 
   const hasDamage = typeof ev.damage === 'number' && ev.damage > 0;
+
+  let amount: number | undefined = hasDamage ? ev.damage : undefined;
+  let amountKind: GameLogEvent['amountKind'] = hasDamage ? 'damage' : undefined;
+  if (isStage6) {
+    const kind = STAGE6_AMOUNT_KIND[ev.type];
+    const parsed = kind ? trailingAmount(remoteMessage) : undefined;
+    if (kind && parsed !== undefined) {
+      amount = parsed;
+      amountKind = kind;
+    } else {
+      amount = undefined;
+      amountKind = undefined;
+    }
+  }
 
   return createLogEvent({
     type,
@@ -171,9 +192,11 @@ export function buildTickLogEvent(
     remoteMessage,
     source,
     target,
-    amount: hasDamage ? ev.damage : undefined,
-    amountKind: hasDamage ? 'damage' : undefined,
+    amount,
+    amountKind,
+    effectType: isStage6 ? STAGE6_EFFECT_TYPE[ev.type] : undefined,
     crit: ev.is_crit ? true : undefined,
     scope: 'node',
   });
 }
+
