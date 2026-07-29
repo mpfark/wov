@@ -307,6 +307,7 @@ function formatPlayerAttack(
 function formatCreatureAttack(
   event: StructuredAttackEvent,
   isLocal: boolean,
+  flavorIdx?: number,
 ): string {
   const attacker = event.attacker_name!;
   const isMiss = event.type === 'creature_miss';
@@ -345,12 +346,82 @@ function formatCreatureAttack(
 
   const tierWord = getDamageTierWord(damage);
   const punct = isCrit ? '!' : '.';
+  const pick = (pool: string[]) =>
+    flavorIdx === undefined ? pickRandom(pool) : pool[flavorIdx % pool.length];
 
   if (isLocal) {
-    const flavor = pickRandom(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
+    const flavor = pick(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
     return `${ICON}${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
-  const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
+  const flavor = pick(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
   return `${ICON}${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
+
+// ── Stage 4: attacks as native structured events ────────────────
+
+const PLAYER_ATTACK_TYPES = new Set(['attack_hit', 'attack_miss', 'offhand_hit', 'offhand_miss']);
+const CREATURE_ATTACK_TYPES = new Set(['creature_hit', 'creature_crit', 'creature_miss']);
+
+/**
+ * Build a structured attack event from a server attack event.
+ *
+ * The client is the authoritative emitter for attack PROSE (tier + flavor
+ * tables live here), so it authors BOTH perspectives up front: `message`
+ * (self-facing) and `remoteMessage` (party observer). No You→name rewriting
+ * downstream, and no string classification — styling comes from the type.
+ *
+ * Returns null when the event is not an attack.
+ */
+export function buildAttackLogEvent(
+  event: StructuredAttackEvent,
+  localCharacterId: string,
+): GameLogEvent | null {
+  const isPlayer = PLAYER_ATTACK_TYPES.has(event.type);
+  const isCreature = CREATURE_ATTACK_TYPES.has(event.type);
+  if (!isPlayer && !isCreature) return null;
+  if (!event.attacker_name || !event.target_name) return null;
+
+  const isLocal = event.character_id === localCharacterId;
+  // One flavor pick, reused for both perspectives so the same blow reads
+  // consistently for the actor and for observers.
+  const flavorIdx = Math.floor(Math.random() * 4);
+  const damage = event.damage ?? 0;
+  const isMiss = event.type.endsWith('_miss');
+
+  let message: string;
+  let remoteMessage: string;
+  if (isPlayer) {
+    const emoji = getEventEmoji(event);
+    message = formatPlayerAttack(event, true, emoji, flavorIdx);
+    remoteMessage = formatPlayerAttack(event, false, emoji, flavorIdx);
+  } else {
+    message = formatCreatureAttack(event, true, flavorIdx);
+    remoteMessage = formatCreatureAttack(event, false, flavorIdx);
+  }
+
+  const playerActor = {
+    kind: 'player' as const,
+    id: event.character_id,
+    name: isPlayer ? event.attacker_name : event.target_name,
+  };
+  const creatureActor = {
+    kind: 'creature' as const,
+    id: event.creature_id,
+    name: isPlayer ? event.target_name : event.attacker_name,
+  };
+
+  return createLogEvent({
+    type: 'attack',
+    message: isLocal ? message : remoteMessage,
+    remoteMessage,
+    source: isPlayer ? playerActor : creatureActor,
+    target: isPlayer ? creatureActor : playerActor,
+    amount: isMiss ? undefined : damage,
+    amountKind: isMiss ? undefined : 'damage',
+    crit: !!event.is_crit,
+    scope: 'node',
+    observed: !isLocal,
+  });
+}
+
