@@ -1058,6 +1058,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
 
+  // On-device archive: full personal log history with infinite scrollback.
+  const logArchive = useLogArchive(character.id, eventLog);
+  const filteredOlderEvents = useMemo(() => {
+    if (!(isWideScreen && chatPanelOpen)) return logArchive.olderEvents;
+    return logArchive.olderEvents.filter(e => e.type !== 'speech' && e.type !== 'whisper');
+  }, [logArchive.olderEvents, isWideScreen, chatPanelOpen]);
+
 
   // ── Shared drop handler ────────────────────────────────────────
   const handleDropItem = useCallback(async (inventoryId: string) => {
