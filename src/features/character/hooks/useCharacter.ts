@@ -206,6 +206,8 @@ export function useCharacter(user: User | null) {
       if (data) setCharacters(data as Character[]);
       throw error;
     }
+    // Purge the player's on-device log archive for this character too.
+    void clearCharacter(id);
   }, [user]);
 
   const createCharacter = async (charData: {
