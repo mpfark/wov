@@ -203,6 +203,10 @@ export interface TickEventInput {
   creature_name?: string;
   damage?: number;
   is_crit?: boolean;
+  /** Stage 8: structured stack count for stacking interactions. */
+  stacks?: number;
+  /** Stage 8: effect identity when the server distinguishes it (e.g. 'poison'). */
+  effect_type?: string;
 }
 
 /**
