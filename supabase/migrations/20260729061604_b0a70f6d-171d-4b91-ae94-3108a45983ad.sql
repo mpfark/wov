@@ -1,0 +1,2 @@
+ALTER TABLE public.party_combat_log ADD COLUMN IF NOT EXISTS event jsonb;
+COMMENT ON COLUMN public.party_combat_log.event IS 'Structured GameLogEvent payload (Phase 3). The message column is kept as compatibility text and must not contain an encoded JSON payload.';

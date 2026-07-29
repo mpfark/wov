@@ -34,7 +34,8 @@ import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarket
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
-import { classifyLogLine } from '@/features/combat/utils/event-log-styles';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
 
 import { useCombatDriver } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
@@ -170,7 +171,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
       if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
-      bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
+      bus.emit('log:local', { event: legacyStringToEvent(`☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.`) });
     }
     // Salvage / gem drops live in character_materials. Realtime on that table
     // is disabled, so explicitly notify any mounted useMaterials hooks.
@@ -188,7 +189,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const creatureNameResolver = useCallback((creatureId: string) => {
     return creaturesRef.current.find(c => c.id === creatureId)?.name;
   }, []);
-  const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
+  const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
   const { creatures, creaturesLoading, removeCreatureLocal } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
@@ -282,7 +283,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       // Resolve leader name for feedback
       const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
       if (leaderName) {
-        bus.emit('log', { message: `You hurry after ${leaderName}.` });
+        bus.emit('log', { event: legacyStringToEvent(`You hurry after ${leaderName}.`) });
       }
     } else {
       // Mismatch or grace expired — tolerate one miss before breaking
@@ -292,12 +293,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         missedFollowCountRef.current = 0;
         toggleFollow(false);
         const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
-        bus.emit('log', { message: `You lose track of ${leaderName ?? 'your leader'} and stop following.` });
+        bus.emit('log', { event: legacyStringToEvent(`You lose track of ${leaderName ?? 'your leader'} and stop following.`) });
       }
     }
   }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
 
-  const [eventLog, setEventLog] = useState<string[]>([]);
+  const [eventLog, setEventLog] = useState<GameLogEvent[]>([]);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
@@ -421,29 +422,35 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
   // ── Event bus subscribers ──────────────────────────────────────
-  useGameEvent(bus, 'log', ({ message }) => {
-    const displayMsg = message.replace('[INSPIRE_BUFF]', '').trim();
-    setEventLog(prev => [...prev.slice(-99), displayMsg]);
+  useGameEvent(bus, 'log', ({ event }) => {
+    setEventLog(prev => [...prev.slice(-99), event]);
   });
-  useGameEvent(bus, 'log', ({ message }) => {
+  useGameEvent(bus, 'log', ({ event }) => {
     (async () => {
-      const id = await addPartyCombatLog(message, character.current_node_id, character.name);
+      const id = await addPartyCombatLog(event, character.current_node_id, character.name);
       if (id) {
         ownLogIdsRef.current.add(id);
-        broadcastCombatMsg(id, message, character.current_node_id, character.name);
+        broadcastCombatMsg(event, character.current_node_id, character.name);
       }
     })();
   });
-  useGameEvent(bus, 'log:local', ({ message }) => {
-    setEventLog(prev => [...prev.slice(-99), message]);
+  useGameEvent(bus, 'log:local', ({ event }) => {
+    setEventLog(prev => [...prev.slice(-99), event]);
   });
   useGameEvent(bus, 'creature:damage', (payload) => {
     broadcastDamage(payload.creatureId, payload.newHp, payload.damage, payload.attackerName, payload.killed);
   });
 
   // ── Log emitters ───────────────────────────────────────────────
-  const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
-  const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
+  // String emitters are a stage-1 shim: they adapt at the emit boundary so
+  // the bus, state and renderer only ever see structured events. Callers are
+  // migrated to structured emits in later stages.
+  const addLocalLog = useCallback((msg: string) => {
+    bus.emit('log:local', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
+  }, [bus]);
+  const addLog = useCallback((msg: string) => {
+    bus.emit('log', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
+  }, [bus]);
 
   // First-entry immersive welcome (staggered) or short returning greeting.
   // Uses the local-only emitter — these are personal narrative and must not
@@ -516,24 +523,32 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [playersHere, addLocalLog]);
 
   // Incoming party log processing
-  const processIncomingLog = useCallback((message: string, characterName: string | null, nodeId: string | null) => {
+  /**
+   * Ingest a party/broadcast entry. A structured `event` always wins; only
+   * string-only entries (older clients, historical rows) go through the
+   * legacy adapter, which also performs the observer "you → Name" rewrite.
+   */
+  const processIncomingLog = useCallback((
+    entry: { id: string; message: string; event?: GameLogEvent },
+    characterName: string | null,
+    nodeId: string | null,
+  ) => {
     if (nodeId && nodeId !== character.current_node_id) return;
-    let msg = message;
-    const name = characterName;
-    if (name) {
-      msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)You /u, `$1${name} `);
-      msg = msg.replace(/ you /gi, ` ${name} `);
-      msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)Your /u, `$1${name}'s `);
-      msg = msg.replace(/ your /gi, ` ${name}'s `);
-      msg = msg.replace(/ you\./gi, ` ${name}.`);
-      msg = msg.replace(/ you!/gi, ` ${name}!`);
-    }
-    if (msg.includes('[INSPIRE_BUFF]')) {
-      const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
-      setEventLog(prev => [...prev.slice(-99), cleanMsg]);
+    if (entry.event) {
+      const ev = entry.event;
+      setEventLog(prev => [...prev.slice(-99), {
+        ...ev,
+        // Observer perspective: prefer the emitter-authored remote wording.
+        message: ev.remoteMessage ?? ev.message,
+        observed: true,
+      }]);
       return;
     }
-    setEventLog(prev => [...prev.slice(-99), msg]);
+    const cleaned = entry.message.replace('[INSPIRE_BUFF]', '').trim();
+    setEventLog(prev => [...prev.slice(-99), legacyStringToEvent(cleaned, {
+      id: entry.id,
+      remoteName: characterName,
+    })]);
   }, [character.current_node_id]);
 
 
@@ -544,7 +559,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (seenIdsRef.current.has(entry.id)) continue;
       seenIdsRef.current.add(entry.id);
       if (ownLogIdsRef.current.has(entry.id)) continue;
-      processIncomingLog(entry.message, entry.character_name, entry.node_id);
+      processIncomingLog(entry, entry.character_name, entry.node_id);
     }
   }, [broadcastLogEntries, party, processIncomingLog]);
 
@@ -896,7 +911,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [character.current_node_id]);
 
   const handleChatMessage = useCallback((formatted: string) => {
-    setEventLog(prev => [...prev.slice(-99), formatted]);
+    setEventLog(prev => [...prev.slice(-99), legacyStringToEvent(formatted)]);
   }, []);
 
   const { sendSay, sendWhisper } = useChat({
@@ -934,7 +949,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
       const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
-      if (err) setEventLog(prev => [...prev.slice(-99), `⚠️ ${err}`]);
+      if (err) setEventLog(prev => [...prev.slice(-99), legacyStringToEvent(`⚠️ ${err}`)]);
       return;
     }
 
@@ -1020,18 +1035,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   // Separate chat messages from event log for wide-screen chat panel.
-  // Routing uses the shared classifier (not literal emoji checks) so the
-  // split stays correct if emitters change their glyphs.
+  // Routing uses the structured event type — no text or emoji inspection.
   const chatMessages = useMemo(() =>
-    eventLog.filter(log => classifyLogLine(log).category === 'speech' || classifyLogLine(log).category === 'whisper'),
+    eventLog.filter(e => e.type === 'speech' || e.type === 'whisper'),
     [eventLog]
   );
   const filteredEventLog = useMemo(() => {
     if (!(isWideScreen && chatPanelOpen)) return eventLog;
-    return eventLog.filter(log => {
-      const cat = classifyLogLine(log).category;
-      return cat !== 'speech' && cat !== 'whisper';
-    });
+    return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
 
 

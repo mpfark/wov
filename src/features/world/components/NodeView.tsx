@@ -1,3 +1,4 @@
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
 import { PlayerPresence } from '@/features/world';
 import { Creature } from '@/features/creatures';
@@ -35,7 +36,7 @@ interface Props {
   creatures: Creature[];
   npcs?: NPC[];
   character: Character;
-  eventLog: string[];
+  eventLog: GameLogEvent[];
   onAttack: (creatureId: string) => void;
   onSelectTarget?: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;

@@ -1,8 +1,9 @@
 /**
  * Owns: event/combat log list rendering.
  *
- * Newest-at-top ordering — the freshest entry appears directly under the
- * top of the panel.
+ * Consumes structured `GameLogEvent`s (legacy strings are adapted at
+ * ingress, never here). Newest-at-top ordering — the freshest entry appears
+ * directly under the top of the panel.
  *
  * Display settings (font size, flavor mode) are owned by useEventLogDisplay
  * and rendered as EventLogControls — typically mounted next to the command
@@ -10,15 +11,15 @@
  */
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { stripFlavorNumber } from '@/features/combat/utils/combat-text';
 import EventLogLine from '@/features/combat/components/EventLogLine';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 import {
   FONT_SIZE_CLASS,
   type EventLogDisplay,
 } from '@/features/combat/hooks/useEventLogDisplay';
 
 interface EventLogPanelProps {
-  filteredEventLog: string[];
+  filteredEventLog: GameLogEvent[];
   display: EventLogDisplay;
   className?: string;
 }
@@ -32,7 +33,7 @@ export default function EventLogPanel({
 
   // Newest first; preserve original index in the key so React keys stay stable.
   const reversedLog = useMemo(
-    () => filteredEventLog.map((rawLog, i) => ({ rawLog, key: i })).reverse(),
+    () => filteredEventLog.map((event, i) => ({ event, key: event.id || String(i) })).reverse(),
     [filteredEventLog],
   );
 
@@ -42,17 +43,14 @@ export default function EventLogPanel({
         {reversedLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
-          reversedLog.map(({ rawLog, key }) => {
-            if (rawLog === '---tick---') {
+          reversedLog.map(({ event, key }) => {
+            if (event.effectType === 'tick_separator') {
               return <div key={key} className="divider-hairline my-2" />;
             }
-            // Flavor mode: strip the trailing canonical [N] suffix server lines emit.
-            const log = displayMode === 'flavor' ? stripFlavorNumber(rawLog) : rawLog;
-            return <EventLogLine key={key} log={log} />;
+            return <EventLogLine key={key} event={event} displayMode={displayMode} />;
           })
         )}
       </div>
     </div>
   );
 }
-

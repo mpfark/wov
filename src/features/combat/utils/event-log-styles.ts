@@ -394,7 +394,7 @@ export interface EventLogPresentation {
   marker: EventLogMarker | null;
 }
 
-const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' | 'strong' | 'urgent' | 'marker'>> = {
+export const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'family' | 'strong' | 'urgent' | 'marker'>> = {
   action: {
     edgeClass: 'log-edge-action',
     textClass: 'text-log-player/90',

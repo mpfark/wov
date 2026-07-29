@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { enqueuePartyCombatLog } from './partyCombatLogBatcher';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 export function usePartyCombatLog(partyId: string | null) {
   // No realtime subscription — combat log entries arrive via party broadcast channel.
@@ -10,12 +11,12 @@ export function usePartyCombatLog(partyId: string | null) {
   // dedup without waiting for the DB round-trip.
 
   const addPartyCombatLog = useCallback(async (
-    message: string,
+    event: GameLogEvent,
     nodeId?: string | null,
     characterName?: string | null,
   ): Promise<string | null> => {
     if (!partyId) return null;
-    return enqueuePartyCombatLog(partyId, message, nodeId ?? null, characterName ?? null);
+    return enqueuePartyCombatLog(partyId, event, nodeId ?? null, characterName ?? null);
   }, [partyId]);
 
   return { addPartyCombatLog };

@@ -1844,6 +1844,7 @@ export type Database = {
         Row: {
           character_name: string | null
           created_at: string
+          event: Json | null
           id: string
           message: string
           node_id: string | null
@@ -1852,6 +1853,7 @@ export type Database = {
         Insert: {
           character_name?: string | null
           created_at?: string
+          event?: Json | null
           id?: string
           message: string
           node_id?: string | null
@@ -1860,6 +1862,7 @@ export type Database = {
         Update: {
           character_name?: string | null
           created_at?: string
+          event?: Json | null
           id?: string
           message?: string
           node_id?: string | null
