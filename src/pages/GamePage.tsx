@@ -725,7 +725,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     character, creatures,
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
-    addLocalLog, updateCharacter, updateCharacterLocal, fetchGroundLoot,
+    addLocalLog, addLocalLogEvent, updateCharacter, updateCharacterLocal, fetchGroundLoot,
     gatherBuffs: gameLoop.gatherBuffs,
     onConsumedBuffs: gameLoop.handleConsumedBuffs,
     onClearedDots: gameLoop.handleClearedDots,
