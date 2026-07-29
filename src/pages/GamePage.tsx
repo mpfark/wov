@@ -1035,18 +1035,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   // Separate chat messages from event log for wide-screen chat panel.
-  // Routing uses the shared classifier (not literal emoji checks) so the
-  // split stays correct if emitters change their glyphs.
+  // Routing uses the structured event type — no text or emoji inspection.
   const chatMessages = useMemo(() =>
     eventLog.filter(e => e.type === 'speech' || e.type === 'whisper'),
     [eventLog]
   );
   const filteredEventLog = useMemo(() => {
     if (!(isWideScreen && chatPanelOpen)) return eventLog;
-    return eventLog.filter(log => {
-      const cat = classifyLogLine(log).category;
-      return cat !== 'speech' && cat !== 'whisper';
-    });
+    return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
 
 
