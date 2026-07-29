@@ -39,9 +39,8 @@ const STAGE5_TYPES = new Set([
   'poison',
   'bleed',
   'consecrate_burn',
-  // Kills / drops / deaths
+  // Kills / deaths (loot + rewards are stage 10)
   'creature_kill',
-  'gem_drop',
   'member_death',
 ]);
 
