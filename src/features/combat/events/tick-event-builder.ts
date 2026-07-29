@@ -39,8 +39,6 @@ const STAGE5_TYPES = new Set([
   'poison',
   'bleed',
   'consecrate_burn',
-  'bleed_applied',
-  'poison_proc',
   // Kills / drops / deaths
   'creature_kill',
   'gem_drop',
@@ -68,28 +66,61 @@ const STAGE6_TYPES = new Set([
   'item_buff_dr',
 ]);
 
-/** Amount semantics per stage-6 server type (used when the prose carries `[N]`). */
-const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
-  consecrate_heal: 'heal',
-  shield_block: 'block',
-  absorb: 'absorb',
-  battle_cry_dr: 'block',
-  divine_challenge_dr: 'block',
-  item_buff_dr: 'block',
+/**
+ * Stage 7 — debuffs and crowd control: the application, refresh, resist,
+ * break and expiry of negative status effects (DoT applications, armour
+ * sunder, roots, snares, weakens, staggers and movement locks).
+ *
+ * These are *status* lines, not damage lines: the payload carries the
+ * effect identity (`effectType`) and the afflicted actor as `target`, so
+ * presentation and any future filtering key off structure instead of the
+ * emoji or wording the server happened to author.
+ */
+const STAGE7_TYPES = new Set([
+  // DoT / proc applications (moved off the stage-5 damage path)
+  'bleed_applied',
+  'poison_proc',
+  'ignite_proc',
+  // Generic + specific control effects
+  'debuff_applied',
+  'debuff_expired',
+  'debuff_resist',
+  'sunder_applied',
+  'root_applied',
+  'snare_applied',
+  'weaken_applied',
+  'stagger',
+  'movement_lock',
+  'cc_break',
+]);
+
+/** Effect identity per stage-7 server type — structured, never parsed from prose. */
+const STAGE7_EFFECT_TYPE: Record<string, string> = {
+  bleed_applied: 'bleed',
+  poison_proc: 'poison',
+  ignite_proc: 'ignite',
+  debuff_applied: 'debuff',
+  debuff_expired: 'debuff',
+  debuff_resist: 'debuff',
+  sunder_applied: 'sunder',
+  root_applied: 'root',
+  snare_applied: 'snare',
+  weaken_applied: 'weaken',
+  stagger: 'stagger',
+  movement_lock: 'movement_lock',
+  cc_break: 'cc_break',
 };
 
-/** Effect label per stage-6 server type — structured, never parsed from prose. */
-const STAGE6_EFFECT_TYPE: Record<string, string> = {
-  consecrate_heal: 'consecrate',
-  buff_consumed: 'buff',
-  absorb: 'absorb',
-  shield_block: 'block',
-  evasion_dodge: 'dodge',
-  awareness_resist: 'resist',
-  battle_cry_dr: 'battle_cry',
-  divine_challenge_dr: 'divine_challenge',
-  item_buff_dr: 'item_ward',
-};
+/**
+ * Control effects the CREATURE inflicts on the player. Everything else in
+ * stage 7 is a player-applied debuff landing on a creature.
+ */
+const STAGE7_CREATURE_SOURCED = new Set(['stagger', 'movement_lock']);
+
+/** Control landing on the player reads as notable; the rest stays routine. */
+function stage7Severity(serverType: string): 'notable' | undefined {
+  return STAGE7_CREATURE_SOURCED.has(serverType) ? 'notable' : undefined;
+}
 
 /** Pull the canonical `[N]` suffix the server appends to mitigation prose. */
 function trailingAmount(message: string): number | undefined {
@@ -99,6 +130,7 @@ function trailingAmount(message: string): number | undefined {
 
 /** Types whose actor is the creature rather than the player. */
 const CREATURE_SOURCE_TYPES = new Set(['member_death']);
+
 
 
 export interface TickEventInput {
