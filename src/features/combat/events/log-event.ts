@@ -57,7 +57,9 @@ export type LogAmountKind =
   | 'absorb'
   | 'xp'
   | 'gold'
-  | 'resource';
+  | 'resource'
+  /** Number of status stacks involved (applied, held or consumed). */
+  | 'stacks';
 
 export type LogScope = 'self' | 'party' | 'node' | 'global';
 
