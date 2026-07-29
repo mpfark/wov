@@ -21,6 +21,7 @@ import { getCachedItemAsync } from '@/features/inventory';
 import { preheatNode } from '@/features/creatures/hooks/useCreatures';
 import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
+import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers
@@ -144,7 +145,7 @@ async function moveFollowers(
   targetNodeId: string,
   isLeader: boolean,
   filterFollowingOnly: boolean,
-  addLog: (msg: string) => void,
+  addLogEvent: (event: GameLogEvent) => void,
   fetchParty: () => void,
   broadcastMove?: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void,
 ): Promise<void> {
@@ -167,26 +168,18 @@ async function moveFollowers(
         broadcastMove(f.character_id, f.character.name, targetNodeId, currentNodeId);
       }
     }
-    addLog('🧭 Your party follows you.');
+    addLogEvent(buildMovementEvent('Your party follows you.', { effectType: 'party_follow' }));
     fetchParty();
   }
 }
 
-/**
- * Stage 9 — positioning outcomes are structured events. The string emitter
- * stays as the fallback so callers that have not passed `addLogEvent` yet
- * keep working unchanged.
- */
+/** Positioning outcomes are structured events. */
 function emitPositioning(
-  p: { addLog: (msg: string) => void; addLogEvent?: (e: GameLogEvent) => void; character: { id: string; name: string } },
+  p: { addLogEvent: (e: GameLogEvent) => void; character: { id: string; name: string } },
   kind: PositioningKind,
   message: string,
 ) {
-  if (p.addLogEvent) {
-    p.addLogEvent(buildPositioningEvent(kind, message, { kind: 'player', id: p.character.id, name: p.character.name }));
-  } else {
-    p.addLog(message);
-  }
+  p.addLogEvent(buildPositioningEvent(kind, message, { kind: 'player', id: p.character.id, name: p.character.name }));
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -196,9 +189,8 @@ function emitPositioning(
 export interface UseMovementActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  addLog: (msg: string) => void;
   /** Stage 9 — structured emitter for positioning-dependent outcomes. */
-  addLogEvent?: (event: GameLogEvent) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
@@ -273,12 +265,12 @@ export function useMovementActions(params: UseMovementActionsParams) {
             inv => inv.item?.name?.toLowerCase() === (conn.lock_key || '').toLowerCase()
           );
           if (!hasKey) {
-            p.addLog(`🔒 This path is locked. You need a "${conn.lock_key}" to pass.`);
+            p.addLogEvent(buildErrorEvent(`This path is locked. You need a "${conn.lock_key}" to pass.`));
             return;
           }
           const expires = Date.now() + 30_000;
           p.onUnlockPath?.(connDir, nodeId, expires);
-          p.addLog(`🔓 You use your ${conn.lock_key} to unlock the path...`);
+          p.addLogEvent(buildSystemEvent(`You use your ${conn.lock_key} to unlock the path...`));
         }
       }
     }
@@ -289,12 +281,12 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const bagWeight = getBagWeight(bagItems);
     const moveCost = getMoveCost(bagWeight, effectiveStr);
     if ((p.character.mp ?? 100) < moveCost) {
-      p.addLog(`⚠️ You are too exhausted to move! Need ${moveCost} MP to move.`);
+      p.addLogEvent(buildErrorEvent(`You are too exhausted to move! Need ${moveCost} MP to move.`));
       return;
     }
     const capacity = getCarryCapacity(effectiveStr);
     if (bagWeight > capacity) {
-      p.addLog(`⚠️ Over-encumbered! Carrying ${bagWeight}/${capacity} weight — movement costs ${moveCost} MP.`);
+      p.addLogEvent(buildErrorEvent(`Over-encumbered! Carrying ${bagWeight}/${capacity} weight — movement costs ${moveCost} MP.`));
     }
 
     // ── Region level check ──
@@ -306,7 +298,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const currentRegion = p.character.current_node_id ? p.getRegion(p.getNode(p.character.current_node_id)?.region_id || '') : null;
     if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && p.character.level < targetRegion.min_level) {
       const levelDiff = targetRegion.min_level - p.character.level;
-      p.addLog(`⚠️ You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`);
+      p.addLogEvent(buildErrorEvent(`You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`));
     }
 
     // ── Flee from combat ──
@@ -337,7 +329,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
         partyMembers: p.partyMembers,
       });
 
-      for (const log of oaResult.logs) p.addLog(log);
+      for (const log of oaResult.logs) p.addLogEvent(buildClientEvent('attack', log, { player: { kind: 'creature' } }));
       if (oaResult.clearStealth) p.buffSetters.setStealthBuff(null);
       if (oaResult.clearEvasion) p.buffSetters.setEvasionBuff(null);
       if (oaResult.newAbsorbHp === null) p.buffSetters.setAbsorbBuff(null);
@@ -358,7 +350,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
         await p.degradeEquipment();
       }
       if (oaResult.newHp <= 0) {
-        p.addLog('💀 You were struck down while retreating...');
+        p.addLogEvent(buildDeathEvent('You were struck down while retreating...'));
         return;
       }
     }
@@ -368,7 +360,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     try {
       if (p.party && !p.isLeader && p.myMembership?.is_following) {
         await p.toggleFollow(false);
-        p.addLog('You break away from the party leader.');
+        p.addLogEvent(buildSystemEvent('You break away from the party leader.'));
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
       p.broadcastMove(p.character.id, p.character.name, nodeId, p.character.current_node_id!);
@@ -377,64 +369,64 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = p.getNodeArea(targetNode);
       const moveName = getNodeDisplayName(targetNode, targetArea);
-      p.addLog(`🧭 You travel ${dirLabel || moveName}.`);
+      p.addLogEvent(buildMovementEvent(`You travel ${dirLabel || moveName}.`));
       
 
       // Move followers (parallel with leader move already committed above)
-      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty, p.broadcastMove);
+      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLogEvent, p.fetchParty, p.broadcastMove);
     } catch {
-      p.addLog('⚠️ Failed to move.');
+      p.addLogEvent(buildErrorEvent('Failed to move.'));
     }
-  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLog, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
+  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
   // ── Teleport ───────────────────────────────────────────────────
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
     if (p.isDead) return;
-    if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
+    if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to teleport.')); return; }
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
     preheatNode(nodeId);
     const currentNodeObj = p.getNode(p.character.current_node_id!);
     if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
       setWaymarkNodeId(p.character.current_node_id!);
-      p.addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
+      p.addLogEvent(buildMovementEvent(`You leave a hidden waymark at ${currentNodeObj.name}.`));
     }
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId, prevNodeId);
     void markNodeVisited(p.character.id, nodeId);
-    p.addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
+    p.addLogEvent(buildMovementEvent(`You teleport to ${targetNode.name} for ${cpCost} CP.`));
     
     setTeleportOpen(false);
 
     // Move co-located party members in parallel with leader DB write
     const filterFollowingOnly = p.character.level < 22;
-    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty, p.broadcastMove);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLogEvent, p.fetchParty, p.broadcastMove);
     await Promise.all([leaderMove, followerMove]);
-  }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
+  }, [p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Return to Waymark ──────────────────────────────────────────
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
     if (!waymarkNodeId) return;
     const waymarkNode = p.getNode(waymarkNodeId);
-    if (!waymarkNode) { p.addLog('⚠️ Your waymark has faded.'); setWaymarkNodeId(null); return; }
+    if (!waymarkNode) { p.addLogEvent(buildErrorEvent('Your waymark has faded.')); setWaymarkNodeId(null); return; }
     if (p.isDead) return;
-    if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to return to waymark.')); return; }
     preheatNode(waymarkNodeId);
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId, prevNodeId);
     void markNodeVisited(p.character.id, waymarkNodeId);
-    p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`);
+    p.addLogEvent(buildMovementEvent(`You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`));
     
     setWaymarkNodeId(null);
     setTeleportOpen(false);
 
-    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLog, p.fetchParty, p.broadcastMove);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLogEvent, p.fetchParty, p.broadcastMove);
     await Promise.all([leaderMove, followerMove]);
-  }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
+  }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Search ─────────────────────────────────────────────────────
   const SEARCH_CP_COST = 5;
@@ -442,11 +434,11 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.isDead) return;
     if (!p.currentNode) return;
     if (p.creatures && p.creatures.length > 0) {
-      p.addLog('❌ You cannot search while creatures are nearby!');
+      p.addLogEvent(buildErrorEvent('You cannot search while creatures are nearby!'));
       return;
     }
     if ((p.character.cp ?? 0) < SEARCH_CP_COST) {
-      p.addLog('❌ Not enough CP to search! (Need 5 CP)');
+      p.addLogEvent(buildErrorEvent('Not enough CP to search! (Need 5 CP)'));
       return;
     }
     const newCp = (p.character.cp ?? 0) - SEARCH_CP_COST;
@@ -487,7 +479,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
     const revealHints = () => {
       for (const c of hintsToReveal) {
-        p.addLog(`🗝️ ${c.direction}: ${c.lock_hint}`);
+        p.addLogEvent(buildSystemEvent(`${c.direction}: ${c.lock_hint}`));
       }
     };
 
@@ -496,10 +488,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = p.getNode(discovered.node_id);
       const targetName = targetNode?.name || 'an unknown place';
-      p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
+      p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
-        p.addLog(`🧭 You travel through the hidden path to ${targetName}.`);
+        p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
       }
       revealHints();
       return;
@@ -514,7 +506,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
                 p_character_id: p.character.id, p_item_id: entry.item_id,
               });
               if (!acquired) {
-                p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`);
+                p.addLogEvent(buildLootEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`));
                 revealHints();
                 return;
               }
@@ -524,12 +516,12 @@ export function useMovementActions(params: UseMovementActionsParams) {
               });
               if (grantErr) {
                 console.error('grant_searched_item failed:', grantErr);
-                p.addLog(`🔍 You spotted ${item.name}, but couldn't pick it up.`);
+                p.addLogEvent(buildLootEvent(`You spotted ${item.name}, but couldn't pick it up.`));
                 revealHints();
                 return;
               }
             }
-            p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`);
+            p.addLogEvent(buildLootEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`));
             
             p.fetchInventory();
             revealHints();
@@ -538,26 +530,26 @@ export function useMovementActions(params: UseMovementActionsParams) {
         }
       }
       const noLootMsg = hintsToReveal.length > 0
-        ? `🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful, though something else catches your eye...`
+        ? `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful, though something else catches your eye...`
         : `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful.`;
-      p.addLog(noLootMsg);
+      p.addLogEvent(buildSystemEvent(noLootMsg));
     } else if (canFindPath) {
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = p.getNode(discovered.node_id);
       const targetName = targetNode?.name || 'an unknown place';
-      p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
+      p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
-        p.addLog(`🧭 You travel through the hidden path to ${targetName}.`);
+        p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
       }
     } else {
       const noneMsg = hintsToReveal.length > 0
-        ? `🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — Your search reveals a clue...`
+        ? `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — Your search reveals a clue...`
         : `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You find nothing of note.`;
-      p.addLog(noneMsg);
+      p.addLogEvent(buildSystemEvent(noneMsg));
     }
     revealHints();
-  }, [p.currentNode, p.character, p.addLog, p.fetchInventory, p.isDead, p.getNode, p.updateCharacter, p.creatures, p.equipped, p.unequipped]);
+  }, [p.currentNode, p.character, p.addLogEvent, p.fetchInventory, p.isDead, p.getNode, p.updateCharacter, p.creatures, p.equipped, p.unequipped]);
 
   return {
     handleMove, handleTeleport, handleReturnToWaymark, handleSearch,

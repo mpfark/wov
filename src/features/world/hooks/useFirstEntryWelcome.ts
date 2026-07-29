@@ -17,6 +17,8 @@
  *    a new character on the short greeting.
  */
 import { useEffect, useRef } from "react";
+import { buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 const FIRST_LINES = [
   "You awaken from a wandering daydream, as though your mind had drifted far beyond the waking world. The thought that held your attention is gone now, lost like mist in the morning sun.",
@@ -31,7 +33,7 @@ const FIRST_LINES = [
 const STAGGER_MS = 900;
 const key = (cid: string) => `entry.first-welcome.${cid}.v1`;
 
-type Emit = (msg: string) => void;
+type Emit = (event: GameLogEvent) => void;
 
 // Survives remounts within the same page load so we don't double-fire (or,
 // worse, flip from first-entry to "Welcome back" on a remount).
@@ -54,13 +56,13 @@ export function useFirstEntryWelcome(characterId: string | undefined, characterL
     // and we backfill the flag so subsequent entries stay consistent.
     if (!hasEntered && (characterLevel ?? 1) <= 1) {
       FIRST_LINES.forEach((line, i) => {
-        window.setTimeout(() => emitRef.current(line), i * STAGGER_MS);
+        window.setTimeout(() => emitRef.current(buildSystemEvent(line, { effectType: 'welcome' })), i * STAGGER_MS);
       });
       window.setTimeout(() => {
         localStorage.setItem(key(characterId), "1");
       }, FIRST_LINES.length * STAGGER_MS);
     } else {
-      emitRef.current("Welcome back, Wayfarer!");
+      emitRef.current(buildSystemEvent('Welcome back, Wayfarer!', { effectType: 'welcome' }));
       if (!hasEntered) {
         try { localStorage.setItem(key(characterId), "1"); } catch { /* ignore */ }
       }

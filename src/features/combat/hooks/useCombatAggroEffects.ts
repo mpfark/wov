@@ -26,25 +26,23 @@ export interface UseCombatAggroEffectsParams {
   character: Character;
   engagedCreatureIdsRef: React.MutableRefObject<string[]>;
   startCombat: (creatureId: string) => void;
-  addLocalLog: (msg: string) => void;
   /** Stage 9 — structured emitter for threat/aggro lines. */
-  addLocalLogEvent?: (event: GameLogEvent) => void;
+  addLocalLogEvent: (event: GameLogEvent) => void;
   setEngagedCreatureIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
   const {
     creatures, inCombat, isLeader, party, isDead, character,
-    engagedCreatureIdsRef, startCombat, addLocalLog, addLocalLogEvent, setEngagedCreatureIds,
+    engagedCreatureIdsRef, startCombat, addLocalLogEvent, setEngagedCreatureIds,
   } = params;
 
   const emitAggro = useCallback((kind: AggroKind, creature: Creature) => {
     const event = buildAggroEvent(kind, { id: creature.id, name: creature.name }, {
       kind: 'player', id: character.id, name: character.name,
     });
-    if (addLocalLogEvent) addLocalLogEvent(event);
-    else addLocalLog(event.message);
-  }, [addLocalLog, addLocalLogEvent, character.id, character.name]);
+    addLocalLogEvent(event);
+  }, [addLocalLogEvent, character.id, character.name]);
 
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());

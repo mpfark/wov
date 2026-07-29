@@ -41,6 +41,7 @@ import { getEffectiveMaxCp } from '@/lib/game-data';
 import { getCastFlavor } from '@/features/combat/utils/cast-flavor';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
+import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
@@ -110,7 +111,7 @@ export interface UseCombatActionsParams {
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   /** State-only mirror — must be used for fields the server already persisted (e.g. reserved_buffs via stance RPCs) to avoid racing redundant DB writes. */
   updateCharacterLocal?: (updates: Partial<Character>) => void;
-  addLog: (msg: string) => void;
+
   /** Stage 9 — structured emitter for taunt / threat lines. */
   addLogEvent?: (event: GameLogEvent) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
@@ -155,10 +156,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const newDur = item.current_durability - 1;
       if (newDur <= 0) {
         if (item.item.rarity === 'unique') {
-          p.addLog(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`);
+          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`));
           await supabase.from('character_inventory').delete().eq('id', item.id);
         } else {
-          p.addLog(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`);
+          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
           await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null } as any).eq('id', item.id);
         }
       } else {
@@ -166,7 +167,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
     }
     p.fetchInventory();
-  }, [p.equipped, p.addLog, p.fetchInventory]);
+  }, [p.equipped, p.addLogEvent, p.fetchInventory]);
 
   // NOTE: `rollLoot` removed — server (`combat-tick` → `processLootDrops`) is
   // the sole authority for ground-loot drops on kill.
@@ -186,7 +187,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
 
     // ── Validation ──
     if (p.character.level < ability.levelRequired) {
-      p.addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
+      p.addLogEvent(buildErrorEvent(`${ability.label} unlocks at level ${ability.levelRequired}.`));
       return;
     }
 
@@ -209,18 +210,18 @@ export function useCombatActions(params: UseCombatActionsParams) {
           p_stance_key: stanceDef.key,
         });
         if (error) {
-          p.addLog(`⚠️ ${ability.emoji} Failed to drop ${stanceDef.label}: ${error.message}`);
+          p.addLogEvent(buildErrorEvent(`Failed to drop ${stanceDef.label}: ${error.message}`));
           return;
         }
         // Optimistically reflect the new reserved_buffs map immediately so the
         // CP bar / pip row updates without waiting for a full character refetch.
         p.updateCharacterLocal?.({ reserved_buffs: (data as any) ?? {} } as any);
-        p.addLog(getStanceDropFlavor(stanceDef.key));
+        p.addLogEvent(buildBuffEvent(getStanceDropFlavor(stanceDef.key), { effectType: 'stance' }));
         return;
       }
 
       if (isMutuallyExcluded(reservedBuffs, stanceDef.key)) {
-        p.addLog(`⚠️ ${ability.emoji} You cannot maintain Ignite and Envenom at the same time.`);
+        p.addLogEvent(buildErrorEvent(`You cannot maintain Ignite and Envenom at the same time.`));
         return;
       }
 
@@ -229,7 +230,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const stanceReservedNow = sumStanceReserved(reservedBuffs);
       const usable = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0, stanceReservedNow);
       if (usable < cost) {
-        p.addLog(`⚠️ Not enough usable CP to maintain ${stanceDef.label}! (${cost} CP needed, ${usable} available)`);
+        p.addLogEvent(buildErrorEvent(`Not enough usable CP to maintain ${stanceDef.label}! (${cost} CP needed, ${usable} available)`));
         return;
       }
 
@@ -239,12 +240,12 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p_tier: stanceDef.tier,
       });
       if (error) {
-        p.addLog(`⚠️ ${ability.emoji} Failed to activate ${stanceDef.label}: ${error.message}`);
+        p.addLogEvent(buildErrorEvent(`Failed to activate ${stanceDef.label}: ${error.message}`));
         return;
       }
       // Optimistic reflect — RPC returns the full reserved_buffs map.
       p.updateCharacterLocal?.({ reserved_buffs: (data as any) ?? {} } as any);
-      p.addLog(getStanceActivateFlavor(stanceDef.key, cost));
+      p.addLogEvent(buildBuffEvent(getStanceActivateFlavor(stanceDef.key, cost), { effectType: 'stance' }));
       return;
     }
 
@@ -252,7 +253,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     const stanceReserved = sumStanceReserved((p.character as any).reserved_buffs);
     const availableCp = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0, stanceReserved);
     if (availableCp < effectiveCpCost) {
-      p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`);
+      p.addLogEvent(buildErrorEvent(`Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`));
       return;
     }
 
@@ -262,7 +263,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     if (!isInstantBuff && !_fromTick && COMBAT_REQUIRED_TYPES.has(ability.type)) {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) {
-        p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`);
+        p.addLogEvent(buildErrorEvent(`You must be in combat to use ${ability.label}!`));
         return;
       }
     }
@@ -275,7 +276,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         ?? p.creatures.find((c: any) => c.is_alive && c.hp > 0)?.id
         ?? null;
       if (!cTargetId) {
-        p.addLog(`${ability.emoji} No target for ${ability.label}!`);
+        p.addLogEvent(buildErrorEvent(`No target for ${ability.label}!`));
         return;
       }
       resolvedT0TargetId = cTargetId;
@@ -291,7 +292,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         ? (p.creatures.find((c: any) => c.id === queueTargetId)?.name ?? null)
         : null;
       const castFlavor = getCastFlavor(ability.type, p.character.class, targetName);
-      if (castFlavor) p.addLog(castFlavor);
+      if (castFlavor) p.addLogEvent(buildAbilityEvent(castFlavor));
       p.queueAbility(abilityIndex, queueTargetId);
       return;
     }
@@ -299,7 +300,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // ── Ability type switch ──
     if (ability.type === 'hp_transfer') {
       if (!targetId || targetId === p.character.id) {
-        p.addLog(`${ability.emoji} You must target an ally to transfer health.`);
+        p.addLogEvent(buildHealEvent(`You must target an ally to transfer health.`));
         return;
       }
       const wisMod = getStatModifier(p.character.wis);
@@ -309,32 +310,32 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // healers can safely sacrifice deeper without dropping themselves dangerously low).
       const reserveHp = Math.max(1, conMod);
       const maxTransfer = p.character.hp - reserveHp;
-      if (maxTransfer <= 0) { p.addLog(`${ability.emoji} You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`); return; }
+      if (maxTransfer <= 0) { p.addLogEvent(buildErrorEvent(`You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`)); return; }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
       await p.updateCharacter({ hp: p.character.hp - actualTransfer });
       const { data: restored, error } = await supabase.rpc('heal_party_member', {
         _healer_id: p.character.id, _target_id: targetId, _heal_amount: actualTransfer,
       });
-      if (error) { p.addLog(`${ability.emoji} Failed to transfer health: ${error.message}`); return; }
+      if (error) { p.addLogEvent(buildErrorEvent(`Failed to transfer health: ${error.message}`)); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
-      p.addLog(`${ability.emoji} ${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`);
+      p.addLogEvent(buildHealEvent(`${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`));
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and mend your wounds! [${restored}]`); }
-      else p.addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`You cast Heal and mend your wounds! [${restored}]`)); }
+      else p.addLogEvent(buildHealEvent(`You cast Heal but you're already at full health.`));
     } else if (ability.type === 'self_heal') {
       const conMod = getStatModifier(p.character.con);
       const healAmount = Math.max(3, conMod * 3 + p.character.level);
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and catch your breath! [${restored}]`); }
-      else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`You use Second Wind and catch your breath! [${restored}]`)); }
+      else p.addLogEvent(buildHealEvent(`You use Second Wind but you're already at full health.`));
     } else if (ability.type === 'regen_buff') {
       // Inspire — additive flat HP/CP regen.
       // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
@@ -360,9 +361,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       });
       const durSec = Math.round(durationMs / 1000);
       if (wasActive) {
-        p.addLog(`${ability.emoji} ${p.character.name} renews the inspiring song! (${durSec}s remaining) [+${mergedHp}HP +${mergedCp}CP]`);
+        p.addLogEvent(buildBuffEvent(`${p.character.name} renews the inspiring song! (${durSec}s remaining) [+${mergedHp}HP +${mergedCp}CP]`));
       } else {
-        p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`);
+        p.addLogEvent(buildBuffEvent(`${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`));
       }
     } else if (ability.type === 'crit_buff') {
       // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
@@ -370,7 +371,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const critBonus = Math.max(1, Math.min(5, Math.floor((Math.max(0, dexMod) + Math.max(0, wisMod)) / 2)));
       p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
-      p.addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`);
+      p.addLogEvent(buildBuffEvent(`Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`));
     } else if (ability.type === 'stealth_buff') {
       // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
       const dexMod = getStatModifier(p.character.dex);
@@ -378,7 +379,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
       const ambushMult = Math.min(2.5, 2 + Math.max(0, chaMod) * 0.05);
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
-      p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`);
+      p.addLogEvent(buildBuffEvent(`Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`));
     } else if (ability.type === 'damage_buff') {
       // Stance — unreachable here; the stance toggle block at the top of
       // handleUseAbility intercepts this ability type. Left as a no-op safety net.
@@ -387,9 +388,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
+      if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use ${ability.label}!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for ${ability.label}.`); return; }
+      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for ${ability.label}.`)); return; }
       // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
       // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
       const scaleMod = p.character.class === 'bard'
@@ -398,7 +399,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = Math.min(15000, 8000 + Math.max(0, scaleMod) * 1000);
       const reduction = getRootReduction(scaleMod);
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
-      p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
+      p.addLogEvent(buildDebuffEvent(`${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`));
     } else if (ability.type === 'battle_cry') {
       // Stance — unreachable; intercepted by stance toggle block above.
       // Magnitude formula lives in getBattleCryDR (STR magnitude / DEX duration,
@@ -407,9 +408,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       return;
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
+      if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Rend!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
+      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Rend.`)); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       // Soft-scaled: STR contribution tapers past softCap (profile 'dot') so late-game
@@ -432,15 +433,15 @@ export function useCombatActions(params: UseCombatActionsParams) {
           maxHp: creature.max_hp, lastKnownHp: p.creatureHpOverrides[creature.id] ?? creature.hp,
         },
       }));
-      p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds every ${intervalMs / 1000}s for ${durationMs / 1000}s. [${dmgPerTick}/tick]`);
+      p.addLogEvent(buildDebuffEvent(`Rend! ${creature.name} bleeds every ${intervalMs / 1000}s for ${durationMs / 1000}s. [${dmgPerTick}/tick]`));
     } else if (ability.type === 'poison_buff') {
       if (p.buffState.poisonBuff && p.buffState.poisonBuff.expiresAt > Date.now()) {
-        p.addLog(`⚠️ ${ability.emoji} Envenom is already active.`);
+        p.addLogEvent(buildErrorEvent(`Envenom is already active.`));
         return;
       }
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setPoisonBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
+      p.addLogEvent(buildBuffEvent(`Envenom! Your weapons drip with poison for 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
@@ -451,7 +452,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
       const dodgeChance = getCloakDodge(chaMod);
       p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
-      p.addLog(`${ability.emoji} Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`);
+      p.addLogEvent(buildBuffEvent(`Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`));
     } else if (ability.type === 'disengage_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
@@ -463,15 +464,15 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
       p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitDurationMs });
       const bonusPct = Math.round((bonusMult - 1) * 100);
-      p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`);
+      p.addLogEvent(buildBuffEvent(`Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`));
     } else if (ability.type === 'ignite_buff') {
       if (p.buffState.igniteBuff && p.buffState.igniteBuff.expiresAt > Date.now()) {
-        p.addLog(`⚠️ ${ability.emoji} Ignite is already active.`);
+        p.addLogEvent(buildErrorEvent(`Ignite is already active.`));
         return;
       }
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
+      p.addLogEvent(buildBuffEvent(`Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff') {
@@ -483,7 +484,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const shieldHp = Math.max(1, wisMod + Math.floor(p.character.level * 0.5));
       const durationMs = Math.min(15000, 8000 + intMod * 1000);
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Force Shield! An arcane ward wraps you for ${Math.round(durationMs / 1000)}s. [${shieldHp}]`);
+      p.addLogEvent(buildBuffEvent(`Force Shield! An arcane ward wraps you for ${Math.round(durationMs / 1000)}s. [${shieldHp}]`));
 
     } else if (ability.type === 'party_regen') {
       // Dual-primary split:
@@ -501,7 +502,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
       const abilityName = isHealer ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
-      p.addLog(`${ability.emoji} ${abilityName} heals ${who} every 3s for ${Math.round(durationMs / 1000)}s. [${healPerTick}/tick]`);
+      p.addLogEvent(buildHealEvent(`${abilityName} heals ${who} every 3s for ${Math.round(durationMs / 1000)}s. [${healPerTick}/tick]`));
     } else if (ability.type === 'ally_absorb') {
       // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
@@ -513,15 +514,15 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (targetId && targetId !== p.character.id) {
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
         const targetName = targetMember?.character.name || 'ally';
-        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} for up to ${durSec}s. [${shieldHp}]`);
+        p.addLogEvent(buildBuffEvent(`Divine Aegis! You shield ${targetName} for up to ${durSec}s. [${shieldHp}]`));
       } else {
-        p.addLog(`${ability.emoji} Divine Aegis! An absorb shield wraps you for up to ${durSec}s. [${shieldHp}]`);
+        p.addLogEvent(buildBuffEvent(`Divine Aegis! An absorb shield wraps you for up to ${durSec}s. [${shieldHp}]`));
       }
     } else if (ability.type === 'sunder_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`); return; }
+      if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Sunder Armor.`); return; }
+      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       // Soft-scaled utility magnitude: floor of 2, plus soft-scaled STR contribution.
@@ -530,7 +531,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Dual-primary split: AC reduction = STR (crushing blow), duration = DEX (precise targeting lingers).
       const durationSec = Math.min(20, 12 + Math.max(0, dexMod));
       p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name } }));
-      p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
+      p.addLogEvent(buildDebuffEvent(`Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`));
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {
@@ -538,7 +539,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
       const durationMs = 30_000;
       p.buffSetters.setHolyShieldBuff({ wisMod, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`);
+      p.addLogEvent(buildBuffEvent(`Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`));
     } else if (ability.type === 'block_buff') {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.
@@ -549,7 +550,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const ticks = Math.min(5, 3 + (conMod >= 3 ? 1 : 0) + (conMod >= 6 ? 1 : 0));
       const durationMs = ticks * 2_000;
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
-      p.addLog(`${ability.emoji} You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`);
+      p.addLogEvent(buildHealEvent(`You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`));
     } else if (ability.type === 'mitigation_buff') {
       // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
@@ -565,7 +566,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         { kind: 'player', id: p.character.id, name: p.character.name },
       );
       if (p.addLogEvent) p.addLogEvent(tauntEvent);
-      else p.addLog(tauntEvent.message);
+      else p.addLogEvent(buildAbilityEvent(tauntEvent.message));
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick
@@ -577,7 +578,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
-  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost]);
+  }, [p.isDead, p.character, p.updateCharacter, p.addLogEvent, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {

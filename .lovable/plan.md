@@ -81,11 +81,11 @@ The only module permitted to inspect strings (emoji prefix, keywords, `🌀`, `�
 5. Abilities, crits, procs, DoTs, kills, deaths.
 6. Heal, regen, buffs, mitigation, absorb.
 7. Debuffs + crowd control (applications, resists, breaks, expiries) as native status events — SHIPPED.
-7b. Debuff break / resist / immunity / stacking interactions as native events with declared source-target orientation — SHIPPED.
-7c. Loot, rewards, XP, levels, quests, contracts.
-8. Movement, system, errors, then the remaining ~173 misc client emitters as the final separate batch.
+7c. Loot, rewards, XP, levels, quests, contracts — SHIPPED (stage 10).
+8. Movement, system, errors and the remaining misc client emitters — SHIPPED (stage 11). Every client emitter now calls a structured builder (`client-event-builder.ts`); `addLog(string)` no longer exists in `src/`. Service-panel mini logs render from the presentation map instead of string colour matching.
 
-Phase 3 is not complete and emoji parsing is not removed until stage 8 ships.
+Remaining before the legacy adapter can be deleted: retire the compatibility `party_combat_log.message` text (one full release after stage 11) and drop the string fallbacks for historical rows / older-client broadcasts.
+
 
 ## 8. Testing
 

@@ -10,6 +10,8 @@ import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
 import { useSoulforgeForge } from './SoulforgeTabContent';
 import { GemPouch } from './GemPouch';
+import { buildErrorEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
@@ -25,7 +27,7 @@ interface Props {
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
   onCharacterRefresh?: () => void;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   isSoulforgeNode?: boolean;
   character?: Character;
   npcName?: string;
@@ -53,10 +55,10 @@ const FORGE_SLOTS = [
 
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLog: parentAddLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLogEvent: parentAddLogEvent,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const [tab, setTab] = useState<BlacksmithTab>('repair');
   const [repairing, setRepairing] = useState(false);
@@ -71,14 +73,14 @@ export default function BlacksmithPanel({
   const repairItem = async (inv: InventoryItem) => {
     if (isUnrepairable(inv.item.rarity)) return;
     const cost = calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
-    if (gold < cost) { addLog('❌ Not enough gold!'); return; }
+    if (gold < cost) { addEvent(buildErrorEvent('Not enough gold!')); return; }
     setRepairing(true);
     await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
     const newGold = gold - cost;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🔨 Repaired ${inv.item.name} for ${cost} gold.`);
+    addEvent(buildSystemEvent(`Repaired ${inv.item.name} for ${cost} gold.`, { amount: cost, amountKind: 'gold', effectType: 'repair' }));
     setRepairing(false);
   };
 
@@ -86,7 +88,7 @@ export default function BlacksmithPanel({
     const items = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
     const totalCost = items.reduce((s, inv) =>
       s + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
-    if (gold < totalCost) { addLog('❌ Not enough gold to repair all!'); return; }
+    if (gold < totalCost) { addEvent(buildErrorEvent('Not enough gold to repair all!')); return; }
     setRepairing(true);
     for (const inv of items) {
       await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
@@ -95,7 +97,7 @@ export default function BlacksmithPanel({
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🔨 Repaired ${items.length} items for ${totalCost} gold.`);
+    addEvent(buildSystemEvent(`Repaired ${items.length} items for ${totalCost} gold.`, { amount: totalCost, amountKind: 'gold', effectType: 'repair' }));
     setRepairing(false);
   };
 
@@ -110,10 +112,10 @@ export default function BlacksmithPanel({
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
-      addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
+      addEvent(buildRewardEvent(`Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`, { amount: data.gold_gained, amountKind: 'gold', effectType: 'salvage_sale' }));
       setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
-      addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Sale failed: ${e.message || 'Unknown error'}`));
     }
     setSelling(false);
   };
@@ -184,7 +186,7 @@ export default function BlacksmithPanel({
   const { craftBlock, craftBasesList, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
-    onGoldChange, onInventoryChange, addLog,
+    onGoldChange, onInventoryChange, addEvent,
     craftNoun: 'Gear',
   });
 

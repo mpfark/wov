@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Sparkles } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
+import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 const PRIMARY_STATS = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
 const SECONDARY_STATS = new Set(['hp', 'hp_regen']);
@@ -19,7 +21,7 @@ interface Props {
   characterId: string;
   inventory: InventoryItem[];
   onInventoryChange: () => void;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
 }
 
 /** A primary Ioun Stone has rarity=unique, slot=trinket, name starting
@@ -58,9 +60,9 @@ interface PreviewResult {
 }
 
 export default function StonebinderPanel({
-  open, onClose, characterId, inventory, onInventoryChange, addLog: parentAddLog,
+  open, onClose, characterId, inventory, onInventoryChange, addLogEvent: parentAddLogEvent,
 }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const [stoneA, setStoneA] = useState<string | null>(null);
   const [stoneB, setStoneB] = useState<string | null>(null);
@@ -142,12 +144,12 @@ export default function StonebinderPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
-      addLog(`⚜ The Stonebinder binds ${a.item.name} and ${b.item.name} into ${data.item.name}.${xpNote}`);
+      addEvent(buildSystemEvent(`The Stonebinder binds ${a.item.name} and ${b.item.name} into ${data.item.name}.${xpNote}`));
       try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       setStoneA(null); setStoneB(null); setPreview(null);
       onInventoryChange();
     } catch (e: any) {
-      addLog(`❌ Binding failed: ${e?.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Binding failed: ${e?.message || 'Unknown error'}`));
     } finally {
       setBinding(false);
     }

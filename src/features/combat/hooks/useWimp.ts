@@ -9,9 +9,8 @@ interface UseWimpParams {
   inCombat: boolean;
   currentNode: GameNode | undefined;
   onMove: (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => void;
-  addLog: (msg: string) => void;
-  /** Stage 9 — structured emitter for positioning outcomes. */
-  addLogEvent?: (event: GameLogEvent) => void;
+  /** Structured emitter for positioning outcomes. */
+  addLogEvent: (event: GameLogEvent) => void;
 }
 
 const DIR_NAMES: Record<string, string> = {
@@ -42,12 +41,11 @@ export interface WimpApi {
  * direction when HP drops at or below `wimp_hp_threshold`. Fires at most
  * once per combat session. Wimp flees skip opportunity attacks (panic escape).
  */
-export function useWimp({ character, inCombat, currentNode, onMove, addLog, addLogEvent }: UseWimpParams): WimpApi {
+export function useWimp({ character, inCombat, currentNode, onMove, addLogEvent }: UseWimpParams): WimpApi {
   const emitNoEscape = useCallback((message: string) => {
     const player = character ? { kind: 'player' as const, id: character.id, name: character.name } : undefined;
-    if (addLogEvent) addLogEvent(buildPositioningEvent('no_escape', message, player));
-    else addLog(message);
-  }, [addLog, addLogEvent, character]);
+    addLogEvent(buildPositioningEvent('no_escape', message, player));
+  }, [addLogEvent, character]);
   const firedRef = useRef(false);
   const warnedNoPathRef = useRef(false);
 

@@ -11,6 +11,8 @@ import { Character } from '@/features/character';
 import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
+import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 // NOTE: `character.bhp` is legacy storage for the current Renown balance.
 // `character.bhp_trained` is legacy storage for Renown training ranks.
@@ -42,7 +44,7 @@ interface Props {
   character: Character;
   equipmentBonuses: Record<string, number>;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  addLog: (msg: string) => void;
+  addLogEvent: (event: GameLogEvent) => void;
   /** Called by allocate/respec flows to commit a batch / refund. */
   onBatchAllocateStats: (allocations: Record<string, number>) => void;
   onFullRespec: () => void;
@@ -54,10 +56,10 @@ interface Props {
 type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
-  open, onClose, character, equipmentBonuses, updateCharacter, addLog: parentAddLog,
+  open, onClose, character, equipmentBonuses, updateCharacter, addLogEvent: parentAddLogEvent,
   onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const [tab, setTab] = useState<TrainerTab>('allocate');
   const [training, setTraining] = useState(false);
@@ -103,10 +105,10 @@ export default function TrainerPanel({
       if (stat === 'dex') updates.max_mp = getMaxMp(character.level, newStatVal);
 
       await updateCharacter(updates);
-      addLog(`🏛️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} RP spent.`);
+      addEvent(buildSystemEvent(`Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} RP spent.`));
     } else {
       await updateCharacter({ bhp: newRp, bhp_trained: newTrained });
-      addLog(`🏛️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} RP spent.`);
+      addEvent(buildSystemEvent(`Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} RP spent.`));
     }
 
     setTraining(false);
@@ -129,11 +131,11 @@ export default function TrainerPanel({
         setMyRank(null);
       }
     } catch (e: any) {
-      addLog(`❌ Failed to load leaderboard: ${e.message || 'Unknown error'}`);
+      addEvent(buildErrorEvent(`Failed to load leaderboard: ${e.message || 'Unknown error'}`));
       setLeaders([]);
     }
     setLoadingBoard(false);
-  }, [character.id, character.rp_total_earned, addLog]);
+  }, [character.id, character.rp_total_earned, addEvent]);
 
   useEffect(() => {
     if (open && tab === 'leaderboard' && leaders === null) {

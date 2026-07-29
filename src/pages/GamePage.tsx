@@ -72,6 +72,7 @@ import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
 import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
+import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
 
 interface Props {
@@ -172,7 +173,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
       if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
-      bus.emit('log:local', { event: legacyStringToEvent(`☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.`) });
+      bus.emit('log:local', { event: buildRewardEvent(`${r.creature_name} was slain! Gained ${parts.join(', ')}.`, { effectType: 'offscreen_kill' }) });
     }
     // Salvage / gem drops live in character_materials. Realtime on that table
     // is disabled, so explicitly notify any mounted useMaterials hooks.
@@ -284,7 +285,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       // Resolve leader name for feedback
       const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
       if (leaderName) {
-        bus.emit('log', { event: legacyStringToEvent(`You hurry after ${leaderName}.`) });
+        bus.emit('log', { event: buildMovementEvent(`You hurry after ${leaderName}.`, { effectType: 'party_follow' }) });
       }
     } else {
       // Mismatch or grace expired — tolerate one miss before breaking
@@ -294,7 +295,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         missedFollowCountRef.current = 0;
         toggleFollow(false);
         const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
-        bus.emit('log', { event: legacyStringToEvent(`You lose track of ${leaderName ?? 'your leader'} and stop following.`) });
+        bus.emit('log', { event: buildSystemEvent(`You lose track of ${leaderName ?? 'your leader'} and stop following.`, { effectType: 'party_follow' }) });
       }
     }
   }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
@@ -446,17 +447,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // String emitters are a stage-1 shim: they adapt at the emit boundary so
   // the bus, state and renderer only ever see structured events. Callers are
   // migrated to structured emits in later stages.
-  const addLocalLog = useCallback((msg: string) => {
-    bus.emit('log:local', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
-  }, [bus]);
   /** Structured emitter — no adapter, no string inspection (stage 2+). */
   const addLocalLogEvent = useCallback((event: GameLogEvent) => {
     bus.emit('log:local', { event });
   }, [bus]);
 
-  const addLog = useCallback((msg: string) => {
-    bus.emit('log', { event: legacyStringToEvent(msg.replace('[INSPIRE_BUFF]', '').trim()) });
-  }, [bus]);
   /** Structured emitter on the shared log path (stage 9+). */
   const addLogEvent = useCallback((event: GameLogEvent) => {
     bus.emit('log', { event });
@@ -465,15 +460,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // First-entry immersive welcome (staggered) or short returning greeting.
   // Uses the local-only emitter — these are personal narrative and must not
   // be persisted to the party log or broadcast to nearby players.
-  useFirstEntryWelcome(character?.id, character?.level, addLocalLog);
+  useFirstEntryWelcome(character?.id, character?.level, addLocalLogEvent);
   // Whisper + transient ring glow when soulring tier increases. Local-only
   // for the same reason as the welcome above.
-  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLog);
+  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLogEvent);
 
   // Sale-completed alert: fires whenever one of this character's listings sells,
   // whether or not the marketplace panel is open. Tells the seller to go collect.
   useMarketplaceSaleAlerts(character.id, (sale) => {
-    addLog(`📜 Your ${sale.item_name} sold for ${sale.price.toLocaleString()} gold — collect your earnings at any marketplace.`);
+    addLogEvent(buildSystemEvent(`Your ${sale.item_name} sold for ${sale.price.toLocaleString()} gold — collect your earnings at any marketplace.`, { amount: sale.price, amountKind: 'gold', effectType: 'market_sale', severity: 'notable' }));
     toast.success(`${sale.item_name} sold for ${sale.price.toLocaleString()} gold`, {
       description: 'Visit any marketplace to collect your earnings.',
     });
@@ -496,7 +491,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       return;
     }
     if (p.actor && p.actor === character.name) return;
-    addLocalLog(`${p.icon} ${p.text}`);
+    addLocalLogEvent(buildSystemEvent(p.text, { scope: 'global', severity: 'notable' }));
   });
 
   // ── Player death cry — broadcast to other players ─────────────
@@ -517,12 +512,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const prevIds = prevPlayersRef.current;
     if (prevIds.size > 0 || currentIds.size === 0) {
       for (const p of playersHere) {
-        if (!prevIds.has(p.id)) addLocalLog(`⚔️ ${p.name} has arrived.`);
+        if (!prevIds.has(p.id)) addLocalLogEvent(buildSystemEvent(`${p.name} has arrived.`, { effectType: 'presence' }));
       }
       for (const id of prevIds) {
         if (!currentIds.has(id)) {
           const name = prevPlayerNamesRef.current.get(id);
-          if (name) addLocalLog(`🚶 ${name} has departed.`);
+          if (name) addLocalLogEvent(buildSystemEvent(`${name} has departed.`, { effectType: 'presence' }));
         }
       }
     }
@@ -530,7 +525,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const nameMap = new Map<string, string>();
     for (const p of playersHere) nameMap.set(p.id, p.name);
     prevPlayerNamesRef.current = nameMap;
-  }, [playersHere, addLocalLog]);
+  }, [playersHere, addLocalLogEvent]);
 
   // Incoming party log processing
   /**
@@ -628,7 +623,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── useGameLoop: regen, death, buff state ────────────────
   const gameLoop = useGameLoop({
-    character, updateCharacter, updateCharacterLocal, equipped, equipmentBonuses, getNode, addLog,
+    character, updateCharacter, updateCharacterLocal, equipped, equipmentBonuses, getNode, addLogEvent,
     startingNodeId, creatures,
     party, partyMembers,
     bus,
@@ -735,7 +730,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     character, creatures,
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
-    addLocalLog, addLocalLogEvent, updateCharacter, updateCharacterLocal, fetchGroundLoot,
+    addLocalLogEvent, updateCharacter, updateCharacterLocal, fetchGroundLoot,
     gatherBuffs: gameLoop.gatherBuffs,
     onConsumedBuffs: gameLoop.handleConsumedBuffs,
     onClearedDots: gameLoop.handleClearedDots,
@@ -809,7 +804,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
-    character, updateCharacter, updateCharacterLocal, addLog, addLogEvent,
+    character, updateCharacter, updateCharacterLocal, addLogEvent,
     equipped, equipmentBonuses,
     creatures, creatureHpOverrides,
     party, partyMembers,
@@ -822,7 +817,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const movementActions = useMovementActions({
-    character, updateCharacter, addLog, addLogEvent,
+    character, updateCharacter, addLogEvent,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
     creatures,
@@ -839,7 +834,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const consumableActions = useConsumableActions({
-    character, updateCharacter, addLog,
+    character, updateCharacter, addLogEvent,
     equipmentBonuses,
     useConsumable,
     buffSetters,
@@ -856,13 +851,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
-  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog, addLogEvent });
+  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
   useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
   useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
-    character, updateCharacter, addLog,
+    character, updateCharacter, addLogEvent,
     onResourcesSynced: refetchCharacters,
   });
 
@@ -878,9 +873,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (groundLoot.length === 0) return;
     const first = groundLoot[0];
     const result = await pickUpItem(first.id);
-    if (result === false) addLog('✨ That unique item is already claimed by another...');
-    else { addLog('📦 You pick up an item.'); fetchInventory(); }
-  }, [isDead, groundLoot, pickUpItem, addLog, fetchInventory]);
+    if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
+    else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
+  }, [isDead, groundLoot, pickUpItem, addLogEvent, fetchInventory]);
 
   /** Stage 9 — the player deliberately picking a target is a structured aggro event. */
   const emitEngage = useCallback((creature: { id: string; name: string }) => {
@@ -951,13 +946,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       const { data, error } = await supabase.rpc('activate_cheat_xp_boost' as any);
       const res = data as any;
       if (error) {
-        addLocalLog('⚠️ The ancient words fizzle out.');
+        addLocalLogEvent(buildErrorEvent('The ancient words fizzle out.'));
       } else if (res?.ok) {
-        addLocalLog('✨ IDDQD — A surge of insight floods you! 2x XP for 1 hour.');
+        addLocalLogEvent(buildBuffEvent('IDDQD — A surge of insight floods you! 2x XP for 1 hour.', { effectType: 'xp_boost', severity: 'notable' }));
       } else if (res?.error === 'already_active') {
-        addLocalLog('✨ The surge of insight already courses through the realm.');
+        addLocalLogEvent(buildSystemEvent('The surge of insight already courses through the realm.'));
       } else {
-        addLocalLog('⚠️ The ancient words fizzle out.');
+        addLocalLogEvent(buildErrorEvent('The ancient words fizzle out.'));
       }
       return;
     }
@@ -967,7 +962,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
       const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
-      if (err) setEventLog(prev => [...prev.slice(-99), legacyStringToEvent(`⚠️ ${err}`)]);
+      if (err) setEventLog(prev => [...prev.slice(-99), buildErrorEvent(err)]);
       return;
     }
 
@@ -976,23 +971,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (cmd) {
       switch (cmd.type) {
         case 'move': {
-          if (!currentNode) { addLocalLog("You can't go that way."); break; }
+          if (!currentNode) { addLocalLogEvent(buildErrorEvent("You can't go that way.")); break; }
           const conn = currentNode.connections?.find(
             (c: any) => c.direction?.toUpperCase() === cmd.direction && !c.hidden
           );
           if (conn) {
             handleMove(conn.node_id, cmd.direction as any);
           } else {
-            addLocalLog("You can't go that way.");
+            addLocalLogEvent(buildErrorEvent("You can't go that way."));
           }
           break;
         }
         case 'attack': {
           const aliveCreatures = creatures.filter(c => c.is_alive);
           if (aliveCreatures.length === 0) {
-            addLocalLog('Nothing to attack here.');
+            addLocalLogEvent(buildErrorEvent('Nothing to attack here.'));
           } else {
-            if (cmd.target) addLocalLog('⚔️ You attack the nearest creature.');
+            if (cmd.target) addLocalLogEvent(buildSystemEvent('You attack the nearest creature.'));
             handleAttackFirst();
           }
           break;
@@ -1003,9 +998,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         }
         case 'loot': {
           if (groundLoot.length === 0) {
-            addLocalLog('No loot to pick up.');
+            addLocalLogEvent(buildErrorEvent('No loot to pick up.'));
           } else {
-            if (cmd.target) addLocalLog('📦 Picking up the nearest item.');
+            if (cmd.target) addLocalLogEvent(buildLootEvent('Picking up the nearest item.'));
             handlePickUpFirst();
           }
           break;
@@ -1015,19 +1010,19 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             const area = currentNode.area_id ? getNodeArea(currentNode) : undefined;
             const name = getNodeDisplayName(currentNode, area);
             const desc = getNodeDisplayDescription(currentNode, area);
-            addLocalLog(`📍 ${name}`);
-            if (desc) addLocalLog(desc);
+            addLocalLogEvent(buildSystemEvent(name, { effectType: 'look' }));
+            if (desc) addLocalLogEvent(buildSystemEvent(desc, { effectType: 'look' }));
             // List exits
             const exits = currentNode.connections
               ?.filter((c: any) => !c.hidden)
               .map((c: any) => c.direction)
               .join(', ');
-            if (exits) addLocalLog(`Exits: ${exits}`);
+            if (exits) addLocalLogEvent(buildSystemEvent(`Exits: ${exits}`, { effectType: 'look' }));
           }
           break;
         }
         case 'summon': {
-          addLocalLog(`🌀 Summon target set to ${cmd.name}. Use the Summon panel to confirm.`);
+          addLocalLogEvent(buildSystemEvent(`Summon target set to ${cmd.name}. Use the Summon panel to confirm.`, { effectType: 'summon' }));
           break;
         }
       }
@@ -1037,7 +1032,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     // Fallthrough to chat
     const sayText = text.replace(/^\/say\s+/i, '');
     sendSay(sayText);
-  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLog, getNodeArea]);
+  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea]);
 
   const handleOpenChat = useCallback(() => {
     chatInputRef.current?.focus();
@@ -1070,9 +1065,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (inv && character.current_node_id) {
       await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
       fetchInventory();
-      addLog(`You dropped ${inv.item.name} on the ground.`);
+      addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`));
     }
-  }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLog]);
+  }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLogEvent]);
 
   // ── De-duplicated prop blocks ──────────────────────────────────
   const charPanelProps = useMemo(() => ({
@@ -1171,7 +1166,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
-      if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+      if (inCombat) { addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
       setTeleportOpen(true);
     } : undefined,
     searchDisabled: character.cp < 5 || creatures.length > 0,
@@ -1179,7 +1174,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     unlockedConnections,
     onMapTeleport: handleTeleport,
     onlinePlayers,
-    addLog,
+    addLogEvent,
     inCombat,
     isDead,
     getRegionForNode: (nodeId: string) => { const n = getNode(nodeId); return n ? getRegion(n.region_id) : undefined; },
@@ -1205,7 +1200,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
-    showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
+    showTargetSelector, handleSearch, inCombat, addLogEvent, setTeleportOpen,
     creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
     getNode, getRegion, currentRegion,
     xpMultiplier, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
@@ -1292,8 +1287,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);
-                if (result === false) addLog('✨ That unique item is already claimed by another...');
-                else { addLog('📦 You pick up an item.'); fetchInventory(); }
+                if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
+                else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               creaturesLoading={creaturesLoading}
@@ -1448,7 +1443,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
           npcName={activeServiceNpc?.service_role === 'vendor' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'vendor' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
@@ -1466,7 +1461,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           onCharacterRefresh={refetchCharacters}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
           isSoulforgeNode={(currentNode as any).is_soulforge === true}
           character={character}
           npcName={activeServiceNpc?.service_role === 'blacksmith' ? activeServiceNpc.name : undefined}
@@ -1489,7 +1484,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           onCharacterRefresh={refetchCharacters}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
           character={character}
           npcName={activeServiceNpc?.service_role === 'jewelcrafter' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'jewelcrafter' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
@@ -1504,7 +1499,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           characterId={character.id}
           inventory={[...equipped, ...unequipped]}
           onInventoryChange={fetchInventory}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
         />
       )}
 
@@ -1535,7 +1530,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           characterGold={character.gold}
           inventory={[...equipped, ...unequipped]}
           onTransacted={() => { fetchInventory(); }}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
           atMarketplace={true}
         />
       )}
@@ -1548,7 +1543,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           character={character}
           equipmentBonuses={equipmentBonuses}
           updateCharacter={updateCharacter}
-          addLog={addLog}
+          addLogEvent={addLogEvent}
           onBatchAllocateStats={handleBatchAllocateStats}
           onFullRespec={handleFullRespec}
           npcName={activeServiceNpc?.service_role === 'trainer' ? activeServiceNpc.name : undefined}

@@ -9,6 +9,8 @@ import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/u
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
 import { useGlobalBroadcastSender } from '@/hooks/useGlobalBroadcast';
+import { buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 interface Props {
   open: boolean;
@@ -18,7 +20,7 @@ interface Props {
   characterGold: number;
   inventory: InventoryItem[];
   onTransacted: () => void;
-  addLog?: (msg: string) => void;
+  addLogEvent?: (event: GameLogEvent) => void;
   /** True when the player is currently standing at a marketplace node. */
   atMarketplace?: boolean;
 }
@@ -60,9 +62,9 @@ function statSummary(stats: Record<string, number> | undefined): string {
 }
 
 export default function MarketplacePanel({
-  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog: parentAddLog, atMarketplace = true,
+  open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLogEvent: parentAddLogEvent, atMarketplace = true,
 }: Props) {
-  const { entries: miniLog, addLog } = useMiniLog(parentAddLog);
+  const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const { listings, uncollectedSales, loading, list, buy, collect } = useMarketplace(characterId);
   const sendGlobal = useGlobalBroadcastSender();
@@ -116,7 +118,7 @@ export default function MarketplacePanel({
     if (!result.ok) { toast.error(result.error || 'Failed to list item'); return; }
     toast.success('Item listed');
     onTransacted();
-    addLog?.(`📜 You list ${result.data?.item_name} for ${price} gold.`);
+    addEvent(buildSystemEvent(`You list ${result.data?.item_name} for ${price} gold.`, { amount: price, amountKind: 'gold', effectType: 'market_listing' }));
     try {
       sendGlobal({
         kind: 'market_listed',
@@ -135,7 +137,7 @@ export default function MarketplacePanel({
     const result = await buy(id);
     if (!result.ok) { toast.error(result.error || 'Failed to buy'); return; }
     toast.success(`Bought ${itemName}`);
-    addLog?.(`💰 You bought ${itemName} for ${p} gold.`);
+    addEvent(buildSystemEvent(`You bought ${itemName} for ${p} gold.`, { amount: p, amountKind: 'gold', effectType: 'market_purchase' }));
     setSelectedListing(null);
     onTransacted();
   };
@@ -151,7 +153,7 @@ export default function MarketplacePanel({
     const total = result.data?.total_gold ?? 0;
     const count = result.data?.collected_count ?? 0;
     toast.success(`+${total.toLocaleString()} gold collected from ${count} sale${count === 1 ? '' : 's'}`);
-    addLog?.(`💰 You collect ${total.toLocaleString()} gold from your marketplace sales.`);
+    addEvent(buildSystemEvent(`You collect ${total.toLocaleString()} gold from your marketplace sales.`, { amount: total, amountKind: 'gold', effectType: 'market_payout' }));
     onTransacted();
   };
 
