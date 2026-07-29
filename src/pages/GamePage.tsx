@@ -1323,6 +1323,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             filteredEventLog={filteredEventLog}
             display={eventLogDisplay}
             className="flex-[55]"
+            olderEvents={filteredOlderEvents}
+            hasMoreHistory={logArchive.hasMore}
+            loadingHistory={logArchive.loadingOlder}
+            onLoadOlder={logArchive.loadOlder}
           />
           <CommandInputBar
             chatInput={chatInput}
