@@ -26,7 +26,13 @@ export type LogEventType =
   | 'boss_cast_hit'
   | 'kill'
   | 'death'
-  | 'level_up'
+  /** A creature taking (or the player picking) a target. */
+  | 'aggro'
+  /** The player forcing or holding a creature's attention. */
+  | 'taunt'
+  /** An outcome that exists only because of where the actor is standing. */
+  | 'positioning'
+
   | 'loot'
   | 'reward'
   | 'quest'
