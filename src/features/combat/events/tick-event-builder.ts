@@ -122,6 +122,45 @@ function stage7Severity(serverType: string): 'notable' | undefined {
   return STAGE7_CREATURE_SOURCED.has(serverType) ? 'notable' : undefined;
 }
 
+/**
+ * Stage 8 — status *interactions*: a debuff being resisted, blocked by
+ * immunity, diminished, broken, cleansed, refreshed, stacked or consumed.
+ *
+ * Orientation is the whole point of this stage. Each type declares who is
+ * resisting/removing (`actor`) and therefore which side the line is written
+ * from; nothing is inferred from the prose. `player` = the local side won the
+ * interaction (their control landed, or they shook one off), `creature` = the
+ * creature won it (our control failed, or theirs held).
+ */
+interface Stage8Spec {
+  effectType: string;
+  /** Which actor the line is *about* — becomes `source`; the other becomes `target`. */
+  actor: 'player' | 'creature';
+  /** Set when the interaction deserves emphasis over a routine status line. */
+  severity?: 'notable';
+  /** Interaction carries a stack count. */
+  stacks?: boolean;
+}
+
+const STAGE8_SPEC: Record<string, Stage8Spec> = {
+  // Player wins the interaction
+  debuff_resist: { effectType: 'resist', actor: 'player' },
+  debuff_immune: { effectType: 'immune', actor: 'player' },
+  debuff_cleansed: { effectType: 'cleanse', actor: 'player' },
+  cc_break: { effectType: 'cc_break', actor: 'player', severity: 'notable' },
+  cc_immune: { effectType: 'cc_immune', actor: 'player' },
+  cc_diminish: { effectType: 'cc_diminish', actor: 'player' },
+  // Creature wins the interaction — our control fails to land or is thrown off
+  creature_resist: { effectType: 'resist', actor: 'creature', severity: 'notable' },
+  creature_immune: { effectType: 'immune', actor: 'creature', severity: 'notable' },
+  // Stacking interactions — player-driven, carrying a stack count
+  debuff_stack: { effectType: 'stack', actor: 'player', stacks: true },
+  debuff_refreshed: { effectType: 'refresh', actor: 'player', stacks: true },
+  debuff_max_stacks: { effectType: 'max_stacks', actor: 'player', severity: 'notable', stacks: true },
+  stack_consumed: { effectType: 'stack_consumed', actor: 'player', stacks: true },
+};
+
+
 /** Amount semantics per stage-6 server type (used when the prose carries `[N]`). */
 const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
   consecrate_heal: 'heal',
@@ -164,6 +203,10 @@ export interface TickEventInput {
   creature_name?: string;
   damage?: number;
   is_crit?: boolean;
+  /** Stage 8: structured stack count for stacking interactions. */
+  stacks?: number;
+  /** Stage 8: effect identity when the server distinguishes it (e.g. 'poison'). */
+  effect_type?: string;
 }
 
 /**
@@ -188,7 +231,7 @@ export function applySelfPerspective(message: string, characterName: string): st
 }
 
 /**
- * Build a structured event for a stage-5/6/7 server event, or null when the
+ * Build a structured event for a stage-5/6/7/8 server event, or null when the
  * event belongs to another stage (caller then falls back to the legacy path).
  */
 export function buildTickLogEvent(
@@ -198,7 +241,8 @@ export function buildTickLogEvent(
 ): GameLogEvent | null {
   const isStage6 = STAGE6_TYPES.has(ev.type);
   const isStage7 = STAGE7_TYPES.has(ev.type);
-  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7) return null;
+  const stage8 = STAGE8_SPEC[ev.type];
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8) return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
@@ -220,14 +264,16 @@ export function buildTickLogEvent(
   // inflicting actor the source. Creature-sourced control (stagger, movement
   // lock) flips the orientation, which is exactly what decides `threat` vs
   // `action` presentation — no wording involved.
-  const creatureIsSource =
-    CREATURE_SOURCE_TYPES.has(ev.type) ||
-    (isStage7 && STAGE7_CREATURE_SOURCED.has(ev.type));
+  // Stage 8 declares the winning actor explicitly per interaction type.
+  const creatureIsSource = stage8
+    ? stage8.actor === 'creature'
+    : CREATURE_SOURCE_TYPES.has(ev.type) ||
+      (isStage7 && STAGE7_CREATURE_SOURCED.has(ev.type));
   // Stage 6 lines describe what happened TO the protected/healed player, so
   // the player is always the subject; the creature (if any) is the other side.
   const source = creatureIsSource
     ? creatureActor
-    : isStage6
+    : isStage6 || stage8
       ? playerActor
       : playerActor ?? creatureActor;
   const target = creatureIsSource ? playerActor : creatureActor;
@@ -253,6 +299,13 @@ export function buildTickLogEvent(
     amount = undefined;
     amountKind = undefined;
   }
+  // Stage 8 carries a stack count when the server sends one — never a damage
+  // number, and never scraped out of the prose.
+  if (stage8) {
+    const stacks = typeof ev.stacks === 'number' && ev.stacks > 0 ? ev.stacks : undefined;
+    amount = stage8.stacks ? stacks : undefined;
+    amountKind = amount !== undefined ? 'stacks' : undefined;
+  }
 
   return createLogEvent({
     type,
@@ -262,15 +315,18 @@ export function buildTickLogEvent(
     target,
     amount,
     amountKind,
-    effectType: isStage7
-      ? STAGE7_EFFECT_TYPE[ev.type]
-      : isStage6
-        ? STAGE6_EFFECT_TYPE[ev.type]
-        : undefined,
-    severity: isStage7 ? stage7Severity(ev.type) : undefined,
+    effectType: stage8
+      ? ev.effect_type ?? stage8.effectType
+      : isStage7
+        ? STAGE7_EFFECT_TYPE[ev.type]
+        : isStage6
+          ? STAGE6_EFFECT_TYPE[ev.type]
+          : undefined,
+    severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
     crit: ev.is_crit ? true : undefined,
     scope: 'node',
   });
 }
+
 
 
