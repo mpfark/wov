@@ -7,6 +7,7 @@
 
 import { CLASS_COMBAT } from './class-abilities';
 import { renderFlavor, flavorHasDamageToken } from '@shared/proc-log-format';
+import { createLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 
 // ── Display mode ────────────────────────────────────────────────
 
