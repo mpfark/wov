@@ -122,6 +122,29 @@ function stage7Severity(serverType: string): 'notable' | undefined {
   return STAGE7_CREATURE_SOURCED.has(serverType) ? 'notable' : undefined;
 }
 
+/** Amount semantics per stage-6 server type (used when the prose carries `[N]`). */
+const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
+  consecrate_heal: 'heal',
+  shield_block: 'block',
+  absorb: 'absorb',
+  battle_cry_dr: 'block',
+  divine_challenge_dr: 'block',
+  item_buff_dr: 'block',
+};
+
+/** Effect label per stage-6 server type — structured, never parsed from prose. */
+const STAGE6_EFFECT_TYPE: Record<string, string> = {
+  consecrate_heal: 'consecrate',
+  buff_consumed: 'buff',
+  absorb: 'absorb',
+  shield_block: 'block',
+  evasion_dodge: 'dodge',
+  awareness_resist: 'resist',
+  battle_cry_dr: 'battle_cry',
+  divine_challenge_dr: 'divine_challenge',
+  item_buff_dr: 'item_ward',
+};
+
 /** Pull the canonical `[N]` suffix the server appends to mitigation prose. */
 function trailingAmount(message: string): number | undefined {
   const m = message.match(/\[(\d+)\]\s*$/);
