@@ -127,10 +127,10 @@ describe('XP — fixed snapshots', () => {
 
 describe('Item stat budget — fixed snapshots', () => {
   it('common L1', () => expect(getItemStatBudget(1, 'common')).toBe(2));
-  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(6));
+  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(5)); // 2 + 9 × 0.24 × 1.5 = 5.24
   // Unique 2H uses the reduced hands_mult of 1.35 (see items.ts header):
-  // 2 + 19 × 0.3 × 3.0 × 1.35 = 25.085 → floor 25.
-  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(25));
+  // 2 + 19 × 0.24 × 3.0 × 1.35 = 20.468 → floor 20.
+  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(20));
   it('consumable triples budget', () => {
     const eqp = getItemStatBudget(10, 'common', 1, 'equipment');
     const con = getItemStatBudget(10, 'common', 1, 'consumable');
