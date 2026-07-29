@@ -176,6 +176,8 @@ export const SERVER_EVENT_TYPE_MAP: Record<ServerEventType, LogEventType> = {
   consecrate_burn: 'dot_tick',
   consecrate_heal: 'heal',
   contract_complete: 'quest',
+  creature_crit: 'attack',
+  creature_hit: 'attack',
   creature_miss: 'attack',
   divine_challenge_dr: 'mitigation',
   evasion_dodge: 'mitigation',
