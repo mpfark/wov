@@ -118,6 +118,8 @@ export default function ItemManager() {
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'value' | 'rarity'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
+  const [showUnassigned, setShowUnassigned] = useState(false);
+
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string; level: number; rarity: string; node_id?: string | null; loot_table_id?: string | null }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id: string; area_id?: string | null; is_inn?: boolean; is_vendor?: boolean; is_blacksmith?: boolean; is_teleport?: boolean; is_trainer?: boolean }[]>([]);

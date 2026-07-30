@@ -22,7 +22,7 @@ const TOOLS = [
 ] as const;
 
 
-export default function ToolsPanel({ onDataChanged, defaultTool = 'item-coverage' }: ToolsPanelProps) {
+export default function ToolsPanel({ defaultTool = 'item-coverage' }: ToolsPanelProps) {
   const [active, setActive] = useState<string>(defaultTool);
 
   const renderTool = () => {
