@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { uploadIllustration } from '@/lib/upload-illustration';
 import { formatProcMessage } from '@shared/proc-log-format';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
@@ -118,79 +118,6 @@ export default function ItemManager() {
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'value' | 'rarity'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
-  const [renamingLegacy, setRenamingLegacy] = useState(false);
-  const [rebalancing, setRebalancing] = useState(false);
-  const [showUnassigned, setShowUnassigned] = useState(false);
-
-  const handleRenameLegacy = async () => {
-    if (renamingLegacy) return;
-    setRenamingLegacy(true);
-    try {
-      toast.info('Scanning legacy items…');
-      const dry = await supabase.functions.invoke('ai-item-rename', { body: { dry_run: true } });
-      if (dry.error) throw dry.error;
-      const dryData = dry.data as { total_violators: number; proposed: number; preview: { old: string; new: string }[]; skipped: { old: string; reason: string }[] };
-      if (!dryData || dryData.total_violators === 0) {
-        toast.success('No legacy violators found.');
-        return;
-      }
-      const sample = dryData.preview.slice(0, 8).map(p => `• ${p.old} → ${p.new}`).join('\n');
-      const more = dryData.preview.length > 8 ? `\n…and ${dryData.preview.length - 8} more` : '';
-      const ok = window.confirm(
-        `Found ${dryData.total_violators} legacy items. Proposed renames: ${dryData.proposed}.\n\nSample:\n${sample}${more}\n\nApply renames now?`
-      );
-      if (!ok) { toast.info('Rename cancelled.'); return; }
-
-      toast.info('Applying renames…');
-      const apply = await supabase.functions.invoke('ai-item-rename', { body: { dry_run: false } });
-      if (apply.error) throw apply.error;
-      const applyData = apply.data as { renamed: number; skipped: { old: string; reason: string }[] };
-      toast.success(`Renamed ${applyData.renamed} items. Skipped ${applyData.skipped.length}.`);
-      if (applyData.skipped.length > 0) console.warn('Skipped renames:', applyData.skipped);
-      await loadItems();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e.message || 'Rename failed');
-    } finally {
-      setRenamingLegacy(false);
-    }
-  };
-
-  const handleRebalanceStats = async () => {
-    if (rebalancing) return;
-    setRebalancing(true);
-    try {
-      toast.info('Scanning equipment stat budgets…');
-      const dry = await supabase.functions.invoke('ai-item-rebalance', { body: { dry_run: true } });
-      if (dry.error) throw dry.error;
-      const dryData = dry.data as { total_mismatches: number; proposed: number; preview: { name: string; old_stats: Record<string, number>; new_stats: Record<string, number>; budget: number }[]; skipped: { name: string; reason: string }[] };
-      if (!dryData || dryData.total_mismatches === 0) {
-        toast.success('All equipment is within budget.');
-        return;
-      }
-      const fmt = (s: Record<string, number>) => Object.entries(s).map(([k, v]) => `${k}:${v}`).join(' ');
-      const sample = dryData.preview.slice(0, 6).map(p => `• ${p.name} (budget ${p.budget})\n  ${fmt(p.old_stats)} → ${fmt(p.new_stats)}`).join('\n');
-      const more = dryData.preview.length > 6 ? `\n…and ${dryData.preview.length - 6} more` : '';
-      const ok = window.confirm(
-        `Found ${dryData.total_mismatches} items with stat-budget mismatches. Proposed rebalances: ${dryData.proposed}. Skipped: ${dryData.skipped.length}.\n\nSample:\n${sample}${more}\n\nApply rebalance now?`
-      );
-      if (!ok) { toast.info('Rebalance cancelled.'); return; }
-
-      toast.info('Applying rebalance…');
-      const apply = await supabase.functions.invoke('ai-item-rebalance', { body: { dry_run: false } });
-      if (apply.error) throw apply.error;
-      const applyData = apply.data as { rebalanced: number; skipped: { name: string; reason: string }[] };
-      toast.success(`Rebalanced ${applyData.rebalanced} items. Skipped ${applyData.skipped.length}.`);
-      if (applyData.skipped.length > 0) console.warn('Skipped rebalances:', applyData.skipped);
-      await loadItems();
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e.message || 'Rebalance failed');
-    } finally {
-      setRebalancing(false);
-    }
-  };
-
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string; level: number; rarity: string; node_id?: string | null; loot_table_id?: string | null }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id: string; area_id?: string | null; is_inn?: boolean; is_vendor?: boolean; is_blacksmith?: boolean; is_teleport?: boolean; is_trainer?: boolean }[]>([]);
@@ -267,11 +194,10 @@ export default function ItemManager() {
   };
 
   const loadUsedItemIds = async () => {
-    const [creaturesRes, nodesRes, vendorRes, startingGearRes, lootTableEntriesRes] = await Promise.all([
+    const [creaturesRes, nodesRes, vendorRes, lootTableEntriesRes] = await Promise.all([
       supabase.from('creatures').select('loot_table'),
       supabase.from('nodes').select('searchable_items'),
       supabase.from('vendor_inventory').select('item_id'),
-      supabase.from('class_starting_gear').select('item_id'),
       supabase.from('loot_table_entries').select('item_id'),
     ]);
     const ids = new Set<string>();
@@ -286,7 +212,6 @@ export default function ItemManager() {
       }
     }
     for (const v of (vendorRes.data || [])) ids.add(v.item_id);
-    for (const g of (startingGearRes.data || [])) ids.add(g.item_id);
     for (const lt of (lootTableEntriesRes.data || [])) ids.add(lt.item_id);
     setUsedItemIds(ids);
   };
@@ -563,14 +488,6 @@ export default function ItemManager() {
         </div>
       </AdminToolSection>
 
-      <AdminToolSection title="Catalog Tools">
-        <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7 w-full justify-start" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
-          <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
-        </Button>
-        <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7 w-full justify-start" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
-          <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
-        </Button>
-      </AdminToolSection>
     </>
   );
 
