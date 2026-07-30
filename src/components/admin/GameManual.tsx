@@ -625,6 +625,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">Enhance tab flow:</strong> pick an owned item on the left → select an eligible gem on the right → the gem is consumed and its stat is added to the item. Each socket costs salvage + gold, same scale as forging.</p>
                   <p><strong className="text-foreground">60% single-attribute cap:</strong> No single attribute may exceed <strong>60%</strong> of the item's total stat budget. This prevents monolithic all-STR / all-WIS bricks and keeps distributed builds competitive.</p>
                   <p><strong className="text-foreground">Rare / Unique / Soulforged gear:</strong> Not affected — those still drop or are forged with pre-rolled stats (no sockets).</p>
+                  <p><strong className="text-foreground">No starting equipment:</strong> New characters spawn with empty slots. First gear comes from crafting a base at the Blacksmith (or early drops) — there is no class starting weapon and no universal starter kit.</p>
                 </CardContent>
               </Card>
 
