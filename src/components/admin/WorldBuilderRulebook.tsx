@@ -157,22 +157,19 @@ export default function WorldBuilderRulebook() {
           </ul>
         </Card>
 
-        {/* Item Forge */}
+        {/* Item Stat Reference */}
         <Card className="p-3 space-y-1.5">
-          <h3 className="font-display text-sm text-primary">Item Forge</h3>
+          <h3 className="font-display text-sm text-primary">Item Stat Reference</h3>
           <p className="text-[11px] text-muted-foreground">
-            Items are created separately from creature/loot generation via the <strong>Item Forge</strong> tab.
+            Items are created by hand in the <strong>Item Manager</strong>. Common and uncommon gear drops as
+            plain bases — players add stats themselves by socketing gems at the Blacksmith / Jewelcrafter.
+            The numbers below are the canonical budget rules used for hand-authored items.
           </p>
-          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Batch</Badge> — Generate multiple items at once. All saved to <code className="text-[10px] bg-muted px-1 rounded">items</code> with <code className="text-[10px] bg-muted px-1 rounded">world_drop: true</code>.</li>
-            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Single</Badge> — Generate one item with full control over slot, level, rarity, and description.</li>
-            <li><strong>Duplicate name check</strong>: On save, items with names already in the database are filtered out.</li>
-            <li>Item types: <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge>. No "material" type.</li>
-          </ul>
 
           <div className="text-[11px] text-muted-foreground mt-2">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Budget Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">equipment: max(2, floor(2 + (level−1) × 0.3 × rarity_mult × hands_mult))</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">equipment: max(2, floor((2 + (level−1) × 0.24 × rarity_mult × hands_mult) × taper))</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">taper: 1.0 (L≤30) · 0.90 · 0.80 · 0.72</code>
             <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">consumable: equipment_budget × 3</code>
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
