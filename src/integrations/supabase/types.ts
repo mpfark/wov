@@ -641,35 +641,6 @@ export type Database = {
           },
         ]
       }
-      class_starting_gear: {
-        Row: {
-          class: Database["public"]["Enums"]["character_class"]
-          created_at: string
-          id: string
-          item_id: string
-        }
-        Insert: {
-          class: Database["public"]["Enums"]["character_class"]
-          created_at?: string
-          id?: string
-          item_id: string
-        }
-        Update: {
-          class?: Database["public"]["Enums"]["character_class"]
-          created_at?: string
-          id?: string
-          item_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "class_starting_gear_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       combat_audit_log: {
         Row: {
           character_id: string
@@ -2105,35 +2076,6 @@ export type Database = {
         }
         Relationships: []
       }
-      universal_starting_gear: {
-        Row: {
-          created_at: string
-          equipped_slot: string
-          id: string
-          item_id: string
-        }
-        Insert: {
-          created_at?: string
-          equipped_slot: string
-          id?: string
-          item_id: string
-        }
-        Update: {
-          created_at?: string
-          equipped_slot?: string
-          id?: string
-          item_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "universal_starting_gear_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           id: string
@@ -2623,10 +2565,6 @@ export type Database = {
       grant_searched_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
-      }
-      grant_starting_gear: {
-        Args: { p_character_id: string }
-        Returns: undefined
       }
       guarded_expire_king_slayer: { Args: never; Returns: undefined }
       guarded_expire_marketplace_listings: { Args: never; Returns: undefined }
