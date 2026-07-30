@@ -3,8 +3,6 @@ project_id = "gpclaklkaolyzfnooajt"
 [functions]
   [functions.admin-users]
     verify_jwt = false
-  [functions.ai-item-forge]
-    verify_jwt = false
   [functions.ai-generate-service-npc]
     verify_jwt = false
   [functions.ai-item-illustration]
@@ -22,8 +20,6 @@ project_id = "gpclaklkaolyzfnooajt"
   [functions.combat-catchup]
     verify_jwt = false
   [functions.ai-suggest-character-name]
-    verify_jwt = false
-  [functions.seed-archetype-items]
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
