@@ -14,7 +14,6 @@ import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
 import ToolsPanel from '@/components/admin/ToolsPanel';
-import ItemForgePanel from '@/components/admin/ItemForgePanel';
 
 
 import GameManual from '@/components/admin/GameManual';
@@ -394,11 +393,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <ItemManager />;
       case 'loot-tables':
         return <LootTableManager />;
-      case 'item-forge':
-        return <ItemForgePanel onDataChanged={loadData} />;
       case 'tools':
       case 'item-coverage':
-      case 'archetype-maintenance':
       case 'class-bonds':
       case 'combat-audit':
       case 'unique-reclaim':

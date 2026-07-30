@@ -38,10 +38,11 @@ head Helm/Hood/Circlet · chest Plate/Armor/Vest/Robe · pants Greaves/Leggings 
 - Spillover loop drips remaining budget into priority order until budget is fully spent or caps are hit.
 - Respects `statCap(key, level)` per stat.
 
-## Generation & class starters
-Deterministic seed lives in edge function `seed-archetype-items` (overlord-gated). Per band: ~84 commons (6 primaries × ~14 slots/weapons) + 48 uncommons (8 pairs × 2 directions × 3 slots).
+## Status (retired tooling)
 
-Class starting weapons use the new primary archetype names: warrior→Vanguard, rogue/ranger→Shadow, wizard→Spellwoven, healer/templar→Sanctified, bard→Crowned.
+The automated catalog tooling has been removed: `seed-archetype-items`, `rebuild-archetype-stats`, `ai-item-forge`, `ai-item-rename` and `ai-item-rebalance` edge functions and their admin panels no longer exist. The grammar above still describes the existing catalog and should be followed when authoring new common/uncommon items by hand in the Item Manager.
+
+There are no class starting weapons and no universal starter kit — new characters spawn with empty slots and craft their first gear.
 
 ## Rename policy
 Names are renamed in place when grammar evolves — IDs stay stable so player inventory, marketplace listings, and ground loot all survive. Stat-pair rows that fall outside the 8 hybrid pairs are left untouched.

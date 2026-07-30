@@ -12,9 +12,8 @@
  *   - Unique 2H weapons drop hands_mult 1.5 → 1.35 so the unique×2H curve
  *     (formerly 4.5× a common's budget at the same level) is reined in.
  *
- * Mirrored in `supabase/functions/_shared/formulas/items.ts` and the local
- * helpers inside `supabase/functions/seed-archetype-items` and
- * `supabase/functions/ai-item-forge`. Keep all four in sync.
+ * Mirrored between `src/shared/formulas/items.ts` and
+ * `supabase/functions/_shared/formulas/items.ts`. Keep both in sync.
  */
 
 export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {

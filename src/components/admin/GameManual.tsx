@@ -625,6 +625,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">Enhance tab flow:</strong> pick an owned item on the left → select an eligible gem on the right → the gem is consumed and its stat is added to the item. Each socket costs salvage + gold, same scale as forging.</p>
                   <p><strong className="text-foreground">60% single-attribute cap:</strong> No single attribute may exceed <strong>60%</strong> of the item's total stat budget. This prevents monolithic all-STR / all-WIS bricks and keeps distributed builds competitive.</p>
                   <p><strong className="text-foreground">Rare / Unique / Soulforged gear:</strong> Not affected — those still drop or are forged with pre-rolled stats (no sockets).</p>
+                  <p><strong className="text-foreground">No starting equipment:</strong> New characters spawn with empty slots. First gear comes from crafting a base at the Blacksmith (or early drops) — there is no class starting weapon and no universal starter kit.</p>
                 </CardContent>
               </Card>
 
@@ -684,14 +685,11 @@ export default function GameManual() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-[10px] font-display text-foreground mb-1">Stat Distribution (3 real attributes — no HP filler on common/uncommon equipment)</p>
-                    <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p><span className="text-foreground">Common 70 / 20 / 10:</span> STR→str/con/dex · DEX→dex/str/wis · CON→con/str/wis · INT→int/wis/cha · WIS→wis/con/int · CHA→cha/wis/dex</p>
-                      <p><span className="text-foreground">Uncommon 50 / 30 / 20:</span> STR+CON→dex · STR+DEX→con · DEX+WIS→con · WIS+CON→int · INT+WIS→cha · CHA+WIS→int · CHA+DEX→wis · CHA+STR→wis</p>
-                      <p className="text-muted-foreground/80">A spillover loop tops up any leftover budget into the same three keys, respecting per-stat caps.</p>
-                    </div>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground/80">
+                    Archetype names are historical — the automated catalog generator has been retired. Common
+                    and uncommon bases now drop with <strong>no rolled stats</strong>; players choose their own
+                    stats by socketing gems. New items are authored by hand in the Item Manager.
+                  </p>
                 </CardContent>
               </Card>
 

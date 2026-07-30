@@ -106,7 +106,6 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
         is_classless: true,
       });
       if (char?.id) {
-        await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
         const family = familyName.trim();
         if (family) {
           const { error: famErr } = await supabase.rpc('apply_family_to_character', {

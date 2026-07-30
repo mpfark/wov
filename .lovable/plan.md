@@ -1,53 +1,44 @@
-The repo currently has 9 test failures and 1 error. I will fix those and then audit the live preview.
+## Goal
 
-## 1. Fix the test suite
+Strip retired systems out of the admin surface, the backend, and the docs.
 
-### 1.1 Missing `@shared` alias in Vitest config
-`vite.config.ts` defines `@shared` → `./supabase/functions/_shared`, but `vitest.config.ts` only has `@`. This causes:
+## 1. Item Forge (removed entirely)
 
-```
-Cannot find module '@shared/proc-log-format' from 'src/features/combat/utils/combat-text.ts'
-```
+- `AdminSidebar.tsx`: drop the `item-forge` nav entry (and the now-unused `Hammer` import).
+- `AdminPage.tsx`: drop the `item-forge` case and the `ItemForgePanel` import.
+- Delete `src/components/admin/ItemForgePanel.tsx`.
+- Delete edge function `supabase/functions/ai-item-forge/` + its `config.toml` entry, and un-deploy it.
 
-**Fix:** add the same `@shared` alias to `vitest.config.ts`.
+## 2. Catalog Tools in Items
 
-### 1.2 Outdated HP snapshots after CON buffs
-`getMaxHp` currently uses `getStatModifier(con) * 2`, so warrior L10 con=14 is 73, not 71. The stale snapshots are in:
+- `ItemManager.tsx`: remove the "Catalog Tools" `AdminToolSection` (Rename Legacy + Rebalance Stats), the `handleRenameLegacy` / `handleRebalanceStats` handlers, their state, and now-unused imports.
+- Delete edge functions `ai-item-rename` and `ai-item-rebalance` (files, config entries, un-deploy).
 
-- `src/lib/__tests__/effective-caps.test.ts` (warrior L10 con=14)
-- `src/shared/formulas/__tests__/formula-parity.test.ts` (same value)
-- `effective-caps.test.ts` also asserts +4 con gear raises HP by `+2`; with the current formula the delta is `+4`.
+## 3. Archetype Maintenance
 
-**Fix:** update the expected numbers to match the current, intended formula.
+- `ToolsPanel.tsx`: remove the `archetype-maintenance` tool entry, its case, and the import.
+- Delete `src/components/admin/tools/ArchetypeMaintenancePanel.tsx`.
+- Delete edge functions `seed-archetype-items` and `rebuild-archetype-stats` (files, config entries, un-deploy).
 
-### 1.3 Outdated item stat budget snapshots
-The item budget formula now uses slope `0.24` and unique 2H hands multiplier `1.35`:
+## 4. Starting gear (full purge)
 
-- uncommon L10: `2 + 9*0.24*1.5 = 5.24 → 5` (test expects 6)
-- unique L20 2H: `2 + 19*0.24*3.0*1.35 = 20.468 → 20` (test expects 25)
+- `RaceClassManager.tsx`: remove the "Starter Gear" tab entirely, and the "Starting Weapon" block from each class card, plus all related state/handlers (`startingGear`, `universalGear`, `weapons`, set/clear handlers) and their queries.
+- `ItemManager.tsx`: remove `class_starting_gear` from the "item in use" reference check.
+- `CharacterCreation.tsx`: remove the `grant_starting_gear` RPC call — new characters spawn with nothing and craft their first gear.
+- Migration: `DROP FUNCTION public.grant_starting_gear`, `DROP TABLE public.class_starting_gear`, `DROP TABLE public.universal_starting_gear` (cascade on policies). Existing characters keep whatever they already own.
 
-Both snapshots are in `src/shared/formulas/__tests__/formula-parity.test.ts`.
+## 5. Docs audit
 
-**Fix:** update expected values to 5 and 20, and refresh the comment for the unique 2H calculation.
+- `WorldBuilderRulebook.tsx`: delete the "Item Forge" section; change the checklist line to "Items — created via the Item Manager, or crafted in-game by players."
+- `GameManual.tsx`: verify and correct anything that assumes forged/seeded archetype catalogs or starting gear. Specifically re-check the item-naming / archetype grammar block (still valid for existing catalog names, but it must no longer point at removed admin tools), and confirm the "plain bases + gems" gear section is the single source of truth for how players get gear. Add a short "new characters start with no equipment" note to the progression section.
+- Update the project memory files that describe removed systems: `mem://admin/ai-item-forge` (delete) and the item-archetype/equipment memories (drop references to the forge and starter gear).
 
-### 1.4 Investigate `StatusBarsStrip.login-display.test.tsx`
-When the full suite runs, the three tests in this file fail with `document is not defined`. Running the file alone passes. This is likely a side effect of the `@shared` resolution failure or a Vitest environment isolation quirk. After fixing the alias and snapshot drift, I will re-run the full suite. If it still fails, I will inspect the Vitest environment setup and the file naming pattern.
+## 6. Verification
 
-## 2. Audit the live app
+- `bun run test` and `bun run build` must pass.
+- Grep for any remaining `item-forge`, `starting_gear`, `archetype-maintenance`, `ai-item-rename`, `ai-item-rebalance` references.
+- Load the admin page in the preview and confirm Items, Tools, and Races & Classes render without the removed sections.
 
-After the test suite is green, I will drive the preview to check for runtime/UX issues:
+## Note
 
-- Login / character select / character creation flow
-- Entering the world (the "Your journey begins..." transition area)
-- Combat (solo and party), event log rendering, and boss telegraphs
-- Inventory, blacksmith, jewelcrafter, and teleport UI
-- Party, summon, and wimp/auto-flee behavior
-- Console and network errors
-
-Any issues found will be documented and fixed in follow-up edits, with the test suite re-run after each change.
-
-## Verification
-
-- `bun test` must pass with 0 failures.
-- `bun run build` must still pass (it already does).
-- Any live-audit findings must be confirmed with a screenshot or console trace before being claimed fixed.
+Existing common/uncommon items in the database are untouched — only the tooling that regenerated them is removed. If you later want a fresh catalog rebuild you'd need a new tool.
