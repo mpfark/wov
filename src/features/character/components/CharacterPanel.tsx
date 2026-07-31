@@ -754,12 +754,14 @@ export default function CharacterPanel({
                     const bonus = equipmentBonuses[stat] || 0;
                     const effective = base + bonus;
                     const mod = getStatModifier(effective);
+                    const renown = ((character.bhp_trained || {}) as Record<string, number>)[stat] || 0;
+                    const basePoints = base - renown;
                     // Calculate non-manual base: creation stats + class level bonuses
                     const creationStats = calculateStats(character.race, character.class);
                     const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
                     const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
-                    const manualPoints = base - nonManualBase;
+                    const manualPoints = basePoints - nonManualBase;
                     
                     // Derive contributions live from formula functions (single source of truth)
                     const contributions = STAT_CONTRIBUTIONS[stat as StatKey]?.effects ?? [];
@@ -774,7 +776,8 @@ export default function CharacterPanel({
                               <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
                             </span>
                             <span className="flex gap-1.5 t-numeric text-xs">
-                              <span>{base}</span>
+                              <span>{basePoints}</span>
+                              <span className="text-elvish w-5 text-right">{renown > 0 ? `+${renown}` : ''}</span>
                               <span className="t-numeric-pos w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
                               <span className="text-muted-foreground w-6 text-right text-[10px]">({mod >= 0 ? '+' : ''}{mod})</span>
                             </span>
@@ -783,7 +786,12 @@ export default function CharacterPanel({
                         <TooltipContent className="bg-popover border-border z-50">
                           <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
-                          <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Base {basePoints}
+                            {renown > 0 && <> + Renown {renown}</>}
+                            {bonus > 0 && <> + Gear {bonus}</>}
+                            {' '}= {effective} (modifier {mod >= 0 ? '+' : ''}{mod})
+                          </p>
                           {derivedLines.length > 0 && (
                             <div className="mt-0.5 border-t border-border-subtle/50 pt-0.5 space-y-0">
                               {derivedLines.map((line, i) => (
@@ -792,8 +800,8 @@ export default function CharacterPanel({
                             </div>
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
-                          {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
-                            <p className="text-[10px] text-elvish mt-0.5">🏛️ +{((character.bhp_trained || {}) as Record<string, number>)[stat]} Renown trained</p>
+                          {renown > 0 && (
+                            <p className="text-[10px] text-elvish mt-0.5">🏛️ +{renown} Renown trained</p>
                           )}
                         </TooltipContent>
                       </Tooltip>
