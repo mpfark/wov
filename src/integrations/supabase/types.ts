@@ -2708,6 +2708,10 @@ export type Database = {
         Returns: Json
       }
       tick_creatures: { Args: never; Returns: undefined }
+      train_renown_stat: {
+        Args: { _character_id: string; _stat: string }
+        Returns: Json
+      }
       try_acquire_unique_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
