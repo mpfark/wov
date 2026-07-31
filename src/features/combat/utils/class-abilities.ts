@@ -114,3 +114,111 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Divine Challenge', emoji: '⚜️', description: 'Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.', tooltip: 'Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.', cpCost: 60, type: 'mitigation_buff', tier: 4, levelRequired: 20 },
   ],
 };
+
+// ── Configurable ability registry (Phase 2b) ────────────────────
+//
+// `CLASS_ABILITIES` above is the balance-identical fallback (matches the rows
+// seeded into `abilities` / `class_ability_assignments`). At boot,
+// `useAbilityRegistry` fetches the configured rows and calls
+// `setAbilityRegistry`, which rewrites `CLASS_ABILITIES` **in place** so every
+// existing consumer (ability bar, combat driver, admin manual) reads configured
+// labels, emojis, descriptions, CP costs and unlock levels with no refactor.
+//
+// The runtime *mechanic* stays code-owned: `mechanic_key` must match one of the
+// `ClassAbility['type']` handlers. Rows with an unknown mechanic are skipped and
+// logged rather than silently breaking a class bar.
+
+/** Shape of one joined `class_ability_assignments` row. */
+export interface AbilityConfigRow {
+  class_key: string;
+  unlock_level: number;
+  is_default: boolean;
+  status: string;
+  role: { slot: number } | null;
+  ability: {
+    label: string;
+    emoji: string;
+    description: string;
+    tooltip: string;
+    cp_cost: number;
+    mechanic_key: string;
+    status: string;
+  } | null;
+}
+
+const KNOWN_MECHANICS = new Set<string>(
+  Object.values(CLASS_ABILITIES).flatMap(list => list.map(a => a.type as string)),
+);
+
+/** Snapshot of the fallback tables, so a reload/registry reset can restore them. */
+const FALLBACK_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntries(
+  Object.entries(CLASS_ABILITIES).map(([k, list]) => [k, list.map(a => ({ ...a }))]),
+);
+
+let abilityRegistryLoaded = false;
+
+export function isAbilityRegistryLoaded(): boolean {
+  return abilityRegistryLoaded;
+}
+
+/** True when `mechanic_key` maps to an implemented runtime handler. */
+export function isKnownAbilityMechanic(mechanicKey: string): boolean {
+  return KNOWN_MECHANICS.has(mechanicKey);
+}
+
+/**
+ * Apply configured ability rows, mutating `CLASS_ABILITIES` in place.
+ * Only classes present in `rows` are replaced; every other class keeps its
+ * fallback list. An empty payload is ignored (treated as a failed load).
+ */
+export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
+  if (!rows || rows.length === 0) return;
+
+  const byClass = new Map<string, ClassAbility[]>();
+
+  for (const row of rows) {
+    if (!row.ability || !row.role) continue;
+    if (row.status !== 'active' || row.ability.status !== 'active') continue;
+    if (!row.is_default) continue;
+    if (!isKnownAbilityMechanic(row.ability.mechanic_key)) {
+      console.warn(
+        `[ability-registry] skipping ${row.class_key}/${row.ability.label}: `
+        + `unknown mechanic "${row.ability.mechanic_key}"`,
+      );
+      continue;
+    }
+    const list = byClass.get(row.class_key) ?? [];
+    list.push({
+      label: row.ability.label,
+      emoji: row.ability.emoji,
+      description: row.ability.description,
+      tooltip: row.ability.tooltip,
+      cpCost: row.ability.cp_cost,
+      type: row.ability.mechanic_key as ClassAbility['type'],
+      tier: row.role.slot,
+      levelRequired: row.unlock_level,
+    });
+    byClass.set(row.class_key, list);
+  }
+
+  for (const [classKey, list] of byClass) {
+    if (list.length === 0) continue;
+    list.sort((a, b) => a.tier - b.tier);
+    CLASS_ABILITIES[classKey] = list;
+  }
+  abilityRegistryLoaded = true;
+}
+
+/** Restore the hardcoded fallback lists (used by tests). */
+export function resetAbilityRegistry(): void {
+  for (const key of Object.keys(CLASS_ABILITIES)) delete CLASS_ABILITIES[key];
+  for (const [k, list] of Object.entries(FALLBACK_ABILITIES)) {
+    CLASS_ABILITIES[k] = list.map(a => ({ ...a }));
+  }
+  abilityRegistryLoaded = false;
+}
+
+/** Abilities a character of `classKey` has unlocked at `level`. */
+export function getUnlockedAbilities(classKey: string, level: number): ClassAbility[] {
+  return (CLASS_ABILITIES[classKey] ?? []).filter(a => level >= a.levelRequired);
+}

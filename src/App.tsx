@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "@/contexts/GameContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useAbilityRegistry } from '@/hooks/useAbilityRegistry';
 import { useClassRegistry } from "@/hooks/useClassRegistry";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -29,6 +30,8 @@ const LoadingFallback = () => (
 const App = () => {
   // Load configurable class rows into the shared class registry.
   useClassRegistry();
+  // Load configurable ability rows into the shared ability registry.
+  useAbilityRegistry();
   return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
