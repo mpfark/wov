@@ -214,9 +214,9 @@ const corsHeaders = {
 // Basic autoattacks use weapon dice + STR (see resolveAttackRoll).
 // Class abilities (Barrage, Eviscerate, Conflagrate) use ability-specific
 // stat-scaling formulas defined inline in their handlers below — they do
-// NOT share the autoattack weapon-die path. CLASS_COMBAT_PROFILES is no
-// longer referenced here; CLASS_CRIT_RANGE / WEAPON_EMOJI carry the
-// remaining class flavor.
+// NOT share the autoattack weapon-die path. Per-class crit range and
+// autoattack flavor come from the configurable class registry (`classes`
+// table, loaded per invocation via loadClassRegistry).
 
 function json(data: unknown) {
   return new Response(JSON.stringify(data), {
