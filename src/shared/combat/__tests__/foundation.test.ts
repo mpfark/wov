@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDamage, resolveHeal } from '../resolution';
+import { absorbFromShield, resolveDamage, resolveHeal } from '../resolution';
 import { selectPrimaryTarget, selectAoeTargets, livingTargets } from '../targeting';
 import { applyStackingEffect, isEffectExpired } from '../status';
 import { buildCastHitMessages, buildCastHitEvent } from '@shared/combat/cast-events';
@@ -141,5 +141,30 @@ describe('cast event generation', () => {
     expect(e.log_event.message).toContain('strikes you');
     expect(e.log_event.remoteMessage).toContain('strikes Calikon');
     expect(e.log_event.target).toEqual({ kind: 'player', id: 'p1', name: 'Calikon' });
+  });
+});
+
+describe('absorbFromShield (ward soak, mid-pipeline)', () => {
+  it('soaks up to the pool and passes the rest onward', () => {
+    expect(absorbFromShield(10, 4)).toEqual({ absorbed: 4, remaining: 6, shieldAfter: 0 });
+  });
+
+  it('fully absorbs when the pool is deep enough', () => {
+    expect(absorbFromShield(7, 20)).toEqual({ absorbed: 7, remaining: 0, shieldAfter: 13 });
+  });
+
+  it('is a no-op without a ward and clamps junk input', () => {
+    expect(absorbFromShield(5, 0)).toEqual({ absorbed: 0, remaining: 5, shieldAfter: 0 });
+    expect(absorbFromShield(-3, NaN)).toEqual({ absorbed: 0, remaining: 0, shieldAfter: 0 });
+  });
+
+  it('matches the old inline expression it replaced', () => {
+    for (const [dmg, pool] of [[13, 5], [2, 9], [0, 3], [40, 40]]) {
+      const absorbed = Math.min(dmg, pool);
+      const w = absorbFromShield(dmg, pool);
+      expect(w.absorbed).toBe(absorbed);
+      expect(w.remaining).toBe(dmg - absorbed);
+      expect(w.shieldAfter).toBe(pool - absorbed);
+    }
   });
 });
