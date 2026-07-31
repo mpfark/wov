@@ -1971,16 +1971,20 @@ Deno.serve(async (req) => {
         const cStr = sm(cs.str || 10);
         const dmgDie = creatureDmgDie(creature.level, creature.rarity);
 
-        if (tankAtNode) {
-          const tank = members.find(m => m.id === tankId);
-          if (!tank || mHp[tankId!] <= 0) continue;
-          applyCreatureHit(tankId!, tank.c.name, tank.c, eq[tankId!] || {}, creature, cStr, dmgDie, '🛡️ ');
-        } else {
-          const alive = members.filter(m => mHp[m.id] > 0);
-          if (alive.length === 0) continue;
-          const target = alive[Math.floor(Math.random() * alive.length)];
-          applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
-        }
+        // Shared targeting primitive: a designated tank soaks everything while
+        // alive (`tank_strict` — nobody else is hit if the tank is down),
+        // otherwise a uniformly random living member takes the swing.
+        const candidates = members.map(m => ({ id: m.id, hp: mHp[m.id] }));
+        const picked = selectPrimaryTarget(candidates, {
+          mode: tankAtNode ? 'tank_strict' : 'random_alive',
+          tankId: tankAtNode ? tankId : null,
+        });
+        if (!picked) continue;
+        const target = members.find(m => m.id === picked.id)!;
+        applyCreatureHit(
+          target.id, target.c.name, target.c, eq[target.id] || {},
+          creature, cStr, dmgDie, tankAtNode ? '🛡️ ' : '',
+        );
       }
     } // end tick loop
 
