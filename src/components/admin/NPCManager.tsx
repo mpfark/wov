@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, MessageCircle } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import NodePicker from './NodePicker';
-import { CLASS_LABELS } from '@/shared/formulas/classes';
+import { CLASS_LABELS, getPlayableClassKeys } from '@/shared/formulas/classes';
 import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
 
 type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter' | 'heraldry';
@@ -394,7 +394,7 @@ const KIND_LABELS: Record<TopicKind, string> = {
 };
 
 
-const CLASS_KEYS = Object.keys(CLASS_LABELS).filter(k => k !== 'classless');
+const CLASS_KEYS = getPlayableClassKeys();
 
 function slugId(label: string): string {
   return (label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'topic')

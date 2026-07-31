@@ -18,7 +18,7 @@ import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
 import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminStickyActions } from './common';
-import { CLASS_LABELS } from '@/shared/formulas/classes';
+import { CLASS_LABELS, getPlayableClassKeys } from '@/shared/formulas/classes';
 
 interface VendorEntry {
   id: string;
@@ -1165,8 +1165,8 @@ export default function NodeEditorPanel({
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border z-50">
                     <SelectItem value="none" className="text-xs">None (not a hall)</SelectItem>
-                    {Object.entries(CLASS_LABELS).map(([k, label]) => (
-                      <SelectItem key={k} value={k} className="text-xs">🏰 {label} Hall</SelectItem>
+                    {getPlayableClassKeys().map((k) => (
+                      <SelectItem key={k} value={k} className="text-xs">🏰 {CLASS_LABELS[k]} Hall</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
