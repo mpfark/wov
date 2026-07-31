@@ -14,3 +14,13 @@
  * `class-abilities.ts` are used and no config fetch happens.
  */
 export const USE_CONFIG_ABILITIES = true;
+
+/**
+ * Phase 2c: read ability *magnitudes* (amount / duration / tick interval) from
+ * the stored `amount_calc` / `duration_calc` records instead of the inline
+ * hardcoded math in the ability handlers.
+ *
+ * When false, the legacy inline formulas are used. The seeded calcs are pinned
+ * balance-identical to those formulas by `ability-calc-parity.test.ts`.
+ */
+export const USE_CONFIG_ABILITY_CALCS = true;

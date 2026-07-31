@@ -12,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   setAbilityRegistry, isAbilityRegistryLoaded, type AbilityConfigRow,
 } from '@/features/combat/utils/class-abilities';
+import {
+  setAbilityCalcRegistry, type AbilityCalcConfigRow,
+} from '@/features/combat/utils/ability-calcs';
 import { USE_CONFIG_ABILITIES } from '@/shared/config/feature-flags';
 
 let started = false;
@@ -34,7 +37,10 @@ export function useAbilityRegistry(): { loaded: boolean } {
         .select(`
           class_key, unlock_level, is_default, status,
           role:class_ability_roles ( slot ),
-          ability:abilities ( label, emoji, description, tooltip, cp_cost, mechanic_key, status )
+          ability:abilities (
+            ability_key, label, emoji, description, tooltip, cp_cost, mechanic_key, status,
+            amount_calc, duration_calc, interval_ms, effect_config
+          )
         `);
       if (cancelled) return;
       if (error) {
@@ -44,6 +50,8 @@ export function useAbilityRegistry(): { loaded: boolean } {
       }
       if (data && data.length > 0) {
         setAbilityRegistry(data as unknown as AbilityConfigRow[]);
+        // Phase 2c: same payload also carries the configured magnitudes.
+        setAbilityCalcRegistry(data as unknown as AbilityCalcConfigRow[]);
         setLoaded(true);
       }
     })();
