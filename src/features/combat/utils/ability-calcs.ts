@@ -187,3 +187,33 @@ export function resolveInterval(classKey: string, tier: number, legacy: number):
   if (!USE_CONFIG_ABILITY_CALCS) return legacy;
   return getAbilityCalcs(classKey, tier)?.intervalMs ?? legacy;
 }
+
+// ── Loadout support (Phase 4) ─────────────────────────────────────
+
+/** Build a calc entry from a joined assignment row (default or alternative). */
+export function toAbilityCalcEntry(row: {
+  ability: {
+    ability_key?: string;
+    mechanic_key: string;
+    amount_calc?: unknown;
+    duration_calc?: unknown;
+    interval_ms?: number | null;
+    effect_config?: unknown;
+  } | null;
+}): AbilityCalcEntry {
+  return {
+    abilityKey: row.ability?.ability_key ?? '',
+    mechanicKey: row.ability?.mechanic_key ?? '',
+    amountCalc: asCalc(row.ability?.amount_calc),
+    durationCalc: asCalc(row.ability?.duration_calc),
+    intervalMs: row.ability?.interval_ms ?? null,
+    effectConfig: (row.ability?.effect_config as Record<string, unknown>) ?? {},
+  };
+}
+
+/** Point one class/tier at a specific ability's magnitudes (loadout choice). */
+export function setAbilityCalcEntry(
+  classKey: string, tier: number, entry: AbilityCalcEntry,
+): void {
+  ABILITY_CALCS[calcKey(classKey, tier)] = entry;
+}

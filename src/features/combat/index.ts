@@ -28,6 +28,9 @@ export type { EffectTickResult } from './utils/combat-resolver';
 // Class abilities
 export * from './utils/class-abilities';
 
+// Per-character ability loadouts (alternatives)
+export * from './utils/ability-loadout';
+
 // Combat action orchestration hook
 export { useCombatActions } from './hooks/useCombatActions';
 export type { UseCombatActionsParams } from './hooks/useCombatActions';

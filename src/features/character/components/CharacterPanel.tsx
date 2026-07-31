@@ -22,6 +22,7 @@ import { MaterialsSection } from '@/features/inventory/components/MaterialsSecti
 import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 // import PortraitTab from './PortraitTab'; // disabled — feature coming later
 import ClassBondRow from './ClassBondRow';
+import AbilityLoadoutTab from './AbilityLoadoutTab';
 
 
 interface Props {
@@ -389,6 +390,7 @@ export default function CharacterPanel({
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
+            <TabsTrigger value="abilities" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Abilities</TabsTrigger>
             {/* Portrait tab temporarily disabled — feature coming later. */}
           </TabsList>
 
@@ -1015,7 +1017,12 @@ export default function CharacterPanel({
               </div>
             </TabsContent>
 
-            {/* Portrait tab content disabled. */}
+            {/* Abilities — per-character loadout choices */}
+            <TabsContent value="abilities" className="mt-0">
+              <AbilityLoadoutTab character={character} inCombat={inCombat} />
+            </TabsContent>
+
+
           </div>
         </Tabs>
 
