@@ -111,3 +111,10 @@ Sequence, all inside Phase 2: enumerate live reads → represent each in structu
 ## Remaining question
 
 Only one left: when a character switches class, should their **retained ability loadout rows** for the old class survive (my plan: yes, keyed by `role_id`, so returning restores prior picks even though bond restarts at zero), or should leaving a class also clear its loadout to match the "abandon the relationship" framing?
+
+## Progress
+
+- **Phase 1a — DONE.** `character_class` enum dropped. `characters.class`, `character_class_bonds.class`, `nodes.class_hall` are now TEXT with FK to `classes(class_key)` (column names kept; representation is canonical `class_key`). `join_order`/`switch_order`/`award_class_bond`/`get_order_roster` recreated with text params and validate against `classes` (active, selectable, not pre-class).
+- **Phase 1a — DONE.** Config tables created: `classes` (seeded: 7 playable + protected `classless` with `is_pre_class`), `class_ability_roles`, `abilities`, `class_ability_assignments`, `character_ability_loadout`. Overlord-only writes, public reads, owner-only loadouts.
+- **Phase 1a — DONE.** Bond rules: leaving an order deletes every non-active bond row; only the active class bond renders in the character panel; recruiter warning states the permanent erasure explicitly.
+- **Next: Phase 1b** — seed ability roles + ability definitions with structured `amount_calc`/`duration_calc`, add the calculation evaluator and the old-vs-new parity harness.
