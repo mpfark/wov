@@ -21,7 +21,7 @@ export async function loadClassRegistry(db: any, force = false): Promise<void> {
     try {
       const { data, error } = await db
         .from('classes')
-        .select('class_key,label,base_hp,base_ac,crit_range,level_bonuses,weapon_proficiencies,autoattack,is_pre_class,is_selectable,sort_order,status');
+        .select('class_key,label,base_hp,base_ac,crit_range,level_bonuses,weapon_proficiencies,is_pre_class,is_selectable,sort_order,status');
       if (error) throw error;
       if (data && data.length > 0) {
         setClassRegistry(data as ClassConfigRow[]);

@@ -18,10 +18,6 @@ const base: ClassConfigDraft = {
   crit_range: 20,
   level_bonuses: { str: 1, dex: 1 },
   weapon_proficiencies: ['sword', 'axe', 'mace'],
-  autoattack: {
-    label: 'Strike', stat: 'str', diceMin: 1, diceMax: 10,
-    emoji: '⚔️', verb: 'swings at', selfVerb: 'swing your blade at',
-  },
 };
 
 describe('validateClassConfig', () => {
@@ -36,16 +32,14 @@ describe('validateClassConfig', () => {
     expect(errors.length).toBe(4);
   });
 
-  it('rejects unknown stats, tags and broken autoattack dice', () => {
+  it('rejects unknown stats and tags', () => {
     const { errors } = validateClassConfig({
       ...base,
       level_bonuses: { luck: 1 },
       weapon_proficiencies: ['spork'],
-      autoattack: { ...base.autoattack, diceMin: 8, diceMax: 4 },
     });
     expect(errors.some(e => e.includes('luck'))).toBe(true);
     expect(errors.some(e => e.includes('spork'))).toBe(true);
-    expect(errors.some(e => e.includes('diceMax'))).toBe(true);
   });
 
   it('warns when level bonuses do not total 2', () => {
@@ -54,11 +48,11 @@ describe('validateClassConfig', () => {
     expect(warnings.some(w => w.includes('total 1'))).toBe(true);
   });
 
-  it('exempts the pre-class row from autoattack and proficiency requirements', () => {
+  it('exempts the pre-class row from proficiency requirements', () => {
     const { errors } = validateClassConfig({
       ...base,
       class_key: 'classless', label: 'Wayfarer', is_pre_class: true, is_selectable: false,
-      level_bonuses: {}, weapon_proficiencies: [], autoattack: {},
+      level_bonuses: {}, weapon_proficiencies: [],
     });
     expect(errors).toHaveLength(0);
   });

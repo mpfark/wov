@@ -30,10 +30,6 @@ export const NEW_CLASS_DEFAULTS = {
   crit_range: 20,
   level_bonuses: {} as Record<string, number>,
   weapon_proficiencies: [] as string[],
-  autoattack: {
-    label: 'Strike', stat: 'str', diceMin: 1, diceMax: 6,
-    emoji: '⚔️', verb: 'strikes', selfVerb: 'strike at',
-  },
 };
 
 export function validateNewClassKey(key: string, existing: string[]): string[] {

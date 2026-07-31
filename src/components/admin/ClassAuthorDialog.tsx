@@ -62,7 +62,6 @@ export default function ClassAuthorDialog({
       crit_range: NEW_CLASS_DEFAULTS.crit_range,
       level_bonuses: NEW_CLASS_DEFAULTS.level_bonuses as never,
       weapon_proficiencies: NEW_CLASS_DEFAULTS.weapon_proficiencies,
-      autoattack: NEW_CLASS_DEFAULTS.autoattack as never,
       restrictions: {} as never,
     });
     if (classError) { setSaving(false); toast.error(classError.message); return; }

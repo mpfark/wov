@@ -3,7 +3,10 @@
  *
  * CANONICAL OWNER for: CLASS_BASE_HP, CLASS_BASE_AC, CLASS_CRIT_RANGE,
  * CLASS_LEVEL_BONUSES, CLASS_LABELS, CLASS_WEAPON_AFFINITY,
- * CLASS_AUTOATTACK, weapon/shield mechanics constants.
+ * weapon/shield mechanics constants.
+ *
+ * Autoattacks are entirely weapon-driven (DEX to-hit, STR damage) — there is
+ * no per-class autoattack profile. Class identity lives in abilities.
  *
  * Phase 2 (configurable classes): the tables below are now *fallback
  * defaults* only. At runtime `setClassRegistry()` is called with the rows of
@@ -67,35 +70,6 @@ export const CLASS_CRIT_RANGE: Record<string, number> = {
   warrior: 20, wizard: 20, ranger: 20, assassin: 19, healer: 20, bard: 20, templar: 20,
 };
 
-/**
- * Autoattack presentation + legacy dice profile per class.
- *
- * `diceMin`/`diceMax` are only used by the three legacy ability handlers
- * (multi_attack, execute_attack, ignite_consume). Autoattack damage itself is
- * weapon-based (`WEAPON_DAMAGE_DIE` in `combat.ts`) with STR scaling.
- */
-export interface ClassAutoattack {
-  label: string;
-  stat: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-  diceMin: number;
-  diceMax: number;
-  emoji: string;
-  /** Third-person verb, e.g. "swings at". */
-  verb: string;
-  /** Second-person verb used in the local player's log, e.g. "swing your blade at". */
-  selfVerb: string;
-}
-
-export const CLASS_AUTOATTACK: Record<string, ClassAutoattack> = {
-  warrior: { label: 'Strike',        stat: 'str', diceMin: 1, diceMax: 10, emoji: '⚔️', verb: 'swings at',                     selfVerb: 'swing your blade at' },
-  wizard:  { label: 'Cast Fireball', stat: 'int', diceMin: 1, diceMax: 8,  emoji: '🔥', verb: 'hurls flame at',                selfVerb: 'hurl arcane flame at' },
-  ranger:  { label: 'Shoot',         stat: 'dex', diceMin: 1, diceMax: 8,  emoji: '🏹', verb: 'shoots',                        selfVerb: 'loose an arrow at' },
-  assassin:{ label: 'Backstab',      stat: 'dex', diceMin: 1, diceMax: 6,  emoji: '🗡️', verb: 'strikes',                       selfVerb: 'strike from the shadows at' },
-  healer:  { label: 'Smite',         stat: 'wis', diceMin: 1, diceMax: 6,  emoji: '⭐', verb: 'smites',                        selfVerb: 'channel divine light against' },
-  bard:    { label: 'Mock',          stat: 'cha', diceMin: 1, diceMax: 6,  emoji: '🎵', verb: 'mocks',                         selfVerb: 'unleash cutting words upon' },
-  templar: { label: 'Judgment',      stat: 'wis', diceMin: 1, diceMax: 8,  emoji: '✝️', verb: 'smites with righteous steel',   selfVerb: 'pass divine judgment upon' },
-};
-
 // ── Runtime registry (rows of the `classes` table) ───────────────
 
 /** Shape of a `classes` row, as far as gameplay math cares. */
@@ -107,7 +81,6 @@ export interface ClassConfigRow {
   crit_range?: number | null;
   level_bonuses?: Record<string, number> | null;
   weapon_proficiencies?: string[] | null;
-  autoattack?: Partial<ClassAutoattack> | null;
   is_pre_class?: boolean | null;
   is_selectable?: boolean | null;
   sort_order?: number | null;
@@ -139,12 +112,6 @@ export function setClassRegistry(rows: ClassConfigRow[]): void {
     if (row.level_bonuses) CLASS_LEVEL_BONUSES[key] = { ...row.level_bonuses };
     if (row.weapon_proficiencies && row.weapon_proficiencies.length > 0) {
       CLASS_WEAPON_AFFINITY[key] = [...row.weapon_proficiencies];
-    }
-    if (row.autoattack && Object.keys(row.autoattack).length > 0) {
-      CLASS_AUTOATTACK[key] = {
-        ...(CLASS_AUTOATTACK[key] ?? CLASS_AUTOATTACK.warrior),
-        ...row.autoattack,
-      } as ClassAutoattack;
     }
     registryMeta[key] = {
       isPreClass: !!row.is_pre_class,
@@ -190,10 +157,6 @@ export function getClassBaseAc(classKey: string): number {
 
 export function getClassLevelBonuses(classKey: string): Record<string, number> {
   return CLASS_LEVEL_BONUSES[classKey] ?? {};
-}
-
-export function getClassAutoattack(classKey: string): ClassAutoattack | null {
-  return CLASS_AUTOATTACK[classKey] ?? null;
 }
 
 export function getClassCritRange(classKey: string): number {

@@ -878,7 +878,6 @@ export type Database = {
       classes: {
         Row: {
           admin_notes: string | null
-          autoattack: Json
           base_ac: number
           base_hp: number
           class_key: string
@@ -899,7 +898,6 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
-          autoattack?: Json
           base_ac?: number
           base_hp?: number
           class_key: string
@@ -920,7 +918,6 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
-          autoattack?: Json
           base_ac?: number
           base_hp?: number
           class_key?: string

@@ -8,7 +8,7 @@ import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
   STAT_LABELS, CLASS_LEVEL_BONUSES, getPlayableClassKeys,
 } from '@/lib/game-data';
-import { getClassCombat, CLASS_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -38,13 +38,11 @@ export default function RaceClassManager() {
           <ScrollArea className="h-full">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
               {getPlayableClassKeys().map(cls => {
-                const combat = getClassCombat(cls);
                 const levelBonus = CLASS_LEVEL_BONUSES[cls] || {};
                 return (
                   <Card key={cls} className="bg-card/80 border-border">
                     <CardHeader className="pb-2 pt-4 px-4">
                       <CardTitle className="text-sm font-display flex items-center gap-2">
-                        <span className="text-lg">{combat?.emoji}</span>
                         {CLASS_LABELS[cls]}
                         <Badge variant="outline" className="ml-auto text-[10px]">
                           HP {CLASS_BASE_HP[cls]} · AC {CLASS_BASE_AC[cls]}

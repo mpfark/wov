@@ -5,7 +5,6 @@
  * Constraints: pure, no React, no side effects.
  */
 
-import { getClassCombat } from './class-abilities';
 import { renderFlavor, flavorHasDamageToken } from '@shared/proc-log-format';
 import { normalizeDamageType } from '@/shared/combat/damage-types';
 import { createLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
@@ -272,9 +271,7 @@ function getEventEmoji(event: StructuredAttackEvent): string {
   }
   if (event.is_offhand) return '🗡️';
   if (event.weapon_tag && WEAPON_EMOJI[event.weapon_tag]) return WEAPON_EMOJI[event.weapon_tag];
-  // Fallback to legacy class emoji if weapon tag unknown (older events).
-  const classCombat = event.attacker_class ? getClassCombat(event.attacker_class) : null;
-  if (classCombat) return classCombat.emoji;
+  // Unknown/absent weapon tag (older events, unarmed): generic strike emoji.
   return '⚔️';
 }
 
