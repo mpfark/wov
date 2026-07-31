@@ -1,9 +1,11 @@
 /**
- * AbilityLoadoutTab — player-facing ability choices (Phase 4).
+ * AbilityLoadoutTab — the character's Spellbook.
  *
- * One card per role that offers alternatives; picking an option swaps the
- * ability in that bar slot immediately. Locked while in combat, and options
- * above the character's level are shown but not selectable.
+ * One row per ability-bar slot, laid out to mirror the bar itself: the slot's
+ * bound key and role name sit on the right, and the techniques the character
+ * may bind into that slot sit to the left of it. Picking one swaps the bar
+ * ability immediately. Locked while in combat; options above the character's
+ * level are shown but not selectable.
  */
 import { Lock } from 'lucide-react';
 import { Character } from '@/features/character';
@@ -18,19 +20,18 @@ interface Props {
 
 export default function AbilityLoadoutTab({ character, inCombat, loadout }: Props) {
   const local = useAbilityLoadout(loadout ? undefined : character.id, character.class);
-  const { roles, selections, saving, error, select } = loadout ?? local;
+  const { allRoles, selections, saving, error, select } = loadout ?? local;
 
-  if (roles.length === 0) {
+  if (allRoles.length === 0) {
     return (
       <p className="t-meta text-center py-4">
-        Your order teaches a single path for each discipline. Alternative techniques will
-        appear here when they are revealed.
+        Your order has not yet inscribed its techniques. They will appear here once revealed.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {inCombat && (
         <p className="t-meta text-center text-destructive/80">
           Techniques cannot be reforged mid-battle.
@@ -38,20 +39,21 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
       )}
       {error && <p className="t-meta text-center text-destructive">{error}</p>}
 
-      {roles.map(role => {
+      {allRoles.map((role, idx) => {
         const activeId =
           selections[role.roleId]
           ?? role.options.find(o => o.isDefault)?.abilityId
           ?? role.options[0]?.abilityId;
+        const active = role.options.find(o => o.abilityId === activeId);
+        const slotLocked = character.level < role.unlockLevel;
 
         return (
-          <div key={role.roleId} className="rounded border border-border/60 bg-surface-2/40 p-2">
-            <div className="flex items-baseline justify-between">
-              <span className="t-label text-[10px] tracking-wide text-primary/80">{role.name}</span>
-              <span className="t-meta">Lvl {role.unlockLevel}</span>
-            </div>
-
-            <div className="flex flex-col gap-1 mt-1.5">
+          <div
+            key={role.roleId}
+            className="flex items-stretch gap-2 rounded border border-border/60 bg-surface-2/40 p-1.5"
+          >
+            {/* Left: the techniques that may be bound into this slot. */}
+            <div className="flex-1 flex flex-col gap-1 min-w-0">
               {role.options.map(option => {
                 const isActive = option.abilityId === activeId;
                 const locked = character.level < option.ability.levelRequired;
@@ -63,7 +65,7 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                     disabled={disabled}
                     onClick={() => select(role.roleId, option.abilityId)}
                     className={[
-                      'text-left rounded px-2 py-1.5 border transition-colors',
+                      'text-left rounded px-2 py-1 border transition-colors',
                       isActive
                         ? 'border-primary/70 bg-primary/10'
                         : 'border-border/50 bg-surface-3/30 hover:border-primary/40',
@@ -72,10 +74,10 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                   >
                     <span className="flex items-center gap-1.5">
                       <span aria-hidden>{option.ability.emoji}</span>
-                      <span className="t-label text-[11px]">{option.ability.label}</span>
+                      <span className="t-label text-[11px] truncate">{option.ability.label}</span>
                       {option.isDefault && <span className="t-meta">· traditional</span>}
                       {locked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                      <span className="t-numeric text-[10px] text-primary/70 ml-auto">
+                      <span className="t-numeric text-[10px] text-primary/70 ml-auto shrink-0">
                         {option.ability.cpCost} CP
                       </span>
                     </span>
@@ -83,6 +85,29 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                   </button>
                 );
               })}
+            </div>
+
+            {/* Right: the bar slot itself — bound key, ability button, role type. */}
+            <div className="w-[104px] shrink-0 flex flex-col items-center justify-center gap-1 border-l border-border/50 pl-2">
+              <div
+                className={[
+                  'w-full rounded border px-1.5 py-1 text-center',
+                  slotLocked
+                    ? 'border-border/40 bg-surface-3/20 opacity-60'
+                    : 'border-elvish/50 bg-surface-3/40',
+                ].join(' ')}
+              >
+                <span className="font-display text-[10px] text-elvish block truncate">
+                  {active ? `${active.ability.emoji} ${active.ability.label}` : '—'}
+                </span>
+                <span className="t-meta text-[8px]">[{idx + 1}]</span>
+              </div>
+              <span className="t-label text-[9px] tracking-wide text-primary/80 text-center leading-tight">
+                {role.name}
+              </span>
+              <span className="t-meta text-[9px]">
+                {slotLocked ? `Lvl ${role.unlockLevel}` : 'bound'}
+              </span>
             </div>
           </div>
         );

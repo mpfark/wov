@@ -15,6 +15,8 @@ import {
 export interface AbilityLoadoutState {
   /** Roles that offer a real choice (more than one active option). */
   roles: LoadoutRole[];
+  /** Every bar slot for the class, in slot order (spellbook rows). */
+  allRoles: LoadoutRole[];
   /** role_id -> ability_id for the current character. */
   selections: Record<string, string>;
   loading: boolean;
@@ -33,6 +35,7 @@ export function useAbilityLoadout(
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const allRoles = classKey ? getLoadoutRoles(classKey) : [];
   const roles = classKey ? getRolesWithAlternatives(classKey) : [];
 
   useEffect(() => {
@@ -92,5 +95,5 @@ export function useAbilityLoadout(
     }
   }, [characterId, classKey, selections]);
 
-  return { roles, selections, loading, saving, error, select };
+  return { roles, allRoles, selections, loading, saving, error, select };
 }
