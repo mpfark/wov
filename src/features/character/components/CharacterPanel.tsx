@@ -1009,7 +1009,9 @@ export default function CharacterPanel({
                 <ClassBondRow
                   characterId={character.id}
                   isClassless={(character as any).is_classless}
+                  activeClass={(character as any).class ?? null}
                 />
+
               </div>
             </TabsContent>
 
