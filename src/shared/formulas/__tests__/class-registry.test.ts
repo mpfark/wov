@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import * as classes from '@/shared/formulas/classes';
 import {
   CLASS_BASE_HP, CLASS_BASE_AC, CLASS_CRIT_RANGE, CLASS_LEVEL_BONUSES,
-  CLASS_LABELS, CLASS_WEAPON_AFFINITY, CLASS_AUTOATTACK,
+  CLASS_LABELS, CLASS_WEAPON_AFFINITY,
   setClassRegistry, getClassCritRange, getWeaponAffinityBonus,
   getPlayableClassKeys, isPreClass,
 } from '@/shared/formulas/classes';
@@ -38,7 +38,6 @@ describe('class fallback tables match the seeded classes rows', () => {
       if (key !== 'classless') {
         expect(CLASS_CRIT_RANGE[key]).toBe(row.crit_range);
         expect(CLASS_WEAPON_AFFINITY[key]).toEqual(row.weapons);
-        expect(CLASS_AUTOATTACK[key]).toBeTruthy();
       }
     });
   }
@@ -53,7 +52,7 @@ describe('class fallback tables match the seeded classes rows', () => {
 });
 
 describe('setClassRegistry overrides configuration in place', () => {
-  it('applies base HP/AC, crit range, level bonuses, affinity and autoattack', () => {
+  it('applies base HP/AC, crit range, level bonuses and affinity', () => {
     setClassRegistry([{
       class_key: 'warrior',
       label: 'Vanguard',
@@ -62,7 +61,6 @@ describe('setClassRegistry overrides configuration in place', () => {
       crit_range: 18,
       level_bonuses: { str: 2 },
       weapon_proficiencies: ['axe'],
-      autoattack: { emoji: '🪓', verb: 'cleaves', selfVerb: 'cleave into' },
       is_pre_class: false,
       is_selectable: true,
       sort_order: 1,
@@ -76,9 +74,6 @@ describe('setClassRegistry overrides configuration in place', () => {
     expect(CLASS_LEVEL_BONUSES.warrior).toEqual({ str: 2 });
     expect(getWeaponAffinityBonus('warrior', 'axe')).toEqual({ hitBonus: 1, damageMult: 1.10 });
     expect(getWeaponAffinityBonus('warrior', 'sword')).toEqual({ hitBonus: 0, damageMult: 1 });
-    expect(CLASS_AUTOATTACK.warrior.emoji).toBe('🪓');
-    // Unspecified autoattack fields are preserved.
-    expect(CLASS_AUTOATTACK.warrior.stat).toBe('str');
 
     // Restore so other suites see the seeded values.
     setClassRegistry([{
@@ -89,7 +84,6 @@ describe('setClassRegistry overrides configuration in place', () => {
       crit_range: 20,
       level_bonuses: { str: 1, dex: 1 },
       weapon_proficiencies: ['sword', 'axe', 'mace'],
-      autoattack: { label: 'Strike', stat: 'str', diceMin: 1, diceMax: 10, emoji: '⚔️', verb: 'swings at', selfVerb: 'swing your blade at' },
     }]);
     expect(CLASS_BASE_HP.warrior).toBe(24);
   });
@@ -101,8 +95,9 @@ describe('setClassRegistry overrides configuration in place', () => {
 });
 
 describe('legacy class constants are gone', () => {
-  it('CLASS_COMBAT_PROFILES and TWO_HANDED_DAMAGE_MULT are removed', () => {
+  it('CLASS_COMBAT_PROFILES, TWO_HANDED_DAMAGE_MULT and CLASS_AUTOATTACK are removed', () => {
     expect((classes as Record<string, unknown>).CLASS_COMBAT_PROFILES).toBeUndefined();
     expect((classes as Record<string, unknown>).TWO_HANDED_DAMAGE_MULT).toBeUndefined();
+    expect((classes as Record<string, unknown>).CLASS_AUTOATTACK).toBeUndefined();
   });
 });
