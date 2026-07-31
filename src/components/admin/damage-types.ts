@@ -1,22 +1,12 @@
 /**
- * Canonical damage types for authored boss content (crit flavors, boss casts).
- * Kept as a closed list so admins pick instead of typing (no typo drift).
+ * Canonical damage types for authored content (crit flavors, boss casts,
+ * abilities). Thin admin-facing view over the shared registry in
+ * `@/shared/combat/damage-types` — that module is the single source of truth.
  */
-export const DAMAGE_TYPES = [
-  { value: 'physical', label: '⚔️ Physical' },
-  { value: 'fire', label: '🔥 Fire' },
-  { value: 'frost', label: '❄️ Frost' },
-  { value: 'lightning', label: '⚡ Lightning' },
-  { value: 'poison', label: '🧪 Poison' },
-  { value: 'nature', label: '🌿 Nature' },
-  { value: 'necrotic', label: '💀 Necrotic' },
-  { value: 'holy', label: '✨ Holy' },
-  { value: 'shadow', label: '🌑 Shadow' },
-  { value: 'arcane', label: '🔮 Arcane' },
-  { value: 'psychic', label: '🌀 Psychic' },
-] as const;
+import { DAMAGE_TYPE_OPTIONS, type DamageTypeKey } from '@/shared/combat/damage-types';
+
+export const DAMAGE_TYPES = DAMAGE_TYPE_OPTIONS;
 
 export const DAMAGE_TYPE_NONE = 'none';
 
-export type DamageTypeValue = (typeof DAMAGE_TYPES)[number]['value'];
-
+export type DamageTypeValue = DamageTypeKey;
