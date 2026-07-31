@@ -84,8 +84,9 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
       const mpRegen = getMpRegenRate(eDex);
 
       const combat = getClassCombat(character.class);
-      const atkStat = combat?.stat || 'str';
-      const atkMod = getStatModifier(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
+      // Autoattacks are weapon-based for every class: DEX drives to-hit,
+      // STR drives damage. The class autoattack `stat` is flavor only.
+      const atkMod = getStatModifier(eDex);
       const intHit = getIntHitBonus(eInt);
       const totalHit = atkMod + intHit;
       const dexCrit = getDexCritBonus(eDex);
