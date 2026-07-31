@@ -1,0 +1,477 @@
+/**
+ * ability-seed.ts — Canonical seed data for the configurable class/ability system.
+ *
+ * This module is the single source of truth used to (a) seed the `class_ability_roles`,
+ * `abilities` and `class_ability_assignments` tables and (b) pin the structured
+ * `amount_calc` / `duration_calc` records against the legacy hardcoded formulas
+ * in the parity harness (`ability-calc-parity.test.ts`).
+ *
+ * Notes:
+ *  - Durations are milliseconds (wall-clock `expires_at` model). No cooldowns.
+ *  - Stances have no `duration_calc` (they persist until dropped); a few keep a
+ *    legacy timed calc because their non-stance preview path still exists.
+ *  - `amount_calc: null` means the magnitude is still mechanic-owned server-side
+ *    (weapon-die rolls, stack consumption). Those move in Phase 2.
+ */
+
+import type { AbilityCalc } from '@/shared/formulas/ability-calc';
+
+export type AbilityActivationMode = 'instant' | 'queued' | 'stance';
+export type AbilityKind = 'damage' | 'heal' | 'buff' | 'debuff' | 'utility';
+export type AbilityTarget = 'self' | 'ally' | 'enemy' | 'party' | 'node';
+
+export interface AbilityRoleSeed {
+  slot: number;
+  name: string;
+  description: string;
+  unlock_level: number;
+}
+
+/** Stable named slots, identical across every class. Assignments reference the role id. */
+export const ABILITY_ROLE_SEED: AbilityRoleSeed[] = [
+  { slot: 0, name: 'Signature', description: 'Class identity attack, available from level 1.', unlock_level: 1 },
+  { slot: 1, name: 'Discipline', description: 'Early sustain, stance or utility tool.', unlock_level: 5 },
+  { slot: 2, name: 'Doctrine', description: 'Mid-tier stance or control tool.', unlock_level: 10 },
+  { slot: 3, name: 'Pressure', description: 'Sustained damage, healing or control over time.', unlock_level: 15 },
+  { slot: 4, name: 'Mastery', description: 'Capstone ability unlocked at level 20.', unlock_level: 20 },
+];
+
+export interface AbilitySeed {
+  ability_key: string;
+  label: string;
+  emoji: string;
+  description: string;
+  tooltip: string;
+  /** Legacy ability `type` — the runtime mechanic that consumes this row. */
+  mechanic_key: string;
+  ability_type: AbilityKind;
+  damage_type: string | null;
+  target_type: AbilityTarget;
+  activation_mode: AbilityActivationMode;
+  cp_cost: number;
+  /** Stance CP reservation percentage (tier 1 = 0.10, 2 = 0.15, 3 = 0.20). */
+  cp_reserve_pct: number | null;
+  amount_calc: AbilityCalc | null;
+  duration_calc: AbilityCalc | null;
+  interval_ms: number | null;
+  effect_config: Record<string, unknown>;
+  combat_text: Record<string, unknown>;
+  /** Class + role slot this ability is assigned to by default. */
+  class_key: string;
+  slot: number;
+}
+
+const stat = (
+  s: AbilityCalc['terms'][number]['stat'],
+  mult = 1,
+  extra: Partial<AbilityCalc['terms'][number]> = {},
+): AbilityCalc['terms'][number] => ({ source: 'stat', stat: s, mult, ...extra });
+
+/** Standard weapon-scaled queued attack: magnitude stays server-owned for now. */
+const WEAPON_ATTACK_CONFIG = { weapon_scaled: true, unarmed_die: '1d4', resolved_by: 'combat-tick' };
+
+export const ABILITY_SEED: AbilitySeed[] = [
+  // ══════════════════ Warrior ══════════════════
+  {
+    ability_key: 'power_strike', label: 'Power Strike', emoji: '⚔️',
+    description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).',
+    tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.',
+    mechanic_key: 'power_strike', ability_type: 'damage', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'str' }, combat_text: {},
+    class_key: 'warrior', slot: 0,
+  },
+  {
+    ability_key: 'second_wind', label: 'Second Wind', emoji: '💪',
+    description: 'Catch your breath and recover HP based on CON',
+    tooltip: 'Recover your HP. Scales with CON.',
+    mechanic_key: 'self_heal', ability_type: 'heal', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
+    amount_calc: { base: 0, terms: [stat('con', 3), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'CON magnitude' },
+    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'warrior', slot: 1,
+  },
+  {
+    ability_key: 'battle_cry', label: 'Battle Cry', emoji: '📯',
+    description: '⚓ Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.',
+    tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.',
+    mechanic_key: 'battle_cry', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
+    amount_calc: { base: 0.10, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.12 } })], floor: null, cap: null, unit: 'percent', note: 'STR magnitude; +0.05 DR with a shield equipped' },
+    duration_calc: null, interval_ms: null,
+    effect_config: { shield_dr_bonus: 0.05, applies_crit_reduction: true }, combat_text: {},
+    class_key: 'warrior', slot: 2,
+  },
+  {
+    ability_key: 'rend', label: 'Rend', emoji: '🩸',
+    description: 'Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).',
+    tooltip: 'Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.',
+    mechanic_key: 'dot_debuff', ability_type: 'debuff', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('str', 1.5, { clampAtZero: true, transform: { kind: 'soft', profile: 'dot' } })], postMult: 0.67, rounding: 'floor', floor: 1, cap: null, unit: 'hp', note: 'STR magnitude, per tick' },
+    duration_calc: { base: 20000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'DEX duration' },
+    interval_ms: 2000, effect_config: {}, combat_text: {},
+    class_key: 'warrior', slot: 3,
+  },
+  {
+    ability_key: 'sunder_armor', label: 'Sunder Armor', emoji: '🔨',
+    description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).",
+    tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.",
+    mechanic_key: 'sunder_debuff', ability_type: 'debuff', damage_type: null,
+    target_type: 'enemy', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'utility' } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'STR magnitude (AC reduction)' },
+    duration_calc: { base: 12000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 20000, unit: 'ms', note: 'DEX duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'warrior', slot: 4,
+  },
+
+  // ══════════════════ Wizard ══════════════════
+  {
+    ability_key: 'fireball', label: 'Fireball', emoji: '🔥',
+    description: 'Hurl a ball of arcane flame at your target, scaling with INT',
+    tooltip: 'Damage one target. Scales with INT.',
+    mechanic_key: 'fireball', ability_type: 'damage', damage_type: 'fire',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { stat: 'int', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'wizard', slot: 0,
+  },
+  {
+    ability_key: 'force_shield', label: 'Force Shield', emoji: '🛡️',
+    description: '⚓ Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.',
+    tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.',
+    mechanic_key: 'absorb_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
+    amount_calc: { base: 0, terms: [stat('wis'), { source: 'level', mult: 0.5, rounding: 'floor' }], floor: 1, cap: null, unit: 'hp', note: 'WIS shield pool' },
+    duration_calc: { base: 8000, terms: [stat('int', 1000)], cap: 15000, unit: 'ms', note: 'legacy timed preview path (stance has no duration)' },
+    interval_ms: null, effect_config: { regen_stat: 'int', reforms_out_of_combat: true }, combat_text: {},
+    class_key: 'wizard', slot: 1,
+  },
+  {
+    ability_key: 'arcane_surge', label: 'Arcane Surge', emoji: '✨',
+    description: '⚓ Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.',
+    tooltip: 'Increase all your damage. Bonus scales with INT. Stance.',
+    mechanic_key: 'damage_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
+    amount_calc: { base: 1.10, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.12 } })], floor: null, cap: null, unit: 'multiplier', note: 'INT magnitude' },
+    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'wizard', slot: 2,
+  },
+  {
+    ability_key: 'ignite', label: 'Ignite', emoji: '🌋',
+    description: '⚓ Stance. While in combat, an orb pulses each heartbeat at your target — proc chance and spark damage scale with INT, the applied burn DoT (stacks/duration) scales with WIS. Mutually exclusive with Envenom. Click again to drop.',
+    tooltip: 'Orbs strike your target and apply burn. Proc/spark scale with INT, burn with WIS. Stance.',
+    mechanic_key: 'ignite_buff', ability_type: 'buff', damage_type: 'fire',
+    target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
+    amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
+    duration_calc: null, interval_ms: null,
+    effect_config: { mutually_exclusive_with: ['envenom'], burn_stat: 'wis', consumes_all_cp: true }, combat_text: {},
+    class_key: 'wizard', slot: 3,
+  },
+  {
+    ability_key: 'conflagrate', label: 'Conflagrate', emoji: '💥',
+    description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Ignite.',
+    tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
+    mechanic_key: 'ignite_consume', ability_type: 'damage', damage_type: 'fire',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 0.30, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'percent', note: 'INT bonus damage per consumed burn stack' },
+    duration_calc: null, interval_ms: null,
+    effect_config: { consumes: 'burn_stacks', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'wizard', slot: 4,
+  },
+
+  // ══════════════════ Ranger ══════════════════
+  {
+    ability_key: 'aimed_shot', label: 'Aimed Shot', emoji: '🎯',
+    description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
+    tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.',
+    mechanic_key: 'aimed_shot', ability_type: 'damage', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: {},
+    class_key: 'ranger', slot: 0,
+  },
+  {
+    ability_key: 'eagle_eye', label: 'Eagle Eye', emoji: '🦅',
+    description: '⚓ Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.',
+    tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.',
+    mechanic_key: 'crit_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
+    amount_calc: { base: 0, terms: [stat('dex', 0.5, { clampAtZero: true }), stat('wis', 0.5, { clampAtZero: true })], rounding: 'floor', floor: 1, cap: 5, unit: 'flat', note: 'DEX+WIS blend — crit range widening' },
+    duration_calc: { base: 30000, terms: [], cap: null, unit: 'ms', note: 'legacy timed preview path (stance has no duration)' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'ranger', slot: 1,
+  },
+  {
+    ability_key: 'barrage', label: 'Barrage', emoji: '🏹',
+    description: 'Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).',
+    tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.',
+    mechanic_key: 'multi_attack', ability_type: 'damage', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 25, cp_reserve_pct: null,
+    amount_calc: { base: 0.55, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'DEX per-arrow damage ratio' },
+    duration_calc: null, interval_ms: null,
+    effect_config: {
+      ...WEAPON_ATTACK_CONFIG,
+      arrow_count_calc: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count' },
+    },
+    combat_text: {},
+    class_key: 'ranger', slot: 2,
+  },
+  {
+    ability_key: 'natures_snare', label: "Nature's Snare", emoji: '🌿',
+    description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.",
+    tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.",
+    mechanic_key: 'root_debuff', ability_type: 'debuff', damage_type: 'nature',
+    target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: { base: 0.25, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'WIS-scaled damage reduction (live formula uses the scaling stat)' },
+    duration_calc: { base: 8000, terms: [stat('wis', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'WIS duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'ranger', slot: 3,
+  },
+  {
+    ability_key: 'disengage', label: 'Disengage', emoji: '🦘',
+    description: 'Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).',
+    tooltip: 'Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.',
+    mechanic_key: 'disengage_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 1.30, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'multiplier', note: 'WIS next-hit damage multiplier' },
+    duration_calc: { base: 5000, terms: [stat('dex', 500)], cap: 8000, unit: 'ms', note: 'DEX dodge duration' },
+    interval_ms: null, effect_config: { next_hit_window_ms: 15000, dodge_chance: 1.0 }, combat_text: {},
+    class_key: 'ranger', slot: 4,
+  },
+
+  // ══════════════════ Assassin ══════════════════
+  {
+    ability_key: 'backstab', label: 'Backstab', emoji: '🗡️',
+    description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
+    tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.',
+    mechanic_key: 'backstab', ability_type: 'damage', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: {},
+    class_key: 'assassin', slot: 0,
+  },
+  {
+    ability_key: 'shadowstep', label: 'Shadowstep', emoji: '🌑',
+    description: 'Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).',
+    tooltip: 'Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.',
+    mechanic_key: 'stealth_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('cha', 0.05, { clampAtZero: true })], floor: null, cap: 2.5, unit: 'multiplier', note: 'CHA ambush multiplier' },
+    duration_calc: { base: 15000, terms: [stat('dex', 1000)], cap: 25000, unit: 'ms', note: 'DEX duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'assassin', slot: 1,
+  },
+  {
+    ability_key: 'envenom', label: 'Envenom', emoji: '🐍',
+    description: '⚓ Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Ignite. Click again to drop.',
+    tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.',
+    mechanic_key: 'poison_buff', ability_type: 'buff', damage_type: 'poison',
+    target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
+    amount_calc: { base: 0.25, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.20 } })], floor: null, cap: null, unit: 'percent', note: 'DEX hit-proc chance' },
+    duration_calc: null, interval_ms: null,
+    effect_config: {
+      mutually_exclusive_with: ['ignite'], consumes_all_cp: true,
+      max_stacks_calc: { base: 3, terms: [{ source: 'stat', stat: 'cha', clampAtZero: true, transform: { kind: 'diminishing', cap: 4 } }], unit: 'count' },
+    },
+    combat_text: {},
+    class_key: 'assassin', slot: 2,
+  },
+  {
+    ability_key: 'eviscerate', label: 'Eviscerate', emoji: '🔪',
+    description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.',
+    tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).',
+    mechanic_key: 'execute_attack', ability_type: 'damage', damage_type: 'physical',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex', consumes: 'poison_stacks', per_stack_stat: 'cha' }, combat_text: {},
+    class_key: 'assassin', slot: 3,
+  },
+  {
+    ability_key: 'cloak_of_shadows', label: 'Cloak of Shadows', emoji: '🌫️',
+    description: 'Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.',
+    tooltip: 'Chance to dodge attacks. Dodge scales with CHA, duration with DEX.',
+    mechanic_key: 'evasion_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 0.40, terms: [stat('cha', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.03, cap: 0.20 } })], floor: null, cap: null, unit: 'percent', note: 'CHA dodge chance' },
+    duration_calc: { base: 10000, terms: [stat('dex', 500)], cap: 15000, unit: 'ms', note: 'DEX duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'assassin', slot: 4,
+  },
+
+  // ══════════════════ Healer ══════════════════
+  {
+    ability_key: 'smite', label: 'Smite', emoji: '⭐',
+    description: 'Channel a burst of divine light at your target, scaling with WIS',
+    tooltip: 'Damage one target. Scales with WIS.',
+    mechanic_key: 'smite', ability_type: 'damage', damage_type: 'holy',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { stat: 'wis', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'healer', slot: 0,
+  },
+  {
+    ability_key: 'heal', label: 'Heal', emoji: '💚',
+    description: 'Restore HP based on your Wisdom',
+    tooltip: 'Restore your HP. Scales with WIS.',
+    mechanic_key: 'heal', ability_type: 'heal', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
+    amount_calc: { base: 0, terms: [stat('wis', 3), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
+    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'healer', slot: 1,
+  },
+  {
+    ability_key: 'transfer_health', label: 'Transfer Health', emoji: '💉',
+    description: 'Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.',
+    tooltip: 'Sacrifice HP to heal an ally. Scales with WIS; CON sets your safety floor.',
+    mechanic_key: 'hp_transfer', ability_type: 'heal', damage_type: null,
+    target_type: 'ally', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
+    amount_calc: { base: 0, terms: [stat('wis', 2), { source: 'level', mult: 0.5, rounding: 'floor' }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
+    duration_calc: null, interval_ms: null,
+    effect_config: { reserve_hp_calc: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' } },
+    combat_text: {},
+    class_key: 'healer', slot: 2,
+  },
+  {
+    ability_key: 'purifying_light', label: 'Purifying Light', emoji: '🌟',
+    description: 'A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).',
+    tooltip: 'Heal nearby allies over time. Heal scales with WIS, duration with CON.',
+    mechanic_key: 'party_regen', ability_type: 'heal', damage_type: null,
+    target_type: 'party', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('wis')], floor: 1, cap: null, unit: 'hp', note: 'WIS heal per tick' },
+    duration_calc: { base: 15000, terms: [stat('con', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'CON duration' },
+    interval_ms: 3000, effect_config: { source: 'healer' }, combat_text: {},
+    class_key: 'healer', slot: 3,
+  },
+  {
+    ability_key: 'divine_aegis', label: 'Divine Aegis', emoji: '🛡️',
+    description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.',
+    tooltip: 'Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.',
+    mechanic_key: 'ally_absorb', ability_type: 'buff', damage_type: null,
+    target_type: 'ally', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 0, terms: [stat('wis', 2), { source: 'level', mult: 0.7, rounding: 'floor' }], floor: null, cap: null, unit: 'hp', note: 'WIS shield pool' },
+    duration_calc: { base: 30000, terms: [stat('con', 2000, { clampAtZero: true })], cap: 60000, unit: 'ms', note: 'CON duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'healer', slot: 4,
+  },
+
+  // ══════════════════ Bard ══════════════════
+  {
+    ability_key: 'cutting_words', label: 'Cutting Words', emoji: '🎵',
+    description: 'Unleash a barbed insult that wounds your target, scaling with CHA',
+    tooltip: 'Damage one target. Scales with CHA.',
+    mechanic_key: 'cutting_words', ability_type: 'damage', damage_type: 'psychic',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { stat: 'cha', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'bard', slot: 0,
+  },
+  {
+    ability_key: 'inspire', label: 'Inspire', emoji: '🎶',
+    description: 'A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s). Recasting refreshes the duration and keeps the stronger regen values.',
+    tooltip: 'Grant party HP & CP regen. Regen scales with CHA, duration with INT.',
+    mechanic_key: 'regen_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'party', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('cha', 1, { clampAtZero: true })], floor: 2, cap: null, unit: 'hp', note: 'CHA HP regen per tick' },
+    duration_calc: { base: 60000, terms: [stat('int', 8000, { clampAtZero: true })], floor: 60000, cap: 180000, unit: 'ms', note: 'INT duration' },
+    interval_ms: null,
+    effect_config: { cp_calc: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' }, refresh_policy: 'best_of' },
+    combat_text: {},
+    class_key: 'bard', slot: 1,
+  },
+  {
+    ability_key: 'dissonance', label: 'Dissonance', emoji: '💢',
+    description: "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.",
+    tooltip: "Reduce target's damage. Reduction scales with CHA, duration with INT.",
+    mechanic_key: 'root_debuff', ability_type: 'debuff', damage_type: 'psychic',
+    target_type: 'enemy', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
+    amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'scaling stat = INT for bards' },
+    duration_calc: { base: 8000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'INT duration' },
+    interval_ms: null, effect_config: {}, combat_text: {},
+    class_key: 'bard', slot: 2,
+  },
+  {
+    ability_key: 'crescendo', label: 'Crescendo', emoji: '✨',
+    description: 'A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.',
+    tooltip: 'Heal nearby allies over time. Heal scales with CHA, duration with INT.',
+    mechanic_key: 'party_regen', ability_type: 'heal', damage_type: null,
+    target_type: 'party', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: { base: 2, terms: [stat('cha')], floor: 1, cap: null, unit: 'hp', note: 'CHA heal per tick' },
+    duration_calc: { base: 15000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'INT duration' },
+    interval_ms: 3000, effect_config: { source: 'bard' }, combat_text: {},
+    class_key: 'bard', slot: 3,
+  },
+  {
+    ability_key: 'grand_finale', label: 'Grand Finale', emoji: '💥',
+    description: 'Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.',
+    tooltip: 'Burst damage on one target. Damage scales with CHA, crit-edge with INT.',
+    mechanic_key: 'burst_damage', ability_type: 'damage', damage_type: 'psychic',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { stat: 'cha', crit_edge_stat: 'int', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'bard', slot: 4,
+  },
+
+  // ══════════════════ Templar ══════════════════
+  {
+    ability_key: 'judgment', label: 'Judgment', emoji: '✝️',
+    description: 'Pass divine judgment, dealing holy damage scaling with WIS',
+    tooltip: 'Holy damage to one target. Scales with WIS.',
+    mechanic_key: 'smite', ability_type: 'damage', damage_type: 'holy',
+    target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { stat: 'wis', resolved_by: 'combat-tick' }, combat_text: {},
+    class_key: 'templar', slot: 0,
+  },
+  {
+    ability_key: 'holy_shield', label: 'Holy Shield', emoji: '⚡',
+    description: '⚓ Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.',
+    tooltip: 'Attackers take holy damage in return. WIS scaling reduced 20%, CON adds a kicker. Stance.',
+    mechanic_key: 'reactive_holy', ability_type: 'buff', damage_type: 'holy',
+    target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
+    amount_calc: null, duration_calc: { base: 30000, terms: [], cap: null, unit: 'ms', note: 'legacy timed preview path (stance has no duration)' },
+    interval_ms: null,
+    effect_config: { magnitude_stat: 'wis', kicker_stat: 'con', once_per_attacker_per_tick: true, resolved_by: 'combat-tick' },
+    combat_text: {},
+    class_key: 'templar', slot: 1,
+  },
+  {
+    ability_key: 'shield_wall', label: 'Shield Wall', emoji: '🛡️',
+    description: '⚓ Stance. Dual-primary: WIS adds bonus block chance, CON adds bonus block amount. Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.',
+    tooltip: 'Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.',
+    mechanic_key: 'block_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
+    amount_calc: null, duration_calc: null, interval_ms: null,
+    effect_config: { chance_stat: 'wis', amount_stat: 'con', block_chance_cap: 0.95, requires_shield: true, resolved_by: 'combat-tick' },
+    combat_text: {},
+    class_key: 'templar', slot: 2,
+  },
+  {
+    ability_key: 'consecrate', label: 'Consecrate', emoji: '🔆',
+    description: 'Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).',
+    tooltip: 'Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.',
+    mechanic_key: 'consecrate', ability_type: 'heal', damage_type: 'holy',
+    target_type: 'node', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
+    amount_calc: null,
+    duration_calc: { base: 6000, terms: [{ source: 'stat_threshold', stat: 'con', mult: 2000, steps: [{ at: 3, add: 1 }, { at: 6, add: 1 }] }], cap: 10000, unit: 'ms', note: 'CON tick ladder × 2000ms interval' },
+    interval_ms: 2000,
+    effect_config: { magnitude_stat: 'wis', magnitude_reduction: 0.35, resolved_by: 'combat-tick' },
+    combat_text: {},
+    class_key: 'templar', slot: 3,
+  },
+  {
+    ability_key: 'divine_challenge', label: 'Divine Challenge', emoji: '⚜️',
+    description: 'Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.',
+    tooltip: 'Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.',
+    mechanic_key: 'mitigation_buff', ability_type: 'buff', damage_type: null,
+    target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
+    amount_calc: { base: 6, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 1.8, cap: 18 } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'WIS flat mitigation per hit' },
+    duration_calc: { base: 30000, terms: [stat('con', 1000, { clampAtZero: true })], cap: 45000, unit: 'ms', note: 'CON duration' },
+    interval_ms: null, effect_config: { is_taunt: true }, combat_text: {},
+    class_key: 'templar', slot: 4,
+  },
+];
+
+/** All distinct playable class keys covered by the seed. */
+export const SEEDED_CLASS_KEYS = Array.from(new Set(ABILITY_SEED.map(a => a.class_key)));
