@@ -2061,6 +2061,16 @@ Deno.serve(async (req) => {
 
 
 
+    // ── Telegraph eligibility ────────────────────────────────────
+    // Bosses telegraph by default (their config is backfilled to enabled).
+    // Rare creatures are OPT-IN: they only telegraph when an admin has
+    // authored a cast config with `enabled: true`. Regular creatures never do.
+    const canTelegraph = (cr: any): boolean => {
+      if (cr?.rarity === 'boss') return (cr as any).boss_cast?.enabled !== false;
+      if (cr?.rarity === 'rare') return (cr as any).boss_cast?.enabled === true;
+      return false;
+    };
+
     // ── M6: Telegraphed boss casts ───────────────────────────────
     // Resolve any casts that have expired, then (30% chance/invocation) start
     // a new one for each engaged boss that has no active cast and is off
@@ -2077,7 +2087,7 @@ Deno.serve(async (req) => {
       // Widest cooldown any engaged boss might use — used to bound recent cast lookback.
       let maxCooldownMs = DEFAULT_BOSS_CAST_COOLDOWN_MS;
       for (const cr of creatures) {
-        if (cr.rarity !== 'boss') continue;
+        if (!canTelegraph(cr)) continue;
         const cd = Number((cr as any).boss_cast?.cooldown_ms);
         if (Number.isFinite(cd) && cd > maxCooldownMs) maxCooldownMs = cd;
       }
@@ -2173,7 +2183,7 @@ Deno.serve(async (req) => {
 
       // 2) Start new casts for engaged bosses that are idle and off cooldown.
       for (const creature of creatures) {
-        if (creature.rarity !== 'boss') continue;
+        if (!canTelegraph(creature)) continue;
         if (creature.is_alive === false) continue;
         if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
         if (!sessionEngaged.has(creature.id)) continue;
