@@ -7,6 +7,7 @@ import { CLASS_LABELS } from '@/shared/formulas/classes';
 interface Props {
   characterId: string;
   isClassless?: boolean;
+  activeClass?: string | null;
 }
 
 interface BondRow {
@@ -15,12 +16,11 @@ interface BondRow {
 }
 
 /**
- * Bond container for the Attributes tab. Shows every class bond the character
- * has earned, each with its live damage/DoT/utility multiplier. Wayfarers (no
- * order) render nothing (no class to bond with). Multiple bonds stack vertically
- * inside the same container so the attribute list is never crowded.
+ * Bond container for the Attributes tab. Shows the bond with the character's
+ * CURRENT order only — leaving a class permanently erases its bond, so there is
+ * no dormant-bond history to display. Wayfarers render nothing.
  */
-export default function ClassBondRow({ characterId, isClassless }: Props) {
+export default function ClassBondRow({ characterId, isClassless, activeClass }: Props) {
   const [bonds, setBonds] = useState<BondRow[]>([]);
 
   useEffect(() => {
@@ -47,13 +47,16 @@ export default function ClassBondRow({ characterId, isClassless }: Props) {
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [characterId, isClassless]);
 
-  if (isClassless || bonds.length === 0) return null;
+  const visible = activeClass ? bonds.filter(b => b.class === activeClass) : bonds;
+
+  if (isClassless || visible.length === 0) return null;
+
 
   return (
     <div className="border-t border-border-subtle pt-1.5">
       <h4 className="t-label mb-1">Bond</h4>
       <div className="space-y-1">
-        {bonds.map(({ class: cls, bond }) => {
+        {visible.map(({ class: cls, bond }) => {
           const mult = bondMultiplier(bond);
           const classLabel = CLASS_LABELS[cls] ?? cls;
           return (

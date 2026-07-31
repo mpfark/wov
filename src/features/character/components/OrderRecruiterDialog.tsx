@@ -179,22 +179,8 @@ export default function OrderRecruiterDialog({
             </p>
           </div>
 
-          {bonds.length > 0 && (
-            <details className="text-xs">
-              <summary className="cursor-pointer text-muted-foreground font-display">Your other bonds</summary>
-              <ul className="mt-2 space-y-1 pl-2">
-                {bonds.filter(b => b.class !== hallClass).map(b => (
-                  <li key={b.class} className="flex justify-between text-[11px]">
-                    <span>{CLASS_LABELS[b.class] ?? b.class}</span>
-                    <span className="text-muted-foreground">{b.bond}</span>
-                  </li>
-                ))}
-                {bonds.filter(b => b.class !== hallClass).length === 0 && (
-                  <li className="text-[11px] text-muted-foreground/70 italic">No other bonds yet.</li>
-                )}
-              </ul>
-            </details>
-          )}
+          {/* Dormant bonds no longer exist: leaving an order permanently erases its bond. */}
+
 
           <div className="pt-1">
             <button
@@ -255,8 +241,13 @@ export default function OrderRecruiterDialog({
           const oldBond = bonds.find(b => b.class === currentClass)?.bond ?? 0;
           return (
             <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs">
-              <p className="text-destructive font-display">⚠ Switching resets your {oldLabel} Bond ({oldBond} → 0).</p>
-              <p className="text-[10px] text-muted-foreground mt-1">The old order will remember you no more.</p>
+              <p className="text-destructive font-display">
+                ⚠ Leaving the {oldLabel} order will permanently erase your bond of {oldBond}.
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                If you return later, your {oldLabel} bond will begin again at zero. The old order will remember you no more.
+              </p>
+
             </div>
           );
         })()}
