@@ -25,6 +25,10 @@ import {
 } from "../_shared/combat-resolver.ts";
 import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType, damageTypeAdjective } from "../_shared/combat/damage-types.ts";
+import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
+import { resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
+import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
+import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
