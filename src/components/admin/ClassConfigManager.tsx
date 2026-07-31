@@ -23,7 +23,8 @@ import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, Loader2, Save, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, Save, ShieldCheck } from 'lucide-react';
+import ClassAuthorDialog from './ClassAuthorDialog';
 import {
   CLASS_STAT_KEYS, CLASS_STATUSES, WEAPON_TAGS, validateClassConfig,
   validateClassLifecycle, type ClassConfigDraft,
@@ -41,6 +42,7 @@ export default function ClassConfigManager() {
   const [draft, setDraft] = useState<ClassConfigDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [authorOpen, setAuthorOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -159,9 +161,21 @@ export default function ClassConfigManager() {
 
   return (
     <div className="h-full flex overflow-hidden">
+      <ClassAuthorDialog
+        open={authorOpen}
+        onOpenChange={setAuthorOpen}
+        existingKeys={rows.map(r => r.class_key)}
+        nextSortOrder={rows.reduce((max, r) => Math.max(max, r.sort_order), 0) + 1}
+        onCreated={load}
+      />
       {/* Class list */}
       <div className="w-64 shrink-0 border-r border-border min-h-0">
-        <ScrollArea className="h-full">
+        <div className="p-2 border-b border-border">
+          <Button size="sm" variant="outline" className="w-full h-7 text-[11px]" onClick={() => setAuthorOpen(true)}>
+            <Plus className="w-3 h-3 mr-1" /> New class
+          </Button>
+        </div>
+        <ScrollArea className="h-[calc(100%-2.75rem)]">
           <div className="p-3 space-y-1">
             {loading && (
               <p className="text-xs text-muted-foreground flex items-center gap-2">
