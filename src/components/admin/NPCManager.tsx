@@ -394,7 +394,6 @@ const KIND_LABELS: Record<TopicKind, string> = {
 };
 
 
-const CLASS_KEYS = getPlayableClassKeys();
 
 function slugId(label: string): string {
   return (label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'topic')
@@ -484,7 +483,7 @@ function TopicsEditor({
             >
               <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick class" /></SelectTrigger>
               <SelectContent className="bg-popover border-border z-50">
-                {CLASS_KEYS.map(k => (
+                {getPlayableClassKeys().map(k => (
                   <SelectItem key={k} value={k} className="text-xs">{CLASS_LABELS[k]}</SelectItem>
                 ))}
               </SelectContent>
