@@ -345,10 +345,12 @@ export default function ClassConfigManager() {
               {/* Autoattack */}
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Autoattack profile</CardTitle>
+                  <CardTitle className="text-sm font-display">Autoattack flavor</CardTitle>
                   <p className="text-[10px] text-muted-foreground">
-                    Damage itself is weapon-based; the dice range is only used by the legacy
-                    multi-attack, execute and ignite-consume mechanics.
+                    Every class autoattacks with its equipped weapon: DEX drives to-hit and STR
+                    drives damage. These fields only control log wording (label, emoji, verbs);
+                    the flavor stat is display-only and the dice range survives solely for the
+                    legacy multi-attack, execute and ignite-consume mechanics.
                   </p>
                 </CardHeader>
                 <CardContent className="grid grid-cols-4 gap-3">
