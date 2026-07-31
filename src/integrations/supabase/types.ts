@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      abilities: {
+        Row: {
+          ability_key: string
+          ability_type: string
+          activation_mode: string
+          admin_notes: string | null
+          amount_calc: Json | null
+          combat_text: Json
+          cp_cost: number
+          cp_reserve_pct: number | null
+          created_at: string
+          damage_type: string | null
+          description: string
+          duration_calc: Json | null
+          effect_config: Json
+          emoji: string
+          id: string
+          interval_ms: number | null
+          label: string
+          mechanic_key: string
+          status: string
+          target_type: string
+          tooltip: string
+          updated_at: string
+        }
+        Insert: {
+          ability_key: string
+          ability_type?: string
+          activation_mode?: string
+          admin_notes?: string | null
+          amount_calc?: Json | null
+          combat_text?: Json
+          cp_cost?: number
+          cp_reserve_pct?: number | null
+          created_at?: string
+          damage_type?: string | null
+          description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
+          emoji?: string
+          id?: string
+          interval_ms?: number | null
+          label: string
+          mechanic_key: string
+          status?: string
+          target_type?: string
+          tooltip?: string
+          updated_at?: string
+        }
+        Update: {
+          ability_key?: string
+          ability_type?: string
+          activation_mode?: string
+          admin_notes?: string | null
+          amount_calc?: Json | null
+          combat_text?: Json
+          cp_cost?: number
+          cp_reserve_pct?: number | null
+          created_at?: string
+          damage_type?: string | null
+          description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
+          emoji?: string
+          id?: string
+          interval_ms?: number | null
+          label?: string
+          mechanic_key?: string
+          status?: string
+          target_type?: string
+          tooltip?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       active_effects: {
         Row: {
           created_at: string
@@ -264,23 +339,69 @@ export type Database = {
           },
         ]
       }
+      character_ability_loadout: {
+        Row: {
+          ability_id: string
+          character_id: string
+          created_at: string
+          role_id: string
+          updated_at: string
+        }
+        Insert: {
+          ability_id: string
+          character_id: string
+          created_at?: string
+          role_id: string
+          updated_at?: string
+        }
+        Update: {
+          ability_id?: string
+          character_id?: string
+          created_at?: string
+          role_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_ability_loadout_ability_id_fkey"
+            columns: ["ability_id"]
+            isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_ability_loadout_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_ability_loadout_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "class_ability_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_class_bonds: {
         Row: {
           bond: number
           character_id: string
-          class: Database["public"]["Enums"]["character_class"]
+          class: string
           updated_at: string
         }
         Insert: {
           bond?: number
           character_id: string
-          class: Database["public"]["Enums"]["character_class"]
+          class: string
           updated_at?: string
         }
         Update: {
           bond?: number
           character_id?: string
-          class?: Database["public"]["Enums"]["character_class"]
+          class?: string
           updated_at?: string
         }
         Relationships: [
@@ -290,6 +411,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "characters"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_class_bonds_class_fkey"
+            columns: ["class"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_key"]
           },
         ]
       }
@@ -465,7 +593,7 @@ export type Database = {
           bhp: number
           bhp_trained: Json
           cha: number
-          class: Database["public"]["Enums"]["character_class"]
+          class: string
           combat_trace_enabled: boolean
           con: number
           contracts_completed: number
@@ -520,7 +648,7 @@ export type Database = {
           bhp?: number
           bhp_trained?: Json
           cha?: number
-          class: Database["public"]["Enums"]["character_class"]
+          class: string
           combat_trace_enabled?: boolean
           con?: number
           contracts_completed?: number
@@ -575,7 +703,7 @@ export type Database = {
           bhp?: number
           bhp_trained?: Json
           cha?: number
-          class?: Database["public"]["Enums"]["character_class"]
+          class?: string
           combat_trace_enabled?: boolean
           con?: number
           contracts_completed?: number
@@ -626,6 +754,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "characters_class_fkey"
+            columns: ["class"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_key"]
+          },
+          {
             foreignKeyName: "characters_current_node_id_fkey"
             columns: ["current_node_id"]
             isOneToOne: false
@@ -640,6 +775,171 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      class_ability_assignments: {
+        Row: {
+          ability_id: string
+          class_key: string
+          created_at: string
+          id: string
+          is_default: boolean
+          role_id: string
+          status: string
+          unlock_level: number
+          updated_at: string
+        }
+        Insert: {
+          ability_id: string
+          class_key: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          role_id: string
+          status?: string
+          unlock_level?: number
+          updated_at?: string
+        }
+        Update: {
+          ability_id?: string
+          class_key?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          role_id?: string
+          status?: string
+          unlock_level?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_ability_assignments_ability_id_fkey"
+            columns: ["ability_id"]
+            isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_ability_assignments_class_key_fkey"
+            columns: ["class_key"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_key"]
+          },
+          {
+            foreignKeyName: "class_ability_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "class_ability_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_ability_roles: {
+        Row: {
+          class_key: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          slot: number
+          unlock_level: number
+          updated_at: string
+        }
+        Insert: {
+          class_key: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          slot: number
+          unlock_level?: number
+          updated_at?: string
+        }
+        Update: {
+          class_key?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          slot?: number
+          unlock_level?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_ability_roles_class_key_fkey"
+            columns: ["class_key"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_key"]
+          },
+        ]
+      }
+      classes: {
+        Row: {
+          admin_notes: string | null
+          autoattack: Json
+          base_ac: number
+          base_hp: number
+          class_key: string
+          color: string
+          created_at: string
+          crit_range: number
+          description: string
+          icon: string
+          is_pre_class: boolean
+          is_selectable: boolean
+          label: string
+          level_bonuses: Json
+          restrictions: Json
+          sort_order: number
+          status: string
+          updated_at: string
+          weapon_proficiencies: string[]
+        }
+        Insert: {
+          admin_notes?: string | null
+          autoattack?: Json
+          base_ac?: number
+          base_hp?: number
+          class_key: string
+          color?: string
+          created_at?: string
+          crit_range?: number
+          description?: string
+          icon?: string
+          is_pre_class?: boolean
+          is_selectable?: boolean
+          label: string
+          level_bonuses?: Json
+          restrictions?: Json
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          weapon_proficiencies?: string[]
+        }
+        Update: {
+          admin_notes?: string | null
+          autoattack?: Json
+          base_ac?: number
+          base_hp?: number
+          class_key?: string
+          color?: string
+          created_at?: string
+          crit_range?: number
+          description?: string
+          icon?: string
+          is_pre_class?: boolean
+          is_selectable?: boolean
+          label?: string
+          level_bonuses?: Json
+          restrictions?: Json
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          weapon_proficiencies?: string[]
+        }
+        Relationships: []
       }
       combat_audit_log: {
         Row: {
@@ -1648,7 +1948,7 @@ export type Database = {
       nodes: {
         Row: {
           area_id: string | null
-          class_hall: Database["public"]["Enums"]["character_class"] | null
+          class_hall: string | null
           connections: Json
           created_at: string
           description: string
@@ -1674,7 +1974,7 @@ export type Database = {
         }
         Insert: {
           area_id?: string | null
-          class_hall?: Database["public"]["Enums"]["character_class"] | null
+          class_hall?: string | null
           connections?: Json
           created_at?: string
           description?: string
@@ -1700,7 +2000,7 @@ export type Database = {
         }
         Update: {
           area_id?: string | null
-          class_hall?: Database["public"]["Enums"]["character_class"] | null
+          class_hall?: string | null
           connections?: Json
           created_at?: string
           description?: string
@@ -1725,6 +2025,13 @@ export type Database = {
           y?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "nodes_class_hall_fkey"
+            columns: ["class_hall"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_key"]
+          },
           {
             foreignKeyName: "nodes_region_id_fkey"
             columns: ["region_id"]
@@ -2277,11 +2584,7 @@ export type Database = {
       }
       assassin_take_contract: { Args: { _character_id: string }; Returns: Json }
       award_class_bond: {
-        Args: {
-          _amount: number
-          _character_id: string
-          _class: Database["public"]["Enums"]["character_class"]
-        }
+        Args: { _amount: number; _character_id: string; _class: string }
         Returns: number
       }
       award_class_bond_for_kill: {
@@ -2532,11 +2835,11 @@ export type Database = {
       get_character_name: { Args: { _character_id: string }; Returns: string }
       get_my_admin_role: { Args: never; Returns: string }
       get_order_roster: {
-        Args: { _class: Database["public"]["Enums"]["character_class"] }
+        Args: { _class: string }
         Returns: {
           bond: number
           character_id: string
-          class: Database["public"]["Enums"]["character_class"]
+          class: string
           family_name: string
           level: number
           name: string
@@ -2620,10 +2923,7 @@ export type Database = {
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
       join_order: {
-        Args: {
-          _character_id: string
-          _class: Database["public"]["Enums"]["character_class"]
-        }
+        Args: { _character_id: string; _class: string }
         Returns: Json
       }
       leave_family: { Args: { _family_id: string }; Returns: Json }
@@ -2697,10 +2997,7 @@ export type Database = {
         Returns: string
       }
       switch_order: {
-        Args: {
-          _character_id: string
-          _class: Database["public"]["Enums"]["character_class"]
-        }
+        Args: { _character_id: string; _class: string }
         Returns: Json
       }
       sync_character_resources: {
@@ -2739,15 +3036,6 @@ export type Database = {
         | "coast"
         | "dungeon"
         | "other"
-      character_class:
-        | "warrior"
-        | "wizard"
-        | "ranger"
-        | "assassin"
-        | "healer"
-        | "bard"
-        | "templar"
-        | "classless"
       character_gender: "male" | "female"
       character_race:
         | "human"
@@ -2908,16 +3196,6 @@ export const Constants = {
         "coast",
         "dungeon",
         "other",
-      ],
-      character_class: [
-        "warrior",
-        "wizard",
-        "ranger",
-        "assassin",
-        "healer",
-        "bard",
-        "templar",
-        "classless",
       ],
       character_gender: ["male", "female"],
       character_race: [
