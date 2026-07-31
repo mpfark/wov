@@ -23,8 +23,8 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
-import { normalizeDamageType, damageTypeAdjective } from "../_shared/combat/damage-types.ts";
+import { formatProcMessage, renderFlavor } from "../_shared/proc-log-format.ts";
+import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
 import { resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
@@ -2121,7 +2121,6 @@ Deno.serve(async (req) => {
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
         const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
         const dmgType = normalizeDamageType((cst.payload as any)?.damage_type);
-        const dmgAdj = damageTypeAdjective(dmgType);
 
         // Apply damage to our in-memory member HP for members who were hit.
         // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
