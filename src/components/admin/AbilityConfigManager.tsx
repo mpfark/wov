@@ -18,7 +18,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Plus, Save } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import AbilityAuthorDialog from './AbilityAuthorDialog';
 import {
   describeCalc, evaluateCalc, validateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
@@ -31,6 +35,7 @@ interface Row {
   slot: number;
   role_name: string;
   ability_id: string;
+  role_id: string;
   ability_key: string;
   label: string;
   emoji: string;
@@ -38,10 +43,16 @@ interface Row {
   tooltip: string;
   cp_cost: number;
   mechanic_key: string;
+  ability_status: string;
+  assignment_status: string;
   interval_ms: number | null;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
 }
+
+interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
+
+const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 
 function parseCalc(text: string): { calc: AbilityCalc | null; errors: string[] } {
   const trimmed = text.trim();
@@ -99,17 +110,23 @@ export default function AbilityConfigManager() {
   const [durationText, setDurationText] = useState('null');
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    const rolesRes = await supabase
+      .from('class_ability_roles')
+      .select('id, class_key, slot, name, unlock_level');
+    setRoles((rolesRes.data as RoleRow[]) ?? []);
     const { data, error } = await supabase
       .from('class_ability_assignments')
       .select(`
         id, class_key, unlock_level, is_default, status,
-        role:class_ability_roles ( slot, name ),
+        role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, emoji, description, tooltip, cp_cost,
-          mechanic_key, interval_ms, amount_calc, duration_calc
+          mechanic_key, status, interval_ms, amount_calc, duration_calc
         )
       `);
     setLoading(false);
@@ -130,6 +147,9 @@ export default function AbilityConfigManager() {
         tooltip: r.ability.tooltip,
         cp_cost: r.ability.cp_cost,
         mechanic_key: r.ability.mechanic_key,
+        ability_status: r.ability.status ?? 'active',
+        assignment_status: r.status ?? 'active',
+        role_id: r.role.id,
         interval_ms: r.ability.interval_ms,
         amount_calc: r.ability.amount_calc,
         duration_calc: r.ability.duration_calc,
@@ -178,11 +198,12 @@ export default function AbilityConfigManager() {
       interval_ms: draft.interval_ms,
       amount_calc: amount.calc as any,
       duration_calc: duration.calc as any,
+      status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
     const { error: assignmentError } = await supabase
       .from('class_ability_assignments')
-      .update({ unlock_level: draft.unlock_level })
+      .update({ unlock_level: draft.unlock_level, status: draft.assignment_status })
       .eq('id', draft.assignment_id);
     setSaving(false);
 
@@ -194,6 +215,18 @@ export default function AbilityConfigManager() {
 
   return (
     <div className="h-full flex overflow-hidden">
+      {authorRole && (
+        <AbilityAuthorDialog
+          open={!!authorRole}
+          onOpenChange={v => { if (!v) setAuthorRole(null); }}
+          classKey={authorRole.class_key}
+          classLabel={CLASS_LABELS[authorRole.class_key] ?? authorRole.class_key}
+          roleId={authorRole.id}
+          roleName={authorRole.name}
+          roleUnlockLevel={authorRole.unlock_level}
+          onCreated={load}
+        />
+      )}
       {/* Ability list */}
       <div className="w-72 shrink-0 border-r border-border min-h-0">
         <ScrollArea className="h-full">
@@ -222,12 +255,54 @@ export default function AbilityConfigManager() {
                       <span className="mr-1">{row.emoji}</span>
                       {row.label}
                       <Badge variant="outline" className="ml-2 text-[9px]">L{row.unlock_level}</Badge>
+                      {(row.ability_status !== 'active' || row.assignment_status !== 'active') && (
+                        <Badge variant="secondary" className="ml-1 text-[9px] capitalize">
+                          {row.ability_status !== 'active' ? row.ability_status : row.assignment_status}
+                        </Badge>
+                      )}
                       <span className="ml-1 text-[10px] text-muted-foreground">{row.cp_cost} CP</span>
                     </button>
                   ))}
+                  {roles
+                    .filter(r => r.class_key === classKey && !list.some(a => a.role_id === r.id))
+                    .sort((a, b) => a.slot - b.slot)
+                    .map(role => (
+                      <Button
+                        key={role.id}
+                        size="sm"
+                        variant="outline"
+                        className="w-full h-7 justify-start text-[11px] border-dashed"
+                        onClick={() => setAuthorRole(role)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> {role.name} (slot {role.slot})
+                      </Button>
+                    ))}
                 </div>
               </div>
             ))}
+            {/* Classes whose roles are all empty still need an entry point. */}
+            {[...new Set(roles.map(r => r.class_key))]
+              .filter(k => !byClass.some(([ck]) => ck === k))
+              .map(classKey => (
+                <div key={classKey}>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    {CLASS_LABELS[classKey] ?? classKey}
+                  </p>
+                  <div className="space-y-1">
+                    {roles.filter(r => r.class_key === classKey).sort((a, b) => a.slot - b.slot).map(role => (
+                      <Button
+                        key={role.id}
+                        size="sm"
+                        variant="outline"
+                        className="w-full h-7 justify-start text-[11px] border-dashed"
+                        onClick={() => setAuthorRole(role)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> {role.name} (slot {role.slot})
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
           </div>
         </ScrollArea>
       </div>
@@ -268,6 +343,28 @@ export default function AbilityConfigManager() {
                     <div className="space-y-1">
                       <Label className="text-[11px]">Unlock level</Label>
                       <Input type="number" value={draft.unlock_level} onChange={e => setDraft({ ...draft, unlock_level: Number(e.target.value) })} className="h-8 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Ability status</Label>
+                      <Select value={draft.ability_status} onValueChange={v => setDraft({ ...draft, ability_status: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ABILITY_STATUSES.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Assignment status</Label>
+                      <Select value={draft.assignment_status} onValueChange={v => setDraft({ ...draft, assignment_status: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ABILITY_STATUSES.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[11px]">Tick interval (ms)</Label>
