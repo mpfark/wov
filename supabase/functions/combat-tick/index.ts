@@ -23,8 +23,12 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
-import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
-import { normalizeDamageType, damageTypeAdjective } from "../_shared/combat/damage-types.ts";
+import { formatProcMessage, renderFlavor } from "../_shared/proc-log-format.ts";
+import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
+import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
+import { resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
+import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
+import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
@@ -1271,15 +1275,14 @@ Deno.serve(async (req) => {
         );
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
-        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: member.id,
           session_id: null, effect_type: 'bleed',
-          stacks: newStacks, damage_per_tick: dmgPerTick,
-          // Preserve cadence on refresh so re-applying Rend doesn't reset the next tick.
-          next_tick_at: existing ? existing.next_tick_at : now + TICK_RATE,
-          expires_at: now + durationMs,
-          tick_rate_ms: TICK_RATE,
+          // Stacking (cap 5) and cadence-preserving refresh live in the
+          // shared status primitive so every DoT behaves identically.
+          ...applyStackingEffect(existing, {
+            now, durationMs, damagePerTick: dmgPerTick, maxStacks: 5, tickRateMs: TICK_RATE,
+          }),
         };
         if (existing) {
           Object.assign(existing, effData);
@@ -1556,14 +1559,13 @@ Deno.serve(async (req) => {
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
           if (mHp[ally.id] <= 0) continue;
-          const allyMaxHp = ally.c.max_hp || 1;
-          const before = mHp[ally.id];
-          mHp[ally.id] = Math.min(before + healAmt, allyMaxHp);
-          const restored = mHp[ally.id] - before;
-          if (restored > 0) {
+          // Shared heal primitive: clamps to max HP and reports the real delta.
+          const heal = resolveHeal({ amount: healAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
+          mHp[ally.id] = heal.hpAfter;
+          if (heal.applied > 0) {
             events.push({
               type: 'consecrate_heal',
-              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${restored}]`,
+              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
               character_id: ally.id,
             });
           }
@@ -1698,17 +1700,16 @@ Deno.serve(async (req) => {
             // procs in consecutive heartbeats would push the next tick forward
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
             const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
             const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
-              stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: existing ? existing.next_tick_at : tickTime + TICK_RATE,
-              expires_at: tickTime + 25000,
-              tick_rate_ms: TICK_RATE,
+              ...applyStackingEffect(existing, {
+                now: tickTime, durationMs: 25000, damagePerTick: dmgPerTick,
+                maxStacks: envenomMaxStacks, tickRateMs: TICK_RATE,
+              }),
             };
             if (existing) {
               Object.assign(existing, effData);
@@ -1882,7 +1883,6 @@ Deno.serve(async (req) => {
         // (sustained, lingering flame). Pulse and burn read different stats
         // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
         const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
         const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
@@ -1890,11 +1890,10 @@ Deno.serve(async (req) => {
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
           session_id: null, effect_type: 'ignite',
-          stacks: newStacks, damage_per_tick: dmgPerTick,
-          // Preserve cadence on refresh — see poison comment above.
-          next_tick_at: existing ? existing.next_tick_at : tickTime + TICK_RATE,
-          expires_at: tickTime + duration,
-          tick_rate_ms: TICK_RATE,
+          ...applyStackingEffect(existing, {
+            now: tickTime, durationMs: duration, damagePerTick: dmgPerTick,
+            maxStacks: 5, tickRateMs: TICK_RATE,
+          }),
         };
         if (existing) {
           Object.assign(existing, effData);
@@ -1968,16 +1967,20 @@ Deno.serve(async (req) => {
         const cStr = sm(cs.str || 10);
         const dmgDie = creatureDmgDie(creature.level, creature.rarity);
 
-        if (tankAtNode) {
-          const tank = members.find(m => m.id === tankId);
-          if (!tank || mHp[tankId!] <= 0) continue;
-          applyCreatureHit(tankId!, tank.c.name, tank.c, eq[tankId!] || {}, creature, cStr, dmgDie, '🛡️ ');
-        } else {
-          const alive = members.filter(m => mHp[m.id] > 0);
-          if (alive.length === 0) continue;
-          const target = alive[Math.floor(Math.random() * alive.length)];
-          applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
-        }
+        // Shared targeting primitive: a designated tank soaks everything while
+        // alive (`tank_strict` — nobody else is hit if the tank is down),
+        // otherwise a uniformly random living member takes the swing.
+        const candidates = members.map(m => ({ id: m.id, hp: mHp[m.id] }));
+        const picked = selectPrimaryTarget(candidates, {
+          mode: tankAtNode ? 'tank_strict' : 'random_alive',
+          tankId: tankAtNode ? tankId : null,
+        });
+        if (!picked) continue;
+        const target = members.find(m => m.id === picked.id)!;
+        applyCreatureHit(
+          target.id, target.c.name, target.c, eq[target.id] || {},
+          creature, cStr, dmgDie, tankAtNode ? '🛡️ ' : '',
+        );
       }
     } // end tick loop
 
@@ -2022,8 +2025,10 @@ Deno.serve(async (req) => {
         // without a designated tank) still register a primary target. The
         // RPC COALESCEs — nulls don't clobber a source that was already set
         // at cast start, but this keeps things consistent if the seed missed.
-        const fallbackMember = members.find(m => mHp[m.id] > 0);
-        const sourceId = (tankAtNode && tankId) ? tankId : (fallbackMember?.id ?? null);
+        const sourceId = selectPrimaryTarget(
+          members.map(m => ({ id: m.id, hp: mHp[m.id] })),
+          { mode: 'tank_preferred', tankId: tankAtNode ? tankId : null },
+        )?.id ?? null;
         const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
           _encounter_id: channel.encounter_id,
           _delta: delta,
@@ -2116,7 +2121,6 @@ Deno.serve(async (req) => {
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
         const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
         const dmgType = normalizeDamageType((cst.payload as any)?.damage_type);
-        const dmgAdj = damageTypeAdjective(dmgType);
 
         // Apply damage to our in-memory member HP for members who were hit.
         // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
@@ -2125,43 +2129,25 @@ Deno.serve(async (req) => {
         // haven't been flushed. Applying the delta preserves those and keeps
         // solo/party math identical.
         for (const h of (hits || [])) {
-          const dmg = Number(h.amount) || 0;
-          if (dmg > 0 && mHp[h.character_id] !== undefined) {
-            mHp[h.character_id] = Math.max(0, mHp[h.character_id] - dmg);
-          }
           const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
-          // Authored flavor wins; blank falls back to the default wording.
-          // If the author inlined {damage}/%v we skip the canonical [N] suffix
-          // so the number isn't printed twice.
-          const suffix = flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`;
-          const renderFor = (target: string) => hitFlavor
-            ? `${emoji} ${renderFlavor(hitFlavor, { creature: creatureName, target, cast: label, damage: dmg, damageType: dmgType ?? undefined })}${suffix}`
-            : `${emoji} ${creatureName}'s ${dmgAdj ? `${dmgAdj} ` : ''}${label} strikes ${target}! [${dmg}]`;
-          const message = renderFor(memberName);
-          events.push({
-            type: 'boss_cast_hit',
-            character_id: h.character_id,
-            creature_id: cst.creature_id,
+          // Shared resolution primitive owns the HP clamp; `applied` is the
+          // real delta and is what the log prints.
+          const hpNow = mHp[h.character_id];
+          const res = resolveDamage({ amount: Number(h.amount) || 0, hp: hpNow ?? 0 });
+          const dmg = hpNow === undefined ? Math.max(0, Math.floor(Number(h.amount) || 0)) : res.applied;
+          if (hpNow !== undefined) mHp[h.character_id] = res.hpAfter;
+          // Prose + structured event come from the shared cast-event builder.
+          events.push(buildCastHitEvent({
+            creatureId: cst.creature_id,
+            creatureName,
+            characterId: h.character_id,
+            characterName: memberName,
+            label,
+            emoji,
+            hitFlavor,
             damage: dmg,
-            message,
-            // Stage 2: structured event — meaning, not styling. The client
-            // renders this directly; `message` stays for older clients.
-            log_event: {
-              v: 1,
-              id: crypto.randomUUID(),
-              ts: Date.now(),
-              type: 'boss_cast_hit',
-              message: renderFor('you'),
-              remoteMessage: message,
-              source: { kind: 'creature', id: cst.creature_id, name: creatureName },
-              target: { kind: 'player', id: h.character_id, name: memberName },
-              amount: dmg,
-              amountKind: 'damage',
-              damageType: dmgType ?? undefined,
-              effectType: label,
-              scope: 'node',
-            },
-          });
+            damageType: dmgType,
+          }));
         }
 
 
@@ -2328,8 +2314,11 @@ Deno.serve(async (req) => {
         // so the resolver has a valid primary target. Without this the cast
         // routes every hit through the AoE branch (aoe_share defaults to 0
         // → [0] damage in the log, base_amount ignored).
-        const aliveMember = members.find(m => mHp[m.id] > 0);
-        const primaryId = (tankAtNode && tankId) ? tankId : (aliveMember?.id ?? null);
+        const primaryTarget = selectPrimaryTarget(
+          members.map(m => ({ id: m.id, hp: mHp[m.id] })),
+          { mode: 'tank_preferred', tankId: tankAtNode ? tankId : null },
+        );
+        const primaryId = primaryTarget?.id ?? null;
         if (primaryId) {
           await db.rpc('encounter_stored_power_add', {
             _encounter_id: encId,
