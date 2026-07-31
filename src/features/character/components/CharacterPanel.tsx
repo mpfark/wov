@@ -806,9 +806,6 @@ export default function CharacterPanel({
                         </TooltipContent>
                       </Tooltip>
                     );
-                        </TooltipContent>
-                      </Tooltip>
-                    );
                   })}
                 </div>
 
