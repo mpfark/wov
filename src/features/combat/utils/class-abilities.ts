@@ -134,8 +134,11 @@ export interface AbilityConfigRow {
   unlock_level: number;
   is_default: boolean;
   status: string;
-  role: { slot: number } | null;
+  /** `abilities.id` — present once the loadout columns are selected. */
+  ability_id?: string;
+  role: { id?: string; slot: number; name?: string } | null;
   ability: {
+    ability_key?: string;
     label: string;
     emoji: string;
     description: string;
@@ -143,8 +146,13 @@ export interface AbilityConfigRow {
     cp_cost: number;
     mechanic_key: string;
     status: string;
+    amount_calc?: unknown;
+    duration_calc?: unknown;
+    interval_ms?: number | null;
+    effect_config?: unknown;
   } | null;
 }
+
 
 const KNOWN_MECHANICS = new Set<string>(
   Object.values(CLASS_ABILITIES).flatMap(list => list.map(a => a.type as string)),
@@ -233,4 +241,16 @@ export function resetAbilityRegistry(): void {
 /** Abilities a character of `classKey` has unlocked at `level`. */
 export function getUnlockedAbilities(classKey: string, level: number): ClassAbility[] {
   return (CLASS_ABILITIES[classKey] ?? []).filter(a => level >= a.levelRequired);
+}
+
+/**
+ * Replace one class's live bar (Phase 4 loadouts). The incoming list is ordered
+ * by config slot; tiers are re-indexed to the 0-based bar position so every
+ * consumer keeps its existing tier semantics.
+ */
+export function setClassAbilityList(classKey: string, list: ClassAbility[]): void {
+  if (!list || list.length === 0) return;
+  const ordered = [...list].sort((a, b) => a.tier - b.tier);
+  ordered.forEach((a, i) => { a.tier = i; });
+  CLASS_ABILITIES[classKey] = ordered;
 }

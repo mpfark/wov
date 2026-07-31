@@ -15,6 +15,7 @@ import {
 import {
   setAbilityCalcRegistry, type AbilityCalcConfigRow,
 } from '@/features/combat/utils/ability-calcs';
+import { setLoadoutOptions } from '@/features/combat/utils/ability-loadout';
 import { USE_CONFIG_ABILITIES } from '@/shared/config/feature-flags';
 
 let started = false;
@@ -35,8 +36,8 @@ export function useAbilityRegistry(): { loaded: boolean } {
       const { data, error } = await supabase
         .from('class_ability_assignments')
         .select(`
-          class_key, unlock_level, is_default, status,
-          role:class_ability_roles ( slot ),
+          class_key, unlock_level, is_default, status, ability_id,
+          role:class_ability_roles ( id, slot, name ),
           ability:abilities (
             ability_key, label, emoji, description, tooltip, cp_cost, mechanic_key, status,
             amount_calc, duration_calc, interval_ms, effect_config
@@ -52,6 +53,8 @@ export function useAbilityRegistry(): { loaded: boolean } {
         setAbilityRegistry(data as unknown as AbilityConfigRow[]);
         // Phase 2c: same payload also carries the configured magnitudes.
         setAbilityCalcRegistry(data as unknown as AbilityCalcConfigRow[]);
+        // Phase 4: the same payload carries non-default alternatives for loadouts.
+        setLoadoutOptions(data as unknown as AbilityConfigRow[]);
         setLoaded(true);
       }
     })();

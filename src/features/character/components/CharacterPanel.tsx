@@ -22,6 +22,8 @@ import { MaterialsSection } from '@/features/inventory/components/MaterialsSecti
 import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 // import PortraitTab from './PortraitTab'; // disabled — feature coming later
 import ClassBondRow from './ClassBondRow';
+import AbilityLoadoutTab from './AbilityLoadoutTab';
+import type { AbilityLoadoutState } from '@/hooks/useAbilityLoadout';
 
 
 interface Props {
@@ -54,6 +56,8 @@ interface Props {
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
+  /** Per-character ability loadout state (owned by GamePage). */
+  abilityLoadout?: AbilityLoadoutState;
   /** Transient soft glow on equipped Soulforged ring slots (fires on tier-up). */
   soulringGlow?: boolean;
   // Stat allocation, respec, and Renown training are now handled exclusively
@@ -337,6 +341,7 @@ export default function CharacterPanel({
   inCombat = false,
   actionBindings: _actionBindings,
   soulringGlow = false,
+  abilityLoadout,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
@@ -389,6 +394,7 @@ export default function CharacterPanel({
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
+            <TabsTrigger value="abilities" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Abilities</TabsTrigger>
             {/* Portrait tab temporarily disabled — feature coming later. */}
           </TabsList>
 
@@ -1015,7 +1021,12 @@ export default function CharacterPanel({
               </div>
             </TabsContent>
 
-            {/* Portrait tab content disabled. */}
+            {/* Abilities — per-character loadout choices */}
+            <TabsContent value="abilities" className="mt-0">
+              <AbilityLoadoutTab character={character} inCombat={inCombat} loadout={abilityLoadout} />
+            </TabsContent>
+
+
           </div>
         </Tabs>
 

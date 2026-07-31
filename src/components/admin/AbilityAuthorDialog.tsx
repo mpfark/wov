@@ -35,11 +35,14 @@ interface Props {
   roleId: string;
   roleName: string;
   roleUnlockLevel: number;
+  /** True when authoring a player-selectable alternative instead of the role default. */
+  asAlternative?: boolean;
   onCreated: () => void;
 }
 
 export default function AbilityAuthorDialog({
-  open, onOpenChange, classKey, classLabel, roleId, roleName, roleUnlockLevel, onCreated,
+  open, onOpenChange, classKey, classLabel, roleId, roleName, roleUnlockLevel,
+  asAlternative = false, onCreated,
 }: Props) {
   const mechanics = useMemo(() => getKnownAbilityMechanics(), []);
   const [existingKeys, setExistingKeys] = useState<string[]>([]);
@@ -92,7 +95,8 @@ export default function AbilityAuthorDialog({
       effect_config: template.effect_config,
       combat_text: {},
       status: 'draft',
-      admin_notes: `Authored for ${classLabel} · ${roleName}`,
+      admin_notes: `Authored for ${classLabel} · ${roleName}`
+        + (asAlternative ? ' (alternative)' : ''),
     }).select('id').single();
 
     if (abilityError || !inserted) {
@@ -106,13 +110,13 @@ export default function AbilityAuthorDialog({
       role_id: roleId,
       ability_id: inserted.id,
       unlock_level: draft.unlock_level,
-      is_default: true,
+      is_default: !asAlternative,
       status: 'draft',
     });
     setSaving(false);
     if (assignError) { toast.error(assignError.message); return; }
 
-    toast.success(`${draft.label} authored as a draft — set its magnitudes, then publish it.`);
+    toast.success(`${draft.label} authored as a ${asAlternative ? 'draft alternative' : 'draft'} — set its magnitudes, then publish it.`);
     onOpenChange(false);
     onCreated();
   };
@@ -122,7 +126,7 @@ export default function AbilityAuthorDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-sm">
-            Author ability — {classLabel} · {roleName}
+            Author {asAlternative ? 'alternative' : 'ability'} — {classLabel} · {roleName}
           </DialogTitle>
         </DialogHeader>
 
