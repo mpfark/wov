@@ -1885,7 +1885,6 @@ Deno.serve(async (req) => {
         // (sustained, lingering flame). Pulse and burn read different stats
         // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
         const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
         const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
@@ -1893,11 +1892,10 @@ Deno.serve(async (req) => {
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
           session_id: null, effect_type: 'ignite',
-          stacks: newStacks, damage_per_tick: dmgPerTick,
-          // Preserve cadence on refresh — see poison comment above.
-          next_tick_at: existing ? existing.next_tick_at : tickTime + TICK_RATE,
-          expires_at: tickTime + duration,
-          tick_rate_ms: TICK_RATE,
+          ...applyStackingEffect(existing, {
+            now: tickTime, durationMs: duration, damagePerTick: dmgPerTick,
+            maxStacks: 5, tickRateMs: TICK_RATE,
+          }),
         };
         if (existing) {
           Object.assign(existing, effData);
