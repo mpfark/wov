@@ -2128,43 +2128,25 @@ Deno.serve(async (req) => {
         // haven't been flushed. Applying the delta preserves those and keeps
         // solo/party math identical.
         for (const h of (hits || [])) {
-          const dmg = Number(h.amount) || 0;
-          if (dmg > 0 && mHp[h.character_id] !== undefined) {
-            mHp[h.character_id] = Math.max(0, mHp[h.character_id] - dmg);
-          }
           const memberName = members.find(m => m.id === h.character_id)?.c?.name ?? 'A hero';
-          // Authored flavor wins; blank falls back to the default wording.
-          // If the author inlined {damage}/%v we skip the canonical [N] suffix
-          // so the number isn't printed twice.
-          const suffix = flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`;
-          const renderFor = (target: string) => hitFlavor
-            ? `${emoji} ${renderFlavor(hitFlavor, { creature: creatureName, target, cast: label, damage: dmg, damageType: dmgType ?? undefined })}${suffix}`
-            : `${emoji} ${creatureName}'s ${dmgAdj ? `${dmgAdj} ` : ''}${label} strikes ${target}! [${dmg}]`;
-          const message = renderFor(memberName);
-          events.push({
-            type: 'boss_cast_hit',
-            character_id: h.character_id,
-            creature_id: cst.creature_id,
+          // Shared resolution primitive owns the HP clamp; `applied` is the
+          // real delta and is what the log prints.
+          const hpNow = mHp[h.character_id];
+          const res = resolveDamage({ amount: Number(h.amount) || 0, hp: hpNow ?? 0 });
+          const dmg = hpNow === undefined ? Math.max(0, Math.floor(Number(h.amount) || 0)) : res.applied;
+          if (hpNow !== undefined) mHp[h.character_id] = res.hpAfter;
+          // Prose + structured event come from the shared cast-event builder.
+          events.push(buildCastHitEvent({
+            creatureId: cst.creature_id,
+            creatureName,
+            characterId: h.character_id,
+            characterName: memberName,
+            label,
+            emoji,
+            hitFlavor,
             damage: dmg,
-            message,
-            // Stage 2: structured event — meaning, not styling. The client
-            // renders this directly; `message` stays for older clients.
-            log_event: {
-              v: 1,
-              id: crypto.randomUUID(),
-              ts: Date.now(),
-              type: 'boss_cast_hit',
-              message: renderFor('you'),
-              remoteMessage: message,
-              source: { kind: 'creature', id: cst.creature_id, name: creatureName },
-              target: { kind: 'player', id: h.character_id, name: memberName },
-              amount: dmg,
-              amountKind: 'damage',
-              damageType: dmgType ?? undefined,
-              effectType: label,
-              scope: 'node',
-            },
-          });
+            damageType: dmgType,
+          }));
         }
 
 
