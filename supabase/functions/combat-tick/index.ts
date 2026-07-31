@@ -14,6 +14,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
+  loadAbilityCalcs, buildServerCalcInputs, resolveServerAmount, resolveServerDuration,
+} from "../_shared/load-ability-calcs.ts";
+import {
   resolveEffectTicks,
   processLootDrops,
   writeCreatureState,
@@ -264,6 +267,7 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
     await loadClassRegistry(db);
+    await loadAbilityCalcs(db);
 
     // Auth — verify JWT signature locally via getClaims (cached JWKS, no
     // network hop). Trusting the unsigned `sub` claim would let an attacker
@@ -662,11 +666,22 @@ Deno.serve(async (req) => {
         const wisMod = Math.max(0, Math.floor((cWis - 10) / 2));
         const dexMod = Math.max(0, Math.floor((cDex - 10) / 2));
         const conMod = Math.max(0, Math.floor((cCon - 10) / 2));
+        // Shared evaluator inputs for configured stance magnitudes.
+        const calcInputs = buildServerCalcInputs(m.c.level || 1, {
+          str: (m.c.str || 10) + ((eq[m.id] as any)?.str || 0),
+          dex: cDex, con: cCon, int: cInt, wis: cWis,
+          cha: (m.c.cha || 10) + ((eq[m.id] as any)?.cha || 0),
+        });
         if (reserved.ignite)       mb.ignite_buff = true;
         if (reserved.envenom)      mb.poison_buff = true;
         if (reserved.eagle_eye) {
           // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
-          const blended = Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2)));
+          // Magnitude is configurable (abilities.amount_calc); the inline
+          // expression stays as the fallback when no calc is configured.
+          const blended = resolveServerAmount(
+            m.c.class || 'ranger', 'eagle_eye', calcInputs,
+            Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2))),
+          );
           mb.crit_buff = { bonus: blended };
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
@@ -702,7 +717,10 @@ Deno.serve(async (req) => {
           // Pool cap = WIS (sustained ward). Regen rate (in apply_force_shield_regen SQL)
           // remains INT-scaled — INT shapes the spark, WIS shapes the ward.
           // Bond multiplier scales the ward magnitude as a utility shield pool.
-          const shieldCapRaw = Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5));
+          const shieldCapRaw = resolveServerAmount(
+            m.c.class || 'wizard', 'force_shield', calcInputs,
+            Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5)),
+          );
           const shieldCap = Math.max(1, Math.floor(shieldCapRaw * (mBondMult[m.id] ?? 1)));
           let current = mb.absorb_buff?.shield_hp;
           if (current === undefined) {
@@ -1241,7 +1259,15 @@ Deno.serve(async (req) => {
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
-        const durationMs = Math.min(30000, 20000 + Math.max(0, dexMod) * 1000);
+        const durationMs = resolveServerDuration(
+          c.class || 'warrior', 'rend',
+          buildServerCalcInputs(c.level || 1, {
+            str: effStr, dex: effDex,
+            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+          }),
+          Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
+        );
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
