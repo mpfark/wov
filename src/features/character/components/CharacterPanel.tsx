@@ -341,6 +341,7 @@ export default function CharacterPanel({
   inCombat = false,
   actionBindings: _actionBindings,
   soulringGlow = false,
+  abilityLoadout,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();

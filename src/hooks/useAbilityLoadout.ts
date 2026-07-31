@@ -12,7 +12,7 @@ import {
   applyAbilityLoadout, getLoadoutRoles, getRolesWithAlternatives, type LoadoutRole,
 } from '@/features/combat/utils/ability-loadout';
 
-interface Result {
+export interface AbilityLoadoutState {
   /** Roles that offer a real choice (more than one active option). */
   roles: LoadoutRole[];
   /** role_id -> ability_id for the current character. */
@@ -27,7 +27,7 @@ export function useAbilityLoadout(
   characterId: string | undefined,
   classKey: string | undefined,
   registryLoaded = true,
-): Result {
+): AbilityLoadoutState {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -7,16 +7,18 @@
  */
 import { Lock } from 'lucide-react';
 import { Character } from '@/features/character';
-import { useAbilityLoadout } from '@/hooks/useAbilityLoadout';
+import { useAbilityLoadout, type AbilityLoadoutState } from '@/hooks/useAbilityLoadout';
 
 interface Props {
   character: Character;
   inCombat?: boolean;
+  /** Shared state from GamePage; a local instance is used when omitted. */
+  loadout?: AbilityLoadoutState;
 }
 
-export default function AbilityLoadoutTab({ character, inCombat }: Props) {
-  const { roles, selections, saving, error, select } =
-    useAbilityLoadout(character.id, character.class);
+export default function AbilityLoadoutTab({ character, inCombat, loadout }: Props) {
+  const local = useAbilityLoadout(loadout ? undefined : character.id, character.class);
+  const { roles, selections, saving, error, select } = loadout ?? local;
 
   if (roles.length === 0) {
     return (
