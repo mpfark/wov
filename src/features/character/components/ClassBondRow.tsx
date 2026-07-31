@@ -56,7 +56,7 @@ export default function ClassBondRow({ characterId, isClassless, activeClass }: 
     <div className="border-t border-border-subtle pt-1.5">
       <h4 className="t-label mb-1">Bond</h4>
       <div className="space-y-1">
-        {bonds.map(({ class: cls, bond }) => {
+        {visible.map(({ class: cls, bond }) => {
           const mult = bondMultiplier(bond);
           const classLabel = CLASS_LABELS[cls] ?? cls;
           return (
