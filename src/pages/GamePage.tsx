@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/LoadingScreen';
 
 import CharacterPanel from '@/features/character/components/CharacterPanel';
+import { useAbilityLoadout } from '@/hooks/useAbilityLoadout';
+import { useAbilityRegistry } from '@/hooks/useAbilityRegistry';
 import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
@@ -1078,8 +1080,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLogEvent]);
 
   // ── De-duplicated prop blocks ──────────────────────────────────
+  // Phase 4: per-character ability choices. Applying a loadout rewrites the live
+  // ability lists, so holding it here keeps the bar and the panel in sync.
+  const abilityLoadout = useAbilityLoadout(
+    character?.id, character?.class, abilityRegistry.loaded,
+  );
+
   const charPanelProps = useMemo(() => ({
     character,
+    abilityLoadout,
     equipped,
     unequipped,
     equipmentBonuses,
