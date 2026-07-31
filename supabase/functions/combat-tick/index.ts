@@ -2114,6 +2114,8 @@ Deno.serve(async (req) => {
         const label = (cst.payload as any)?.label ?? cst.cast_key;
         const emoji = (cst.payload as any)?.emoji ?? '☄️';
         const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
+        const dmgType = normalizeDamageType((cst.payload as any)?.damage_type);
+        const dmgAdj = damageTypeAdjective(dmgType);
 
         // Apply damage to our in-memory member HP for members who were hit.
         // Use DELTA (h.amount) rather than the RPC's absolute new_hp: the RPC
@@ -2132,8 +2134,8 @@ Deno.serve(async (req) => {
           // so the number isn't printed twice.
           const suffix = flavorHasDamageToken(hitFlavor) ? '' : ` [${dmg}]`;
           const renderFor = (target: string) => hitFlavor
-            ? `${emoji} ${renderFlavor(hitFlavor, { creature: creatureName, target, cast: label, damage: dmg })}${suffix}`
-            : `${emoji} ${creatureName}'s ${label} strikes ${target}! [${dmg}]`;
+            ? `${emoji} ${renderFlavor(hitFlavor, { creature: creatureName, target, cast: label, damage: dmg, damageType: dmgType ?? undefined })}${suffix}`
+            : `${emoji} ${creatureName}'s ${dmgAdj ? `${dmgAdj} ` : ''}${label} strikes ${target}! [${dmg}]`;
           const message = renderFor(memberName);
           events.push({
             type: 'boss_cast_hit',
@@ -2154,6 +2156,7 @@ Deno.serve(async (req) => {
               target: { kind: 'player', id: h.character_id, name: memberName },
               amount: dmg,
               amountKind: 'damage',
+              damageType: dmgType ?? undefined,
               effectType: label,
               scope: 'node',
             },
@@ -2194,6 +2197,7 @@ Deno.serve(async (req) => {
           emoji?: string;
           cast_flavor?: string;
           hit_flavor?: string;
+          damage_type?: string;
           amount?: number;
 
           base_amount?: number;
@@ -2235,6 +2239,7 @@ Deno.serve(async (req) => {
         const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
         const castFlavor = String(cfg.cast_flavor ?? '').trim();
         const hitFlavorCfg = String(cfg.hit_flavor ?? '').trim();
+        const castDamageType = normalizeDamageType(cfg.damage_type);
 
 
         const lastCastAt = lastCastAtByCreature.get(creature.id) ?? 0;
@@ -2274,6 +2279,7 @@ Deno.serve(async (req) => {
           // in a later tick) renders the same text the admin configured.
           cast_flavor: castFlavor || undefined,
           hit_flavor: hitFlavorCfg || undefined,
+          damage_type: castDamageType || undefined,
           amount,
 
           cast_ms: castMs,
@@ -2345,7 +2351,7 @@ Deno.serve(async (req) => {
           : predictedMax;
 
         const startRendered = castFlavor
-          ? renderFlavor(castFlavor, { creature: creature.name, cast: label })
+          ? renderFlavor(castFlavor, { creature: creature.name, cast: label, damageType: castDamageType ?? undefined })
           : '';
         // Authored prose stands alone — no cast name or flee hint appended.
         // Stage 2: the 🌀 routing sentinel is GONE. Telegraph styling is
@@ -2365,6 +2371,7 @@ Deno.serve(async (req) => {
             type: 'boss_telegraph',
             message: startMessage,
             source: { kind: 'creature', id: creature.id, name: creature.name },
+            damageType: castDamageType ?? undefined,
             effectType: label,
             severity: 'urgent',
             scope: 'node',
