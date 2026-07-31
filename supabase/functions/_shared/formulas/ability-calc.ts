@@ -24,8 +24,8 @@
  * to `supabase/functions/_shared/formulas/ability-calc.ts`.
  */
 
-import { diminishing, diminishingFloat } from './stats';
-import { getEffectiveCombatMod, type EffectiveProfile } from './effective';
+import { diminishing, diminishingFloat } from './stats.ts';
+import { getEffectiveCombatMod, type EffectiveProfile } from './effective.ts';
 
 export type CalcStat = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
