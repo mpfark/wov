@@ -47,7 +47,7 @@ export default function ClassBondRow({ characterId, isClassless }: Props) {
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [characterId, isClassless]);
 
-  if (isClassless || !characterClass || bonds.length === 0) return null;
+  if (isClassless || bonds.length === 0) return null;
 
   return (
     <div className="border-t border-border-subtle pt-1.5">
