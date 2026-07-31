@@ -2,7 +2,7 @@
  * ClassConfigManager — Phase 3 admin editor for class lifecycle & tuning.
  *
  * Edits rows of the `classes` table (presentation, base HP/AC, crit range,
- * every-3-levels bonuses, weapon proficiencies, autoattack profile) and owns
+ * every-3-levels bonuses, weapon proficiencies) and owns
  * the lifecycle: draft → active → retired plus class-hall selectability.
  *
  * All saves run through the pure checks in `@/shared/formulas/class-validate`
@@ -71,7 +71,6 @@ export default function ClassConfigManager() {
       crit_range: r.crit_range ?? 20,
       level_bonuses: (r.level_bonuses as Record<string, number>) ?? {},
       weapon_proficiencies: (r.weapon_proficiencies as string[]) ?? [],
-      autoattack: (r.autoattack as ClassConfigDraft['autoattack']) ?? {},
     }));
     setRows(mapped);
     setRoles((roleRes.data as RoleRow[]) ?? []);
@@ -92,7 +91,6 @@ export default function ClassConfigManager() {
       ...row,
       level_bonuses: { ...row.level_bonuses },
       weapon_proficiencies: [...row.weapon_proficiencies],
-      autoattack: { ...row.autoattack },
     });
   };
 
@@ -140,7 +138,6 @@ export default function ClassConfigManager() {
       crit_range: draft.crit_range,
       level_bonuses: draft.level_bonuses as never,
       weapon_proficiencies: draft.weapon_proficiencies,
-      autoattack: draft.autoattack as never,
     }).eq('class_key', draft.class_key);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -214,7 +211,7 @@ export default function ClassConfigManager() {
         <ScrollArea className="h-full">
           {!draft ? (
             <p className="p-6 text-sm text-muted-foreground">
-              Select a class to edit its lifecycle, base stats and autoattack profile.
+              Select a class to edit its lifecycle, base stats and proficiencies.
             </p>
           ) : (
             <div className="p-4 space-y-4 max-w-3xl">
@@ -338,59 +335,6 @@ export default function ClassConfigManager() {
                         );
                       })}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Autoattack */}
-              <Card className="bg-card/80">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Autoattack flavor</CardTitle>
-                  <p className="text-[10px] text-muted-foreground">
-                    Every class autoattacks with its equipped weapon: DEX drives to-hit and STR
-                    drives damage. These fields only control log wording (label, emoji, verbs);
-                    the flavor stat is display-only and the dice range survives solely for the
-                    legacy multi-attack, execute and ignite-consume mechanics.
-                  </p>
-                </CardHeader>
-                <CardContent className="grid grid-cols-4 gap-3">
-                  <div className="col-span-2 space-y-1">
-                    <Label className="text-[11px]">Label</Label>
-                    <Input value={draft.autoattack.label ?? ''} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, label: e.target.value } })} className="h-8 text-xs" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Emoji</Label>
-                    <Input value={draft.autoattack.emoji ?? ''} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, emoji: e.target.value } })} className="h-8 text-xs" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Flavor stat</Label>
-                    <Select
-                      value={draft.autoattack.stat ?? ''}
-                      onValueChange={v => setDraft({ ...draft, autoattack: { ...draft.autoattack, stat: v } })}
-                    >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        {CLASS_STAT_KEYS.map(s => (
-                          <SelectItem key={s} value={s} className="text-xs uppercase">{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Dice min</Label>
-                    <Input type="number" value={draft.autoattack.diceMin ?? 1} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, diceMin: Number(e.target.value) } })} className="h-8 text-xs" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px]">Dice max</Label>
-                    <Input type="number" value={draft.autoattack.diceMax ?? 6} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, diceMax: Number(e.target.value) } })} className="h-8 text-xs" />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <Label className="text-[11px]">Third-person verb</Label>
-                    <Input value={draft.autoattack.verb ?? ''} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, verb: e.target.value } })} className="h-8 text-xs" />
-                  </div>
-                  <div className="col-span-4 space-y-1">
-                    <Label className="text-[11px]">Self verb (own log)</Label>
-                    <Input value={draft.autoattack.selfVerb ?? ''} onChange={e => setDraft({ ...draft, autoattack: { ...draft.autoattack, selfVerb: e.target.value } })} className="h-8 text-xs" />
                   </div>
                 </CardContent>
               </Card>

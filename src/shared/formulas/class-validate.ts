@@ -16,16 +16,6 @@ export const WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'w
 export type ClassStatus = 'draft' | 'active' | 'retired';
 export const CLASS_STATUSES: ClassStatus[] = ['draft', 'active', 'retired'];
 
-export interface ClassAutoattackDraft {
-  label?: string | null;
-  stat?: string | null;
-  diceMin?: number | null;
-  diceMax?: number | null;
-  emoji?: string | null;
-  verb?: string | null;
-  selfVerb?: string | null;
-}
-
 export interface ClassConfigDraft {
   class_key: string;
   label: string;
@@ -41,7 +31,6 @@ export interface ClassConfigDraft {
   crit_range: number;
   level_bonuses: Record<string, number>;
   weapon_proficiencies: string[];
-  autoattack: ClassAutoattackDraft;
 }
 
 export interface ClassValidation {
@@ -116,25 +105,6 @@ export function validateClassConfig(draft: ClassConfigDraft): ClassValidation {
   if (new Set(profs).size !== profs.length) errors.push('Duplicate weapon proficiency.');
   if (!preClass && profs.length === 0) {
     warnings.push('No weapon proficiencies — this class never gets the affinity hit/damage bonus.');
-  }
-
-  // Autoattack profile
-  const aa = draft.autoattack ?? {};
-  if (!preClass) {
-    if (!aa.label?.trim()) errors.push('Autoattack label is required.');
-    if (!aa.stat || !CLASS_STAT_KEYS.includes(aa.stat as ClassStatKey)) {
-      errors.push('Autoattack stat must be one of str, dex, con, int, wis, cha.');
-    }
-    if (!aa.verb?.trim()) errors.push('Autoattack third-person verb is required.');
-    if (!aa.selfVerb?.trim()) errors.push('Autoattack self verb is required.');
-    if (!aa.emoji?.trim()) warnings.push('Autoattack has no emoji.');
-    const min = Number(aa.diceMin);
-    const max = Number(aa.diceMax);
-    if (!Number.isInteger(min) || min < 1) errors.push('Autoattack diceMin must be an integer >= 1.');
-    if (!Number.isInteger(max) || max < 1) errors.push('Autoattack diceMax must be an integer >= 1.');
-    if (Number.isFinite(min) && Number.isFinite(max) && max < min) {
-      errors.push('Autoattack diceMax must be >= diceMin.');
-    }
   }
 
   if (preClass && draft.is_selectable) {

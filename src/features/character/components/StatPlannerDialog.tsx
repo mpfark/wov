@@ -9,7 +9,6 @@ import {
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
 } from '@/lib/game-data';
-import { getClassCombat } from '@/features/combat';
 
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 
@@ -83,14 +82,13 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
       const cpRegen = getCpRegen(eInt);
       const mpRegen = getMpRegenRate(eDex);
 
-      const combat = getClassCombat(character.class);
       // Autoattacks are weapon-based for every class: DEX drives to-hit,
-      // STR drives damage. The class autoattack `stat` is flavor only.
+      // STR drives damage.
       const atkMod = getStatModifier(eDex);
       const intHit = getIntHitBonus(eInt);
       const totalHit = atkMod + intHit;
       const dexCrit = getDexCritBonus(eDex);
-      const critRange = (combat?.critRange || 20) - dexCrit;
+      const critRange = getClassCritRange(character.class) - dexCrit;
       const wisAntiCrit = getWisAntiCrit(eWis);
       const strFloor = getStrDamageFloor(eStr);
       const buyDisc = getChaBuyDiscount(eCha);
