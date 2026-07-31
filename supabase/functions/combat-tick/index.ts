@@ -1275,15 +1275,14 @@ Deno.serve(async (req) => {
         );
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
-        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: member.id,
           session_id: null, effect_type: 'bleed',
-          stacks: newStacks, damage_per_tick: dmgPerTick,
-          // Preserve cadence on refresh so re-applying Rend doesn't reset the next tick.
-          next_tick_at: existing ? existing.next_tick_at : now + TICK_RATE,
-          expires_at: now + durationMs,
-          tick_rate_ms: TICK_RATE,
+          // Stacking (cap 5) and cadence-preserving refresh live in the
+          // shared status primitive so every DoT behaves identically.
+          ...applyStackingEffect(existing, {
+            now, durationMs, damagePerTick: dmgPerTick, maxStacks: 5, tickRateMs: TICK_RATE,
+          }),
         };
         if (existing) {
           Object.assign(existing, effData);
