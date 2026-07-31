@@ -438,7 +438,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   },
   {
     ability_key: 'shield_wall', label: 'Shield Wall', emoji: '🛡️',
-    description: '⚓ Stance. Dual-primary: WIS adds bonus block chance, CON adds bonus block amount. Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.',
+    description: '⚓ Stance. Dual-primary: WIS adds bonus block chance (+25.5% floor, up to +46.75% at high WIS), CON adds bonus block amount (+~4 floor, up to +~9 at high CON). Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.',
     tooltip: 'Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.',
     mechanic_key: 'block_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
