@@ -12,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   setAbilityRegistry, isAbilityRegistryLoaded, type AbilityConfigRow,
 } from '@/features/combat/utils/class-abilities';
+import {
+  setAbilityCalcRegistry, type AbilityCalcConfigRow,
+} from '@/features/combat/utils/ability-calcs';
 import { USE_CONFIG_ABILITIES } from '@/shared/config/feature-flags';
 
 let started = false;
