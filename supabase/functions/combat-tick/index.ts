@@ -1701,17 +1701,16 @@ Deno.serve(async (req) => {
             // procs in consecutive heartbeats would push the next tick forward
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
             const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
             const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
-              stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: existing ? existing.next_tick_at : tickTime + TICK_RATE,
-              expires_at: tickTime + 25000,
-              tick_rate_ms: TICK_RATE,
+              ...applyStackingEffect(existing, {
+                now: tickTime, durationMs: 25000, damagePerTick: dmgPerTick,
+                maxStacks: envenomMaxStacks, tickRateMs: TICK_RATE,
+              }),
             };
             if (existing) {
               Object.assign(existing, effData);
