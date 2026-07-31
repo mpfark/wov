@@ -74,7 +74,7 @@ describe('setAbilityRegistry overrides ability lists in place', () => {
   it('replaces the configured class and leaves others on fallback', () => {
     const healerBefore = CLASS_ABILITIES.healer.map(a => a.label);
 
-    setAbilityRegistry([row({ slot: 1, label: 'Configured Two' }), row()]);
+    setAbilityRegistry([row({ slot: 2, label: 'Configured Two' }), row({ slot: 1 })]);
 
     expect(isAbilityRegistryLoaded()).toBe(true);
     expect(CLASS_ABILITIES.warrior.map(a => a.label)).toEqual(['Configured', 'Configured Two']);
@@ -90,10 +90,10 @@ describe('setAbilityRegistry overrides ability lists in place', () => {
 
     setAbilityRegistry([
       row(),
-      row({ slot: 1, label: 'Draft', status: 'draft' }),
-      row({ slot: 2, label: 'Retired Ability', ability: { ...row().ability!, status: 'retired' } }),
-      row({ slot: 3, label: 'Not Default', is_default: false }),
-      row({ slot: 4, label: 'Broken', mechanic: 'teleport_to_moon' }),
+      row({ slot: 2, label: 'Draft', status: 'draft' }),
+      row({ slot: 3, label: 'Retired Ability', ability: { ...row().ability!, status: 'retired' } }),
+      row({ slot: 4, label: 'Not Default', is_default: false }),
+      row({ slot: 5, label: 'Broken', mechanic: 'teleport_to_moon' }),
     ]);
 
     expect(CLASS_ABILITIES.warrior.map(a => a.label)).toEqual(['Configured']);
@@ -122,7 +122,9 @@ describe('getUnlockedAbilities', () => {
     expect(getUnlockedAbilities('warrior', 20).length).toBe(5);
     expect(getUnlockedAbilities('classless', 42)).toEqual([]);
 
-    setAbilityRegistry([row({ slot: 4, label: 'Early Capstone', unlock_level: 2 })]);
+    setAbilityRegistry([row({ slot: 5, label: 'Early Capstone', unlock_level: 2 })]);
     expect(getUnlockedAbilities('warrior', 2).map(a => a.label)).toEqual(['Early Capstone']);
+    // Config slots are 1-based; the runtime tier is normalized to a 0-based index.
+    expect(CLASS_ABILITIES.warrior[0].tier).toBe(0);
   });
 });

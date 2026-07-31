@@ -195,7 +195,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       tooltip: row.ability.tooltip,
       cpCost: row.ability.cp_cost,
       type: row.ability.mechanic_key as ClassAbility['type'],
-      tier: row.role.slot,
+      tier: row.role.slot, // provisional: normalized to a 0-based index below
       levelRequired: row.unlock_level,
     });
     byClass.set(row.class_key, list);
@@ -203,7 +203,10 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
 
   for (const [classKey, list] of byClass) {
     if (list.length === 0) continue;
+    // Role slots may be 1-based in config; the runtime tier is a 0-based index
+    // into the class bar, so normalize after ordering.
     list.sort((a, b) => a.tier - b.tier);
+    list.forEach((a, i) => { a.tier = i; });
     CLASS_ABILITIES[classKey] = list;
   }
   abilityRegistryLoaded = true;
