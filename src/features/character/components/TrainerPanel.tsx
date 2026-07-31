@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { Character } from '@/features/character';
-import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
 import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
@@ -43,7 +42,7 @@ interface Props {
   onClose: () => void;
   character: Character;
   equipmentBonuses: Record<string, number>;
-  updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   addLogEvent: (event: GameLogEvent) => void;
   /** Called by allocate/respec flows to commit a batch / refund. */
   onBatchAllocateStats: (allocations: Record<string, number>) => void;
@@ -56,7 +55,7 @@ interface Props {
 type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
-  open, onClose, character, equipmentBonuses, updateCharacter, addLogEvent: parentAddLogEvent,
+  open, onClose, character, equipmentBonuses, updateCharacterLocal, addLogEvent: parentAddLogEvent,
   onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
   const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
@@ -77,7 +76,7 @@ export default function TrainerPanel({
     else setTab('renown');
   }, [open, character.unspent_stat_points, character.respec_points]);
 
-  // ── Renown training ──
+  // ── Renown training (server-authoritative) ──
   const handleTrain = async (stat: typeof STAT_KEYS[number]) => {
     const rank = trained[stat] || 0;
     const cost = getTrainingCost(rank);
@@ -85,34 +84,36 @@ export default function TrainerPanel({
     if (character.level < 30) return;
 
     setTraining(true);
-    const chance = getSuccessChance(rank);
-    const roll = Math.random() * 100;
-    const success = roll < chance;
+    try {
+      const { data, error } = await supabase.rpc('train_renown_stat' as any, {
+        _character_id: character.id,
+        _stat: stat,
+      });
+      if (error) throw error;
+      const res = data as any;
 
-    const newRp = character.bhp - cost;
-    const newTrained = { ...trained };
-
-    if (success) {
-      newTrained[stat] = rank + 1;
-      const newStatVal = (character as any)[stat] + 1;
+      // Mirror the authoritative result locally.
       const updates: Partial<Character> = {
-        bhp: newRp,
-        bhp_trained: newTrained,
-        [stat]: newStatVal,
+        bhp: res.bhp,
+        bhp_trained: res.bhp_trained || {},
+        max_hp: res.max_hp,
+        max_cp: res.max_cp,
+        max_mp: res.max_mp,
       };
-      if (stat === 'con') updates.max_hp = getMaxHp(character.class, newStatVal, character.level);
-      if (stat === 'wis') updates.max_cp = getMaxCp(character.level, newStatVal);
-      if (stat === 'dex') updates.max_mp = getMaxMp(character.level, newStatVal);
+      (updates as any)[stat] = res.new_value;
+      updateCharacterLocal?.(updates);
 
-      await updateCharacter(updates);
-      addEvent(buildSystemEvent(`Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} RP spent.`));
-    } else {
-      await updateCharacter({ bhp: newRp, bhp_trained: newTrained });
-      addEvent(buildSystemEvent(`Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} RP spent.`));
+      if (res.success) {
+        addEvent(buildSystemEvent(`Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${res.rank}, ${res.chance}% chance) — ${res.cost} RP spent.`));
+      } else {
+        addEvent(buildSystemEvent(`Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${res.chance}% chance) — ${res.cost} RP spent.`));
+      }
+    } catch (e: any) {
+      addEvent(buildErrorEvent(`Training failed: ${e.message || 'Unknown error'}`));
     }
-
     setTraining(false);
   };
+
 
   // ── Leaderboard ──
   const fetchLeaderboard = useCallback(async () => {
