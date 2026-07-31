@@ -294,7 +294,7 @@ export default function CreatureManager() {
         }))
         .filter(f => f.text.length > 0),
       boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
-      boss_cast: form.rarity === 'boss' && form.boss_cast_enabled ? {
+      boss_cast: (form.rarity === 'boss' || form.rarity === 'rare') && form.boss_cast_enabled ? {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
         emoji: form.boss_cast_emoji.trim() || '☄️',
@@ -723,11 +723,13 @@ export default function CreatureManager() {
                 </div>
               )}
 
-              {/* Boss Cast — telegraphed ability with Stored Power (unified card) */}
-              {form.rarity === 'boss' && (
+              {/* Telegraphed cast — bosses by default, rares opt-in (unified card) */}
+              {(form.rarity === 'boss' || form.rarity === 'rare') && (
                 <div className="space-y-1.5 p-2 border border-border rounded bg-background/50">
                   <div className="flex items-center justify-between">
-                    <p className="font-display text-xs text-primary">Boss Cast</p>
+                    <p className="font-display text-xs text-primary">
+                      {form.rarity === 'boss' ? 'Boss Cast' : 'Telegraphed Cast (Rare)'}
+                    </p>
                     <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <input
                         type="checkbox"
@@ -738,7 +740,7 @@ export default function CreatureManager() {
                     </label>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    While channeling, this boss pauses its auto-attacks and stores what its mitigated hits would have dealt into a pool. On resolve, primary target takes <span className="font-mono">Flat + pool × primary_share</span>; other party members on the node take <span className="font-mono">Flat AoE + pool × aoe_share</span>. Leaving the node before resolve avoids the damage.
+                    While channeling, this creature pauses its auto-attacks and stores what its mitigated hits would have dealt into a pool. On resolve, primary target takes <span className="font-mono">Flat + pool × primary_share</span>; other party members on the node take <span className="font-mono">Flat AoE + pool × aoe_share</span>. Leaving the node before resolve avoids the damage.
                   </p>
                   {form.boss_cast_enabled && (
                     <>
