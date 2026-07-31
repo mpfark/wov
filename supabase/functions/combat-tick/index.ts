@@ -2331,8 +2331,11 @@ Deno.serve(async (req) => {
         // so the resolver has a valid primary target. Without this the cast
         // routes every hit through the AoE branch (aoe_share defaults to 0
         // → [0] damage in the log, base_amount ignored).
-        const aliveMember = members.find(m => mHp[m.id] > 0);
-        const primaryId = (tankAtNode && tankId) ? tankId : (aliveMember?.id ?? null);
+        const primaryTarget = selectPrimaryTarget(
+          members.map(m => ({ id: m.id, hp: mHp[m.id] })),
+          { mode: 'tank_preferred', tankId: tankAtNode ? tankId : null },
+        );
+        const primaryId = primaryTarget?.id ?? null;
         if (primaryId) {
           await db.rpc('encounter_stored_power_add', {
             _encounter_id: encId,
