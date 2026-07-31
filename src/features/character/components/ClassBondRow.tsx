@@ -6,17 +6,22 @@ import { CLASS_LABELS } from '@/shared/formulas/classes';
 
 interface Props {
   characterId: string;
-  characterClass: string;
   isClassless?: boolean;
 }
 
+interface BondRow {
+  class: string;
+  bond: number;
+}
+
 /**
- * Compact Bond row for the Attributes tab. Shows current Bond + the live
- * damage/DoT/utility multiplier it grants for the character's active class.
- * Wayfarers (no order) render nothing (no class to bond with).
+ * Bond container for the Attributes tab. Shows every class bond the character
+ * has earned, each with its live damage/DoT/utility multiplier. Wayfarers (no
+ * order) render nothing (no class to bond with). Multiple bonds stack vertically
+ * inside the same container so the attribute list is never crowded.
  */
-export default function ClassBondRow({ characterId, characterClass, isClassless }: Props) {
-  const [bond, setBond] = useState<number>(0);
+export default function ClassBondRow({ characterId, isClassless }: Props) {
+  const [bonds, setBonds] = useState<BondRow[]>([]);
 
   useEffect(() => {
     if (!characterId || isClassless) return;
@@ -24,16 +29,15 @@ export default function ClassBondRow({ characterId, characterClass, isClassless 
     const load = async () => {
       const { data } = await supabase
         .from('character_class_bonds')
-        .select('bond')
+        .select('class, bond')
         .eq('character_id', characterId)
-        .eq('class', characterClass as any)
-        .maybeSingle();
-      if (!cancelled) setBond((data as any)?.bond ?? 0);
+        .order('class', { ascending: true });
+      if (!cancelled) setBonds((data as BondRow[] | null) ?? []);
     };
     load();
 
     const channel = supabase
-      .channel(`bond-${characterId}-${characterClass}`)
+      .channel(`bond-${characterId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'character_class_bonds',
         filter: `character_id=eq.${characterId}`,
@@ -41,22 +45,30 @@ export default function ClassBondRow({ characterId, characterClass, isClassless 
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [characterId, characterClass, isClassless]);
+  }, [characterId, isClassless]);
 
-  if (isClassless || !characterClass) return null;
-
-  const mult = bondMultiplier(bond);
-  const classLabel = CLASS_LABELS[characterClass] ?? characterClass;
+  if (isClassless || bonds.length === 0) return null;
 
   return (
-    <div className="px-2 py-1.5 mb-1 rounded border border-border bg-background/40">
-      <div className="flex items-center justify-between text-[10px] mb-1">
-        <span className="font-display text-foreground">{classLabel} Bond</span>
-        <span className="text-muted-foreground">
-          {bond} / 100 · <span className="text-primary">×{mult.toFixed(2)}</span>
-        </span>
+    <div className="border-t border-border-subtle pt-1.5">
+      <h4 className="t-label mb-1">Bond</h4>
+      <div className="space-y-1">
+        {bonds.map(({ class: cls, bond }) => {
+          const mult = bondMultiplier(bond);
+          const classLabel = CLASS_LABELS[cls] ?? cls;
+          return (
+            <div key={cls} className="px-2 py-1.5 rounded border border-border bg-background/40">
+              <div className="flex items-center justify-between text-[10px] mb-1">
+                <span className="font-display text-foreground">{classLabel} Bond</span>
+                <span className="text-muted-foreground">
+                  {bond} / 100 · <span className="text-primary">×{mult.toFixed(2)}</span>
+                </span>
+              </div>
+              <Progress value={bond} className="h-1.5" />
+            </div>
+          );
+        })}
       </div>
-      <Progress value={bond} className="h-1.5" />
       <p className="text-[9px] text-muted-foreground italic mt-1">
         Mastery scales your damage and ability magnitudes (max +15%).
       </p>
