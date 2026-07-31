@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
+import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   resolveEffectTicks,
   processLootDrops,

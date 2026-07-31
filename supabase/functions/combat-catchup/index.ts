@@ -31,6 +31,7 @@ import {
 } from "../_shared/combat-resolver.ts";
 
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
+import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 
 
 const corsHeaders = {
