@@ -42,7 +42,7 @@ interface Props {
   onClose: () => void;
   character: Character;
   equipmentBonuses: Record<string, number>;
-  updateCharacterLocal: (updates: Partial<Character>) => void;
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   addLogEvent: (event: GameLogEvent) => void;
   /** Called by allocate/respec flows to commit a batch / refund. */
   onBatchAllocateStats: (allocations: Record<string, number>) => void;
@@ -101,7 +101,7 @@ export default function TrainerPanel({
         max_mp: res.max_mp,
       };
       (updates as any)[stat] = res.new_value;
-      updateCharacterLocal(updates);
+      updateCharacterLocal?.(updates);
 
       if (res.success) {
         addEvent(buildSystemEvent(`Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${res.rank}, ${res.chance}% chance) — ${res.cost} RP spent.`));
