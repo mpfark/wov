@@ -425,6 +425,7 @@ export function buildAttackLogEvent(
     target: isPlayer ? creatureActor : playerActor,
     amount: isMiss ? undefined : damage,
     amountKind: isMiss ? undefined : 'damage',
+    damageType: normalizeDamageType(event.boss_flavor?.damage_type) ?? undefined,
     crit: !!event.is_crit,
     scope: 'node',
     // `observed` is applied by the broadcast receiver, not the emitter: a
