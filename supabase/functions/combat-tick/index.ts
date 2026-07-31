@@ -1559,14 +1559,13 @@ Deno.serve(async (req) => {
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
           if (mHp[ally.id] <= 0) continue;
-          const allyMaxHp = ally.c.max_hp || 1;
-          const before = mHp[ally.id];
-          mHp[ally.id] = Math.min(before + healAmt, allyMaxHp);
-          const restored = mHp[ally.id] - before;
-          if (restored > 0) {
+          // Shared heal primitive: clamps to max HP and reports the real delta.
+          const heal = resolveHeal({ amount: healAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
+          mHp[ally.id] = heal.hpAfter;
+          if (heal.applied > 0) {
             events.push({
               type: 'consecrate_heal',
-              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${restored}]`,
+              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
               character_id: ally.id,
             });
           }
