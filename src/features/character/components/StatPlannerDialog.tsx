@@ -9,6 +9,9 @@ import {
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
 } from '@/lib/game-data';
+import { getClassCritRange } from '@/shared/formulas/classes';
+
+
 
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 
