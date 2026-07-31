@@ -9,7 +9,7 @@ import {
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
 } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/features/combat';
+import { getClassCombat } from '@/features/combat';
 
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 
@@ -83,7 +83,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
       const cpRegen = getCpRegen(eInt);
       const mpRegen = getMpRegenRate(eDex);
 
-      const combat = CLASS_COMBAT[character.class];
+      const combat = getClassCombat(character.class);
       const atkStat = combat?.stat || 'str';
       const atkMod = getStatModifier(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
       const intHit = getIntHitBonus(eInt);

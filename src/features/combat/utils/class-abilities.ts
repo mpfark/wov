@@ -1,22 +1,43 @@
+import {
+  CLASS_AUTOATTACK, CLASS_CRIT_RANGE, getClassAutoattack, getClassCritRange,
+  type ClassAutoattack,
+} from '@/shared/formulas/classes';
+
 export interface ClassCombat {
   label: string;
-  stat: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+  stat: ClassAutoattack['stat'];
   diceMin: number;
   diceMax: number;
   critRange: number;
   emoji: string;
+  /** Second-person verb used in the local player's log. */
   verb: string;
 }
 
-export const CLASS_COMBAT: Record<string, ClassCombat> = {
-  warrior: { label: 'Strike',        stat: 'str', diceMin: 1, diceMax: 10, critRange: 20, emoji: '⚔️', verb: 'swing your blade at' },
-  wizard:  { label: 'Cast Fireball', stat: 'int', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🔥', verb: 'hurl arcane flame at' },
-  ranger:  { label: 'Shoot',         stat: 'dex', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🏹', verb: 'loose an arrow at' },
-  assassin:   { label: 'Backstab',      stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strike from the shadows at' },
-  healer:  { label: 'Smite',         stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'channel divine light against' },
-  bard:    { label: 'Mock',          stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'unleash cutting words upon' },
-  templar: { label: 'Judgment',      stat: 'wis', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '✝️', verb: 'pass divine judgment upon' },
-};
+/**
+ * Autoattack presentation per class, derived from the configurable class
+ * registry (`classes` table, applied via `setClassRegistry`). Kept as a
+ * function so it always reflects the currently loaded configuration.
+ */
+export function getClassCombat(classKey: string): ClassCombat | null {
+  const aa = getClassAutoattack(classKey);
+  if (!aa) return null;
+  return {
+    label: aa.label,
+    stat: aa.stat,
+    diceMin: aa.diceMin,
+    diceMax: aa.diceMax,
+    critRange: getClassCritRange(classKey),
+    emoji: aa.emoji,
+    verb: aa.selfVerb,
+  };
+}
+
+/** Every class that has an autoattack profile, in registry order. */
+export function getClassCombatKeys(): string[] {
+  return Object.keys(CLASS_AUTOATTACK).filter(k => CLASS_CRIT_RANGE[k] !== undefined);
+}
+
 
 export interface ClassAbility {
   label: string;

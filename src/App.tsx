@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "@/contexts/GameContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useClassRegistry } from "@/hooks/useClassRegistry";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -25,7 +26,10 @@ const LoadingFallback = () => (
   </div>
 );
 
-const App = () => (
+const App = () => {
+  // Load configurable class rows into the shared class registry.
+  useClassRegistry();
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -51,6 +55,7 @@ const App = () => (
 
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

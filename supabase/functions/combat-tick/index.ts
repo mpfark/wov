@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
+import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   resolveEffectTicks,
   processLootDrops,
@@ -213,9 +214,9 @@ const corsHeaders = {
 // Basic autoattacks use weapon dice + STR (see resolveAttackRoll).
 // Class abilities (Barrage, Eviscerate, Conflagrate) use ability-specific
 // stat-scaling formulas defined inline in their handlers below — they do
-// NOT share the autoattack weapon-die path. CLASS_COMBAT_PROFILES is no
-// longer referenced here; CLASS_CRIT_RANGE / WEAPON_EMOJI carry the
-// remaining class flavor.
+// NOT share the autoattack weapon-die path. Per-class crit range and
+// autoattack flavor come from the configurable class registry (`classes`
+// table, loaded per invocation via loadClassRegistry).
 
 function json(data: unknown) {
   return new Response(JSON.stringify(data), {
@@ -262,6 +263,7 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
+    await loadClassRegistry(db);
 
     // Auth — verify JWT signature locally via getClaims (cached JWKS, no
     // network hop). Trusting the unsigned `sub` claim would let an attacker

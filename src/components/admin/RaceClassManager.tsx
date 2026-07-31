@@ -6,9 +6,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
-  STAT_LABELS, CLASS_LEVEL_BONUSES,
+  STAT_LABELS, CLASS_LEVEL_BONUSES, getPlayableClassKeys,
 } from '@/lib/game-data';
-import { CLASS_COMBAT, CLASS_ABILITIES } from '@/features/combat';
+import { getClassCombat, CLASS_ABILITIES } from '@/features/combat';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -37,8 +37,8 @@ export default function RaceClassManager() {
         <TabsContent value="classes" className="flex-1 min-h-0 mt-0">
           <ScrollArea className="h-full">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
-              {Object.keys(CLASS_LABELS).map(cls => {
-                const combat = CLASS_COMBAT[cls];
+              {getPlayableClassKeys().map(cls => {
+                const combat = getClassCombat(cls);
                 const levelBonus = CLASS_LEVEL_BONUSES[cls] || {};
                 return (
                   <Card key={cls} className="bg-card/80 border-border">
