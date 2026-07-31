@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
+    await loadClassRegistry(db);
 
     // ── Authentication ────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
