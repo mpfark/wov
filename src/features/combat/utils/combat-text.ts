@@ -7,6 +7,7 @@
 
 import { getClassCombat } from './class-abilities';
 import { renderFlavor, flavorHasDamageToken } from '@shared/proc-log-format';
+import { normalizeDamageType } from '@/shared/combat/damage-types';
 import { createLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 
 // ── Display mode ────────────────────────────────────────────────
@@ -203,8 +204,11 @@ export interface BossFlavorPayload {
   name: string;
   text: string;
   emoji?: string;
-  // `damage_type` is stored for future extensibility (e.g., resistances or UI),
-  // but has no effect on combat mechanics in the current implementation.
+  /**
+   * Canonical damage-type key (see `@/shared/combat/damage-types`). Feeds the
+   * `{damage_type}` flavor token and the structured event's `damageType`.
+   * It carries no mitigation math — resistances do not exist yet.
+   */
   damage_type?: string;
 }
 
@@ -338,6 +342,7 @@ function formatCreatureAttack(
       target: targetLabel,
       cast: bf.name || '',
       damage,
+      damageType: normalizeDamageType(bf.damage_type) ?? undefined,
     });
     // Author inlined the number → don't append the canonical [N] suffix twice.
     const suffix = flavorHasDamageToken(bf.text) ? '' : dmgSuffix;
@@ -420,6 +425,7 @@ export function buildAttackLogEvent(
     target: isPlayer ? creatureActor : playerActor,
     amount: isMiss ? undefined : damage,
     amountKind: isMiss ? undefined : 'damage',
+    damageType: normalizeDamageType(event.boss_flavor?.damage_type) ?? undefined,
     crit: !!event.is_crit,
     scope: 'node',
     // `observed` is applied by the broadcast receiver, not the emitter: a

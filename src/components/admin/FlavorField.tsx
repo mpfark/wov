@@ -5,7 +5,7 @@ import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
  * Shared admin editor for authored combat flavor text (boss casts, boss crits).
  * Same placeholder set everywhere so authors only learn one syntax.
  */
-export const FLAVOR_TOKENS = '{creature} {target} {cast} {damage}';
+export const FLAVOR_TOKENS = '{creature} {target} {cast} {damage} {damage_type}';
 
 interface FlavorFieldProps {
   label: string;
