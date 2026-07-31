@@ -729,11 +729,6 @@ export default function CharacterPanel({
 
             <TabsContent value="attributes" className="mt-0">
               <div className="gap-group.5">
-                <ClassBondRow
-                  characterId={character.id}
-                  characterClass={character.class}
-                  isClassless={(character as any).is_classless}
-                />
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
                 {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
                   <div className="text-[10px] font-display text-center py-1 px-2 bg-primary/10 rounded border border-primary/20 gap-row">
