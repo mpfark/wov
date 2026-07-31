@@ -167,6 +167,15 @@ export function isKnownAbilityMechanic(mechanicKey: string): boolean {
 }
 
 /**
+ * Every code-owned mechanic an authored ability may bind to (Phase 4).
+ * Admin authoring can compose new abilities/classes only from these handlers —
+ * a brand-new mechanic still requires a code change.
+ */
+export function getKnownAbilityMechanics(): string[] {
+  return [...KNOWN_MECHANICS].sort();
+}
+
+/**
  * Apply configured ability rows, mutating `CLASS_ABILITIES` in place.
  * Only classes present in `rows` are replaced; every other class keeps its
  * fallback list. An empty payload is ignored (treated as a failed load).
