@@ -45,6 +45,8 @@ interface Row {
   mechanic_key: string;
   ability_status: string;
   assignment_status: string;
+  /** False for player-selectable alternatives on the same role. */
+  is_default: boolean;
   interval_ms: number | null;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
@@ -112,6 +114,7 @@ export default function AbilityConfigManager() {
   const [sampleMod, setSampleMod] = useState(4);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
+  const [authorAsAlternative, setAuthorAsAlternative] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,7 +135,9 @@ export default function AbilityConfigManager() {
     setLoading(false);
     if (error) { toast.error(error.message); return; }
     const mapped: Row[] = (data ?? [])
-      .filter((r: any) => r.ability && r.role && r.is_default)
+      // Alternatives (is_default = false) are kept: they are the player-selectable
+      // loadout options for the same role.
+      .filter((r: any) => r.ability && r.role)
       .map((r: any) => ({
         assignment_id: r.id,
         class_key: r.class_key,
@@ -149,12 +154,17 @@ export default function AbilityConfigManager() {
         mechanic_key: r.ability.mechanic_key,
         ability_status: r.ability.status ?? 'active',
         assignment_status: r.status ?? 'active',
+        is_default: !!r.is_default,
         role_id: r.role.id,
         interval_ms: r.ability.interval_ms,
         amount_calc: r.ability.amount_calc,
         duration_calc: r.ability.duration_calc,
       }))
-      .sort((a, b) => a.class_key.localeCompare(b.class_key) || a.slot - b.slot);
+      .sort((a, b) =>
+        a.class_key.localeCompare(b.class_key)
+        || a.slot - b.slot
+        || Number(b.is_default) - Number(a.is_default)
+        || a.label.localeCompare(b.label));
     setRows(mapped);
   }, []);
 
@@ -218,12 +228,13 @@ export default function AbilityConfigManager() {
       {authorRole && (
         <AbilityAuthorDialog
           open={!!authorRole}
-          onOpenChange={v => { if (!v) setAuthorRole(null); }}
+          onOpenChange={v => { if (!v) { setAuthorRole(null); setAuthorAsAlternative(false); } }}
           classKey={authorRole.class_key}
           classLabel={CLASS_LABELS[authorRole.class_key] ?? authorRole.class_key}
           roleId={authorRole.id}
           roleName={authorRole.name}
           roleUnlockLevel={authorRole.unlock_level}
+          asAlternative={authorAsAlternative}
           onCreated={load}
         />
       )}
@@ -255,6 +266,9 @@ export default function AbilityConfigManager() {
                       <span className="mr-1">{row.emoji}</span>
                       {row.label}
                       <Badge variant="outline" className="ml-2 text-[9px]">L{row.unlock_level}</Badge>
+                      {!row.is_default && (
+                        <Badge variant="outline" className="ml-1 text-[9px] border-primary/50 text-primary">alt</Badge>
+                      )}
                       {(row.ability_status !== 'active' || row.assignment_status !== 'active') && (
                         <Badge variant="secondary" className="ml-1 text-[9px] capitalize">
                           {row.ability_status !== 'active' ? row.ability_status : row.assignment_status}
@@ -264,6 +278,20 @@ export default function AbilityConfigManager() {
                     </button>
                   ))}
                   {roles
+                    .filter(r => r.class_key === classKey && list.some(a => a.role_id === r.id && a.is_default))
+                    .sort((a, b) => a.slot - b.slot)
+                    .map(role => (
+                      <Button
+                        key={`alt-${role.id}`}
+                        size="sm"
+                        variant="ghost"
+                        className="w-full h-6 justify-start text-[10px] text-muted-foreground"
+                        onClick={() => { setAuthorAsAlternative(true); setAuthorRole(role); }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> alternative for {role.name}
+                      </Button>
+                    ))}
+                  {roles
                     .filter(r => r.class_key === classKey && !list.some(a => a.role_id === r.id))
                     .sort((a, b) => a.slot - b.slot)
                     .map(role => (
@@ -272,7 +300,7 @@ export default function AbilityConfigManager() {
                         size="sm"
                         variant="outline"
                         className="w-full h-7 justify-start text-[11px] border-dashed"
-                        onClick={() => setAuthorRole(role)}
+                        onClick={() => { setAuthorAsAlternative(false); setAuthorRole(role); }}
                       >
                         <Plus className="w-3 h-3 mr-1" /> {role.name} (slot {role.slot})
                       </Button>
@@ -295,7 +323,7 @@ export default function AbilityConfigManager() {
                         size="sm"
                         variant="outline"
                         className="w-full h-7 justify-start text-[11px] border-dashed"
-                        onClick={() => setAuthorRole(role)}
+                        onClick={() => { setAuthorAsAlternative(false); setAuthorRole(role); }}
                       >
                         <Plus className="w-3 h-3 mr-1" /> {role.name} (slot {role.slot})
                       </Button>
