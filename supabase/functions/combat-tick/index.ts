@@ -2025,8 +2025,10 @@ Deno.serve(async (req) => {
         // without a designated tank) still register a primary target. The
         // RPC COALESCEs — nulls don't clobber a source that was already set
         // at cast start, but this keeps things consistent if the seed missed.
-        const fallbackMember = members.find(m => mHp[m.id] > 0);
-        const sourceId = (tankAtNode && tankId) ? tankId : (fallbackMember?.id ?? null);
+        const sourceId = selectPrimaryTarget(
+          members.map(m => ({ id: m.id, hp: mHp[m.id] })),
+          { mode: 'tank_preferred', tankId: tankAtNode ? tankId : null },
+        )?.id ?? null;
         const { data: newSp, error: addErr } = await db.rpc('encounter_stored_power_add', {
           _encounter_id: channel.encounter_id,
           _delta: delta,
