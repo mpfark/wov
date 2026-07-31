@@ -26,6 +26,8 @@
  * assumes local truth for effect data.
  */
 
+import { resolveDamage } from "./combat/resolution.ts";
+
 // ── Types ────────────────────────────────────────────────────────
 
 export interface LootQueueEntry {
@@ -122,7 +124,7 @@ export function resolveEffectTicks(
       // Apply tick if due
       if (eff.next_tick_at <= tickTime!) {
         const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
-        cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
+        cHp[eff.target_id] = resolveDamage({ amount: totalDmg, hp: cHp[eff.target_id] }).hpAfter;
 
         const emoji = eff.effect_type === 'bleed' ? '🩸' : eff.effect_type === 'poison' ? '🧪' : '🔥';
         const verb = eff.effect_type === 'bleed' ? 'bleeds from' : eff.effect_type === 'poison' ? 'suffers' : 'burns from';
@@ -162,7 +164,7 @@ export function resolveEffectTicks(
         if (cKilled.has(eff.target_id) || cHp[eff.target_id] <= 0) break;
 
         const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
-        cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
+        cHp[eff.target_id] = resolveDamage({ amount: totalDmg, hp: cHp[eff.target_id] }).hpAfter;
 
         if (cHp[eff.target_id] <= 0 && !cKilled.has(eff.target_id)) {
           cKilled.add(eff.target_id);

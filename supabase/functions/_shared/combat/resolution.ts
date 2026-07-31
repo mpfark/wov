@@ -88,3 +88,26 @@ export function resolveHeal(input: { amount: number; hp: number; maxHp: number }
   const applied = hpAfter - hpBefore;
   return { raw, applied, overheal: raw - applied, hpBefore, hpAfter };
 }
+
+export interface WardAbsorption {
+  /** Portion soaked by the ward. */
+  absorbed: number;
+  /** Damage still travelling on to the remaining mitigation steps. */
+  remaining: number;
+  /** Ward pool left after the soak. */
+  shieldAfter: number;
+}
+
+/**
+ * Soak damage with an absorb pool WITHOUT touching HP.
+ *
+ * Needed because the absorb step sits in the MIDDLE of the pipeline (step 6):
+ * later steps (Battle Cry DR, Divine Challenge, glancing caps) still apply to
+ * whatever the ward let through, so callers there cannot use `resolveDamage`.
+ */
+export function absorbFromShield(amount: number, shield: number): WardAbsorption {
+  const raw = clampNonNegative(amount);
+  const pool = clampNonNegative(shield);
+  const absorbed = Math.min(pool, raw);
+  return { absorbed, remaining: raw - absorbed, shieldAfter: pool - absorbed };
+}

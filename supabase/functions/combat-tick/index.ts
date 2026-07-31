@@ -26,7 +26,7 @@ import {
 import { formatProcMessage, renderFlavor } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
-import { resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
+import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
@@ -124,13 +124,13 @@ function resolveProcs(
     switch (proc.type) {
       case 'lifesteal':
       case 'heal_pulse': {
-        mHp[attackerId] = Math.min(mHp[attackerId] + proc.value, maxHp);
+        mHp[attackerId] = resolveHeal({ amount: proc.value, hp: mHp[attackerId], maxHp }).hpAfter;
         events.push({ type: 'proc', message, character_id: attackerId });
         break;
       }
       case 'burst_damage': {
         if (cKilled.has(targetId)) break;
-        cHp[targetId] = Math.max(cHp[targetId] - proc.value, 0);
+        cHp[targetId] = resolveDamage({ amount: proc.value, hp: cHp[targetId] }).hpAfter;
         events.push({ type: 'proc', message, character_id: attackerId });
         break;
       }
@@ -1003,7 +1003,7 @@ Deno.serve(async (req) => {
             arrowDmg = Math.max(arrowDmg, 1);
             arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
             totalDmg += arrowDmg;
-            cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
+            cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
             events.push({
               type: 'attack_hit',
               message: `🏹 Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
@@ -1067,7 +1067,7 @@ Deno.serve(async (req) => {
         const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
-        cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
+        cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
@@ -1101,7 +1101,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage
         if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
-        cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
+        cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
@@ -1192,7 +1192,7 @@ Deno.serve(async (req) => {
         // that ever picks it up).
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
-        cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
+        cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
         const hitMsg = isBackstab
           ? `${emoji} ${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
           : `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
@@ -1232,7 +1232,7 @@ Deno.serve(async (req) => {
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
-        cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
+        cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -1378,9 +1378,10 @@ Deno.serve(async (req) => {
 
         // 6. Absorb shield
         if (mb.absorb_buff?.shield_hp && mb.absorb_buff.shield_hp > 0) {
-          const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
-          mb.absorb_buff.shield_hp -= absorbed;
-          dmg -= absorbed;
+          const ward = absorbFromShield(dmg, mb.absorb_buff.shield_hp);
+          const absorbed = ward.absorbed;
+          mb.absorb_buff.shield_hp = ward.shieldAfter;
+          dmg = ward.remaining;
           // Single-icon policy: Force Shield's own emoji only — no extra
           // sparkle/star glyph. (Previous builds rendered "🛡️ ✨" which the
           // EventLog split across two visual rows.)
@@ -1428,7 +1429,7 @@ Deno.serve(async (req) => {
         if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
 
 
-        mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
+        mHp[targetId] = resolveDamage({ amount: dmg, hp: mHp[targetId] }).hpAfter;
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
@@ -1458,7 +1459,7 @@ Deno.serve(async (req) => {
             const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
             const returnDmgBase = Math.max(1, Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
-            cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
+            cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
             events.push({
               type: 'holy_shield_return',
               message: `⚡ ${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
@@ -1574,7 +1575,7 @@ Deno.serve(async (req) => {
         // Burn every engaged, alive creature
         for (const cr of creatures) {
           if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
-          cHp[cr.id] = Math.max(cHp[cr.id] - burnAmt, 0);
+          cHp[cr.id] = resolveDamage({ amount: burnAmt, hp: cHp[cr.id] }).hpAfter;
           events.push({
             type: 'consecrate_burn',
             message: `🔆 Holy fire sears ${cr.name}! [${burnAmt}]`,
@@ -1673,7 +1674,7 @@ Deno.serve(async (req) => {
           // Bond multiplier (mastery scalar; class-only, 1.00–1.15×).
           dmg = Math.max(1, Math.floor(dmg * mBondMult[m.id]));
 
-          cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
+          cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
           events.push({
             type: 'attack_hit',
             message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! [${dmg}]`,
@@ -1811,7 +1812,7 @@ Deno.serve(async (req) => {
           // Bond multiplier (class-only mastery scalar).
           dmg2 = Math.max(1, Math.floor(dmg2 * mBondMult[m.id]));
 
-          cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
+          cHp[target.id] = resolveDamage({ amount: dmg2, hp: cHp[target.id] }).hpAfter;
           events.push({
             type: 'offhand_hit',
             message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand finds an opening on ${target.name}! [${dmg2}]`,
@@ -1877,7 +1878,7 @@ Deno.serve(async (req) => {
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
-        cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
+        cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
 
         // Upsert burn DoT — damage-per-tick + duration scale from WIS
         // (sustained, lingering flame). Pulse and burn read different stats
