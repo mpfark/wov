@@ -3,6 +3,8 @@
  * Single source of truth — imported by both combat-tick (Deno) and admin UI (Vite via @shared alias).
  */
 
+import { damageTypeAdjective } from './combat/damage-types.ts';
+
 export interface ProcLogInput {
   type: string;
   value: number;
@@ -16,6 +18,8 @@ export interface FlavorVars {
   target?: string;
   cast?: string;
   damage?: number | string;
+  /** Canonical damage-type key (see `_shared/combat/damage-types.ts`). */
+  damageType?: string;
 }
 
 export const FLAVOR_MAX_LEN = 240;
@@ -24,7 +28,7 @@ export const FLAVOR_MAX_LEN = 240;
  * Canonical flavor renderer. One helper for boss casts, boss crit flavors and
  * procs so authored text behaves identically everywhere.
  *
- * Tokens: {creature} {target} {cast} {damage}
+ * Tokens: {creature} {target} {cast} {damage} {damage_type}
  * Legacy aliases (still supported): %a = creature, %e = target, %v = damage
  */
 export function renderFlavor(template: string, vars: FlavorVars = {}): string {
@@ -32,11 +36,13 @@ export function renderFlavor(template: string, vars: FlavorVars = {}): string {
   const target = vars.target ?? '';
   const cast = vars.cast ?? '';
   const damage = vars.damage === undefined || vars.damage === null ? '' : String(vars.damage);
+  const damageType = damageTypeAdjective(vars.damageType);
 
   const out = String(template ?? '')
     .replace(/\{creature\}/gi, creature)
     .replace(/\{target\}/gi, target)
     .replace(/\{cast\}/gi, cast)
+    .replace(/\{damage_type\}/gi, damageType)
     .replace(/\{damage\}/gi, damage)
     .replace(/%a/g, creature)
     .replace(/%e/g, target)
