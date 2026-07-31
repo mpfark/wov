@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ServicePanelShell, ServicePanelEmpty, useMiniLog } from '@/components/ui/ServicePanelShell';
 import { Character } from '@/features/character';
-import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
 import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
@@ -43,7 +42,7 @@ interface Props {
   onClose: () => void;
   character: Character;
   equipmentBonuses: Record<string, number>;
-  updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal: (updates: Partial<Character>) => void;
   addLogEvent: (event: GameLogEvent) => void;
   /** Called by allocate/respec flows to commit a batch / refund. */
   onBatchAllocateStats: (allocations: Record<string, number>) => void;
@@ -56,7 +55,7 @@ interface Props {
 type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
-  open, onClose, character, equipmentBonuses, updateCharacter, addLogEvent: parentAddLogEvent,
+  open, onClose, character, equipmentBonuses, updateCharacterLocal, addLogEvent: parentAddLogEvent,
   onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
   const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);

@@ -1554,7 +1554,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onClose={() => { setTrainerOpen(false); setActiveServiceNpc(null); }}
           character={character}
           equipmentBonuses={equipmentBonuses}
-          updateCharacter={updateCharacter}
+          updateCharacterLocal={updateCharacterLocal}
           addLogEvent={addLogEvent}
           onBatchAllocateStats={handleBatchAllocateStats}
           onFullRespec={handleFullRespec}
