@@ -1082,6 +1082,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── De-duplicated prop blocks ──────────────────────────────────
   // Phase 4: per-character ability choices. Applying a loadout rewrites the live
   // ability lists, so holding it here keeps the bar and the panel in sync.
+  const abilityRegistry = useAbilityRegistry();
   const abilityLoadout = useAbilityLoadout(
     character?.id, character?.class, abilityRegistry.loaded,
   );
@@ -1123,7 +1124,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, inspireBuff, soulringGlow,
+    damageBuff, partyRegenBuff, inspireBuff, soulringGlow, abilityLoadout,
   ]);
 
   const activeBuffs = useMemo(() => ({

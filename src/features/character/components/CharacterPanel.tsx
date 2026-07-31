@@ -23,6 +23,7 @@ import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 // import PortraitTab from './PortraitTab'; // disabled — feature coming later
 import ClassBondRow from './ClassBondRow';
 import AbilityLoadoutTab from './AbilityLoadoutTab';
+import type { AbilityLoadoutState } from '@/hooks/useAbilityLoadout';
 
 
 interface Props {
@@ -55,6 +56,8 @@ interface Props {
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
+  /** Per-character ability loadout state (owned by GamePage). */
+  abilityLoadout?: AbilityLoadoutState;
   /** Transient soft glow on equipped Soulforged ring slots (fires on tier-up). */
   soulringGlow?: boolean;
   // Stat allocation, respec, and Renown training are now handled exclusively
@@ -1019,7 +1022,7 @@ export default function CharacterPanel({
 
             {/* Abilities — per-character loadout choices */}
             <TabsContent value="abilities" className="mt-0">
-              <AbilityLoadoutTab character={character} inCombat={inCombat} />
+              <AbilityLoadoutTab character={character} inCombat={inCombat} loadout={abilityLoadout} />
             </TabsContent>
 
 
