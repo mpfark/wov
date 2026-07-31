@@ -24,6 +24,7 @@ import {
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
 import { formatProcMessage, renderFlavor, flavorHasDamageToken } from "../_shared/proc-log-format.ts";
+import { normalizeDamageType, damageTypeAdjective } from "../_shared/combat/damage-types.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
