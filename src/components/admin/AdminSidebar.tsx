@@ -64,6 +64,7 @@ const NAV_GROUPS = [
     label: 'Systems',
     items: [
       { key: 'races-classes', label: 'Races & Classes', icon: Dna },
+      { key: 'class-config', label: 'Class Config', icon: Dna },
       { key: 'abilities', label: 'Abilities', icon: Zap },
       { key: 'xp-boost', label: 'XP Boost', icon: Zap },
     ],

@@ -11,6 +11,7 @@ import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/users/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
 import AbilityConfigManager from '@/components/admin/AbilityConfigManager';
+import ClassConfigManager from '@/components/admin/ClassConfigManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
@@ -409,6 +410,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <RaceClassManager />;
       case 'abilities':
         return <AbilityConfigManager />;
+      case 'class-config':
+        return <ClassConfigManager />;
       case 'xp-boost':
         return (
           <div className="p-6">
