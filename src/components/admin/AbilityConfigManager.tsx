@@ -136,9 +136,7 @@ export default function AbilityConfigManager() {
 
   const select = (row: Row) => {
     setSelectedId(row.assignment_id);
-    setDraft({ ...row });
-    setAmountText(row.amount_calc ? JSON.stringify(row.amount_calc, null, 2) : 'null');
-    setDurationText(row.duration_calc ? JSON.stringify(row.duration_calc, null, 2) : 'null');
+    setDraft({ ...row, mechanic_calcs: { ...row.mechanic_calcs } });
   };
 
   const sample: CalcInputs = useMemo(() => ({
@@ -147,7 +145,9 @@ export default function AbilityConfigManager() {
       str: sampleMod, dex: sampleMod, con: sampleMod,
       int: sampleMod, wis: sampleMod, cha: sampleMod,
     },
-  }), [sampleLevel, sampleMod]);
+    context: { active_stacks: sampleStacks, consumed_stacks: sampleStacks },
+    weaponDie: sampleWeaponDie,
+  }), [sampleLevel, sampleMod, sampleStacks, sampleWeaponDie]);
 
   const byClass = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -155,12 +155,28 @@ export default function AbilityConfigManager() {
     return [...map.entries()];
   }, [rows]);
 
+  /**
+   * Publish gate — a draft with structurally invalid or incomplete calcs is
+   * rejected before it can be written. There is no silent legacy fallback.
+   */
+  const draftErrors = useMemo(() => draft ? validateAbilityForPublish({
+    mechanic_key: draft.mechanic_key,
+    amount_calc: draft.amount_calc,
+    duration_calc: draft.duration_calc,
+    mechanic_calcs: draft.mechanic_calcs,
+  }) : [], [draft]);
+
+  const previewMagnitude = useMemo(
+    () => draft?.amount_calc ? evaluateCalc(draft.amount_calc, sample) : 0,
+    [draft?.amount_calc, sample],
+  );
+
   const save = async () => {
     if (!draft) return;
-    const amount = parseCalc(amountText);
-    const duration = parseCalc(durationText);
-    const errors = [...amount.errors, ...duration.errors];
-    if (errors.length) { toast.error(errors.join(' · ')); return; }
+    if (draftErrors.length) {
+      toast.error(`Cannot save — ${draftErrors.length} calculation problem(s) must be fixed first.`);
+      return;
+    }
 
     setSaving(true);
     const { error: abilityError } = await supabase.from('abilities').update({
@@ -170,8 +186,9 @@ export default function AbilityConfigManager() {
       tooltip: draft.tooltip,
       cp_cost: draft.cp_cost,
       interval_ms: draft.interval_ms,
-      amount_calc: amount.calc as any,
-      duration_calc: duration.calc as any,
+      amount_calc: draft.amount_calc as any,
+      duration_calc: draft.duration_calc as any,
+      mechanic_calcs: draft.mechanic_calcs as any,
       status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
@@ -186,6 +203,7 @@ export default function AbilityConfigManager() {
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
     await load();
   };
+
 
   return (
     <div className="h-full flex overflow-hidden">
