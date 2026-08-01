@@ -403,8 +403,8 @@ export default function AbilityConfigManager() {
 
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Magnitudes</CardTitle>
-                  <div className="flex items-center gap-3 pt-1">
+                  <CardTitle className="text-sm font-display">Calculations</CardTitle>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
                     <div className="flex items-center gap-1">
                       <Label className="text-[10px] text-muted-foreground">Preview level</Label>
                       <Input type="number" value={sampleLevel} onChange={e => setSampleLevel(Number(e.target.value))} className="h-7 w-16 text-xs" />
@@ -413,20 +413,73 @@ export default function AbilityConfigManager() {
                       <Label className="text-[10px] text-muted-foreground">Stat mod</Label>
                       <Input type="number" value={sampleMod} onChange={e => setSampleMod(Number(e.target.value))} className="h-7 w-16 text-xs" />
                     </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] text-muted-foreground">Stacks</Label>
+                      <Input type="number" min={0} value={sampleStacks} onChange={e => setSampleStacks(Number(e.target.value))} className="h-7 w-16 text-xs" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] text-muted-foreground">Weapon die</Label>
+                      <Input type="number" min={2} value={sampleWeaponDie} onChange={e => setSampleWeaponDie(Number(e.target.value))} className="h-7 w-16 text-xs" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <CalcField title="Amount calc" value={amountText} onChange={setAmountText} sample={sample} />
-                  <CalcField title="Duration calc (ms)" value={durationText} onChange={setDurationText} sample={sample} />
-                  <p className="text-[10px] text-muted-foreground">
-                    Leave a calc as <span className="font-mono">null</span> to keep the mechanic-owned value
-                    (weapon-die rolls, stack consumption and stance timing stay in code).
-                  </p>
+                  <CalcBuilder
+                    title="Amount calc"
+                    value={draft.amount_calc}
+                    onChange={c => setDraft({ ...draft, amount_calc: c })}
+                    sample={sample}
+                    hint="Magnitude in the unit chosen above — damage, healing, shield pool, flat reduction."
+                  />
+                  <CalcBuilder
+                    title="Duration calc (ms)"
+                    value={draft.duration_calc}
+                    onChange={c => setDraft({ ...draft, duration_calc: c })}
+                    sample={sample}
+                    hint="Durations are wall-clock milliseconds. Bond and Arcane Surge never touch durations."
+                  />
                 </CardContent>
               </Card>
 
+              <Card className="bg-card/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display flex items-center gap-2">
+                    Mechanic tunables
+                    <Badge variant="secondary" className="text-[10px] font-mono">{draft.mechanic_key}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MechanicCalcsEditor
+                    mechanicKey={draft.mechanic_key}
+                    value={draft.mechanic_calcs}
+                    onChange={next => setDraft({ ...draft, mechanic_calcs: next })}
+                    sample={sample}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display">Global pipeline rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <GlobalModifiersPanel baseMagnitude={previewMagnitude} intMod={sampleMod} />
+                </CardContent>
+              </Card>
+
+              {draftErrors.length > 0 && (
+                <div className="rounded border border-destructive/50 bg-destructive/5 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-destructive flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Publish blocked — fix these first:
+                  </p>
+                  {draftErrors.map(err => (
+                    <p key={err} className="text-[11px] text-destructive pl-5">{err}</p>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button size="sm" onClick={save} disabled={saving}>
+                <Button size="sm" onClick={save} disabled={saving || draftErrors.length > 0}>
                   {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
                   Save ability
                 </Button>
@@ -434,6 +487,7 @@ export default function AbilityConfigManager() {
                   Reset
                 </Button>
               </div>
+
             </div>
           )}
         </ScrollArea>
