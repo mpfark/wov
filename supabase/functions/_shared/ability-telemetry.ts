@@ -32,7 +32,7 @@ import type { AbilityCalc, CalcInputs } from './formulas/ability-calc.ts';
  * a silent legacy substitution. Flipped at checkpoint 5 for all classes at once.
  */
 export const USE_CONFIG_ABILITY_CALCS_V2 =
-  (Deno.env.get('USE_CONFIG_ABILITY_CALCS_V2') ?? 'false') === 'true';
+  (Deno.env.get('USE_CONFIG_ABILITY_CALCS_V2') ?? 'true') === 'true';
 
 /** Parity comparison mode — evaluates both paths. Off in production. */
 const COMPARE_MODE = (Deno.env.get('ABILITY_CALC_COMPARE') ?? 'false') === 'true';
