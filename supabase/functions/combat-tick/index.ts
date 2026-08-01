@@ -1009,15 +1009,35 @@ Deno.serve(async (req) => {
         con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
         wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
       });
-      /** Configured magnitude for this cast, with the inline formula as fallback. */
+      /**
+       * Configured magnitude for this cast, with the inline formula as fallback.
+       * `paMagEx` exposes the full result (value + whether config answered) and
+       * accepts the equipped weapon die so `dice` terms can roll. Randomness
+       * lives here at the call site — the evaluator only calls the injected
+       * roller, and only the winning path ever rolls.
+       */
+      const paMagEx = (
+        kind: 'amount' | 'duration' | 'mechanic',
+        legacy: () => number,
+        param?: string,
+        weaponDie?: number | null,
+        context?: Record<string, number>,
+      ) => resolveMagnitudeEx({
+        classKey: c.class || '', abilityKey: paAbilityKey, kind, param,
+        inputs: {
+          ...paInputs,
+          weaponDie: weaponDie ?? null,
+          roll: (sides: number) => rollDmg(1, sides),
+          ...(context ? { context } : {}),
+        },
+        legacy, characterId: member.id, nodeId: combatNodeId,
+      });
       const paMag = (
         kind: 'amount' | 'duration' | 'mechanic',
         legacy: () => number,
         param?: string,
-      ): number => resolveMagnitude({
-        classKey: c.class || '', abilityKey: paAbilityKey, kind, param,
-        inputs: paInputs, legacy, characterId: member.id, nodeId: combatNodeId,
-      });
+      ): number => paMagEx(kind, legacy, param).value;
+
 
       // ── Server-authoritative stack count ──────────────────────────
       // SECURITY: finisher stack counts are read from active_effects, never
