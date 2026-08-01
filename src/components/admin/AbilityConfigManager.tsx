@@ -121,7 +121,9 @@ export default function AbilityConfigManager() {
         interval_ms: r.ability.interval_ms,
         amount_calc: r.ability.amount_calc,
         duration_calc: r.ability.duration_calc,
+        mechanic_calcs: (r.ability.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       }))
+
       .sort((a, b) =>
         a.class_key.localeCompare(b.class_key)
         || a.slot - b.slot
