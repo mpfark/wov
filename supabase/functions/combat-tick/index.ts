@@ -705,7 +705,18 @@ Deno.serve(async (req) => {
           const cStr = (m.c.str || 10) + ((eq[m.id] as any)?.str || 0);
           const strMod = Math.max(0, Math.floor((cStr - 10) / 2));
           const hasShield = isShield(offHandTag[m.id]);
-          const { dr, critReduction } = getBattleCryDR(strMod, hasShield);
+          const coded = getBattleCryDR(strMod, hasShield);
+          // Named mechanic values: damage_reduction / crit_reduction.
+          const dr = resolveMagnitude({
+            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
+            param: 'damage_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+            legacy: () => coded.dr,
+          });
+          const critReduction = resolveMagnitude({
+            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
+            param: 'crit_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+            legacy: () => coded.critReduction,
+          });
           mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
         if (reserved.holy_shield) {
