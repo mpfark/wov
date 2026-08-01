@@ -1161,7 +1161,10 @@ Deno.serve(async (req) => {
         // diminishingFloat in getConflagratePerStack, so no additional scaling there.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
         const baseDmg = Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3));
-        const perStackBonus = getConflagratePerStack(intMod);
+        // Conflagrate's configured `amount_calc` is the per-stack ratio today
+        // (it becomes `per_stack_multiplier` at checkpoint 4); the stat base
+        // above stays mechanic-owned until the evaluator can express it.
+        const perStackBonus = paMag('amount', () => getConflagratePerStack(intMod));
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
