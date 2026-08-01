@@ -1111,7 +1111,7 @@ Deno.serve(async (req) => {
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
-        const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const stacks = serverStacks('poison', target.id);
         // Resolve weapon once so miss + hit + tag all share the same source.
         const { die: evisDie, tag: evisTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
