@@ -1038,9 +1038,11 @@ Deno.serve(async (req) => {
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        // Per-arrow flat bonus (the die roll itself stays mechanic-owned until
-        // the evaluator gains dice terms at checkpoint 3).
-        const arrowBonus = paMag('amount', () => Math.max(0, Math.floor(dexMod / 2)));
+        // Per-arrow flat bonus stays mechanic-owned here: barrage's existing
+        // `amount_calc` holds the per-arrow *ratio* (percent), a different
+        // quantity. It becomes the `per_arrow_multiplier` mechanic calc at
+        // checkpoint 4; routing it now would change balance.
+        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
