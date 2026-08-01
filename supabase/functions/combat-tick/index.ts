@@ -1297,11 +1297,13 @@ Deno.serve(async (req) => {
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
         // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
         const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
-        const baseDmg = Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5)));
+        const baseDmg = paMag('amount', () => Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5))));
         let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
-        // INT crit-edge: d20 vs crit threshold lowered by floor(intMod/2). Floor 17.
+        // INT crit-edge: named mechanic value (unit 'flat'), applied as a
+        // threshold reduction. d20 vs crit threshold. Floor 17.
         const critRoll = rollD20();
-        const critThreshold = Math.max(17, 20 - Math.floor(Math.max(0, intMod) / 2));
+        const critEdge = paMag('mechanic', () => Math.floor(Math.max(0, intMod) / 2), 'crit_edge');
+        const critThreshold = Math.max(17, 20 - critEdge);
         const isFinaleCrit = critRoll >= critThreshold;
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
