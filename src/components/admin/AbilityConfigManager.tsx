@@ -1,12 +1,14 @@
 /**
- * AbilityConfigManager — admin editor for the configurable class ability system
- * (Phase 2c). Edits the `abilities` rows and their class assignment:
- * presentation (label/emoji/text), cost, unlock level and the structured
- * magnitude calcs (`amount_calc` / `duration_calc` / `interval_ms`).
+ * AbilityConfigManager — admin editor for the configurable class ability system.
+ * Edits `abilities` rows and their class assignment: presentation, cost, unlock
+ * level and the structured calculations (`amount_calc`, `duration_calc`,
+ * `mechanic_calcs`, `interval_ms`).
  *
- * Calcs are edited as JSON with live validation (`validateCalc`), a readable
- * formula preview (`describeCalc`) and a sample evaluation at a chosen
- * level / stat modifier so balance changes can be sanity-checked before saving.
+ * Checkpoint 6: calculations are authored through the no-code `CalcBuilder`
+ * (term rows, dice pickers, threshold ladders, final multipliers) and the
+ * template-driven `MechanicCalcsEditor`. JSON is a read-only diagnostic only.
+ * Invalid drafts are rejected before save — abilities may not be published with
+ * structurally invalid or incomplete calculations.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,14 +20,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, Save } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import AbilityAuthorDialog from './AbilityAuthorDialog';
+import CalcBuilder from './ability/CalcBuilder';
+import MechanicCalcsEditor from './ability/MechanicCalcsEditor';
+import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import {
-  describeCalc, evaluateCalc, validateCalc, type AbilityCalc, type CalcInputs,
+  evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
+import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import { CLASS_LABELS } from '@/lib/game-data';
 
 interface Row {
@@ -50,57 +56,13 @@ interface Row {
   interval_ms: number | null;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
+  mechanic_calcs: Record<string, AbilityCalc>;
 }
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 
-function parseCalc(text: string): { calc: AbilityCalc | null; errors: string[] } {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed === 'null') return { calc: null, errors: [] };
-  try {
-    const parsed = JSON.parse(trimmed) as AbilityCalc;
-    return { calc: parsed, errors: validateCalc(parsed) };
-  } catch (e) {
-    return { calc: null, errors: [`invalid JSON: ${(e as Error).message}`] };
-  }
-}
-
-function CalcField({
-  title, value, onChange, sample,
-}: {
-  title: string;
-  value: string;
-  onChange: (v: string) => void;
-  sample: CalcInputs;
-}) {
-  const { calc, errors } = parseCalc(value);
-  return (
-    <div className="space-y-1">
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">{title}</Label>
-      <Textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        rows={5}
-        spellCheck={false}
-        className="font-mono text-[11px]"
-        placeholder="null"
-      />
-      {errors.length > 0 ? (
-        <p className="text-[11px] text-destructive">{errors.join(' · ')}</p>
-      ) : calc ? (
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-mono">{describeCalc(calc)}</span>
-          {' → '}
-          <span className="text-primary font-mono">{evaluateCalc(calc, sample)}</span>
-        </p>
-      ) : (
-        <p className="text-[11px] text-muted-foreground">Not configured — mechanic-owned value.</p>
-      )}
-    </div>
-  );
-}
 
 export default function AbilityConfigManager() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -108,10 +70,12 @@ export default function AbilityConfigManager() {
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row | null>(null);
-  const [amountText, setAmountText] = useState('null');
-  const [durationText, setDurationText] = useState('null');
+
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
+  const [sampleStacks, setSampleStacks] = useState(3);
+  const [sampleWeaponDie, setSampleWeaponDie] = useState(8);
+
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
   const [authorAsAlternative, setAuthorAsAlternative] = useState(false);
@@ -129,8 +93,9 @@ export default function AbilityConfigManager() {
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, emoji, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, amount_calc, duration_calc
+          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
         )
+
       `);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
@@ -159,7 +124,9 @@ export default function AbilityConfigManager() {
         interval_ms: r.ability.interval_ms,
         amount_calc: r.ability.amount_calc,
         duration_calc: r.ability.duration_calc,
+        mechanic_calcs: (r.ability.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       }))
+
       .sort((a, b) =>
         a.class_key.localeCompare(b.class_key)
         || a.slot - b.slot
@@ -172,9 +139,7 @@ export default function AbilityConfigManager() {
 
   const select = (row: Row) => {
     setSelectedId(row.assignment_id);
-    setDraft({ ...row });
-    setAmountText(row.amount_calc ? JSON.stringify(row.amount_calc, null, 2) : 'null');
-    setDurationText(row.duration_calc ? JSON.stringify(row.duration_calc, null, 2) : 'null');
+    setDraft({ ...row, mechanic_calcs: { ...row.mechanic_calcs } });
   };
 
   const sample: CalcInputs = useMemo(() => ({
@@ -183,7 +148,9 @@ export default function AbilityConfigManager() {
       str: sampleMod, dex: sampleMod, con: sampleMod,
       int: sampleMod, wis: sampleMod, cha: sampleMod,
     },
-  }), [sampleLevel, sampleMod]);
+    context: { active_stacks: sampleStacks, consumed_stacks: sampleStacks },
+    weaponDie: sampleWeaponDie,
+  }), [sampleLevel, sampleMod, sampleStacks, sampleWeaponDie]);
 
   const byClass = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -191,12 +158,28 @@ export default function AbilityConfigManager() {
     return [...map.entries()];
   }, [rows]);
 
+  /**
+   * Publish gate — a draft with structurally invalid or incomplete calcs is
+   * rejected before it can be written. There is no silent legacy fallback.
+   */
+  const draftErrors = useMemo(() => draft ? validateAbilityForPublish({
+    mechanic_key: draft.mechanic_key,
+    amount_calc: draft.amount_calc,
+    duration_calc: draft.duration_calc,
+    mechanic_calcs: draft.mechanic_calcs,
+  }) : [], [draft]);
+
+  const previewMagnitude = useMemo(
+    () => draft?.amount_calc ? evaluateCalc(draft.amount_calc, sample) : 0,
+    [draft?.amount_calc, sample],
+  );
+
   const save = async () => {
     if (!draft) return;
-    const amount = parseCalc(amountText);
-    const duration = parseCalc(durationText);
-    const errors = [...amount.errors, ...duration.errors];
-    if (errors.length) { toast.error(errors.join(' · ')); return; }
+    if (draftErrors.length) {
+      toast.error(`Cannot save — ${draftErrors.length} calculation problem(s) must be fixed first.`);
+      return;
+    }
 
     setSaving(true);
     const { error: abilityError } = await supabase.from('abilities').update({
@@ -206,8 +189,9 @@ export default function AbilityConfigManager() {
       tooltip: draft.tooltip,
       cp_cost: draft.cp_cost,
       interval_ms: draft.interval_ms,
-      amount_calc: amount.calc as any,
-      duration_calc: duration.calc as any,
+      amount_calc: draft.amount_calc as any,
+      duration_calc: draft.duration_calc as any,
+      mechanic_calcs: draft.mechanic_calcs as any,
       status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
@@ -222,6 +206,7 @@ export default function AbilityConfigManager() {
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
     await load();
   };
+
 
   return (
     <div className="h-full flex overflow-hidden">
@@ -418,8 +403,8 @@ export default function AbilityConfigManager() {
 
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Magnitudes</CardTitle>
-                  <div className="flex items-center gap-3 pt-1">
+                  <CardTitle className="text-sm font-display">Calculations</CardTitle>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
                     <div className="flex items-center gap-1">
                       <Label className="text-[10px] text-muted-foreground">Preview level</Label>
                       <Input type="number" value={sampleLevel} onChange={e => setSampleLevel(Number(e.target.value))} className="h-7 w-16 text-xs" />
@@ -428,20 +413,73 @@ export default function AbilityConfigManager() {
                       <Label className="text-[10px] text-muted-foreground">Stat mod</Label>
                       <Input type="number" value={sampleMod} onChange={e => setSampleMod(Number(e.target.value))} className="h-7 w-16 text-xs" />
                     </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] text-muted-foreground">Stacks</Label>
+                      <Input type="number" min={0} value={sampleStacks} onChange={e => setSampleStacks(Number(e.target.value))} className="h-7 w-16 text-xs" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] text-muted-foreground">Weapon die</Label>
+                      <Input type="number" min={2} value={sampleWeaponDie} onChange={e => setSampleWeaponDie(Number(e.target.value))} className="h-7 w-16 text-xs" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <CalcField title="Amount calc" value={amountText} onChange={setAmountText} sample={sample} />
-                  <CalcField title="Duration calc (ms)" value={durationText} onChange={setDurationText} sample={sample} />
-                  <p className="text-[10px] text-muted-foreground">
-                    Leave a calc as <span className="font-mono">null</span> to keep the mechanic-owned value
-                    (weapon-die rolls, stack consumption and stance timing stay in code).
-                  </p>
+                  <CalcBuilder
+                    title="Amount calc"
+                    value={draft.amount_calc}
+                    onChange={c => setDraft({ ...draft, amount_calc: c })}
+                    sample={sample}
+                    hint="Magnitude in the unit chosen above — damage, healing, shield pool, flat reduction."
+                  />
+                  <CalcBuilder
+                    title="Duration calc (ms)"
+                    value={draft.duration_calc}
+                    onChange={c => setDraft({ ...draft, duration_calc: c })}
+                    sample={sample}
+                    hint="Durations are wall-clock milliseconds. Bond and Arcane Surge never touch durations."
+                  />
                 </CardContent>
               </Card>
 
+              <Card className="bg-card/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display flex items-center gap-2">
+                    Mechanic tunables
+                    <Badge variant="secondary" className="text-[10px] font-mono">{draft.mechanic_key}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MechanicCalcsEditor
+                    mechanicKey={draft.mechanic_key}
+                    value={draft.mechanic_calcs}
+                    onChange={next => setDraft({ ...draft, mechanic_calcs: next })}
+                    sample={sample}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display">Global pipeline rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <GlobalModifiersPanel baseMagnitude={previewMagnitude} intMod={sampleMod} />
+                </CardContent>
+              </Card>
+
+              {draftErrors.length > 0 && (
+                <div className="rounded border border-destructive/50 bg-destructive/5 p-3 space-y-1">
+                  <p className="text-[11px] font-semibold text-destructive flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Publish blocked — fix these first:
+                  </p>
+                  {draftErrors.map(err => (
+                    <p key={err} className="text-[11px] text-destructive pl-5">{err}</p>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button size="sm" onClick={save} disabled={saving}>
+                <Button size="sm" onClick={save} disabled={saving || draftErrors.length > 0}>
                   {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
                   Save ability
                 </Button>
@@ -449,6 +487,7 @@ export default function AbilityConfigManager() {
                   Reset
                 </Button>
               </div>
+
             </div>
           )}
         </ScrollArea>
