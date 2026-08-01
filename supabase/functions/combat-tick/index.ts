@@ -1085,7 +1085,7 @@ Deno.serve(async (req) => {
           const totalAtk = roll + dexMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
-            let arrowDmg = Math.max(rollDmg(1, arrowDie) + arrowBonus, 1);
+            let arrowDmg = Math.max(1, Math.floor(rollArrow()));
             if (isCrit) arrowDmg *= 2;
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
