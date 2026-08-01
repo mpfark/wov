@@ -14,8 +14,15 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
-  loadAbilityCalcs, buildServerCalcInputs, resolveServerAmount, resolveServerDuration,
+  loadAbilityCalcs, buildServerCalcInputs,
 } from "../_shared/load-ability-calcs.ts";
+// Checkpoint 2: every ability magnitude funnels through resolveMagnitude —
+// configuration first, the inline formula passed in as an explicit legacy
+// closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
+// and hard failures produce audit rows.
+import {
+  resolveMagnitude, drainAbilityCalcAuditRows, getAbilityCalcCounters,
+} from "../_shared/ability-telemetry.ts";
 import {
   resolveEffectTicks,
   processLootDrops,
