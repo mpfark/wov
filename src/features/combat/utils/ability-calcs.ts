@@ -19,17 +19,15 @@
  * sites migrate. Bar tier is presentation ordering only; it is no longer an
  * identity.
  *
- * Fallback: `ABILITY_SEED` is the balance-identical seed data, pinned against
- * the original hardcoded math by `ability-calc-parity.test.ts`. Until a fetch
- * lands (or when `USE_CONFIG_ABILITY_CALCS` is off) the caller's legacy inline
- * value is used, so nothing can regress if the config load fails.
+ * Fallback: `ABILITY_SEED` is the compiled seed data. It primes the registry so
+ * configuration can always answer, even before a fetch lands or if the config
+ * load fails. Legacy inline formulas were removed at checkpoint 7.
  */
 import { ABILITY_SEED } from '@/shared/config/ability-seed';
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs, type CalcStat,
 } from '@/shared/formulas/ability-calc';
 import { getStatModifier } from '@/shared/formulas/stats';
-import { USE_CONFIG_ABILITY_CALCS } from '@/shared/config/feature-flags';
 
 export interface AbilityCalcEntry {
   abilityKey: string;
