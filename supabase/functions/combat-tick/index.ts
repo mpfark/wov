@@ -21,7 +21,7 @@ import {
 // closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
 // and hard failures produce audit rows.
 import {
-  resolveMagnitude, drainAbilityCalcAuditRows, getAbilityCalcCounters,
+  resolveMagnitude, resolveMagnitudeEx, drainAbilityCalcAuditRows, getAbilityCalcCounters,
 } from "../_shared/ability-telemetry.ts";
 import {
   resolveEffectTicks,
