@@ -693,7 +693,6 @@ Deno.serve(async (req) => {
           const blended = resolveMagnitude({
             classKey: m.c.class || 'ranger', abilityKey: 'eagle_eye', kind: 'amount',
             inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2))),
           });
           mb.crit_buff = { bonus: blended };
         }
@@ -710,12 +709,10 @@ Deno.serve(async (req) => {
           const dr = resolveMagnitude({
             classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
             param: 'damage_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => coded.dr,
           });
           const critReduction = resolveMagnitude({
             classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
             param: 'crit_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => coded.critReduction,
           });
           mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
@@ -733,12 +730,10 @@ Deno.serve(async (req) => {
             chance_bonus: resolveMagnitude({
               classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
               param: 'block_chance', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-              legacy: () => getShieldWallChanceBonus(cWis),
             }),
             amount_bonus: resolveMagnitude({
               classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
               param: 'block_amount', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-              legacy: () => getShieldWallAmountBonus(cCon),
             }),
           };
         }
@@ -754,7 +749,6 @@ Deno.serve(async (req) => {
           const shieldCapRaw = resolveMagnitude({
             classKey: m.c.class || 'wizard', abilityKey: 'force_shield', kind: 'amount',
             inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5)),
           });
           const shieldCap = Math.max(1, Math.floor(shieldCapRaw * (mBondMult[m.id] ?? 1)));
           let current = mb.absorb_buff?.shield_hp;
@@ -1018,7 +1012,6 @@ Deno.serve(async (req) => {
        */
       const paMagEx = (
         kind: 'amount' | 'duration' | 'mechanic',
-        legacy: () => number,
         param?: string,
         weaponDie?: number | null,
         context?: Record<string, number>,
@@ -1034,7 +1027,6 @@ Deno.serve(async (req) => {
       });
       const paMag = (
         kind: 'amount' | 'duration' | 'mechanic',
-        legacy: () => number,
         param?: string,
       ): number => paMagEx(kind, legacy, param).value;
 
@@ -1075,7 +1067,6 @@ Deno.serve(async (req) => {
         // Named mechanic value: arrow_count (unit 'count').
         const arrowCount = paMag(
           'mechanic',
-          () => Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0)),
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
@@ -1084,7 +1075,6 @@ Deno.serve(async (req) => {
         const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const rollArrow = () => paMagEx(
           'amount',
-          () => Math.max(rollDmg(1, arrowDie) + arrowBonus, 1),
           undefined, arrowDie,
         ).value;
 
@@ -1172,12 +1162,11 @@ Deno.serve(async (req) => {
         // stack multiplier rounds once. The legacy closure mirrors that exactly.
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const baseDmg = paMagEx('amount', () =>
-          rollDmg(1, evisDie) + dexMod + (2 + effDexDmg + Math.floor((c.level || 1) / 3)),
+        const baseDmg = paMagEx('amount',
           undefined, evisDie,
         ).value;
         // Named mechanic value: per_stack_multiplier (unit 'mult').
-        const perStackBonus = paMag('mechanic', () => 0.50 + effChaStack * 0.02, 'per_stack_multiplier');
+        const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
 
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
@@ -1210,8 +1199,8 @@ Deno.serve(async (req) => {
         // `per_stack_multiplier` mechanic calc; both keep the inline formula as
         // their legacy closure.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
-        const baseDmg = paMag('amount', () => Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3)));
-        const perStackBonus = paMag('mechanic', () => getConflagratePerStack(intMod), 'per_stack_multiplier');
+        const baseDmg = paMag('amount');
+        const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
 
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
@@ -1297,13 +1286,8 @@ Deno.serve(async (req) => {
         // legacy closure must produce the full number too — never a delta.
         // Anything else would double-count the weapon die after the cutover.
         const t0Res = t0Weapon
-          ? paMagEx('amount', () => Math.max(1,
-              rollDmg(1, t0Weapon.die) + mod
-              + Math.round(3 + effMod + Math.floor((c.level || 1) / 3))
-            ), undefined, t0Weapon.die)
-          : paMagEx('amount', () => Math.max(1,
-              Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))
-            ));
+          ? paMagEx('amount', undefined, t0Weapon.die)
+          : paMagEx('amount');
         let dmg = Math.max(1, Math.floor(t0Res.value));
         // Templar Judgment: intentional ability-specific nerf. Post-cutover the
         // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
@@ -1347,12 +1331,12 @@ Deno.serve(async (req) => {
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
         // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
         const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
-        const baseDmg = paMag('amount', () => Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5))));
+        const baseDmg = paMag('amount');
         let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
         // INT crit-edge: named mechanic value (unit 'flat'), applied as a
         // threshold reduction. d20 vs crit threshold. Floor 17.
         const critRoll = rollD20();
-        const critEdge = paMag('mechanic', () => Math.floor(Math.max(0, intMod) / 2), 'crit_edge');
+        const critEdge = paMag('mechanic', 'crit_edge');
         const critThreshold = Math.max(17, 20 - critEdge);
         const isFinaleCrit = critRoll >= critThreshold;
         if (isFinaleCrit) damage = damage * 2;
@@ -1393,7 +1377,6 @@ Deno.serve(async (req) => {
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
         const durationMs = paMag(
           'duration',
-          () => Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
         );
         // Rend's per-tick magnitude stays mechanic-owned for now: its existing
         // `amount_calc` is a STR-only curve, while the live formula also folds
@@ -1592,7 +1575,6 @@ Deno.serve(async (req) => {
                 wis: effectiveWis, cha: (targetC.cha || 10) + (targetEq.cha || 0),
               }),
               characterId: targetId, nodeId: combatNodeId,
-              legacy: () => Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)),
             }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
@@ -1699,7 +1681,6 @@ Deno.serve(async (req) => {
         const consRes = resolveMagnitudeEx({
           classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
-          legacy: () => 2 + consWis,
         });
         const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
         const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
