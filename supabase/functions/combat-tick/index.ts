@@ -1345,8 +1345,10 @@ Deno.serve(async (req) => {
           'duration',
           () => Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
         );
-        // Rend per-tick magnitude is configured too (`amount_calc`); it is
-        // resolved above via the same funnel once the DoT base is expressible.
+        // Rend's per-tick magnitude stays mechanic-owned for now: its existing
+        // `amount_calc` is a STR-only curve, while the live formula also folds
+        // in the weapon-die average. It joins the funnel at checkpoint 3, when
+        // dice terms make the two expressible as one calc.
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const effData = {
