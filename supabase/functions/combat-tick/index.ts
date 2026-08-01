@@ -1031,9 +1031,16 @@ Deno.serve(async (req) => {
         const effWis = (c.wis || 10) + (eb.wis || 0);
         const dexMod = sm(effDex);
         const wisMod = sm(effWis);
-        const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
+        // Named mechanic value: arrow_count (unit 'count').
+        const arrowCount = paMag(
+          'mechanic',
+          () => Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0)),
+          'arrow_count',
+        );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
+        // Per-arrow flat bonus (the die roll itself stays mechanic-owned until
+        // the evaluator gains dice terms at checkpoint 3).
+        const arrowBonus = paMag('amount', () => Math.max(0, Math.floor(dexMod / 2)));
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
