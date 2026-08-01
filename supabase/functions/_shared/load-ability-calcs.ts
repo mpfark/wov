@@ -10,15 +10,15 @@
  * Key is `${class_key}:${ability_key}` — server handlers know which ability
  * they are resolving by key, not by bar tier.
  *
- * Safety: every resolver takes the legacy inline expression as its fallback.
- * If the load fails, a row is missing, or a calc is absent (mechanic-owned
- * math such as weapon-die rolls), the original hardcoded value is used, so a
- * config outage can never change balance.
+ * Safety (checkpoint 7): legacy inline formulas are gone, so configuration must
+ * always be able to answer. The registry is therefore **primed from the
+ * compiled `ABILITY_SEED`** at module load and only ever replaced by live rows.
+ * A database outage degrades to the seeded (parity-proven) values, never to
+ * zero.
  */
-import {
-  evaluateCalc, type AbilityCalc, type CalcInputs, type CalcStat,
-} from './formulas/ability-calc.ts';
+import { type AbilityCalc, type CalcInputs, type CalcStat } from './formulas/ability-calc.ts';
 import { getStatModifier } from './formulas/stats.ts';
+import { ABILITY_SEED } from './config/ability-seed.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -38,6 +38,19 @@ let inflight: Promise<void> | null = null;
 const REGISTRY: Record<string, ServerAbilityCalcEntry> = {};
 
 const key = (classKey: string, abilityKey: string) => `${classKey}:${abilityKey}`;
+
+/** Compiled fallback: the seed is the same data the tables were seeded from. */
+for (const a of ABILITY_SEED) {
+  REGISTRY[key(a.class_key, a.ability_key)] = {
+    abilityKey: a.ability_key,
+    mechanicKey: a.mechanic_key,
+    amountCalc: a.amount_calc,
+    durationCalc: a.duration_calc,
+    intervalMs: a.interval_ms,
+    effectConfig: (a.effect_config as Record<string, unknown>) ?? {},
+    mechanicCalcs: a.mechanic_calcs ?? {},
+  };
+}
 
 function asCalc(value: unknown): AbilityCalc | null {
   if (!value || typeof value !== 'object') return null;
