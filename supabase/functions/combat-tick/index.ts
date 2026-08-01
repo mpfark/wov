@@ -1660,25 +1660,22 @@ Deno.serve(async (req) => {
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
         const bm = mBondMult[m.id] ?? 1;
-        // Consecrate strength reduced by 35% (balance pass). The nerf is routed
-        // as the ability's final multiplier so checkpoint 4 can move the 0.65
-        // into Consecrate's configured `finalMult` with no code change here.
+        // Consecrate strength reduced by 35%. Post-cutover the ×0.65 rider lives
+        // INSIDE the configured `amount_calc` (`finalMult`), so it is only
+        // re-applied here when the legacy closure produced the magnitude.
         const consInputs = buildServerCalcInputs(m.c.level || 1, {
           str: m.c.str || 10, dex: m.c.dex || 10, con: m.c.con || 10,
           int: m.c.int || 10, wis: (m.c.wis || 10), cha: m.c.cha || 10,
         });
-        const consMag = resolveMagnitude({
+        const consRes = resolveMagnitudeEx({
           classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
           legacy: () => 2 + consWis,
         });
-        const consFinalMult = resolveMagnitude({
-          classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'mechanic',
-          param: 'final_multiplier', inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
-          legacy: () => 0.65,
-        });
-        const healAmt = Math.max(1, Math.floor(consMag * bm * consFinalMult));
-        const burnAmt = Math.max(1, Math.floor(consMag * bm * consFinalMult));
+        const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
+        const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
+        const burnAmt = healAmt;
+
 
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
