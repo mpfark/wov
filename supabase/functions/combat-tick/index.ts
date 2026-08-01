@@ -21,7 +21,7 @@ import {
 // closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
 // and hard failures produce audit rows.
 import {
-  resolveMagnitude, drainAbilityCalcAuditRows, getAbilityCalcCounters,
+  resolveMagnitude, resolveMagnitudeEx, drainAbilityCalcAuditRows, getAbilityCalcCounters,
 } from "../_shared/ability-telemetry.ts";
 import {
   resolveEffectTicks,
@@ -1009,15 +1009,35 @@ Deno.serve(async (req) => {
         con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
         wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
       });
-      /** Configured magnitude for this cast, with the inline formula as fallback. */
+      /**
+       * Configured magnitude for this cast, with the inline formula as fallback.
+       * `paMagEx` exposes the full result (value + whether config answered) and
+       * accepts the equipped weapon die so `dice` terms can roll. Randomness
+       * lives here at the call site — the evaluator only calls the injected
+       * roller, and only the winning path ever rolls.
+       */
+      const paMagEx = (
+        kind: 'amount' | 'duration' | 'mechanic',
+        legacy: () => number,
+        param?: string,
+        weaponDie?: number | null,
+        context?: Record<string, number>,
+      ) => resolveMagnitudeEx({
+        classKey: c.class || '', abilityKey: paAbilityKey, kind, param,
+        inputs: {
+          ...paInputs,
+          weaponDie: weaponDie ?? null,
+          roll: (sides: number) => rollDmg(1, sides),
+          ...(context ? { context } : {}),
+        },
+        legacy, characterId: member.id, nodeId: combatNodeId,
+      });
       const paMag = (
         kind: 'amount' | 'duration' | 'mechanic',
         legacy: () => number,
         param?: string,
-      ): number => resolveMagnitude({
-        classKey: c.class || '', abilityKey: paAbilityKey, kind, param,
-        inputs: paInputs, legacy, characterId: member.id, nodeId: combatNodeId,
-      });
+      ): number => paMagEx(kind, legacy, param).value;
+
 
       // ── Server-authoritative stack count ──────────────────────────
       // SECURITY: finisher stack counts are read from active_effects, never
@@ -1059,11 +1079,15 @@ Deno.serve(async (req) => {
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        // Per-arrow flat bonus stays mechanic-owned here: barrage's existing
-        // `amount_calc` holds the per-arrow *ratio* (percent), a different
-        // quantity. It becomes the `per_arrow_multiplier` mechanic calc at
-        // checkpoint 4; routing it now would change balance.
+        // Per-arrow damage is configured: barrage's `amount_calc` is the FULL
+        // per-arrow magnitude (weapon die + half DEX), rolled once per arrow.
         const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
+        const rollArrow = () => paMagEx(
+          'amount',
+          () => Math.max(rollDmg(1, arrowDie) + arrowBonus, 1),
+          undefined, arrowDie,
+        ).value;
+
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
@@ -1081,7 +1105,7 @@ Deno.serve(async (req) => {
           const totalAtk = roll + dexMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
-            let arrowDmg = Math.max(rollDmg(1, arrowDie) + arrowBonus, 1);
+            let arrowDmg = Math.max(1, Math.floor(rollArrow()));
             if (isCrit) arrowDmg *= 2;
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
@@ -1143,15 +1167,18 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
-        // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
-        // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
+        // Configured v2 `amount_calc` is the FULL pre-multiplier magnitude
+        // (weapon die + DEX + soft DEX + level/3), deliberately unrounded so the
+        // stack multiplier rounds once. The legacy closure mirrors that exactly.
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const weaponRoll = rollDmg(1, evisDie);
-        const abilityBonus = paMag('amount', () => 2 + effDexDmg + Math.floor((c.level || 1) / 3));
-        const baseDmg = weaponRoll + dexMod + abilityBonus;
+        const baseDmg = paMagEx('amount', () =>
+          rollDmg(1, evisDie) + dexMod + (2 + effDexDmg + Math.floor((c.level || 1) / 3)),
+          undefined, evisDie,
+        ).value;
         // Named mechanic value: per_stack_multiplier (unit 'mult').
         const perStackBonus = paMag('mechanic', () => 0.50 + effChaStack * 0.02, 'per_stack_multiplier');
+
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
@@ -1178,14 +1205,14 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
           continue;
         }
-        // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
-        // diminishingFloat in getConflagratePerStack, so no additional scaling there.
+        // Soft-scaled INT base (profile 'burst'). Post-cutover the base lives in
+        // `amount_calc` and the per-stack rider in the named
+        // `per_stack_multiplier` mechanic calc; both keep the inline formula as
+        // their legacy closure.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
-        const baseDmg = Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3));
-        // Conflagrate's configured `amount_calc` is the per-stack ratio today
-        // (it becomes `per_stack_multiplier` at checkpoint 4); the stat base
-        // above stays mechanic-owned until the evaluator can express it.
-        const perStackBonus = paMag('amount', () => getConflagratePerStack(intMod));
+        const baseDmg = paMag('amount', () => Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3)));
+        const perStackBonus = paMag('mechanic', () => getConflagratePerStack(intMod), 'per_stack_multiplier');
+
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
@@ -1265,24 +1292,26 @@ Deno.serve(async (req) => {
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
-        // Both damage paths route through the resolver. The dice roll stays
-        // mechanic-owned until checkpoint 3 adds dice terms; the stat/level
-        // bonus (and the whole spell-path magnitude) is configurable.
-        let dmg: number;
-        if (t0Weapon) {
-          const weaponRoll = rollDmg(1, t0Weapon.die);
-          const abilityBonus = paMag('amount', () => Math.round(3 + effMod + Math.floor((c.level || 1) / 3)));
-          dmg = Math.max(1, weaponRoll + mod + abilityBonus);
-        } else {
-          dmg = Math.max(1, paMag('amount', () => Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))));
+        // Checkpoint 5: the configured v2 `amount_calc` expresses the FULL
+        // magnitude (weapon die + raw stat + soft bonus + level/3), so the
+        // legacy closure must produce the full number too — never a delta.
+        // Anything else would double-count the weapon die after the cutover.
+        const t0Res = t0Weapon
+          ? paMagEx('amount', () => Math.max(1,
+              rollDmg(1, t0Weapon.die) + mod
+              + Math.round(3 + effMod + Math.floor((c.level || 1) / 3))
+            ), undefined, t0Weapon.die)
+          : paMagEx('amount', () => Math.max(1,
+              Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))
+            ));
+        let dmg = Math.max(1, Math.floor(t0Res.value));
+        // Templar Judgment: intentional ability-specific nerf. Post-cutover the
+        // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
+        // applied here when the legacy closure produced the number.
+        if (pa.ability_type === 'smite' && c.class === 'templar' && t0Res.source !== 'config') {
+          dmg = Math.max(1, Math.floor(dmg * 0.8));
         }
-        // Templar Judgment: intentional ability-specific nerf. Routed as the
-        // ability's final multiplier so checkpoint 4 can move the 0.8 into
-        // Judgment's configured `finalMult` with no code change here.
-        if (pa.ability_type === 'smite' && c.class === 'templar') {
-          const finalMult = paMag('mechanic', () => 0.8, 'final_multiplier');
-          dmg = Math.max(1, Math.floor(dmg * finalMult));
-        }
+
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
@@ -1660,25 +1689,22 @@ Deno.serve(async (req) => {
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
         const bm = mBondMult[m.id] ?? 1;
-        // Consecrate strength reduced by 35% (balance pass). The nerf is routed
-        // as the ability's final multiplier so checkpoint 4 can move the 0.65
-        // into Consecrate's configured `finalMult` with no code change here.
+        // Consecrate strength reduced by 35%. Post-cutover the ×0.65 rider lives
+        // INSIDE the configured `amount_calc` (`finalMult`), so it is only
+        // re-applied here when the legacy closure produced the magnitude.
         const consInputs = buildServerCalcInputs(m.c.level || 1, {
           str: m.c.str || 10, dex: m.c.dex || 10, con: m.c.con || 10,
           int: m.c.int || 10, wis: (m.c.wis || 10), cha: m.c.cha || 10,
         });
-        const consMag = resolveMagnitude({
+        const consRes = resolveMagnitudeEx({
           classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
           legacy: () => 2 + consWis,
         });
-        const consFinalMult = resolveMagnitude({
-          classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'mechanic',
-          param: 'final_multiplier', inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
-          legacy: () => 0.65,
-        });
-        const healAmt = Math.max(1, Math.floor(consMag * bm * consFinalMult));
-        const burnAmt = Math.max(1, Math.floor(consMag * bm * consFinalMult));
+        const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
+        const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
+        const burnAmt = healAmt;
+
 
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {

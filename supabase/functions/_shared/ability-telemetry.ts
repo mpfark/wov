@@ -32,7 +32,7 @@ import type { AbilityCalc, CalcInputs } from './formulas/ability-calc.ts';
  * a silent legacy substitution. Flipped at checkpoint 5 for all classes at once.
  */
 export const USE_CONFIG_ABILITY_CALCS_V2 =
-  (Deno.env.get('USE_CONFIG_ABILITY_CALCS_V2') ?? 'false') === 'true';
+  (Deno.env.get('USE_CONFIG_ABILITY_CALCS_V2') ?? 'true') === 'true';
 
 /** Parity comparison mode — evaluates both paths. Off in production. */
 const COMPARE_MODE = (Deno.env.get('ABILITY_CALC_COMPARE') ?? 'false') === 'true';
@@ -87,8 +87,13 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
 /**
  * Resolve an ability magnitude through configuration, falling back to the
  * caller's inline formula. Records telemetry; writes nothing.
+ *
+ * `resolveMagnitudeEx` returns the full result so a call site can tell whether
+ * configuration answered. That matters for riders that are *inside* the
+ * configured calc post-cutover (judgment's ×0.8, consecrate's ×0.65): they must
+ * only be re-applied when the legacy closure produced the number.
  */
-export function resolveMagnitude(args: MagnitudeArgs): number {
+export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult {
   const result: AbilityMagnitudeResult = resolveAbilityMagnitude({
     classKey: args.classKey,
     abilityKey: args.abilityKey,
@@ -130,8 +135,14 @@ export function resolveMagnitude(args: MagnitudeArgs): number {
     });
   }
 
-  return result.value;
+  return result;
 }
+
+/** Value-only convenience wrapper around `resolveMagnitudeEx`. */
+export function resolveMagnitude(args: MagnitudeArgs): number {
+  return resolveMagnitudeEx(args).value;
+}
+
 
 /** Snapshot of the aggregated counters for this isolate. */
 export function getAbilityCalcCounters(): AbilityCalcCounters {
