@@ -55,6 +55,12 @@ export interface AbilitySeed {
   duration_calc: AbilityCalc | null;
   interval_ms: number | null;
   effect_config: Record<string, unknown>;
+  /**
+   * Named typed mechanic calculations (`abilities.mechanic_calcs`). Keys must
+   * belong to the row's mechanic template (`shared/config/mechanic-templates`);
+   * unknown keys are rejected by the DB validation trigger.
+   */
+  mechanic_calcs?: Record<string, AbilityCalc>;
   combat_text: Record<string, unknown>;
   /** Class + role slot this ability is assigned to by default. */
   class_key: string;
@@ -67,6 +73,51 @@ const stat = (
   extra: Partial<AbilityCalc['terms'][number]> = {},
 ): AbilityCalc['terms'][number] => ({ source: 'stat', stat: s, mult, ...extra });
 
+/** Weapon-die term: the equipped main hand, unarmed falling back to 1d4. */
+const weaponDie = (): AbilityCalc['terms'][number] =>
+  ({ source: 'dice', die: 'weapon_main', fallbackDie: 4, count: 1, label: 'weapon die' });
+
+/** Level term with its own rounding (e.g. floor(level / 3)). */
+const lvl = (
+  mult: number,
+  rounding: AbilityCalc['rounding'] = 'floor',
+): AbilityCalc['terms'][number] => ({ source: 'level', mult, rounding });
+
+/**
+ * Tier-0 physical identity attack (checkpoint 4, contract v2):
+ *   1d{weapon} + statMod + round(3 + soft(statMod,'damage') + floor(level/3))
+ * Per-term rounding reproduces the legacy grouping exactly: every other term is
+ * an integer, so rounding the soft-scaled stat alone equals rounding the sum.
+ */
+const physicalT0 = (s: 'str' | 'dex'): AbilityCalc => ({
+  version: 2, base: 3,
+  terms: [
+    weaponDie(),
+    stat(s, 1, { label: 'raw modifier' }),
+    stat(s, 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
+    lvl(1 / 3),
+  ],
+  rounding: 'none', floor: 1, cap: null, unit: 'hp',
+  note: 'weapon die + stat + (3 + soft stat + level/3)',
+});
+
+/**
+ * Tier-0 spell identity attack (contract v2):
+ *   round(5 + 2 × soft(statMod,'damage') + floor(level/3))
+ */
+const spellT0 = (s: 'int' | 'wis' | 'cha', finalMult?: number): AbilityCalc => ({
+  version: 2, base: 5,
+  terms: [
+    stat(s, 2, { clampAtZero: true, transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
+    lvl(1 / 3),
+  ],
+  ...(finalMult !== undefined ? { finalMult } : {}),
+  rounding: 'floor', floor: 1, cap: null, unit: 'hp',
+  note: finalMult !== undefined
+    ? `5 + 2× soft stat + level/3, ×${finalMult} ability rider`
+    : '5 + 2× soft stat + level/3',
+});
+
 /** Standard weapon-scaled queued attack: magnitude stays server-owned for now. */
 const WEAPON_ATTACK_CONFIG = { weapon_scaled: true, unarmed_die: '1d4', resolved_by: 'combat-tick' };
 
@@ -78,7 +129,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.',
     mechanic_key: 'power_strike', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
-    amount_calc: null, duration_calc: null, interval_ms: null,
+    amount_calc: physicalT0('str'), duration_calc: null, interval_ms: null,
     effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'str' }, combat_text: {},
     class_key: 'warrior', slot: 0,
   },
@@ -133,7 +184,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Damage one target. Scales with INT.',
     mechanic_key: 'fireball', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
-    amount_calc: null, duration_calc: null, interval_ms: null,
+    amount_calc: spellT0('int'), duration_calc: null, interval_ms: null,
     effect_config: { stat: 'int', resolved_by: 'combat-tick' }, combat_text: {},
     class_key: 'wizard', slot: 0,
   },
@@ -188,7 +239,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.',
     mechanic_key: 'aimed_shot', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
-    amount_calc: null, duration_calc: null, interval_ms: null,
+    amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
     effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: {},
     class_key: 'ranger', slot: 0,
   },
