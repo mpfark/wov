@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { bondMultiplier } from '@/shared/formulas/bond';
-import { getArcaneSurgeMult } from '@/shared/formulas/abilities';
+import { resolveAmountByKey } from '@/features/combat/utils/ability-calcs';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -27,7 +27,14 @@ export default function GlobalModifiersPanel({
   const [surgeOn, setSurgeOn] = useState(false);
 
   const bondMult = bondMultiplier(bond);
-  const surgeMult = surgeOn ? getArcaneSurgeMult(intMod) : 1;
+  // Arcane Surge magnitude is configured on its own ability row, so the panel
+  // reads it through the same resolver the combat pipeline uses.
+  const surgeMult = surgeOn
+    ? resolveAmountByKey('arcane_surge', {
+        level: 1,
+        mods: { str: 0, dex: 0, con: 0, int: intMod, wis: 0, cha: 0 },
+      }, 1)
+    : 1;
   const final = baseMagnitude * bondMult * surgeMult;
 
   return (
