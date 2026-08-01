@@ -1143,15 +1143,18 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
-        // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
-        // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
+        // Configured v2 `amount_calc` is the FULL pre-multiplier magnitude
+        // (weapon die + DEX + soft DEX + level/3), deliberately unrounded so the
+        // stack multiplier rounds once. The legacy closure mirrors that exactly.
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const weaponRoll = rollDmg(1, evisDie);
-        const abilityBonus = paMag('amount', () => 2 + effDexDmg + Math.floor((c.level || 1) / 3));
-        const baseDmg = weaponRoll + dexMod + abilityBonus;
+        const baseDmg = paMagEx('amount', () =>
+          rollDmg(1, evisDie) + dexMod + (2 + effDexDmg + Math.floor((c.level || 1) / 3)),
+          undefined, evisDie,
+        ).value;
         // Named mechanic value: per_stack_multiplier (unit 'mult').
         const perStackBonus = paMag('mechanic', () => 0.50 + effChaStack * 0.02, 'per_stack_multiplier');
+
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
