@@ -141,3 +141,12 @@ export function resolveServerInterval(
 ): number {
   return getServerAbilityCalcs(classKey, abilityKey)?.intervalMs ?? legacy;
 }
+
+/**
+ * Did the registry load at least once? Used by the magnitude resolver to
+ * distinguish "no calc configured for this ability" (expected, mechanic-owned)
+ * from "the registry itself is unavailable" (actionable).
+ */
+export function isAbilityRegistryLoaded(): boolean {
+  return Object.keys(REGISTRY).length > 0;
+}
