@@ -1178,14 +1178,14 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
           continue;
         }
-        // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
-        // diminishingFloat in getConflagratePerStack, so no additional scaling there.
+        // Soft-scaled INT base (profile 'burst'). Post-cutover the base lives in
+        // `amount_calc` and the per-stack rider in the named
+        // `per_stack_multiplier` mechanic calc; both keep the inline formula as
+        // their legacy closure.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
-        const baseDmg = Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3));
-        // Conflagrate's configured `amount_calc` is the per-stack ratio today
-        // (it becomes `per_stack_multiplier` at checkpoint 4); the stat base
-        // above stays mechanic-owned until the evaluator can express it.
-        const perStackBonus = paMag('amount', () => getConflagratePerStack(intMod));
+        const baseDmg = paMag('amount', () => Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3)));
+        const perStackBonus = paMag('mechanic', () => getConflagratePerStack(intMod), 'per_stack_multiplier');
+
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
