@@ -83,6 +83,8 @@ export interface AbilityCalcCounters {
   config: number;
   legacy: number;
   fallbackUnconfigured: number;
+  /** v2 record present but the cutover flag is still off. */
+  fallbackPendingCutover: number;
   fallbackInvalid: number;
   fallbackRegistry: number;
   compared: number;
@@ -94,7 +96,8 @@ export interface AbilityCalcCounters {
 export function createAbilityCalcCounters(): AbilityCalcCounters {
   return {
     resolved: 0, config: 0, legacy: 0,
-    fallbackUnconfigured: 0, fallbackInvalid: 0, fallbackRegistry: 0,
+    fallbackUnconfigured: 0, fallbackPendingCutover: 0,
+    fallbackInvalid: 0, fallbackRegistry: 0,
     compared: 0, matched: 0, mismatched: 0, actionableFailures: 0,
   };
 }
@@ -197,6 +200,7 @@ export function accumulateAbilityCalcCounters(
   else counters.legacy += 1;
   switch (result.fallbackReason) {
     case 'unconfigured': counters.fallbackUnconfigured += 1; break;
+    case 'pending_cutover': counters.fallbackPendingCutover += 1; break;
     case 'invalid': counters.fallbackInvalid += 1; break;
     case 'registry_unavailable': counters.fallbackRegistry += 1; break;
     default: break;
