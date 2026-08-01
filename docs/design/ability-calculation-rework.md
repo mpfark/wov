@@ -305,10 +305,17 @@ Each is completed and verified independently before the next begins.
    seeded rolls (min, max, 3 mid, per-arrow sequences); stacks 0/1/partial/max;
    unarmed vs every weapon die; operation-order distinctions; eviscerate
    intermediate stages; global-modifier panel values. Then flip the flag.
-6. **Visual editor** — term rows, dice picker, stack-op picker, floor/cap/rounding
-   selects, template-driven named mechanic-calc section, final-multiplier field,
-   generated formula line, min/max/avg, level×mod table, context selector,
-   global-modifier panel, per-field validation, publish blocking. JSON becomes a
-   collapsed read-only diagnostic.
+6. **Visual editor** ✅ — `src/components/admin/ability/CalcBuilder.tsx` (term rows
+   for every source, dice picker with `weapon_main` + unarmed fallback, stat
+   transform/threshold ladders, context selector, final multiplier, nested
+   `multiplierCalc` with its own rounding, floor/cap/rounding/unit selects, admin
+   note, generated formula line, min/avg/max spread and a level × stat-mod table),
+   `MechanicCalcsEditor.tsx` (template-driven named mechanic calcs; unknown keys
+   and missing required params are surfaced as errors; stack-op read-out) and
+   `GlobalModifiersPanel.tsx` (bond points + Arcane Surge controlling values with a
+   pre → post readout). `AbilityConfigManager` now blocks save whenever
+   `validateAbilityForPublish` reports problems; JSON is a collapsed read-only
+   diagnostic inside the builder.
+
 7. **Remove legacy** — delete the inline formulas, the `ability_type` compat map,
    and the superseded helpers in `shared/formulas/abilities.ts`.
