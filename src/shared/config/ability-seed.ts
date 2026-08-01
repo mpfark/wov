@@ -226,9 +226,20 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
     mechanic_key: 'ignite_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
-    amount_calc: { base: 0.30, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'percent', note: 'INT bonus damage per consumed burn stack' },
+    amount_calc: {
+      version: 2, base: 4,
+      terms: [
+        stat('int', 2, { clampAtZero: true, transform: { kind: 'soft', profile: 'burst' }, rounding: 'round' }),
+        lvl(1 / 3),
+      ],
+      rounding: 'none', floor: 1, cap: null, unit: 'hp', note: 'INT base damage before the burn-stack multiplier',
+    },
     duration_calc: null, interval_ms: null,
-    effect_config: { consumes: 'burn_stacks', resolved_by: 'combat-tick' }, combat_text: {},
+    effect_config: { consumes: 'burn_stacks', resolved_by: 'combat-tick' },
+    mechanic_calcs: {
+      per_stack_multiplier: { base: 0.30, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'percent', note: 'INT bonus damage per consumed burn stack' },
+    },
+    combat_text: {},
     class_key: 'wizard', slot: 4,
   },
 
@@ -260,11 +271,16 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.',
     mechanic_key: 'multi_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 25, cp_reserve_pct: null,
-    amount_calc: { base: 0.55, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'DEX per-arrow damage ratio' },
+    amount_calc: {
+      version: 2, base: 0,
+      terms: [weaponDie(), stat('dex', 0.5, { clampAtZero: true, rounding: 'floor' })],
+      rounding: 'none', floor: 1, cap: null, unit: 'hp', note: 'per-arrow damage: weapon die + half DEX',
+    },
     duration_calc: null, interval_ms: null,
-    effect_config: {
-      ...WEAPON_ATTACK_CONFIG,
-      arrow_count_calc: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count' },
+    effect_config: { ...WEAPON_ATTACK_CONFIG },
+    mechanic_calcs: {
+      arrow_count: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count', note: 'DEX/WIS arrow ladder' },
+      per_arrow_multiplier: { base: 0.55, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'DEX per-arrow damage ratio vs autoattack' },
     },
     combat_text: {},
     class_key: 'ranger', slot: 2,
@@ -324,7 +340,9 @@ export const ABILITY_SEED: AbilitySeed[] = [
     duration_calc: null, interval_ms: null,
     effect_config: {
       mutually_exclusive_with: ['ignite'], consumes_all_cp: true,
-      max_stacks_calc: { base: 3, terms: [{ source: 'stat', stat: 'cha', clampAtZero: true, transform: { kind: 'diminishing', cap: 4 } }], unit: 'count' },
+    },
+    mechanic_calcs: {
+      max_stacks: { base: 3, terms: [{ source: 'stat', stat: 'cha', clampAtZero: true, transform: { kind: 'diminishing', cap: 4 } }], unit: 'count', note: 'CHA stack ceiling' },
     },
     combat_text: {},
     class_key: 'assassin', slot: 2,
@@ -399,7 +417,10 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'ally', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: { base: 0, terms: [stat('wis', 2), { source: 'level', mult: 0.5, rounding: 'floor' }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
     duration_calc: null, interval_ms: null,
-    effect_config: { reserve_hp_calc: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' } },
+    effect_config: {},
+    mechanic_calcs: {
+      reserve_hp: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' },
+    },
     combat_text: {},
     class_key: 'healer', slot: 2,
   },
@@ -446,7 +467,10 @@ export const ABILITY_SEED: AbilitySeed[] = [
     amount_calc: { base: 2, terms: [stat('cha', 1, { clampAtZero: true })], floor: 2, cap: null, unit: 'hp', note: 'CHA HP regen per tick' },
     duration_calc: { base: 60000, terms: [stat('int', 8000, { clampAtZero: true })], floor: 60000, cap: 180000, unit: 'ms', note: 'INT duration' },
     interval_ms: null,
-    effect_config: { cp_calc: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' }, refresh_policy: 'best_of' },
+    effect_config: { refresh_policy: 'best_of' },
+    mechanic_calcs: {
+      cp_per_tick: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' },
+    },
     combat_text: {},
     class_key: 'bard', slot: 1,
   },
