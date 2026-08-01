@@ -321,5 +321,20 @@ Each is completed and verified independently before the next begins.
    `validateAbilityForPublish` reports problems; JSON is a collapsed read-only
    diagnostic inside the builder.
 
-7. **Remove legacy** — delete the inline formulas, the `ability_type` compat map,
-   and the superseded helpers in `shared/formulas/abilities.ts`.
+7. **Remove legacy** ✅ — deleted `shared/formulas/abilities.ts` and its server
+   mirror (all 11 helpers), the `USE_CONFIG_ABILITY_CALCS` /
+   `USE_CONFIG_ABILITY_CALCS_V2` flags, and every `legacy: () => …` closure in
+   `combat-tick` and `useCombatActions`. Newly routed through configuration:
+   Arcane Surge (its own ability row, via the `surgeMult` helper, neutral
+   `fallbackValue: 1`), Envenom proc chance + `max_stacks`, Ignite orb chance,
+   and Battle Cry damage/crit reduction (configured base + the global
+   `SHIELD_ANTI_CRIT_BONUS` when a shield is equipped). The original curves now
+   live *only* as a frozen reference implementation inside
+   `ability-calc-parity.test.ts`, which pins the seed to shipped balance.
+
+   Retained deliberately: the `ability_type → ability_key` map in `combat-tick`.
+   It is not legacy math — it resolves the handful of shared *mechanic* names the
+   client dispatches on to the ability that owns the configuration. Removing it
+   means changing the client's cast payload to send `ability_key`, which is a
+   protocol change rather than a formula cleanup.
+
