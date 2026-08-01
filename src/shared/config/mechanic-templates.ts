@@ -136,15 +136,27 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   t('burst_damage', { params: [P('crit_edge', 'Crit range widening', 'flat', 'threshold')] }),
 
   // ── Buffs / mitigation ────────────────────────────────────────
-  t('battle_cry', { duration: true, params: [P('crit_reduction', 'Crit damage reduction', 'pct', 'rate')] }),
+  t('battle_cry', {
+    duration: true,
+    params: [
+      P('damage_reduction', 'Incoming damage reduction', 'pct', 'rate'),
+      P('crit_reduction', 'Crit damage reduction', 'pct', 'rate'),
+    ],
+  }),
   t('absorb_buff', { duration: true }),
   t('ally_absorb', { duration: true }),
   t('damage_buff', { duration: true, params: [P('damage_multiplier', 'Damage multiplier', 'mult', 'multiplier')] }),
   t('crit_buff', { duration: true }),
-  t('block_buff', { duration: true, params: [P('block_chance', 'Block chance', 'pct', 'chance')] }),
+  t('block_buff', {
+    duration: true,
+    params: [
+      P('block_chance', 'Bonus block chance', 'pct', 'chance'),
+      P('block_amount', 'Bonus block amount', 'flat', 'magnitude'),
+    ],
+  }),
   t('reactive_holy', {
     duration: true,
-    params: [P('retaliation_kicker', 'Retaliation bonus', 'hp', 'magnitude')],
+    params: [P('retaliation_damage', 'Retaliation damage', 'hp', 'magnitude')],
   }),
   t('mitigation_buff', {
     duration: true,
