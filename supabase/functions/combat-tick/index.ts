@@ -730,10 +730,11 @@ Deno.serve(async (req) => {
           // Pool cap = WIS (sustained ward). Regen rate (in apply_force_shield_regen SQL)
           // remains INT-scaled — INT shapes the spark, WIS shapes the ward.
           // Bond multiplier scales the ward magnitude as a utility shield pool.
-          const shieldCapRaw = resolveServerAmount(
-            m.c.class || 'wizard', 'force_shield', calcInputs,
-            Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5)),
-          );
+          const shieldCapRaw = resolveMagnitude({
+            classKey: m.c.class || 'wizard', abilityKey: 'force_shield', kind: 'amount',
+            inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+            legacy: () => Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5)),
+          });
           const shieldCap = Math.max(1, Math.floor(shieldCapRaw * (mBondMult[m.id] ?? 1)));
           let current = mb.absorb_buff?.shield_hp;
           if (current === undefined) {
