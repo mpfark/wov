@@ -690,10 +690,11 @@ Deno.serve(async (req) => {
           // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
           // Magnitude is configurable (abilities.amount_calc); the inline
           // expression stays as the fallback when no calc is configured.
-          const blended = resolveServerAmount(
-            m.c.class || 'ranger', 'eagle_eye', calcInputs,
-            Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2))),
-          );
+          const blended = resolveMagnitude({
+            classKey: m.c.class || 'ranger', abilityKey: 'eagle_eye', kind: 'amount',
+            inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+            legacy: () => Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2))),
+          });
           mb.crit_buff = { bonus: blended };
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
