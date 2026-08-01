@@ -108,8 +108,8 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
         loadedAt = Date.now();
       }
     } catch (err) {
-      // Non-fatal: handlers fall back to their legacy inline formulas.
-      console.error('[ability-calcs] load failed, using legacy formulas:', err);
+      // Non-fatal: the seeded registry keeps serving parity-proven values.
+      console.error('[ability-calcs] load failed, using seeded calcs:', err);
     } finally {
       inflight = null;
     }
@@ -139,41 +139,12 @@ export function buildServerCalcInputs(
   };
 }
 
-function resolve(
-  which: 'amountCalc' | 'durationCalc',
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  const calc = getServerAbilityCalcs(classKey, abilityKey)?.[which];
-  if (!calc) return legacy;
-  return evaluateCalc(calc, inputs);
-}
-
-/** Configured magnitude, or `legacy` when unconfigured / mechanic-owned. */
-export function resolveServerAmount(
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  return resolve('amountCalc', classKey, abilityKey, inputs, legacy);
-}
-
-/** Configured duration in ms, or `legacy` when unconfigured. */
-export function resolveServerDuration(
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  return resolve('durationCalc', classKey, abilityKey, inputs, legacy);
-}
-
-/** Configured tick interval in ms, or `legacy` when unconfigured. */
-export function resolveServerInterval(
-  classKey: string, abilityKey: string, legacy: number,
-): number {
-  return getServerAbilityCalcs(classKey, abilityKey)?.intervalMs ?? legacy;
-}
-
 /**
- * Did the registry load at least once? Used by the magnitude resolver to
- * distinguish "no calc configured for this ability" (expected, mechanic-owned)
- * from "the registry itself is unavailable" (actionable).
+ * Is any configuration available at all? Always true in practice — the compiled
+ * seed primes the registry — but the resolver keeps the check so a future
+ * seed-less deployment reports an actionable failure instead of silent zeroes.
  */
 export function isAbilityRegistryLoaded(): boolean {
   return Object.keys(REGISTRY).length > 0;
 }
+
