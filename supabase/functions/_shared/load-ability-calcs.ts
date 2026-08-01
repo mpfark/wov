@@ -27,6 +27,8 @@ export interface ServerAbilityCalcEntry {
   durationCalc: AbilityCalc | null;
   intervalMs: number | null;
   effectConfig: Record<string, unknown>;
+  /** Named typed mechanic calcs from `abilities.mechanic_calcs`. */
+  mechanicCalcs: Record<string, AbilityCalc>;
 }
 
 const TTL_MS = 60_000;
@@ -44,6 +46,17 @@ function asCalc(value: unknown): AbilityCalc | null {
   return calc;
 }
 
+/** Coerce the stored `mechanic_calcs` object into validated calc records. */
+function asMechanicCalcs(value: unknown): Record<string, AbilityCalc> {
+  if (!value || typeof value !== 'object') return {};
+  const out: Record<string, AbilityCalc> = {};
+  for (const [param, raw] of Object.entries(value as Record<string, unknown>)) {
+    const calc = asCalc(raw);
+    if (calc) out[param] = calc;
+  }
+  return out;
+}
+
 /** Replace the registry contents from joined assignment rows. */
 export function setServerAbilityCalcs(rows: any[]): void {
   const next: Record<string, ServerAbilityCalcEntry> = {};
@@ -59,6 +72,7 @@ export function setServerAbilityCalcs(rows: any[]): void {
       durationCalc: asCalc(ability.duration_calc),
       intervalMs: ability.interval_ms ?? null,
       effectConfig: (ability.effect_config as Record<string, unknown>) ?? {},
+      mechanicCalcs: asMechanicCalcs(ability.mechanic_calcs),
     };
   }
   if (Object.keys(next).length === 0) return; // keep whatever we had
@@ -74,7 +88,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
     try {
       const { data, error } = await db
         .from('class_ability_assignments')
-        .select('class_key,is_default,status,ability:abilities(ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config)');
+        .select('class_key,is_default,status,ability:abilities(ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
       if (error) throw error;
       if (data && data.length > 0) {
         setServerAbilityCalcs(data);
