@@ -20,8 +20,9 @@ import { validateCalc, type AbilityCalc } from '../formulas/ability-calc';
 
 export type MechanicCalcParamKey =
   | 'arrow_count' | 'max_stacks' | 'proc_chance' | 'stacks_applied'
-  | 'per_arrow_multiplier' | 'per_stack_multiplier' | 'block_chance'
-  | 'crit_reduction' | 'crit_edge' | 'retaliation_kicker'
+  | 'per_arrow_multiplier' | 'per_stack_multiplier'
+  | 'block_chance' | 'block_amount'
+  | 'damage_reduction' | 'crit_reduction' | 'crit_edge' | 'retaliation_damage'
   | 'reserve_hp' | 'cp_per_tick' | 'regen_per_tick' | 'orb_chance'
   | 'final_multiplier' | 'flat_reduction' | 'dodge_chance' | 'damage_multiplier'
   | 'root_reduction';
