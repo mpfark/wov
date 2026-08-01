@@ -1244,17 +1244,23 @@ Deno.serve(async (req) => {
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
+        // Both damage paths route through the resolver. The dice roll stays
+        // mechanic-owned until checkpoint 3 adds dice terms; the stat/level
+        // bonus (and the whole spell-path magnitude) is configurable.
         let dmg: number;
         if (t0Weapon) {
           const weaponRoll = rollDmg(1, t0Weapon.die);
-          const abilityBonus = Math.round(3 + effMod + Math.floor((c.level || 1) / 3));
+          const abilityBonus = paMag('amount', () => Math.round(3 + effMod + Math.floor((c.level || 1) / 3)));
           dmg = Math.max(1, weaponRoll + mod + abilityBonus);
         } else {
-          dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
+          dmg = Math.max(1, paMag('amount', () => Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))));
         }
-        // Templar Judgment: scaling reduced 20% vs shared smite baseline.
+        // Templar Judgment: intentional ability-specific nerf. Routed as the
+        // ability's final multiplier so checkpoint 4 can move the 0.8 into
+        // Judgment's configured `finalMult` with no code change here.
         if (pa.ability_type === 'smite' && c.class === 'templar') {
-          dmg = Math.max(1, Math.floor(dmg * 0.8));
+          const finalMult = paMag('mechanic', () => 0.8, 'final_multiplier');
+          dmg = Math.max(1, Math.floor(dmg * finalMult));
         }
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
