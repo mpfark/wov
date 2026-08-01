@@ -972,6 +972,53 @@ Deno.serve(async (req) => {
       // log lines so dual-wielders can see which weapon was used.
       const tagSuffix = (tag: string) => ` (${tag})`;
 
+      // ── Ability magnitude routing (checkpoint 2) ───────────────────
+      // `ability_type` stays the client's dispatch hint (compat map, deleted at
+      // checkpoint 7). Identity for configuration is always the ability_key.
+      const ABILITY_KEY_BY_TYPE: Record<string, string> = {
+        multi_attack: 'barrage', execute_attack: 'eviscerate',
+        ignite_consume: 'conflagrate', burst_damage: 'grand_finale',
+        dot_debuff: 'rend',
+      };
+      const paAbilityKey = (pa.ability_type === 'smite' && c.class === 'templar')
+        ? 'judgment'
+        : (ABILITY_KEY_BY_TYPE[pa.ability_type] ?? pa.ability_type);
+      const paInputs = buildServerCalcInputs(c.level || 1, {
+        str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+        con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+        wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+      });
+      /** Configured magnitude for this cast, with the inline formula as fallback. */
+      const paMag = (
+        kind: 'amount' | 'duration' | 'mechanic',
+        legacy: () => number,
+        param?: string,
+      ): number => resolveMagnitude({
+        classKey: c.class || '', abilityKey: paAbilityKey, kind, param,
+        inputs: paInputs, legacy, characterId: member.id, nodeId: combatNodeId,
+      });
+
+      // ── Server-authoritative stack count ──────────────────────────
+      // SECURITY: finisher stack counts are read from active_effects, never
+      // from client input. The client's advisory value is ignored entirely.
+      const serverStacks = (
+        effectType: 'poison' | 'ignite',
+        targetId: string | undefined | null,
+      ): number => {
+        if (!targetId) return 0;
+        let own = 0;
+        let any = 0;
+        for (const eff of activeEffects) {
+          if (eff.effect_type !== effectType || eff.target_id !== targetId) continue;
+          if (eff._expired || (eff.expires_at ?? 0) <= now) continue;
+          const n = Number(eff.stacks) || 0;
+          if (eff.source_id === member.id) own = Math.max(own, n);
+          any = Math.max(any, n);
+        }
+        return Math.min(5, Math.max(0, own || any));
+      };
+
+
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
