@@ -87,8 +87,13 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
 /**
  * Resolve an ability magnitude through configuration, falling back to the
  * caller's inline formula. Records telemetry; writes nothing.
+ *
+ * `resolveMagnitudeEx` returns the full result so a call site can tell whether
+ * configuration answered. That matters for riders that are *inside* the
+ * configured calc post-cutover (judgment's ×0.8, consecrate's ×0.65): they must
+ * only be re-applied when the legacy closure produced the number.
  */
-export function resolveMagnitude(args: MagnitudeArgs): number {
+export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult {
   const result: AbilityMagnitudeResult = resolveAbilityMagnitude({
     classKey: args.classKey,
     abilityKey: args.abilityKey,
@@ -130,8 +135,14 @@ export function resolveMagnitude(args: MagnitudeArgs): number {
     });
   }
 
-  return result.value;
+  return result;
 }
+
+/** Value-only convenience wrapper around `resolveMagnitudeEx`. */
+export function resolveMagnitude(args: MagnitudeArgs): number {
+  return resolveMagnitudeEx(args).value;
+}
+
 
 /** Snapshot of the aggregated counters for this isolate. */
 export function getAbilityCalcCounters(): AbilityCalcCounters {
