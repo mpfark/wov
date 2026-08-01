@@ -70,8 +70,7 @@ export default function AbilityConfigManager() {
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row | null>(null);
-  const [amountText, setAmountText] = useState('null');
-  const [durationText, setDurationText] = useState('null');
+
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
   const [roles, setRoles] = useState<RoleRow[]>([]);
