@@ -1,6 +1,6 @@
 # Ability Calculation Rework
 
-Status: **checkpoint 1 landed** (audit + identity). Checkpoints 2–7 pending.
+Status: **checkpoint 3 landed** (evaluator v2 + mechanic templates). Checkpoints 4–7 pending.
 
 This document is the reference for the migration of every player-ability
 calculation into genuinely configurable data. It records the verified audit, the
@@ -283,7 +283,7 @@ Each is completed and verified independently before the next begins.
    bypass path through it with the current inline math as an explicit
    `legacyFallback`; aggregated counters + dev logging; audit rows only for
    mismatch / fallback / actionable failure. Server-read `consume_stacks`.
-3. **Evaluator v2** — dice + context sources, `finalMult`, `multiplierCalc`,
+3. **Evaluator v2** ✅ — dice + context sources, `finalMult`, `multiplierCalc`,
    `multRounding`, injectable `RollSource`, extended `describeCalc` /
    `validateCalc`, mechanic-template registry, mirror-identity test.
 4. **Schema + seed** — `abilities.mechanic_calcs jsonb`,
