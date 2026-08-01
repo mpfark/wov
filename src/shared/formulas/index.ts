@@ -13,6 +13,5 @@ export * from './xp';
 export * from './items';
 export * from './creatures';
 export * from './economy';
-export * from './abilities';
 export * from './effective';
 export * from './ability-calc';

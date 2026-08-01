@@ -1,16 +1,20 @@
 # Ability Calculation Rework
 
-Status: **checkpoint 5 landed** (parity proof + cutover). Checkpoints 6–7 pending.
+Status: **complete** — checkpoints 1–7 landed.
 
-Cutover state: `USE_CONFIG_ABILITY_CALCS_V2` is **on** (client constant in
-`src/shared/config/feature-flags.ts`, server default in
-`supabase/functions/_shared/ability-telemetry.ts`, overridable with the
-`USE_CONFIG_ABILITY_CALCS_V2=false` env var as the rollback path). All 35 active
-rows carry the parity-proven `version: 2` records and their named
-`mechanic_calcs`; the live table was verified byte-identical to the seed.
-Parity harnesses: `ability-calc-parity.test.ts` (pure level/stat calcs) and
+Cutover state: configuration is the **only** source of ability magnitudes. The
+`USE_CONFIG_ABILITY_CALCS` / `USE_CONFIG_ABILITY_CALCS_V2` flags are gone, and so
+are the legacy inline formulas (`shared/formulas/abilities.ts` and its server
+mirror). `resolveMagnitude` reads the configured calc; if one is missing or does
+not evaluate, that is an actionable failure with a constant safety fallback —
+never legacy math. Both client and server registries are primed from the
+compiled `ABILITY_SEED`, so a failed config fetch still resolves the
+parity-proven numbers.
+Parity harnesses: `ability-calc-parity.test.ts` (now the *pin* — it carries the
+original curves as a frozen reference implementation) and
 `ability-calc-v2-parity.test.ts` (dice with seeded rolls, `finalMult`, per-stack
 multipliers, mechanic calcs).
+
 
 This document is the reference for the migration of every player-ability
 calculation into genuinely configurable data. It records the verified audit, the
@@ -317,5 +321,20 @@ Each is completed and verified independently before the next begins.
    `validateAbilityForPublish` reports problems; JSON is a collapsed read-only
    diagnostic inside the builder.
 
-7. **Remove legacy** — delete the inline formulas, the `ability_type` compat map,
-   and the superseded helpers in `shared/formulas/abilities.ts`.
+7. **Remove legacy** ✅ — deleted `shared/formulas/abilities.ts` and its server
+   mirror (all 11 helpers), the `USE_CONFIG_ABILITY_CALCS` /
+   `USE_CONFIG_ABILITY_CALCS_V2` flags, and every `legacy: () => …` closure in
+   `combat-tick` and `useCombatActions`. Newly routed through configuration:
+   Arcane Surge (its own ability row, via the `surgeMult` helper, neutral
+   `fallbackValue: 1`), Envenom proc chance + `max_stacks`, Ignite orb chance,
+   and Battle Cry damage/crit reduction (configured base + the global
+   `SHIELD_ANTI_CRIT_BONUS` when a shield is equipped). The original curves now
+   live *only* as a frozen reference implementation inside
+   `ability-calc-parity.test.ts`, which pins the seed to shipped balance.
+
+   Retained deliberately: the `ability_type → ability_key` map in `combat-tick`.
+   It is not legacy math — it resolves the handful of shared *mechanic* names the
+   client dispatches on to the ability that owns the configuration. Removing it
+   means changing the client's cast payload to send `ability_key`, which is a
+   protocol change rather than a formula cleanup.
+

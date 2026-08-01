@@ -19,17 +19,15 @@
  * sites migrate. Bar tier is presentation ordering only; it is no longer an
  * identity.
  *
- * Fallback: `ABILITY_SEED` is the balance-identical seed data, pinned against
- * the original hardcoded math by `ability-calc-parity.test.ts`. Until a fetch
- * lands (or when `USE_CONFIG_ABILITY_CALCS` is off) the caller's legacy inline
- * value is used, so nothing can regress if the config load fails.
+ * Fallback: `ABILITY_SEED` is the compiled seed data. It primes the registry so
+ * configuration can always answer, even before a fetch lands or if the config
+ * load fails. Legacy inline formulas were removed at checkpoint 7.
  */
 import { ABILITY_SEED } from '@/shared/config/ability-seed';
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs, type CalcStat,
 } from '@/shared/formulas/ability-calc';
 import { getStatModifier } from '@/shared/formulas/stats';
-import { USE_CONFIG_ABILITY_CALCS } from '@/shared/config/feature-flags';
 
 export interface AbilityCalcEntry {
   abilityKey: string;
@@ -212,15 +210,20 @@ export function buildCalcInputs(
   };
 }
 
+/**
+ * Checkpoint 7: configuration is the only source of ability magnitudes. The
+ * compiled `ABILITY_SEED` primes the registry, so a resolve can only come up
+ * empty for an ability that genuinely has no calc configured — in which case
+ * the caller's constant `fallback` (default 0) is returned.
+ */
 function resolveByKey(
   which: 'amountCalc' | 'durationCalc',
   abilityKey: string,
   inputs: CalcInputs,
-  legacy: number,
+  fallback: number,
 ): number {
-  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
   const calc = getAbilityCalcsByKey(abilityKey)?.[which];
-  if (!calc) return legacy;
+  if (!calc) return fallback;
   return evaluateCalc(calc, inputs);
 }
 
@@ -229,52 +232,49 @@ function resolve(
   classKey: string,
   tier: number,
   inputs: CalcInputs,
-  legacy: number,
+  fallback: number,
 ): number {
-  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
   const key = getAbilityKeyForSlot(classKey, tier);
-  if (!key) return legacy;
-  return resolveByKey(which, key, inputs, legacy);
+  if (!key) return fallback;
+  return resolveByKey(which, key, inputs, fallback);
 }
 
-/** Canonical: configured magnitude for one `ability_key`, or `legacy`. */
+/** Canonical: configured magnitude for one `ability_key`. */
 export function resolveAmountByKey(
-  abilityKey: string, inputs: CalcInputs, legacy: number,
+  abilityKey: string, inputs: CalcInputs, fallback = 0,
 ): number {
-  return resolveByKey('amountCalc', abilityKey, inputs, legacy);
+  return resolveByKey('amountCalc', abilityKey, inputs, fallback);
 }
 
-/** Canonical: configured duration (ms) for one `ability_key`, or `legacy`. */
+/** Canonical: configured duration (ms) for one `ability_key`. */
 export function resolveDurationByKey(
-  abilityKey: string, inputs: CalcInputs, legacy: number,
+  abilityKey: string, inputs: CalcInputs, fallback = 0,
 ): number {
-  return resolveByKey('durationCalc', abilityKey, inputs, legacy);
+  return resolveByKey('durationCalc', abilityKey, inputs, fallback);
 }
 
-/** Canonical: configured tick interval (ms) for one `ability_key`, or `legacy`. */
-export function resolveIntervalByKey(abilityKey: string, legacy: number): number {
-  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
-  return getAbilityCalcsByKey(abilityKey)?.intervalMs ?? legacy;
+/** Canonical: configured tick interval (ms) for one `ability_key`. */
+export function resolveIntervalByKey(abilityKey: string, fallback = 0): number {
+  return getAbilityCalcsByKey(abilityKey)?.intervalMs ?? fallback;
 }
 
-/** Compat: configured magnitude for a class/tier ability, or `legacy`. */
+/** Compat: configured magnitude for a class/tier ability. */
 export function resolveAmount(
-  classKey: string, tier: number, inputs: CalcInputs, legacy: number,
+  classKey: string, tier: number, inputs: CalcInputs, fallback = 0,
 ): number {
-  return resolve('amountCalc', classKey, tier, inputs, legacy);
+  return resolve('amountCalc', classKey, tier, inputs, fallback);
 }
 
-/** Compat: configured duration (ms) for a class/tier ability, or `legacy`. */
+/** Compat: configured duration (ms) for a class/tier ability. */
 export function resolveDuration(
-  classKey: string, tier: number, inputs: CalcInputs, legacy: number,
+  classKey: string, tier: number, inputs: CalcInputs, fallback = 0,
 ): number {
-  return resolve('durationCalc', classKey, tier, inputs, legacy);
+  return resolve('durationCalc', classKey, tier, inputs, fallback);
 }
 
-/** Compat: configured tick interval (ms), or `legacy` when unconfigured. */
-export function resolveInterval(classKey: string, tier: number, legacy: number): number {
-  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
-  return getAbilityCalcs(classKey, tier)?.intervalMs ?? legacy;
+/** Compat: configured tick interval (ms). */
+export function resolveInterval(classKey: string, tier: number, fallback = 0): number {
+  return getAbilityCalcs(classKey, tier)?.intervalMs ?? fallback;
 }
 
 // ── Loadout support (Phase 4) ─────────────────────────────────────

@@ -16,10 +16,10 @@ import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs,
 } from "../_shared/load-ability-calcs.ts";
-// Checkpoint 2: every ability magnitude funnels through resolveMagnitude —
-// configuration first, the inline formula passed in as an explicit legacy
-// closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
-// and hard failures produce audit rows.
+// Every ability magnitude funnels through resolveMagnitude — configuration is
+// the sole source (checkpoint 7); a missing or invalid calc is an actionable
+// failure, never silent legacy math. Telemetry is aggregated in-isolate; only
+// failures produce audit rows.
 import {
   resolveMagnitude, resolveMagnitudeEx, drainAbilityCalcAuditRows, getAbilityCalcCounters,
 } from "../_shared/ability-telemetry.ts";
@@ -62,14 +62,6 @@ import {
   getShieldWallAmountBonus,
   type HitQuality,
 } from "../_shared/formulas/combat.ts";
-import {
-  getArcaneSurgeMult,
-  getConflagratePerStack,
-  getEnvenomProc,
-  getEnvenomMaxStacks,
-  getIgniteOrbChance,
-  getBattleCryDR,
-} from "../_shared/formulas/abilities.ts";
 import {
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
@@ -266,6 +258,23 @@ const TICK_RATE = 2000;
 const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
 
 // ── Main handler ─────────────────────────────────────────────────
+
+/**
+ * Arcane Surge is a global damage-pipeline rule (not a per-ability rider), so
+ * its multiplier is resolved from its own configured ability row rather than a
+ * hardcoded helper. `fallbackValue: 1` is a neutral constant, never a formula —
+ * a missing calc leaves damage untouched and reports an actionable failure.
+ */
+function surgeMult(
+  classKey: string, level: number, intStat: number,
+  characterId?: string | null, nodeId?: string | null,
+): number {
+  return resolveMagnitude({
+    classKey, abilityKey: 'arcane_surge', kind: 'amount',
+    inputs: buildServerCalcInputs(level, { int: intStat }),
+    fallbackValue: 1, characterId, nodeId,
+  });
+}
 
 Deno.serve(async (req) => {
   const _requestT0 = Date.now();
@@ -693,30 +702,22 @@ Deno.serve(async (req) => {
           const blended = resolveMagnitude({
             classKey: m.c.class || 'ranger', abilityKey: 'eagle_eye', kind: 'amount',
             inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2))),
           });
           mb.crit_buff = { bonus: blended };
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
-          // Dual-primary (Warrior STR+DEX): magnitude scales with STR (and +5%
-          // shield bonus), duration is implicit via the stance. Crit reduction
-          // shares the curve. Hardcoded values have been retired.
-          const cStr = (m.c.str || 10) + ((eq[m.id] as any)?.str || 0);
-          const strMod = Math.max(0, Math.floor((cStr - 10) / 2));
+          // Dual-primary (Warrior STR+DEX): magnitude comes from the configured
+          // `battle_cry` amount calc (STR curve); duration is implicit via the
+          // stance. Crit reduction shares that curve, and an equipped shield
+          // adds the global shield anti-crit bonus on the damage-reduction leg.
           const hasShield = isShield(offHandTag[m.id]);
-          const coded = getBattleCryDR(strMod, hasShield);
-          // Named mechanic values: damage_reduction / crit_reduction.
-          const dr = resolveMagnitude({
-            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
-            param: 'damage_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => coded.dr,
+          const base = resolveMagnitude({
+            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'amount',
+            inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
           });
-          const critReduction = resolveMagnitude({
-            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
-            param: 'crit_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => coded.critReduction,
-          });
+          const dr = base + (hasShield ? SHIELD_ANTI_CRIT_BONUS : 0);
+          const critReduction = base;
           mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
         if (reserved.holy_shield) {
@@ -733,12 +734,10 @@ Deno.serve(async (req) => {
             chance_bonus: resolveMagnitude({
               classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
               param: 'block_chance', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-              legacy: () => getShieldWallChanceBonus(cWis),
             }),
             amount_bonus: resolveMagnitude({
               classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
               param: 'block_amount', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-              legacy: () => getShieldWallAmountBonus(cCon),
             }),
           };
         }
@@ -754,7 +753,6 @@ Deno.serve(async (req) => {
           const shieldCapRaw = resolveMagnitude({
             classKey: m.c.class || 'wizard', abilityKey: 'force_shield', kind: 'amount',
             inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-            legacy: () => Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5)),
           });
           const shieldCap = Math.max(1, Math.floor(shieldCapRaw * (mBondMult[m.id] ?? 1)));
           let current = mb.absorb_buff?.shield_hp;
@@ -993,9 +991,10 @@ Deno.serve(async (req) => {
       // log lines so dual-wielders can see which weapon was used.
       const tagSuffix = (tag: string) => ` (${tag})`;
 
-      // ── Ability magnitude routing (checkpoint 2) ───────────────────
-      // `ability_type` stays the client's dispatch hint (compat map, deleted at
-      // checkpoint 7). Identity for configuration is always the ability_key.
+      // ── Ability magnitude routing ─────────────────────────────────
+      // `ability_type` is the client's *mechanic* dispatch hint; this map turns
+      // the handful of shared mechanic names into the ability_key that owns the
+      // configuration. Identity for configuration is always the ability_key.
       const ABILITY_KEY_BY_TYPE: Record<string, string> = {
         multi_attack: 'barrage', execute_attack: 'eviscerate',
         ignite_consume: 'conflagrate', burst_damage: 'grand_finale',
@@ -1010,7 +1009,8 @@ Deno.serve(async (req) => {
         wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
       });
       /**
-       * Configured magnitude for this cast, with the inline formula as fallback.
+       * Configured magnitude for this cast — configuration is the only source
+       * (checkpoint 7).
        * `paMagEx` exposes the full result (value + whether config answered) and
        * accepts the equipped weapon die so `dice` terms can roll. Randomness
        * lives here at the call site — the evaluator only calls the injected
@@ -1018,7 +1018,6 @@ Deno.serve(async (req) => {
        */
       const paMagEx = (
         kind: 'amount' | 'duration' | 'mechanic',
-        legacy: () => number,
         param?: string,
         weaponDie?: number | null,
         context?: Record<string, number>,
@@ -1030,13 +1029,12 @@ Deno.serve(async (req) => {
           roll: (sides: number) => rollDmg(1, sides),
           ...(context ? { context } : {}),
         },
-        legacy, characterId: member.id, nodeId: combatNodeId,
+        characterId: member.id, nodeId: combatNodeId,
       });
       const paMag = (
         kind: 'amount' | 'duration' | 'mechanic',
-        legacy: () => number,
         param?: string,
-      ): number => paMagEx(kind, legacy, param).value;
+      ): number => paMagEx(kind, param).value;
 
 
       // ── Server-authoritative stack count ──────────────────────────
@@ -1075,7 +1073,6 @@ Deno.serve(async (req) => {
         // Named mechanic value: arrow_count (unit 'count').
         const arrowCount = paMag(
           'mechanic',
-          () => Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0)),
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
@@ -1084,7 +1081,6 @@ Deno.serve(async (req) => {
         const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const rollArrow = () => paMagEx(
           'amount',
-          () => Math.max(rollDmg(1, arrowDie) + arrowBonus, 1),
           undefined, arrowDie,
         ).value;
 
@@ -1108,7 +1104,7 @@ Deno.serve(async (req) => {
             let arrowDmg = Math.max(1, Math.floor(rollArrow()));
             if (isCrit) arrowDmg *= 2;
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
-            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
@@ -1172,12 +1168,11 @@ Deno.serve(async (req) => {
         // stack multiplier rounds once. The legacy closure mirrors that exactly.
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const baseDmg = paMagEx('amount', () =>
-          rollDmg(1, evisDie) + dexMod + (2 + effDexDmg + Math.floor((c.level || 1) / 3)),
+        const baseDmg = paMagEx('amount',
           undefined, evisDie,
         ).value;
         // Named mechanic value: per_stack_multiplier (unit 'mult').
-        const perStackBonus = paMag('mechanic', () => 0.50 + effChaStack * 0.02, 'per_stack_multiplier');
+        const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
 
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
@@ -1210,13 +1205,13 @@ Deno.serve(async (req) => {
         // `per_stack_multiplier` mechanic calc; both keep the inline formula as
         // their legacy closure.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
-        const baseDmg = paMag('amount', () => Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3)));
-        const perStackBonus = paMag('mechanic', () => getConflagratePerStack(intMod), 'per_stack_multiplier');
+        const baseDmg = paMag('amount');
+        const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
 
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
-        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
@@ -1297,13 +1292,8 @@ Deno.serve(async (req) => {
         // legacy closure must produce the full number too — never a delta.
         // Anything else would double-count the weapon die after the cutover.
         const t0Res = t0Weapon
-          ? paMagEx('amount', () => Math.max(1,
-              rollDmg(1, t0Weapon.die) + mod
-              + Math.round(3 + effMod + Math.floor((c.level || 1) / 3))
-            ), undefined, t0Weapon.die)
-          : paMagEx('amount', () => Math.max(1,
-              Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))
-            ));
+          ? paMagEx('amount', undefined, t0Weapon.die)
+          : paMagEx('amount');
         let dmg = Math.max(1, Math.floor(t0Res.value));
         // Templar Judgment: intentional ability-specific nerf. Post-cutover the
         // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
@@ -1315,7 +1305,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
-        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
         const hitMsg = isBackstab
@@ -1347,17 +1337,17 @@ Deno.serve(async (req) => {
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
         // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
         const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
-        const baseDmg = paMag('amount', () => Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5))));
+        const baseDmg = paMag('amount');
         let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
         // INT crit-edge: named mechanic value (unit 'flat'), applied as a
         // threshold reduction. d20 vs crit threshold. Floor 17.
         const critRoll = rollD20();
-        const critEdge = paMag('mechanic', () => Math.floor(Math.max(0, intMod) / 2), 'crit_edge');
+        const critEdge = paMag('mechanic', 'crit_edge');
         const critThreshold = Math.max(17, 20 - critEdge);
         const isFinaleCrit = critRoll >= critThreshold;
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
-        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
@@ -1389,11 +1379,10 @@ Deno.serve(async (req) => {
         let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
-        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
         const durationMs = paMag(
           'duration',
-          () => Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
         );
         // Rend's per-tick magnitude stays mechanic-owned for now: its existing
         // `amount_calc` is a STR-only curve, while the live formula also folds
@@ -1592,7 +1581,6 @@ Deno.serve(async (req) => {
                 wis: effectiveWis, cha: (targetC.cha || 10) + (targetEq.cha || 0),
               }),
               characterId: targetId, nodeId: combatNodeId,
-              legacy: () => Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)),
             }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
@@ -1699,7 +1687,6 @@ Deno.serve(async (req) => {
         const consRes = resolveMagnitudeEx({
           classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
-          legacy: () => 2 + consWis,
         });
         const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
         const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
@@ -1807,7 +1794,7 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('stealth');
             events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
-          if (isDmgBuff) dmg = Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
+          if (isDmgBuff) dmg = Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId));
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -1841,8 +1828,19 @@ Deno.serve(async (req) => {
           // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
           const dexMod = sm((c.dex || 10) + (eb.dex || 0));
           const chaMod = sm((c.cha || 10) + (eb.cha || 0));
-          const envenomProc = getEnvenomProc(dexMod);
-          const envenomMaxStacks = getEnvenomMaxStacks(chaMod);
+          const envenomInputs = buildServerCalcInputs(c.level || 1, {
+            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+          });
+          const envenomProc = resolveMagnitude({
+            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'amount',
+            inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
+          });
+          const envenomMaxStacks = resolveMagnitude({
+            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'mechanic',
+            param: 'max_stacks', inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
+          });
           if (mb.poison_buff && Math.random() < envenomProc) {
             // Server-side DoT creation: upsert poison into active_effects.
             // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
@@ -1950,7 +1948,7 @@ Deno.serve(async (req) => {
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
-          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
 
           // Clamp minimum 1
           dmg2 = Math.max(dmg2, 1);
@@ -2021,10 +2019,19 @@ Deno.serve(async (req) => {
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         const wisMod = sm((c.wis || 10) + (eb.wis || 0));
-        if (Math.random() >= getIgniteOrbChance(intMod)) continue;
+        const orbChance = resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'amount',
+          inputs: buildServerCalcInputs(c.level || 1, {
+            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+          }),
+          characterId: m.id, nodeId: combatNodeId,
+        });
+        if (Math.random() >= orbChance) continue;
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
         pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
         cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
@@ -2061,7 +2068,7 @@ Deno.serve(async (req) => {
           attacker_name: c.name,
           target_name: target.name,
           damage: pulseDmg,
-          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${newStacks})! [${pulseDmg}]`,
+          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
         });
         // Re-emit the legacy ignite_proc event so the existing client wiring
         // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)

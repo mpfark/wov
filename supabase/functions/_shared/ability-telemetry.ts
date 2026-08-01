@@ -1,15 +1,16 @@
 /**
  * ability-telemetry.ts — server binding for the shared ability-magnitude
- * resolver (checkpoint 2).
+ * resolver.
  *
  * Wraps `resolveAbilityMagnitude` with:
- *   • the server ability registry (`load-ability-calcs.ts`),
+ *   • the server ability registry (`load-ability-calcs.ts`, primed from the
+ *     compiled seed so configuration can always answer),
  *   • in-isolate aggregated counters (no hot-path writes),
- *   • an actionable-event queue that receives a row ONLY for a parity
- *     mismatch, an invalid/unavailable configuration, or a hard failure.
+ *   • an actionable-event queue that receives a row ONLY when configuration
+ *     could not answer.
  *
- * Import `resolveMagnitude` instead of the raw `resolveServer*` helpers so all
- * ability math funnels through one place.
+ * Checkpoint 7: there is no legacy path and no cutover flag. Configuration is
+ * the sole source of ability magnitudes.
  */
 import {
   getServerAbilityCalcs, isAbilityRegistryLoaded,
@@ -26,16 +27,6 @@ import {
 } from './combat/ability-magnitude.ts';
 import type { AbilityCalc, CalcInputs } from './formulas/ability-calc.ts';
 
-/**
- * Global cutover flag. Legacy fallback is a pre-cutover mechanism only; once
- * this is true an invalid active configuration is an actionable failure, never
- * a silent legacy substitution. Flipped at checkpoint 5 for all classes at once.
- */
-export const USE_CONFIG_ABILITY_CALCS_V2 =
-  (Deno.env.get('USE_CONFIG_ABILITY_CALCS_V2') ?? 'true') === 'true';
-
-/** Parity comparison mode — evaluates both paths. Off in production. */
-const COMPARE_MODE = (Deno.env.get('ABILITY_CALC_COMPARE') ?? 'false') === 'true';
 const DEV_LOG = (Deno.env.get('ABILITY_CALC_DEBUG') ?? 'false') === 'true';
 
 let counters: AbilityCalcCounters = createAbilityCalcCounters();
@@ -58,8 +49,8 @@ export interface MagnitudeArgs {
   /** Named mechanic parameter key when `kind === 'mechanic'`. */
   param?: string;
   inputs: CalcInputs;
-  /** The original inline formula — only invoked when config cannot answer. */
-  legacy: () => number;
+  /** Constant safety floor used only when configuration fails. */
+  fallbackValue?: number;
   characterId?: string | null;
   nodeId?: string | null;
 }
@@ -71,9 +62,9 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
     case 'amount': return entry.amountCalc;
     case 'duration': return entry.durationCalc;
     case 'mechanic': {
-      // Canonical home is `abilities.mechanic_calcs` (checkpoint 4). The legacy
+      // Canonical home is `abilities.mechanic_calcs`. The older
       // `effect_config.<param>_calc` spelling is still honoured for rows that
-      // have not been migrated yet.
+      // predate the migration.
       if (args.param && entry.mechanicCalcs?.[args.param]) return entry.mechanicCalcs[args.param];
       const raw = (entry.effectConfig ?? {})[`${args.param}_calc`];
       if (!raw || typeof raw !== 'object') return null;
@@ -85,13 +76,9 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
 }
 
 /**
- * Resolve an ability magnitude through configuration, falling back to the
- * caller's inline formula. Records telemetry; writes nothing.
- *
- * `resolveMagnitudeEx` returns the full result so a call site can tell whether
- * configuration answered. That matters for riders that are *inside* the
- * configured calc post-cutover (judgment's ×0.8, consecrate's ×0.65): they must
- * only be re-applied when the legacy closure produced the number.
+ * Resolve an ability magnitude from configuration. Records telemetry; writes
+ * nothing. `resolveMagnitudeEx` returns the full result so a call site can tell
+ * whether configuration answered.
  */
 export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult {
   const result: AbilityMagnitudeResult = resolveAbilityMagnitude({
@@ -101,9 +88,7 @@ export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult 
     param: args.param,
     inputs: args.inputs,
     calc: args.kind === 'interval' ? null : pickCalc(args),
-    legacy: args.legacy,
-    useV2: USE_CONFIG_ABILITY_CALCS_V2,
-    compare: COMPARE_MODE,
+    fallbackValue: args.fallbackValue,
     registryUnavailable: !isAbilityRegistryLoaded(),
   });
 
@@ -111,26 +96,20 @@ export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult 
 
   if (DEV_LOG) {
     console.log('[ability-calc]', magnitudeLabel(args), result.source, result.value,
-      result.fallbackReason ?? '', result.mismatch ? `legacy=${result.legacyValue}` : '');
+      result.failureReason ?? '');
   }
 
   if (isActionableAbilityCalcEvent(result) && auditQueue.length < AUDIT_QUEUE_CAP) {
     auditQueue.push({
       character_id: args.characterId ?? null,
       node_id: args.nodeId ?? null,
-      event_type: result.mismatch
-        ? 'ability_calc_mismatch'
-        : result.actionableFailure
-          ? 'ability_calc_failure'
-          : 'ability_calc_fallback',
-      message: result.message ?? `${magnitudeLabel(args)}: ${result.fallbackReason}`,
+      event_type: 'ability_calc_failure',
+      message: result.message ?? `${magnitudeLabel(args)}: ${result.failureReason}`,
       payload: {
         label: magnitudeLabel(args),
         source: result.source,
         value: result.value,
-        legacy_value: result.legacyValue ?? null,
-        fallback_reason: result.fallbackReason ?? null,
-        v2: USE_CONFIG_ABILITY_CALCS_V2,
+        failure_reason: result.failureReason ?? null,
       },
     });
   }
@@ -153,7 +132,7 @@ export function resetAbilityCalcCounters(): void {
   counters = createAbilityCalcCounters();
 }
 
-/** Take and clear the queued actionable rows (mismatch / fallback / failure). */
+/** Take and clear the queued actionable rows. */
 export function drainAbilityCalcAuditRows(): AbilityCalcAuditRow[] {
   const rows = auditQueue;
   auditQueue = [];

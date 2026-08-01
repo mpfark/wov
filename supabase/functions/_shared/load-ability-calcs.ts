@@ -10,15 +10,15 @@
  * Key is `${class_key}:${ability_key}` — server handlers know which ability
  * they are resolving by key, not by bar tier.
  *
- * Safety: every resolver takes the legacy inline expression as its fallback.
- * If the load fails, a row is missing, or a calc is absent (mechanic-owned
- * math such as weapon-die rolls), the original hardcoded value is used, so a
- * config outage can never change balance.
+ * Safety (checkpoint 7): legacy inline formulas are gone, so configuration must
+ * always be able to answer. The registry is therefore **primed from the
+ * compiled `ABILITY_SEED`** at module load and only ever replaced by live rows.
+ * A database outage degrades to the seeded (parity-proven) values, never to
+ * zero.
  */
-import {
-  evaluateCalc, type AbilityCalc, type CalcInputs, type CalcStat,
-} from './formulas/ability-calc.ts';
+import { type AbilityCalc, type CalcInputs, type CalcStat } from './formulas/ability-calc.ts';
 import { getStatModifier } from './formulas/stats.ts';
+import { ABILITY_SEED } from './config/ability-seed.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -38,6 +38,19 @@ let inflight: Promise<void> | null = null;
 const REGISTRY: Record<string, ServerAbilityCalcEntry> = {};
 
 const key = (classKey: string, abilityKey: string) => `${classKey}:${abilityKey}`;
+
+/** Compiled fallback: the seed is the same data the tables were seeded from. */
+for (const a of ABILITY_SEED) {
+  REGISTRY[key(a.class_key, a.ability_key)] = {
+    abilityKey: a.ability_key,
+    mechanicKey: a.mechanic_key,
+    amountCalc: a.amount_calc,
+    durationCalc: a.duration_calc,
+    intervalMs: a.interval_ms,
+    effectConfig: (a.effect_config as Record<string, unknown>) ?? {},
+    mechanicCalcs: a.mechanic_calcs ?? {},
+  };
+}
 
 function asCalc(value: unknown): AbilityCalc | null {
   if (!value || typeof value !== 'object') return null;
@@ -95,8 +108,8 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
         loadedAt = Date.now();
       }
     } catch (err) {
-      // Non-fatal: handlers fall back to their legacy inline formulas.
-      console.error('[ability-calcs] load failed, using legacy formulas:', err);
+      // Non-fatal: the seeded registry keeps serving parity-proven values.
+      console.error('[ability-calcs] load failed, using seeded calcs:', err);
     } finally {
       inflight = null;
     }
@@ -126,41 +139,12 @@ export function buildServerCalcInputs(
   };
 }
 
-function resolve(
-  which: 'amountCalc' | 'durationCalc',
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  const calc = getServerAbilityCalcs(classKey, abilityKey)?.[which];
-  if (!calc) return legacy;
-  return evaluateCalc(calc, inputs);
-}
-
-/** Configured magnitude, or `legacy` when unconfigured / mechanic-owned. */
-export function resolveServerAmount(
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  return resolve('amountCalc', classKey, abilityKey, inputs, legacy);
-}
-
-/** Configured duration in ms, or `legacy` when unconfigured. */
-export function resolveServerDuration(
-  classKey: string, abilityKey: string, inputs: CalcInputs, legacy: number,
-): number {
-  return resolve('durationCalc', classKey, abilityKey, inputs, legacy);
-}
-
-/** Configured tick interval in ms, or `legacy` when unconfigured. */
-export function resolveServerInterval(
-  classKey: string, abilityKey: string, legacy: number,
-): number {
-  return getServerAbilityCalcs(classKey, abilityKey)?.intervalMs ?? legacy;
-}
-
 /**
- * Did the registry load at least once? Used by the magnitude resolver to
- * distinguish "no calc configured for this ability" (expected, mechanic-owned)
- * from "the registry itself is unavailable" (actionable).
+ * Is any configuration available at all? Always true in practice — the compiled
+ * seed primes the registry — but the resolver keeps the check so a future
+ * seed-less deployment reports an actionable failure instead of silent zeroes.
  */
 export function isAbilityRegistryLoaded(): boolean {
   return Object.keys(REGISTRY).length > 0;
 }
+
