@@ -16,8 +16,8 @@ import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs,
 } from "../_shared/load-ability-calcs.ts";
-// Checkpoint 2: every ability magnitude funnels through resolveMagnitude —
-// configuration first, the inline formula passed in as an explicit legacy
+// Every ability magnitude funnels through resolveMagnitude — configuration is
+// the sole source (checkpoint 7); a missing calc reports an actionable
 // closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
 // and hard failures produce audit rows.
 import {
@@ -991,9 +991,10 @@ Deno.serve(async (req) => {
       // log lines so dual-wielders can see which weapon was used.
       const tagSuffix = (tag: string) => ` (${tag})`;
 
-      // ── Ability magnitude routing (checkpoint 2) ───────────────────
-      // `ability_type` stays the client's dispatch hint (compat map, deleted at
-      // checkpoint 7). Identity for configuration is always the ability_key.
+      // ── Ability magnitude routing ─────────────────────────────────
+      // `ability_type` is the client's *mechanic* dispatch hint; this map turns
+      // the handful of shared mechanic names into the ability_key that owns the
+      // configuration. Identity for configuration is always the ability_key.
       const ABILITY_KEY_BY_TYPE: Record<string, string> = {
         multi_attack: 'barrage', execute_attack: 'eviscerate',
         ignite_consume: 'conflagrate', burst_damage: 'grand_finale',
