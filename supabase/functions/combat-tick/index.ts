@@ -1149,7 +1149,7 @@ Deno.serve(async (req) => {
         // Per-stack bonus scales with INT. Burn stack count scales with WIS via Ignite. Rolls to hit on INT.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
-        const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const stacks = serverStacks('ignite', target.id);
         const hit = rollAbilityHit(intMod);
         if (!hit.hit) {
           const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
