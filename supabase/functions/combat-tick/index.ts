@@ -1265,24 +1265,26 @@ Deno.serve(async (req) => {
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
-        // Both damage paths route through the resolver. The dice roll stays
-        // mechanic-owned until checkpoint 3 adds dice terms; the stat/level
-        // bonus (and the whole spell-path magnitude) is configurable.
-        let dmg: number;
-        if (t0Weapon) {
-          const weaponRoll = rollDmg(1, t0Weapon.die);
-          const abilityBonus = paMag('amount', () => Math.round(3 + effMod + Math.floor((c.level || 1) / 3)));
-          dmg = Math.max(1, weaponRoll + mod + abilityBonus);
-        } else {
-          dmg = Math.max(1, paMag('amount', () => Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))));
+        // Checkpoint 5: the configured v2 `amount_calc` expresses the FULL
+        // magnitude (weapon die + raw stat + soft bonus + level/3), so the
+        // legacy closure must produce the full number too — never a delta.
+        // Anything else would double-count the weapon die after the cutover.
+        const t0Res = t0Weapon
+          ? paMagEx('amount', () => Math.max(1,
+              rollDmg(1, t0Weapon.die) + mod
+              + Math.round(3 + effMod + Math.floor((c.level || 1) / 3))
+            ), undefined, t0Weapon.die)
+          : paMagEx('amount', () => Math.max(1,
+              Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3))
+            ));
+        let dmg = Math.max(1, Math.floor(t0Res.value));
+        // Templar Judgment: intentional ability-specific nerf. Post-cutover the
+        // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
+        // applied here when the legacy closure produced the number.
+        if (pa.ability_type === 'smite' && c.class === 'templar' && t0Res.source !== 'config') {
+          dmg = Math.max(1, Math.floor(dmg * 0.8));
         }
-        // Templar Judgment: intentional ability-specific nerf. Routed as the
-        // ability's final multiplier so checkpoint 4 can move the 0.8 into
-        // Judgment's configured `finalMult` with no code change here.
-        if (pa.ability_type === 'smite' && c.class === 'templar') {
-          const finalMult = paMag('mechanic', () => 0.8, 'final_multiplier');
-          dmg = Math.max(1, Math.floor(dmg * finalMult));
-        }
+
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
