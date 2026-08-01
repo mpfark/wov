@@ -73,6 +73,9 @@ export default function AbilityConfigManager() {
 
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
+  const [sampleStacks, setSampleStacks] = useState(3);
+  const [sampleWeaponDie, setSampleWeaponDie] = useState(8);
+
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
   const [authorAsAlternative, setAuthorAsAlternative] = useState(false);
