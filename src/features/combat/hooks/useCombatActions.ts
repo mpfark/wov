@@ -311,7 +311,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildHealEvent(`You must target an ally to transfer health.`));
         return;
       }
-      const wisMod = getStatModifier(p.character.wis);
       const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const transferAmount = amountOf();
       // Dual-primary split: amount = WIS, safety floor scales with CON (hardy
@@ -329,7 +328,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const targetName = targetMember?.character.name || 'ally';
       p.addLogEvent(buildHealEvent(`${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`));
     } else if (ability.type === 'heal') {
-      const wisMod = getStatModifier(p.character.wis);
       const healAmount = amountOf();
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
@@ -337,7 +335,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`You cast Heal and mend your wounds! [${restored}]`)); }
       else p.addLogEvent(buildHealEvent(`You cast Heal but you're already at full health.`));
     } else if (ability.type === 'self_heal') {
-      const conMod = getStatModifier(p.character.con);
       const healAmount = amountOf();
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
@@ -351,7 +348,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // best-of HP/CP regen across the prior and new cast (never weakens an
       // active buff). Does not stack.
       const chaMod = Math.max(0, getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0)));
-      const intMod = Math.max(0, getStatModifier(p.character.int + (p.equipmentBonuses.int || 0)));
       const newHp = amountOf();
       const newCp = Math.max(1, Math.ceil(chaMod / 2) + 1);
       const durationMs = durationOf();
@@ -375,16 +371,12 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
     } else if (ability.type === 'crit_buff') {
       // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const critBonus = amountOf();
       const critDurationMs = durationOf();
       p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + critDurationMs });
       p.addLogEvent(buildBuffEvent(`Eagle Eye! Your crit range is now ${20 - critBonus}-20 for ${Math.round(critDurationMs / 1000)}s.`));
     } else if (ability.type === 'stealth_buff') {
       // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
-      const dexMod = getStatModifier(p.character.dex);
-      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const durationMs = durationOf();
       const ambushMult = amountOf();
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
@@ -402,9 +394,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for ${ability.label}.`)); return; }
       // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
       // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
-      const scaleMod = p.character.class === 'bard'
-        ? getStatModifier(p.character.int + (p.equipmentBonuses.int || 0))
-        : getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const durationMs = durationOf();
       const reduction = amountOf();
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
@@ -420,10 +409,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Rend.`)); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       // Soft-scaled: STR contribution tapers past softCap (profile 'dot') so late-game
       // stat stacking yields reduced marginal gain without a hard ceiling.
-      const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
       const dmgPerTick = amountOf();
       // Dual-primary split: damage = STR (the wound), duration = DEX (precision keeps it open).
       const durationMs = durationOf();
@@ -453,8 +440,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       // Dual-primary (Assassin DEX+CHA): dodge magnitude = CHA (showmanship),
       // duration = DEX (footwork).
       const durationMs = durationOf();
@@ -462,8 +447,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
       p.addLogEvent(buildBuffEvent(`Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`));
     } else if (ability.type === 'disengage_buff') {
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       // Dual-primary (Ranger DEX+WIS): dodge duration = DEX, next-hit
       // bonus magnitude = WIS (calm aim after the leap).
       const dodgeDurationMs = durationOf();
@@ -487,8 +470,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Force Shield (legacy timed preview — stance toggle intercepts in practice).
       // Pool scales with WIS to match server authority (combat-tick) and the
       // ability description. INT shapes regen; WIS shapes the ward.
-      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
-      const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const shieldHp = amountOf();
       const durationMs = durationOf();
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
@@ -499,12 +480,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       //   Healer (WIS+CON): heal/tick = WIS, duration = CON (stamina sustains the radiance).
       //   Bard   (CHA+INT): heal/tick = CHA, duration = INT (knowledge stretches the melody).
       const isHealer = p.character.class === 'healer';
-      const magnitudeMod = isHealer
-        ? getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0))
-        : getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      const durationMod = isHealer
-        ? getStatModifier(p.character.con + (p.equipmentBonuses.con || 0))
-        : getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const healPerTick = amountOf();
       const durationMs = durationOf();
       p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
@@ -513,8 +488,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLogEvent(buildHealEvent(`${abilityName} heals ${who} every 3s for ${Math.round(durationMs / 1000)}s. [${healPerTick}/tick]`));
     } else if (ability.type === 'ally_absorb') {
       // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
-      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
-      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const shieldHp = amountOf();
       const durationMs = durationOf();
       p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: Date.now() + durationMs });
@@ -531,8 +504,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
-      const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       // Soft-scaled utility magnitude: floor of 2, plus soft-scaled STR contribution.
       const acReduction = amountOf();
 
@@ -556,14 +527,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Templar — Consecrate: dual-primary — magnitude (heal/burn) = WIS, number of ticks scales with CON.
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
       const conMod = Math.max(0, getStatModifier(p.character.con + (p.equipmentBonuses.con || 0)));
-      const ticks = Math.min(5, 3 + (conMod >= 3 ? 1 : 0) + (conMod >= 6 ? 1 : 0));
       const durationMs = durationOf();
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
       p.addLogEvent(buildHealEvent(`You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`));
     } else if (ability.type === 'mitigation_buff') {
       // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
-      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
-      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const durationMs = durationOf();
       const flat = amountOf();
       p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
