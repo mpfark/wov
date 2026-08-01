@@ -1059,11 +1059,15 @@ Deno.serve(async (req) => {
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        // Per-arrow flat bonus stays mechanic-owned here: barrage's existing
-        // `amount_calc` holds the per-arrow *ratio* (percent), a different
-        // quantity. It becomes the `per_arrow_multiplier` mechanic calc at
-        // checkpoint 4; routing it now would change balance.
+        // Per-arrow damage is configured: barrage's `amount_calc` is the FULL
+        // per-arrow magnitude (weapon die + half DEX), rolled once per arrow.
         const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
+        const rollArrow = () => paMagEx(
+          'amount',
+          () => Math.max(rollDmg(1, arrowDie) + arrowBonus, 1),
+          undefined, arrowDie,
+        ).value;
+
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
