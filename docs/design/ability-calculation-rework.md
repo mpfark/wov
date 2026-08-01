@@ -283,7 +283,7 @@ Each is completed and verified independently before the next begins.
    bypass path through it with the current inline math as an explicit
    `legacyFallback`; aggregated counters + dev logging; audit rows only for
    mismatch / fallback / actionable failure. Server-read `consume_stacks`.
-3. **Evaluator v2** — dice + context sources, `finalMult`, `multiplierCalc`,
+3. **Evaluator v2** ✅ — dice + context sources, `finalMult`, `multiplierCalc`,
    `multRounding`, injectable `RollSource`, extended `describeCalc` /
    `validateCalc`, mechanic-template registry, mirror-identity test.
 4. **Schema + seed** — `abilities.mechanic_calcs jsonb`,
