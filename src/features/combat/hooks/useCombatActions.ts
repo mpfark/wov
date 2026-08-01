@@ -18,7 +18,6 @@ import { supabase } from '@/integrations/supabase/client';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { getAvailableCp } from '@/features/combat/utils/cp-display';
-import { getEffectiveCombatMod } from '@/shared/formulas/effective';
 import {
   buildCalcInputs, resolveAmount, resolveDuration, resolveInterval,
 } from '@/features/combat/utils/ability-calcs';
@@ -408,9 +407,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Rend!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Rend.`)); return; }
-      const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
-      // Soft-scaled: STR contribution tapers past softCap (profile 'dot') so late-game
-      // stat stacking yields reduced marginal gain without a hard ceiling.
+      // Damage per tick, duration and interval are all configured on the
+      // `rend` ability row (STR magnitude / DEX duration).
       const dmgPerTick = amountOf();
       // Dual-primary split: damage = STR (the wound), duration = DEX (precision keeps it open).
       const durationMs = durationOf();
@@ -526,7 +524,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'consecrate') {
       // Templar — Consecrate: dual-primary — magnitude (heal/burn) = WIS, number of ticks scales with CON.
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
-      const conMod = Math.max(0, getStatModifier(p.character.con + (p.equipmentBonuses.con || 0)));
       const durationMs = durationOf();
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
       p.addLogEvent(buildHealEvent(`You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`));
