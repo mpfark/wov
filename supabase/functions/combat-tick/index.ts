@@ -17,9 +17,9 @@ import {
   loadAbilityCalcs, buildServerCalcInputs,
 } from "../_shared/load-ability-calcs.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
-// the sole source (checkpoint 7); a missing calc reports an actionable
-// closure. Telemetry is aggregated in-isolate; only mismatches, invalid config
-// and hard failures produce audit rows.
+// the sole source (checkpoint 7); a missing or invalid calc is an actionable
+// failure, never silent legacy math. Telemetry is aggregated in-isolate; only
+// failures produce audit rows.
 import {
   resolveMagnitude, resolveMagnitudeEx, drainAbilityCalcAuditRows, getAbilityCalcCounters,
 } from "../_shared/ability-telemetry.ts";
