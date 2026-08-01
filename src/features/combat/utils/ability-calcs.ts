@@ -1,5 +1,5 @@
 /**
- * ability-calcs.ts — Phase 2c: configurable ability *magnitudes*.
+ * ability-calcs.ts — configurable ability *magnitudes*.
  *
  * Phase 2b made ability presentation (label, emoji, text, CP cost, unlock
  * level) configurable. This module does the same for the numbers: the
@@ -7,9 +7,17 @@
  * the `abilities` table are loaded into a runtime registry and evaluated by
  * `@/shared/formulas/ability-calc`.
  *
- * Registry key is `${classKey}:${tier}` — the same 0-based bar index the
- * ability list uses — because two classes can share a mechanic with different
- * scaling (Healer's Purifying Light scales WIS/CON, Bard's Crescendo CHA/INT).
+ * Checkpoint 1 of the ability-calculation rework (see
+ * `docs/design/ability-calculation-rework.md`): the registry is keyed by
+ * **`ability_key`** — the single identity shared with the server registry
+ * (`supabase/functions/_shared/load-ability-calcs.ts`). `ability_key` is unique
+ * per ability, so classes sharing a mechanic with different scaling (Healer's
+ * Purifying Light WIS/CON vs Bard's Crescendo CHA/INT) stay distinct entries.
+ *
+ * A compatibility map (`class_key:tier -> ability_key`) preserves the old
+ * tier-based lookups used by the ability bar and combat driver until those call
+ * sites migrate. Bar tier is presentation ordering only; it is no longer an
+ * identity.
  *
  * Fallback: `ABILITY_SEED` is the balance-identical seed data, pinned against
  * the original hardcoded math by `ability-calc-parity.test.ts`. Until a fetch
@@ -32,11 +40,12 @@ export interface AbilityCalcEntry {
   effectConfig: Record<string, unknown>;
 }
 
-const calcKey = (classKey: string, tier: number) => `${classKey}:${tier}`;
+/** Compat lookup key for the legacy `class:tier` addressing. */
+const slotKey = (classKey: string, tier: number) => `${classKey}:${tier}`;
 
-/** Seeded fallback, keyed by class + bar tier. */
+/** Seeded fallback entries, keyed by `ability_key`. */
 const FALLBACK_CALCS: Record<string, AbilityCalcEntry> = Object.fromEntries(
-  ABILITY_SEED.map(a => [calcKey(a.class_key, a.slot), {
+  ABILITY_SEED.map(a => [a.ability_key, {
     abilityKey: a.ability_key,
     mechanicKey: a.mechanic_key,
     amountCalc: a.amount_calc,
@@ -46,8 +55,16 @@ const FALLBACK_CALCS: Record<string, AbilityCalcEntry> = Object.fromEntries(
   } satisfies AbilityCalcEntry]),
 );
 
-/** Live registry — mutated in place by `setAbilityCalcRegistry`. */
+/** Seeded `class:tier -> ability_key` compat map. */
+const FALLBACK_SLOTS: Record<string, string> = Object.fromEntries(
+  ABILITY_SEED.map(a => [slotKey(a.class_key, a.slot), a.ability_key]),
+);
+
+/** Live registry, keyed by `ability_key` — mutated by `setAbilityCalcRegistry`. */
 export const ABILITY_CALCS: Record<string, AbilityCalcEntry> = { ...FALLBACK_CALCS };
+
+/** Live `class:tier -> ability_key` compat map. */
+const SLOT_KEYS: Record<string, string> = { ...FALLBACK_SLOTS };
 
 let calcRegistryLoaded = false;
 
@@ -80,9 +97,10 @@ function asCalc(value: unknown): AbilityCalc | null {
 }
 
 /**
- * Apply configured calc rows. Slots may be 1-based in config, so each class's
- * rows are sorted and re-indexed to the 0-based bar tier — identical to the
- * normalization in `setAbilityRegistry`.
+ * Apply configured calc rows. Entries are stored by `ability_key`; slots may be
+ * 1-based in config, so each class's rows are sorted and re-indexed to the
+ * 0-based bar tier for the compat map — identical to the normalization in
+ * `setAbilityRegistry`.
  */
 export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
   if (!rows || rows.length === 0) return;
@@ -110,7 +128,10 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
   for (const [classKey, list] of byClass) {
     if (list.length === 0) continue;
     list.sort((a, b) => a.slot - b.slot);
-    list.forEach((row, tier) => { ABILITY_CALCS[calcKey(classKey, tier)] = row.entry; });
+    list.forEach((row, tier) => {
+      ABILITY_CALCS[row.entry.abilityKey] = row.entry;
+      SLOT_KEYS[slotKey(classKey, tier)] = row.entry.abilityKey;
+    });
   }
   calcRegistryLoaded = true;
 }
@@ -119,12 +140,27 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
 export function resetAbilityCalcRegistry(): void {
   for (const key of Object.keys(ABILITY_CALCS)) delete ABILITY_CALCS[key];
   Object.assign(ABILITY_CALCS, FALLBACK_CALCS);
+  for (const key of Object.keys(SLOT_KEYS)) delete SLOT_KEYS[key];
+  Object.assign(SLOT_KEYS, FALLBACK_SLOTS);
   calcRegistryLoaded = false;
 }
 
-export function getAbilityCalcs(classKey: string, tier: number): AbilityCalcEntry | null {
-  return ABILITY_CALCS[calcKey(classKey, tier)] ?? null;
+/** Canonical lookup: magnitudes for one `ability_key`. */
+export function getAbilityCalcsByKey(abilityKey: string): AbilityCalcEntry | null {
+  return ABILITY_CALCS[abilityKey] ?? null;
 }
+
+/** The ability currently occupying a class's bar tier, if any. */
+export function getAbilityKeyForSlot(classKey: string, tier: number): string | null {
+  return SLOT_KEYS[slotKey(classKey, tier)] ?? null;
+}
+
+/** Compat lookup by bar tier — resolves through the `class:tier` map. */
+export function getAbilityCalcs(classKey: string, tier: number): AbilityCalcEntry | null {
+  const key = getAbilityKeyForSlot(classKey, tier);
+  return key ? getAbilityCalcsByKey(key) : null;
+}
+
 
 // ── Runtime evaluation ────────────────────────────────────────────
 
