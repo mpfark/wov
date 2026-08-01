@@ -715,10 +715,20 @@ Deno.serve(async (req) => {
         if (reserved.shield_wall) {
           // Dual-primary (Templar WIS+CON): WIS → bonus block chance,
           // CON → bonus block amount. Requires a shield equipped to actually
-          // benefit; the block step below reads both fields.
+          // benefit; the block step below reads both fields. Both are named
+          // mechanic values (block_chance / block_amount) resolved through the
+          // single funnel, with the coded helpers as the legacy fallback.
           mb.shield_wall_stance = {
-            chance_bonus: getShieldWallChanceBonus(cWis),
-            amount_bonus: getShieldWallAmountBonus(cCon),
+            chance_bonus: resolveMagnitude({
+              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              param: 'block_chance', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+              legacy: () => getShieldWallChanceBonus(cWis),
+            }),
+            amount_bonus: resolveMagnitude({
+              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              param: 'block_amount', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+              legacy: () => getShieldWallAmountBonus(cCon),
+            }),
           };
         }
         if (reserved.force_shield) {
