@@ -2067,7 +2067,7 @@ Deno.serve(async (req) => {
           attacker_name: c.name,
           target_name: target.name,
           damage: pulseDmg,
-          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${newStacks})! [${pulseDmg}]`,
+          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
         });
         // Re-emit the legacy ignite_proc event so the existing client wiring
         // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
