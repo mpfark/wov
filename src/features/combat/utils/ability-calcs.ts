@@ -288,6 +288,7 @@ export function toAbilityCalcEntry(row: {
     duration_calc?: unknown;
     interval_ms?: number | null;
     effect_config?: unknown;
+    mechanic_calcs?: unknown;
   } | null;
 }): AbilityCalcEntry {
   return {
@@ -297,8 +298,10 @@ export function toAbilityCalcEntry(row: {
     durationCalc: asCalc(row.ability?.duration_calc),
     intervalMs: row.ability?.interval_ms ?? null,
     effectConfig: (row.ability?.effect_config as Record<string, unknown>) ?? {},
+    mechanicCalcs: asMechanicCalcs(row.ability?.mechanic_calcs),
   };
 }
+
 
 /**
  * Point one class/tier at a specific ability's magnitudes (loadout choice).
