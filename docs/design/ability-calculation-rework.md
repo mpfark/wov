@@ -1,6 +1,6 @@
 # Ability Calculation Rework
 
-Status: **checkpoint 1 landed** (audit + identity). Checkpoints 2–7 pending.
+Status: **checkpoint 3 landed** (evaluator v2 + mechanic templates). Checkpoints 4–7 pending.
 
 This document is the reference for the migration of every player-ability
 calculation into genuinely configurable data. It records the verified audit, the
