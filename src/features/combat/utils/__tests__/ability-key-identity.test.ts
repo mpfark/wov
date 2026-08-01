@@ -92,6 +92,8 @@ describe('loadout swaps repoint the slot map', () => {
       durationCalc: null,
       intervalMs: null,
       effectConfig: {},
+      mechanicCalcs: {},
+
     });
     expect(getAbilityKeyForSlot('wizard', 0)).toBe('frost_bolt');
     expect(getAbilityCalcs('wizard', 0)!.abilityKey).toBe('frost_bolt');
