@@ -1127,9 +1127,10 @@ Deno.serve(async (req) => {
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
         const weaponRoll = rollDmg(1, evisDie);
-        const abilityBonus = 2 + effDexDmg + Math.floor((c.level || 1) / 3);
+        const abilityBonus = paMag('amount', () => 2 + effDexDmg + Math.floor((c.level || 1) / 3));
         const baseDmg = weaponRoll + dexMod + abilityBonus;
-        const perStackBonus = 0.50 + effChaStack * 0.02;
+        // Named mechanic value: per_stack_multiplier (unit 'mult').
+        const perStackBonus = paMag('mechanic', () => 0.50 + effChaStack * 0.02, 'per_stack_multiplier');
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
