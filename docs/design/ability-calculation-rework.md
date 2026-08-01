@@ -1,16 +1,20 @@
 # Ability Calculation Rework
 
-Status: **checkpoint 5 landed** (parity proof + cutover). Checkpoints 6–7 pending.
+Status: **complete** — checkpoints 1–7 landed.
 
-Cutover state: `USE_CONFIG_ABILITY_CALCS_V2` is **on** (client constant in
-`src/shared/config/feature-flags.ts`, server default in
-`supabase/functions/_shared/ability-telemetry.ts`, overridable with the
-`USE_CONFIG_ABILITY_CALCS_V2=false` env var as the rollback path). All 35 active
-rows carry the parity-proven `version: 2` records and their named
-`mechanic_calcs`; the live table was verified byte-identical to the seed.
-Parity harnesses: `ability-calc-parity.test.ts` (pure level/stat calcs) and
+Cutover state: configuration is the **only** source of ability magnitudes. The
+`USE_CONFIG_ABILITY_CALCS` / `USE_CONFIG_ABILITY_CALCS_V2` flags are gone, and so
+are the legacy inline formulas (`shared/formulas/abilities.ts` and its server
+mirror). `resolveMagnitude` reads the configured calc; if one is missing or does
+not evaluate, that is an actionable failure with a constant safety fallback —
+never legacy math. Both client and server registries are primed from the
+compiled `ABILITY_SEED`, so a failed config fetch still resolves the
+parity-proven numbers.
+Parity harnesses: `ability-calc-parity.test.ts` (now the *pin* — it carries the
+original curves as a frozen reference implementation) and
 `ability-calc-v2-parity.test.ts` (dice with seeded rolls, `finalMult`, per-stack
 multipliers, mechanic calcs).
+
 
 This document is the reference for the migration of every player-ability
 calculation into genuinely configurable data. It records the verified audit, the
