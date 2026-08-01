@@ -34,7 +34,13 @@ export type FallbackReason =
   /** A calc exists but does not validate / did not evaluate to a finite number. */
   | 'invalid'
   /** The registry itself was unavailable (load failure). */
-  | 'registry_unavailable';
+  | 'registry_unavailable'
+  /**
+   * A v2 (post-rework) calc exists but the global cutover flag is still off.
+   * Backfilled v2 records are authored ahead of the flip (checkpoint 4) and
+   * must not change balance before the parity proof (checkpoint 5).
+   */
+  | 'pending_cutover';
 
 export interface AbilityMagnitudeRequest {
   classKey: string;
@@ -130,6 +136,16 @@ export function resolveAbilityMagnitude(req: AbilityMagnitudeRequest): AbilityMa
       value: req.legacy(),
       source: 'legacy',
       fallbackReason: 'unconfigured',
+    };
+  }
+
+  // Pre-cutover gate: v2 records are authored during checkpoint 4 but only
+  // become authoritative when the global flag flips at checkpoint 5.
+  if (req.calc.version === 2 && !req.useV2) {
+    return {
+      value: req.legacy(),
+      source: 'legacy',
+      fallbackReason: 'pending_cutover',
     };
   }
 
