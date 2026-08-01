@@ -1,12 +1,14 @@
 /**
- * AbilityConfigManager — admin editor for the configurable class ability system
- * (Phase 2c). Edits the `abilities` rows and their class assignment:
- * presentation (label/emoji/text), cost, unlock level and the structured
- * magnitude calcs (`amount_calc` / `duration_calc` / `interval_ms`).
+ * AbilityConfigManager — admin editor for the configurable class ability system.
+ * Edits `abilities` rows and their class assignment: presentation, cost, unlock
+ * level and the structured calculations (`amount_calc`, `duration_calc`,
+ * `mechanic_calcs`, `interval_ms`).
  *
- * Calcs are edited as JSON with live validation (`validateCalc`), a readable
- * formula preview (`describeCalc`) and a sample evaluation at a chosen
- * level / stat modifier so balance changes can be sanity-checked before saving.
+ * Checkpoint 6: calculations are authored through the no-code `CalcBuilder`
+ * (term rows, dice pickers, threshold ladders, final multipliers) and the
+ * template-driven `MechanicCalcsEditor`. JSON is a read-only diagnostic only.
+ * Invalid drafts are rejected before save — abilities may not be published with
+ * structurally invalid or incomplete calculations.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,14 +20,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, Save } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import AbilityAuthorDialog from './AbilityAuthorDialog';
+import CalcBuilder from './ability/CalcBuilder';
+import MechanicCalcsEditor from './ability/MechanicCalcsEditor';
+import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import {
-  describeCalc, evaluateCalc, validateCalc, type AbilityCalc, type CalcInputs,
+  evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
+import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import { CLASS_LABELS } from '@/lib/game-data';
 
 interface Row {
@@ -50,57 +56,13 @@ interface Row {
   interval_ms: number | null;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
+  mechanic_calcs: Record<string, AbilityCalc>;
 }
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 
-function parseCalc(text: string): { calc: AbilityCalc | null; errors: string[] } {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed === 'null') return { calc: null, errors: [] };
-  try {
-    const parsed = JSON.parse(trimmed) as AbilityCalc;
-    return { calc: parsed, errors: validateCalc(parsed) };
-  } catch (e) {
-    return { calc: null, errors: [`invalid JSON: ${(e as Error).message}`] };
-  }
-}
-
-function CalcField({
-  title, value, onChange, sample,
-}: {
-  title: string;
-  value: string;
-  onChange: (v: string) => void;
-  sample: CalcInputs;
-}) {
-  const { calc, errors } = parseCalc(value);
-  return (
-    <div className="space-y-1">
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">{title}</Label>
-      <Textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        rows={5}
-        spellCheck={false}
-        className="font-mono text-[11px]"
-        placeholder="null"
-      />
-      {errors.length > 0 ? (
-        <p className="text-[11px] text-destructive">{errors.join(' · ')}</p>
-      ) : calc ? (
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-mono">{describeCalc(calc)}</span>
-          {' → '}
-          <span className="text-primary font-mono">{evaluateCalc(calc, sample)}</span>
-        </p>
-      ) : (
-        <p className="text-[11px] text-muted-foreground">Not configured — mechanic-owned value.</p>
-      )}
-    </div>
-  );
-}
 
 export default function AbilityConfigManager() {
   const [rows, setRows] = useState<Row[]>([]);
