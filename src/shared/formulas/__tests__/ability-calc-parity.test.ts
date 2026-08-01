@@ -162,7 +162,7 @@ describe('magnitude parity', () => {
     sweep(byKey('inspire').amount_calc, (_l, m) => Math.max(2, Math.max(0, m) + 2));
   });
   it('Inspire CP regen — max(1, ceil(CHA/2) + 1)', () => {
-    const cpCalc = (byKey('inspire').effect_config as any).cp_calc as AbilityCalc;
+    const cpCalc = byKey('inspire').mechanic_calcs!.cp_per_tick as AbilityCalc;
     sweep(cpCalc, (_l, m) => Math.max(1, Math.ceil(Math.max(0, m) / 2) + 1));
   });
   it('Eagle Eye — floor((DEX + WIS)/2), 1..5', () => {
@@ -192,7 +192,7 @@ describe('magnitude parity', () => {
   });
   it('Envenom proc + max stacks — match legacy helpers', () => {
     sweep(byKey('envenom').amount_calc, (_l, m) => getEnvenomProc(m));
-    const stacks = (byKey('envenom').effect_config as any).max_stacks_calc as AbilityCalc;
+    const stacks = byKey('envenom').mechanic_calcs!.max_stacks as AbilityCalc;
     sweep(stacks, (_l, m) => getEnvenomMaxStacks(m));
   });
   it('Arcane Surge multiplier — matches getArcaneSurgeMult', () => {
@@ -202,11 +202,11 @@ describe('magnitude parity', () => {
     sweep(byKey('ignite').amount_calc, (_l, m) => getIgniteOrbChance(m));
   });
   it('Conflagrate per-stack ratio — matches getConflagratePerStack', () => {
-    sweep(byKey('conflagrate').amount_calc, (_l, m) => getConflagratePerStack(m));
+    sweep(byKey('conflagrate').mechanic_calcs!.per_stack_multiplier, (_l, m) => getConflagratePerStack(m));
   });
   it('Barrage per-arrow ratio + arrow count', () => {
-    sweep(byKey('barrage').amount_calc, (_l, m) => getBarragePerArrowRatio(m));
-    const count = (byKey('barrage').effect_config as any).arrow_count_calc as AbilityCalc;
+    sweep(byKey('barrage').mechanic_calcs!.per_arrow_multiplier, (_l, m) => getBarragePerArrowRatio(m));
+    const count = byKey('barrage').mechanic_calcs!.arrow_count as AbilityCalc;
     sweep(count, (_l, m) => {
       const mod = Math.max(0, m);
       return Math.min(4, 2 + (mod >= 3 ? 1 : 0) + (mod >= 4 ? 1 : 0));
@@ -216,7 +216,7 @@ describe('magnitude parity', () => {
     sweep(byKey('divine_challenge').amount_calc, (_l, m) => getDivineChallengeFlat(m));
   });
   it('Transfer Health safety floor — max(1, CON)', () => {
-    const reserve = (byKey('transfer_health').effect_config as any).reserve_hp_calc as AbilityCalc;
+    const reserve = byKey('transfer_health').mechanic_calcs!.reserve_hp as AbilityCalc;
     sweep(reserve, (_l, m) => Math.max(1, m));
   });
 });

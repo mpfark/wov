@@ -43,13 +43,16 @@ describe('audit shape: 7 classes × 5 abilities = 35', () => {
     expect(Object.keys(ABILITY_CALCS)).toHaveLength(35);
   });
 
-  it('exactly the 12 documented abilities have a null amount calc', () => {
+  it('only the two mechanic-param-owned abilities have a null amount calc', () => {
+    // Checkpoint 4 backfilled every other null. Holy Shield and Shield Wall
+    // carry their magnitudes as named mechanic calcs (retaliation_damage,
+    // block_chance / block_amount), so `amount_calc` stays null by design.
     const nulls = ABILITY_SEED.filter(a => !a.amount_calc).map(a => a.ability_key).sort();
-    expect(nulls).toEqual([
-      'aimed_shot', 'backstab', 'consecrate', 'cutting_words', 'eviscerate',
-      'fireball', 'grand_finale', 'holy_shield', 'judgment', 'power_strike',
-      'shield_wall', 'smite',
-    ]);
+    expect(nulls).toEqual(['holy_shield', 'shield_wall']);
+    for (const key of nulls) {
+      const row = ABILITY_SEED.find(a => a.ability_key === key)!;
+      expect(Object.keys(row.mechanic_calcs ?? {}).length).toBeGreaterThan(0);
+    }
   });
 });
 
