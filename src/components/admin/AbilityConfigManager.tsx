@@ -90,8 +90,9 @@ export default function AbilityConfigManager() {
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, emoji, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, amount_calc, duration_calc
+          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
         )
+
       `);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
