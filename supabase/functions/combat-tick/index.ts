@@ -707,22 +707,17 @@ Deno.serve(async (req) => {
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
-          // Dual-primary (Warrior STR+DEX): magnitude scales with STR (and +5%
-          // shield bonus), duration is implicit via the stance. Crit reduction
-          // shares the curve. Hardcoded values have been retired.
-          const cStr = (m.c.str || 10) + ((eq[m.id] as any)?.str || 0);
-          const strMod = Math.max(0, Math.floor((cStr - 10) / 2));
+          // Dual-primary (Warrior STR+DEX): magnitude comes from the configured
+          // `battle_cry` amount calc (STR curve); duration is implicit via the
+          // stance. Crit reduction shares that curve, and an equipped shield
+          // adds the global shield anti-crit bonus on the damage-reduction leg.
           const hasShield = isShield(offHandTag[m.id]);
-          const coded = getBattleCryDR(strMod, hasShield);
-          // Named mechanic values: damage_reduction / crit_reduction.
-          const dr = resolveMagnitude({
-            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
-            param: 'damage_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+          const base = resolveMagnitude({
+            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'amount',
+            inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
           });
-          const critReduction = resolveMagnitude({
-            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'mechanic',
-            param: 'crit_reduction', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-          });
+          const dr = base + (hasShield ? SHIELD_ANTI_CRIT_BONUS : 0);
+          const critReduction = base;
           mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
         if (reserved.holy_shield) {
@@ -1832,8 +1827,19 @@ Deno.serve(async (req) => {
           // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
           const dexMod = sm((c.dex || 10) + (eb.dex || 0));
           const chaMod = sm((c.cha || 10) + (eb.cha || 0));
-          const envenomProc = getEnvenomProc(dexMod);
-          const envenomMaxStacks = getEnvenomMaxStacks(chaMod);
+          const envenomInputs = buildServerCalcInputs(c.level || 1, {
+            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+          });
+          const envenomProc = resolveMagnitude({
+            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'amount',
+            inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
+          });
+          const envenomMaxStacks = resolveMagnitude({
+            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'mechanic',
+            param: 'max_stacks', inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
+          });
           if (mb.poison_buff && Math.random() < envenomProc) {
             // Server-side DoT creation: upsert poison into active_effects.
             // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
@@ -2012,7 +2018,16 @@ Deno.serve(async (req) => {
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         const wisMod = sm((c.wis || 10) + (eb.wis || 0));
-        if (Math.random() >= getIgniteOrbChance(intMod)) continue;
+        const orbChance = resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'amount',
+          inputs: buildServerCalcInputs(c.level || 1, {
+            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+          }),
+          characterId: m.id, nodeId: combatNodeId,
+        });
+        if (Math.random() >= orbChance) continue;
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
