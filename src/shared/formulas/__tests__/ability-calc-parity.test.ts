@@ -3,12 +3,13 @@
  * ability calculation system.
  *
  * Every calc seeded in `ability-seed.ts` is evaluated across the full plausible
- * stat/level range and compared against the ORIGINAL hardcoded formula that
- * currently lives in `useCombatActions.ts` / `shared/formulas/abilities.ts`.
+ * stat/level range and compared against the ORIGINAL hardcoded formulas.
  *
- * If a case here fails, either the seed data drifted or a balance change was
- * made in only one of the two places. Both must move together until the
- * hardcoded handlers are removed in a later checkpoint.
+ * Checkpoint 7 deleted `shared/formulas/abilities.ts` from the runtime, so the
+ * original curves are frozen *here* as a reference implementation. This file is
+ * now the pin: it locks the seeded configuration to the balance the game
+ * shipped with. A failure means the seed drifted — intentional balance changes
+ * must update both the seed and the reference below, together and on purpose.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -16,11 +17,24 @@ import { evaluateCalc, type AbilityCalc, type CalcInputs, describeCalc, validate
 import { ABILITY_SEED } from '@/shared/config/ability-seed';
 import { getStatModifier } from '@/shared/formulas/stats';
 import { getEffectiveCombatMod } from '@/shared/formulas/effective';
-import {
-  getBattleCryDR, getRootReduction, getDisengageMult, getCloakDodge,
-  getEnvenomProc, getEnvenomMaxStacks, getArcaneSurgeMult, getConflagratePerStack,
-  getIgniteOrbChance, getBarragePerArrowRatio, getDivineChallengeFlat,
-} from '@/shared/formulas/abilities';
+import { diminishing, diminishingFloat } from '@/shared/formulas/stats';
+
+// ── Frozen reference curves (the pre-config hardcoded formulas) ──────────
+// Do not "fix" these to match a new seed; they are the historical baseline.
+const getBattleCryDR = (strMod: number, hasShield: boolean) => {
+  const base = 0.10 + diminishingFloat(Math.max(0, strMod), 0.02, 0.12);
+  return { dr: base + (hasShield ? 0.05 : 0), critReduction: base };
+};
+const getRootReduction = (m: number) => 0.25 + diminishingFloat(Math.max(0, m), 0.02, 0.15);
+const getDisengageMult = (m: number) => 1.30 + diminishingFloat(Math.max(0, m), 0.05, 0.40);
+const getCloakDodge = (m: number) => 0.40 + diminishingFloat(Math.max(0, m), 0.03, 0.20);
+const getEnvenomProc = (m: number) => 0.25 + diminishingFloat(Math.max(0, m), 0.04, 0.20);
+const getEnvenomMaxStacks = (m: number) => 3 + diminishing(Math.max(0, m), 4);
+const getArcaneSurgeMult = (m: number) => 1.10 + diminishingFloat(Math.max(0, m), 0.02, 0.12);
+const getConflagratePerStack = (m: number) => 0.30 + diminishingFloat(Math.max(0, m), 0.05, 0.40);
+const getIgniteOrbChance = (m: number) => 0.25 + diminishingFloat(Math.max(0, m), 0.04, 0.25);
+const getBarragePerArrowRatio = (m: number) => 0.55 + diminishingFloat(Math.max(0, m), 0.04, 0.25);
+const getDivineChallengeFlat = (m: number) => Math.round(6 + diminishingFloat(Math.max(0, m), 1.8, 18));
 
 const STATS = [1, 4, 8, 10, 12, 14, 16, 18, 20, 24, 30, 40];
 const LEVELS = [1, 5, 10, 15, 20, 30, 42];
