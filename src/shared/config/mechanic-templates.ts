@@ -182,6 +182,13 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
       P('cp_per_tick', 'CP restored per tick', 'cp', 'rate'),
     ],
   }),
+  t('regen_buff', {
+    duration: true,
+    params: [
+      P('regen_per_tick', 'HP regen per tick', 'hp', 'rate'),
+      P('cp_per_tick', 'CP regen per tick', 'cp', 'rate'),
+    ],
+  }),
 ];
 
 const BY_KEY = new Map(MECHANIC_TEMPLATES.map(m => [m.mechanicKey, m]));
