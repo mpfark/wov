@@ -1554,7 +1554,17 @@ Deno.serve(async (req) => {
             // WIS contribution is now reduced by 20% (CON/level portions remain unchanged).
             const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
             const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
-            const returnDmgBase = Math.max(1, Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)));
+            const returnDmgBase = Math.max(1, resolveMagnitude({
+              classKey: targetC.class || 'templar', abilityKey: 'holy_shield', kind: 'mechanic',
+              param: 'retaliation_damage',
+              inputs: buildServerCalcInputs(targetC.level || 1, {
+                str: (targetC.str || 10) + (targetEq.str || 0), dex: (targetC.dex || 10) + (targetEq.dex || 0),
+                con: (targetC.con || 10) + (targetEq.con || 0), int: (targetC.int || 10) + (targetEq.int || 0),
+                wis: effectiveWis, cha: (targetC.cha || 10) + (targetEq.cha || 0),
+              }),
+              characterId: targetId, nodeId: combatNodeId,
+              legacy: () => Math.round(2 + Math.floor(wisModForReturn * 0.8) + conKicker + Math.floor((targetC.level || 1) / 4)),
+            }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
             events.push({
