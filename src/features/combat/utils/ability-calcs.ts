@@ -191,6 +191,18 @@ export function buildCalcInputs(
   };
 }
 
+function resolveByKey(
+  which: 'amountCalc' | 'durationCalc',
+  abilityKey: string,
+  inputs: CalcInputs,
+  legacy: number,
+): number {
+  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
+  const calc = getAbilityCalcsByKey(abilityKey)?.[which];
+  if (!calc) return legacy;
+  return evaluateCalc(calc, inputs);
+}
+
 function resolve(
   which: 'amountCalc' | 'durationCalc',
   classKey: string,
@@ -199,26 +211,46 @@ function resolve(
   legacy: number,
 ): number {
   if (!USE_CONFIG_ABILITY_CALCS) return legacy;
-  const calc = getAbilityCalcs(classKey, tier)?.[which];
-  if (!calc) return legacy;
-  return evaluateCalc(calc, inputs);
+  const key = getAbilityKeyForSlot(classKey, tier);
+  if (!key) return legacy;
+  return resolveByKey(which, key, inputs, legacy);
 }
 
-/** Configured magnitude for a class/tier ability, or `legacy` when unconfigured. */
+/** Canonical: configured magnitude for one `ability_key`, or `legacy`. */
+export function resolveAmountByKey(
+  abilityKey: string, inputs: CalcInputs, legacy: number,
+): number {
+  return resolveByKey('amountCalc', abilityKey, inputs, legacy);
+}
+
+/** Canonical: configured duration (ms) for one `ability_key`, or `legacy`. */
+export function resolveDurationByKey(
+  abilityKey: string, inputs: CalcInputs, legacy: number,
+): number {
+  return resolveByKey('durationCalc', abilityKey, inputs, legacy);
+}
+
+/** Canonical: configured tick interval (ms) for one `ability_key`, or `legacy`. */
+export function resolveIntervalByKey(abilityKey: string, legacy: number): number {
+  if (!USE_CONFIG_ABILITY_CALCS) return legacy;
+  return getAbilityCalcsByKey(abilityKey)?.intervalMs ?? legacy;
+}
+
+/** Compat: configured magnitude for a class/tier ability, or `legacy`. */
 export function resolveAmount(
   classKey: string, tier: number, inputs: CalcInputs, legacy: number,
 ): number {
   return resolve('amountCalc', classKey, tier, inputs, legacy);
 }
 
-/** Configured duration (ms) for a class/tier ability, or `legacy` when unconfigured. */
+/** Compat: configured duration (ms) for a class/tier ability, or `legacy`. */
 export function resolveDuration(
   classKey: string, tier: number, inputs: CalcInputs, legacy: number,
 ): number {
   return resolve('durationCalc', classKey, tier, inputs, legacy);
 }
 
-/** Configured tick interval (ms), or `legacy` when unconfigured. */
+/** Compat: configured tick interval (ms), or `legacy` when unconfigured. */
 export function resolveInterval(classKey: string, tier: number, legacy: number): number {
   if (!USE_CONFIG_ABILITY_CALCS) return legacy;
   return getAbilityCalcs(classKey, tier)?.intervalMs ?? legacy;
@@ -247,9 +279,17 @@ export function toAbilityCalcEntry(row: {
   };
 }
 
-/** Point one class/tier at a specific ability's magnitudes (loadout choice). */
+/**
+ * Point one class/tier at a specific ability's magnitudes (loadout choice).
+ * Stores the entry under its `ability_key` and repoints the compat slot map.
+ * Keyless entries (unloaded config) fall back to a synthetic slot identity so
+ * the bar still resolves.
+ */
 export function setAbilityCalcEntry(
   classKey: string, tier: number, entry: AbilityCalcEntry,
 ): void {
-  ABILITY_CALCS[calcKey(classKey, tier)] = entry;
+  const key = entry.abilityKey || slotKey(classKey, tier);
+  ABILITY_CALCS[key] = entry;
+  SLOT_KEYS[slotKey(classKey, tier)] = key;
 }
+
