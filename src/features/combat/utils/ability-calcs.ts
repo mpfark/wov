@@ -38,6 +38,8 @@ export interface AbilityCalcEntry {
   durationCalc: AbilityCalc | null;
   intervalMs: number | null;
   effectConfig: Record<string, unknown>;
+  /** Named typed mechanic calcs (`abilities.mechanic_calcs`). */
+  mechanicCalcs: Record<string, AbilityCalc>;
 }
 
 /** Compat lookup key for the legacy `class:tier` addressing. */
@@ -52,6 +54,7 @@ const FALLBACK_CALCS: Record<string, AbilityCalcEntry> = Object.fromEntries(
     durationCalc: a.duration_calc,
     intervalMs: a.interval_ms,
     effectConfig: a.effect_config ?? {},
+    mechanicCalcs: a.mechanic_calcs ?? {},
   } satisfies AbilityCalcEntry]),
 );
 
@@ -86,6 +89,7 @@ export interface AbilityCalcConfigRow {
     duration_calc: unknown;
     interval_ms: number | null;
     effect_config: unknown;
+    mechanic_calcs?: unknown;
   } | null;
 }
 
@@ -94,6 +98,22 @@ function asCalc(value: unknown): AbilityCalc | null {
   const calc = value as AbilityCalc;
   if (!Array.isArray(calc.terms) || typeof calc.base !== 'number') return null;
   return calc;
+}
+
+/** Coerce the stored `mechanic_calcs` object into validated calc records. */
+function asMechanicCalcs(value: unknown): Record<string, AbilityCalc> {
+  if (!value || typeof value !== 'object') return {};
+  const out: Record<string, AbilityCalc> = {};
+  for (const [param, raw] of Object.entries(value as Record<string, unknown>)) {
+    const calc = asCalc(raw);
+    if (calc) out[param] = calc;
+  }
+  return out;
+}
+
+/** Named mechanic calc for one ability, or null when unconfigured. */
+export function getMechanicCalc(abilityKey: string, param: string): AbilityCalc | null {
+  return getAbilityCalcsByKey(abilityKey)?.mechanicCalcs?.[param] ?? null;
 }
 
 /**
@@ -120,6 +140,7 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
         durationCalc: asCalc(row.ability.duration_calc),
         intervalMs: row.ability.interval_ms ?? null,
         effectConfig: (row.ability.effect_config as Record<string, unknown>) ?? {},
+        mechanicCalcs: asMechanicCalcs(row.ability.mechanic_calcs),
       },
     });
     byClass.set(row.class_key, list);

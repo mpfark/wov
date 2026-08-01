@@ -34,7 +34,13 @@ export type FallbackReason =
   /** A calc exists but does not validate / did not evaluate to a finite number. */
   | 'invalid'
   /** The registry itself was unavailable (load failure). */
-  | 'registry_unavailable';
+  | 'registry_unavailable'
+  /**
+   * A v2 (post-rework) calc exists but the global cutover flag is still off.
+   * Backfilled v2 records are authored ahead of the flip (checkpoint 4) and
+   * must not change balance before the parity proof (checkpoint 5).
+   */
+  | 'pending_cutover';
 
 export interface AbilityMagnitudeRequest {
   classKey: string;
@@ -77,6 +83,8 @@ export interface AbilityCalcCounters {
   config: number;
   legacy: number;
   fallbackUnconfigured: number;
+  /** v2 record present but the cutover flag is still off. */
+  fallbackPendingCutover: number;
   fallbackInvalid: number;
   fallbackRegistry: number;
   compared: number;
@@ -88,7 +96,8 @@ export interface AbilityCalcCounters {
 export function createAbilityCalcCounters(): AbilityCalcCounters {
   return {
     resolved: 0, config: 0, legacy: 0,
-    fallbackUnconfigured: 0, fallbackInvalid: 0, fallbackRegistry: 0,
+    fallbackUnconfigured: 0, fallbackPendingCutover: 0,
+    fallbackInvalid: 0, fallbackRegistry: 0,
     compared: 0, matched: 0, mismatched: 0, actionableFailures: 0,
   };
 }
@@ -130,6 +139,16 @@ export function resolveAbilityMagnitude(req: AbilityMagnitudeRequest): AbilityMa
       value: req.legacy(),
       source: 'legacy',
       fallbackReason: 'unconfigured',
+    };
+  }
+
+  // Pre-cutover gate: v2 records are authored during checkpoint 4 but only
+  // become authoritative when the global flag flips at checkpoint 5.
+  if (req.calc.version === 2 && !req.useV2) {
+    return {
+      value: req.legacy(),
+      source: 'legacy',
+      fallbackReason: 'pending_cutover',
     };
   }
 
@@ -181,6 +200,7 @@ export function accumulateAbilityCalcCounters(
   else counters.legacy += 1;
   switch (result.fallbackReason) {
     case 'unconfigured': counters.fallbackUnconfigured += 1; break;
+    case 'pending_cutover': counters.fallbackPendingCutover += 1; break;
     case 'invalid': counters.fallbackInvalid += 1; break;
     case 'registry_unavailable': counters.fallbackRegistry += 1; break;
     default: break;

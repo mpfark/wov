@@ -71,8 +71,10 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
     case 'amount': return entry.amountCalc;
     case 'duration': return entry.durationCalc;
     case 'mechanic': {
-      // Named mechanic calcs live in `effect_config.<param>_calc` today and move
-      // to `abilities.mechanic_calcs` at checkpoint 4.
+      // Canonical home is `abilities.mechanic_calcs` (checkpoint 4). The legacy
+      // `effect_config.<param>_calc` spelling is still honoured for rows that
+      // have not been migrated yet.
+      if (args.param && entry.mechanicCalcs?.[args.param]) return entry.mechanicCalcs[args.param];
       const raw = (entry.effectConfig ?? {})[`${args.param}_calc`];
       if (!raw || typeof raw !== 'object') return null;
       const calc = raw as AbilityCalc;

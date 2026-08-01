@@ -21,6 +21,7 @@ export type Database = {
           activation_mode: string
           admin_notes: string | null
           amount_calc: Json | null
+          calc_version: number
           combat_text: Json
           cp_cost: number
           cp_reserve_pct: number | null
@@ -33,6 +34,7 @@ export type Database = {
           id: string
           interval_ms: number | null
           label: string
+          mechanic_calcs: Json
           mechanic_key: string
           status: string
           target_type: string
@@ -45,6 +47,7 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          calc_version?: number
           combat_text?: Json
           cp_cost?: number
           cp_reserve_pct?: number | null
@@ -57,6 +60,7 @@ export type Database = {
           id?: string
           interval_ms?: number | null
           label: string
+          mechanic_calcs?: Json
           mechanic_key: string
           status?: string
           target_type?: string
@@ -69,6 +73,7 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          calc_version?: number
           combat_text?: Json
           cp_cost?: number
           cp_reserve_pct?: number | null
@@ -81,6 +86,7 @@ export type Database = {
           id?: string
           interval_ms?: number | null
           label?: string
+          mechanic_calcs?: Json
           mechanic_key?: string
           status?: string
           target_type?: string
@@ -2536,6 +2542,7 @@ export type Database = {
     }
     Functions: {
       _family_name_is_reserved: { Args: { _key: string }; Returns: boolean }
+      ability_mechanic_params: { Args: never; Returns: Json }
       accept_party_invite: {
         Args: { _membership_id: string }
         Returns: undefined
@@ -3014,6 +3021,10 @@ export type Database = {
       update_party_member_hp: {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
+      }
+      validate_ability_calc: {
+        Args: { _calc: Json; _depth?: number; _label: string }
+        Returns: string
       }
       wake_world: { Args: never; Returns: Json }
       world_is_awake: { Args: never; Returns: boolean }

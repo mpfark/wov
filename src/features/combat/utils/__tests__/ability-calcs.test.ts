@@ -111,8 +111,9 @@ describe('configured overrides', () => {
   });
 
   it('falls back to the legacy value when no calc is configured', () => {
-    // power_strike (warrior slot 0) is weapon-die owned: amount_calc is null.
-    expect(resolveAmount('warrior', 0, buildCalcInputs(CHAR), 77)).toBe(77);
+    // shield_wall (templar slot 2) carries its magnitudes as named mechanic
+    // calcs, so amount_calc is null and the legacy value is used.
+    expect(resolveAmount('templar', 2, buildCalcInputs(CHAR), 77)).toBe(77);
   });
 
   it('reset restores the seeded entries', () => {

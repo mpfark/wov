@@ -40,7 +40,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
           role:class_ability_roles ( id, slot, name ),
           ability:abilities (
             ability_key, label, emoji, description, tooltip, cp_cost, mechanic_key, status,
-            amount_calc, duration_calc, interval_ms, effect_config
+            amount_calc, duration_calc, interval_ms, effect_config, mechanic_calcs
           )
         `);
       if (cancelled) return;
