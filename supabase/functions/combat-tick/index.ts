@@ -1341,15 +1341,12 @@ Deno.serve(async (req) => {
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
-        const durationMs = resolveServerDuration(
-          c.class || 'warrior', 'rend',
-          buildServerCalcInputs(c.level || 1, {
-            str: effStr, dex: effDex,
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          }),
-          Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
+        const durationMs = paMag(
+          'duration',
+          () => Math.min(30000, 20000 + Math.max(0, dexMod) * 1000),
         );
+        // Rend per-tick magnitude is configured too (`amount_calc`); it is
+        // resolved above via the same funnel once the DoT base is expressible.
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const effData = {
