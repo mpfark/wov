@@ -36,8 +36,9 @@ describe('audit shape: 7 classes × 5 abilities = 35', () => {
     const keys = ABILITY_SEED.map(a => a.ability_key);
     expect(new Set(keys).size).toBe(35);
     for (const key of keys) {
-      expect(getAbilityCalcsByKey(key), key)?.not.toBeNull();
+      expect(getAbilityCalcsByKey(key), key).not.toBeNull();
       expect(getAbilityCalcsByKey(key)!.abilityKey).toBe(key);
+
     }
     expect(Object.keys(ABILITY_CALCS)).toHaveLength(35);
   });
