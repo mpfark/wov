@@ -1,145 +1,133 @@
-# Revised plan v4 — configurable classes & abilities
+# Ability Calculation Rework — Final Approved Plan (rev. 3)
 
-Two corrections vs v3: bonds are **not** preserved (existing wipe-on-leave behaviour stays and becomes explicit in the UI), and `duration_calc` stays in **milliseconds**. Framing:
+## A. Verified counts
 
-- **Wiping the bond on leaving a class is the intentional switching penalty** — verified existing behaviour, now made explicit and test-covered rather than changed.
-- **Duration and autoattack migrations must be balance-neutral** — every number reaching combat stays byte-identical; parity tests are the gate.
+Confirmed by query against `classes` / `class_ability_assignments` / `abilities`: **7 selectable classes** (assassin, bard, healer, ranger, templar, warrior, wizard) × **5 active default abilities each = 35 active player abilities**. Every audit table, resolver route and parity case below covers all 35.
 
----
+**Exactly 12 have `amount_calc = null`:** power_strike, aimed_shot, backstab, eviscerate, fireball, smite, judgment, cutting_words, grand_finale, holy_shield, shield_wall, consecrate. Barrage is *not* null (it has an `amount_calc` plus `arrow_count_calc` in `effect_config`).
 
-## Decision 1 — `duration_calc` in milliseconds (confirmed)
+## B. Verified current state
 
-Audit confirmed: no player-ability duration is tick-counted. `useCombatActions` computes `durationMs` inline and writes `expires_at = Date.now() + durationMs`; `combat-tick` writes `expires_at: nowMs + durSec * 1000` / `now + durationMs`; `active_effects.expires_at` is an epoch-ms bigint. Cadence is a separate concept (`tick_rate_ms` / `next_tick_at`, per-ability `intervalMs`).
+1. `CLASS_COMBAT_PROFILES` no longer exists (removed with the autoattack purge); remaining code-owned scaling is the 11 helpers in `shared/formulas/abilities.ts`.
+2. The evaluator has two byte-identical copies: `src/shared/formulas/ability-calc.ts` and `supabase/functions/_shared/formulas/ability-calc.ts`.
+3. The admin editor is JSON-first (`AbilityConfigManager.tsx`: `Textarea` + `JSON.parse` + `validateCalc` + `describeCalc`) — replaced by the visual builder in checkpoint 6.
+4. **Security defect:** `consume_stacks` is client-supplied (`useCombatDriver.ts` sends it; `combat-tick` only clamps to 5). Becomes server-read from `active_effects` in checkpoint 2.
+5. Registry key drift: client `${classKey}:${tier}`, server `${class_key}:${ability_key}`; combat dispatch switches on client-supplied `ability_type`. Consolidated onto `ability_key`.
+6. Effect-key drift: `active_effects.effect_type` uses `poison`/`ignite`, `effect_config.consumes` says `poison_stacks`/`burn_stacks`. Canonical mapping added.
+7. Consecrate's nerf is stored as `magnitude_reduction: 0.35` (a ×0.65 final multiplier).
 
-Therefore:
-- `duration_calc.unit = 'ms'` for **every** existing ability. No conversion to combat ticks in this migration — that would change tick delays, catch-up processing and possibly world-sleep behaviour.
-- `'ticks'` remains a legal value in the schema and evaluator for future mechanics, but nothing seeds it.
-- These are **effect lifetimes, not cooldowns**. Conventional cooldowns stay out of the system entirely — no `cooldown_ms` column, no cooldown admin, validation or persistence.
-- Server-backed `expires_at` timestamps remain the runtime representation; only the *curve* moves into config.
-- Pulse cadence becomes a separate `interval_ms` field (Rend 5000, party regen 3000, Ignite pulse) — never folded into duration.
-- Admin displays durations as readable seconds/minutes while storing ms, e.g. `Duration = 20.0s + max(0, DEX mod) × 1.0s, capped 30.0s`.
-- There is one duration representation only: `duration_calc`. A fixed duration is `{ base: 300000, terms: [] }` (Ignite/Envenom).
+## C. Decisions carried from review
 
-```text
-duration_calc: { base, terms:[{stat, mult, effective}], floor, cap, rounding, unit }
+**Bond and Arcane Surge stay global.** Damage-pipeline rules applied once, never duplicated per ability. Controlling values stay configurable in place (bond curve in `shared/formulas/bond.ts` config; Arcane Surge magnitude on its own ability row). The admin preview gains a **global-modifiers panel** — bond-tier and Arcane-Surge toggles showing `pre-global → post-global` — so the editor sees the true end number without those factors entering the ability's own calc.
+
+**Named, typed mechanic calculations — no `bonus_calc` catch-all.** Each mechanic template declares the named calc parameters it supports, each with its own semantic key, unit, label and role. All are edited with the same visual builder and validated by the same evaluator.
+
+```ts
+interface MechanicCalcParam {
+  key: 'arrow_count' | 'max_stacks' | 'proc_chance' | 'stacks_applied'
+     | 'per_arrow_multiplier' | 'per_stack_multiplier' | 'block_chance'
+     | 'crit_reduction' | 'crit_edge' | 'retaliation_kicker'
+     | 'reserve_hp' | 'cp_per_tick' | 'regen_per_tick' | 'orb_chance';
+  label: string;
+  unit: 'count' | 'pct' | 'mult' | 'hp' | 'cp' | 'flat' | 'ms';
+  required: boolean;
+  role: 'magnitude' | 'rate' | 'multiplier' | 'chance' | 'threshold';
+}
+interface MechanicTemplate {
+  mechanicKey: string;
+  supportsAmount: boolean; supportsDuration: boolean; supportsInterval: boolean;
+  params: MechanicCalcParam[];
+  requiresStackOp?: StackOpSpec;
+}
 ```
 
-Curves that must be reproduced exactly (all via `getEffectiveCombatMod`, all clamped):
+Stored in `abilities.mechanic_calcs jsonb` (`{ arrow_count: AbilityCalcV2, … }`). Migration folds today's ad-hoc values into proper names: `arrow_count_calc` → `arrow_count`, `max_stacks_calc` → `max_stacks`, `cp_calc` → `cp_per_tick`, `reserve_hp_calc` → `reserve_hp`, plus helper-owned `proc_chance` (Envenom), `orb_chance` (Ignite), `per_arrow_multiplier` (Barrage), `per_stack_multiplier` (Eviscerate, Conflagrate), `block_chance` (Shield Wall), `crit_reduction` (Battle Cry), `crit_edge` (Grand Finale), `retaliation_kicker` (Holy Shield). Unknown param keys are rejected by validation.
 
-| Ability | Current expression | duration_calc |
-|---|---|---|
-| Crescendo | `min(180000, max(60000, 60000 + intMod*8000))` | base 60000, INT ×8000, floor 60000, cap 180000 |
-| Shadowstep | `min(15000 + dexMod*1000, 25000)` | base 15000, DEX ×1000, cap 25000 |
-| Snare / Dissonance | `min(15000, 8000 + max(0,mod)*1000)`, WIS (ranger) / INT (bard) | base 8000, stat ×1000 ≥0, cap 15000, per-assignment stat |
-| Rend | `min(30000, 20000 + max(0,dexMod)*1000)` | base 20000, DEX ×1000 ≥0, cap 30000; `interval_ms` 5000 |
-| Cloak of Shadows | `min(15000, 10000 + dexMod*500)` | base 10000, DEX ×500, cap 15000 |
-| Disengage | dodge `min(8000, 5000 + dexMod*500)`; next-hit flat 15000 | two duration_calcs (primary / secondary) |
-| Force Shield | `min(15000, 8000 + intMod*1000)` | base 8000, INT ×1000, cap 15000 |
-| Party regen | `min(30000, 15000 + max(0,mod)*1000)`, WIS (healer) / INT (bard) | base 15000, stat ×1000 ≥0, cap 30000; `interval_ms` 3000 |
-| Divine Aegis | `min(60000, 30000 + max(0,conMod)*2000)` | base 30000, CON ×2000 ≥0, cap 60000 |
-| Ignite / Envenom | flat 300000 | base 300000, no terms |
-| Battle Cry, Sunder, Consecrate, Holy Shield, Divine Challenge, Purifying Light | curves in `formulas/abilities.ts` | transcribed one-for-one during Phase 1 seeding |
+**Judgment's ×0.8 becomes configuration.** Removed from the `ability_type==='smite' && class==='templar'` branch in `combat-tick`, stored as `finalMult: 0.8` labelled "Final multiplier (ability nerf)", editable, and rendered in both the generated formula string and the numeric preview. Consecrate's `magnitude_reduction: 0.35` migrates the same way to `finalMult: 0.65`.
 
-Parity gate: for every ability × every stat mod in −5..+15, `evaluateDurationCalc(config)` must equal the current inline expression exactly, including clamp order and rounding. Mechanic handlers keep owning *what* an effect does.
+**Single global cutover.** One flag, `USE_CONFIG_ABILITY_CALCS_V2`, flipped for all 7 classes at once only after the full parity suite is green. Legacy stays purely as a rollback path during production verification, then is deleted in checkpoint 7. No long-running per-class mixture.
 
----
+## D. Clarifications from this round (rev. 3)
 
-## Decision 2 — Leaving a class wipes its bond (existing rule, made explicit)
+**1. One authoritative representation of multipliers.** `abilities.multiplier_calc` is **dropped from the schema**. `finalMult` and `multiplierCalc` live **inside the versioned `amount_calc` object** (and inside each named mechanic calc, which uses the same type). One column, one shape, one evaluator; nothing to keep in sync. A separately labelled output column would only be introduced if the implementation proves a case where a multiplier must be resolved without its parent amount — none is known, and if one appears it will be raised before checkpoint 4 rather than pre-built.
 
-Verified current `join_order`: it deletes the departing class's bond row, then `INSERT … ON CONFLICT (character_id, class) DO NOTHING`. This is retained. One hardening change: because a stale row for the *target* class could survive from legacy data, the insert becomes an explicit upsert that **forces the new class's bond to 0** (`ON CONFLICT … DO UPDATE SET bond = 0, updated_at = now()`), so a re-joined class can never resume old progress. Live data (16 rows) is consistent with this; a one-off cleanup deletes any row whose class ≠ the character's active class.
+**2. Legacy fallback is a pre-cutover-only mechanism.** Before the flip: an invalid or missing active calc falls back to legacy and records the event. After the flip, **legacy is never silently invoked**. Instead:
+- Validation moves to publish time — an ability row cannot transition `draft → active` unless every required calc for its mechanic template validates. Enforced by the DB validation trigger, not just the UI.
+- Active rows are therefore already fully validated; if one still fails at resolve time it is a **hard error**: the action is rejected with a clear player-facing message and an `actionable_failure` audit row, no silent legacy substitution.
+- Checkpoint 4 includes a one-off sweep asserting all 35 active rows validate, and checkpoint 5's suite fails if any active row lacks a required calc.
 
-Enforcement and UI:
-- `award_class_bond` / `award_class_bond_for_kill` assert the awarded class equals the character's active `class_key`, so only the active class can gain bond.
-- `ClassBondRow` shows **only** the active class bond. No dormant rows, no dormant styling, no decay, no history retention.
-- `OrderRecruiterDialog`: the "Your other bonds" disclosure is removed (it can only ever be empty), and the destructive warning is made explicit before confirmation: *"Leaving the {current order} will permanently erase your bond of N. If you return later, your bond will begin again at zero."* Cancelling changes nothing.
-- Switching still clears only temporary class combat state — `reserved_buffs = '{}'` (stances/reserved CP), class-sourced `active_effects` where the character is the source, queued abilities not belonging to the new class. Level, attributes, XP, inventory, equipment untouched. Loadout rows keyed by `role_id` are retained so a returning character keeps its ability picks (bond still restarts at zero).
-- Memory `game/bond-multiplier.md`: the "Switch cost" line is confirmed and expanded, not rewritten.
+**3. No routine writes from the combat hot path.** Parity comparison uses **in-isolate aggregated counters** (compare count, match count, fallback count, mismatch count) plus `console.log` in development. `combat_audit_log` receives a row **only** for an actual mismatch, a fallback event, or an actionable failure — never for a successful comparison. Counters are exposed through an existing lightweight periodic flush (with the same guard used by other overlord diagnostics) so a hot tick performs zero extra writes in the healthy path.
 
-**Acceptance tests** (`__tests__/class-bond-switching`):
-1. A→B deletes A's row and creates B at 0.
-2. B→A deletes B's row and creates A at 0 (no resumption).
-3. A bond at the 100 cap is permanently lost on leaving.
-4. Cancelling the recruiter confirmation performs no writes.
-5. Wayfarer→first class creates the bond at 0, deletes nothing.
-6. A kill while active in B credits only B; no other bond row exists to credit.
-7. Switching clears stances / class effects / queued abilities but leaves level, attributes, XP, inventory and equipment unchanged.
-8. Legacy stale target-class row is forced to 0 by the upsert.
+**4. "Generic configuration" scope, documented.** Genuinely configurable means **reusable combinations of supported mechanic templates and their named parameters** — new numbers, curves, stat sources, dice, stacks, multipliers, floors and caps, freely recombined without code. It does **not** mean new combat *behaviour*: a mechanic that does something no existing handler does (a new targeting shape, a new status interaction) still requires a coded handler. The rule, written into `docs/design/ability-calculation-rework.md`, is that once such a handler exists it must expose its tunables as a `MechanicTemplate` with named, typed, unit-carrying params so they are immediately editable through the same visual builder — no handler ships with hardcoded magnitudes.
 
----
+## E. Corrected roster — all 35 abilities
 
-## Decision 3 — Wayfarer as a protected system row
+Columns: calc source today · `amount_calc` null? · inputs · dice · stacks · named mechanic calcs · multipliers · floor/round · hardcoded remainder.
 
-`classes` keeps a `classless` row with `is_pre_class = true`, purely for uniform FKs and lookups:
-- Hidden from the ordinary Classes admin list; shown separately as a read-only **System States** entry.
-- Not creatable, duplicable, publishable, unpublishable, retireable or deletable — lifecycle RPCs and a DB trigger reject `is_pre_class` rows.
-- `selectable_in_class_hall = false`, additionally guarded inside `join_order`.
-- Zero rows permitted in `class_ability_roles`, `class_ability_assignments`, `character_ability_loadout` (constraint-enforced).
-- Excluded from publish validation (no five-role or default-ability requirement).
-- Keeps its live values (`base_hp` 18, `base_ac` 10, empty level bonuses / weapon affinity) since pre-order characters use them.
-- Remains the state of every newly created character until they join an order.
+**Warrior** — power_strike(1) inline T0 · **null** · str, level · 1d weapon (unarmed d4) · bond · max(1) · whole formula | second_wind(2) config · ok · con, level · floor 3 | battle_cry(3) config + `getBattleCryDR` · ok · str · `crit_reduction` · +0.05 shield | rend(4) config, 2000ms · ok · str, dex, weapon · per-tick weapon leg | sunder_armor(5) config · ok · str, dex
 
----
+**Ranger** — aimed_shot(1) inline T0 · **null** · dex, level · weapon die · whole formula | eagle_eye(2) config · ok · dex, wis · cap 5 | barrage(3) config + `arrow_count_calc` + `getBarragePerArrowRatio` · ok · dex, wis · weapon die ×N · `arrow_count`, `per_arrow_multiplier` · roll-per-arrow stays mechanic | natures_snare(4) `getRootReduction` · ok · dex/cha · cap 0.40 | disengage(5) `getDisengageMult` · ok · wis, dex · 1.30–1.70
 
-## Decision 4 — Finish class-constant migration in Phase 2
+**Assassin** — backstab(1) inline T0 · **null** · dex, level · weapon die · stealth ambush mult, bond · whole formula | shadowstep(2) config · ok · dex, cha · cap 2.5 | envenom(3) config + `max_stacks_calc` + `getEnvenomProc` · ok · dex, cha · applies poison · `max_stacks`, `proc_chance`, `stacks_applied` | eviscerate(4) inline · **null** · dex, cha, level, **consumed_stacks** · weapon die · consumes all poison (≤5) · `per_stack_multiplier` · 1+(0.50+effCHA×0.02)×stacks, bond · round→floor, max(1) · whole formula | cloak_of_shadows(5) `getCloakDodge` · ok · dex, cha · cap 0.60
 
-Audit correction: **`CLASS_COMBAT_PROFILES` has zero live reads.** It appears only in its two definition files and a stale `combat-tick` comment that itself states it is no longer referenced; the "three handlers read dice from here" note in its doc comment is out of date (`multi_attack`, `execute_attack`, `ignite_consume` use ability-specific inline formulas; autoattacks use `WEAPON_DAMAGE_DIE` + STR). So no live dice value needs migrating from it — removal is genuine cleanup.
+**Wizard** — fireball(1) inline T0 spell · **null** · int, level · Arcane Surge, bond · max(1), round · `5 + 2×soft(int) + ⌊lvl/3⌋` | force_shield(2) config · ok · int/con · `regen_per_tick` | arcane_surge(3) `getArcaneSurgeMult` · ok · int · global ×1.10–1.22 · applied at 3 sites → centralised | ignite(4) config + `getIgniteOrbChance` · ok · int, wis · applies burn · `orb_chance`, `stacks_applied` | conflagrate(5) config base + `getConflagratePerStack` · ok · int, level, **consumed_stacks** · consumes burn ≤5 · `per_stack_multiplier` · Arcane Surge, bond · floor, max(1)
 
-What *is* live and migrates in Phase 2:
-- `CLASS_COMBAT` (label/verb/emoji) — read by `combat-text.ts`, `StatPlannerDialog`, `RaceClassManager` → `classes.autoattack {emoji, verb, label}`.
-- `CLASS_CRIT_RANGE` / `getClassCritRange` (assassin 19) → `classes.crit_range`.
-- `CLASS_WEAPON_AFFINITY` via `getWeaponAffinityBonus` → `classes.weapon_affinity TEXT[]`; the +1 hit / ×1.10 damage constants stay code-owned.
-- `CLASS_BASE_HP`, `CLASS_BASE_AC`, `CLASS_LEVEL_BONUSES`, `CLASS_LABELS` → `classes` columns.
-- The three handlers' inline dice/formulas → ability `calc` blocks, parity-tested.
+**Healer** — smite(1) inline T0 spell · **null** · wis, level | heal(2) config · ok · wis, level · floor 3 | transfer_health(3) config + `reserve_hp_calc` · ok · wis, con · `reserve_hp` · max(1) | purifying_light(4) config, 3000ms · ok · wis, con · `regen_per_tick` | divine_aegis(5) config · ok · wis, con · cap 60s
 
-Sequence, all inside Phase 2: enumerate live reads → represent each in structured config → repoint consumers → parity tests against the old constants → only then delete `CLASS_COMBAT_PROFILES`, `TWO_HANDED_DAMAGE_MULT` and the stale comment. Phase 2 ends with no playable-class combat number in a hardcoded table. Phase 5 stays narrowly scoped to the shared player-ability/boss-cast foundation.
+**Templar** — judgment(1) inline T0 spell **+ ×0.8** · **null** · wis, level · `finalMult 0.8` (configured) · class rider removed | holy_shield(2) inline · **null** · wis, con · `retaliation_kicker` · both legs hardcoded | shield_wall(3) inline · **null** · con, wis · `block_chance` (cap 0.95) · both legs hardcoded | consecrate(4) inline ×0.65, 2000ms · **null** · wis, con · `finalMult 0.65` | divine_challenge(5) `getDivineChallengeFlat` · ok · wis, con · round, floor 6
 
----
+**Bard** — cutting_words(1) inline T0 spell · **null** · cha, level | inspire(2) config + `cp_calc` · ok · cha, int · `cp_per_tick` · floor 1 | dissonance(3) `getRootReduction` · ok · cha, int · cap | crescendo(4) config, 3000ms · ok · cha, int · `regen_per_tick` | grand_finale(5) inline burst · **null** · cha, int, level · `crit_edge` · bond · max(1) · both legs hardcoded
 
-## Carried forward (unchanged)
+**Why the 12 are null:** each needs something today's `CalcTerm` cannot express — a weapon die (power_strike, aimed_shot, backstab, eviscerate), a consumed-stack multiplier (eviscerate), a second named magnitude (shield_wall, holy_shield, grand_finale), or a final ability multiplier (judgment 0.8, consecrate 0.65). Nothing is inherently inexpressible.
 
-- **Phase 1 drops the `character_class` enum** in five stages (add `class_key` → backfill + mirror triggers → switch all reads/writes/functions/types with enum-signature shims → verify live data → drop shims, columns, `DROP TYPE`). Verified surface: 3 columns (`characters.class`, `character_class_bonds.class`, `nodes.class_hall`) and 6 functions (`join_order`, `switch_order`, `get_order_roster`, `award_class_bond`, `award_class_bond_for_kill`, `delete_character_cascade`). Afterwards a new class is a single row insert.
-- **No cooldowns anywhere.** Economy = CP spend, CP reservation (stances), queue-to-next-tick, effect durations.
-- **No starting equipment** in scope; weapon proficiency/affinity retained. Admin Characters pages: Overview, Classes, Races, Abilities, Progression.
-- **Class switching stays enabled** and safe, per Decision 2.
-- **Abilities split from assignments**: `abilities` (identity, mechanic_key, targeting, CP behaviour, `calc`, `duration_calc`, `interval_ms`, event text) + `class_ability_assignments` (class_key, ability_id, role_id, unlock_level, is_default, status), `UNIQUE (role_id, ability_id)` plus a partial unique index for one default per role. Reuse across classes happens via `mechanic_key`, not shared ability rows.
-- **Roles identified by record**: `class_ability_roles.id` is identity; `slot_index` (1–5, unique per class) is display/hotkey order only.
-- **Phases:** 1 enum removal + data model + evaluator + parity harness · 2 combat reads config behind `USE_CONFIG_ABILITIES`, all live class constants migrated, deprecated tables deleted · 3 class lifecycle + validation in admin · 4 alternatives, per-character loadouts, Frost Bolt POC · 5 narrow shared foundation (damage types, damage/heal resolution, targeting primitives, status application, event generation) + one boss-cast POC.
-- **Party tank finding (documented, not a blocker):** `combat-tick` uses `tankId = party.tank_id ?? party.leader_id`, scoped per `party_id` per tick, so two parties on one node each redirect to their own tank and a solo player is never covered by another party's tank. No threat/taunt model exists; the migration keeps reading `parties.tank_id` unchanged.
+**Bypass paths in `combat-tick` to route through the resolver:** T0 dispatch, eviscerate, conflagrate, burst_damage, templar block / holy / consecrate handlers, and the three Arcane Surge application sites.
 
----
+## F. Canonical contract
 
-## Remaining question
+```ts
+interface AbilityCalcV2 {
+  version: 2;
+  base: number;
+  terms: CalcTerm[];               // + 'dice' and 'context' sources
+  finalMult?: number;              // constant ability rider (judgment 0.8, consecrate 0.65)
+  multiplierCalc?: AbilityCalcV2;  // calculated multiplier (per-stack riders)
+  multRounding?: CalcRounding;     // preserves eviscerate's intermediate round
+  rounding?: CalcRounding; floor?: number | null; cap?: number | null;
+  unit: CalcUnit; note?: string;
+}
+```
 
-Only one left: when a character switches class, should their **retained ability loadout rows** for the old class survive (my plan: yes, keyed by `role_id`, so returning restores prior picks even though bond restarts at zero), or should leaving a class also clear its loadout to match the "abandon the relationship" framing?
+Fixed order, never author-chosen:
 
-## Progress
+```
+primary   = base + Σ term(i)                    // per-term rounding only
+withConst = primary × (finalMult ?? 1)
+mult      = multiplierCalc ? eval(multiplierCalc) : 1
+value     = clamp(applyRounding(round(withConst × mult, multRounding)))
+```
 
-- **Phase 1a — DONE.** `character_class` enum dropped. `characters.class`, `character_class_bonds.class`, `nodes.class_hall` are now TEXT with FK to `classes(class_key)` (column names kept; representation is canonical `class_key`). `join_order`/`switch_order`/`award_class_bond`/`get_order_roster` recreated with text params and validate against `classes` (active, selectable, not pre-class).
-- **Phase 1a — DONE.** Config tables created: `classes` (seeded: 7 playable + protected `classless` with `is_pre_class`), `class_ability_roles`, `abilities`, `class_ability_assignments`, `character_ability_loadout`. Overlord-only writes, public reads, owner-only loadouts.
-- **Phase 1a — DONE.** Bond rules: leaving an order deletes every non-active bond row; only the active class bond renders in the character panel; recruiter warning states the permanent erasure explicitly.
-- **Phase 1b — DONE.** Structured calc evaluator (`shared/formulas/ability-calc.ts`, mirrored to edge functions), canonical seed module (`shared/config/ability-seed.ts`) and the old-vs-new parity harness (43 tests across stats 1–40 / levels 1–42) are in place. Config tables are now populated: 35 `class_ability_roles` (7 classes × 5 stable slots Signature/Discipline/Doctrine/Pressure/Mastery), 35 `abilities` with structured `amount_calc` / `duration_calc` / `interval_ms` / `effect_config`, and 35 `class_ability_assignments` (all `is_default`, `status = 'active'`).
-- **Phase 2a — DONE.** Class constants are now configuration. `src/shared/formulas/classes.ts` (mirrored to `_shared/formulas/`) keeps the seed tables only as balance-identical fallbacks and gains a runtime registry: `setClassRegistry(rows)` mutates `CLASS_LABELS` / `CLASS_BASE_HP` / `CLASS_BASE_AC` / `CLASS_CRIT_RANGE` / `CLASS_LEVEL_BONUSES` / `CLASS_WEAPON_AFFINITY` / `CLASS_AUTOATTACK` in place, so every existing consumer reads configured values unchanged. Loaders: `useClassRegistry` (App boot) on the client, `_shared/load-class-registry.ts` (60s memo) in `combat-tick` + `combat-catchup`. `CLASS_COMBAT` moved into the registry as `CLASS_AUTOATTACK` (now carrying both `verb` and `selfVerb`) and is read via `getClassCombat()`; class dropdowns/lists use `getPlayableClassKeys()` / `getSelectableClassKeys()`. `CLASS_COMBAT_PROFILES` and `TWO_HANDED_DAMAGE_MULT` are deleted, along with the stale `combat-tick` comment. Gate: `__tests__/class-registry.test.ts` (12 tests) pins fallbacks to the seeded rows and verifies in-place override.
-- **Phase 2b — DONE.** Ability definitions are now configuration. `CLASS_ABILITIES` in `features/combat/utils/class-abilities.ts` is demoted to a balance-identical fallback plus a runtime registry: `setAbilityRegistry(rows)` rewrites the lists in place from `class_ability_assignments` joined to `abilities` + `class_ability_roles`, so the ability bar, combat driver, admin manual and class panel read configured label / emoji / description / tooltip / CP cost / unlock level with no consumer refactor. Loader: `useAbilityRegistry` (App boot), gated by `USE_CONFIG_ABILITIES` in `shared/config/feature-flags.ts`. Rows that are non-default, non-active, or carry an unimplemented `mechanic_key` are skipped with a warning (mechanics stay code-owned); 1-based config slots are normalized to 0-based runtime tiers. Verified byte-identical: a per-class label/emoji/CP/mechanic/unlock + description/tooltip md5 signature matches the live config rows for all 7 classes (one drifted Shield Wall description was restored in both the seed module and the table). Gates: `__tests__/ability-registry.test.ts` (42 tests) pins fallbacks against `ABILITY_SEED`, asserts every seeded mechanic has a handler, and covers the filter/override/reset paths.
-- **Phase 2c — DONE (client).** Ability magnitudes are configuration. `features/combat/utils/ability-calcs.ts` holds a `classKey:tier` registry fed by `useAbilityRegistry` from `abilities.amount_calc` / `duration_calc` / `interval_ms`; `useCombatActions` resolves every heal/shield/dot/duration through `amountOf` / `durationOf` / `intervalOf`, each keeping its legacy inline expression as fallback. Gated by `USE_CONFIG_ABILITY_CALCS`. Calc inputs are canonical base+renown+gear modifiers (three handlers that previously ignored gear now include it). Admin editor: Admin -> Systems -> Abilities (`AbilityConfigManager.tsx`) with `describeCalc` preview and a level/stat balance sandbox. Gate: `__tests__/ability-calcs.test.ts` (12 tests) asserts full bar coverage, seeded parity with the old inline math, override/reset and legacy-fallback paths.
-- **Phase 2c — DONE (server).** `_shared/load-ability-calcs.ts` mirrors the registry for edge functions, keyed `class_key:ability_key` (server handlers know abilities by key, not bar tier) with a 60s memo and legacy fallback on every resolver. `combat-tick` loads it next to the class registry and now resolves Eagle Eye's crit blend, Force Shield's ward cap and Rend's bleed duration from config. Rend's per-tick damage stays mechanic-owned (weapon-die driven), as does Consecrate's pulse magnitude (no `amount_calc`). Also fixed extensionless imports in the mirrored `_shared/formulas/ability-calc.ts` / `index.ts` that broke Deno bundling.
-- **Phase 5a — DONE.** Shared combat foundation started with the damage-type vocabulary: `src/shared/combat/damage-types.ts` (mirrored to `_shared/combat/`) owns the canonical 11-type registry (key/label/emoji/adjective) plus `normalizeDamageType` / `getDamageType` / `damageTypeLabel` / `damageTypeAdjective` / `DAMAGE_TYPE_OPTIONS`. The admin dropdown list is now a thin re-export, `renderFlavor` gained a `{damage_type}` token (adjective, collapses cleanly when untyped), and the previously authored-but-unwired boss-cast `damage_type` is now fully wired: it travels in the cast payload, renders in cast-start and hit prose (`"searing Cataclysm"` default wording) and lands on `GameLogEvent.damageType` for both boss casts and boss crit flavors. No mitigation/resistance math — identity and prose only. Gate: `src/shared/combat/__tests__/damage-types.test.ts` (5 tests); suite 306 green.
-- **Phase 5b — DONE.** The shared combat foundation now owns the four primitives that were previously re-typed at each call site, canonical in `src/shared/combat/` and mirrored to `_shared/combat/`:
-  - `resolution.ts` — `resolveDamage` (ward soak → HP clamp → `killed`) and `resolveHeal` (max-HP clamp, real delta, never revives the fallen). Junk/negative input clamps instead of leaking NaN.
-  - `targeting.ts` — `selectPrimaryTarget` with `tank_strict` (designated tank soaks everything; nobody is hit if the tank is down) / `tank_preferred` / `random_alive` (injectable `pick` for deterministic tests), plus `livingTargets` / `selectAoeTargets`. Encodes the existing no-threat-model rule; still reads `parties.tank_id ?? leader_id`.
-  - `status.ts` — `applyStackingEffect` centralises the two DoT rules (stack to cap, and refresh NEVER resets `next_tick_at`) and `isEffectExpired`.
-  - `_shared/combat/cast-events.ts` — single copy (client reaches it via `@shared`): `buildCastHitMessages` / `buildCastHitEvent` generate the cast-hit prose and structured `boss_cast_hit` event, keeping authored-flavor precedence, the `{damage}`-inlined suffix suppression and the damage-type adjective.
-  Wired in `combat-tick`: creature autoattack target pick, stored-power source pick and cast-start primary seeding go through `selectPrimaryTarget`; bleed / poison / ignite upserts go through `applyStackingEffect`; Consecrate healing goes through `resolveHeal`; boss-cast hit application + logging (the POC path) goes through `resolveDamage` + `buildCastHitEvent`. All balance-neutral — no number reaching combat changed; the now-dead `flavorHasDamageToken` / `damageTypeAdjective` imports were removed from the function.
-  Gate: `src/shared/combat/__tests__/foundation.test.ts` (19 tests) pins each primitive against the old inline expressions; suite 325 green; `combat-tick` deployed.
-- **Phase 5c — DONE (full HP-write sweep).** Every remaining raw HP mutation in the tick path now goes through the shared primitives, so clamping lives in exactly one place:
-  - New primitive `absorbFromShield(amount, shield)` in `resolution.ts` (mirrored) — soaks with a ward pool WITHOUT touching HP, because the absorb step sits mid-pipeline (step 6) and later steps (Battle Cry DR, Divine Challenge, item DR, glancing caps) still apply to what the ward let through. Force Shield's absorb step uses it.
-  - `combat-tick`: 12 `Math.max(hp - dmg, 0)` sites replaced by `resolveDamage(...).hpAfter` — creature autoattack damage on players, ability hits (Barrage arrows, single-target strikes, Eviscerate, Consecrate burn, ignite pulse, Holy Shield retaliation, DoT ticks); the lifesteal / heal-pulse proc now uses `resolveHeal(...).hpAfter`.
-  - `_shared/combat-resolver.ts` (shared by `combat-tick` and `combat-catchup`): both single-tick and bulk-mode DoT HP writes use `resolveDamage`, so live and catch-up ticks provably clamp identically.
-  - Balance-neutral: same arithmetic, same floors; 4 added tests pin `absorbFromShield` against the inline expression it replaced. Suite 329 green; `combat-tick` + `combat-catchup` deployed.
-- **Phase 5d — DONE (telegraph reuse + SQL clamp parity).**
-  - **Rare-creature telegraphs.** `combat-tick` now decides eligibility with one helper, `canTelegraph(creature)`: bosses telegraph by default (config backfilled to enabled), **rares are opt-in** — they only cast when an admin authored a config with `enabled: true` — and regular creatures never do. It replaces the three scattered `rarity !== 'boss'` gates (cooldown-window scan and cast-start loop). No new code path: rares reuse the existing cast lifecycle, stored power, `cast-events` prose/log builder and node-scoped broadcast, so the telegraph UI works for them unchanged.
-  - **Admin.** `CreatureManager`'s cast card now shows for rare creatures too, titled "Telegraphed Cast (Rare)" vs "Boss Cast", and the save path persists `boss_cast` for boss **or** rare. World Emote on Death stays boss-only.
-  - **SQL clamp parity.** `heal_party_member` (both overloads) and `damage_party_member` were rewritten to obey the same rules as `resolveHeal` / `resolveDamage`: amounts clamp to >= 0 (negative heal can't drain, negative damage can't heal), healing **never revives a fallen character** (hp <= 0 → returns 0), the return value is the real applied delta (so logs can't over-report overheal), damage skips the already-fallen, and the target row is locked `FOR UPDATE`. The gear/gem `_effective_max_hp` cap behaviour is preserved.
-  - Suite 329 green; `combat-tick` deployed.
-- **Next** — surface rare telegraphs in the world/creature tooltips so players can tell which rares channel, and consider a per-cast damage-type resistance pass.
+Named mechanic calcs use the same type and evaluate independently with their own rounding/floor/cap. Absent optional component = identity. `postMult` is folded into `finalMult` (one concept, not two).
 
+**New term sources.** `dice`: `{ source:'dice', count, die:'weapon_main'|'d4'…'d12', fallbackDie:4 }` — `weapon_main` resolves via the existing `getMemberWeaponDie()`, unarmed → fallback; each roll independent; Barrage rolls once per arrow. Randomness only in `combat-tick` through an injectable `RollSource` so tests seed it. `context`, allowlisted to `active_stacks` and `consumed_stacks`. Preview shows min/max/avg for dice and lets the editor pick a context value.
 
+## G. Typed stacks
+
+Canonical `poison_stacks` / `burn_stacks`, mapped to existing `active_effects.effect_type` values `poison` / `ignite` (shared mapping; no data migration). Stack behaviour is a validated shared-TS mechanic registry, not a new table — two stack types, both needing code handlers. Abilities reference it via `effect_config.stack_op`: `{ stackType, op: 'apply'|'consume_all'|'consume_n', timing: 'on_hit'|'on_commit', owner: 'target' }`, with `max_stacks` / `stacks_applied` as named mechanic calcs. Current semantics preserved exactly: consumed on commit (also on miss), clamp 5. Server reads the count from `active_effects`; the client field is dropped.
+
+## H. Lookup consolidation
+
+One identity: **`ability_key`**. Client registry re-keyed from `class:tier` to `ability_key` (tier kept only for bar order); queued payload sends `ability_key`; `combat-tick` dispatches on the **server-loaded** `mechanic_key`, with a temporary `ability_type` → key map for in-flight actions.
+
+## I. Checkpoints — each completed and verified independently before the next
+
+1. **Audit + identity (this checkpoint only).** Land `docs/design/ability-calculation-rework.md` with the verified 35-ability roster, the canonical contract, the mechanic-template model, the generic-configuration scope note (D4) and the validation policy (D2). Re-key the client registry from `class:tier` to `ability_key`, keeping tier for bar ordering, with a legacy compat map. **No math change** — verified by the existing `ability-calcs.test.ts` and `ability-calc-parity.test.ts` passing unchanged plus a new key-coverage test asserting all 35 keys resolve.
+2. **One resolver** — `resolveAbilityMagnitude(ctx)` in `_shared`; route all bypass paths through it with current inline math as explicit `legacyFallback`; in-isolate aggregated counters, dev logging, audit rows only for mismatch / fallback / actionable failure. Fix `consume_stacks` to server-read here.
+3. **Evaluator v2** — dice + context sources, `finalMult`, `multiplierCalc`, `multRounding`, injectable `RollSource`, extended `describeCalc`/`validateCalc`, mechanic-template registry; test asserting the two evaluator mirrors stay identical.
+4. **Schema + seed** — add `abilities.mechanic_calcs jsonb` and `abilities.calc_version smallint default 2` (**no** `multiplier_calc` column); validation trigger rejecting unknown sources / param keys / mechanic keys **and blocking `draft → active` when a required calc is missing or invalid**; backfill all 12 nulls, migrate the four existing `*_calc` blobs and the 11 helper values into named params, move judgment 0.8 and consecrate 0.65 into `finalMult`; sweep asserting all 35 active rows validate.
+5. **Parity proof** — extend `ability-calc-parity.test.ts` to **all 7 classes × all 35 abilities** plus every named mechanic calc: levels [1,5,10,15,20,30,42] × stat mods including thresholds and negatives; seeded rolls (min, max, 3 mid, per-arrow sequences); stacks 0/1/partial/max; unarmed vs every weapon die; operation-order distinctions; eviscerate intermediate-stage comparison; global-modifier panel values checked against the pipeline. Flip `USE_CONFIG_ABILITY_CALCS_V2` (all classes) only when green — at which point legacy fallback stops being a resolve-time path.
+6. **Visual editor** — replace the JSON textarea with term rows (source/stat/mult/transform/rounding), dice picker, stack-op picker, floor/cap/rounding selects, a **named mechanic-calc section driven by the mechanic template** (each param labelled with its unit), a final-multiplier field, generated formula line, min/max/avg, level×mod example table, context selector, the global-modifier preview panel, per-field validation and publish-blocking on invalid drafts. JSON becomes a collapsed read-only diagnostic.
+7. **Remove legacy** — once fallback counters read zero for a full production cycle: delete the inline formulas, the `ability_type` compat map, and the superseded helpers in `shared/formulas/abilities.ts`.
+
+## J. Validation, security, rollback
+
+Reject unknown term sources, unknown context/stack/param keys, unknown mechanic keys, dice count outside 1–20, non-finite multipliers, `floor > cap`, >12 terms, nesting depth >2. Enforced by the DB trigger at write and publish time and re-validated server-side on load. RLS unchanged: `abilities` readable by players, writes steward/overlord only. Preview evaluates **client-side** on the shared evaluator — no server preview endpoint, so no formula-execution surface. Rollback: all new columns additive; `calc_version` plus the single global flag gate the resolver, so flipping back restores legacy with no data change; comparison mode passes the **same seeded `RollSource`** to both paths so dice roll once.
