@@ -14,7 +14,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
-  loadAbilityCalcs, buildServerCalcInputs,
+  loadAbilityCalcs, buildServerCalcInputs, authorizeQueuedAbility,
 } from "../_shared/load-ability-calcs.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
 // the sole source (checkpoint 7); a missing or invalid calc is an actionable
@@ -919,6 +919,25 @@ Deno.serve(async (req) => {
       const c = member.c;
       const eb = eq[member.id] || {};
 
+      // ── Server-side authorization (before any resource mutation) ───
+      // The queued `ability_key` is a client claim. The server confirms it is an
+      // active assignment for this character's class and unlock level, and takes
+      // the authoritative role slot from the registry.
+      const auth = authorizeQueuedAbility({
+        classKey: c.class || '',
+        level: c.level || 1,
+        abilityKey: pa.ability_key,
+        abilityType: pa.ability_type,
+      });
+      if (auth.error || !auth.entry) {
+        events.push({
+          type: 'ability_fail',
+          message: `⚠️ ${c.name} cannot use that technique — ${auth.error ?? 'unavailable'}.`,
+          character_id: member.id,
+        });
+        continue;
+      }
+
       const cpCost = pa.cp_cost || 0;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
@@ -992,17 +1011,10 @@ Deno.serve(async (req) => {
       const tagSuffix = (tag: string) => ` (${tag})`;
 
       // ── Ability magnitude routing ─────────────────────────────────
-      // `ability_type` is the client's *mechanic* dispatch hint; this map turns
-      // the handful of shared mechanic names into the ability_key that owns the
-      // configuration. Identity for configuration is always the ability_key.
-      const ABILITY_KEY_BY_TYPE: Record<string, string> = {
-        multi_attack: 'barrage', execute_attack: 'eviscerate',
-        ignite_consume: 'conflagrate', burst_damage: 'grand_finale',
-        dot_debuff: 'rend',
-      };
-      const paAbilityKey = (pa.ability_type === 'smite' && c.class === 'templar')
-        ? 'judgment'
-        : (ABILITY_KEY_BY_TYPE[pa.ability_type] ?? pa.ability_type);
+      // Identity for configuration is always the canonical ability_key, resolved
+      // and authorized above. `ability_type` remains only the mechanic dispatch
+      // hint for the handler branches below.
+      const paAbilityKey = auth.abilityKey;
       const paInputs = buildServerCalcInputs(c.level || 1, {
         str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
         con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),

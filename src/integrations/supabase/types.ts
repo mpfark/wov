@@ -105,6 +105,7 @@ export type Database = {
           next_tick_at: number
           node_id: string
           session_id: string | null
+          source_ability_key: string | null
           source_id: string
           stacks: number
           target_id: string
@@ -119,6 +120,7 @@ export type Database = {
           next_tick_at: number
           node_id: string
           session_id?: string | null
+          source_ability_key?: string | null
           source_id: string
           stacks?: number
           target_id: string
@@ -133,6 +135,7 @@ export type Database = {
           next_tick_at?: number
           node_id?: string
           session_id?: string | null
+          source_ability_key?: string | null
           source_id?: string
           stacks?: number
           target_id?: string

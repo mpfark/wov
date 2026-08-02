@@ -280,7 +280,6 @@ export const ABILITY_SEED: AbilitySeed[] = [
     effect_config: { ...WEAPON_ATTACK_CONFIG },
     mechanic_calcs: {
       arrow_count: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count', note: 'DEX/WIS arrow ladder' },
-      per_arrow_multiplier: { base: 0.55, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'DEX per-arrow damage ratio vs autoattack' },
     },
     combat_text: {},
     class_key: 'ranger', slot: 2,
