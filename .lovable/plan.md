@@ -87,3 +87,13 @@ Wire each unused-but-supported param to its handler, moving today's hardcoded nu
 - **Phase C — no silent zero:** `AbilityConfigError`, `requireAbilityMagnitude` and `ABILITY_CONFIG_FAILURE_TEXT` added to the shared magnitude module (mirrored server-side). `combat-tick` runs `preflightAbilityConfig()` on the authorized registry entry **before** the CP check/spend; a failure emits the neutral "the technique falters" line and one `ability_config_invalid` audit row, with no CP, cooldown, stack or effect mutation. Queued `ability_calc_failure` rows now actually drain into `combat_audit_log` (failures only, capped at 20/tick).
 - **Phase D — sealed configuration mode:** server `ABILITY_RESOLVER_MODE` (`v2` | `sealed`) read from the `ABILITY_RESOLVER_MODE` env override or the `ability_resolver_mode` configuration key through the existing 60 s cached refresh — no per-tick query. Sealed resolves only from the compiled `ABILITY_SEED` and ignores database rows; client mirror via `ABILITY_RESOLVER_MODE` in `feature-flags.ts`, which makes `setAbilityCalcRegistry` a no-op.
 - **Tests:** `src/shared/combat/__tests__/ability-config-failure.test.ts` covers unconfigured / invalid / registry-unavailable throwing, the success path, the lenient resolver still flagging failures, the neutral text, and the sealed-mode registry gate. Full suite green (408 tests), typecheck clean, `combat-tick` deployed.
+
+## Status (Phase E complete)
+
+- **Phase E — identity/authorization tests:** `src/shared/combat/__tests__/ability-identity-authorization.test.ts` exercises the real server loader (`load-ability-calcs.ts`, imported at runtime with a `Deno.env` shim):
+  - a deliberately differently tuned **alternative** ability sharing a `mechanic_key` with the default is loaded, resolves its own `amount_calc` when queued by `ability_key`, and takes its role slot from the registry (never from the client);
+  - a legacy `ability_type`-only payload still resolves the **default**;
+  - rejection matrix: unassigned key, other class, forged identity (key of one class + mechanic of another), below unlock level, empty identity, retired ability, inactive assignment;
+  - mechanic parameters stay per-ability across a swap, and one malformed param aborts the whole swap (previous registry kept);
+  - resource immutability: `combat-tick` runs authorization and the config preflight **before** the CP check/spend, both rejection paths `continue`, and no CP/HP/`active_effects` write exists in that window.
+- Full suite green (423 tests).
