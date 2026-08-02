@@ -15,7 +15,9 @@ import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs, authorizeQueuedAbility,
+  preflightAbilityConfig, getAbilityResolverMode,
 } from "../_shared/load-ability-calcs.ts";
+import { ABILITY_CONFIG_FAILURE_TEXT } from "../_shared/combat/ability-magnitude.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
 // the sole source (checkpoint 7); a missing or invalid calc is an actionable
 // failure, never silent legacy math. Telemetry is aggregated in-isolate; only
@@ -912,6 +914,11 @@ Deno.serve(async (req) => {
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
     const consumedBuffs: Record<string, string[]> = {};
+    /** Actionable rows for casts rejected by the configuration preflight. */
+    const abilityConfigFailures: Array<{
+      character_id: string; node_id: string | null; event_type: string;
+      message: string; payload: Record<string, unknown>;
+    }> = [];
 
     for (const pa of pendingAbilities) {
       const member = members.find(m => m.id === pa.character_id);
@@ -934,6 +941,32 @@ Deno.serve(async (req) => {
           type: 'ability_fail',
           message: `⚠️ ${c.name} cannot use that technique — ${auth.error ?? 'unavailable'}.`,
           character_id: member.id,
+        });
+        continue;
+      }
+
+      // ── Configuration preflight (before any resource mutation) ─────
+      // Phase C: a missing / invalid configured magnitude must never silently
+      // resolve to 0. The cast aborts here — no CP spend, no cooldown, no
+      // stacks, no effect rows — and one actionable audit row is written.
+      const configErrors = preflightAbilityConfig(auth.entry);
+      if (configErrors.length > 0) {
+        events.push({
+          type: 'ability_fail',
+          message: `⚠️ ${c.name}: ${ABILITY_CONFIG_FAILURE_TEXT}.`,
+          character_id: member.id,
+        });
+        abilityConfigFailures.push({
+          character_id: member.id,
+          node_id: combatNodeId,
+          event_type: 'ability_config_invalid',
+          message: `${c.class}:${auth.abilityKey}: ${configErrors[0]}`,
+          payload: {
+            ability_key: auth.abilityKey,
+            mechanic_key: auth.entry.mechanicKey,
+            resolver_mode: getAbilityResolverMode(),
+            errors: configErrors.slice(0, 5),
+          },
         });
         continue;
       }
@@ -3132,7 +3165,30 @@ Deno.serve(async (req) => {
       }
     }
 
-
+    // ── Ability configuration failures (actionable, failures only) ──
+    // A healthy tick writes nothing here. Rows appear only when a cast was
+    // rejected by the preflight or a magnitude could not be resolved.
+    try {
+      const configRows = [
+        ...abilityConfigFailures,
+        ...drainAbilityCalcAuditRows(),
+      ];
+      const insertable = configRows.filter(r => r.character_id);
+      if (insertable.length > 0) {
+        await db.from('combat_audit_log').insert(
+          insertable.slice(0, 20).map(r => ({
+            character_id: r.character_id,
+            character_name: members.find(m => m.id === r.character_id)?.c?.name ?? null,
+            node_id: r.node_id ?? node_id ?? null,
+            event_type: r.event_type,
+            message: r.message,
+            payload: r.payload,
+          })),
+        );
+      }
+    } catch (e) {
+      console.error('[combat-tick] ability config audit write failed', e);
+    }
 
     // ── Combat Audit Log (overlord-only opt-in per character) ────
     try {

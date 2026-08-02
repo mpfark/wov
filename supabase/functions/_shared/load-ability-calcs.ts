@@ -49,6 +49,33 @@ export interface ServerAbilityCalcEntry {
 
 const TTL_MS = 60_000;
 let loadedAt = 0;
+
+// ── Phase D: sealed configuration mode ──────────────────────────────
+// `v2`     — normal: live database rows drive the registry.
+// `sealed` — the registry resolves ONLY from the parity-verified compiled
+//            `ABILITY_SEED`; database rows are ignored entirely.
+//
+// Sealed mode protects against invalid database configuration, a bad
+// registry refresh, and unsafe admin edits. It does NOT protect against bugs
+// shared by both modes (resolver, evaluator, mechanic handlers).
+//
+// The value is read through the same cached configuration path as the ability
+// calcs (60 s TTL) — never an uncached query per tick.
+export type AbilityResolverMode = 'v2' | 'sealed';
+
+const ENV_MODE = (Deno.env.get('ABILITY_RESOLVER_MODE') ?? '').trim().toLowerCase();
+let resolverMode: AbilityResolverMode = ENV_MODE === 'sealed' ? 'sealed' : 'v2';
+const modeIsPinnedByEnv = ENV_MODE === 'sealed' || ENV_MODE === 'v2';
+
+export function getAbilityResolverMode(): AbilityResolverMode {
+  return resolverMode;
+}
+
+/** Tests / explicit overrides. */
+export function setAbilityResolverMode(mode: AbilityResolverMode): void {
+  resolverMode = mode === 'sealed' ? 'sealed' : 'v2';
+}
+
 let inflight: Promise<void> | null = null;
 let lastRefreshRejected: string[] = [];
 let liveRowsLoaded = false;
@@ -119,6 +146,10 @@ export interface RegistrySwapResult {
  * half-valid registry.
  */
 export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
+  if (resolverMode === 'sealed') {
+    // Sealed: the compiled seed is authoritative; live rows are ignored.
+    return { applied: false, entries: 0, errors: ['sealed configuration mode: database rows ignored'] };
+  }
   const next: Record<string, ServerAbilityCalcEntry> = {};
   const errors: string[] = [];
 
@@ -196,6 +227,23 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
 
   inflight = (async () => {
     try {
+      if (!modeIsPinnedByEnv) {
+        // Same cached refresh as the calcs — one read per TTL window, never per tick.
+        const { data: modeRow } = await db
+          .from('app_secrets').select('value').eq('key', 'ability_resolver_mode').maybeSingle();
+        const next: AbilityResolverMode =
+          String(modeRow?.value ?? '').trim().toLowerCase() === 'sealed' ? 'sealed' : 'v2';
+        if (next !== resolverMode) {
+          console.log('[ability-calcs] resolver mode ->', next);
+          resolverMode = next;
+          if (next === 'sealed') resetToSeed();
+        }
+      }
+      if (resolverMode === 'sealed') {
+        resetToSeed();
+        loadedAt = Date.now();
+        return;
+      }
       const { data, error } = await db
         .from('class_ability_assignments')
         .select('class_key,ability_id,role_id,is_default,status,unlock_level,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
@@ -315,13 +363,37 @@ export function isLiveAbilityRegistryLoaded(): boolean {
   return liveRowsLoaded;
 }
 
-/** Reset to the compiled seed (tests only). */
-export function resetServerAbilityCalcs(): void {
+/** Replace the registry contents with the compiled seed. */
+function resetToSeed(): void {
   for (const k of Object.keys(REGISTRY)) delete REGISTRY[k];
   Object.assign(REGISTRY, seedRegistry());
-  loadedAt = 0;
   liveRowsLoaded = false;
+}
+
+/** Reset to the compiled seed (tests only). */
+export function resetServerAbilityCalcs(): void {
+  resetToSeed();
+  loadedAt = 0;
   lastRefreshRejected = [];
+  resolverMode = ENV_MODE === 'sealed' ? 'sealed' : 'v2';
+}
+
+/**
+ * Phase C — configuration preflight for one authorized cast.
+ *
+ * Runs the shared publish contract against the registry entry that will supply
+ * every number for this cast. Any error means the cast must abort **before any
+ * resource mutation**: no CP spend, no cooldown, no stacks, no effect rows.
+ */
+export function preflightAbilityConfig(entry: ServerAbilityCalcEntry): string[] {
+  return validateAbilityForPublish({
+    mechanic_key: entry.mechanicKey,
+    amount_calc: entry.amountCalc,
+    duration_calc: entry.durationCalc,
+    interval_ms: entry.intervalMs,
+    mechanic_calcs: entry.mechanicCalcs,
+    status: 'active',
+  });
 }
 
 /** Build evaluator inputs from raw stats already including gear bonuses. */

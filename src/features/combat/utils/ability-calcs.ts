@@ -24,6 +24,7 @@
  * load fails. Legacy inline formulas were removed at checkpoint 7.
  */
 import { ABILITY_SEED } from '@/shared/config/ability-seed';
+import { ABILITY_RESOLVER_MODE } from '@/shared/config/feature-flags';
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs, type CalcStat,
 } from '@/shared/formulas/ability-calc';
@@ -122,6 +123,10 @@ export function getMechanicCalc(abilityKey: string, param: string): AbilityCalc 
  */
 export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
   if (!rows || rows.length === 0) return;
+  if (ABILITY_RESOLVER_MODE === 'sealed') {
+    // Sealed mode: the compiled seed is authoritative, configured rows ignored.
+    return;
+  }
 
   const byClass = new Map<string, { slot: number; entry: AbilityCalcEntry }[]>();
   for (const row of rows) {
