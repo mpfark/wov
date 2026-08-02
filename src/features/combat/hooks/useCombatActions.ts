@@ -19,7 +19,7 @@ import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { getAvailableCp } from '@/features/combat/utils/cp-display';
 import {
-  buildCalcInputs, resolveAmount, resolveDuration, resolveInterval,
+  buildCalcInputs, resolveAmount, resolveDuration, resolveInterval, resolveMechanic,
 } from '@/features/combat/utils/ability-calcs';
 
 import {
@@ -303,6 +303,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       resolveDuration(p.character.class, ability.tier, calcInputs);
     const intervalOf = () =>
       resolveInterval(p.character.class, ability.tier);
+    /**
+     * Named mechanic parameter (`abilities.mechanic_calcs`) for this cast.
+     * Admin-configured knobs are the source; `fallback` is a constant safety
+     * floor only, never a formula.
+     */
+    const mechanicOf = (param: string, fallback: number) =>
+      resolveMechanic(p.character.class, ability.tier, param, calcInputs, fallback);
 
     // ── Ability type switch ──
     if (ability.type === 'hp_transfer') {
@@ -310,11 +317,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildHealEvent(`You must target an ally to transfer health.`));
         return;
       }
-      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const transferAmount = amountOf();
       // Dual-primary split: amount = WIS, safety floor scales with CON (hardy
       // healers can safely sacrifice deeper without dropping themselves dangerously low).
-      const reserveHp = Math.max(1, conMod);
+      // The floor is the configured `reserve_hp` mechanic calc.
+      const reserveHp = Math.max(1, Math.floor(mechanicOf('reserve_hp', 1)));
       const maxTransfer = p.character.hp - reserveHp;
       if (maxTransfer <= 0) { p.addLogEvent(buildErrorEvent(`You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`)); return; }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
@@ -346,9 +353,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Recast policy: refresh the timer to the new duration; keep the
       // best-of HP/CP regen across the prior and new cast (never weakens an
       // active buff). Does not stack.
-      const chaMod = Math.max(0, getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0)));
       const newHp = amountOf();
-      const newCp = Math.max(1, Math.ceil(chaMod / 2) + 1);
+      // CP regen per tick is the configured `cp_per_tick` mechanic calc.
+      const newCp = Math.max(1, Math.ceil(mechanicOf('cp_per_tick', 1)));
       const durationMs = durationOf();
       const now = Date.now();
       const prev = p.buffState.inspireBuff;

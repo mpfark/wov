@@ -183,7 +183,12 @@ describe('mechanic templates', () => {
   it('declares the mechanics that own named tunables', () => {
     expect(getMechanicTemplate('multi_attack')?.params.map(p => p.key)).toContain('arrow_count');
     expect(getMechanicTemplate('poison_buff')?.params.map(p => p.key)).toContain('max_stacks');
-    expect(getMechanicTemplate('smite')?.params.map(p => p.key)).toContain('final_multiplier');
+    expect(getMechanicTemplate('hp_transfer')?.params.map(p => p.key)).toContain('reserve_hp');
+    // Fully-wired policy: mechanics whose only magnitude is `amount_calc` expose
+    // no duplicate named knob.
+    expect(getMechanicTemplate('smite')?.params).toEqual([]);
+    expect(getMechanicTemplate('smite')?.requiresAmount).toBe(true);
+
     expect(getMechanicTemplate('execute_attack')?.requiresStackOp).toEqual({
       stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target',
     });

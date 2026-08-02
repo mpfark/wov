@@ -22,6 +22,7 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
+import { getAbilityKeyForSlot } from '@/features/combat/utils/ability-calcs';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
@@ -653,8 +654,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             }
           }
 
+          // Canonical wire identity: the configured `ability_key` for this bar
+          // slot. `ability_type` stays only as the mechanic dispatch hint.
+          const abilityKey = getAbilityKeyForSlot(p.character.class, pending.index);
+
           const abilityPayload = {
             character_id: p.character.id,
+            ability_key: abilityKey,
             ability_type: ability.type,
             target_creature_id: targetId,
             consume_stacks: consumeStacks,

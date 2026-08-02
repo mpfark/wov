@@ -33,7 +33,6 @@ const getEnvenomMaxStacks = (m: number) => 3 + diminishing(Math.max(0, m), 4);
 const getArcaneSurgeMult = (m: number) => 1.10 + diminishingFloat(Math.max(0, m), 0.02, 0.12);
 const getConflagratePerStack = (m: number) => 0.30 + diminishingFloat(Math.max(0, m), 0.05, 0.40);
 const getIgniteOrbChance = (m: number) => 0.25 + diminishingFloat(Math.max(0, m), 0.04, 0.25);
-const getBarragePerArrowRatio = (m: number) => 0.55 + diminishingFloat(Math.max(0, m), 0.04, 0.25);
 const getDivineChallengeFlat = (m: number) => Math.round(6 + diminishingFloat(Math.max(0, m), 1.8, 18));
 
 const STATS = [1, 4, 8, 10, 12, 14, 16, 18, 20, 24, 30, 40];
@@ -218,8 +217,7 @@ describe('magnitude parity', () => {
   it('Conflagrate per-stack ratio — matches getConflagratePerStack', () => {
     sweep(byKey('conflagrate').mechanic_calcs!.per_stack_multiplier, (_l, m) => getConflagratePerStack(m));
   });
-  it('Barrage per-arrow ratio + arrow count', () => {
-    sweep(byKey('barrage').mechanic_calcs!.per_arrow_multiplier, (_l, m) => getBarragePerArrowRatio(m));
+  it('Barrage arrow count', () => {
     const count = byKey('barrage').mechanic_calcs!.arrow_count as AbilityCalc;
     sweep(count, (_l, m) => {
       const mod = Math.max(0, m);

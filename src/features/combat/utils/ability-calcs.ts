@@ -277,6 +277,30 @@ export function resolveInterval(classKey: string, tier: number, fallback = 0): n
   return getAbilityCalcs(classKey, tier)?.intervalMs ?? fallback;
 }
 
+/** Canonical: named mechanic parameter for one `ability_key`. */
+export function resolveMechanicByKey(
+  abilityKey: string, param: string, inputs: CalcInputs, fallback = 0,
+): number {
+  const calc = getMechanicCalc(abilityKey, param);
+  if (!calc) return fallback;
+  const value = evaluateCalc(calc, inputs);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * Compat: named mechanic parameter for a class/tier ability.
+ * Used by the client action handlers so admin-configured mechanic knobs
+ * (`reserve_hp`, `cp_per_tick`, …) are the actual source of those values.
+ */
+export function resolveMechanic(
+  classKey: string, tier: number, param: string, inputs: CalcInputs, fallback = 0,
+): number {
+  const key = getAbilityKeyForSlot(classKey, tier);
+  if (!key) return fallback;
+  return resolveMechanicByKey(key, param, inputs, fallback);
+}
+
+
 // ── Loadout support (Phase 4) ─────────────────────────────────────
 
 /** Build a calc entry from a joined assignment row (default or alternative). */
