@@ -104,7 +104,7 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
     expect(auth.error).toBeNull();
     expect(auth.abilityKey).toBe('lacerate');
     expect(auth.entry?.amountCalc?.base).toBe(19);
-    expect(auth.entry?.mechanicKey).toBe('dot_debuff');
+    expect(auth.entry?.mechanicKey).toBe('power_strike');
   });
 
   it('the client cannot mint a role slot — it is derived from the registry', () => {
@@ -130,7 +130,8 @@ describe('Phase E — rejection matrix', () => {
   beforeEach(() => {
     loader.setServerAbilityCalcs([
       row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'power_strike', amount: 7, slot: 3, unlockLevel: 12 }),
-      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'execute_attack', amount: 11, slot: 4 }),
+      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'execute_attack', amount: 11, slot: 4,
+        mechanicCalcs: { per_stack_multiplier: calc(0.2) } }),
     ]);
   });
 
