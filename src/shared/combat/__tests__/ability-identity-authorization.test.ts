@@ -17,7 +17,23 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Loader = typeof import('../../../../supabase/functions/_shared/load-ability-calcs.ts');
+interface Entry {
+  abilityKey: string; mechanicKey: string; classKey: string; roleSlot: number;
+  amountCalc: { base: number } | null; mechanicCalcs: Record<string, { base: number }>;
+  unlockLevel: number; isDefault: boolean;
+}
+interface AuthArgs {
+  classKey: string; level: number; abilityKey?: string | null; abilityType?: string | null;
+}
+interface Loader {
+  setServerAbilityCalcs(rows: unknown[]): { applied: boolean; entries: number; errors: string[] };
+  getServerAbilityCalcs(classKey: string, abilityKey: string): Entry | null;
+  authorizeQueuedAbility(args: AuthArgs): { entry: Entry | null; abilityKey: string; roleSlot: number; error: string | null };
+  resetServerAbilityCalcs(): void;
+  isAbilityRegistryLoaded(): boolean;
+}
+/** Resolved at runtime only: the server mirror is a Deno module, outside the app tsconfig. */
+const LOADER_PATH = '../../../../supabase/functions/_shared/load-ability-calcs.ts';
 let loader: Loader;
 
 const calc = (base: number) => ({ base, terms: [] });
@@ -60,7 +76,7 @@ function row(opts: {
 beforeAll(async () => {
   // The loader reads `Deno.env` at module load; provide a minimal shim.
   vi.stubGlobal('Deno', { env: { get: () => undefined } });
-  loader = await import('../../../../supabase/functions/_shared/load-ability-calcs.ts');
+  loader = (await import(/* @vite-ignore */ LOADER_PATH)) as unknown as Loader;
 });
 
 beforeEach(() => {
@@ -118,7 +134,7 @@ describe('Phase E — rejection matrix', () => {
     ]);
   });
 
-  const reject = (args: Parameters<Loader['authorizeQueuedAbility']>[0]) => {
+  const reject = (args: AuthArgs) => {
     const auth = loader.authorizeQueuedAbility(args);
     expect(auth.entry).toBeNull();
     expect(auth.error).toBeTruthy();
