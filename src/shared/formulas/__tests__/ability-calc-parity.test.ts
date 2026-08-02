@@ -33,6 +33,9 @@ const getEnvenomMaxStacks = (m: number) => 3 + diminishing(Math.max(0, m), 4);
 const getArcaneSurgeMult = (m: number) => 1.10 + diminishingFloat(Math.max(0, m), 0.02, 0.12);
 const getConflagratePerStack = (m: number) => 0.30 + diminishingFloat(Math.max(0, m), 0.05, 0.40);
 const getIgniteOrbChance = (m: number) => 0.25 + diminishingFloat(Math.max(0, m), 0.04, 0.25);
+const getIgnitePulseDamage = (m: number) => Math.max(1, Math.floor(2 + m));
+const getIgniteBurnDamage = (m: number) => Math.max(1, Math.floor(getEffectiveCombatMod(Math.max(0, m), 'dot') * 0.7 * 0.67));
+const getIgniteDuration = (m: number) => Math.min(45000, 30000 + Math.max(0, m) * 1000);
 const getDivineChallengeFlat = (m: number) => Math.round(6 + diminishingFloat(Math.max(0, m), 1.8, 18));
 
 const STATS = [1, 4, 8, 10, 12, 14, 16, 18, 20, 24, 30, 40];
@@ -211,8 +214,14 @@ describe('magnitude parity', () => {
   it('Arcane Surge multiplier — matches getArcaneSurgeMult', () => {
     sweep(byKey('arcane_surge').amount_calc, (_l, m) => getArcaneSurgeMult(m));
   });
-  it('Ignite orb chance — matches getIgniteOrbChance', () => {
+  it('Ignite supported values match the live formulas', () => {
+    const ignite = byKey('ignite');
     sweep(byKey('ignite').amount_calc, (_l, m) => getIgniteOrbChance(m));
+    sweep(ignite.duration_calc, (_l, m) => getIgniteDuration(m));
+    sweep(ignite.mechanic_calcs!.pulse_damage, (_l, m) => getIgnitePulseDamage(m));
+    sweep(ignite.mechanic_calcs!.burn_damage, (_l, m) => getIgniteBurnDamage(m));
+    sweep(ignite.mechanic_calcs!.max_stacks, () => 5);
+    expect(ignite.interval_ms).toBe(2000);
   });
   it('Conflagrate per-stack ratio — matches getConflagratePerStack', () => {
     sweep(byKey('conflagrate').mechanic_calcs!.per_stack_multiplier, (_l, m) => getConflagratePerStack(m));

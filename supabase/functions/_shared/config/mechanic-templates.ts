@@ -28,6 +28,7 @@ import { validateCalc, type AbilityCalc } from '../formulas/ability-calc.ts';
 export type MechanicCalcParamKey =
   | 'arrow_count'
   | 'max_stacks' | 'per_stack_multiplier'
+  | 'pulse_damage' | 'burn_damage'
   | 'block_chance' | 'block_amount'
   | 'crit_edge' | 'retaliation_damage'
   | 'reserve_hp' | 'cp_per_tick';
@@ -138,8 +139,18 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
     stackOp: { stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
   }),
-  // `amount_calc` is the orb pulse chance.
-  t('ignite_buff', { requiresAmount: true }),
+  // `amount_calc` is the orb pulse chance; the remaining burn behavior is
+  // explicitly configurable and consumed by combat-tick.
+  t('ignite_buff', {
+    duration: true, interval: true,
+    requiresAmount: true, requiresDuration: true, requiresInterval: true,
+    params: [
+      P('pulse_damage', 'Orb pulse damage', 'hp', 'magnitude', true),
+      P('burn_damage', 'Burn damage per tick', 'hp', 'magnitude', true),
+      P('max_stacks', 'Maximum burn stacks', 'count', 'threshold', true),
+    ],
+    stackOp: { stackType: 'burn_stacks', op: 'apply', timing: 'on_hit', owner: 'target' },
+  }),
   t('ignite_consume', {
     requiresAmount: true,
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],

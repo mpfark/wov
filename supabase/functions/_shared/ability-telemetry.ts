@@ -61,6 +61,9 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
   switch (args.kind) {
     case 'amount': return entry.amountCalc;
     case 'duration': return entry.durationCalc;
+    case 'interval': return entry.intervalMs == null ? null : {
+      base: entry.intervalMs, terms: [], unit: 'ms', note: 'configured interval',
+    };
     case 'mechanic': {
       // Canonical home is `abilities.mechanic_calcs`. The older
       // `effect_config.<param>_calc` spelling is still honoured for rows that
@@ -87,7 +90,7 @@ export function resolveMagnitudeEx(args: MagnitudeArgs): AbilityMagnitudeResult 
     kind: args.kind,
     param: args.param,
     inputs: args.inputs,
-    calc: args.kind === 'interval' ? null : pickCalc(args),
+    calc: pickCalc(args),
     fallbackValue: args.fallbackValue,
     registryUnavailable: !isAbilityRegistryLoaded(),
   });
