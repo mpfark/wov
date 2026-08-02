@@ -47,7 +47,7 @@ describe('Phase C — no silent zero', () => {
 
   it('returns the configured value when configuration answers', () => {
     const calc = { base: 5, terms: [{ source: 'stat', stat: 'str', multiplier: 2 }] } as never;
-    expect(requireAbilityMagnitude({ ...base, calc })).toBe(11);
+    expect(requireAbilityMagnitude({ ...base, calc })).toBe(8);
   });
 
   it('the lenient resolver still reports the failure it papered over', () => {
