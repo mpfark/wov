@@ -281,7 +281,14 @@ export function authorizeQueuedAbility(args: {
     return { entry: null, abilityKey: '', roleSlot: -1, error: 'no ability specified' };
   }
 
-  const entry = getServerAbilityCalcs(classKey, abilityKey);
+  let entry = getServerAbilityCalcs(classKey, abilityKey);
+  // Legacy compat: an old client sent only the mechanic hint and this class
+  // renames that mechanic's ability (templar `smite` → `judgment`). Resolve by
+  // mechanic within the character's own class — never across classes.
+  if (!entry && !claimed && args.abilityType) {
+    entry = getServerClassAbilities(classKey)
+      .find(e => e.mechanicKey === args.abilityType) ?? null;
+  }
   if (!entry) {
     return {
       entry: null, abilityKey, roleSlot: -1,
@@ -294,7 +301,7 @@ export function authorizeQueuedAbility(args: {
       error: `"${abilityKey}" unlocks at level ${entry.unlockLevel}`,
     };
   }
-  return { entry, abilityKey, roleSlot: entry.roleSlot, error: null };
+  return { entry, abilityKey: entry.abilityKey, roleSlot: entry.roleSlot, error: null };
 }
 
 
