@@ -3173,9 +3173,10 @@ Deno.serve(async (req) => {
         ...abilityConfigFailures,
         ...drainAbilityCalcAuditRows(),
       ];
-      if (configRows.length > 0) {
+      const insertable = configRows.filter(r => r.character_id);
+      if (insertable.length > 0) {
         await db.from('combat_audit_log').insert(
-          configRows.slice(0, 20).map(r => ({
+          insertable.slice(0, 20).map(r => ({
             character_id: r.character_id,
             character_name: members.find(m => m.id === r.character_id)?.c?.name ?? null,
             node_id: r.node_id ?? node_id ?? null,

@@ -14,3 +14,19 @@
  * `class-abilities.ts` are used and no config fetch happens.
  */
 export const USE_CONFIG_ABILITIES = true;
+
+/**
+ * Phase D: ability resolver mode.
+ *
+ *   'v2'     — normal: live `abilities` rows drive the client calc registry.
+ *   'sealed' — the client resolves ONLY from the compiled, parity-verified
+ *              `ABILITY_SEED`; configured rows are ignored.
+ *
+ * Sealed mode is a temporary safety switch against invalid database
+ * configuration, a bad registry refresh or an unsafe admin edit. It does NOT
+ * protect against bugs shared by both modes (resolver, evaluator, mechanic
+ * handlers). The server has the matching switch via the `ability_resolver_mode`
+ * configuration key (or the `ABILITY_RESOLVER_MODE` environment override).
+ * Remove both once this pass is verified in production.
+ */
+export const ABILITY_RESOLVER_MODE: 'v2' | 'sealed' = 'v2';
