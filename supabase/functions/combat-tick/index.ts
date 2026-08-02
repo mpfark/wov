@@ -3165,7 +3165,29 @@ Deno.serve(async (req) => {
       }
     }
 
-
+    // ── Ability configuration failures (actionable, failures only) ──
+    // A healthy tick writes nothing here. Rows appear only when a cast was
+    // rejected by the preflight or a magnitude could not be resolved.
+    try {
+      const configRows = [
+        ...abilityConfigFailures,
+        ...drainAbilityCalcAuditRows(),
+      ];
+      if (configRows.length > 0) {
+        await db.from('combat_audit_log').insert(
+          configRows.slice(0, 20).map(r => ({
+            character_id: r.character_id,
+            character_name: members.find(m => m.id === r.character_id)?.c?.name ?? null,
+            node_id: r.node_id ?? node_id ?? null,
+            event_type: r.event_type,
+            message: r.message,
+            payload: r.payload,
+          })),
+        );
+      }
+    } catch (e) {
+      console.error('[combat-tick] ability config audit write failed', e);
+    }
 
     // ── Combat Audit Log (overlord-only opt-in per character) ────
     try {
