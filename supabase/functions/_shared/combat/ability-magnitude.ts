@@ -129,6 +129,60 @@ export function resolveAbilityMagnitude(req: AbilityMagnitudeRequest): AbilityMa
   return { value: configured, source: 'config' };
 }
 
+/**
+ * Phase C — no silent zero.
+ *
+ * A configuration failure is a *controlled* error, not a quiet `0`. Callers
+ * that must not proceed on a bad configuration use `requireAbilityMagnitude`
+ * (or throw this error themselves after a failed preflight) and abort the
+ * ability **before any resource is spent**.
+ */
+export class AbilityConfigError extends Error {
+  readonly label: string;
+  readonly failureReason: FailureReason;
+  readonly kind: MagnitudeKind;
+  readonly param?: string;
+  readonly classKey: string;
+  readonly abilityKey: string;
+
+  constructor(
+    req: Pick<AbilityMagnitudeRequest, 'classKey' | 'abilityKey' | 'kind' | 'param'>,
+    failureReason: FailureReason,
+    detail: string,
+  ) {
+    super(`${magnitudeLabel(req)}: ${detail}`);
+    this.name = 'AbilityConfigError';
+    this.label = magnitudeLabel(req);
+    this.failureReason = failureReason;
+    this.kind = req.kind;
+    this.param = req.param;
+    this.classKey = req.classKey;
+    this.abilityKey = req.abilityKey;
+  }
+}
+
+/** Neutral player-facing line for any configuration failure. */
+export const ABILITY_CONFIG_FAILURE_TEXT = 'the technique falters';
+
+/**
+ * Strict resolve: returns the configured value or throws `AbilityConfigError`.
+ * Never returns a fallback — use `resolveAbilityMagnitude` when a constant
+ * safety floor is genuinely acceptable.
+ */
+export function requireAbilityMagnitude(
+  req: Omit<AbilityMagnitudeRequest, 'fallbackValue'>,
+): number {
+  const result = resolveAbilityMagnitude(req);
+  if (result.source !== 'config') {
+    throw new AbilityConfigError(
+      req,
+      result.failureReason ?? 'invalid',
+      result.message ?? 'configuration could not answer',
+    );
+  }
+  return result.value;
+}
+
 /** Fold a result into aggregated counters. Mutates and returns `counters`. */
 export function accumulateAbilityCalcCounters(
   counters: AbilityCalcCounters,
