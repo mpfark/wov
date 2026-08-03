@@ -7,7 +7,7 @@
  *
  *   • dice terms (weapon die, unarmed fallback) — proved with a SEEDED roll
  *     source so both paths see identical rolls,
- *   • class-assignment riders (judgment ×0.8, consecrate ×0.65),
+ *   • `finalMult` riders (judgment ×0.8, consecrate ×0.65),
  *   • per-stack multipliers over the full 0..5 stack range,
  *   • named mechanic calcs whose legacy owner was an inline expression in
  *     `combat-tick` (holy shield retaliation, shield wall block, crit edge).
@@ -106,22 +106,6 @@ function sweepPlain(
   }
 }
 
-function sweepClassScaled(
-  key: string,
-  legacy: (level: number, mod: number) => number,
-) {
-  const seed = byKey(key);
-  const scale = seed.class_scale ?? 1;
-  for (const level of LEVELS) {
-    for (const raw of STATS) {
-      const calc = amountOf(key);
-      const got = evaluateCalc({ ...calc, finalMult: (calc.finalMult ?? 1) * scale }, inputs(level, raw));
-      const want = legacy(level, getStatModifier(raw));
-      expect(Math.abs(got - want) < 1e-9, `${key} ${JSON.stringify({ level, raw, got, want })}`).toBe(true);
-    }
-  }
-}
-
 // ── Legacy formulas, copied verbatim from the live call sites ──────
 
 /** combat-tick T0 physical: weapon die + raw mod + (3 + soft mod + level/3). */
@@ -198,10 +182,11 @@ describe('spell parity — tier-0 stat-only attacks', () => {
     });
   }
 
-  it('judgment — the ×0.8 templar rider lives on the class assignment', () => {
-    sweepClassScaled(
-      'judgment',
+  it('judgment — the ×0.8 templar rider lives in finalMult', () => {
+    sweepPlain(
+      amountOf('judgment'),
       (l, m) => Math.max(1, Math.floor(legacySpellT0(l, m) * 0.8)),
+      'judgment',
     );
   });
 });
@@ -309,16 +294,16 @@ describe('templar mechanic parity', () => {
     }
   });
 
-  it('consecrate — (2 + WIS) × 0.65 configured as Class Scale', () => {
-    sweepClassScaled(
-      'consecrate',
+  it('consecrate — (2 + WIS) × 0.65 configured as finalMult', () => {
+    sweepPlain(
+      amountOf('consecrate'),
       (_l, m) => (2 + Math.max(0, m)) * 0.65,
+      'consecrate',
     );
     // The live call site floors once, after the bond multiplier.
     for (const raw of STATS) {
       const mod = Math.max(0, getStatModifier(raw));
-      const calc = amountOf('consecrate');
-      const got = evaluateCalc({ ...calc, finalMult: (calc.finalMult ?? 1) * (byKey('consecrate').class_scale ?? 1) }, inputs(10, raw));
+      const got = evaluateCalc(amountOf('consecrate'), inputs(10, raw));
       expect(Math.max(1, Math.floor(got * 1))).toBe(Math.max(1, Math.floor((2 + mod) * 0.65)));
     }
   });

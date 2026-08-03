@@ -59,9 +59,7 @@ function pickCalc(args: MagnitudeArgs): AbilityCalc | null {
   const entry = getServerAbilityCalcs(args.classKey, args.abilityKey);
   if (!entry) return null;
   switch (args.kind) {
-    case 'amount': return entry.amountCalc
-      ? { ...entry.amountCalc, finalMult: (entry.amountCalc.finalMult ?? 1) * entry.classScale }
-      : null;
+    case 'amount': return entry.amountCalc;
     case 'duration': return entry.durationCalc;
     case 'mechanic': {
       // Canonical home is `abilities.mechanic_calcs`. The older

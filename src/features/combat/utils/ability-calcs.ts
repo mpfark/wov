@@ -37,8 +37,6 @@ export interface AbilityCalcEntry {
   durationCalc: AbilityCalc | null;
   intervalMs: number | null;
   effectConfig: Record<string, unknown>;
-  /** Class-assignment balance rider applied to amount only. */
-  classScale: number;
   /** Named typed mechanic calcs (`abilities.mechanic_calcs`). */
   mechanicCalcs: Record<string, AbilityCalc>;
 }
@@ -55,7 +53,6 @@ const FALLBACK_CALCS: Record<string, AbilityCalcEntry> = Object.fromEntries(
     durationCalc: a.duration_calc,
     intervalMs: a.interval_ms,
     effectConfig: a.effect_config ?? {},
-    classScale: a.class_scale ?? 1,
     mechanicCalcs: a.mechanic_calcs ?? {},
   } satisfies AbilityCalcEntry]),
 );
@@ -82,7 +79,6 @@ export interface AbilityCalcConfigRow {
   class_key: string;
   is_default: boolean;
   status: string;
-  class_scale?: number;
   role: { slot: number } | null;
   ability: {
     ability_key: string;
@@ -147,7 +143,6 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
         durationCalc: asCalc(row.ability.duration_calc),
         intervalMs: row.ability.interval_ms ?? null,
         effectConfig: (row.ability.effect_config as Record<string, unknown>) ?? {},
-        classScale: row.class_scale ?? 1,
         mechanicCalcs: asMechanicCalcs(row.ability.mechanic_calcs),
       },
     });
@@ -234,9 +229,7 @@ function resolveByKey(
 ): number {
   const calc = getAbilityCalcsByKey(abilityKey)?.[which];
   if (!calc) return fallback;
-  if (which !== 'amountCalc') return evaluateCalc(calc, inputs);
-  const classScale = getAbilityCalcsByKey(abilityKey)?.classScale ?? 1;
-  return evaluateCalc({ ...calc, finalMult: (calc.finalMult ?? 1) * classScale }, inputs);
+  return evaluateCalc(calc, inputs);
 }
 
 function resolve(
@@ -326,7 +319,6 @@ export function toAbilityCalcEntry(row: {
     effect_config?: unknown;
     mechanic_calcs?: unknown;
   } | null;
-  class_scale?: number;
 }): AbilityCalcEntry {
   return {
     abilityKey: row.ability?.ability_key ?? '',
@@ -335,7 +327,6 @@ export function toAbilityCalcEntry(row: {
     durationCalc: asCalc(row.ability?.duration_calc),
     intervalMs: row.ability?.interval_ms ?? null,
     effectConfig: (row.ability?.effect_config as Record<string, unknown>) ?? {},
-    classScale: row.class_scale ?? 1,
     mechanicCalcs: asMechanicCalcs(row.ability?.mechanic_calcs),
   };
 }
@@ -354,3 +345,4 @@ export function setAbilityCalcEntry(
   ABILITY_CALCS[key] = entry;
   SLOT_KEYS[slotKey(classKey, tier)] = key;
 }
+

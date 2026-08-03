@@ -92,8 +92,6 @@ export interface AbilityConfigRow {
   unlock_level: number;
   is_default: boolean;
   status: string;
-  /** Final class-assignment magnitude multiplier. */
-  class_scale?: number;
   /** `abilities.id` — present once the loadout columns are selected. */
   ability_id?: string;
   role: { id?: string; slot: number; name?: string } | null;

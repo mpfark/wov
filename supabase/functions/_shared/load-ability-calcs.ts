@@ -33,8 +33,6 @@ export interface ServerAbilityCalcEntry {
   durationCalc: AbilityCalc | null;
   intervalMs: number | null;
   effectConfig: Record<string, unknown>;
-  /** Class-assignment balance rider applied to amount only. */
-  classScale: number;
   /** Named typed mechanic calcs from `abilities.mechanic_calcs`. */
   mechanicCalcs: Record<string, AbilityCalc>;
   // ── Identity / authorization ──────────────────────────────────
@@ -100,7 +98,6 @@ function seedRegistry(): Record<string, ServerAbilityCalcEntry> {
       durationCalc: a.duration_calc,
       intervalMs: a.interval_ms,
       effectConfig: (a.effect_config as Record<string, unknown>) ?? {},
-      classScale: a.class_scale ?? 1,
       mechanicCalcs: a.mechanic_calcs ?? {},
       classKey: a.class_key,
       abilityId: null,
@@ -148,8 +145,6 @@ export interface RegistrySwapResult {
  * resolving the previous, fully valid configuration instead of running on a
  * half-valid registry.
  */
-// Supabase's nested-select result is intentionally dynamic at this boundary.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
   if (resolverMode === 'sealed') {
     // Sealed: the compiled seed is authoritative; live rows are ignored.
@@ -199,7 +194,6 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       intervalMs: ability.interval_ms ?? null,
       effectConfig: (ability.effect_config as Record<string, unknown>) ?? {},
       mechanicCalcs,
-      classScale: Number(row.class_scale ?? 1),
       classKey: row.class_key,
       abilityId: row.ability_id ?? ability.id ?? null,
       roleId: row.role_id ?? row.role?.id ?? null,
@@ -227,8 +221,6 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
   return { applied: true, entries, errors };
 }
 
-// Edge callers provide a Supabase client whose generated schema is unavailable here.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
   if (!force && Date.now() - loadedAt < TTL_MS && Object.keys(REGISTRY).length > 0) return;
   if (inflight) return inflight;
@@ -254,7 +246,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       }
       const { data, error } = await db
         .from('class_ability_assignments')
-        .select('class_key,ability_id,role_id,is_default,status,unlock_level,class_scale,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
+        .select('class_key,ability_id,role_id,is_default,status,unlock_level,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
       if (error) throw error;
       if (data && data.length > 0) {
         const result = setServerAbilityCalcs(data);

@@ -33,7 +33,6 @@ import {
 } from '@/shared/formulas/ability-calc';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import { CLASS_LABELS } from '@/lib/game-data';
-import type { Json } from '@/integrations/supabase/types';
 
 interface Row {
   assignment_id: string;
@@ -57,32 +56,9 @@ interface Row {
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
   mechanic_calcs: Record<string, AbilityCalc>;
-  template_id: string;
-  template_key: string;
-  template_name: string;
 }
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
-
-interface QueryRow {
-  id: string;
-  class_key: string;
-  unlock_level: number;
-  is_default: boolean;
-  status: string;
-  role: { id: string; slot: number; name: string } | null;
-  ability: {
-    id: string; ability_key: string; label: string; description: string;
-    tooltip: string; cp_cost: number; mechanic_key: string; status: string;
-    interval_ms: number | null; amount_calc: AbilityCalc | null; duration_calc: AbilityCalc | null;
-    mechanic_calcs: Record<string, AbilityCalc> | null;
-    template: {
-      id: string; template_key: string; name: string; cp_cost: number; mechanic_key: string;
-      interval_ms: number | null; amount_calc: AbilityCalc | null; duration_calc: AbilityCalc | null;
-      mechanic_calcs: Record<string, AbilityCalc> | null;
-    } | null;
-  } | null;
-}
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 
@@ -116,22 +92,17 @@ export default function AbilityConfigManager() {
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs,
-          template:ability_templates (
-            id, template_key, name, cp_cost, mechanic_key, interval_ms,
-            amount_calc, duration_calc, mechanic_calcs
-          )
+          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
         )
 
       `);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
-    const queryRows = (data ?? []) as unknown as QueryRow[];
-    const mapped: Row[] = queryRows
+    const mapped: Row[] = (data ?? [])
       // Alternatives (is_default = false) are kept: they are the player-selectable
       // loadout options for the same role.
-      .filter((r): r is QueryRow & { ability: NonNullable<QueryRow['ability']>; role: NonNullable<QueryRow['role']> } => !!r.ability && !!r.role)
-      .map(r => ({
+      .filter((r: any) => r.ability && r.role)
+      .map((r: any) => ({
         assignment_id: r.id,
         class_key: r.class_key,
         unlock_level: r.unlock_level,
@@ -142,19 +113,16 @@ export default function AbilityConfigManager() {
         label: r.ability.label,
         description: r.ability.description,
         tooltip: r.ability.tooltip,
-        cp_cost: r.ability.template?.cp_cost ?? r.ability.cp_cost,
-        mechanic_key: r.ability.template?.mechanic_key ?? r.ability.mechanic_key,
+        cp_cost: r.ability.cp_cost,
+        mechanic_key: r.ability.mechanic_key,
         ability_status: r.ability.status ?? 'active',
         assignment_status: r.status ?? 'active',
         is_default: !!r.is_default,
         role_id: r.role.id,
-        interval_ms: r.ability.template?.interval_ms ?? r.ability.interval_ms,
-        amount_calc: r.ability.template?.amount_calc ?? r.ability.amount_calc,
-        duration_calc: r.ability.template?.duration_calc ?? r.ability.duration_calc,
-        mechanic_calcs: (r.ability.template?.mechanic_calcs ?? r.ability.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
-        template_id: r.ability.template?.id ?? '',
-        template_key: r.ability.template?.template_key ?? r.ability.ability_key,
-        template_name: r.ability.template?.name ?? `${r.ability.label} template`,
+        interval_ms: r.ability.interval_ms,
+        amount_calc: r.ability.amount_calc,
+        duration_calc: r.ability.duration_calc,
+        mechanic_calcs: (r.ability.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       }))
 
       .sort((a, b) =>
@@ -216,18 +184,13 @@ export default function AbilityConfigManager() {
       label: draft.label,
       description: draft.description,
       tooltip: draft.tooltip,
-      status: draft.ability_status,
-    }).eq('id', draft.ability_id);
-
-    const { error: templateError } = await supabase.from('ability_templates').update({
-      name: draft.template_name,
       cp_cost: draft.cp_cost,
       interval_ms: draft.interval_ms,
-      amount_calc: draft.amount_calc as unknown as Json,
-      duration_calc: draft.duration_calc as unknown as Json,
-      mechanic_calcs: draft.mechanic_calcs as unknown as Json,
+      amount_calc: draft.amount_calc as any,
+      duration_calc: draft.duration_calc as any,
+      mechanic_calcs: draft.mechanic_calcs as any,
       status: draft.ability_status,
-    }).eq('id', draft.template_id);
+    }).eq('id', draft.ability_id);
 
     const { error: assignmentError } = await supabase
       .from('class_ability_assignments')
@@ -235,7 +198,7 @@ export default function AbilityConfigManager() {
       .eq('id', draft.assignment_id);
     setSaving(false);
 
-    const err = abilityError || templateError || assignmentError;
+    const err = abilityError || assignmentError;
     if (err) { toast.error(err.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
     await load();
@@ -370,7 +333,6 @@ export default function AbilityConfigManager() {
                       {CLASS_LABELS[draft.class_key] ?? draft.class_key} · slot {draft.slot} · {draft.role_name}
                     </Badge>
                     <Badge variant="secondary" className="text-[10px] font-mono">{draft.mechanic_key}</Badge>
-                    <Badge variant="outline" className="text-[10px]">Template: {draft.template_name}</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -380,7 +342,7 @@ export default function AbilityConfigManager() {
                       <Input value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px]">Template CP cost</Label>
+                      <Label className="text-[11px]">CP cost</Label>
                       <Input type="number" value={draft.cp_cost} onChange={e => setDraft({ ...draft, cp_cost: Number(e.target.value) })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
@@ -433,10 +395,7 @@ export default function AbilityConfigManager() {
 
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Template calculations</CardTitle>
-                  <p className="text-[11px] text-muted-foreground">
-                    Changes inherit automatically to every class ability using {draft.template_name}.
-                  </p>
+                  <CardTitle className="text-sm font-display">Calculations</CardTitle>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     <div className="flex items-center gap-1">
                       <Label className="text-[10px] text-muted-foreground">Preview level</Label>

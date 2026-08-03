@@ -75,14 +75,6 @@ describe('seeded magnitudes match the legacy inline math', () => {
     expect(resolveAmount('healer', 3, skewed, -1))
       .toBe(Math.max(1, getStatModifier(10) + 2));
   });
-
-  it('applies Class Scale to amount but not duration', () => {
-    const judgment = resolveAmount('templar', 0, inputs, -1);
-    const unscaled = ABILITY_CALCS.judgment.amountCalc!;
-    expect(judgment).toBeLessThan(resolveAmount('healer', 0, inputs, -1));
-    expect(ABILITY_CALCS.judgment.classScale).toBe(0.8);
-    expect(unscaled).toBeTruthy();
-  });
 });
 
 describe('configured overrides', () => {
@@ -90,7 +82,6 @@ describe('configured overrides', () => {
     class_key: 'warrior',
     is_default: true,
     status: 'active',
-    class_scale: 1,
     role: { slot: 1 },
     ability: {
       ability_key: 'second_wind',
