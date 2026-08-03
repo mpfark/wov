@@ -26,6 +26,8 @@ import { getStatModifier } from './formulas/stats.ts';
 import { ABILITY_SEED, ABILITY_ROLE_SEED } from './config/ability-seed.ts';
 import { validateAbilityForPublish } from './config/mechanic-templates.ts';
 import { normalizeDamageType } from './combat/damage-types.ts';
+import { applyAssignmentOverrides } from './config/effective-ability.ts';
+import { getClassScaling } from './formulas/classes.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -51,6 +53,10 @@ export interface ServerAbilityCalcEntry {
   cpCost: number;
   /** `abilities.damage_type`, normalized. Metadata only: no mitigation effect. */
   damageType: string | null;
+  /** Effective (override-aware) display label. */
+  label: string;
+  /** Effective (override-aware) authored combat text. */
+  combatText: Record<string, unknown>;
 }
 
 const TTL_MS = 60_000;
@@ -84,6 +90,7 @@ export function setAbilityResolverMode(mode: AbilityResolverMode): void {
 
 let inflight: Promise<void> | null = null;
 let lastRefreshRejected: string[] = [];
+let overrideErrors: string[] = [];
 let liveRowsLoaded = false;
 
 const REGISTRY: Record<string, ServerAbilityCalcEntry> = {};
@@ -113,6 +120,8 @@ function seedRegistry(): Record<string, ServerAbilityCalcEntry> {
       unlockLevel: SEED_UNLOCK_BY_SLOT[a.slot] ?? 1,
       cpCost: Number(a.cp_cost ?? 0),
       damageType: normalizeDamageType(a.damage_type),
+      label: a.label ?? a.ability_key,
+      combatText: (a.combat_text as Record<string, unknown>) ?? {},
     };
   }
   return out;
@@ -161,7 +170,13 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
   const next: Record<string, ServerAbilityCalcEntry> = {};
   const errors: string[] = [];
 
-  for (const row of rows ?? []) {
+  // Base ability + validated class-assignment overrides, resolved through the
+  // ONE shared resolver. An invalid override object is discarded (base config
+  // still resolves), so it must NOT abort the registry swap — it is reported
+  // through the audit queue instead.
+  const resolved = applyAssignmentOverrides(rows as any[], k => getClassScaling(k) as any);
+  overrideErrors = resolved.errors;
+  for (const row of resolved.rows) {
     const ability = row?.ability;
     if (!ability) continue;
     if (row.status !== 'active' || ability.status !== 'active') continue;
@@ -211,6 +226,8 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       // Authoritative cast metadata: the client's queued `cp_cost` is ignored.
       cpCost: Math.max(0, Math.round(Number(ability.cp_cost ?? 0))),
       damageType: normalizeDamageType(ability.damage_type),
+      label: ability.label ?? ability.ability_key,
+      combatText: (ability.combat_text as Record<string, unknown>) ?? {},
     };
   }
 
@@ -257,7 +274,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       }
       const { data, error } = await db
         .from('class_ability_assignments')
-        .select('class_key,ability_id,role_id,is_default,status,unlock_level,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
+        .select('class_key,ability_id,role_id,is_default,status,unlock_level,overrides,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,label,description,tooltip,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs,combat_text)');
       if (error) throw error;
       if (data && data.length > 0) {
         const result = setServerAbilityCalcs(data);
@@ -396,6 +413,26 @@ export function authorizeQueuedAbility(args: {
 }
 
 
+/**
+ * Take and clear invalid-override reports from the most recent refresh. These
+ * are actionable configuration errors: the class ran on base configuration.
+ */
+export function drainAbilityOverrideAuditRows(): Array<{
+  character_id: string | null; node_id: string | null;
+  event_type: string; message: string; payload: Record<string, unknown>;
+}> {
+  if (overrideErrors.length === 0) return [];
+  const rows = overrideErrors.slice(0, 20).map(message => ({
+    character_id: null as string | null,
+    node_id: null as string | null,
+    event_type: 'ability_override_invalid',
+    message,
+    payload: { source: 'class_ability_assignments.overrides' },
+  }));
+  overrideErrors = [];
+  return rows;
+}
+
 /** Errors from the most recent rejected refresh (empty when healthy). */
 export function getLastRegistryRejection(): string[] {
   return lastRefreshRejected;
@@ -418,6 +455,7 @@ export function resetServerAbilityCalcs(): void {
   resetToSeed();
   loadedAt = 0;
   lastRefreshRejected = [];
+  overrideErrors = [];
   resolverMode = ENV_MODE === 'sealed' ? 'sealed' : 'v2';
 }
 

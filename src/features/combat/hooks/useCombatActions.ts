@@ -33,7 +33,7 @@ import {
   type ReservedBuffsMap,
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
-import { getCastFlavor } from '@/features/combat/utils/cast-flavor';
+import { resolveCastFlavor } from '@/features/combat/utils/ability-text';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
 import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
@@ -286,8 +286,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const targetName = queueTargetId
         ? (p.creatures.find((c: any) => c.id === queueTargetId)?.name ?? null)
         : null;
-      const castFlavor = getCastFlavor(ability.type, p.character.class, targetName);
-      if (castFlavor) p.addLogEvent(buildAbilityEvent(castFlavor));
+      const castFlavor = resolveCastFlavor(ability, p.character.class, targetName);
+      if (castFlavor) {
+        p.addLogEvent(buildAbilityEvent(castFlavor, {
+          abilityKey: ability.abilityKey,
+          ...(ability.damageType ? { damageType: ability.damageType } : {}),
+        }));
+      }
       p.queueAbility(abilityIndex, queueTargetId);
       return;
     }

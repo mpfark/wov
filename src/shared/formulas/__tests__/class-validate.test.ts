@@ -18,6 +18,8 @@ const base: ClassConfigDraft = {
   crit_range: 20,
   level_bonuses: { str: 1, dex: 1 },
   weapon_proficiencies: ['sword', 'axe', 'mace'],
+  primary_attribute: 'str',
+  secondary_attribute: 'dex',
 };
 
 describe('validateClassConfig', () => {

@@ -34,6 +34,8 @@ export interface ClientEventOptions {
   amountKind?: LogAmountKind;
   damageType?: string;
   effectType?: string;
+  /** Canonical ability identity (additive metadata; never a classifier). */
+  abilityKey?: string;
   severity?: LogSeverity;
   crit?: boolean;
   scope?: LogScope;

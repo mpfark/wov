@@ -111,6 +111,19 @@ const FLAVOR: Record<string, FlavorVariants> = {
   },
 };
 
+/**
+ * Ability-key flavor. Keyed by canonical `abilities.ability_key`, checked before
+ * the mechanic table so two abilities sharing one mechanic keep separate text.
+ */
+const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
+  frost_bolt: {
+    withTarget: [
+      'Frost gathers into a jagged shard above your palm, angled at {target}…',
+      'The air whitens and cracks as you shape a lance of ice for {target}…',
+    ],
+  },
+};
+
 // Smite is shared — separate tables keyed on character class.
 const SMITE_FLAVOR_BY_CLASS: Record<string, string[]> = {
   templar: [
@@ -128,8 +141,26 @@ function substitute(template: string, target: string | null): string {
 }
 
 /**
- * Returns the cast-time flavor line for a queued ability, or null when the
- * ability type has no defined cast flavor (caller should skip emitting).
+ * Ability-identity flavor lookup. Returns null when the ability key has no
+ * ability-specific entry (the caller then falls back to the mechanic table).
+ */
+export function getAbilityCastFlavor(
+  abilityKey: string,
+  targetName: string | null,
+): string | null {
+  const entry = ABILITY_FLAVOR[abilityKey];
+  if (!entry) return null;
+  if (entry.withTarget && entry.withTarget.length > 0) {
+    return substitute(pick(entry.withTarget), targetName);
+  }
+  if (entry.selfOrAlly && entry.selfOrAlly.length > 0) return pick(entry.selfOrAlly);
+  return null;
+}
+
+/**
+ * Returns the cast-time flavor line for a queued ability keyed by its *mechanic*.
+ * Fallback path only — prefer `resolveCastFlavor` in `ability-text.ts`, which
+ * checks authored text and ability identity first.
  */
 export function getCastFlavor(
   abilityType: string,

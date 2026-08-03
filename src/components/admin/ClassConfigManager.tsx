@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { AlertTriangle, Loader2, Plus, Save, ShieldCheck } from 'lucide-react';
 import ClassAuthorDialog from './ClassAuthorDialog';
+import ClassAbilityConfig from './class/ClassAbilityConfig';
 import {
   CLASS_STAT_KEYS, CLASS_STATUSES, WEAPON_TAGS, validateClassConfig,
   validateClassLifecycle, type ClassConfigDraft,
@@ -70,6 +71,8 @@ export default function ClassConfigManager() {
       crit_range: r.crit_range ?? 20,
       level_bonuses: (r.level_bonuses as Record<string, number>) ?? {},
       weapon_proficiencies: (r.weapon_proficiencies as string[]) ?? [],
+      primary_attribute: (r as { primary_attribute?: string | null }).primary_attribute ?? null,
+      secondary_attribute: (r as { secondary_attribute?: string | null }).secondary_attribute ?? null,
     }));
     setRows(mapped);
     setRoles((roleRes.data as RoleRow[]) ?? []);
@@ -136,7 +139,9 @@ export default function ClassConfigManager() {
       crit_range: draft.crit_range,
       level_bonuses: draft.level_bonuses as never,
       weapon_proficiencies: draft.weapon_proficiencies,
-    }).eq('class_key', draft.class_key);
+      primary_attribute: draft.primary_attribute ?? null,
+      secondary_attribute: draft.secondary_attribute ?? null,
+    } as never).eq('class_key', draft.class_key);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
@@ -286,6 +291,43 @@ export default function ClassConfigManager() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Primary attribute</Label>
+                      <Select
+                        value={draft.primary_attribute ?? '__none'}
+                        onValueChange={v => setDraft({ ...draft, primary_attribute: v === '__none' ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none" className="text-xs">None</SelectItem>
+                          {CLASS_STAT_KEYS.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs uppercase">{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Secondary attribute</Label>
+                      <Select
+                        value={draft.secondary_attribute ?? '__none'}
+                        onValueChange={v => setDraft({ ...draft, secondary_attribute: v === '__none' ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none" className="text-xs">None</SelectItem>
+                          {CLASS_STAT_KEYS.map(s => (
+                            <SelectItem key={s} value={s} className="text-xs uppercase">{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="col-span-2 text-[10px] text-muted-foreground">
+                      Ability calc terms scaling off these attributes become the
+                      overridable primary / secondary scaling roles for this class.
+                    </p>
+                  </div>
+
                   <div>
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
                       Attribute bonuses every 3 levels
@@ -331,6 +373,13 @@ export default function ClassConfigManager() {
                   </div>
                 </CardContent>
               </Card>
+
+              <ClassAbilityConfig
+                classKey={draft.class_key}
+                classLabel={draft.label}
+                primaryAttribute={draft.primary_attribute ?? null}
+                secondaryAttribute={draft.secondary_attribute ?? null}
+              />
 
               {/* Validation */}
               <Card className="bg-card/80">

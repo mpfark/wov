@@ -96,6 +96,13 @@ export interface CalcTerm {
   rounding?: CalcRounding;
   /** Optional label used by `describeCalc` / admin tooltips. */
   label?: string;
+  /**
+   * Optional scaling-role tag (`primary` / `secondary`). Only tagged stat terms
+   * may have their **attribute** replaced by a class assignment override
+   * (`overrides.scaling`); the coefficient and every other property are always
+   * preserved. Absent = not overridable.
+   */
+  role?: 'primary' | 'secondary';
 }
 
 /**

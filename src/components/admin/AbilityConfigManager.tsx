@@ -1,8 +1,14 @@
 /**
- * AbilityConfigManager — admin editor for the configurable class ability system.
- * Edits `abilities` rows and their class assignment: presentation, cost, unlock
- * level and the structured calculations (`amount_calc`, `duration_calc`,
- * `mechanic_calcs`, `interval_ms`).
+ * AbilityConfigManager — admin editor for the reusable ability BASE LIBRARY.
+ *
+ * Owns `abilities` rows only: presentation, taxonomy, damage type, CP cost,
+ * lifecycle and the structured calculations (`amount_calc`, `duration_calc`,
+ * `mechanic_calcs`, `interval_ms`). `ability_key` and `mechanic_key` are
+ * immutable identity and are never editable here.
+ *
+ * Class-side concerns — which class uses an ability, in which slot, at which
+ * unlock level, which entry is the slot default, and per-class overrides — live
+ * in the class editor (`class/ClassAbilityConfig`). Keep that split.
  *
  * Checkpoint 6: calculations are authored through the no-code `CalcBuilder`
  * (term rows, dice pickers, threshold ladders, final multipliers) and the
@@ -207,34 +213,12 @@ export default function AbilityConfigManager() {
       status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
-    const { error: assignmentError } = await supabase
-      .from('class_ability_assignments')
-      .update({
-        unlock_level: draft.unlock_level,
-        status: draft.assignment_status,
-        role_id: draft.role_id,
-      })
-      .eq('id', draft.assignment_id);
     setSaving(false);
-
-    const err = abilityError || assignmentError;
-    if (err) { toast.error(err.message); return; }
+    if (abilityError) { toast.error(abilityError.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
     await load();
   };
 
-  /** Promote an alternative to its slot default (atomic, admin-only RPC). */
-  const promoteDefault = async () => {
-    if (!draft) return;
-    setSaving(true);
-    const { error } = await supabase.rpc('set_assignment_default' as any, {
-      _assignment_id: draft.assignment_id,
-    });
-    setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`${draft.label} is now the default for ${draft.role_name}.`);
-    await load();
-  };
 
 
   return (
@@ -290,20 +274,6 @@ export default function AbilityConfigManager() {
                       <span className="ml-1 text-[10px] text-muted-foreground">{row.cp_cost} CP</span>
                     </button>
                   ))}
-                  {roles
-                    .filter(r => r.class_key === classKey && list.some(a => a.role_id === r.id && a.is_default))
-                    .sort((a, b) => a.slot - b.slot)
-                    .map(role => (
-                      <Button
-                        key={`alt-${role.id}`}
-                        size="sm"
-                        variant="ghost"
-                        className="w-full h-6 justify-start text-[10px] text-muted-foreground"
-                        onClick={() => { setAuthorAsAlternative(true); setAuthorRole(role); }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> alternative for {role.name}
-                      </Button>
-                    ))}
                   {roles
                     .filter(r => r.class_key === classKey && !list.some(a => a.role_id === r.id))
                     .sort((a, b) => a.slot - b.slot)
@@ -379,23 +349,8 @@ export default function AbilityConfigManager() {
                       <Input type="number" value={draft.cp_cost} onChange={e => setDraft({ ...draft, cp_cost: Number(e.target.value) })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px]">Unlock level</Label>
-                      <Input type="number" value={draft.unlock_level} onChange={e => setDraft({ ...draft, unlock_level: Number(e.target.value) })} className="h-8 text-xs" />
-                    </div>
-                    <div className="space-y-1">
                       <Label className="text-[11px]">Ability status</Label>
                       <Select value={draft.ability_status} onValueChange={v => setDraft({ ...draft, ability_status: v })}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {ABILITY_STATUSES.map(s => (
-                            <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Assignment status</Label>
-                      <Select value={draft.assignment_status} onValueChange={v => setDraft({ ...draft, assignment_status: v })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {ABILITY_STATUSES.map(s => (
@@ -451,33 +406,11 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-[11px]">Slot (role)</Label>
-                      <Select value={draft.role_id} onValueChange={v => setDraft({ ...draft, role_id: v })}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {roles
-                            .filter(r => r.class_key === draft.class_key)
-                            .sort((a, b) => a.slot - b.slot)
-                            .map(r => (
-                              <SelectItem key={r.id} value={r.id} className="text-xs">
-                                Slot {r.slot} · {r.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-[11px]">Default</Label>
-                      {draft.is_default ? (
-                        <p className="h-8 flex items-center text-[11px] text-muted-foreground">
-                          Default for this slot.
-                        </p>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-8 text-[11px]" disabled={saving} onClick={promoteDefault}>
-                          Make default for {draft.role_name}
-                        </Button>
-                      )}
+                    <div className="col-span-4 rounded border border-border/60 bg-muted/20 px-2 py-1.5">
+                      <p className="text-[10px] text-muted-foreground">
+                        Slot, unlock level, slot default and per-class overrides are configured in
+                        the Classes editor. This library row is shared by every class that uses it.
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-1">
