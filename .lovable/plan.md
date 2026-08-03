@@ -113,14 +113,14 @@ The reverted baseline already contains far more of the target architecture than 
 1. **Outcome.** Every existing wizard immediately sees a second option in the Signature slot. Fireball stays equipped by default; Frost Bolt must be deliberately equipped.
 2. **Current code.** `abilities` / `class_ability_assignments`; `ABILITY_SEED`; Spellbook; `combat-tick` T0 branch.
 3. **DB.** Insert one `abilities` row `frost_bolt` — same `mechanic_key` as `fireball`, identical `amount_calc`, `cp_cost`, `target_type`, `activation_mode`, only `damage_type='frost'` and its own label/description/combat text. Insert one `class_ability_assignments` row on the wizard Signature role with `unlock_level` **equal to Fireball's** and `is_default=false`, `status='active'`. No admin activation gate.
-4. **Server.** No new mechanic. Frost Bolt resolves through the same T0 handler; only the authoritative `damage_type` differs. Explicitly **no** chill, slow or other frost status.
+4. **Server.** No new mechanic. Frost Bolt resolves through the same T0 handler; only the authoritative `damage_type` differs. Explicitly **no** chill, slow or other frost status. **Acceptance bar:** Frost Bolt is not "done" until its `frost` type, resolved server-side from the authorized `ability_key`, appears in the structured combat events produced by the Phase 3 propagation path — a matching label in the client alone does not count.
 5. **Client.** None beyond what Phase 3 already renders; add the frost damage-type colour/wording to the log formatter if not already present.
 6. **Admin.** Visible and editable via `AbilityConfigManager` (full assignment editing arrives in Phase 6).
-7. **Compatibility.** Wizards with no loadout row keep casting Fireball (the default). Equipping Frost Bolt writes one loadout row.
-8. **Tests.** Only the equipped ability casts; the unequipped sibling is refused server-side; both keys resolve to identical damage numbers with different damage types.
-9. **Manual checks.** As a wizard, open Spellbook → Signature slot shows Fireball (equipped) and Frost Bolt; equip Frost Bolt, cast, confirm frost wording and identical damage; confirm the bar no longer offers Fireball.
+7. **Compatibility.** Wizards with no loadout row keep casting Fireball (the default). Equipping Frost Bolt writes one loadout row through `set_ability_loadout`.
+8. **Tests.** Only the equipped ability casts; the unequipped sibling is refused server-side; both keys resolve to identical damage numbers with different damage types; the emitted event carries `damageType='frost'`.
+9. **Manual checks.** As a wizard, open Spellbook → Signature slot shows Fireball (equipped) and Frost Bolt; equip Frost Bolt, cast, confirm frost wording in the log and identical damage; confirm the bar no longer offers Fireball.
 10. **Out of scope.** Frost status effects, resistances, other classes' alternatives.
-11. **Deploy/rollback.** Migration only. Rollback = set the assignment `status='retired'`; any loadout rows pointing at it fall back to the slot default.
+11. **Deploy/rollback.** Migration only. **Rollback is a two-step data migration, not a status flip:** first `update character_ability_loadout set ability_id = <fireball id> where ability_id = <frost bolt id>` (or delete those rows so the slot default applies), verify zero rows remain pointing at Frost Bolt, and only then set the assignment `status='retired'`. This is required because Phase 3 refuses casts whose explicit selection has become unavailable rather than silently defaulting — retiring first would leave those wizards with a dead slot.
 12. **Dependencies.** Requires Phases 2 and 3.
 13. **Files.** migration, `src/shared/config/ability-seed.ts` + `_shared` mirror, possibly `src/features/combat/utils/cast-flavor.ts`.
 
