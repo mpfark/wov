@@ -4,7 +4,6 @@ import {
   DAMAGE_TYPE_KEYS,
   DAMAGE_TYPE_OPTIONS,
   normalizeDamageType,
-  getDamageType,
   damageTypeLabel,
   damageTypeAdjective,
 } from '../damage-types';
