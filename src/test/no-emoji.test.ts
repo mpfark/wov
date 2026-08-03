@@ -21,7 +21,8 @@ const SELF = 'src/test/no-emoji.test.ts';
 const EMOJI_RANGES: Array<[number, number]> = [
   [0x1f000, 0x1faff],
   [0x1f1e6, 0x1f1ff], // regional indicators
-  [0x2600, 0x263f],
+  [0x2600, 0x2604],
+  [0x2607, 0x263f], // ornamental stars U+2605-2606 stay allowed
   [0x2643, 0x26ff], // misc symbols; gender signs U+2640-2642 stay allowed
   [0x2b00, 0x2bff],
   [0x23e9, 0x23fa], // media / hourglass controls
