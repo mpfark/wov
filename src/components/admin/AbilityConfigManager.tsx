@@ -199,18 +199,38 @@ export default function AbilityConfigManager() {
       amount_calc: draft.amount_calc as any,
       duration_calc: draft.duration_calc as any,
       mechanic_calcs: draft.mechanic_calcs as any,
+      damage_type: draft.damage_type,
+      ability_type: draft.ability_type,
+      activation_mode: draft.activation_mode,
       status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
     const { error: assignmentError } = await supabase
       .from('class_ability_assignments')
-      .update({ unlock_level: draft.unlock_level, status: draft.assignment_status })
+      .update({
+        unlock_level: draft.unlock_level,
+        status: draft.assignment_status,
+        role_id: draft.role_id,
+      })
       .eq('id', draft.assignment_id);
     setSaving(false);
 
     const err = abilityError || assignmentError;
     if (err) { toast.error(err.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
+    await load();
+  };
+
+  /** Promote an alternative to its slot default (atomic, admin-only RPC). */
+  const promoteDefault = async () => {
+    if (!draft) return;
+    setSaving(true);
+    const { error } = await supabase.rpc('set_assignment_default' as any, {
+      _assignment_id: draft.assignment_id,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${draft.label} is now the default for ${draft.role_name}.`);
     await load();
   };
 
