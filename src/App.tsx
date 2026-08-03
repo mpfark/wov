@@ -18,6 +18,7 @@ const GameRoute = lazy(() => import("./pages/GameRoute"));
 const AdminRoute = lazy(() => import("./pages/AdminRoute"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const GalleryPage = lazy(() => import("./pages/GalleryPage"));
+const OAuthConsentPage = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient();
 
