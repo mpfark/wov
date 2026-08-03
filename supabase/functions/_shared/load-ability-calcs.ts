@@ -45,6 +45,11 @@ export interface ServerAbilityCalcEntry {
   roleSlot: number;
   isDefault: boolean;
   unlockLevel: number;
+  // ── Authoritative cast metadata (Phase 3) ─────────────────────
+  /** `abilities.cp_cost` — the only CP cost the server will ever spend. */
+  cpCost: number;
+  /** `abilities.damage_type`, normalized. Metadata only: no mitigation effect. */
+  damageType: string | null;
 }
 
 const TTL_MS = 60_000;
