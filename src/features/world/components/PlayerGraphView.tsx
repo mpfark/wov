@@ -468,42 +468,36 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   />
                 );
               })()}
-              {/* Service icons positioned outside the node circle */}
-              {node.is_vendor && (
-                <text x={pos.px - 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+              {/* Service markers — coloured dots ringing the node edge */}
+              {(() => {
+                const markers = nodeServiceMarkers(node);
+                if (!markers.length) return null;
+                const radius = (isVisitedGhost ? 22 : 28) + 7;
+                // Arc across the top-left → left → bottom-left, leaving the
+                // top-right (creatures) and bottom arc (party) untouched.
+                const start = Math.PI * 1.15;
+                const end = Math.PI * 1.85;
+                return markers.map((svc, i) => {
+                  const t = markers.length === 1 ? 0.5 : i / (markers.length - 1);
+                  const angle = start + t * (end - start);
+                  const cx = pos.px + Math.cos(angle) * radius;
+                  const cy = pos.py + Math.sin(angle) * radius;
+                  return (
+                    <circle
+                      key={svc.key}
+                      cx={cx}
+                      cy={cy}
+                      r={3.5}
+                      fill={svc.color}
+                      className="stroke-background"
+                      strokeWidth={1.25}
+                    >
+                      <title>{svc.title}</title>
+                    </circle>
+                  );
+                });
+              })()}
 
-                </text>
-              )}
-              {node.is_inn && (
-                <text x={pos.px + 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
-              {node.is_blacksmith && (
-                <text x={pos.px - 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
-              {(node as any).is_jewelcrafter && (
-                <text x={pos.px - 26} y={pos.py + 42} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
-              {node.is_teleport && (
-                <text x={pos.px + 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
-              {(node as any).is_trainer && (
-                <text x={pos.px} y={pos.py + 34} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
-              {(node as any).is_marketplace && (
-                <text x={pos.px + 26} y={pos.py + 12} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-
-                </text>
-              )}
             </g>
           );
         })}
