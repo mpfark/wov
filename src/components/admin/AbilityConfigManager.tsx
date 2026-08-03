@@ -33,6 +33,8 @@ import {
 } from '@/shared/formulas/ability-calc';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import { CLASS_LABELS } from '@/lib/game-data';
+import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
+import AssignmentMatrix from './ability/AssignmentMatrix';
 
 interface Row {
   assignment_id: string;
