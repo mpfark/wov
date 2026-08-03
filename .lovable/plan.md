@@ -4,8 +4,9 @@ Incorporates the audit feedback. Scope is the correction only: canonical ability
 
 ## Repository evidence that conflicts with a requirement (report first)
 
-1. **No class "primary/secondary attribute" definition exists.** `classes` carries `base_hp`, `base_ac`, `crit_range`, `level_bonuses`, `weapon_proficiencies`, `restrictions`; `class-authoring.ts` has no stat-priority concept. A symbolic `primary`/`secondary` override therefore has nothing authoritative to resolve against. Decision: the admin UI offers "Primary / Secondary" as convenience shortcuts (derived, read-only, from the class's `level_bonuses` stat weights) but **stores the concrete attribute** (`str|dex|con|int|wis|cha`), exactly as the feedback prefers.
-2. **Several approved formulas genuinely blend two attributes** (Eagle Eye DEX+WIS, Warrior STR magnitude / DEX duration, Envenom DEX proc + CHA ceiling). So model **A** (single scaling attribute) cannot represent them. Chosen model is **A-with-roles**: base calc stat terms may be tagged with a role (`primary` / `secondary`), and an assignment override supplies a concrete attribute per tagged role. Untagged terms are never rewritten. No new coefficient authoring is introduced — `scaling_coefficient` is exposed **only** where the base calc's tagged term already has a `mult`, and defaults to that exact value.
+1. **No class "primary/secondary attribute" definition exists.** `classes` carries `base_hp`, `base_ac`, `crit_range`, `level_bonuses`, `weapon_proficiencies`, `restrictions`; `class-authoring.ts` has no stat-priority concept. Class stat identity is **not** inferred from `level_bonuses`. Decision (preferred approach): Migration A adds explicit `primary_attribute` and `secondary_attribute` columns to `classes`, each validated as `str|dex|con|int|wis|cha`. Class Config may then offer "Primary"/"Secondary" as UI shortcuts, but the assignment override always stores the **deliberately resolved concrete attribute**, so a later class-identity change never silently rebalances existing abilities. Backfill sets each class's two columns to the attributes its current formulas already scale from (annotation only, no formula change); if any class is ambiguous, that class ships without shortcuts and shows only the six concrete attributes.
+2. **Several approved formulas genuinely blend two attributes** (Eagle Eye DEX+WIS, Warrior STR magnitude / DEX duration, Envenom DEX proc + CHA ceiling). So model **A** (single scaling attribute) cannot represent them. Chosen model is **A-with-roles**: base calc stat terms may be tagged with a role (`primary` / `secondary`), and an assignment override supplies a concrete attribute per tagged role. Untagged terms are never rewritten. **No coefficient authoring at all** in this correction — a tagged term's base coefficient (`mult`) is preserved exactly.
+
 3. **`effect_type` is an existing semantic taxonomy**, not an ability identity: `tick-event-builder.ts` / `reward-event-builder.ts` / `threat-event-builder.ts` map event kinds to values like `resist`, `stack`, `cleanse`, `xp`, `gold`, `engage`. It is used for log classification and effect handling. It will **not** be replaced; `abilityKey` is added alongside it.
 4. **`abilities.combat_text jsonb` already exists and is entirely unread at runtime** (all seed values `{}`; only `AbilityAuthorDialog` writes an empty object). It becomes the home for ability-specific authored flavor — no new column for text.
 5. **No repository use case for class-specific CP cost exists** — `cp_cost` is read from the ability row everywhere. Per the feedback, `cp_cost` stays a base property and is **excluded** from overrides.
@@ -30,9 +31,11 @@ Changes:
 Scaling attributes live inside `AbilityCalc.terms[].stat` (`ability-calc.ts`). The additive model:
 
 - Base calc stat terms may carry an optional `role: 'primary' | 'secondary'` marker (new optional field on `CalcTerm`; absent = not overridable).
-- Assignment override: `scaling: { primary_attribute?: CalcStat, secondary_attribute?: CalcStat, primary_coefficient?: number, secondary_coefficient?: number }`.
-- The resolver rewrites only tagged terms: substitutes `stat`, and `mult` only when a coefficient override is present and the base term already has a configurable `mult`.
+- Assignment override: `scaling: { primary_attribute?: CalcStat, secondary_attribute?: CalcStat }` — attributes only.
+- The resolver rewrites **only the `stat` field** of tagged terms. `mult`, transforms, rounding, thresholds and every other term property are copied through untouched, so a class override can never change a coefficient or curve.
 - `chance_on_hit` and every other mechanic parameter stay entirely separate — they are `mechanic_calcs` params, never touched by `scaling`.
+- Coefficient authoring is explicitly deferred; no `primary_coefficient` / `secondary_coefficient` field exists in the schema, resolver, validator or UI.
+
 
 ### Parameter classification inventory (`mechanic-templates.ts`, verified)
 
@@ -58,9 +61,12 @@ For every existing assignment: overrides start empty, and role tags are added to
 
 ## Part 3 — Admin split
 
-**Abilities page** (`AbilityConfigManager.tsx` rewritten): queries `abilities` directly — no assignment join, no class grouping, no `AssignmentMatrix`. Each base ability appears once. Editable: `ability_key`, label, description, tooltip, `mechanic_key`, `ability_type`, `activation_mode`, `target_type`, `cp_cost`, `damage_type`, `amount_calc`/`duration_calc`/`interval_ms`, `mechanic_calcs`, `combat_text`, `status` — each labelled as a global default. Class/slot/unlock/is_default controls removed. `AbilityAuthorDialog` loses its role/alternative arguments.
+**Abilities page** (`AbilityConfigManager.tsx` rewritten): queries `abilities` directly — no assignment join, no class grouping, no `AssignmentMatrix`. Each base ability appears once. Editable: label, description, tooltip, `ability_type`, `activation_mode`, `target_type`, `cp_cost`, `damage_type`, `amount_calc`/`duration_calc`/`interval_ms`, `mechanic_calcs`, `combat_text`, `status` — each labelled as a global default. Class/slot/unlock/is_default controls removed. `AbilityAuthorDialog` loses its role/alternative arguments.
 
-**Class Config page** (`ClassConfigManager.tsx`): new "Ability Configuration" section with exactly the five `class_ability_roles` slots. Per slot: default base ability, alternatives, ability picker sourced from the base library, unlock level, assignment status, class-specific override editor (presentation, `combat_text`, `scaling`, supported mechanic params), effective configuration, and a preview using the shared resolver. Promote-to-default reuses the existing `set_assignment_default` RPC and its one-default-per-slot partial unique index. `AssignmentMatrix.tsx` moves here as the read-only overview. New components under `src/components/admin/class-abilities/`.
+**Canonical identity protection.** `ability_key` is set at creation only; afterwards it renders read-only with a copy affordance, and renaming requires an explicit migration/alias workflow (documented, not exposed in the UI). `mechanic_key` is presented as a guarded change: a warning that it changes executable behaviour, a re-validation of the row against the new mechanic template (`validateAbilityForPublish`), and it is **blocked** while the ability is `active` or referenced by any non-retired `class_ability_assignments` row. The controlled path is: retire or unassign → change mechanic → re-validate calcs/params → re-publish. Enforced both in the UI and by extending the existing `public.validate_ability_row()` trigger so the block cannot be bypassed. Ordinary presentation fields stay directly editable.
+
+**Class Config page** (`ClassConfigManager.tsx`): the class editor gains explicit `primary_attribute` / `secondary_attribute` selectors, plus a new "Ability Configuration" section with exactly the five `class_ability_roles` slots. Per slot: default base ability, alternatives, ability picker sourced from the base library, unlock level, default/alternative state, assignment status, class-specific override editor (presentation/flavor, `scaling` attributes for tagged terms, supported mechanic params), the effective configuration, and a preview using the shared resolver. Promote-to-default reuses the existing `set_assignment_default` RPC and its one-default-per-slot partial unique index. `AssignmentMatrix.tsx` moves here as the read-only overview. New components under `src/components/admin/class-abilities/`.
+
 
 No data is lost: the assignment rows the old page edited stay in `class_ability_assignments`; only the editing location moves.
 
@@ -73,9 +79,12 @@ validateAssignmentOverrides(baseRow, overrides) -> string[]
 resolveEffectiveAbility(baseRow, assignmentRow) -> { ability, errors }
 ```
 
-Authoritative TypeScript validation (mechanic-aware): allowed override keys, `scaling` roles that actually exist as tagged terms in the base calc, mechanic params belonging to the base mechanic, and `validateCalc` on any calc override.
+Authoritative TypeScript validation (mechanic-aware): allowed override keys, `scaling` roles that actually exist as tagged terms in the base calc, and mechanic params belonging to the base mechanic.
 
-**Validation-authority split (chosen approach 3, plus a parity test):** SQL validates *structural shape and primitive allowlists only* — `overrides` must be a JSON object, keys drawn from a small SQL allowlist (`label`, `description`, `tooltip`, `combat_text`, `scaling`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`), `scaling.*_attribute` in the six stat literals, coefficients numeric and finite, text within length limits. Whether a field is *supported by the selected mechanic* is decided by the shared TypeScript resolver used by client, server and admin preview. A parity test asserts the SQL key allowlist matches the TypeScript key union, failing loudly if either drifts. No mechanic-template duplication in SQL.
+**Override allowlist (narrow).** Exactly: `label`, `description`, `tooltip`, `combat_text`, `scaling` (`primary_attribute` / `secondary_attribute` only), `mechanic_calcs` (params of the base mechanic only). Whole-formula overrides — `amount_calc`, `duration_calc`, `interval_ms` — are **not** permitted: no repository evidence shows an existing class-specific need, so they remain base-ability properties. Unlock level, default/alternative state and lifecycle status stay as their existing dedicated assignment columns, not as JSON overrides. `cp_cost` is excluded (base property).
+
+**Validation-authority split (chosen approach 3, plus a parity test):** SQL validates *structural shape and primitive allowlists only* — `overrides` must be a JSON object, keys drawn from the SQL allowlist above, `scaling` containing only `primary_attribute`/`secondary_attribute` with values in the six stat literals, `combat_text` values as strings within length limits. Whether a field is *supported by the selected mechanic* is decided by the shared TypeScript resolver used by client, server and admin preview. A parity test asserts the SQL key allowlist matches the TypeScript key union, failing loudly if either drifts. No mechanic-template duplication in SQL.
+
 
 **Failure behaviour (deterministic, no silent partial merge):** if `validateAssignmentOverrides` returns any error, the resolver **discards the override object entirely** and resolves the assignment from its base configuration — never a partial deep-merge. It returns the errors alongside, and:
 
@@ -89,8 +98,11 @@ Existing assignments have empty overrides, so they are unaffected throughout dep
 
 1. **Migration A** — additive only:
    - `ALTER TABLE public.class_ability_assignments ADD COLUMN overrides jsonb NOT NULL DEFAULT '{}'::jsonb;`
+   - `ALTER TABLE public.classes ADD COLUMN primary_attribute text, ADD COLUMN secondary_attribute text;` with a validation trigger restricting both to `str|dex|con|int|wis|cha` (nullable, so a class may ship without shortcuts), plus a backfill `UPDATE` setting each existing class to the attributes its current formulas already scale from.
    - `CREATE FUNCTION public.validate_assignment_overrides()` (structural/primitive checks above, `SECURITY DEFINER`, `SET search_path = public`) + `BEFORE INSERT OR UPDATE` trigger.
-   - Frost Bolt `combat_text` written in the same migration as an explicit `UPDATE public.abilities SET combat_text = jsonb_set(...) WHERE ability_key = 'frost_bolt'` — keeping the live row synchronized with the compiled seed. Nothing else is overwritten.
+   - Extend `public.validate_ability_row()` to reject a `mechanic_key` change while the ability is `active` or referenced by a non-retired assignment, and to reject any change to `ability_key` after creation.
+   - Frost Bolt `combat_text` written in the same migration as an explicit `UPDATE public.abilities SET combat_text = ... WHERE ability_key = 'frost_bolt'` — keeping the live row synchronized with the compiled seed. Nothing else is overwritten.
+
 2. Regenerate types.
 3. Land `effective-ability.ts` + Deno mirror, the `CalcTerm.role` tag, the `abilityKey`/`damageType`/`combat_text` wiring, `ability-text.ts` and the `cast-flavor` re-keying. Update `ability-seed.ts` (Frost Bolt text + role tags) so seed and DB match.
 4. Rewrite the Abilities page; move `AssignmentMatrix`; add the Class Config slot/override editors.
@@ -119,11 +131,14 @@ Existing assignments have empty overrides, so they are unaffected throughout dep
 - Fallback chain: no authored text → ability-key flavor → mechanic flavor.
 - Base abilities appear exactly once on the Abilities page (no class grouping, no matrix); assignments/overrides only editable via Class Config.
 - Numerical parity: every seeded assignment resolves to identical values pre/post migration across level 1–42 and modifier −2..+10.
-- Scaling: explicit attribute override resolves; "Primary"/"Secondary" admin shortcuts store the concrete attribute; untagged terms are never rewritten.
+- Scaling: explicit attribute override resolves; "Primary"/"Secondary" shortcuts resolve through the class's explicit `primary_attribute`/`secondary_attribute` and are stored as the concrete attribute; untagged terms are never rewritten; a tagged term's `mult` is always preserved.
+- No coefficient override exists: an override carrying `primary_coefficient`/`secondary_coefficient`, `amount_calc`, `duration_calc` or `interval_ms` is rejected by both SQL and the resolver.
 - `chance_on_hit`/`block_chance`/Envenom params are unaffected by `scaling` overrides.
+- Identity protection: `ability_key` cannot be changed after creation; a `mechanic_key` change is blocked while active or assigned (UI and DB trigger).
 - Invalid or unsupported override → whole override discarded, base config used, error recorded, deterministic result; admin save blocked and preview shows the errors.
 - Admin preview and server resolution agree for every seeded assignment (shared-resolver parity, extending `shared-mirror-identity.test.ts`).
 - Existing characters keep the same five effective abilities; Fireball default / Frost Bolt alternative preserved.
+
 
 ## Explicitly out of scope
 
