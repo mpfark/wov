@@ -72,7 +72,7 @@ const T0_OPENER_TYPES = new Set([
   'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
-// (Queue-flavor "⏳ …" chat log was removed — the ability button's pulsing
+// (Queue-flavor chat log was removed — the ability button's pulsing
 // outline is the only pending-cast indicator now.)
 
 
@@ -280,7 +280,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // Damage/heal abilities must be queued for the heartbeat tick.
     // No chat-log entry is emitted — the ability button itself pulses while
     // pending, which is sufficient visual feedback (and avoids the orphan
-    // ⏳ line landing on its own row when queued out of combat).
+    // queued line landing on its own row when queued out of combat).
     if (!isInstantBuff && !_fromTick) {
       const queueTargetId = resolvedT0TargetId ?? targetId;
       const targetName = queueTargetId
