@@ -37,7 +37,7 @@ import {
 
 const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
 /** was the server sentinel for boss cast starts before stage 2. */
-const TELEGRAPH_RE = /^ |begins channeling|flee the node|begins to channel|telegraph/i;
+const TELEGRAPH_RE = /^\u{1F300}|begins channeling|flee the node|begins to channel|telegraph/iu;
 const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
 const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
 
