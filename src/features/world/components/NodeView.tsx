@@ -177,75 +177,42 @@ export default function NodeView({
                 {region.name} — Levels {region.min_level}–{region.max_level}
               </p>
             )}
-            <div className="flex items-center justify-center gap-1.5 mt-0.5 flex-wrap">
+            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
               {(() => {
-                const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
-                const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
-                const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
-                const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
-                return (
-                  <>
-                    {/* Order & Lineage */}
-                    {node.class_hall && (() => {
-                      const hasRecruiter = npcs.some(n => n.service_role === 'recruiter');
-                      return (
-                        <span
-                          className={`text-[10px] ${hasRecruiter ? 'text-glow' : 'opacity-70'}`}
-                          title={hasRecruiter ? `Order Hall — recruits ${node.class_hall}` : `Order Hall (${node.class_hall}) — no recruiter on duty`}
-                        >
-
-                        </span>
-                      );
-                    })()}
-                    {(node as any).is_heraldry && (
-                      <span className="text-[10px]" title="Heraldry — claim or change family names"> </span>
-                    )}
-                    {node.is_trainer && (
+                const staffedBy: Record<string, boolean> = {
+                  is_vendor: npcs.some(n => n.service_role === 'vendor'),
+                  is_blacksmith: npcs.some(n => n.service_role === 'blacksmith'),
+                  is_jewelcrafter: npcs.some(n => n.service_role === 'jewelcrafter'),
+                  is_trainer: npcs.some(n => n.service_role === 'trainer'),
+                  is_heraldry: npcs.some(n => n.service_role === 'heraldry'),
+                  class_hall: npcs.some(n => n.service_role === 'recruiter'),
+                };
+                return nodeServiceMarkers(node).map(svc => {
+                  const staffable = svc.key in staffedBy;
+                  const staffed = staffedBy[svc.key];
+                  return (
+                    <span
+                      key={svc.key}
+                      className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wide ${
+                        staffable && !staffed ? 'opacity-50' : 'text-foreground/80'
+                      }`}
+                      title={
+                        staffable
+                          ? `${svc.title} — ${staffed ? 'staffed' : 'nobody on duty'}`
+                          : svc.title
+                      }
+                    >
                       <span
-                        className={`text-[10px] ${hasTrainerNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasTrainerNpc ? 'Renown Trainer — staffed' : 'Renown Trainer (no trainer on duty)'}
-                      >
-
-                      </span>
-                    )}
-                    {/* Trade & Craft */}
-                    {node.is_vendor && (
-                      <span
-                        className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasVendorNpc ? 'Vendor — shopkeeper present' : 'Vendor (no shopkeeper)'}
-                      >
-
-                      </span>
-                    )}
-                    {node.is_blacksmith && (
-                      <span
-                        className={`text-[10px] ${hasBlacksmithNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasBlacksmithNpc ? 'Blacksmith — staffed' : 'Blacksmith (no smith on duty)'}
-                      >
-
-                      </span>
-                    )}
-                    {(node as any).is_jewelcrafter && (
-                      <span
-                        className={`text-[10px] ${hasJewelcrafterNpc ? 'text-glow' : 'opacity-70'}`}
-                        title={hasJewelcrafterNpc ? 'Jewelcrafter — staffed' : 'Jewelcrafter (no jeweler on duty)'}
-                      >
-
-                      </span>
-                    )}
-                    {(node as any).is_soulforge && (
-                      <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge"> </span>
-                    )}
-                    {(node as any).is_stonebinder && (
-                      <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Ioun Stones"> </span>
-                    )}
-                    {/* Environment */}
-                    {node.is_inn && <span className="text-[10px]" title="Inn"> </span>}
-                    {node.is_teleport && <span className="text-[10px]" title="Teleport"> </span>}
-                  </>
-                );
+                        className="inline-block w-2 h-2 rounded-full ring-1 ring-background"
+                        style={{ backgroundColor: svc.color }}
+                      />
+                      {svc.title}
+                    </span>
+                  );
+                });
               })()}
             </div>
+
           </div>
 
           {/* Description */}
