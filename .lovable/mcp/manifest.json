@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://gpclaklkaolyzfnooajt.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "wovarneth",
+      "version": "0.1.0",
+      "title": "WoVarneth"
+    },
+    "tools": [
+      {
+        "name": "list_characters",
+        "title": "List characters",
+        "description": "List the signed-in player's characters in Wayfarers of Varneth with class, race, level, gold and vital resources.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_character",
+        "title": "Get character sheet",
+        "description": "Read the full sheet for one of the signed-in player's characters by name: attributes, resources, renown, progress and current location.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Character's first name, e.g. 'Calikon'."
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_inventory",
+        "title": "List inventory",
+        "description": "List the equipment and inventory of one of the signed-in player's characters, including rarity, slot, durability and equipped state.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "character_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Character's first name."
+            },
+            "equipped_only": {
+              "type": "boolean",
+              "description": "When true, only return equipped items."
+            }
+          },
+          "required": [
+            "character_name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "describe_location",
+        "title": "Describe a world location",
+        "description": "Describe a location (node) in the world of Varneth: its description, region, area, services and exits. Omit the name to describe where a character currently stands.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "node_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Location name, e.g. 'Hearthvale Square'."
+            },
+            "character_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Describe where this character of the signed-in player currently stands."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
