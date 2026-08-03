@@ -352,9 +352,10 @@ export default function AbilityConfigManager() {
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           {!draft ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              Select an ability to edit its text, cost and magnitude formulas.
-            </p>
+            <AssignmentMatrix
+              rows={rows}
+              onSelect={id => { const row = rows.find(r => r.assignment_id === id); if (row) select(row); }}
+            />
           ) : (
             <div className="p-4 space-y-4 max-w-3xl">
               <Card className="bg-card/80">
