@@ -103,6 +103,7 @@ export interface AbilityConfigRow {
     cp_cost: number;
     mechanic_key: string;
     status: string;
+    damage_type?: string | null;
     amount_calc?: unknown;
     duration_calc?: unknown;
     interval_ms?: number | null;

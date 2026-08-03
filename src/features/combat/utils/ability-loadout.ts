@@ -24,6 +24,8 @@ export interface LoadoutOption {
   /** `abilities.id` — the value stored in `character_ability_loadout.ability_id`. */
   abilityId: string;
   abilityKey: string;
+  /** Canonical damage type key (null for buffs, heals and utility). */
+  damageType: string | null;
   /** True for the class default (the row flagged `is_default`). */
   isDefault: boolean;
   ability: ClassAbility;
@@ -72,6 +74,7 @@ export function setLoadoutOptions(rows: AbilityConfigRow[]): void {
     role.options.push({
       abilityId,
       abilityKey: row.ability.ability_key ?? '',
+      damageType: row.ability.damage_type ?? null,
       isDefault: row.is_default,
       ability: {
         label: row.ability.label,
