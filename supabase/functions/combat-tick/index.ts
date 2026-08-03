@@ -1006,14 +1006,14 @@ Deno.serve(async (req) => {
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
       const reservedTotal = sumReservedCp(member.c.reserved_buffs);
       if (getAvailableCp(mCp[member.id], reservedTotal) < cpCost) {
-        events.push({ type: 'ability_fail', message: `${c.name} doesn't have enough CP!`, character_id: member.id });
+        pushAbilityEvent({ type: 'ability_fail', message: `${c.name} doesn't have enough CP!`, character_id: member.id });
         continue;
       }
       mCp[member.id] -= cpCost;
 
       const target = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
       if (!target) {
-        events.push({ type: 'ability_fail', message: `${c.name}'s target is no longer valid.`, character_id: member.id });
+        pushAbilityEvent({ type: 'ability_fail', message: `${c.name}'s target is no longer valid.`, character_id: member.id });
         continue;
       }
 
@@ -1133,7 +1133,7 @@ Deno.serve(async (req) => {
       };
 
 
-      if (pa.ability_type === 'multi_attack') {
+      if (paMech === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
@@ -1168,7 +1168,7 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
-        events.push({ type: 'ability_cast', message: `${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
+        pushAbilityEvent({ type: 'ability_cast', message: `${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
@@ -1185,7 +1185,7 @@ Deno.serve(async (req) => {
             arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
             totalDmg += arrowDmg;
             cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
-            events.push({
+            pushAbilityEvent({
               type: 'attack_hit',
               message: `Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
               attacker_name: c.name,
@@ -1197,7 +1197,7 @@ Deno.serve(async (req) => {
               character_id: member.id,
             });
           } else {
-            events.push({
+            pushAbilityEvent({
               type: 'attack_miss',
               message: `Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
               attacker_name: c.name,
@@ -1216,11 +1216,11 @@ Deno.serve(async (req) => {
           if (!consumedBuffs[member.id]) consumedBuffs[member.id] = [];
           if (isStealth) {
             consumedBuffs[member.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `${c.name}'s stealth ambush empowers the volley!`, character_id: member.id });
+            pushAbilityEvent({ type: 'buff_consumed', message: `${c.name}'s stealth ambush empowers the volley!`, character_id: member.id });
           }
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
-      } else if (pa.ability_type === 'execute_attack') {
+      } else if (paMech === 'execute_attack') {
         // Eviscerate (Assassin / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
         // Per-stack bonus scales with CHA showmanship. Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
@@ -1234,7 +1234,7 @@ Deno.serve(async (req) => {
         if (!hit.hit) {
           // Strike committed — poison stacks still consumed on miss.
           const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
@@ -1253,16 +1253,16 @@ Deno.serve(async (req) => {
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
         } else {
-          events.push({ type: 'ability_hit', message: `${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
 
-      } else if (pa.ability_type === 'ignite_consume') {
+      } else if (paMech === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
         // Per-stack bonus scales with INT. Burn stack count scales with WIS via Ignite. Rolls to hit on INT.
         const effInt = (c.int || 10) + (eb.int || 0);
@@ -1271,7 +1271,7 @@ Deno.serve(async (req) => {
         const hit = rollAbilityHit(intMod);
         if (!hit.hit) {
           const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
+          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
           continue;
         }
@@ -1290,22 +1290,22 @@ Deno.serve(async (req) => {
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
+          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
         } else {
-          events.push({ type: 'ability_hit', message: `${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
+          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (
-        pa.ability_type === 'fireball' ||
-        pa.ability_type === 'power_strike' ||
-        pa.ability_type === 'aimed_shot' ||
-        pa.ability_type === 'backstab' ||
-        pa.ability_type === 'smite' ||
-        pa.ability_type === 'cutting_words'
+        paMech === 'fireball' ||
+        paMech === 'power_strike' ||
+        paMech === 'aimed_shot' ||
+        paMech === 'backstab' ||
+        paMech === 'smite' ||
+        paMech === 'cutting_words'
       ) {
         // T0 class identity abilities. Two damage paths:
         //   • Physical (power_strike / aimed_shot / backstab):
@@ -1329,16 +1329,16 @@ Deno.serve(async (req) => {
           cutting_words: { verb: 'mocks' },
         };
         const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
-        const stat = T0_STAT[pa.ability_type];
+        const stat = T0_STAT[paMech];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        let { verb } = T0_LABEL[pa.ability_type];
+        let { verb } = T0_LABEL[paMech];
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
-        if (pa.ability_type === 'smite' && c.class === 'templar') {
+        if (paMech === 'smite' && c.class === 'templar') {
           verb = 'passes divine judgment upon';
         }
-        const isPhysT0 = PHYSICAL_T0.has(pa.ability_type);
-        const isBackstab = pa.ability_type === 'backstab';
+        const isPhysT0 = PHYSICAL_T0.has(paMech);
+        const isBackstab = paMech === 'backstab';
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
         // Backstab reads better as a possessive sentence so the local "You"
@@ -1350,7 +1350,7 @@ Deno.serve(async (req) => {
           const missMsg = isBackstab
             ? `${c.name}'s blade slips wide — ${target.name} is untouched.`
             : `${c.name} ${verb} ${target.name} — misses!${weaponSuffix}`;
-          events.push({
+          pushAbilityEvent({
             type: 'ability_miss',
             message: missMsg,
             character_id: member.id,
@@ -1372,7 +1372,7 @@ Deno.serve(async (req) => {
         // Templar Judgment: intentional ability-specific nerf. Post-cutover the
         // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
         // applied here when the legacy closure produced the number.
-        if (pa.ability_type === 'smite' && c.class === 'templar' && t0Res.source !== 'config') {
+        if (paMech === 'smite' && c.class === 'templar' && t0Res.source !== 'config') {
           dmg = Math.max(1, Math.floor(dmg * 0.8));
         }
 
@@ -1385,7 +1385,7 @@ Deno.serve(async (req) => {
         const hitMsg = isBackstab
           ? `${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
           : `${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
-        events.push({
+        pushAbilityEvent({
           type: 'ability_hit',
           message: hitMsg,
           character_id: member.id,
@@ -1395,7 +1395,7 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
 
-      } else if (pa.ability_type === 'burst_damage') {
+      } else if (paMech === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
         // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
         // Rolls to hit on CHA; crit edge applies only on a successful hit.
@@ -1405,7 +1405,7 @@ Deno.serve(async (req) => {
         const intMod = sm(effInt);
         const hit = rollAbilityHit(chaMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
           continue;
         }
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
@@ -1425,11 +1425,11 @@ Deno.serve(async (req) => {
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
-        events.push({ type: 'ability_hit', message: `Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
+        pushAbilityEvent({ type: 'ability_hit', message: `Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha, member.id);
         }
-      } else if (pa.ability_type === 'dot_debuff') {
+      } else if (paMech === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row.
         // Dual-primary (Warrior STR+DEX): magnitude = weapon damage + STR (the wound),
         // duration = DEX (precision keeps it open). Rolls to hit on DEX.
@@ -1443,7 +1443,7 @@ Deno.serve(async (req) => {
         const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
@@ -1478,7 +1478,7 @@ Deno.serve(async (req) => {
         } else {
           activeEffects.push({ id: crypto.randomUUID(), ...effData });
         }
-        events.push({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+        pushAbilityEvent({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
       }
     }
 
