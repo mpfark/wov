@@ -53,6 +53,10 @@ interface Row {
   /** False for player-selectable alternatives on the same role. */
   is_default: boolean;
   interval_ms: number | null;
+  /** Canonical damage type key, or null for non-damaging abilities. */
+  damage_type: string | null;
+  ability_type: string;
+  activation_mode: string;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
   mechanic_calcs: Record<string, AbilityCalc>;
@@ -61,6 +65,8 @@ interface Row {
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
+const ABILITY_TYPES = ['damage', 'heal', 'buff', 'debuff'] as const;
+const ACTIVATION_MODES = ['instant', 'queued', 'stance'] as const;
 
 
 export default function AbilityConfigManager() {
