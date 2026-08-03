@@ -292,12 +292,12 @@ resolver, so flipping back restores legacy behaviour with no data change.
 Each is completed and verified independently before the next begins.
 
 1. **Audit + identity** — this document; client registry re-keyed to
-   `ability_key` with a `class:tier` compat map. No math change. ✅
+   `ability_key` with a `class:tier` compat map. No math change.
 2. **One resolver** — `resolveAbilityMagnitude(ctx)` in `_shared`; route every
    bypass path through it with the current inline math as an explicit
    `legacyFallback`; aggregated counters + dev logging; audit rows only for
    mismatch / fallback / actionable failure. Server-read `consume_stacks`.
-3. **Evaluator v2** ✅ — dice + context sources, `finalMult`, `multiplierCalc`,
+3. **Evaluator v2** — dice + context sources, `finalMult`, `multiplierCalc`,
    `multRounding`, injectable `RollSource`, extended `describeCalc` /
    `validateCalc`, mechanic-template registry, mirror-identity test.
 4. **Schema + seed** — `abilities.mechanic_calcs jsonb`,
@@ -309,7 +309,7 @@ Each is completed and verified independently before the next begins.
    seeded rolls (min, max, 3 mid, per-arrow sequences); stacks 0/1/partial/max;
    unarmed vs every weapon die; operation-order distinctions; eviscerate
    intermediate stages; global-modifier panel values. Then flip the flag.
-6. **Visual editor** ✅ — `src/components/admin/ability/CalcBuilder.tsx` (term rows
+6. **Visual editor** — `src/components/admin/ability/CalcBuilder.tsx` (term rows
    for every source, dice picker with `weapon_main` + unarmed fallback, stat
    transform/threshold ladders, context selector, final multiplier, nested
    `multiplierCalc` with its own rounding, floor/cap/rounding/unit selects, admin
@@ -321,7 +321,7 @@ Each is completed and verified independently before the next begins.
    `validateAbilityForPublish` reports problems; JSON is a collapsed read-only
    diagnostic inside the builder.
 
-7. **Remove legacy** ✅ — deleted `shared/formulas/abilities.ts` and its server
+7. **Remove legacy** — deleted `shared/formulas/abilities.ts` and its server
    mirror (all 11 helpers), the `USE_CONFIG_ABILITY_CALCS` /
    `USE_CONFIG_ABILITY_CALCS_V2` flags, and every `legacy: () => …` closure in
    `combat-tick` and `useCombatActions`. Newly routed through configuration:

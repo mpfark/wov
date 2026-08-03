@@ -126,13 +126,12 @@ export function resolveEffectTicks(
         const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
         cHp[eff.target_id] = resolveDamage({ amount: totalDmg, hp: cHp[eff.target_id] }).hpAfter;
 
-        const emoji = eff.effect_type === 'bleed' ? '🩸' : eff.effect_type === 'poison' ? '🧪' : '🔥';
         const verb = eff.effect_type === 'bleed' ? 'bleeds from' : eff.effect_type === 'poison' ? 'suffers' : 'burns from';
         const sourceLabel = eff.effect_type === 'bleed'
           ? `${charName}'s Rend`
           : `${charName}'s ${eff.effect_type} (×${eff.stacks})`;
         const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
-        events.push({ type: 'dot_tick', message: `${emoji} ${creature.name} ${verb} ${sourceLabel}. [${dmgLabel}]` });
+        events.push({ type: 'dot_tick', message: `${creature.name} ${verb} ${sourceLabel}. [${dmgLabel}]` });
 
         eff.next_tick_at += eff.tick_rate_ms;
         advancedEffects.push(eff);
@@ -338,7 +337,7 @@ export async function processLootDrops(
               window: [pickedTier.min, pickedTier.max], reason: pickedTier.reason,
             }));
           }
-          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${picked.name}!` });
+          events.push({ type: 'loot_drop', message: `${drop.creatureName} dropped ${picked.name}!` });
         }
 
         // Separate consumable roll
@@ -383,7 +382,7 @@ export async function processLootDrops(
                 creature: drop.creatureName, creatureLevel, reason: cTierReason,
               }));
             }
-            events.push({ type: 'loot_drop', message: `🧴 ${drop.creatureName} dropped ${pickedC.name}!` });
+            events.push({ type: 'loot_drop', message: `${drop.creatureName} dropped ${pickedC.name}!` });
           }
         }
 
@@ -423,7 +422,7 @@ export async function processLootDrops(
           db.from('node_ground_loot').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId),
         ]);
         if ((invCount && invCount > 0) || (groundCount && groundCount > 0)) {
-          events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
+          events.push({ type: 'loot_drop', message: `The unique power of ${item.name} is already claimed...` });
           continue;
         }
       }
@@ -433,7 +432,7 @@ export async function processLootDrops(
         item_id: pickedItemId,
         creature_name: drop.creatureName,
       });
-      events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${item.name}!` });
+      events.push({ type: 'loot_drop', message: `${drop.creatureName} dropped ${item.name}!` });
     } catch (e) {
       console.error('Loot drop error:', e);
     }

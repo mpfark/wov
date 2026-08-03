@@ -44,7 +44,6 @@ interface Row {
   role_id: string;
   ability_key: string;
   label: string;
-  emoji: string;
   description: string;
   tooltip: string;
   cp_cost: number;
@@ -92,7 +91,7 @@ export default function AbilityConfigManager() {
         id, class_key, unlock_level, is_default, status,
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
-          id, ability_key, label, emoji, description, tooltip, cp_cost,
+          id, ability_key, label, description, tooltip, cp_cost,
           mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
         )
 
@@ -112,7 +111,6 @@ export default function AbilityConfigManager() {
         ability_id: r.ability.id,
         ability_key: r.ability.ability_key,
         label: r.ability.label,
-        emoji: r.ability.emoji,
         description: r.ability.description,
         tooltip: r.ability.tooltip,
         cp_cost: r.ability.cp_cost,
@@ -184,7 +182,6 @@ export default function AbilityConfigManager() {
     setSaving(true);
     const { error: abilityError } = await supabase.from('abilities').update({
       label: draft.label,
-      emoji: draft.emoji,
       description: draft.description,
       tooltip: draft.tooltip,
       cp_cost: draft.cp_cost,
@@ -248,7 +245,6 @@ export default function AbilityConfigManager() {
                           : 'border-border/60 hover:bg-muted/40'
                       }`}
                     >
-                      <span className="mr-1">{row.emoji}</span>
                       {row.label}
                       <Badge variant="outline" className="ml-2 text-[9px]">L{row.unlock_level}</Badge>
                       {!row.is_default && (
@@ -332,7 +328,7 @@ export default function AbilityConfigManager() {
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display flex items-center gap-2">
-                    <span className="text-lg">{draft.emoji}</span>{draft.label}
+                    {draft.label}
                     <Badge variant="outline" className="text-[10px]">
                       {CLASS_LABELS[draft.class_key] ?? draft.class_key} · slot {draft.slot} · {draft.role_name}
                     </Badge>
@@ -344,10 +340,6 @@ export default function AbilityConfigManager() {
                     <div className="col-span-2 space-y-1">
                       <Label className="text-[11px]">Label</Label>
                       <Input value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} className="h-8 text-xs" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Emoji</Label>
-                      <Input value={draft.emoji} onChange={e => setDraft({ ...draft, emoji: e.target.value })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[11px]">CP cost</Label>

@@ -167,7 +167,7 @@ export default function BlacksmithPanel({
     <div className="gap-section text-[11px] text-muted-foreground">
       <p>Equipment loses durability when you take hits in combat. At <span className="text-destructive font-display">0%</span>, items become unequipped and unusable.</p>
       <p>Repair cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
-      <p className="text-destructive">⚠️ Unique items cannot be repaired — they are destroyed at 0% durability.</p>
+      <p className="text-destructive"> Unique items cannot be repaired — they are destroyed at 0% durability.</p>
     </div>
   );
 
@@ -199,14 +199,14 @@ export default function BlacksmithPanel({
       </div>
       {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
-        <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
+        <h3 className="t-label text-[11px]"> Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
           <div className="gap-group">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Amount:</span>
-              <span className="font-display text-dwarvish">🔩 {sellAmount} → {sellAmount}g</span>
+              <span className="font-display text-dwarvish"> {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
             <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || sellAmount < 1}
@@ -236,7 +236,7 @@ export default function BlacksmithPanel({
     <span className="inline-flex flex-col items-center gap-0.5">
       {npcName && (
         <span className="font-display text-elvish">
-          💬 {npcName}
+{npcName}
           {npcFlavor && <span className="text-muted-foreground italic"> — {npcFlavor}</span>}
         </span>
       )}
@@ -246,7 +246,7 @@ export default function BlacksmithPanel({
           <span className="font-display tabular-nums text-primary">{gold}</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span>🔩</span>
+          <span> </span>
           <span className="font-display tabular-nums text-dwarvish">{salvage}</span>
         </span>
       </span>
@@ -258,11 +258,11 @@ export default function BlacksmithPanel({
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
       <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-4' : 'grid-cols-3'}`}>
-        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Repair</TabsTrigger>
-        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">⚒️ Forge</TabsTrigger>
-        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary">💠 Enhance</TabsTrigger>
+        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary"> Repair</TabsTrigger>
+        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary"> Forge</TabsTrigger>
+        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary"> Enhance</TabsTrigger>
         {showSoulforge && (
-          <TabsTrigger value="soulforge" className="t-label text-[11px] data-[state=active]:text-soulforged text-soulforged">⚒️ Soulforge</TabsTrigger>
+          <TabsTrigger value="soulforge" className="t-label text-[11px] data-[state=active]:text-soulforged text-soulforged"> Soulforge</TabsTrigger>
         )}
       </TabsList>
       <TabsContent value="repair" className="hidden" />
@@ -313,7 +313,6 @@ export default function BlacksmithPanel({
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="🔨"
       title="Blacksmith"
       subtitle={subtitle}
       tabs={tabs}

@@ -21,7 +21,6 @@ export interface BossCast {
   creatureId: string;
   castKey: string;
   label: string;
-  emoji: string;
   startedAt: number; // ms epoch
   expiresAt: number; // ms epoch
   castMs: number;
@@ -112,7 +111,6 @@ export function useBossCasts(nodeId: string | null | undefined) {
           creatureId: row.creature_id as string,
           castKey: row.cast_key as string,
           label: payload.label ?? (row.cast_key as string),
-          emoji: payload.emoji ?? '☄️',
           startedAt: row.started_at ? new Date(row.started_at).getTime() : now,
           expiresAt: expires,
           castMs: payload.cast_ms ?? Math.max(500, expires - (row.started_at ? new Date(row.started_at).getTime() : now)),
@@ -134,7 +132,6 @@ export function useBossCasts(nodeId: string | null | undefined) {
           creatureId: p.creature_id,
           castKey: p.cast_key,
           label: p.label ?? p.cast_key,
-          emoji: p.emoji ?? '☄️',
           startedAt: p.started_at ? new Date(p.started_at).getTime() : Date.now(),
           expiresAt: p.expires_at ? new Date(p.expires_at).getTime() : Date.now() + (p.cast_ms ?? 4000),
           castMs: p.cast_ms ?? 4000,

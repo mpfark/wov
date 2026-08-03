@@ -34,7 +34,6 @@ function MaterialChip({ material }: { material: MaterialEntry }) {
             dim ? 'opacity-30 border-border' : 'surface-row'
           }`}
         >
-          <span>{material.icon || '🔩'}</span>
           <span>{material.count}</span>
           <span className="text-muted-foreground">{material.name}</span>
         </span>

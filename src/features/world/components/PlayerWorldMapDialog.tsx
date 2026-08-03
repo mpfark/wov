@@ -50,7 +50,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -428,9 +428,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                 {/* Area hulls — colored fill + stroke like admin */}
                 {areaOutlines.map(({ areaId, path, labelX, labelY }) => {
                   const area = areaById.get(areaId);
-                  const emoji = area ? (emojiMap[area.area_type] || '📍') : '📍';
-                  const fill = getAreaFillColor(emoji);
-                  const stroke = getAreaStrokeColor(emoji);
+                  const areaColor = area ? (colorMap[area.area_type] || '') : '';
+                  const fill = getAreaFillColor(areaColor);
+                  const stroke = getAreaStrokeColor(areaColor);
 
                   const handleAreaTooltip = (e: React.MouseEvent) => {
                     if (!area) return;
@@ -538,11 +538,11 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const isCurrent = node.id === currentNodeId;
                   const isHovered = hoveredNode === node.id;
                   const area = node.area_id ? areaById.get(node.area_id) : null;
-                  const emoji = area ? (emojiMap[area.area_type] || '📍') : '📍';
+                  const areaColor = area ? (colorMap[area.area_type] || '') : '';
                   const hasUniqueName = node.name && node.name.trim() && (!area || node.name.trim() !== area.name);
                   const showLabel = hasUniqueName || isCurrent;
-                  const fillColor = isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(emoji);
-                  const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji);
+                  const fillColor = isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(areaColor);
+                  const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(areaColor);
                   const isTeleportNode = node.is_teleport && visitedIds.has(node.id) && !isCurrent;
                   const canTeleportHere = isTeleportNode && onTeleport && !inCombat;
                   
@@ -553,17 +553,17 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const buildNodeTooltip = (e: React.MouseEvent) => {
                     const lines: string[] = [];
                     if (area && area.name !== node.name) lines.push(area.name);
-                    for (const b of nodeBosses) lines.push(`💀 ${b.name} (Lv ${b.level})`);
+                    for (const b of nodeBosses) lines.push(`${b.name} (Lv ${b.level})`);
 
                     const services: string[] = [];
-                    if (node.is_teleport) services.push('🌀 Teleport');
-                    if ((node as any).is_inn) services.push('🏨 Inn');
-                    if (node.is_vendor) services.push('🪙 Vendor');
-                    if (node.is_blacksmith) services.push('🔨 Blacksmith');
-                    if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
-                    if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
-                    if ((node as any).is_trainer) services.push('🏛️ Trainer');
-                    if ((node as any).is_marketplace) services.push('🏷️ Marketplace');
+                    if (node.is_teleport) services.push('Teleport');
+                    if ((node as any).is_inn) services.push('Inn');
+                    if (node.is_vendor) services.push('Vendor');
+                    if (node.is_blacksmith) services.push('Blacksmith');
+                    if ((node as any).is_jewelcrafter) services.push('Jewelcrafter');
+                    if ((node as any).is_stonebinder) services.push('Stonebinder');
+                    if ((node as any).is_trainer) services.push('Trainer');
+                    if ((node as any).is_marketplace) services.push('Marketplace');
                     if (services.length > 0) lines.push(services.join(' · '));
                     const range = formatLevelRange(creatureLevels.get(node.id) || []);
                     if (range) lines.push(range);
@@ -612,7 +612,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                           textAnchor="middle" dominantBaseline="middle"
                           fontSize={9}
                         >
-                          💀
+
                         </text>
                       )}
 
@@ -625,7 +625,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                           textAnchor="middle" dominantBaseline="middle"
                           fontSize={8} opacity={0.7}
                         >
-                          🌀
+
                         </text>
                       )}
 
@@ -720,7 +720,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                     }`}
                   >
-                    ⚡ {cpCost} CP
+{cpCost} CP
                   </button>
                 </div>
               </div>

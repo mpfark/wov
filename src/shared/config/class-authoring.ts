@@ -44,7 +44,6 @@ export function validateNewClassKey(key: string, existing: string[]): string[] {
 export interface NewAbilityDraft {
   ability_key: string;
   label: string;
-  emoji: string;
   description: string;
   tooltip: string;
   mechanic_key: string;

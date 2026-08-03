@@ -17,7 +17,6 @@ describe('shared damage-type registry', () => {
     for (const d of DAMAGE_TYPE_REGISTRY) {
       expect(d.key).toBe(d.key.toLowerCase());
       expect(d.label.length).toBeGreaterThan(0);
-      expect(d.emoji.length).toBeGreaterThan(0);
       expect(d.adjective.length).toBeGreaterThan(0);
     }
   });
@@ -36,7 +35,6 @@ describe('shared damage-type registry', () => {
     expect(damageTypeAdjective('holy')).toBe('radiant');
     expect(damageTypeLabel('nope')).toBe('');
     expect(damageTypeAdjective(null)).toBe('');
-    expect(getDamageType('shadow')?.emoji).toBe('🌑');
   });
 
   it('is the only source for the admin dropdown', () => {

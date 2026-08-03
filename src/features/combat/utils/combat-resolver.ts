@@ -77,14 +77,13 @@ export function resolveEffectTicks(
         const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
         cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
 
-        const emoji = eff.effect_type === 'bleed' ? '🩸' : eff.effect_type === 'poison' ? '🧪' : '🔥';
         const verb = eff.effect_type === 'bleed' ? 'bleeds' : eff.effect_type === 'poison' ? 'takes' : 'burns';
         const suffix = eff.effect_type === 'bleed'
           ? `(${charName}'s Rend)`
           : `(${eff.stacks} stack${eff.stacks > 1 ? 's' : ''}, ${charName})`;
         const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
         const dmgType = eff.effect_type === 'bleed' ? '' : eff.effect_type === 'poison' ? ' poison' : ' fire';
-        events.push({ type: 'dot_tick', message: `${emoji} ${creature.name} ${verb} for ${dmgLabel}${dmgType} damage! ${suffix}` });
+        events.push({ type: 'dot_tick', message: `${creature.name} ${verb} for ${dmgLabel}${dmgType} damage! ${suffix}` });
 
         eff.next_tick_at += eff.tick_rate_ms;
         advancedEffects.push(eff);

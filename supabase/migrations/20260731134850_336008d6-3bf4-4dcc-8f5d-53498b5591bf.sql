@@ -38,13 +38,13 @@ INSERT INTO public.classes
   (class_key, label, status, is_pre_class, is_selectable, sort_order, base_hp, base_ac, crit_range, level_bonuses, weapon_proficiencies, autoattack)
 VALUES
   ('classless','Wayfarer','active',true,false,0,18,10,20,'{}','{}','{}'),
-  ('warrior','Warrior','active',false,true,1,24,12,20,'{"str":1,"dex":1}','{sword,axe,mace}','{"stat":"str","diceMin":1,"diceMax":10,"emoji":"⚔️","verb":"swings at","label":"Strike","selfVerb":"swing your blade at"}'),
-  ('wizard','Wizard','active',false,true,2,16,9,20,'{"int":1,"wis":1}','{staff,wand}','{"stat":"int","diceMin":1,"diceMax":8,"emoji":"🔥","verb":"hurls flame at","label":"Cast Fireball","selfVerb":"hurl arcane flame at"}'),
-  ('ranger','Ranger','active',false,true,3,20,10,20,'{"dex":1,"wis":1}','{bow,dagger}','{"stat":"dex","diceMin":1,"diceMax":8,"emoji":"🏹","verb":"shoots","label":"Shoot","selfVerb":"loose an arrow at"}'),
-  ('assassin','Assassin','active',false,true,4,16,10,19,'{"dex":1,"cha":1}','{dagger,sword}','{"stat":"dex","diceMin":1,"diceMax":6,"emoji":"🗡️","verb":"strikes","label":"Backstab","selfVerb":"strike from the shadows at"}'),
-  ('healer','Healer','active',false,true,5,18,9,20,'{"wis":1,"con":1}','{mace,staff}','{"stat":"wis","diceMin":1,"diceMax":6,"emoji":"⭐","verb":"smites","label":"Smite","selfVerb":"channel divine light against"}'),
-  ('bard','Bard','active',false,true,6,16,9,20,'{"cha":1,"int":1}','{sword,wand}','{"stat":"cha","diceMin":1,"diceMax":6,"emoji":"🎵","verb":"mocks","label":"Mock","selfVerb":"unleash cutting words upon"}'),
-  ('templar','Templar','active',false,true,7,22,12,20,'{"wis":1,"con":1}','{sword,mace}','{"stat":"wis","diceMin":1,"diceMax":8,"emoji":"✝️","verb":"smites with righteous steel","label":"Judgment","selfVerb":"pass divine judgment upon"}');
+  ('warrior','Warrior','active',false,true,1,24,12,20,'{"str":1,"dex":1}','{sword,axe,mace}','{"stat":"str","diceMin":1,"diceMax":10,"emoji":"","verb":"swings at","label":"Strike","selfVerb":"swing your blade at"}'),
+  ('wizard','Wizard','active',false,true,2,16,9,20,'{"int":1,"wis":1}','{staff,wand}','{"stat":"int","diceMin":1,"diceMax":8,"emoji":"","verb":"hurls flame at","label":"Cast Fireball","selfVerb":"hurl arcane flame at"}'),
+  ('ranger','Ranger','active',false,true,3,20,10,20,'{"dex":1,"wis":1}','{bow,dagger}','{"stat":"dex","diceMin":1,"diceMax":8,"emoji":"","verb":"shoots","label":"Shoot","selfVerb":"loose an arrow at"}'),
+  ('assassin','Assassin','active',false,true,4,16,10,19,'{"dex":1,"cha":1}','{dagger,sword}','{"stat":"dex","diceMin":1,"diceMax":6,"emoji":"","verb":"strikes","label":"Backstab","selfVerb":"strike from the shadows at"}'),
+  ('healer','Healer','active',false,true,5,18,9,20,'{"wis":1,"con":1}','{mace,staff}','{"stat":"wis","diceMin":1,"diceMax":6,"emoji":"","verb":"smites","label":"Smite","selfVerb":"channel divine light against"}'),
+  ('bard','Bard','active',false,true,6,16,9,20,'{"cha":1,"int":1}','{sword,wand}','{"stat":"cha","diceMin":1,"diceMax":6,"emoji":"","verb":"mocks","label":"Mock","selfVerb":"unleash cutting words upon"}'),
+  ('templar','Templar','active',false,true,7,22,12,20,'{"wis":1,"con":1}','{sword,mace}','{"stat":"wis","diceMin":1,"diceMax":8,"emoji":"","verb":"smites with righteous steel","label":"Judgment","selfVerb":"pass divine judgment upon"}');
 
 -- ============ 2. enum -> text ============
 ALTER TABLE public.characters ALTER COLUMN class TYPE text USING class::text;

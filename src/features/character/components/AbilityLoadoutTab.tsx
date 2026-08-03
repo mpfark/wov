@@ -65,7 +65,7 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                   ].join(' ')}
                 >
                   <span className="font-display text-[10px] text-elvish block truncate">
-                    {active ? `${active.ability.emoji} ${active.ability.label}` : '—'}
+                    {active ? active.ability.label : '—'}
                   </span>
                   <span className="t-meta text-[8px]">[{idx + 1}]</span>
                 </div>
@@ -98,7 +98,6 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                             disabled && !isActive ? 'opacity-50 cursor-not-allowed' : '',
                           ].join(' ')}
                         >
-                          <span aria-hidden>{option.ability.emoji}</span>
                           <span className="t-label text-[11px] truncate">
                             {option.ability.label}
                           </span>
@@ -109,7 +108,7 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                       </TooltipTrigger>
                       <TooltipContent side="left" className="max-w-[220px] z-50">
                         <p className="t-label text-[11px]">
-                          {option.ability.emoji} {option.ability.label}
+                          {option.ability.label}
                           {option.isDefault && <span className="t-meta"> · traditional</span>}
                         </p>
                         <p className="t-meta mt-0.5">{option.ability.tooltip}</p>

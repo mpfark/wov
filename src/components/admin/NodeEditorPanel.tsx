@@ -333,7 +333,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={editLocked} onChange={e => setEditLocked(e.target.checked)} />
-                  🔒 Locked (requires key item)
+Locked (requires key item)
                 </label>
                 {editLocked && (
                   <>
@@ -369,9 +369,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                 <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
                 <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
                 {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
-                {c.hidden && <span className="text-[10px] text-primary/70 font-mono">👁️ Hidden</span>}
-                {c.locked && <span className="text-[10px] text-amber-500/70 font-mono">🔒 {c.lock_key}</span>}
-                {c.locked && c.lock_hint && <span className="text-[10px]" title={c.lock_hint}>💡</span>}
+                {c.hidden && <span className="text-[10px] text-primary/70 font-mono"> Hidden</span>}
+                {c.locked && <span className="text-[10px] text-amber-500/70 font-mono"> {c.lock_key}</span>}
+                {c.locked && c.lock_hint && <span className="text-[10px]" title={c.lock_hint}> </span>}
                 <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 px-2 text-[10px]">
                   Edit
                 </Button>
@@ -417,7 +417,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
         </label>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input type="checkbox" checked={addLocked} onChange={e => setAddLocked(e.target.checked)} />
-          🔒 Locked (requires key item)
+Locked (requires key item)
         </label>
         {addLocked && (
           <>
@@ -450,7 +450,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
       {/* Suggested Connections (nearby unconnected nodes) */}
       {suggestions.length > 0 && (
         <div className="border-t border-border pt-3 space-y-2">
-          <p className="font-display text-xs text-accent-foreground">💡 Nearby Nodes</p>
+          <p className="font-display text-xs text-accent-foreground"> Nearby Nodes</p>
           <div className="space-y-1">
             {suggestions.map((s: any) => (
               <div key={s.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-accent/30 bg-accent/5">
@@ -608,7 +608,7 @@ export default function NodeEditorPanel({
   });
   const [generatingNpc, setGeneratingNpc] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
-  const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
+  const { areaTypes, refetch: _refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1091,32 +1091,32 @@ export default function NodeEditorPanel({
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_vendor}
                     onChange={e => setForm(f => ({ ...f, is_vendor: e.target.checked }))} />
-                  🛒 Is Vendor
+Is Vendor
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_inn}
                     onChange={e => setForm(f => ({ ...f, is_inn: e.target.checked }))} />
-                  🏨 Is Inn (3× HP regen)
+Is Inn (3× HP regen)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_blacksmith}
                     onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked, is_soulforge: e.target.checked ? f.is_soulforge : false }))} />
-                  🔨 Is Blacksmith (repair items)
+Is Blacksmith (repair items)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_jewelcrafter}
                     onChange={e => setForm(f => ({ ...f, is_jewelcrafter: e.target.checked }))} />
-                  💎 Is Jewelcrafter (forge rings and trinkets)
+Is Jewelcrafter (forge rings and trinkets)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_stonebinder}
                     onChange={e => setForm(f => ({ ...f, is_stonebinder: e.target.checked }))} />
-                  ⚜ Is Stonebinder (fuse Turning Stones into Ascended)
+Is Stonebinder (fuse Turning Stones into Ascended)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
-                  🌀 Is Teleport Point (fast travel destination)
+Is Teleport Point (fast travel destination)
                 </label>
                 <label className={`flex items-center gap-2 text-xs ml-6 ${form.is_teleport ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
                   <input type="checkbox" checked={form.is_public_teleport} disabled={!form.is_teleport}
@@ -1126,27 +1126,27 @@ export default function NodeEditorPanel({
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_trainer}
                     onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
-                  🏛️ Is Renown Trainer (Renown attribute training, Lv30+)
+Is Renown Trainer (Renown attribute training, Lv30+)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_marketplace}
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
-                  🏷️ Is Marketplace (player marketplace for unique items)
+Is Marketplace (player marketplace for unique items)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={(form as any).is_heraldry}
                     onChange={e => setForm(f => ({ ...f, is_heraldry: e.target.checked } as any))} />
-                  📜 Is Heraldry (claim or change family names)
+Is Heraldry (claim or change family names)
                 </label>
                 <label className={`flex items-center gap-2 text-xs ${form.is_blacksmith ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
                   <input type="checkbox" checked={form.is_soulforge}
                     disabled={!form.is_blacksmith}
                     onChange={e => setForm(f => ({ ...f, is_soulforge: e.target.checked }))} />
-                  ⚒️ Soulforge-Capable (adds Soulforge tab at this blacksmith)
+Soulforge-Capable (adds Soulforge tab at this blacksmith)
                 </label>
                 {!form.is_blacksmith && form.is_soulforge && (
                   <p className="text-[10px] text-destructive pl-6">
-                    ⚠️ Soulforge requires a Blacksmith node. Enable Blacksmith above or this flag will be ignored.
+Soulforge requires a Blacksmith node. Enable Blacksmith above or this flag will be ignored.
                   </p>
                 )}
                 {!form.is_blacksmith && !form.is_soulforge && (
@@ -1157,7 +1157,7 @@ export default function NodeEditorPanel({
               </div>
 
               <div className="space-y-1 pt-2 border-t border-border">
-                <label className="text-[10px] text-muted-foreground font-display">🏰 Order Hall (recruits for class)</label>
+                <label className="text-[10px] text-muted-foreground font-display"> Order Hall (recruits for class)</label>
                 <Select
                   value={form.class_hall || 'none'}
                   onValueChange={v => setForm(f => ({ ...f, class_hall: v === 'none' ? '' : v }))}
@@ -1166,7 +1166,7 @@ export default function NodeEditorPanel({
                   <SelectContent className="bg-popover border-border z-50">
                     <SelectItem value="none" className="text-xs">None (not a hall)</SelectItem>
                     {getPlayableClassKeys().map((k) => (
-                      <SelectItem key={k} value={k} className="text-xs">🏰 {CLASS_LABELS[k]} Hall</SelectItem>
+                      <SelectItem key={k} value={k} className="text-xs"> {CLASS_LABELS[k]} Hall</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1261,7 +1261,7 @@ export default function NodeEditorPanel({
                           <span className="flex items-center gap-0.5">
                             <Clock className="w-2.5 h-2.5" /> {formatRespawn(c.respawn_seconds)}
                           </span>
-                          <span>{c.is_alive ? '✅ alive' : '💀 dead'}</span>
+                          <span>{c.is_alive ? 'alive' : 'dead'}</span>
                         </div>
 
                         {/* Stats */}
@@ -1276,11 +1276,11 @@ export default function NodeEditorPanel({
                         {/* Loot */}
                         <div className="text-[10px] text-muted-foreground">
                           {lootName ? (
-                            <span>🎲 <span className="text-foreground">{lootName}</span> · {Math.round(c.drop_chance * 100)}% drop</span>
+                            <span> <span className="text-foreground">{lootName}</span> · {Math.round(c.drop_chance * 100)}% drop</span>
                           ) : legacyLoot.length > 0 ? (
-                            <span>🎲 {legacyLoot.length} legacy item{legacyLoot.length !== 1 ? 's' : ''}</span>
+                            <span> {legacyLoot.length} legacy item{legacyLoot.length !== 1 ? 's' : ''}</span>
                           ) : (
-                            <span className="text-destructive/80">⚠ No loot configured</span>
+                            <span className="text-destructive/80"> No loot configured</span>
                           )}
                         </div>
                       </div>
@@ -1540,7 +1540,7 @@ export default function NodeEditorPanel({
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {areaTypes.map(t => (
-                        <SelectItem key={t.name} value={t.name} className="text-xs capitalize">{t.emoji} {t.name}</SelectItem>
+                        <SelectItem key={t.name} value={t.name} className="text-xs capitalize">{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

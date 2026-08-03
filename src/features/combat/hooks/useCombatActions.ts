@@ -151,10 +151,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const newDur = item.current_durability - 1;
       if (newDur <= 0) {
         if (item.item.rarity === 'unique') {
-          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`));
+          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} shatters and its essence returns to its origin...`));
           await supabase.from('character_inventory').delete().eq('id', item.id);
         } else {
-          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
+          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
           await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null } as any).eq('id', item.id);
         }
       } else {

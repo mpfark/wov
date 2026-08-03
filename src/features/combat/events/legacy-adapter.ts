@@ -36,8 +36,8 @@ import {
 } from '@/features/combat/utils/event-log-styles';
 
 const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
-/** 🌀 was the server sentinel for boss cast starts before stage 2. */
-const TELEGRAPH_RE = /^🌀|begins channeling|flee the node|begins to channel|telegraph/i;
+/** was the server sentinel for boss cast starts before stage 2. */
+const TELEGRAPH_RE = /^ |begins channeling|flee the node|begins to channel|telegraph/i;
 const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
 const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
 
@@ -95,7 +95,7 @@ export function rewriteLegacyRemote(message: string, name: string): string {
 function resolveType(raw: string, cls: ClassifiedLog): { type: LogEventType; source?: LogActor; effectType?: string; severity?: LogSeverity } {
   if (TELEGRAPH_RE.test(raw)) return { type: 'boss_telegraph' };
   if (QUEST_RE.test(raw)) return { type: 'quest' };
-  if (cls.baseCategory === 'enemy_attack' && raw.startsWith('⚠️') && ERROR_RE.test(raw)) {
+  if (cls.baseCategory === 'enemy_attack' && raw.startsWith('\u{26A0}\u{FE0F}') && ERROR_RE.test(raw)) {
     return { type: 'error' };
   }
   if (PLAYER_DEATH_RE.test(raw)) return { type: 'death' };

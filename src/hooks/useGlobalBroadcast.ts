@@ -19,8 +19,6 @@ export type GlobalBroadcastKind = 'market_listed' | 'player_death' | 'boss_death
 
 export interface GlobalBroadcastPayload {
   kind: GlobalBroadcastKind;
-  /** Emoji prefix, ready-to-display (📜, 💀, 👑, …) */
-  icon: string;
   /** Pre-formatted display text, no icon prefix */
   text: string;
   /** Sender's character name — used for self-skip on the receiver side */

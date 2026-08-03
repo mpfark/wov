@@ -5,7 +5,6 @@ export interface MaterialDef {
   key: string;
   name: string;
   description: string;
-  icon: string;
   rarity: string;
   category: string;
   tradeable: boolean;

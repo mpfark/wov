@@ -155,10 +155,10 @@ export default function CharacterActionsColumn({
               <div className="flex gap-1">
                 <Input type="number" min={1} value={grantSalvageAmount}
                   onChange={e => setGrantSalvageAmount(parseInt(e.target.value) || 0)}
-                  className="h-7 text-[10px] w-20" placeholder="🔩" />
+                  className="h-7 text-[10px] w-20" placeholder="" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                   disabled={grantSalvageAmount <= 0} onClick={() => onGrantSalvage(selectedChar.id)}>
-                  🔩 Grant Salvage
+Grant Salvage
                 </Button>
               </div>
 

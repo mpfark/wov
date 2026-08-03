@@ -92,7 +92,7 @@ export default function RaceClassManager() {
                             {CLASS_ABILITIES[cls].map((ability, idx) => (
                               <div key={idx} className="text-xs bg-secondary/50 rounded p-2 space-y-0.5">
                                 <div className="font-medium flex items-center gap-1">
-                                  {ability.emoji} {ability.label}
+                                  {ability.label}
                                   <Badge variant="outline" className="text-[9px] ml-auto">
                                     Tier {ability.tier} · Lvl {ability.levelRequired}
                                   </Badge>

@@ -18,23 +18,22 @@ export interface DamageTypeMeta {
   /** Display noun, e.g. "Fire". */
   label: string;
   /** Decorative only — carries no routing meaning. */
-  emoji: string;
   /** Adjective used inside generated prose, e.g. "searing". */
   adjective: string;
 }
 
 export const DAMAGE_TYPE_REGISTRY: readonly DamageTypeMeta[] = [
-  { key: 'physical', label: 'Physical', emoji: '⚔️', adjective: 'brutal' },
-  { key: 'fire', label: 'Fire', emoji: '🔥', adjective: 'searing' },
-  { key: 'frost', label: 'Frost', emoji: '❄️', adjective: 'freezing' },
-  { key: 'lightning', label: 'Lightning', emoji: '⚡', adjective: 'crackling' },
-  { key: 'poison', label: 'Poison', emoji: '🧪', adjective: 'venomous' },
-  { key: 'nature', label: 'Nature', emoji: '🌿', adjective: 'thorned' },
-  { key: 'necrotic', label: 'Necrotic', emoji: '💀', adjective: 'withering' },
-  { key: 'holy', label: 'Holy', emoji: '✨', adjective: 'radiant' },
-  { key: 'shadow', label: 'Shadow', emoji: '🌑', adjective: 'creeping' },
-  { key: 'arcane', label: 'Arcane', emoji: '🔮', adjective: 'unraveling' },
-  { key: 'psychic', label: 'Psychic', emoji: '🌀', adjective: 'maddening' },
+  { key: 'physical', label: 'Physical', adjective: 'brutal' },
+  { key: 'fire', label: 'Fire', adjective: 'searing' },
+  { key: 'frost', label: 'Frost', adjective: 'freezing' },
+  { key: 'lightning', label: 'Lightning', adjective: 'crackling' },
+  { key: 'poison', label: 'Poison', adjective: 'venomous' },
+  { key: 'nature', label: 'Nature', adjective: 'thorned' },
+  { key: 'necrotic', label: 'Necrotic', adjective: 'withering' },
+  { key: 'holy', label: 'Holy', adjective: 'radiant' },
+  { key: 'shadow', label: 'Shadow', adjective: 'creeping' },
+  { key: 'arcane', label: 'Arcane', adjective: 'unraveling' },
+  { key: 'psychic', label: 'Psychic', adjective: 'maddening' },
 ] as const;
 
 export type DamageTypeKey = (typeof DAMAGE_TYPE_REGISTRY)[number]['key'];
@@ -71,6 +70,6 @@ export function damageTypeAdjective(value: unknown): string {
   return getDamageType(value)?.adjective ?? '';
 }
 
-/** Options for admin `<Select>` controls: `{ value, label }` with emoji prefix. */
+/** Options for admin `<Select>` controls: `{ value, label }`. */
 export const DAMAGE_TYPE_OPTIONS: readonly { value: string; label: string }[] =
-  DAMAGE_TYPE_REGISTRY.map(d => ({ value: d.key, label: `${d.emoji} ${d.label}` }));
+  DAMAGE_TYPE_REGISTRY.map(d => ({ value: d.key, label: d.label }));

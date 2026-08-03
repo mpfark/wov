@@ -65,11 +65,11 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
   const isDisengaged = buffState.evasionBuff && Date.now() < buffState.evasionBuff.expiresAt && buffState.evasionBuff.source === 'disengage';
 
   if (isStealthed) {
-    logs.push('🌑 You slip through the shadows unnoticed...');
+    logs.push('You slip through the shadows unnoticed...');
     return { newHp: currentHp, logs, clearStealth: true, clearEvasion: false, newAbsorbHp: undefined, memberDamages };
   }
   if (isDisengaged) {
-    logs.push('🦘 You leap away cleanly — no opportunity attacks!');
+    logs.push('You leap away cleanly — no opportunity attacks!');
     return { newHp: currentHp, logs, clearStealth: false, clearEvasion: true, newAbsorbHp: undefined, memberDamages };
   }
 
@@ -84,7 +84,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
   for (const creature of livingCreatures) {
     if (currentHp <= 0) break;
     if (hasEvasion && Math.random() < buffState.evasionBuff!.dodgeChance) {
-      logs.push(`🌫️ ${namePrefix} dodge${party ? 's' : ''} ${creature.name}'s opportunity attack!`);
+      logs.push(`${namePrefix} dodge${party ? 's' : ''} ${creature.name}'s opportunity attack!`);
       continue;
     }
     const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
@@ -96,10 +96,10 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
         const absorbed = Math.min(currentAbsorb, rawDmg);
         currentAbsorb -= absorbed;
         dmgToHp = rawDmg - absorbed;
-        if (absorbed > 0) logs.push(`🛡️ Your shield absorbs ${absorbed} damage from ${creature.name}'s opportunity attack!`);
+        if (absorbed > 0) logs.push(`Your shield absorbs ${absorbed} damage from ${creature.name}'s opportunity attack!`);
       }
       if (dmgToHp > 0) currentHp = Math.max(currentHp - dmgToHp, 0);
-      logs.push(`⚔️ ${creature.name} strikes ${namePrefixLower} while fleeing — ${rawDmg} damage${dmgToHp < rawDmg ? ` (${dmgToHp} after shield)` : ''}!`);
+      logs.push(`${creature.name} strikes ${namePrefixLower} while fleeing — ${rawDmg} damage${dmgToHp < rawDmg ? ` (${dmgToHp} after shield)` : ''}!`);
     } else {
       logs.push(`${creature.name} swipes at ${namePrefixLower} while fleeing — misses!`);
     }
@@ -118,7 +118,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
         const memberAC = calculateAC(member.character.class, member.character.dex ?? 10);
         if (atkRoll >= memberAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing — ${dmg} damage!`);
+          logs.push(`${creature.name} strikes ${member.character.name} while fleeing — ${dmg} damage!`);
           memberDamages.push({ characterId: member.character_id, damage: dmg, creatureName: creature.name, maxHp: member.character.max_hp });
         } else {
           logs.push(`${creature.name} swipes at ${member.character.name} while fleeing — misses!`);

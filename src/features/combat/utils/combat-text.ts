@@ -202,7 +202,6 @@ export function resolveCreatureAttackVerb(
 export interface BossFlavorPayload {
   name: string;
   text: string;
-  emoji?: string;
   /**
    * Canonical damage-type key (see `@/shared/combat/damage-types`). Feeds the
    * `{damage_type}` flavor token and the structured event's `damageType`.
@@ -247,11 +246,10 @@ export function formatCombatEvent(
     return event.message;
   }
 
-  const emoji = getEventEmoji(event);
   const isLocal = event.character_id === localCharacterId;
 
   if (isPlayerAttack || isOffhand) {
-    return formatPlayerAttack(event, isLocal, emoji);
+    return formatPlayerAttack(event, isLocal);
   }
   if (isCreatureAttack) {
     return formatCreatureAttack(event, isLocal);
@@ -260,25 +258,9 @@ export function formatCombatEvent(
   return event.message;
 }
 
-const WEAPON_EMOJI: Record<string, string> = {
-  sword: '⚔️', axe: '🪓', mace: '🔨', dagger: '🗡️',
-  bow: '🏹', staff: '🪄', wand: '🪄',
-};
-
-function getEventEmoji(event: StructuredAttackEvent): string {
-  if (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') {
-    return '';
-  }
-  if (event.is_offhand) return '🗡️';
-  if (event.weapon_tag && WEAPON_EMOJI[event.weapon_tag]) return WEAPON_EMOJI[event.weapon_tag];
-  // Unknown/absent weapon tag (older events, unarmed): generic strike emoji.
-  return '⚔️';
-}
-
 function formatPlayerAttack(
   event: StructuredAttackEvent,
   isLocal: boolean,
-  emoji: string,
   flavorIdx?: number,
 ): string {
   const target = event.target_name!;
@@ -288,9 +270,9 @@ function formatPlayerAttack(
 
   if (isMiss) {
     if (isLocal) {
-      return `${emoji} You miss ${target}.`;
+      return `You miss ${target}.`;
     }
-    return `${emoji} ${event.attacker_name!} misses ${target}.`;
+    return `${event.attacker_name!} misses ${target}.`;
   }
 
   const tierWord = getDamageTierWord(damage);
@@ -301,9 +283,9 @@ function formatPlayerAttack(
 
 
   if (isLocal) {
-    return `${emoji} You ${tierWord} ${target}, ${flavor}${punct}${dmgSuffix}`;
+    return `You ${tierWord} ${target}, ${flavor}${punct}${dmgSuffix}`;
   }
-  return `${emoji} ${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${punct}${dmgSuffix}`;
+  return `${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${punct}${dmgSuffix}`;
 }
 
 function formatCreatureAttack(
@@ -315,13 +297,12 @@ function formatCreatureAttack(
   const isMiss = event.type === 'creature_miss';
   const isCrit = !!event.is_crit;
   const damage = event.damage ?? 0;
-  const ICON = '👹 ';
 
   if (isMiss) {
     if (isLocal) {
-      return `${ICON}${attacker} misses you.`;
+      return `${attacker} misses you.`;
     }
-    return `${ICON}${attacker} misses ${event.target_name!}.`;
+    return `${attacker} misses ${event.target_name!}.`;
   }
 
   const dmgSuffix = damage > 0 ? ` [${damage}]` : '';
@@ -331,8 +312,6 @@ function formatCreatureAttack(
   // legacy %a/%e/%v still supported).
   if (isCrit && event.boss_flavor) {
     const bf = event.boss_flavor;
-    const emoji = bf.emoji || '';
-    const prefix = emoji ? `${emoji} ` : ICON;
     const targetLabel = isLocal ? 'you' : event.target_name!;
     const interpolated = renderFlavor(bf.text, {
       creature: attacker,
@@ -343,7 +322,7 @@ function formatCreatureAttack(
     });
     // Author inlined the number → don't append the canonical [N] suffix twice.
     const suffix = flavorHasDamageToken(bf.text) ? '' : dmgSuffix;
-    return `${prefix}${interpolated}!${suffix}`;
+    return `${interpolated}!${suffix}`;
   }
 
 
@@ -354,11 +333,11 @@ function formatCreatureAttack(
 
   if (isLocal) {
     const flavor = pick(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
-    return `${ICON}${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
+    return `${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
   const flavor = pick(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  return `${ICON}${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
+  return `${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
 
 // ── Stage 4: attacks as native structured events ────────────────
@@ -395,9 +374,8 @@ export function buildAttackLogEvent(
   let message: string;
   let remoteMessage: string;
   if (isPlayer) {
-    const emoji = getEventEmoji(event);
-    message = formatPlayerAttack(event, true, emoji, flavorIdx);
-    remoteMessage = formatPlayerAttack(event, false, emoji, flavorIdx);
+    message = formatPlayerAttack(event, true, flavorIdx);
+    remoteMessage = formatPlayerAttack(event, false, flavorIdx);
   } else {
     message = formatCreatureAttack(event, true, flavorIdx);
     remoteMessage = formatCreatureAttack(event, false, flavorIdx);

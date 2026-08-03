@@ -197,7 +197,7 @@ export default function OrderRecruiterDialog({
               }}
               className="w-full flex items-center justify-between text-[11px] font-display text-muted-foreground hover:text-primary transition-colors"
             >
-              <span>🏰 View order roster — by renown</span>
+              <span> View order roster — by renown</span>
               <span className="text-[10px]">{rosterOpen ? '▾' : '▸'}</span>
             </button>
             {rosterOpen && (
@@ -242,7 +242,7 @@ export default function OrderRecruiterDialog({
           return (
             <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs">
               <p className="text-destructive font-display">
-                ⚠ Leaving the {oldLabel} order will permanently erase your bond of {oldBond}.
+Leaving the {oldLabel} order will permanently erase your bond of {oldBond}.
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">
                 If you return later, your {oldLabel} bond will begin again at zero. The old order will remember you no more.

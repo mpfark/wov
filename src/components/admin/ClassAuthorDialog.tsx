@@ -33,7 +33,6 @@ export default function ClassAuthorDialog({
 }: Props) {
   const [label, setLabel] = useState('');
   const [key, setKey] = useState('');
-  const [icon, setIcon] = useState('🛡️');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -50,7 +49,6 @@ export default function ClassAuthorDialog({
     const { error: classError } = await supabase.from('classes').insert({
       class_key: key,
       label: label.trim(),
-      icon,
       color: '',
       description: description.trim(),
       status: 'draft',
@@ -97,10 +95,6 @@ export default function ClassAuthorDialog({
                 }}
                 className="h-8 text-xs"
               />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px]">Icon</Label>
-              <Input value={icon} onChange={e => setIcon(e.target.value)} className="h-8 text-xs" />
             </div>
             <div className="col-span-4 space-y-1">
               <Label className="text-[11px]">Class key</Label>

@@ -11,7 +11,7 @@ describe('Stage 10 — loot, rewards, progression, quests', () => {
 
   it('classifies a gem drop as loot and strips the decorative glyph', () => {
     const ev = buildRewardLogEvent(
-      { type: 'gem_drop', message: '💎 Found a Ruby of Might!', character_id: ME },
+      { type: 'gem_drop', message: 'Found a Ruby of Might!', character_id: ME },
       ME,
       'Aldric',
     )!;
@@ -34,7 +34,7 @@ describe('Stage 10 — loot, rewards, progression, quests', () => {
 
   it('folds the local name to second person on level ups', () => {
     const ev = buildRewardLogEvent(
-      { type: 'level_up', message: '🎉 Level Up! Aldric is now level 12!', character_id: ME },
+      { type: 'level_up', message: 'Level Up! Aldric is now level 12!', character_id: ME },
       ME,
       'Aldric',
     )!;
@@ -46,7 +46,7 @@ describe('Stage 10 — loot, rewards, progression, quests', () => {
 
   it('keeps stat points and class bonuses routine so they carry no marker', () => {
     const ev = buildRewardLogEvent(
-      { type: 'stat_point', message: '📊 Aldric gained 1 stat point to allocate!', character_id: ME },
+      { type: 'stat_point', message: 'Aldric gained 1 stat point to allocate!', character_id: ME },
       ME,
       'Aldric',
     )!;
@@ -56,7 +56,7 @@ describe('Stage 10 — loot, rewards, progression, quests', () => {
 
   it('routes contract completion to the quest family', () => {
     const ev = buildRewardLogEvent(
-      { type: 'contract_complete', message: '🗡️ Contract fulfilled — Ser Caldris put down.', character_id: ME },
+      { type: 'contract_complete', message: 'Contract fulfilled — Ser Caldris put down.', character_id: ME },
       ME,
       'Aldric',
     )!;
@@ -67,7 +67,7 @@ describe('Stage 10 — loot, rewards, progression, quests', () => {
 
   it('uses the observer prose for another player\'s reward', () => {
     const ev = buildRewardLogEvent(
-      { type: 'level_up', message: '🎉 Level Up! Brynn is now level 9!', character_id: 'char-2' },
+      { type: 'level_up', message: 'Level Up! Brynn is now level 9!', character_id: 'char-2' },
       ME,
       'Aldric',
     )!;

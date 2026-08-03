@@ -360,7 +360,6 @@ export default function TrainerPanel({
       <ServicePanelShell
         open={open}
         onClose={onClose}
-        icon="🏛️"
         title="Trainer"
         subtitle={subtitle}
         tabs={tabsRow}

@@ -69,51 +69,51 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     return () => clearInterval(interval);
   }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive, holyShieldActive, consecrateActive, divineChallengeActive]);
 
-  const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
+  const buffs: { label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
-  if (isAtInn) buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
+  if (isAtInn) buffs.push({ label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
 
   if (foodActive) {
     const dur = BUFF_DURATIONS['Food'] || 120_000;
     const pct = Math.max(0, Math.min(100, ((foodBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🍞', label: 'Food', detail: `+${foodBuff!.flatRegen} regen`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label: 'Food', detail: `+${foodBuff!.flatRegen} regen`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (critActive) {
     const dur = BUFF_DURATIONS['Eagle Eye'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((critBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🦅', label: 'Eagle Eye', detail: `Crit ${20 - critBuff!.bonus}-20`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    buffs.push({ label: 'Eagle Eye', detail: `Crit ${20 - critBuff!.bonus}-20`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
   }
 
   if (acActive) {
     const dur = BUFF_DURATIONS['Battle Cry'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((battleCryBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '📯', label: 'Battle Cry', detail: `DR ${Math.round(battleCryBuff!.damageReduction * 100)}%`, color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+    buffs.push({ label: 'Battle Cry', detail: `DR ${Math.round(battleCryBuff!.damageReduction * 100)}%`, color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
   if (poisonActive) {
     const dur = BUFF_DURATIONS['Envenom'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((poisonBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🐍', label: 'Envenom', detail: '40% poison proc', color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label: 'Envenom', detail: '40% poison proc', color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (dmgBuffActive) {
     const dur = BUFF_DURATIONS['Arcane Surge'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((damageBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '✨', label: 'Arcane Surge', detail: `dmg ↑ (scales with INT)`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label: 'Arcane Surge', detail: `dmg ↑ (scales with INT)`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (evasionActive) {
     const isDisengage = evasionBuff!.source === 'disengage';
     const dur = isDisengage ? 8_000 : (BUFF_DURATIONS['Cloak of Shadows'] || 15_000);
     const pct = Math.max(0, Math.min(100, ((evasionBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: isDisengage ? '🦘' : '🌫️', label: isDisengage ? 'Disengage' : 'Cloak of Shadows', detail: isDisengage ? '100% dodge + next hit bonus' : '50% dodge', color: isDisengage ? 'text-accent' : 'text-primary', bgColor: isDisengage ? 'bg-accent/15' : 'bg-primary/15', pct });
+    buffs.push({ label: isDisengage ? 'Disengage' : 'Cloak of Shadows', detail: isDisengage ? '100% dodge + next hit bonus' : '50% dodge', color: isDisengage ? 'text-accent' : 'text-primary', bgColor: isDisengage ? 'bg-accent/15' : 'bg-primary/15', pct });
   }
 
   if (igniteActive) {
     const dur = BUFF_DURATIONS['Ignite'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🌋', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+    buffs.push({ label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
   // Force Shield: stance takes precedence over the legacy timed absorb buff so
@@ -123,26 +123,25 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     const detail = forceShieldStance.inCombat
       ? `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP`
       : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
-    buffs.push({ emoji: '🛡️', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    buffs.push({ label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
   } else if (absorbActive) {
     // Divine Aegis — castable absorb ward, no countdown.
     const cap = Math.max(1, absorbBuff!.shieldCap ?? absorbBuff!.shieldHp);
     const pct = Math.max(0, Math.min(100, (absorbBuff!.shieldHp / cap) * 100));
-    buffs.push({ emoji: '🛡️', label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (partyRegenActive) {
     const isHealer = partyRegenBuff!.source === 'healer';
     const dur = BUFF_DURATIONS[isHealer ? 'Purifying Light' : 'Crescendo'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: isHealer ? '🌟' : '✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (inspireActive) {
     const dur = inspireBuff!.durationMs || 90_000;
     const pct = Math.max(0, Math.min(100, ((inspireBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🎶',
       label: 'Inspire',
       detail: `+${inspireBuff!.hpPerTick} HP & +${inspireBuff!.cpPerTick} CP regen`,
       color: 'text-elvish',
@@ -155,25 +154,25 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (stealthActive) {
     const dur = 20_000; // max ~20s duration for Shadowstep
     const pct = Math.max(0, Math.min(100, ((stealthBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🌑', label: 'Shadowstep', detail: 'Stealth + ambush bonus', color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    buffs.push({ label: 'Shadowstep', detail: 'Stealth + ambush bonus', color: 'text-primary', bgColor: 'bg-primary/15', pct });
   }
 
   if (holyShieldActive) {
     const dur = BUFF_DURATIONS['Holy Shield'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((holyShieldBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '⚡', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (consecrateActive) {
     const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
     const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🔆', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (divineChallengeActive) {
     const dur = BUFF_DURATIONS['Divine Challenge'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((divineChallengeBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '⚜️', label: 'Divine Challenge', detail: `−${divineChallengeBuff!.flat} damage per hit`, color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ label: 'Divine Challenge', detail: `−${divineChallengeBuff!.flat} damage per hit`, color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   return (
@@ -184,7 +183,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
           <TooltipTrigger asChild>
             <span className={`relative inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border overflow-hidden text-xs font-display ${b.color} cursor-default`}>
               <span className={`absolute inset-0 ${b.bgColor} origin-left transition-transform duration-1000 ease-linear`} style={{ transform: `scaleX(${b.pct / 100})` }} />
-              <span className="relative z-10">{b.emoji}</span>
+              <span className="relative z-10">{b.label}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
@@ -288,7 +287,7 @@ export default function StatusBarsStrip({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="ml-1 tabular-nums cursor-help inline-flex items-center gap-0.5" style={{ color: `hsl(${colorVar})` }}>
-                        🛡{wardOverlay.shieldHp}/{wardOverlay.shieldCap}
+{wardOverlay.shieldHp}/{wardOverlay.shieldCap}
                         {showRegenPulse && (
                           <span className="text-[9px] animate-pulse font-display" style={{ color: `hsl(${colorVar})` }}>+</span>
                         )}
@@ -346,7 +345,7 @@ export default function StatusBarsStrip({
               {cpView.stanceShown > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="ml-1 text-soulforged cursor-help">⚓{cpView.stanceShown}</span>
+                    <span className="ml-1 text-soulforged cursor-help"> {cpView.stanceShown}</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
                     Stance reserved — locked while these stances are active.
@@ -413,7 +412,7 @@ export default function StatusBarsStrip({
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
             {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
-              <span className="t-numeric text-gold text-[9px]">🏛️ {character.bhp || 0} RP</span>
+              <span className="t-numeric text-gold text-[9px]"> {character.bhp || 0} RP</span>
             )}
             <span className="t-numeric text-primary text-[9px]">{character.xp}/{xpForNext}</span>
           </div>

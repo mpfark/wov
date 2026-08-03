@@ -95,7 +95,7 @@ export default function CreaturePicker({
                     <span className={RARITY_COLORS[c.rarity] || ''}>{c.name}</span>
                     <span className="text-muted-foreground ml-1">Lv{c.level}</span>
                     {c.node_id && <span className="text-[9px] text-muted-foreground/60 ml-1">(assigned)</span>}
-                    {c.loot_table_id && <span className="text-[9px] ml-1">🔗</span>}
+                    {c.loot_table_id && <span className="text-[9px] ml-1"> </span>}
                   </CommandItem>
                 ))}
               </CommandGroup>

@@ -86,7 +86,7 @@ export default function SummonPlayerPanel({
 
   return (
     <div className="space-y-1">
-      <h4 className="font-display text-[10px] text-muted-foreground">🌀 Summon Player</h4>
+      <h4 className="font-display text-[10px] text-muted-foreground"> Summon Player</h4>
       <div className="flex gap-1">
         <Input
           placeholder="Character name"

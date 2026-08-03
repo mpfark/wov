@@ -44,19 +44,19 @@ CREATE INDEX character_materials_character_idx ON public.character_materials(cha
 
 -- Seed catalog: salvage + 12 gems
 INSERT INTO public.materials (key, name, description, icon, rarity, category, tradeable, value, sort_order) VALUES
-  ('salvage',    'Salvage',    'Scrap recovered from creatures, used for forging and gem cutting.', '🔩', 'common', 'scrap', true, 1, 0),
-  ('garnet',     'Garnet',     'Primary gem aligned with Strength.',     '💎', 'common', 'gem', true, 25, 100),
-  ('topaz',      'Topaz',      'Primary gem aligned with Dexterity.',    '💎', 'common', 'gem', true, 25, 101),
-  ('emerald',    'Emerald',    'Primary gem aligned with Constitution.', '💎', 'common', 'gem', true, 25, 102),
-  ('sapphire',   'Sapphire',   'Primary gem aligned with Intelligence.', '💎', 'common', 'gem', true, 25, 103),
-  ('pearl',      'Pearl',      'Primary gem aligned with Wisdom.',       '💎', 'common', 'gem', true, 25, 104),
-  ('amethyst',   'Amethyst',   'Primary gem aligned with Charisma.',     '💎', 'common', 'gem', true, 25, 105),
-  ('citrine',    'Citrine',    'Hybrid gem fused from STR + DEX.',  '✨', 'uncommon', 'gem', true, 75, 200),
-  ('jade',       'Jade',       'Hybrid gem fused from DEX + CON.',  '✨', 'uncommon', 'gem', true, 75, 201),
-  ('aquamarine', 'Aquamarine', 'Hybrid gem fused from CON + INT.',  '✨', 'uncommon', 'gem', true, 75, 202),
-  ('opal',       'Opal',       'Hybrid gem fused from INT + WIS.',  '✨', 'uncommon', 'gem', true, 75, 203),
-  ('moonstone',  'Moonstone',  'Hybrid gem fused from WIS + CHA.',  '✨', 'uncommon', 'gem', true, 75, 204),
-  ('sunstone',   'Sunstone',   'Hybrid gem fused from CHA + STR.',  '✨', 'uncommon', 'gem', true, 75, 205);
+  ('salvage',    'Salvage',    'Scrap recovered from creatures, used for forging and gem cutting.', '', 'common', 'scrap', true, 1, 0),
+  ('garnet',     'Garnet',     'Primary gem aligned with Strength.',     '', 'common', 'gem', true, 25, 100),
+  ('topaz',      'Topaz',      'Primary gem aligned with Dexterity.',    '', 'common', 'gem', true, 25, 101),
+  ('emerald',    'Emerald',    'Primary gem aligned with Constitution.', '', 'common', 'gem', true, 25, 102),
+  ('sapphire',   'Sapphire',   'Primary gem aligned with Intelligence.', '', 'common', 'gem', true, 25, 103),
+  ('pearl',      'Pearl',      'Primary gem aligned with Wisdom.',       '', 'common', 'gem', true, 25, 104),
+  ('amethyst',   'Amethyst',   'Primary gem aligned with Charisma.',     '', 'common', 'gem', true, 25, 105),
+  ('citrine',    'Citrine',    'Hybrid gem fused from STR + DEX.',  '', 'uncommon', 'gem', true, 75, 200),
+  ('jade',       'Jade',       'Hybrid gem fused from DEX + CON.',  '', 'uncommon', 'gem', true, 75, 201),
+  ('aquamarine', 'Aquamarine', 'Hybrid gem fused from CON + INT.',  '', 'uncommon', 'gem', true, 75, 202),
+  ('opal',       'Opal',       'Hybrid gem fused from INT + WIS.',  '', 'uncommon', 'gem', true, 75, 203),
+  ('moonstone',  'Moonstone',  'Hybrid gem fused from WIS + CHA.',  '', 'uncommon', 'gem', true, 75, 204),
+  ('sunstone',   'Sunstone',   'Hybrid gem fused from CHA + STR.',  '', 'uncommon', 'gem', true, 75, 205);
 
 -- Helper: add_material — positive deltas only.
 CREATE OR REPLACE FUNCTION public.add_material(_character_id uuid, _key text, _delta integer)

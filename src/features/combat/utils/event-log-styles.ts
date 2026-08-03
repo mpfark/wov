@@ -183,29 +183,29 @@ export interface ClassifiedLog {
 function baseCategoryOf(log: string): EventLogCategory {
   // Loot / XP / rewards.
   if (
-    log.startsWith('🏆') ||
+    log.startsWith('\u{1F3C6}') ||
     log.includes('Legendary') ||
     log.includes('Soulforged item') ||
     log.includes('Unique item')
   ) {
     return 'loot';
   }
-  if (log.startsWith('📈') || log.startsWith('💰') || log.includes('XP') || log.includes('gold')) {
+  if (log.startsWith('\u{1F4C8}') || log.startsWith('\u{1F4B0}') || log.includes('XP') || log.includes('gold')) {
     return 'xp';
   }
 
   // Communication.
-  if (log.startsWith('🤫')) return 'whisper';
-  if (log.startsWith('💬')) return 'speech';
+  if (log.startsWith('\u{1F92B}')) return 'whisper';
+  if (log.startsWith('\u{1F4AC}')) return 'speech';
 
   // System / travel / queueing.
-  if (log.startsWith('⏳') || log.startsWith('🧭') || log.startsWith('🗺️') || log.startsWith('🚪')) {
+  if (log.startsWith('\u{23F3}') || log.startsWith('\u{1F9ED}') || log.startsWith('\u{1F5FA}\u{FE0F}') || log.startsWith('\u{1F6AA}')) {
     return 'system';
   }
 
   // Mitigation / shield / block.
   if (
-    log.startsWith('🛡️') ||
+    log.startsWith('\u{1F6E1}\u{FE0F}') ||
     log.includes('blocks') ||
     log.includes('absorbs') ||
     log.includes('parries') ||
@@ -216,9 +216,9 @@ function baseCategoryOf(log: string): EventLogCategory {
 
   // Healing / restore.
   if (
-    log.startsWith('💚') ||
-    log.startsWith('💪') ||
-    log.startsWith('💉') ||
+    log.startsWith('\u{1F49A}') ||
+    log.startsWith('\u{1F4AA}') ||
+    log.startsWith('\u{1F489}') ||
     log.includes('restore') ||
     log.includes('recover') ||
     log.includes('heals you')
@@ -228,11 +228,11 @@ function baseCategoryOf(log: string): EventLogCategory {
 
   // Holy / radiance / consecration.
   if (
-    log.startsWith('✨') ||
-    log.startsWith('🕊️') ||
-    log.startsWith('🌟') ||
-    log.startsWith('🔆') ||
-    log.startsWith('⚡') ||
+    log.startsWith('\u{2728}') ||
+    log.startsWith('\u{1F54A}\u{FE0F}') ||
+    log.startsWith('\u{1F31F}') ||
+    log.startsWith('\u{1F506}') ||
+    log.startsWith('\u{26A1}') ||
     log.includes('holy damage') ||
     log.includes('Consecrate')
   ) {
@@ -240,40 +240,40 @@ function baseCategoryOf(log: string): EventLogCategory {
   }
 
   // Elemental DoTs / effects.
-  if (log.startsWith('🔥') || log.startsWith('🌋')) return 'fire';
-  if (log.startsWith('🧪') || log.startsWith('🐍')) return 'poison';
-  if (log.startsWith('🩸')) return 'bleed';
-  if (log.startsWith('🌑') || log.startsWith('🌫️')) return 'shadow';
+  if (log.startsWith('\u{1F525}') || log.startsWith('\u{1F30B}')) return 'fire';
+  if (log.startsWith('\u{1F9EA}') || log.startsWith('\u{1F40D}')) return 'poison';
+  if (log.startsWith('\u{1FA78}')) return 'bleed';
+  if (log.startsWith('\u{1F311}') || log.startsWith('\u{1F32B}\u{FE0F}')) return 'shadow';
 
   // Buffs / songs / stances.
   if (
-    log.startsWith('🎶') ||
-    log.startsWith('🌿') ||
-    log.startsWith('🔄') ||
-    log.startsWith('📯') ||
-    log.startsWith('🦅') ||
-    log.startsWith('🦘') ||
-    log.startsWith('⚜️')
+    log.startsWith('\u{1F3B6}') ||
+    log.startsWith('\u{1F33F}') ||
+    log.startsWith('\u{1F504}') ||
+    log.startsWith('\u{1F4EF}') ||
+    log.startsWith('\u{1F985}') ||
+    log.startsWith('\u{1F998}') ||
+    log.startsWith('\u{269C}\u{FE0F}')
   ) {
     return 'buff';
   }
 
   // Damage warnings / DoT damage taken / creature attacks.
-  if (log.startsWith('⚠️') || log.startsWith('💔') || log.startsWith('👹')) {
+  if (log.startsWith('\u{26A0}\u{FE0F}') || log.startsWith('\u{1F494}') || log.startsWith('\u{1F479}')) {
     return 'enemy_attack';
   }
 
   // Player attack glyphs (weapons + class fallbacks).
   if (
-    log.startsWith('⚔️') ||
-    log.startsWith('🗡️') ||
-    log.startsWith('🏹') ||
-    log.startsWith('🪓') ||
-    log.startsWith('🔨') ||
-    log.startsWith('🪄') ||
-    log.startsWith('🎯') ||
-    log.startsWith('🔪') ||
-    log.startsWith('🦘')
+    log.startsWith('\u{2694}\u{FE0F}') ||
+    log.startsWith('\u{1F5E1}\u{FE0F}') ||
+    log.startsWith('\u{1F3F9}') ||
+    log.startsWith('\u{1FA93}') ||
+    log.startsWith('\u{1F528}') ||
+    log.startsWith('\u{1FA84}') ||
+    log.startsWith('\u{1F3AF}') ||
+    log.startsWith('\u{1F52A}') ||
+    log.startsWith('\u{1F998}')
   ) {
     return 'player_attack';
   }
@@ -295,12 +295,12 @@ function baseCategoryOf(log: string): EventLogCategory {
  */
 export function classifyLogLine(log: string): ClassifiedLog {
   const isRemote = log.includes('(remote)');
-  const isCrit = log.includes('CRITICAL!') || log.startsWith('💥');
+  const isCrit = log.includes('CRITICAL!') || log.startsWith('\u{1F4A5}');
   const isKill =
-    log.startsWith('💀') ||
+    log.startsWith('\u{1F480}') ||
     log.includes('been defeated') ||
     log.includes('struck down');
-  const isLevelUp = log.startsWith('🎉') || log.includes('Level Up') || log.startsWith('✨') || log.startsWith('🌋');
+  const isLevelUp = log.startsWith('\u{1F389}') || log.includes('Level Up') || log.startsWith('\u{2728}') || log.startsWith('\u{1F30B}');
 
   const baseCategory = baseCategoryOf(log);
 
@@ -456,8 +456,8 @@ const CATEGORY_FAMILY: Record<EventLogCategory, EventLogFamily> = {
 };
 
 const QUEST_RE = /contract (?:fulfilled|accepted|complete)|quest (?:complete|completed|updated|accepted)/i;
-/** 🌀 is the server-emitted sentinel for boss cast starts (see combat-tick). */
-const TELEGRAPH_RE = /^🌀|begins channeling|flee the node|begins to channel|telegraph/i;
+/** \u{1F300} is the server-emitted sentinel for boss cast starts (see combat-tick). */
+const TELEGRAPH_RE = /^\u{1F300}|begins channeling|flee the node|begins to channel|telegraph/i;
 const ERROR_RE = /not enough|no longer valid|failed|cannot |fizzle|unavailable|too far/i;
 const PLAYER_DEATH_RE = /you (?:have )?(?:died|been slain|have fallen)|you are dead/i;
 
@@ -473,7 +473,7 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
 
   const isQuest = QUEST_RE.test(log);
   const isTelegraph = TELEGRAPH_RE.test(log);
-  const isError = cls.baseCategory === 'enemy_attack' && log.startsWith('⚠️') && ERROR_RE.test(log);
+  const isError = cls.baseCategory === 'enemy_attack' && log.startsWith('\u{26A0}\u{FE0F}') && ERROR_RE.test(log);
   const isPlayerDeath = PLAYER_DEATH_RE.test(log);
 
   let family: EventLogFamily;
@@ -486,7 +486,7 @@ export function toPresentation(log: string, classified?: ClassifiedLog): EventLo
     family = CATEGORY_FAMILY[cls.baseCategory] ?? 'ambient';
     if (family === 'chat') family = 'ambient';
     if (family === 'ambient') {
-      // Bare "💥 CRITICAL!" lines carry no category glyph — infer the side.
+      // Bare "\u{1F4A5} CRITICAL!" lines carry no category glyph — infer the side.
       family = /\byou(?:r)?\b/i.test(log) && !/\bhits? you\b/i.test(log) ? 'action' : 'threat';
     }
   } else {

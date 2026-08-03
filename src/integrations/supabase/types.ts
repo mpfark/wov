@@ -279,16 +279,19 @@ export type Database = {
       }
       area_types: {
         Row: {
+          color: string
           created_at: string
           emoji: string
           name: string
         }
         Insert: {
+          color?: string
           created_at?: string
           emoji?: string
           name: string
         }
         Update: {
+          color?: string
           created_at?: string
           emoji?: string
           name?: string

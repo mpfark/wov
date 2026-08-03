@@ -10,7 +10,7 @@ import { buildSystemEvent } from '@/features/combat/events/client-event-builder'
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 const GLOW_MS = 8000;
-const WHISPER = '💍 You feel a warmth at your hand — your Soulforged Ring hums with new power. Return to the Soulforge when you are ready.';
+const WHISPER = 'You feel a warmth at your hand — your Soulforged Ring hums with new power. Return to the Soulforge when you are ready.';
 
 type Emit = (event: GameLogEvent) => void;
 

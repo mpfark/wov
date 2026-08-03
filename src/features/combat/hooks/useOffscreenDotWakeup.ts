@@ -167,7 +167,7 @@ export function useOffscreenDotWakeup({
                 : `+${reward.xp_each} XP`;
               const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
               const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
-              const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
+              const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} Renown` : '';
 
               eventBus.emit('log', { event: buildRewardEvent(`${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`, { effectType: 'offscreen_kill' }) });
 
@@ -339,7 +339,7 @@ function scheduleWakeup(
             : `+${reward.xp_each} XP`;
           const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
           const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
-          const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
+          const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} Renown` : '';
 
           eventBus.emit('log', { event: buildRewardEvent(`${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`, { effectType: 'offscreen_kill' }) });
 

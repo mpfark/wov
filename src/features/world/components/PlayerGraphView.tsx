@@ -43,7 +43,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
   const initialFetchDone = useRef(false);
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view (locked connections ARE visible)
@@ -335,9 +335,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       const allAreaNodes = allDisplayNodes.filter(n => n.area_id === area.id);
       if (allAreaNodes.length === 0) continue;
 
-      const emoji = emojiMap[area.area_type] || '📍';
-      const fill = getAreaFillColor(emoji);
-      const stroke = getAreaStrokeColor(emoji);
+      const areaColor = colorMap[area.area_type] || '';
+      const fill = getAreaFillColor(areaColor);
+      const stroke = getAreaStrokeColor(areaColor);
       const hasGhostNodes = allAreaNodes.some(n => secondDegIds.has(n.id));
 
       if (hasGhostNodes) {
@@ -403,7 +403,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               />
               {edge.locked && (
                 <text x={midX} y={midY} textAnchor="middle" dominantBaseline="central" className="text-[10px] select-none pointer-events-none">
-                  🔒
+
                 </text>
               )}
             </g>
@@ -471,37 +471,37 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               {/* Service icons positioned outside the node circle */}
               {node.is_vendor && (
                 <text x={pos.px - 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🪙
+
                 </text>
               )}
               {node.is_inn && (
                 <text x={pos.px + 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🏨
+
                 </text>
               )}
               {node.is_blacksmith && (
                 <text x={pos.px - 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🔨
+
                 </text>
               )}
               {(node as any).is_jewelcrafter && (
                 <text x={pos.px - 26} y={pos.py + 42} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  💎
+
                 </text>
               )}
               {node.is_teleport && (
                 <text x={pos.px + 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🌀
+
                 </text>
               )}
               {(node as any).is_trainer && (
                 <text x={pos.px} y={pos.py + 34} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🏛️
+
                 </text>
               )}
               {(node as any).is_marketplace && (
                 <text x={pos.px + 26} y={pos.py + 12} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🏷️
+
                 </text>
               )}
             </g>

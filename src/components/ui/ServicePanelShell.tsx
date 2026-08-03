@@ -32,7 +32,6 @@ export type { MiniLogEntry } from '@/components/ui/ServicePanelMiniLog';
 export interface ServicePanelShellProps {
   open: boolean;
   onClose: () => void;
-  icon: string;
   title: string;
   subtitle?: ReactNode;
   headerActions?: ReactNode;
@@ -53,7 +52,6 @@ export interface ServicePanelShellProps {
 export function ServicePanelShell({
   open,
   onClose,
-  icon,
   title,
   subtitle,
   headerActions,
@@ -93,7 +91,7 @@ export function ServicePanelShell({
           <div className="px-5 pt-4 pb-1 shrink-0">
             <div className="flex items-center justify-center gap-3 pr-8">
               <h2 className="font-display text-lg text-primary text-glow text-center tracking-wide">
-                {icon} {title}
+                {title}
               </h2>
               {headerActions && (
                 <div className="ml-auto flex items-center gap-2">{headerActions}</div>

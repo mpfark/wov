@@ -99,8 +99,8 @@ export function useCreatureBroadcast(
       if (onOtherRef.current) {
         const creatureName = resolverRef.current?.(data.creature_id) ?? 'a creature';
         const msg = data.killed
-          ? `⚔️ ${data.attacker_name} slays ${creatureName}! (remote)`
-          : `⚔️ ${data.attacker_name} hits ${creatureName} for ${data.damage} damage. (remote)`;
+          ? `${data.attacker_name} slays ${creatureName}! (remote)`
+          : `${data.attacker_name} hits ${creatureName} for ${data.damage} damage. (remote)`;
         onOtherRef.current(msg);
       }
     };

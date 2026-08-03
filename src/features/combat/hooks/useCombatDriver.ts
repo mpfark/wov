@@ -139,7 +139,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
-  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string; emoji: string } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string } | null>(null);
   const [pendingCpCost, setPendingCpCost] = useState<number>(0);
   // Last CP value the client optimistically committed for the in-flight ability.
   // When the server's tick response echoes this exact value, we suppress the
@@ -248,8 +248,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const ability = allAbilities[index];
     const cpCost = ability?.cpCost ?? 0;
     const label = ability?.label ?? 'ability';
-    const emoji = ability?.emoji ?? '⭐';
-    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label, emoji };
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label };
     setPendingAbility({ index, targetId });
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;

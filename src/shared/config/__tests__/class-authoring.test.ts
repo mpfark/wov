@@ -28,8 +28,7 @@ describe('role template', () => {
 describe('validateNewAbility', () => {
   const mechanics = getKnownAbilityMechanics();
   const base = {
-    ability_key: 'shield_wall', label: 'Shield Wall', emoji: '🛡️',
-    description: 'Brace behind your shield.', tooltip: '',
+    ability_key: 'shield_wall', label: 'Shield Wall', description: 'Brace behind your shield.', tooltip: '',
     mechanic_key: mechanics[0], cp_cost: 12, unlock_level: 10,
   };
 

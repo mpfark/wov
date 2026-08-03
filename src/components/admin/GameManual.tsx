@@ -9,30 +9,30 @@ import PoolRulesTab from './loot/PoolRulesTab';
 import XpBoostPanel from './XpBoostPanel';
 
 const MANUAL_SECTIONS: { id: string; label: string }[] = [
-  { id: 'levels', label: '📊 Level Progression' },
-  { id: 'characters', label: '🧙 Character Slots' },
-  { id: 'stats', label: '🎭 Character Stats' },
-  { id: 'hp-ac', label: '❤️ HP, AC & Regen' },
-  { id: 'cp-system', label: '🔮 Concentration (CP)' },
-  { id: 'combat', label: '⚔️ Combat' },
-  { id: 'wimp', label: '🏃‍♂️ Wimp (Auto-Flee)' },
-  { id: 'xp-rewards', label: '🏆 XP & Rewards' },
-  { id: 'abilities', label: '✨ Class Abilities' },
-  { id: 'creatures', label: '🐉 Creature Scaling' },
-  { id: 'items', label: '🎒 Items & Gear Rework' },
-  { id: 'equipment-slots', label: '🎽 Equipment Slots' },
-  { id: 'gems', label: '💠 Gems & Stonebinder' },
-  { id: 'weapon-affinity', label: '⚔️ Weapon Tags' },
-  { id: 'stamina', label: '🏃 Stamina' },
-  { id: 'milestones', label: '🏆 Milestone Rewards' },
-  { id: 'teleports', label: '🌀 Teleports (Public & Recall)' },
-  { id: 'treasure-maps', label: '🗺️ Treasure Maps' },
-  { id: 'contracts', label: '🗡️ Assassin Contracts' },
-  { id: 'chat', label: '💬 Chat' },
-  { id: 'renown', label: '🏛️ Renown' },
-  { id: 'economy', label: '💰 Economy' },
-  { id: 'death', label: '💀 Death & Respawn' },
-  { id: 'slumber', label: '🌙 World Slumber' },
+  { id: 'levels', label: 'Level Progression' },
+  { id: 'characters', label: 'Character Slots' },
+  { id: 'stats', label: 'Character Stats' },
+  { id: 'hp-ac', label: 'HP, AC & Regen' },
+  { id: 'cp-system', label: 'Concentration (CP)' },
+  { id: 'combat', label: 'Combat' },
+  { id: 'wimp', label: 'Wimp (Auto-Flee)' },
+  { id: 'xp-rewards', label: 'XP & Rewards' },
+  { id: 'abilities', label: 'Class Abilities' },
+  { id: 'creatures', label: 'Creature Scaling' },
+  { id: 'items', label: 'Items & Gear Rework' },
+  { id: 'equipment-slots', label: 'Equipment Slots' },
+  { id: 'gems', label: 'Gems & Stonebinder' },
+  { id: 'weapon-affinity', label: 'Weapon Tags' },
+  { id: 'stamina', label: 'Stamina' },
+  { id: 'milestones', label: 'Milestone Rewards' },
+  { id: 'teleports', label: 'Teleports (Public & Recall)' },
+  { id: 'treasure-maps', label: 'Treasure Maps' },
+  { id: 'contracts', label: 'Assassin Contracts' },
+  { id: 'chat', label: 'Chat' },
+  { id: 'renown', label: 'Renown' },
+  { id: 'economy', label: 'Economy' },
+  { id: 'death', label: 'Death & Respawn' },
+  { id: 'slumber', label: 'World Slumber' },
 ];
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -112,7 +112,7 @@ export default function GameManual() {
           {/* 1. Level Progression */}
           <AccordionItem value="levels" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              📊 Level Progression (1–{MAX_LEVEL})
+Level Progression (1–{MAX_LEVEL})
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
@@ -139,7 +139,7 @@ export default function GameManual() {
                         <TableCell className="text-xs">{row.totalXp.toLocaleString()}</TableCell>
                         <TableCell className="text-xs">{row.statGain}</TableCell>
                         <TableCell className="text-xs">{row.classBonus ? '✦ Yes' : '—'}</TableCell>
-                        <TableCell className="text-xs">{row.respec ? '🔄 +1' : '—'}</TableCell>
+                        <TableCell className="text-xs">{row.respec ? '+1' : '—'}</TableCell>
                         <TableCell className="text-xs">
                           {row.players > 0 ? <Badge variant="secondary" className="text-xs">{row.players}</Badge> : '—'}
                         </TableCell>
@@ -165,13 +165,13 @@ export default function GameManual() {
               </Card>
               <Card className="mt-3 bg-card/30">
                 <CardContent className="p-3">
-                  <p className="text-xs font-display text-chart-5 mb-1">🔄 Respec Points (Levels 10, 20, 30, 40)</p>
+                  <p className="text-xs font-display text-chart-5 mb-1"> Respec Points (Levels 10, 20, 30, 40)</p>
                   <p className="text-xs text-muted-foreground">
                     At each milestone level, you earn <strong className="text-foreground">1 respec point</strong>. 
                     Spending a respec point triggers a <strong className="text-foreground">full reset</strong> of all manually allocated stat points, returning them as unspent points to reallocate freely. 
                     Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
                     Only manually allocated points are reset — base race, class, and level-up bonuses are permanent.
-                    Both <strong className="text-foreground">stat allocation</strong> and <strong className="text-foreground">respec</strong> are now performed at <strong className="text-foreground">🏛️ Trainer</strong> nodes.
+                    Both <strong className="text-foreground">stat allocation</strong> and <strong className="text-foreground">respec</strong> are now performed at <strong className="text-foreground"> Trainer</strong> nodes.
                   </p>
                 </CardContent>
               </Card>
@@ -181,7 +181,7 @@ export default function GameManual() {
           {/* Character Slots */}
           <AccordionItem value="characters" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🧙 Character Slots & Multi-Character System
+Character Slots & Multi-Character System
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -197,7 +197,7 @@ export default function GameManual() {
           {/* 2. Character Stats & Creation */}
           <AccordionItem value="stats" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🎭 Character Stats & Creation
+Character Stats & Creation
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <p className="text-xs text-muted-foreground">
@@ -208,7 +208,7 @@ export default function GameManual() {
               {/* What Each Attribute Does */}
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">📋 Attribute Effects</p>
+                  <p className="text-xs font-display text-primary"> Attribute Effects</p>
                   <div className="text-xs text-muted-foreground space-y-1.5">
                     <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(3, floor(√mod))</code> min damage.</p>
                     <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(4, floor(√mod))</code> — max crit on 16-20.</p>
@@ -221,7 +221,7 @@ export default function GameManual() {
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
                   </p>
                   <p className="text-[10px] text-muted-foreground/70">
-                    ⚖️ <strong className="text-foreground">Diminishing returns:</strong> All cross-stat bonuses scale with <code className="text-primary">√(modifier)</code> instead of linearly, with hard caps. Early investment is impactful; extreme stacking gives sharply reduced returns.
+<strong className="text-foreground">Diminishing returns:</strong> All cross-stat bonuses scale with <code className="text-primary">√(modifier)</code> instead of linearly, with hard caps. Early investment is impactful; extreme stacking gives sharply reduced returns.
                   </p>
                 </CardContent>
               </Card>
@@ -280,15 +280,15 @@ export default function GameManual() {
           {/* 3. HP, AC & Regen */}
           <AccordionItem value="hp-ac" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              ❤️ HP, AC & Regeneration
+HP, AC & Regeneration
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
                 <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 2 + floor(√(CON − 10)) + gear + food + milestone + inn</p>
-                <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> All passive regen (HP, CP, Stamina) is paused. Server-driven heals (potions, abilities) still apply.</p>
-                <p className="mt-1">🏨 <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
+                <p className="text-amber-400 mt-1"> <strong>In Combat:</strong> All passive regen (HP, CP, Stamina) is paused. Server-driven heals (potions, abilities) still apply.</p>
+                <p className="mt-1"> <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
                 <p className="mt-1">Example: CON 14 → base regen = <code className="text-primary">{getStatRegen(14)}</code> HP/tick, CON 20 → <code className="text-primary">{getStatRegen(20)}</code> HP/tick</p>
               </div>
               <Table>
@@ -315,7 +315,7 @@ export default function GameManual() {
           {/* 3b. Concentration Points (CP) */}
           <AccordionItem value="cp-system" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🔮 Concentration Points (CP)
+Concentration Points (CP)
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -325,8 +325,8 @@ export default function GameManual() {
                 <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but low mental stats). Investing in both INT and WIS rewards split investment over stacking a single mental stat.</p>
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 4 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/4s for every 2 points of primary stat modifier</p>
-                <p><strong className="text-foreground">🏨 Inn Rest</strong> = +10 flat CP regen per tick</p>
-                <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
+                <p><strong className="text-foreground"> Inn Rest</strong> = +10 flat CP regen per tick</p>
+                <p><strong className="text-foreground"> Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
               </div>
 
               <div>
@@ -365,7 +365,7 @@ export default function GameManual() {
           {/* 4. Combat */}
           <AccordionItem value="combat" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              ⚔️ Combat
+Combat
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -404,7 +404,7 @@ export default function GameManual() {
           {/* Wimp / Auto-Flee */}
           <AccordionItem value="wimp" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏃‍♂️ Wimp (Auto-Flee)
+Wimp (Auto-Flee)
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -420,7 +420,7 @@ export default function GameManual() {
           {/* 4b. XP & Creature Rewards */}
           <AccordionItem value="xp-rewards" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏆 XP & Creature Rewards
+XP & Creature Rewards
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -468,7 +468,7 @@ export default function GameManual() {
           {/* 5. Class Abilities */}
           <AccordionItem value="abilities" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              ✨ Class Abilities
+Class Abilities
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
@@ -494,7 +494,7 @@ export default function GameManual() {
                         <TableBody>
                           {abilities.map(a => (
                             <TableRow key={a.label}>
-                              <TableCell className="text-xs font-display">{a.emoji} {a.label}</TableCell>
+                              <TableCell className="text-xs font-display">{a.label}</TableCell>
                               <TableCell className="text-xs">{a.tier}</TableCell>
                               <TableCell className="text-xs">{a.levelRequired}</TableCell>
                               <TableCell className="text-xs">{a.cpCost} CP</TableCell>
@@ -511,56 +511,56 @@ export default function GameManual() {
               <div className="mt-3 space-y-2">
                 <p className="text-xs font-display text-primary">Key Ability Formulas</p>
                 <div className="p-2 bg-muted/30 rounded border border-border mb-2">
-                  <p className="text-[10px] text-muted-foreground"><span className="text-elvish font-display">⚡ Instant</span> — resolves immediately on button press (buffs, auras). <span className="text-dwarvish font-display">⏳ Heartbeat</span> — queued and executes on the next 2s server tick (heals, attacks, DoTs). Heartbeat abilities cannot be spammed — only one can be queued at a time.</p>
+                  <p className="text-[10px] text-muted-foreground"><span className="text-elvish font-display"> Instant</span> — resolves immediately on button press (buffs, auras). <span className="text-dwarvish font-display">⏳ Heartbeat</span> — queued and executes on the next 2s server tick (heals, attacks, DoTs). Heartbeat abilities cannot be spammed — only one can be queued at a time.</p>
                 </div>
                 <div className="p-2 bg-soulforged/10 rounded border border-soulforged/40 mb-2">
-                  <p className="text-[10px] text-foreground"><span className="text-soulforged font-display">⚓ Stance</span> — toggle on/off. Locks a percentage of your max CP for as long as it is active and persists across combat / movement until you drop it or log out. Reservation cost: <strong>T1 = 10%</strong>, <strong>T2 = 15%</strong>, <strong>T3 = 20%</strong> of max CP (min 5). Dropping a stance frees the slot but <strong>does NOT refund the CP</strong> — you must regenerate it. Ignite and Envenom are mutually exclusive. Stances clear on logout, character load, death, and respec. Stances: 🦅 Eagle Eye, 🛡️ Force Shield, ⚡ Holy Shield (T1) · ✨ Arcane Surge, 📯 Battle Cry (T2) · 🌋 Ignite, 🐍 Envenom (T3).</p>
+                  <p className="text-[10px] text-foreground"><span className="text-soulforged font-display"> Stance</span> — toggle on/off. Locks a percentage of your max CP for as long as it is active and persists across combat / movement until you drop it or log out. Reservation cost: <strong>T1 = 10%</strong>, <strong>T2 = 15%</strong>, <strong>T3 = 20%</strong> of max CP (min 5). Dropping a stance frees the slot but <strong>does NOT refund the CP</strong> — you must regenerate it. Ignite and Envenom are mutually exclusive. Stances clear on logout, character load, death, and respec. Stances:Eagle Eye,Force Shield,Holy Shield (T1) · Arcane Surge,Battle Cry (T2) · Ignite,Envenom (T3).</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <p className="text-[10px] text-muted-foreground/80 mt-1">T0 abilities scale from each class's primary stat: <code className="text-primary">max(1, 5 + 2 × statMod + floor(level / 3))</code>.</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Warrior —</p>
-                  <p><strong className="text-foreground">💪 Second Wind (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
-                  <p><strong className="text-foreground">📯 Battle Cry (T2 stance, 25 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 15% of max CP. Damage Reduction = <code className="text-primary">15% base (20% with shield)</code>, Crit DR = <code className="text-primary">+15% extra on crits</code>. <em className="text-muted-foreground">Persists until dropped — reserved CP is not refunded.</em></p>
-                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Bleed = <code className="text-primary">floor((softScale(STR_mod, 'dot') × 1.5 + 2) × 0.67)</code> per 2s tick (STR, soft-scaled past +20), Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (DEX keeps the wound open). <em className="text-muted-foreground">Multi-target: can bleed multiple creatures simultaneously (tracked per creature).</em></p>
-                  <p><strong className="text-foreground">🔨 Sunder Armor (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> AC Reduction = <code className="text-primary">round(2 + softScale(STR_mod, 'utility'))</code> (STR, soft-scaled past 12), Duration = <code className="text-primary">min(20s, 12s + DEX_mod)</code>s (DEX = precise strike, lasting weakness)</p>
+                  <p><strong className="text-foreground"> Second Wind (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
+                  <p><strong className="text-foreground"> Battle Cry (T2 stance, 25 CP):</strong> <span className="text-soulforged"> </span> Reserves 15% of max CP. Damage Reduction = <code className="text-primary">15% base (20% with shield)</code>, Crit DR = <code className="text-primary">+15% extra on crits</code>. <em className="text-muted-foreground">Persists until dropped — reserved CP is not refunded.</em></p>
+                  <p><strong className="text-foreground"> Rend (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Bleed = <code className="text-primary">floor((softScale(STR_mod, 'dot') × 1.5 + 2) × 0.67)</code> per 2s tick (STR, soft-scaled past +20), Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (DEX keeps the wound open). <em className="text-muted-foreground">Multi-target: can bleed multiple creatures simultaneously (tracked per creature).</em></p>
+                  <p><strong className="text-foreground"> Sunder Armor (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> AC Reduction = <code className="text-primary">round(2 + softScale(STR_mod, 'utility'))</code> (STR, soft-scaled past 12), Duration = <code className="text-primary">min(20s, 12s + DEX_mod)</code>s (DEX = precise strike, lasting weakness)</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Wizard —</p>
-                  <p><strong className="text-foreground">🛡️ Force Shield (T1 stance):</strong> <span className="text-soulforged">⚓</span> Reserves 10% of max CP. Maintains an arcane ward with cap ≈ <code className="text-primary">WIS_mod + floor(level × 0.5)</code> HP. The shield <strong>does not regenerate during combat</strong> — once depleted, it stays down for the rest of the fight. While <strong>out of combat</strong>, the ward gradually recharges at <code className="text-primary">1 + floor(INT_mod / 2)</code> HP every ~2s up to the cap (WIS shapes the pool, INT shapes the spark). Shield HP persists across fights, so jumping into the next pull too soon means a partially-charged ward. <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
-                  <p><strong className="text-foreground">✨ Arcane Surge (T2 stance, 25 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 15% of max CP. +15% damage to all your attacks (autoattacks, abilities, DoTs, off-hand, Ignite pulses). <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
-                  <p><strong className="text-foreground">🌋 Ignite (T3 stance, 50 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 20% of max CP. While in combat, each heartbeat an orb has a 40% chance to strike your target for <code className="text-primary">2 + INT_mod</code> direct damage and apply a burn — <code className="text-primary">floor(softScale(WIS_mod, 'dot') × 0.7 × 0.67)</code> damage per stack per 2s tick (max 5 stacks, soft-scaled past +20). Duration <code className="text-primary">30s + WIS_mod × 1s</code> (cap 45s). INT shapes the spark, WIS sustains the flame. <em className="text-muted-foreground">Mutually exclusive with Envenom. Persists until dropped — CP not refunded.</em></p>
-                  <p><strong className="text-foreground">💥 Conflagrate (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d8 + INT_mod) × (1 + 0.5 × burn_stacks)</code>, consumes all burn stacks</p>
+                  <p><strong className="text-foreground"> Force Shield (T1 stance):</strong> <span className="text-soulforged"> </span> Reserves 10% of max CP. Maintains an arcane ward with cap ≈ <code className="text-primary">WIS_mod + floor(level × 0.5)</code> HP. The shield <strong>does not regenerate during combat</strong> — once depleted, it stays down for the rest of the fight. While <strong>out of combat</strong>, the ward gradually recharges at <code className="text-primary">1 + floor(INT_mod / 2)</code> HP every ~2s up to the cap (WIS shapes the pool, INT shapes the spark). Shield HP persists across fights, so jumping into the next pull too soon means a partially-charged ward. <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
+                  <p><strong className="text-foreground"> Arcane Surge (T2 stance, 25 CP):</strong> <span className="text-soulforged"> </span> Reserves 15% of max CP. +15% damage to all your attacks (autoattacks, abilities, DoTs, off-hand, Ignite pulses). <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
+                  <p><strong className="text-foreground"> Ignite (T3 stance, 50 CP):</strong> <span className="text-soulforged"> </span> Reserves 20% of max CP. While in combat, each heartbeat an orb has a 40% chance to strike your target for <code className="text-primary">2 + INT_mod</code> direct damage and apply a burn — <code className="text-primary">floor(softScale(WIS_mod, 'dot') × 0.7 × 0.67)</code> damage per stack per 2s tick (max 5 stacks, soft-scaled past +20). Duration <code className="text-primary">30s + WIS_mod × 1s</code> (cap 45s). INT shapes the spark, WIS sustains the flame. <em className="text-muted-foreground">Mutually exclusive with Envenom. Persists until dropped — CP not refunded.</em></p>
+                  <p><strong className="text-foreground"> Conflagrate (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d8 + INT_mod) × (1 + 0.5 × burn_stacks)</code>, consumes all burn stacks</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Ranger —</p>
-                  <p><strong className="text-foreground">🦅 Eagle Eye (T1 stance, 15 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 10% of max CP. Crit Range widened by <code className="text-primary">min(DEX_mod, 5)</code>. <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
-                  <p><strong className="text-foreground">🏹🏹 Barrage (T2, 25 CP):</strong> <span className="text-dwarvish">⏳</span> Fire <code className="text-primary">DEX_mod ≥ 3 ? 3 : 2</code> arrows at 70% damage each</p>
-                  <p><strong className="text-foreground">🌿 Nature's Snare (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🦘 Disengage (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> 100% dodge for <code className="text-primary">min(8s, 5s + DEX_mod × 0.5s)</code>, next hit +50% damage</p>
+                  <p><strong className="text-foreground"> Eagle Eye (T1 stance, 15 CP):</strong> <span className="text-soulforged"> </span> Reserves 10% of max CP. Crit Range widened by <code className="text-primary">min(DEX_mod, 5)</code>. <em className="text-muted-foreground">Persists until dropped — CP not refunded.</em></p>
+                  <p><strong className="text-foreground"> Barrage (T2, 25 CP):</strong> <span className="text-dwarvish">⏳</span> Fire <code className="text-primary">DEX_mod ≥ 3 ? 3 : 2</code> arrows at 70% damage each</p>
+                  <p><strong className="text-foreground"> Nature's Snare (T3, 40 CP):</strong> <span className="text-elvish"> </span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground"> Disengage (T4, 60 CP):</strong> <span className="text-elvish"> </span> 100% dodge for <code className="text-primary">min(8s, 5s + DEX_mod × 0.5s)</code>, next hit +50% damage</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Assassin —</p>
-                  <p><strong className="text-foreground">🌑 Shadowstep (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🐍 Envenom (T3 stance, 50 CP):</strong> <span className="text-soulforged">⚓</span> Reserves 20% of max CP. Each hit has a 40% chance to apply a stackable poison DoT — <code className="text-primary">floor(softScale(DEX_mod, 'dot') × 1.2 × 0.67)</code> per stack per 2s tick (max 5 stacks, stacks last 25s, soft-scaled past +20). <em className="text-muted-foreground">Mutually exclusive with Ignite. Persists until dropped — CP not refunded.</em></p>
-                  <p><strong className="text-foreground">🔪 Eviscerate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
-                  <p><strong className="text-foreground">🌫️ Cloak of Shadows (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> 50% dodge chance, Duration = <code className="text-primary">min(15s, 10s + DEX_mod × 0.5s)</code></p>
+                  <p><strong className="text-foreground"> Shadowstep (T1, 15 CP):</strong> <span className="text-elvish"> </span> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
+                  <p><strong className="text-foreground"> Envenom (T3 stance, 50 CP):</strong> <span className="text-soulforged"> </span> Reserves 20% of max CP. Each hit has a 40% chance to apply a stackable poison DoT — <code className="text-primary">floor(softScale(DEX_mod, 'dot') × 1.2 × 0.67)</code> per stack per 2s tick (max 5 stacks, stacks last 25s, soft-scaled past +20). <em className="text-muted-foreground">Mutually exclusive with Ignite. Persists until dropped — CP not refunded.</em></p>
+                  <p><strong className="text-foreground"> Eviscerate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
+                  <p><strong className="text-foreground"> Cloak of Shadows (T4, 60 CP):</strong> <span className="text-elvish"> </span> 50% dodge chance, Duration = <code className="text-primary">min(15s, 10s + DEX_mod × 0.5s)</code></p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Healer —</p>
-                  <p><strong className="text-foreground">💚 Heal (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Restore = <code className="text-primary">max(3, WIS_mod × 3 + level)</code></p>
-                  <p><strong className="text-foreground">💉 Transfer Health (T2, 25 CP):</strong> <span className="text-dwarvish">⏳</span> Sacrifice own HP to heal ally = <code className="text-primary">WIS_mod × 3 + level</code> (capped by own HP − 1)</p>
-                  <p><strong className="text-foreground">🌟 Purifying Light (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🛡️ Divine Aegis (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> Places an absorb shield on a targeted ally (or self). Pool = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>. <strong>Now timed</strong> — the shield lasts up to <code className="text-primary">60s</code>, duration scales with CON, and expires whether or not it was fully absorbed.</p>
+                  <p><strong className="text-foreground"> Heal (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Restore = <code className="text-primary">max(3, WIS_mod × 3 + level)</code></p>
+                  <p><strong className="text-foreground"> Transfer Health (T2, 25 CP):</strong> <span className="text-dwarvish">⏳</span> Sacrifice own HP to heal ally = <code className="text-primary">WIS_mod × 3 + level</code> (capped by own HP − 1)</p>
+                  <p><strong className="text-foreground"> Purifying Light (T3, 40 CP):</strong> <span className="text-elvish"> </span> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground"> Divine Aegis (T4, 60 CP):</strong> <span className="text-elvish"> </span> Places an absorb shield on a targeted ally (or self). Pool = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>. <strong>Now timed</strong> — the shield lasts up to <code className="text-primary">60s</code>, duration scales with CON, and expires whether or not it was fully absorbed.</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Bard —</p>
-                  <p><strong className="text-foreground">🎶 Inspire (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Flat HP & CP regen for self + party, magnitude scales with CHA, duration scales with INT (60–180s). Recast to refresh — keeps the stronger HP/CP regen values.</p>
-                  <p><strong className="text-foreground">🎵💢 Dissonance (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">✨ Crescendo (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🎵💥 Grand Finale (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">max(8, softScale(CHA_mod, 'burst') × 4 + floor(level × 1.5)) + 1d(softScale(CHA_mod, 'burst') × 2)</code> (CHA soft-scaled past +18)</p>
+                  <p><strong className="text-foreground"> Inspire (T1, 15 CP):</strong> <span className="text-elvish"> </span> Flat HP & CP regen for self + party, magnitude scales with CHA, duration scales with INT (60–180s). Recast to refresh — keeps the stronger HP/CP regen values.</p>
+                  <p><strong className="text-foreground"> Dissonance (T2, 25 CP):</strong> <span className="text-elvish"> </span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground"> Crescendo (T3, 40 CP):</strong> <span className="text-elvish"> </span> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
+                  <p><strong className="text-foreground"> Grand Finale (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">max(8, softScale(CHA_mod, 'burst') × 4 + floor(level × 1.5)) + 1d(softScale(CHA_mod, 'burst') × 2)</code> (CHA soft-scaled past +18)</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Templar —</p>
-                  <p><strong className="text-foreground">✝️ Judgment (T0, 10 CP):</strong> <span className="text-dwarvish">⏳</span> Holy damage = <code className="text-primary">floor((5 + 2·WIS_mod + floor(level/3)) × 0.8)</code> — 20% reduced vs the shared smite baseline for balance.</p>
-                  <p><strong className="text-foreground">⚡ Holy Shield (T1 stance, 15 CP):</strong> <span className="text-soulforged">⚓</span> A holy aura burns each attacker that strikes you for <code className="text-primary">floor(2 + floor(WIS_mod × 0.8) + CON_kicker + floor(level/4))</code> holy damage in return (max once per attacker per 2s tick). WIS contribution reduced 20%. <em className="text-muted-foreground">Persists until dropped.</em></p>
-                  <p><strong className="text-foreground">🛡️ Shield Wall (T2 Stance):</strong> <span className="text-soulforged">⚓</span> Dual-primary scaling — WIS adds bonus block chance (+25.5% floor, scaling up to +46.75% at high WIS); CON adds bonus block amount (+~4 floor, scaling up to +~9 at high CON). Stacks on top of base block (DEX→chance, STR→amount); final chance capped at 95%. <strong>Requires a shield equipped.</strong> Click again to drop.</p>
-                  <p><strong className="text-foreground">🔆 Consecrate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Sanctifies the ground for a limited number of ticks. Each tick <strong>heals all party members on this node</strong> and <strong>burns creatures currently engaged</strong>. Heal / burn per tick = <code className="text-primary">floor((2 + WIS_mod) × bond × 0.65)</code> (35% reduced). Number of ticks scales with <strong>CON</strong>: 3 base, +1 at CON ≥ 3 mod, +1 at CON ≥ 6 mod (cap 5 ticks / 10s).</p>
-                  <p><strong className="text-foreground">⚜️ Divine Challenge (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> Subtracts a flat amount from every incoming hit: <code className="text-primary">round(6 + dim(WIS_mod, 1.8, 18))</code> (min 6, up to ~24 at high WIS). Duration 30s + CON. Stacks with Battle Cry / WIS dampen.</p>
+                  <p><strong className="text-foreground"> Judgment (T0, 10 CP):</strong> <span className="text-dwarvish">⏳</span> Holy damage = <code className="text-primary">floor((5 + 2·WIS_mod + floor(level/3)) × 0.8)</code> — 20% reduced vs the shared smite baseline for balance.</p>
+                  <p><strong className="text-foreground"> Holy Shield (T1 stance, 15 CP):</strong> <span className="text-soulforged"> </span> A holy aura burns each attacker that strikes you for <code className="text-primary">floor(2 + floor(WIS_mod × 0.8) + CON_kicker + floor(level/4))</code> holy damage in return (max once per attacker per 2s tick). WIS contribution reduced 20%. <em className="text-muted-foreground">Persists until dropped.</em></p>
+                  <p><strong className="text-foreground"> Shield Wall (T2 Stance):</strong> <span className="text-soulforged"> </span> Dual-primary scaling — WIS adds bonus block chance (+25.5% floor, scaling up to +46.75% at high WIS); CON adds bonus block amount (+~4 floor, scaling up to +~9 at high CON). Stacks on top of base block (DEX→chance, STR→amount); final chance capped at 95%. <strong>Requires a shield equipped.</strong> Click again to drop.</p>
+                  <p><strong className="text-foreground"> Consecrate (T3, 40 CP):</strong> <span className="text-dwarvish">⏳</span> Sanctifies the ground for a limited number of ticks. Each tick <strong>heals all party members on this node</strong> and <strong>burns creatures currently engaged</strong>. Heal / burn per tick = <code className="text-primary">floor((2 + WIS_mod) × bond × 0.65)</code> (35% reduced). Number of ticks scales with <strong>CON</strong>: 3 base, +1 at CON ≥ 3 mod, +1 at CON ≥ 6 mod (cap 5 ticks / 10s).</p>
+                  <p><strong className="text-foreground"> Divine Challenge (T4, 60 CP):</strong> <span className="text-elvish"> </span> Subtracts a flat amount from every incoming hit: <code className="text-primary">round(6 + dim(WIS_mod, 1.8, 18))</code> (min 6, up to ~24 at high WIS). Duration 30s + CON. Stacks with Battle Cry / WIS dampen.</p>
 
                   <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +5. Lv 39+ milestone: all CP costs −10%.</p>
                 </div>
@@ -571,7 +571,7 @@ export default function GameManual() {
           {/* 6. Creature Scaling */}
           <AccordionItem value="creatures" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🐉 Creature Scaling
+Creature Scaling
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -615,12 +615,12 @@ export default function GameManual() {
           {/* 7. Items & Economy */}
           <AccordionItem value="items" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🎒 Items & Gear Rework
+Items & Gear Rework
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <Card className="bg-primary/5 border-primary/30">
                 <CardContent className="p-3 space-y-1 text-xs text-muted-foreground">
-                  <p className="text-xs font-display text-primary">🛠️ Gear Rework — Plain Bases + Enhance</p>
+                  <p className="text-xs font-display text-primary"> Gear Rework — Plain Bases + Enhance</p>
                   <p>World and forge <strong className="text-foreground">Common / Uncommon</strong> gear now drops as <strong>plain bases with no rolled stats</strong>. Players choose which stats to add themselves by <strong className="text-foreground">socketing gems</strong> via the new <strong>Enhance</strong> tab at the Blacksmith and Jewelcrafter.</p>
                   <p><strong className="text-foreground">Enhance tab flow:</strong> pick an owned item on the left → select an eligible gem on the right → the gem is consumed and its stat is added to the item. Each socket costs salvage + gold, same scale as forging.</p>
                   <p><strong className="text-foreground">60% single-attribute cap:</strong> No single attribute may exceed <strong>60%</strong> of the item's total stat budget. This prevents monolithic all-STR / all-WIS bricks and keeps distributed builds competitive.</p>
@@ -748,7 +748,7 @@ export default function GameManual() {
           {/* Equipment Slots */}
           <AccordionItem value="equipment-slots" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🎽 Equipment Slots (9-Slot Paper Doll)
+Equipment Slots (9-Slot Paper Doll)
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -769,7 +769,7 @@ export default function GameManual() {
           {/* Gems & Stonebinder */}
           <AccordionItem value="gems" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              💠 Gems & Stonebinder
+Gems & Stonebinder
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -785,7 +785,7 @@ export default function GameManual() {
                 <p className="font-display text-primary mt-2">Hybrid Gems (6 — one per attribute pair)</p>
                 <p>Fuse <strong>1 of each primary</strong> in the pair at the Jewelcrafter — no salvage cost, the two primaries are the price. Used to forge Uncommon items and to socket hybrid stats on plain gear.</p>
 
-                <p className="font-display text-primary mt-2">🪨 Stonebinder — Ascended (Turning) Stones</p>
+                <p className="font-display text-primary mt-2"> Stonebinder — Ascended (Turning) Stones</p>
                 <p>An advanced Jewelcrafter recipe. Fuse <strong>two different primary Turning Stones</strong> into the matching <strong className="text-foreground">Ascended Stone</strong>. Ascended Stones follow <strong>world-unique exclusivity</strong> — only one instance of each Ascended stone can exist in the world at a time, and once used to forge, the pool is empty until it's destroyed / returned.</p>
                 <p><strong className="text-foreground">No salvage cost</strong> — the sacrifice of two Turning Stones is the entire cost. Recipes are stat-identity based, so the Ascended Stone always matches the two primaries' combined identity.</p>
               </div>
@@ -795,7 +795,7 @@ export default function GameManual() {
           {/* ── Weapon Affinity ── */}
           <AccordionItem value="weapon-affinity" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              ⚔️ Weapon Tags & Class Affinity
+Weapon Tags & Class Affinity
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -831,7 +831,7 @@ export default function GameManual() {
 
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p className="font-display text-primary">Dual Wielding</p>
-                <p>Any <strong className="text-foreground">1H weapon</strong> can be equipped in the off-hand using the second equip button (⚔) in the inventory. Off-hand weapons contribute their stats <strong className="text-foreground">and</strong> grant a <strong className="text-primary">bonus attack</strong> each combat tick:</p>
+                <p>Any <strong className="text-foreground">1H weapon</strong> can be equipped in the off-hand using the second equip button () in the inventory. Off-hand weapons contribute their stats <strong className="text-foreground">and</strong> grant a <strong className="text-primary">bonus attack</strong> each combat tick:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li><strong className="text-primary">30% damage</strong> of main-hand base damage</li>
                   <li><strong className="text-foreground">Separate hit roll</strong> — can miss independently of main-hand</li>
@@ -856,7 +856,7 @@ export default function GameManual() {
           {/* 8. Stamina (MP) */}
           <AccordionItem value="stamina" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏃 Stamina (Move Points)
+Stamina (Move Points)
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
@@ -870,7 +870,7 @@ export default function GameManual() {
                 </div>
 
                 <div className="space-y-1 bg-background/40 p-2 rounded border border-border">
-                  <p className="text-foreground font-display text-xs">⚖️ Encumbrance</p>
+                  <p className="text-foreground font-display text-xs"> Encumbrance</p>
                   <p>Players have a <strong className="text-foreground">carry capacity</strong> based on Strength:</p>
                   <p><strong className="text-foreground">Carry Capacity</strong> = 12 + STR modifier (minimum 10)</p>
                   <p>Items have different <strong className="text-foreground">weights</strong>: equipment = 1 slot, consumables = ⅓ slot. Equipped items and belted potions don't count.</p>
@@ -886,7 +886,7 @@ export default function GameManual() {
 
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏆 Milestone Rewards
+Milestone Rewards
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
@@ -894,7 +894,7 @@ export default function GameManual() {
 
                 <Card className="bg-card/30">
                   <CardContent className="p-3 space-y-2">
-                    <p className="text-xs font-display text-primary">💚 HP & CP Regeneration (Level 20+)</p>
+                    <p className="text-xs font-display text-primary"> HP & CP Regeneration (Level 20+)</p>
                     <p>Starting at level 20, characters gain flat bonus regeneration per tick that scales every 5 levels. This stacks additively with CON regen, equipment regen, food, and inn bonuses.</p>
                     <Table>
                       <TableHeader>
@@ -918,7 +918,7 @@ export default function GameManual() {
 
                 <Card className="bg-card/30">
                   <CardContent className="p-3 space-y-2">
-                    <p className="text-xs font-display text-primary">🌀 Utility Unlocks</p>
+                    <p className="text-xs font-display text-primary"> Utility Unlocks</p>
                     <p><strong className="text-foreground">Level 22 — Teleport / Arcane Recall:</strong> Travel instantly between visited teleport nodes. When used from a non-teleport node, a temporary waymark is left for a return trip.</p>
                     <p><strong className="text-foreground">Level 26 — Summon Player:</strong> Summon any online player to your location by typing their name. Uses the same distance-based CP cost as teleportation. Does not require party membership — useful for meeting up with friends anywhere in the world.</p>
                   </CardContent>
@@ -933,23 +933,23 @@ export default function GameManual() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow><TableCell className="text-xs">20</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+2 HP / +1 CP regen per tick</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">22</TableCell><TableCell className="text-xs">🌀 Teleport</TableCell><TableCell className="text-xs">Arcane Recall from any non-combat node</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+4 HP / +2 CP regen per tick</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">26</TableCell><TableCell className="text-xs">🌀 Summon Player</TableCell><TableCell className="text-xs">Summon any online player to your location (CP cost based on distance)</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs">🏅 Title: Lord / Lady</TableCell><TableCell className="text-xs">First nobility title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">🏅 Title: Baron / Baroness</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">💍 Soulforged Ring (Tier 1)</TableCell><TableCell className="text-xs">Claim your Soulforged Ring at the Soulforge</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">31</TableCell><TableCell className="text-xs">🏅 Title: Count / Countess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">33</TableCell><TableCell className="text-xs">💍 Tempered Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs">🏅 Title: Viscount / Viscountess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+8 HP / +4 CP regen per tick</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">💍 Refined Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">37</TableCell><TableCell className="text-xs">🏅 Title: Marquis / Marquise</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs">💍 Masterwork Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: Duke / Duchess</TableCell><TableCell className="text-xs">+10 HP / +5 CP regen.</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">🏅 Title: Prince / Princess + 💍 Ascended Ring</TableCell><TableCell className="text-xs">Maximum nobility title. Final ring re-forge.</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">—</TableCell><TableCell className="text-xs">👑 King / Queen</TableCell><TableCell className="text-xs">Killing blow on King Aldric. Lost after 30 min offline.</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">20</TableCell><TableCell className="text-xs"> Regen Milestone</TableCell><TableCell className="text-xs">+2 HP / +1 CP regen per tick</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">22</TableCell><TableCell className="text-xs"> Teleport</TableCell><TableCell className="text-xs">Arcane Recall from any non-combat node</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs"> Regen Milestone</TableCell><TableCell className="text-xs">+4 HP / +2 CP regen per tick</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">26</TableCell><TableCell className="text-xs"> Summon Player</TableCell><TableCell className="text-xs">Summon any online player to your location (CP cost based on distance)</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs"> Title: Lord / Lady</TableCell><TableCell className="text-xs">First nobility title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs"> Title: Baron / Baroness</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs"> Soulforged Ring (Tier 1)</TableCell><TableCell className="text-xs">Claim your Soulforged Ring at the Soulforge</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">31</TableCell><TableCell className="text-xs"> Title: Count / Countess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">33</TableCell><TableCell className="text-xs"> Tempered Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs"> Title: Viscount / Viscountess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs"> Regen Milestone</TableCell><TableCell className="text-xs">+8 HP / +4 CP regen per tick</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs"> Refined Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">37</TableCell><TableCell className="text-xs"> Title: Marquis / Marquise</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs"> Masterwork Soulforged Ring</TableCell><TableCell className="text-xs">Re-forge ring with a higher stat budget</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs"> Title: Duke / Duchess</TableCell><TableCell className="text-xs">+10 HP / +5 CP regen.</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs"> Title: Prince / Princess +Ascended Ring</TableCell><TableCell className="text-xs">Maximum nobility title. Final ring re-forge.</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">—</TableCell><TableCell className="text-xs"> King / Queen</TableCell><TableCell className="text-xs">Killing blow on King Aldric. Lost after 30 min offline.</TableCell></TableRow>
                   </TableBody>
                 </Table>
               </div>
@@ -959,7 +959,7 @@ export default function GameManual() {
           {/* Teleports */}
           <AccordionItem value="teleports" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🌀 Teleports — Recall & Public Nodes
+Teleports — Recall & Public Nodes
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -974,7 +974,7 @@ export default function GameManual() {
           {/* Treasure Maps */}
           <AccordionItem value="treasure-maps" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🗺️ Treasure Maps
+Treasure Maps
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -989,7 +989,7 @@ export default function GameManual() {
           {/* Assassin Contracts */}
           <AccordionItem value="contracts" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🗡️ Assassin Contracts
+Assassin Contracts
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -1005,7 +1005,7 @@ export default function GameManual() {
           {/* Chat */}
           <AccordionItem value="chat" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              💬 Chat (Say & Whisper)
+Chat (Say & Whisper)
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">
@@ -1024,7 +1024,7 @@ export default function GameManual() {
           {/* Renown */}
           <AccordionItem value="renown" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏛️ Renown
+Renown
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
@@ -1036,7 +1036,7 @@ export default function GameManual() {
 
                 <div>
                   <p className="font-display text-foreground mb-1">Training (Level 30+)</p>
-                  <p>Visit a <strong className="text-foreground">🏛️ Trainer</strong> node to spend Renown on permanent attribute ranks beyond the level cap. The same Trainer panel also handles level-up stat allocation and respec.</p>
+                  <p>Visit a <strong className="text-foreground"> Trainer</strong> node to spend Renown on permanent attribute ranks beyond the level cap. The same Trainer panel also handles level-up stat allocation and respec.</p>
                   <p><strong className="text-foreground">Cost:</strong> <code className="text-primary">20 × (rank + 1)</code> RP per attempt (success or fail).</p>
                   <Table>
                     <TableHeader>
@@ -1107,12 +1107,12 @@ export default function GameManual() {
           {/* Economy */}
           <AccordionItem value="economy" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              💰 Economy — Gold, Salvage & Trading
+Economy — Gold, Salvage & Trading
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">🪙 Gold</p>
+                  <p className="text-xs font-display text-primary"> Gold</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>The primary trade currency. Earned from killing creatures and selling items.</p>
                     <p><strong className="text-foreground">Creature drops:</strong> Gold scales with creature level and rarity. Humanoid creatures give a CHA-based bonus: <code className="text-primary">min(25%, modifier × 5%)</code> extra gold.</p>
@@ -1124,12 +1124,12 @@ export default function GameManual() {
 
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-dwarvish">🔩 Salvage</p>
+                  <p className="text-xs font-display text-dwarvish"> Salvage</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>A crafting currency used at the <strong className="text-foreground">Blacksmith</strong> and <strong className="text-foreground">Jewelcrafter</strong> forges. Dropped only by <strong className="text-foreground">non-humanoid creatures</strong> (beasts, monsters, etc.).</p>
                     <p><strong className="text-foreground">Drop formula:</strong> <code className="text-primary">1 + floor(level / 5)</code></p>
                     <p><strong className="text-foreground">Rarity multiplier:</strong> Regular ×1, <span className="text-elvish">Rare ×2</span>, <span className="text-destructive">Boss ×4</span></p>
-                    <p><strong className="text-foreground">Forge cost:</strong> <code className="text-primary">🔩 5 + level×2</code> salvage + <code className="text-primary">level×5</code> gold + <strong className="text-foreground">1 matching gem</strong> per attempt.</p>
+                    <p><strong className="text-foreground">Forge cost:</strong> <code className="text-primary"> 5 + level×2</code> salvage + <code className="text-primary">level×5</code> gold + <strong className="text-foreground">1 matching gem</strong> per attempt.</p>
                     <p><strong className="text-foreground">Forge output:</strong> Random item for chosen slot, gated by the gems you own (see Gems below). <span className="text-foreground">Common</span> requires a primary gem; <span className="text-elvish">Uncommon</span> requires a hybrid gem. Rare/Unique items cannot be forged.</p>
                   </div>
                 </CardContent>
@@ -1137,7 +1137,7 @@ export default function GameManual() {
 
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">💠 Gems — Forge Gating</p>
+                  <p className="text-xs font-display text-primary"> Gems — Forge Gating</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>Gems are a second forging material. The gem you spend determines what kind of item the forge will offer — pool entries are filtered to only show items whose dominant attribute(s) match a gem you own.</p>
                     <p><strong className="text-foreground">Primary gems (6, one per attribute):</strong> <span style={{ color: 'hsl(0,70%,55%)' }}>Garnet → STR</span>, <span style={{ color: 'hsl(50,90%,55%)' }}>Topaz → DEX</span>, <span style={{ color: 'hsl(140,60%,45%)' }}>Emerald → CON</span>, <span style={{ color: 'hsl(220,70%,60%)' }}>Sapphire → INT</span>, <span className="text-foreground">Pearl → WIS</span>, <span style={{ color: 'hsl(280,60%,65%)' }}>Amethyst → CHA</span>. Used to forge <strong>Common</strong> items whose top stat matches the gem.</p>
@@ -1152,7 +1152,7 @@ export default function GameManual() {
 
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">🏪 Vendor Trading</p>
+                  <p className="text-xs font-display text-primary"> Vendor Trading</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>Vendors are found at specific nodes and carry a fixed stock of items.</p>
                     <p><strong className="text-foreground">Buying:</strong> Prices are set per item. CHA discount: <code className="text-primary">min(10%, modifier × 2%)</code> off.</p>
@@ -1164,7 +1164,7 @@ export default function GameManual() {
 
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">👥 Party Loot Splitting</p>
+                  <p className="text-xs font-display text-primary"> Party Loot Splitting</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>When a creature dies, <strong className="text-foreground">XP, gold, and salvage</strong> are split equally among all party members at the same node.</p>
                     <p><strong className="text-foreground">Item drops:</strong> Loot drops to the ground at the creature's node of death. Any player can pick it up (first come, first served).</p>
@@ -1175,7 +1175,7 @@ export default function GameManual() {
 
               <Card className="bg-card/30 border-border">
                 <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">🔨 Blacksmith — Repairs</p>
+                  <p className="text-xs font-display text-primary"> Blacksmith — Repairs</p>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>Blacksmith nodes allow repairing damaged equipment for gold.</p>
                     <p><strong className="text-foreground">Repair cost:</strong> <code className="text-primary">ceil((100 − durability) × itemValue × rarityMult / 100)</code></p>
@@ -1190,7 +1190,7 @@ export default function GameManual() {
           {/* Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              💀 Death & Respawn
+Death & Respawn
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -1205,7 +1205,7 @@ export default function GameManual() {
           {/* World Slumber */}
           <AccordionItem value="slumber" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🌙 World Slumber
+World Slumber
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-2 text-xs text-muted-foreground">

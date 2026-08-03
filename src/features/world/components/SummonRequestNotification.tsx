@@ -55,7 +55,7 @@ export default function SummonRequestNotification({ pendingSummons, onAccept, on
         return (
           <div key={req.id} className="flex items-center gap-2 rounded border border-primary/30 bg-primary/5 px-2 py-1.5 animate-in fade-in slide-in-from-top-2">
             <span className="text-xs font-display flex-1">
-              🌀 <strong>{req.summoner_name}</strong> is summoning you ({remaining}s)
+<strong>{req.summoner_name}</strong> is summoning you ({remaining}s)
             </span>
             <Button
               size="sm"

@@ -39,7 +39,7 @@ export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
     <TooltipProvider delayDuration={150}>
       <div className="gap-row">
         <div className="t-label flex items-center gap-1">
-          💠 Gems
+Gems
         </div>
         {empty ? (
           <p className="text-[10px] text-muted-foreground italic">No gems yet — slay foes to find them.</p>

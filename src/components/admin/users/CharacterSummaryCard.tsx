@@ -23,7 +23,7 @@ export default function CharacterSummaryCard({ character: c, nodeName }: Props) 
         </div>
         <div className="text-right text-[10px]">
           <div className="text-primary font-display">{c.gold}g</div>
-          {nodeName && <div className="text-muted-foreground truncate max-w-[120px]">📍 {nodeName}</div>}
+          {nodeName && <div className="text-muted-foreground truncate max-w-[120px]"> {nodeName}</div>}
         </div>
       </div>
 

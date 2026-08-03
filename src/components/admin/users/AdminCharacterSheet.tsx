@@ -283,7 +283,7 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
-                      {isBroken && <span className="text-destructive mr-1">⚒</span>}
+                      {isBroken && <span className="text-destructive mr-1"> </span>}
                       {inv.item.name}
                       {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
                       {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}

@@ -112,24 +112,24 @@ describe('applyStackingEffect', () => {
 describe('cast event generation', () => {
   const base = {
     creatureId: 'c1', creatureName: 'Vanguard', characterId: 'p1', characterName: 'Calikon',
-    label: 'Cataclysm', emoji: '☄️', damage: 42,
+    label: 'Cataclysm', damage: 42,
   };
 
   it('uses the default sentence with the damage-type adjective', () => {
     const m = buildCastHitMessages({ ...base, damageType: 'fire' });
-    expect(m.message).toBe("☄️ Vanguard's searing Cataclysm strikes Calikon! [42]");
-    expect(m.selfMessage).toBe("☄️ Vanguard's searing Cataclysm strikes you! [42]");
+    expect(m.message).toBe("Vanguard's searing Cataclysm strikes Calikon! [42]");
+    expect(m.selfMessage).toBe("Vanguard's searing Cataclysm strikes you! [42]");
   });
 
   it('collapses cleanly when the cast is untyped', () => {
-    expect(buildCastHitMessages(base).message).toBe("☄️ Vanguard's Cataclysm strikes Calikon! [42]");
+    expect(buildCastHitMessages(base).message).toBe("Vanguard's Cataclysm strikes Calikon! [42]");
   });
 
   it('prefers authored flavor and skips the duplicate damage suffix', () => {
     expect(buildCastHitMessages({ ...base, hitFlavor: '{creature} crushes {target}' }).message)
-      .toBe('☄️ Vanguard crushes Calikon [42]');
+      .toBe('Vanguard crushes Calikon [42]');
     expect(buildCastHitMessages({ ...base, hitFlavor: '{creature} crushes {target} for {damage}' }).message)
-      .toBe('☄️ Vanguard crushes Calikon for 42');
+      .toBe('Vanguard crushes Calikon for 42');
   });
 
   it('emits a structured boss_cast_hit event with self/remote split', () => {

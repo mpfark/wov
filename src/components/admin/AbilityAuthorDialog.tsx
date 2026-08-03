@@ -48,7 +48,7 @@ export default function AbilityAuthorDialog({
   const [existingKeys, setExistingKeys] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<NewAbilityDraft>({
-    ability_key: '', label: '', emoji: '✨', description: '', tooltip: '',
+    ability_key: '', label: '', description: '', tooltip: '',
     mechanic_key: mechanics[0] ?? '', cp_cost: 10, unlock_level: roleUnlockLevel,
   });
 
@@ -83,7 +83,6 @@ export default function AbilityAuthorDialog({
     const { data: inserted, error: abilityError } = await supabase.from('abilities').insert({
       ability_key: draft.ability_key,
       label: draft.label,
-      emoji: draft.emoji,
       description: draft.description,
       tooltip: draft.tooltip || draft.description,
       mechanic_key: draft.mechanic_key,
@@ -143,10 +142,6 @@ export default function AbilityAuthorDialog({
                 })}
                 className="h-8 text-xs"
               />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px]">Emoji</Label>
-              <Input value={draft.emoji} onChange={e => setDraft({ ...draft, emoji: e.target.value })} className="h-8 text-xs" />
             </div>
             <div className="space-y-1">
               <Label className="text-[11px]">CP cost</Label>

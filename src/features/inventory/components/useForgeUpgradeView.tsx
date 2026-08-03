@@ -189,7 +189,7 @@ export function useForgeUpgradeView({
     <div className="gap-section">
       <div>
         <h3 className="t-label text-[11px] mb-1">
-          🔨 Craft a Plain {craftNoun}
+Craft a Plain {craftNoun}
           <span className="ml-2 text-[10px] text-muted-foreground font-normal">
             Tier {playerTier} · {GEAR_TIERS.find(t => t.tier === playerTier)?.prefix} (item Lv{tierItemLevel})
           </span>
@@ -211,7 +211,7 @@ export function useForgeUpgradeView({
 
       <div className="text-[10px] text-muted-foreground flex items-center gap-2">
         <span>Cost per craft:</span>
-        <span className={`font-display ${salvage >= craftSalvage ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {craftSalvage}</span>
+        <span className={`font-display ${salvage >= craftSalvage ? 'text-dwarvish' : 'text-destructive'}`}> {craftSalvage}</span>
         <span>+</span>
         <span className={`font-display ${gold >= craftGold ? 'text-primary' : 'text-destructive'}`}>{craftGold}g</span>
       </div>
@@ -349,7 +349,7 @@ export function useForgeUpgradeView({
 
         <div className="gap-group border-t border-border-subtle pt-2">
           <div className="text-[10px] text-muted-foreground">
-            Per-gem cost: <span className="font-display">🔩 {applySalvage}</span> + <span className="font-display">{applyGold}g</span> + 1 gem
+            Per-gem cost: <span className="font-display"> {applySalvage}</span> + <span className="font-display">{applyGold}g</span> + 1 gem
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {PRIMARY_GEM_KEYS.map(gk => {
@@ -380,7 +380,7 @@ export function useForgeUpgradeView({
           <Button size="sm" variant="ghost" onClick={stripItem}
             disabled={!!working || Object.values(selectedInv.applied_gems || {}).every(v => !v) || gold < stripGold || salvage < stripSalvage}
             className="font-display text-[10px] h-7 w-full text-destructive hover:text-destructive">
-            🧹 Strip all gems ({stripSalvage} salvage + {stripGold}g — gems are destroyed)
+Strip all gems ({stripSalvage} salvage + {stripGold}g — gems are destroyed)
           </Button>
         </div>
       </div>

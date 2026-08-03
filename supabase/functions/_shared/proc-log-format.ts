@@ -8,7 +8,6 @@ import { damageTypeAdjective } from './combat/damage-types.ts';
 export interface ProcLogInput {
   type: string;
   value: number;
-  emoji: string;
   text: string;
 }
 
@@ -108,5 +107,5 @@ export function formatProcMessage(
 
   const interpolated = interpolateTemplate(proc.text, attackerName, targetName, proc.value);
 
-  return `${proc.emoji} ${interpolated}!${suffix}`;
+  return `${interpolated}!${suffix}`;
 }

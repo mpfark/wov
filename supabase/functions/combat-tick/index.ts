@@ -86,13 +86,12 @@ import { bondMultiplier } from "../_shared/formulas/bond.ts";
 import { effectiveItemStats } from "../_shared/formulas/items.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
-function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
+function pickBossFlavor(raw: any): { name: string; text: string; damage_type?: string } | null {
   const flavors = (Array.isArray(raw) ? raw : [])
     .filter((f: any) => typeof f.text === 'string' && f.text.trim().length > 0)
     .map((f: any) => ({
       name: ((f.name as string) || '').trim(),
       text: (f.text as string).trim(),
-      emoji: ((f.emoji as string) || '').trim(),
       weight: Number.isFinite(f.weight) && (f.weight as number) > 0 ? (f.weight as number) : 1,
       damage_type: ((f.damage_type as string) || '').trim() || undefined,
     }));
@@ -101,14 +100,14 @@ function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; 
   let roll = Math.random() * totalWeight;
   for (const f of flavors) {
     roll -= f.weight;
-    if (roll <= 0) return { name: f.name, text: f.text, emoji: f.emoji, damage_type: f.damage_type };
+    if (roll <= 0) return { name: f.name, text: f.text, damage_type: f.damage_type };
   }
   const last = flavors[flavors.length - 1];
-  return { name: last.name, text: last.text, emoji: last.emoji, damage_type: last.damage_type };
+  return { name: last.name, text: last.text, damage_type: last.damage_type };
 }
 // ── Proc-on-hit resolver ────────────────────────────────────
 function resolveProcs(
-  procs: { type: string; chance: number; value: number; emoji: string; text: string }[],
+  procs: { type: string; chance: number; value: number; text: string }[],
   attackerName: string,
   attackerId: string,
   targetName: string,
@@ -209,7 +208,7 @@ function resolveBuffProcs(
       .replace(/%v/g, String(magnitude));
     events.push({
       type: 'buff_proc',
-      message: `${p.emoji || '✨'} ${wearerName} — ${interpolated} (${suffix})`,
+      message: `${wearerName} — ${interpolated} (${suffix})`,
       character_id: wearerId,
     });
   }
@@ -535,7 +534,7 @@ Deno.serve(async (req) => {
     const mainHandRarity: Record<string, string | null> = {};
     const offHandRarity: Record<string, string | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
-    const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
+    const memberProcs: Record<string, { type: string; chance: number; value: number; text: string }[]> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
@@ -856,11 +855,11 @@ Deno.serve(async (req) => {
           const tokens: string[] = [];
           if (bonusXp > 0) tokens.push(`+${bonusXp} XP`);
           if (bonusGold > 0) tokens.push(`+${bonusGold} gold`);
-          if (bonusBhp > 0) tokens.push(`+${bonusBhp} 🏛️ Renown`);
+          if (bonusBhp > 0) tokens.push(`+${bonusBhp} Renown`);
           events.push({
             type: 'contract_complete',
             character_id: mr.memberId,
-            message: `🗡️ Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
+            message: `Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
           });
 
           // Clear contract + bump lifetime counter (separate update so it
@@ -939,7 +938,7 @@ Deno.serve(async (req) => {
       if (auth.error || !auth.entry) {
         events.push({
           type: 'ability_fail',
-          message: `⚠️ ${c.name} cannot use that technique — ${auth.error ?? 'unavailable'}.`,
+          message: `${c.name} cannot use that technique — ${auth.error ?? 'unavailable'}.`,
           character_id: member.id,
         });
         continue;
@@ -953,7 +952,7 @@ Deno.serve(async (req) => {
       if (configErrors.length > 0) {
         events.push({
           type: 'ability_fail',
-          message: `⚠️ ${c.name}: ${ABILITY_CONFIG_FAILURE_TEXT}.`,
+          message: `${c.name}: ${ABILITY_CONFIG_FAILURE_TEXT}.`,
           character_id: member.id,
         });
         abilityConfigFailures.push({
@@ -976,14 +975,14 @@ Deno.serve(async (req) => {
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
       const reservedTotal = sumReservedCp(member.c.reserved_buffs);
       if (getAvailableCp(mCp[member.id], reservedTotal) < cpCost) {
-        events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
+        events.push({ type: 'ability_fail', message: `${c.name} doesn't have enough CP!`, character_id: member.id });
         continue;
       }
       mCp[member.id] -= cpCost;
 
       const target = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
       if (!target) {
-        events.push({ type: 'ability_fail', message: `⚠️ ${c.name}'s target is no longer valid.`, character_id: member.id });
+        events.push({ type: 'ability_fail', message: `${c.name}'s target is no longer valid.`, character_id: member.id });
         continue;
       }
 
@@ -1138,7 +1137,7 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
-        events.push({ type: 'ability_cast', message: `🏹 ${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
+        events.push({ type: 'ability_cast', message: `${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
@@ -1157,7 +1156,7 @@ Deno.serve(async (req) => {
             cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
             events.push({
               type: 'attack_hit',
-              message: `🏹 Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
+              message: `Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -1169,7 +1168,7 @@ Deno.serve(async (req) => {
           } else {
             events.push({
               type: 'attack_miss',
-              message: `🏹 Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
+              message: `Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -1186,7 +1185,7 @@ Deno.serve(async (req) => {
           if (!consumedBuffs[member.id]) consumedBuffs[member.id] = [];
           if (isStealth) {
             consumedBuffs[member.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush empowers the volley!`, character_id: member.id });
+            events.push({ type: 'buff_consumed', message: `${c.name}'s stealth ambush empowers the volley!`, character_id: member.id });
           }
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
@@ -1204,7 +1203,7 @@ Deno.serve(async (req) => {
         if (!hit.hit) {
           // Strike committed — poison stacks still consumed on miss.
           const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          events.push({ type: 'ability_miss', message: `${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
@@ -1223,10 +1222,10 @@ Deno.serve(async (req) => {
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          events.push({ type: 'ability_hit', message: `${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
         } else {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+          events.push({ type: 'ability_hit', message: `${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
@@ -1241,7 +1240,7 @@ Deno.serve(async (req) => {
         const hit = rollAbilityHit(intMod);
         if (!hit.hit) {
           const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `💥 ${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
           continue;
         }
@@ -1260,10 +1259,10 @@ Deno.serve(async (req) => {
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
         } else {
-          events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -1290,22 +1289,21 @@ Deno.serve(async (req) => {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
           backstab: 'dex', smite: 'wis', cutting_words: 'cha',
         };
-        const T0_LABEL: Record<string, { emoji: string; verb: string }> = {
-          fireball:      { emoji: '🔥',  verb: 'hurls a fireball at' },
-          power_strike:  { emoji: '⚔️',  verb: 'delivers a crushing blow to' },
-          aimed_shot:    { emoji: '🎯',  verb: 'looses an aimed shot at' },
-          backstab:      { emoji: '🗡️', verb: 'backstabs' },
-          smite:         { emoji: '⭐',  verb: 'smites' },
-          cutting_words: { emoji: '🎵',  verb: 'mocks' },
+        const T0_LABEL: Record<string, { verb: string }> = {
+          fireball:      { verb: 'hurls a fireball at' },
+          power_strike:  { verb: 'delivers a crushing blow to' },
+          aimed_shot:    { verb: 'looses an aimed shot at' },
+          backstab:      { verb: 'backstabs' },
+          smite:         { verb: 'smites' },
+          cutting_words: { verb: 'mocks' },
         };
         const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        let { emoji, verb } = T0_LABEL[pa.ability_type];
+        let { verb } = T0_LABEL[pa.ability_type];
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
         if (pa.ability_type === 'smite' && c.class === 'templar') {
-          emoji = '✝️';
           verb = 'passes divine judgment upon';
         }
         const isPhysT0 = PHYSICAL_T0.has(pa.ability_type);
@@ -1319,8 +1317,8 @@ Deno.serve(async (req) => {
         const hit = rollAbilityHit(mod);
         if (!hit.hit) {
           const missMsg = isBackstab
-            ? `${emoji} ${c.name}'s blade slips wide — ${target.name} is untouched.`
-            : `${emoji} ${c.name} ${verb} ${target.name} — misses!${weaponSuffix}`;
+            ? `${c.name}'s blade slips wide — ${target.name} is untouched.`
+            : `${c.name} ${verb} ${target.name} — misses!${weaponSuffix}`;
           events.push({
             type: 'ability_miss',
             message: missMsg,
@@ -1354,8 +1352,8 @@ Deno.serve(async (req) => {
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
         const hitMsg = isBackstab
-          ? `${emoji} ${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
-          : `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
+          ? `${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
+          : `${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
         events.push({
           type: 'ability_hit',
           message: hitMsg,
@@ -1376,7 +1374,7 @@ Deno.serve(async (req) => {
         const intMod = sm(effInt);
         const hit = rollAbilityHit(chaMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `🎵💥 ${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
           continue;
         }
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
@@ -1396,7 +1394,7 @@ Deno.serve(async (req) => {
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
-        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
+        events.push({ type: 'ability_hit', message: `Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha, member.id);
         }
@@ -1414,7 +1412,7 @@ Deno.serve(async (req) => {
         const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+          events.push({ type: 'ability_miss', message: `${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
@@ -1449,7 +1447,7 @@ Deno.serve(async (req) => {
         } else {
           activeEffects.push({ id: crypto.randomUUID(), ...effData });
         }
-        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+        events.push({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
       }
     }
 
@@ -1488,7 +1486,7 @@ Deno.serve(async (req) => {
         const antiCrit = wisAntiCrit(effectiveWis) + (hasShield ? SHIELD_ANTI_CRIT_BONUS : 0);
         if (antiCrit > 0 && Math.random() < antiCrit) {
           isCrit = false;
-          events.push({ type: 'awareness_resist', message: `🧘 ${targetName}'s awareness deflects ${creature.name}'s critical strike!`, character_id: targetId });
+          events.push({ type: 'awareness_resist', message: `${targetName}'s awareness deflects ${creature.name}'s critical strike!`, character_id: targetId });
         }
       }
 
@@ -1498,7 +1496,7 @@ Deno.serve(async (req) => {
 
       if (quality !== 'miss') {
         if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
-          events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
+          events.push({ type: 'evasion_dodge', message: `${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
           return;
         }
 
@@ -1530,7 +1528,7 @@ Deno.serve(async (req) => {
 
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
-            events.push({ type: 'shield_block', message: `🛡️ ${targetName} raises their shield and turns the blow! [${blockAmt}]`, character_id: targetId });
+            events.push({ type: 'shield_block', message: `${targetName} raises their shield and turns the blow! [${blockAmt}]`, character_id: targetId });
 
             if (dmg <= 0) return;
           }
@@ -1542,10 +1540,10 @@ Deno.serve(async (req) => {
           const absorbed = ward.absorbed;
           mb.absorb_buff.shield_hp = ward.shieldAfter;
           dmg = ward.remaining;
-          // Single-icon policy: Force Shield's own emoji only — no extra
-          // sparkle/star glyph. (Previous builds rendered "🛡️ ✨" which the
+          // Single-line policy: Force Shield's own wording only — no extra
+          // sparkle/star glyph. (Previous builds rendered "" which the
           // EventLog split across two visual rows.)
-          events.push({ type: 'absorb', message: `🛡️ A shimmering ward soaks ${creature.name}'s strike for ${targetName}! [${absorbed}]`, character_id: targetId });
+          events.push({ type: 'absorb', message: `A shimmering ward soaks ${creature.name}'s strike for ${targetName}! [${absorbed}]`, character_id: targetId });
           if (dmg <= 0) return;
         }
 
@@ -1558,7 +1556,7 @@ Deno.serve(async (req) => {
           dr = Math.min(0.95, dr);
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-          events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
+          events.push({ type: 'battle_cry_dr', message: `${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
         }
 
         // 7b. Divine Challenge (Templar) — flat damage reduction, bond multiplier scales magnitude.
@@ -1568,7 +1566,7 @@ Deno.serve(async (req) => {
           if (flat > 0 && dmg > 0) {
             const preDmg = dmg;
             dmg = Math.max(dmg - flat, 1);
-            events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
+            events.push({ type: 'divine_challenge_dr', message: `${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
           }
         }
 
@@ -1579,7 +1577,7 @@ Deno.serve(async (req) => {
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - drFrac)), 1);
           if (preDmg !== dmg) {
-            events.push({ type: 'item_buff_dr', message: `🛡️ ${targetName}'s warding turns the blow! [${preDmg - dmg}]`, character_id: targetId });
+            events.push({ type: 'item_buff_dr', message: `${targetName}'s warding turns the blow! [${preDmg - dmg}]`, character_id: targetId });
           }
         }
 
@@ -1593,7 +1591,7 @@ Deno.serve(async (req) => {
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
-        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `👹 ${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! [${dmg}]`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
+        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! [${dmg}]`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
 
         // Boss crit flavor enrichment
         if (isCrit) {
@@ -1631,7 +1629,7 @@ Deno.serve(async (req) => {
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
             events.push({
               type: 'holy_shield_return',
-              message: `⚡ ${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
+              message: `${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
               character_id: targetId,
               creature_id: creature.id,
             });
@@ -1647,12 +1645,12 @@ Deno.serve(async (req) => {
         }
 
         if (mHp[targetId] <= 0) {
-          events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
+          events.push({ type: 'member_death', message: `${targetName} has been defeated...`, character_id: targetId });
         }
 
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
-        events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses!`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses!`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
@@ -1747,7 +1745,7 @@ Deno.serve(async (req) => {
           if (heal.applied > 0) {
             events.push({
               type: 'consecrate_heal',
-              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
+              message: `Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
               character_id: ally.id,
             });
           }
@@ -1759,7 +1757,7 @@ Deno.serve(async (req) => {
           cHp[cr.id] = resolveDamage({ amount: burnAmt, hp: cHp[cr.id] }).hpAfter;
           events.push({
             type: 'consecrate_burn',
-            message: `🔆 Holy fire sears ${cr.name}! [${burnAmt}]`,
+            message: `Holy fire sears ${cr.name}! [${burnAmt}]`,
             character_id: m.id,
             creature_id: cr.id,
           });
@@ -1837,7 +1835,7 @@ Deno.serve(async (req) => {
             dmg = Math.max(Math.floor(dmg * stealthMult), 1);
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
             consumedBuffs[m.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
+            events.push({ type: 'buff_consumed', message: `${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
           if (isDmgBuff) dmg = Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId));
           if (hasDisengage) {
@@ -1858,7 +1856,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! [${dmg}]`,
+            message: `${isCrit ? 'CRITICAL! ' : ''}${c.name} attacks ${target.name}! [${dmg}]`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -1909,7 +1907,7 @@ Deno.serve(async (req) => {
             } else {
               activeEffects.push({ id: crypto.randomUUID(), ...effData });
             }
-            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
+            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `${c.name}'s attack poisons ${target.name}!` });
           }
           // (Ignite no longer procs from autoattacks — it now pulses
           // independently each heartbeat as a "shield of fireballs". See the
@@ -1931,7 +1929,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `⚔️ ${c.name} attacks ${target.name} — miss!`,
+            message: `${c.name} attacks ${target.name} — miss!`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -2007,7 +2005,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = resolveDamage({ amount: dmg2, hp: cHp[target.id] }).hpAfter;
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand finds an opening on ${target.name}! [${dmg2}]`,
+            message: `${isCrit2 ? 'CRIT! ' : ''}${c.name}'s off-hand finds an opening on ${target.name}! [${dmg2}]`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -2034,7 +2032,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss!`,
+            message: `${c.name}'s off-hand swings at ${target.name} — miss!`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -2113,7 +2111,7 @@ Deno.serve(async (req) => {
           attacker_name: c.name,
           target_name: target.name,
           damage: pulseDmg,
-          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
+          message: `A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
         });
         // Re-emit the legacy ignite_proc event so the existing client wiring
         // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
@@ -2122,7 +2120,7 @@ Deno.serve(async (req) => {
           type: 'ignite_proc',
           character_id: m.id,
           creature_id: target.id,
-          message: `🔥 ${c.name}'s ignite seared ${target.name}.`,
+          message: `${c.name}'s ignite seared ${target.name}.`,
         });
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -2181,7 +2179,7 @@ Deno.serve(async (req) => {
         const target = members.find(m => m.id === picked.id)!;
         applyCreatureHit(
           target.id, target.c.name, target.c, eq[target.id] || {},
-          creature, cStr, dmgDie, tankAtNode ? '🛡️ ' : '',
+          creature, cStr, dmgDie, tankAtNode ? '' : '',
         );
       }
     } // end tick loop
@@ -2330,7 +2328,6 @@ Deno.serve(async (req) => {
         const creature = creatures.find(c => c.id === cst.creature_id);
         const creatureName = creature?.name ?? 'The boss';
         const label = (cst.payload as any)?.label ?? cst.cast_key;
-        const emoji = (cst.payload as any)?.emoji ?? '☄️';
         const hitFlavor = String((cst.payload as any)?.hit_flavor ?? '').trim();
         const dmgType = normalizeDamageType((cst.payload as any)?.damage_type);
 
@@ -2355,7 +2352,6 @@ Deno.serve(async (req) => {
             characterId: h.character_id,
             characterName: memberName,
             label,
-            emoji,
             hitFlavor,
             damage: dmg,
             damageType: dmgType,
@@ -2393,7 +2389,6 @@ Deno.serve(async (req) => {
         // Per-boss cast config (falls back to defaults when unset).
         const cfg = ((creature as any).boss_cast ?? {}) as {
           label?: string;
-          emoji?: string;
           cast_flavor?: string;
           hit_flavor?: string;
           damage_type?: string;
@@ -2435,7 +2430,6 @@ Deno.serve(async (req) => {
         const lockMs = Number.isFinite(cfg.lock_ms as number) && (cfg.lock_ms as number) > 0
           ? Math.floor(cfg.lock_ms as number) : 0;
         const label = (cfg.label && cfg.label.trim()) || 'Cataclysm';
-        const emoji = (cfg.emoji && cfg.emoji.trim()) || '☄️';
         const castFlavor = String(cfg.cast_flavor ?? '').trim();
         const hitFlavorCfg = String(cfg.hit_flavor ?? '').trim();
         const castDamageType = normalizeDamageType(cfg.damage_type);
@@ -2473,7 +2467,6 @@ Deno.serve(async (req) => {
         };
         const payload: Record<string, unknown> = {
           label,
-          emoji,
           // Authored flavor travels with the cast so resolution (which may run
           // in a later tick) renders the same text the admin configured.
           cast_flavor: castFlavor || undefined,
@@ -2556,11 +2549,11 @@ Deno.serve(async (req) => {
           ? renderFlavor(castFlavor, { creature: creature.name, cast: label, damageType: castDamageType ?? undefined })
           : '';
         // Authored prose stands alone — no cast name or flee hint appended.
-        // Stage 2: the 🌀 routing sentinel is GONE. Telegraph styling is
+        // Stage 2: the routing sentinel is GONE. Telegraph styling is
         // derived from the structured `log_event.type`, never from the text.
         const startMessage = startRendered
-          ? `${emoji} ${startRendered}`
-          : `${emoji} ${creature.name} begins channeling ${label}!`;
+          ? startRendered
+          : `${creature.name} begins channeling ${label}!`;
 
         events.push({
           type: 'boss_cast_start',
@@ -2593,7 +2586,6 @@ Deno.serve(async (req) => {
             cast_key: castKey,
             ability_key: castKey,
             label,
-            emoji,
             node_id: combatNodeId,
             started_at: row.started_at,
             expires_at: row.expires_at,
@@ -2720,13 +2712,13 @@ Deno.serve(async (req) => {
               bonusNames.push(`+${amt} ${s.toUpperCase()}`);
             }
             if (bonusNames.length) {
-              events.push({ type: 'level_bonus', message: `📈 ${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
+              events.push({ type: 'level_bonus', message: `${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
             }
           }
 
           if ([10, 20, 30, 40].includes(newLevel)) {
             updates.respec_points = (c.respec_points || 0) + 1;
-            events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
+            events.push({ type: 'respec', message: `${c.name} earned a respec point!` });
           }
 
           // ── Deep-Core Forge milestone tokens ──
@@ -2739,7 +2731,7 @@ Deno.serve(async (req) => {
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
-              message: '✨ As your strength settles into something greater, you feel a distant pull deep beneath the mountains — ancient, patient, and waiting.',
+              message: 'As your strength settles into something greater, you feel a distant pull deep beneath the mountains — ancient, patient, and waiting.',
             });
           }
           if (newLevel === 42) {
@@ -2749,7 +2741,7 @@ Deno.serve(async (req) => {
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
-              message: '🌋 The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
+              message: 'The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
             });
             princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
           }
@@ -2765,8 +2757,8 @@ Deno.serve(async (req) => {
           updates.max_cp = calcMaxCp(newLevel, fWis);
           updates.max_mp = calcMaxMp(newLevel, fDex);
 
-          events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
-          events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
+          events.push({ type: 'level_up', character_id: m.id, message: `Level Up! ${c.name} is now level ${newLevel}!` });
+          events.push({ type: 'stat_point', message: `${c.name} gained 1 stat point to allocate!` });
         }
         if (newLevel >= 42) newXp = 0;
         updates.xp = newXp;
@@ -2891,12 +2883,12 @@ Deno.serve(async (req) => {
               bonusNames.push(`+${amt} ${s.toUpperCase()}`);
             }
             if (bonusNames.length) {
-              events.push({ type: 'level_bonus', message: `📈 ${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
+              events.push({ type: 'level_bonus', message: `${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
             }
           }
           if ([10, 20, 30, 40].includes(newLevel)) {
             updates.respec_points = (c.respec_points || 0) + 1;
-            events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
+            events.push({ type: 'respec', message: `${c.name} earned a respec point!` });
           }
           if (newLevel === 42) {
             princeAscensions.push({ characterId: m.id, characterName: c.name, gender: c.gender || 'male', charClass: c.class });
@@ -2910,8 +2902,8 @@ Deno.serve(async (req) => {
           updates.hp = newMaxHp;
           updates.max_cp = calcMaxCp(newLevel, fWis);
           updates.max_mp = calcMaxMp(newLevel, fDex);
-          events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
-          events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
+          events.push({ type: 'level_up', character_id: m.id, message: `Level Up! ${c.name} is now level ${newLevel}!` });
+          events.push({ type: 'stat_point', message: `${c.name} gained 1 stat point to allocate!` });
         }
         if (newLevel >= 42) newXp = 0;
         updates.xp = newXp;
@@ -3131,7 +3123,6 @@ Deno.serve(async (req) => {
           event: 'world',
           payload: {
             kind: 'king_crowned',
-            icon: '👑',
             text: `King Aldric Vael has fallen. ${slayer.characterName} is now ${titleWord} of Varneth.`,
             actor: slayer.characterName,
             nonce: `aldric:${Date.now()}`,
@@ -3153,7 +3144,6 @@ Deno.serve(async (req) => {
             event: 'world',
             payload: {
               kind: 'prince_ascended',
-              icon: '👑',
               text: `${p.characterName} has ascended to the peak of mortal strength and is now ${titleWord} of the realm.`,
               actor: p.characterName,
               nonce: `prince:${p.characterId}:${Date.now()}`,

@@ -76,12 +76,11 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
-const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: '📋 Legacy Table', item_pool: '🎲 Item Pool', salvage_only: '🔩 Salvage Only' };
+const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: 'Legacy Table', item_pool: 'Item Pool', salvage_only: 'Salvage Only' };
 
 interface BossCritFlavor {
   name: string;
   text: string;
-  emoji: string;
   weight: number;
   damage_type: string;
 }
@@ -99,8 +98,7 @@ const defaultForm = () => ({
   boss_death_cry: '',
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
-  boss_cast_emoji: '☄️',
-  boss_cast_damage_type: '',   // canonical damage type for the cast
+  boss_cast_boss_cast_damage_type: '',   // canonical damage type for the cast
   boss_cast_flavor: '',        // log line when the boss begins the cast
   boss_cast_hit_flavor: '',    // log line when the cast lands on a character
 
@@ -205,7 +203,6 @@ export default function CreatureManager() {
       boss_death_cry: typeof (c as any).boss_death_cry === 'string' ? (c as any).boss_death_cry : '',
       boss_cast_enabled: !!((c as any).boss_cast),
       boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
-      boss_cast_emoji: (c as any).boss_cast?.emoji ?? '☄️',
       boss_cast_damage_type: (c as any).boss_cast?.damage_type ?? '',
       boss_cast_flavor: (c as any).boss_cast?.cast_flavor ?? '',
       boss_cast_hit_flavor: (c as any).boss_cast?.hit_flavor ?? '',
@@ -288,7 +285,6 @@ export default function CreatureManager() {
         .map(f => ({
           name: f.name?.trim() || '',
           text: f.text?.trim() || '',
-          emoji: f.emoji?.trim() || '',
           weight: Number.isFinite(f.weight) && f.weight > 0 ? f.weight : 1,
           damage_type: f.damage_type?.trim() || undefined,
         }))
@@ -297,7 +293,6 @@ export default function CreatureManager() {
       boss_cast: (form.rarity === 'boss' || form.rarity === 'rare') && form.boss_cast_enabled ? {
         enabled: true,
         label: form.boss_cast_label.trim() || 'Cataclysm',
-        emoji: form.boss_cast_emoji.trim() || '☄️',
         // Authored log flavor; blank → server default wording.
         damage_type: form.boss_cast_damage_type || null,
         cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
@@ -431,7 +426,7 @@ export default function CreatureManager() {
           <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
           <SelectContent className="bg-popover border-border z-50 max-h-60">
             <SelectItem value="all" className="text-xs">All Regions</SelectItem>
-            <SelectItem value="unassigned" className="text-xs text-destructive">⚠ Unassigned ({unassignedCount})</SelectItem>
+            <SelectItem value="unassigned" className="text-xs text-destructive"> Unassigned ({unassignedCount})</SelectItem>
             {regionNames.map(r => (
               <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
             ))}
@@ -559,11 +554,11 @@ export default function CreatureManager() {
                     <span className={`font-display text-sm ${RARITY_COLORS[creature.rarity]}`}>{creature.name}</span>
                     <span className="text-[10px] text-muted-foreground capitalize px-1 py-0.5 rounded bg-background/50 border border-border">{creature.rarity}</span>
                     <span className="text-[10px] text-muted-foreground">Lvl {creature.level}</span>
-                    {!creature.is_alive && <span className="text-[10px]">💀</span>}
-                    {creature.is_aggressive && <span className="text-[10px]">⚔️</span>}
+                    {!creature.is_alive && <span className="text-[10px]"> </span>}
+                    {creature.is_aggressive && <span className="text-[10px]"> </span>}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-muted-foreground">📍 {getNodeName(creature.node_id)}</span>
+                    <span className="text-xs text-muted-foreground"> {getNodeName(creature.node_id)}</span>
                     <span className="text-[10px] text-muted-foreground">HP {creature.hp}/{creature.max_hp} | AC {creature.ac}</span>
                   </div>
                 </div>
@@ -698,7 +693,7 @@ export default function CreatureManager() {
                   <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
                 </div>
                 <div className="mt-1.5 pt-1.5 border-t border-border/50 flex items-center gap-3 text-xs">
-                  <span>⚔️ Damage: <strong className="text-primary">1d{getCreatureDamageDie(form.level, form.rarity)} + {getStatModifier(previewStats.stats.str)}</strong></span>
+                  <span> Damage: <strong className="text-primary">1d{getCreatureDamageDie(form.level, form.rarity)} + {getStatModifier(previewStats.stats.str)}</strong></span>
                   <span className="text-muted-foreground">({1 + getStatModifier(previewStats.stats.str)}–{getCreatureDamageDie(form.level, form.rarity) + getStatModifier(previewStats.stats.str)})</span>
                 </div>
               </div>
@@ -710,7 +705,7 @@ export default function CreatureManager() {
                   <p className="font-display text-xs text-primary">World Emote on Death</p>
                   <p className="text-[10px] text-muted-foreground">
                     An atmospheric line shown to all players when this boss dies. Written as world narration, not the boss speaking.
-                    Broadcast verbatim, prefixed with <span className="font-mono">🌫️</span>. Use <span className="font-mono">%a</span> for the killer's name. Leave empty to disable.
+                    Broadcast verbatim, prefixed with <span className="font-mono"> </span>. Use <span className="font-mono">%a</span> for the killer's name. Leave empty to disable.
                   </p>
                   <Textarea
                     value={form.boss_death_cry}
@@ -744,20 +739,12 @@ export default function CreatureManager() {
                   </p>
                   {form.boss_cast_enabled && (
                     <>
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={form.boss_cast_emoji}
-                          onChange={e => setForm(f => ({ ...f, boss_cast_emoji: e.target.value }))}
-                          placeholder="☄️"
-                          className="w-10 h-7 text-xs px-1 text-center"
-                        />
-                        <Input
+                      <Input
                           value={form.boss_cast_label}
                           onChange={e => setForm(f => ({ ...f, boss_cast_label: e.target.value }))}
                           placeholder="Cataclysm"
                           className="flex-1 h-7 text-xs"
                         />
-                      </div>
                       <label className="text-[10px] text-muted-foreground block">
                         Damage type
                         <Select
@@ -780,20 +767,18 @@ export default function CreatureManager() {
                         value={form.boss_cast_flavor}
                         onChange={v => setForm(f => ({ ...f, boss_cast_flavor: v }))}
                         placeholder="{creature} draws the sky down — {cast} gathers above the node!"
-                        emoji={form.boss_cast_emoji}
                         sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm' }}
                         hint="{target}/{damage} are empty here"
-                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'} begins channeling ${form.boss_cast_label || 'Cataclysm'}! Flee the node to avoid it. (default)`}
+                        fallback={`${form.name || 'The Boss'} begins channeling ${form.boss_cast_label || 'Cataclysm'}! Flee the node to avoid it. (default)`}
                       />
                       <FlavorField
                         label="Impact flavor (log line when the cast lands)"
                         value={form.boss_cast_hit_flavor}
                         onChange={v => setForm(f => ({ ...f, boss_cast_hit_flavor: v }))}
                         placeholder="{cast} breaks over {target} in a wave of ruin!"
-                        emoji={form.boss_cast_emoji}
                         sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm', damage: 42 }}
                         hint="damage is appended as [N] unless you write {damage}"
-                        fallback={`${form.boss_cast_emoji || '☄️'} ${form.name || 'The Boss'}'s ${form.boss_cast_label || 'Cataclysm'} strikes Hero! [42] (default)`}
+                        fallback={`${form.name || 'The Boss'}'s ${form.boss_cast_label || 'Cataclysm'} strikes Hero! [42] (default)`}
                       />
 
                       <div className="grid grid-cols-2 gap-1">
@@ -909,16 +894,6 @@ export default function CreatureManager() {
                   <div key={idx} className="p-2 bg-background/50 rounded border border-border space-y-1">
                     <div className="flex items-center gap-1">
                       <Input
-                        value={flavor.emoji}
-                        onChange={e => {
-                          const updated = [...form.boss_crit_flavors];
-                          updated[idx] = { ...updated[idx], emoji: e.target.value };
-                          setForm(f => ({ ...f, boss_crit_flavors: updated }));
-                        }}
-                        placeholder="🔥"
-                        className="w-10 h-7 text-xs px-1 text-center"
-                      />
-                      <Input
                         value={flavor.name}
                         onChange={e => {
                           const updated = [...form.boss_crit_flavors];
@@ -976,8 +951,7 @@ export default function CreatureManager() {
                     </Select>
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
-                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}
-                        {renderFlavor(flavor.text, {
+                        Preview:                         {renderFlavor(flavor.text, {
                           creature: form.name || 'Dragon',
                           target: 'Hero',
                           cast: flavor.name || '',
@@ -994,7 +968,7 @@ export default function CreatureManager() {
                   className="w-full h-7 text-xs"
                   onClick={() => setForm(f => ({
                     ...f,
-                    boss_crit_flavors: [...f.boss_crit_flavors, { name: '', text: '', emoji: '', weight: 1, damage_type: '' }],
+                    boss_crit_flavors: [...f.boss_crit_flavors, { name: '', text: '', weight: 1, damage_type: '' }],
                   }))}
                 >
                   <Plus className="h-3 w-3 mr-1" /> Add Flavor

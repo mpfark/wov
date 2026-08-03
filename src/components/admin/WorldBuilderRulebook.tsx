@@ -7,7 +7,7 @@ export default function WorldBuilderRulebook() {
     <ScrollArea className="h-full">
       <div className="p-4 pb-12 space-y-4 max-w-2xl">
         <div>
-          <h2 className="font-display text-lg text-primary mb-1">📜 AI Rulebook</h2>
+          <h2 className="font-display text-lg text-primary mb-1"> AI Rulebook</h2>
           <p className="text-xs text-muted-foreground">
             Reference of all rules the AI follows when generating world content. These match the system prompt enforced by the <code className="text-[10px] bg-muted px-1 rounded">ai-world-builder</code> edge function.
           </p>
@@ -243,7 +243,7 @@ export default function WorldBuilderRulebook() {
             <li><strong>Nodes</strong> — added using the directional <code className="text-[10px] bg-muted px-1 rounded">+</code> buttons (N, NE, E, SE, S, SW, W, NW) around selected nodes on the map.</li>
             <li><strong>Connections</strong> — click the faint green dotted lines between nearby nodes (&lt;140px) for instant bidirectional linking.</li>
             <li><strong>Areas</strong> — managed via the Areas tab or inline in the Node Editor.</li>
-            <li><strong>AI naming</strong> — use the <code className="text-[10px] bg-muted px-1 rounded">✨</code> sparkle button in region/node editors for AI-suggested names and descriptions.</li>
+            <li><strong>AI naming</strong> — use the <code className="text-[10px] bg-muted px-1 rounded"> </code> sparkle button in region/node editors for AI-suggested names and descriptions.</li>
           </ul>
         </Card>
 

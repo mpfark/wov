@@ -42,11 +42,11 @@ interface NodePickerProps {
 
 function getFlags(node: NodePickerNode): string {
   const flags: string[] = [];
-  if (node.is_inn) flags.push('🏨');
-  if (node.is_vendor) flags.push('🛒');
-  if (node.is_blacksmith) flags.push('⚒️');
-  if (node.is_teleport) flags.push('✨');
-  if (node.is_trainer) flags.push('⚔️');
+  if (node.is_inn) flags.push('');
+  if (node.is_vendor) flags.push('');
+  if (node.is_blacksmith) flags.push('');
+  if (node.is_teleport) flags.push('');
+  if (node.is_trainer) flags.push('');
   return flags.join('');
 }
 
