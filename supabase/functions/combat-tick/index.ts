@@ -2151,7 +2151,7 @@ Deno.serve(async (req) => {
           type: 'ignite_proc',
           character_id: m.id,
           creature_id: target.id,
-          message: `${c.name}'s ignite seared ${target.name}.`,
+          message: `${c.name}'s orb of fire seared ${target.name} with Ignite.`,
         });
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {

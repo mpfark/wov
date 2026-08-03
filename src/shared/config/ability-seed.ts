@@ -201,8 +201,8 @@ export const ABILITY_SEED: AbilitySeed[] = [
     class_key: 'wizard', slot: 2,
   },
   {
-    ability_key: 'ignite', label: 'Ignite', description: 'Stance. While in combat, an orb pulses each heartbeat at your target — proc chance and spark damage scale with INT, the applied burn DoT (stacks/duration) scales with WIS. Mutually exclusive with Envenom. Click again to drop.',
-    tooltip: 'Orbs strike your target and apply burn. Proc/spark scale with INT, burn with WIS. Stance.',
+    ability_key: 'ignite', label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.',
+    tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.',
     mechanic_key: 'ignite_buff', ability_type: 'buff', damage_type: 'fire',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
@@ -211,7 +211,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     class_key: 'wizard', slot: 3,
   },
   {
-    ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Ignite.',
+    ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.',
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
     mechanic_key: 'ignite_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
@@ -312,7 +312,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     class_key: 'assassin', slot: 1,
   },
   {
-    ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Ignite. Click again to drop.',
+    ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.',
     tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.',
     mechanic_key: 'poison_buff', ability_type: 'buff', damage_type: 'poison',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,

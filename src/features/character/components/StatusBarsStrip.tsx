@@ -10,7 +10,7 @@ import { getCpDisplay } from '@/features/combat/utils/cp-display';
 // `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
 // the buff itself carries `durationMs` and the bar uses that.
 const BUFF_DURATIONS: Record<string, number> = {
-  Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
+  Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, 'Orbs of Fire': 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
   'Holy Shield': 30_000, 'Shield Wall': 4_000, Consecrate: 6_000, 'Divine Challenge': 30_000,
 };
 
@@ -111,9 +111,9 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   }
 
   if (igniteActive) {
-    const dur = BUFF_DURATIONS['Ignite'] || 30_000;
+    const dur = BUFF_DURATIONS['Orbs of Fire'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+    buffs.push({ label: 'Orbs of Fire', detail: 'orbs apply Ignite', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
   // Force Shield: stance takes precedence over the legacy timed absorb buff so
