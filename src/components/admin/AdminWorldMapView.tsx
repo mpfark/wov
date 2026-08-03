@@ -94,7 +94,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const allNodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
 
   const zoomAroundPoint = useCallback((centerX: number, centerY: number, newZoom: number) => {
     setZoom(prevZoom => {
@@ -452,7 +452,6 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       className="group w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground cursor-pointer"
                     >
                       <div className="flex items-center gap-1 min-w-0">
-                        <span className="text-sm shrink-0">{emojiMap[area.area_type] || '📍'}</span>
                         <span className="font-display truncate max-w-[160px]" title={area.name}>{area.name}</span>
                         <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                           {onEditArea && (
@@ -578,8 +577,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
 
             {/* Area hulls — color-coded by area type */}
             {[...areaHulls.entries()].map(([areaId, { path, area }]) => {
-              const emoji = emojiMap[area.area_type] || '📍';
-              const colors = { fill: getAreaFillColor(emoji), stroke: getAreaStrokeColor(emoji) };
+              const areaColor = colorMap[area.area_type] || '';
+              const colors = { fill: getAreaFillColor(areaColor), stroke: getAreaStrokeColor(areaColor) };
               // Compute label position from area nodes
               const areaNodes = nodes.filter(n => n.area_id === areaId);
               const areaPositions = areaNodes.map(n => allNodePositions.get(n.id)).filter(Boolean) as Array<{ px: number; py: number }>;
@@ -756,7 +755,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   )}
                   {(node.is_vendor || node.is_inn || node.is_blacksmith || node.is_jewelcrafter) && (
                     <text x={pos.px} y={pos.py - 12} textAnchor="middle" className="text-[8px] select-none pointer-events-none">
-                      {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}{node.is_jewelcrafter ? '💎' : ''}
+                      {node.is_vendor ? '' : ''}{node.is_inn ? '' : ''}{node.is_blacksmith ? '' : ''}{node.is_jewelcrafter ? '' : ''}
                     </text>
                   )}
                   {(() => {
@@ -774,7 +773,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                             fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} />
                         )}
                         {nc > 0 && (
-                          <text x={pos.px + 14} y={pos.py + 22} className="text-[8px] select-none pointer-events-none">💬</text>
+                          <text x={pos.px + 14} y={pos.py + 22} className="text-[8px] select-none pointer-events-none"> </text>
                         )}
                         <text x={pos.px} y={pos.py + 34} textAnchor="middle"
                           className="fill-muted-foreground text-[7px] select-none pointer-events-none">

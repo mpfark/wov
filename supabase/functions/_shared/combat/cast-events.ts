@@ -23,7 +23,6 @@ export interface CastHitInput {
   characterName: string;
   /** Display name of the cast (payload label, falling back to cast_key). */
   label: string;
-  emoji: string;
   /** Author-supplied template; blank falls back to the default sentence. */
   hitFlavor?: string | null;
   damage: number;
@@ -46,14 +45,14 @@ export function buildCastHitMessages(input: CastHitInput): CastHitEvent {
 
   const render = (target: string) =>
     flavor
-      ? `${input.emoji} ${renderFlavor(flavor, {
+      ? `${renderFlavor(flavor, {
           creature: input.creatureName,
           target,
           cast: input.label,
           damage,
           damageType: dmgType ?? undefined,
         })}${suffix}`
-      : `${input.emoji} ${input.creatureName}'s ${adjective ? `${adjective} ` : ''}${input.label} strikes ${target}! [${damage}]`;
+      : `${input.creatureName}'s ${adjective ? `${adjective} ` : ''}${input.label} strikes ${target}! [${damage}]`;
 
   return { message: render(input.characterName), selfMessage: render('you') };
 }

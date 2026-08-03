@@ -8,7 +8,6 @@ interface ProcEntry {
   type: string;
   chance: number;
   value: number;
-  emoji?: string;
   text?: string;
 }
 
@@ -77,7 +76,6 @@ export function ProcExpectancyPanel({ procs }: Props) {
       <div className="space-y-0.5">
         {rows.map(r => (
           <div key={r.idx} className="flex items-center gap-2 text-[10px] font-mono">
-            <span className="w-5 text-center">{r.emoji || '•'}</span>
             <span className="w-20 capitalize text-muted-foreground">{r.type.replace('_', ' ')}</span>
             <span className="w-16 text-right">{Math.round((r.chance || 0) * 100)}%</span>
             <span className="text-muted-foreground">×</span>

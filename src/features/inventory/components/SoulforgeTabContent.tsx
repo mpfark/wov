@@ -158,7 +158,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
       if (error) throw error;
       const parsed = (typeof data === 'string' ? JSON.parse(data) : data) as any;
       toast({
-        title: '💍 Soulforged!',
+        title: 'Soulforged!',
         description: `${parsed?.name ?? nextStep.name} now hums on your finger.`,
       });
       onForged();
@@ -248,7 +248,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
         disabled={!canForge}
         className="font-display text-xs h-8 bg-elvish/80 hover:bg-elvish text-background"
       >
-        {forging ? 'Forging...' : `💍 ${headerText}`}
+        {forging ? 'Forging...' : `${headerText}`}
       </Button>
     </div>
   );

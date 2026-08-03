@@ -137,7 +137,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
                   onClick={takeContract}
                   className="text-primary hover:text-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  🗡️ Take a contract
+Take a contract
                 </button>
               )}
               {hasActiveContract && (
@@ -148,7 +148,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
                     title="Take a new contract"
                     className="text-primary/90 hover:text-primary hover:text-glow transition-all disabled:opacity-50"
                   >
-                    🔄 Re-roll
+Re-roll
                   </button>
                   <span className="text-border">·</span>
                   <button
@@ -156,7 +156,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
                     onClick={abandonContract}
                     className="text-muted-foreground hover:text-destructive transition-all disabled:opacity-50"
                   >
-                    ✖ Abandon
+Abandon
                   </button>
                 </>
               )}
@@ -169,7 +169,7 @@ export default function NPCDialogPanel({ npc, open, onClose, worldContext, onCon
                 onClick={receiveGiftedItem}
                 className="text-primary hover:text-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs font-body italic normal-case"
               >
-                📜 Take what is offered
+Take what is offered
               </button>
             </div>
           )}

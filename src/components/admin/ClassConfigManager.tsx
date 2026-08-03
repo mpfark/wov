@@ -59,7 +59,6 @@ export default function ClassConfigManager() {
     const mapped: ClassConfigDraft[] = (classRes.data ?? []).map(r => ({
       class_key: r.class_key,
       label: r.label ?? '',
-      icon: r.icon ?? '',
       color: r.color ?? '',
       description: r.description ?? '',
       status: r.status ?? 'active',
@@ -127,7 +126,6 @@ export default function ClassConfigManager() {
     setSaving(true);
     const { error } = await supabase.from('classes').update({
       label: draft.label,
-      icon: draft.icon ?? '',
       color: draft.color ?? '',
       description: draft.description ?? '',
       status: draft.status,
@@ -189,7 +187,6 @@ export default function ClassConfigManager() {
                     : 'border-border/60 hover:bg-muted/40'
                 }`}
               >
-                <span className="mr-1">{row.icon}</span>
                 {row.label}
                 <Badge
                   variant={row.status === 'active' ? 'secondary' : 'outline'}
@@ -219,7 +216,7 @@ export default function ClassConfigManager() {
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display flex items-center gap-2">
-                    <span className="text-lg">{draft.icon}</span>{draft.label}
+                    {draft.label}
                     <Badge variant="outline" className="text-[10px] font-mono">{draft.class_key}</Badge>
                     {draft.is_pre_class && <Badge variant="secondary" className="text-[10px]">pre-class</Badge>}
                     <Badge variant="outline" className="ml-auto text-[10px]">
@@ -232,10 +229,6 @@ export default function ClassConfigManager() {
                     <div className="col-span-2 space-y-1">
                       <Label className="text-[11px]">Label</Label>
                       <Input value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} className="h-8 text-xs" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Icon</Label>
-                      <Input value={draft.icon ?? ''} onChange={e => setDraft({ ...draft, icon: e.target.value })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[11px]">Sort order</Label>

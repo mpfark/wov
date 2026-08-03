@@ -7,7 +7,7 @@
  */
 
 /**
- * Phase 2b: read ability definitions (label, emoji, text, CP cost, unlock
+ * Phase 2b: read ability definitions (label, text, CP cost, unlock
  * level) from the `abilities` / `class_ability_assignments` config tables.
  *
  * When false, the balance-identical hardcoded fallback lists in

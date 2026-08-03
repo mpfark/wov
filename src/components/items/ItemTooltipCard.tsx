@@ -129,13 +129,13 @@ export default function ItemTooltipCard({
           <div className="gap-group">
             {isWeapon && (
               <div className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline">
-                <span className="t-label">⚔ Weapon Damage</span>
+                <span className="t-label"> Weapon Damage</span>
                 <span className="t-numeric text-sm text-primary">
                   1d{die}<span className="t-meta ml-1">+ STR</span>
                 </span>
                 {affinity && (
                   <>
-                    <span className="t-label">⛨ Affinity</span>
+                    <span className="t-label"> Affinity</span>
                     <span className="t-body text-elvish text-right">{affinity}</span>
                   </>
                 )}
@@ -183,7 +183,7 @@ export default function ItemTooltipCard({
         <>
           <Divider />
           <div className="gap-row">
-            <div className="t-label mb-0.5">💠 Socketed</div>
+            <div className="t-label mb-0.5"> Socketed</div>
             <div className="flex flex-wrap gap-x-2 gap-y-0.5">
               {gemEntries.map(([gemKey, count]) => {
                 const def = GEM_CATALOG[gemKey as GemKey];
@@ -208,7 +208,7 @@ export default function ItemTooltipCard({
           <Divider />
           <div className="flex justify-between gap-2 t-meta">
             <span className="flex flex-wrap items-baseline gap-x-2">
-              {isBroken && <span className="t-numeric-neg font-display">⚒ Broken</span>}
+              {isBroken && <span className="t-numeric-neg font-display"> Broken</span>}
               {durabilityPct != null && (
                 <span>
                   Durability <span className="t-numeric text-xs">{durabilityPct}</span>

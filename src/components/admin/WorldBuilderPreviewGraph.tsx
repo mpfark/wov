@@ -149,7 +149,7 @@ export default function WorldBuilderPreviewGraph({
   nodes, creatures, npcs, items, areas = [], existingAnchors = [], mode, populateNodeNames,
 }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
 
   const populatePositions = useMemo(() => {
     if (mode !== 'populate' || !populateNodeNames) return null;
@@ -274,7 +274,7 @@ export default function WorldBuilderPreviewGraph({
   const getNodeFlags = (id: string) => {
     const node = nodes.find(n => n.temp_id === id);
     if (!node) return '';
-    return [node.is_inn && '🏨', node.is_vendor && '🛒', node.is_blacksmith && '🔨'].filter(Boolean).join('');
+    return [node.is_inn && '', node.is_vendor && '', node.is_blacksmith && ''].filter(Boolean).join('');
   };
 
   const getNodeAreaColor = (id: string): string | null => {
@@ -282,8 +282,8 @@ export default function WorldBuilderPreviewGraph({
     if (!node?.area_temp_id) return null;
     const area = areas.find(a => a.temp_id === node.area_temp_id);
     if (!area) return null;
-    const emoji = emojiMap[area.area_type] || '📍';
-    return getAreaPreviewColor(emoji);
+    const areaColor = colorMap[area.area_type] || '';
+    return getAreaPreviewColor(areaColor);
   };
 
   return (
@@ -374,11 +374,11 @@ export default function WorldBuilderPreviewGraph({
               )}
               {nc > 0 && (
                 <text x={px + 6} y={py + 20}
-                  className="text-[7px] select-none pointer-events-none">💬</text>
+                  className="text-[7px] select-none pointer-events-none"> </text>
               )}
               {ic > 0 && (
                 <text x={px + 14} y={py + 20}
-                  className="text-[7px] select-none pointer-events-none">📦</text>
+                  className="text-[7px] select-none pointer-events-none"> </text>
               )}
 
               <text
@@ -418,7 +418,7 @@ export default function WorldBuilderPreviewGraph({
           <text x={108} y={9} className="fill-muted-foreground text-[8px]">Aggro</text>
           <circle cx={140} cy={6} r={3} fill="hsl(35 60% 50%)" />
           <text x={148} y={9} className="fill-muted-foreground text-[8px]">Passive</text>
-          <text x={170} y={9} className="fill-muted-foreground text-[8px]">📦 Items</text>
+          <text x={170} y={9} className="fill-muted-foreground text-[8px]"> Items</text>
         </g>
       </svg>
 
@@ -439,7 +439,7 @@ export default function WorldBuilderPreviewGraph({
               <span className="text-[9px] text-muted-foreground font-medium">Creatures:</span>
               {hoveredInfo.crList.map((cr, i) => (
                 <div key={i} className="text-[9px] text-muted-foreground">
-                  {cr.is_aggressive ? '⚔' : '🐾'} {cr.name} ({cr.rarity}){cr.is_humanoid ? ' 🧑' : ''}
+                  {cr.is_aggressive ? '' : ''} {cr.name} ({cr.rarity}){cr.is_humanoid ? '' : ''}
                 </div>
               ))}
             </div>
@@ -449,7 +449,7 @@ export default function WorldBuilderPreviewGraph({
               <span className="text-[9px] text-muted-foreground font-medium">Items:</span>
               {hoveredInfo.itemList.map((item, i) => (
                 <div key={i} className="text-[9px] text-muted-foreground">
-                  📦 {item.name} ({item.rarity})
+{item.name} ({item.rarity})
                 </div>
               ))}
             </div>
@@ -458,7 +458,7 @@ export default function WorldBuilderPreviewGraph({
             <div className="mt-1">
               <span className="text-[9px] text-muted-foreground font-medium">NPCs:</span>
               {hoveredInfo.npcList.map((npc, i) => (
-                <div key={i} className="text-[9px] text-muted-foreground">💬 {npc.name}</div>
+                <div key={i} className="text-[9px] text-muted-foreground"> {npc.name}</div>
               ))}
             </div>
           )}

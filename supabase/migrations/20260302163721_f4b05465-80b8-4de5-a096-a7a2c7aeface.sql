@@ -6,14 +6,14 @@ ALTER TABLE public.areas ALTER COLUMN area_type SET DEFAULT 'other';
 -- Create area_types reference table
 CREATE TABLE IF NOT EXISTS public.area_types (
   name text PRIMARY KEY,
-  emoji text NOT NULL DEFAULT '📍',
+  emoji text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Seed with existing types
 INSERT INTO public.area_types (name, emoji) VALUES
-  ('forest', '🌲'), ('town', '🏘️'), ('cave', '🕳️'), ('ruins', '🏚️'), ('plains', '🌾'),
-  ('mountain', '⛰️'), ('swamp', '🌿'), ('desert', '🏜️'), ('coast', '🌊'), ('dungeon', '⚔️'), ('other', '📍')
+  ('forest', ''), ('town', ''), ('cave', ''), ('ruins', ''), ('plains', ''),
+  ('mountain', ''), ('swamp', ''), ('desert', ''), ('coast', ''), ('dungeon', ''), ('other', '')
 ON CONFLICT DO NOTHING;
 
 -- RLS

@@ -3,7 +3,7 @@
  *
  * CANONICAL OWNER for: getMaxHp, getMaxCp, getMaxMp, getEffectiveMax*, regen helpers.
  *
- * ⚠️ SQL MIRROR: `public.sync_character_resources()` mirrors getMaxHp/Cp/Mp
+ * SQL MIRROR: `public.sync_character_resources()` mirrors getMaxHp/Cp/Mp
  * in PL/pgSQL. If you change the numbers here, also update that RPC.
  */
 

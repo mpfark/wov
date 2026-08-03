@@ -59,7 +59,7 @@ export default function HeartbeatIndicator({ lastTickTime, tickInterval = 2000 }
           className="transition-none"
         />
       </svg>
-      <span className="text-[9px] font-display text-destructive/70 tracking-wide">⚔️</span>
+      <span className="text-[9px] font-display text-destructive/70 tracking-wide"> </span>
     </div>
   );
 }

@@ -6,6 +6,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Save, Pencil, Trash2 } from 'lucide-react';
 import { useAreaTypes } from '@/features/world';
+import {
+  areaColorToHex,
+  hexToAreaColor,
+  isValidAreaColor,
+  NEUTRAL_AREA_COLOR,
+  getAreaHeaderColor,
+  getAreaFillColor,
+  getAreaStrokeColor,
+} from '@/features/world/utils/area-colors';
 
 interface Props {
   open: boolean;
@@ -15,35 +24,36 @@ interface Props {
 export default function AreaTypeDialog({ open, onOpenChange }: Props) {
   const { areaTypes, refetch } = useAreaTypes();
   const [editingType, setEditingType] = useState<string | null>(null);
-  const [typeForm, setTypeForm] = useState({ name: '', emoji: '📍' });
+  const [typeForm, setTypeForm] = useState({ name: '', color: NEUTRAL_AREA_COLOR });
   const [saving, setSaving] = useState(false);
 
   const openCreate = () => {
     setEditingType(null);
-    setTypeForm({ name: '', emoji: '📍' });
+    setTypeForm({ name: '', color: NEUTRAL_AREA_COLOR });
   };
 
-  const openEdit = (t: { name: string; emoji: string }) => {
+  const openEdit = (t: { name: string; color: string }) => {
     setEditingType(t.name);
-    setTypeForm({ name: t.name, emoji: t.emoji });
+    setTypeForm({ name: t.name, color: isValidAreaColor(t.color) ? t.color : NEUTRAL_AREA_COLOR });
   };
 
   const saveType = async () => {
     if (!typeForm.name.trim()) return toast.error('Name is required');
+    const color = isValidAreaColor(typeForm.color) ? typeForm.color : NEUTRAL_AREA_COLOR;
     setSaving(true);
     if (editingType) {
       if (editingType !== typeForm.name.trim()) {
-        const { error: insertErr } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), emoji: typeForm.emoji } as any);
+        const { error: insertErr } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), color } as any);
         if (insertErr) { toast.error(insertErr.message); setSaving(false); return; }
         await supabase.from('areas').update({ area_type: typeForm.name.trim().toLowerCase() } as any).eq('area_type', editingType);
         await supabase.from('area_types').delete().eq('name', editingType);
       } else {
-        const { error } = await supabase.from('area_types').update({ emoji: typeForm.emoji } as any).eq('name', editingType);
+        const { error } = await supabase.from('area_types').update({ color } as any).eq('name', editingType);
         if (error) { toast.error(error.message); setSaving(false); return; }
       }
       toast.success('Type updated');
     } else {
-      const { error } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), emoji: typeForm.emoji } as any);
+      const { error } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), color } as any);
       if (error) { toast.error(error.message); setSaving(false); return; }
       toast.success('Type created');
     }
@@ -70,8 +80,15 @@ export default function AreaTypeDialog({ open, onOpenChange }: Props) {
           <div className="space-y-1 max-h-48 overflow-y-auto">
             {areaTypes.map(t => (
               <div key={t.name} className="flex items-center gap-2 p-1.5 rounded border border-border bg-background/40">
-                <span className="text-sm">{t.emoji}</span>
-                <span className="text-xs flex-1 capitalize">{t.name}</span>
+                <span
+                  aria-hidden
+                  className="w-3.5 h-3.5 rounded-sm border shrink-0"
+                  style={{
+                    backgroundColor: getAreaFillColor(t.color),
+                    borderColor: getAreaStrokeColor(t.color),
+                  }}
+                />
+                <span className="text-xs flex-1 capitalize" style={{ color: getAreaHeaderColor(t.color) }}>{t.name}</span>
                 <Button variant="ghost" size="sm" onClick={() => openEdit(t)} className="h-5 w-5 p-0">
                   <Pencil className="w-2.5 h-2.5" />
                 </Button>
@@ -83,9 +100,28 @@ export default function AreaTypeDialog({ open, onOpenChange }: Props) {
           </div>
           <div className="border-t border-border pt-3 space-y-2">
             <span className="font-display text-xs text-muted-foreground">{editingType ? 'Edit Type' : 'New Type'}</span>
-            <div className="flex gap-2">
-              <Input placeholder="Emoji" value={typeForm.emoji} onChange={e => setTypeForm(f => ({ ...f, emoji: e.target.value }))} className="h-8 text-xs w-16" maxLength={4} />
+            <div className="flex gap-2 items-center">
+              <Input
+                type="color"
+                aria-label="Map colour"
+                value={areaColorToHex(typeForm.color)}
+                onChange={e => setTypeForm(f => ({ ...f, color: hexToAreaColor(e.target.value) }))}
+                className="h-8 w-12 p-1"
+              />
               <Input placeholder="Type name" value={typeForm.name} onChange={e => setTypeForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs flex-1" />
+            </div>
+            <div className="flex items-center gap-2 rounded border border-border bg-background/40 p-1.5">
+              <span
+                aria-hidden
+                className="w-6 h-6 rounded-sm border shrink-0"
+                style={{
+                  backgroundColor: getAreaFillColor(typeForm.color),
+                  borderColor: getAreaStrokeColor(typeForm.color),
+                }}
+              />
+              <span className="text-[10px] text-muted-foreground">
+                Map preview — {typeForm.name.trim() || 'unnamed'} · {typeForm.color}
+              </span>
             </div>
             <div className="flex gap-2">
               <Button onClick={saveType} disabled={saving} className="font-display text-xs flex-1">

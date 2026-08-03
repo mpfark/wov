@@ -12,7 +12,7 @@ const PRIMARY_STATS = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
 const SECONDARY_STATS = new Set(['hp', 'hp_regen']);
 
 const STONE_GLYPH: Record<string, string> = {
-  str: '⚒', dex: '🗡', con: '🌳', int: '✦', wis: '🌊', cha: '🔔',
+  str: '', dex: '', con: '', int: '✦', wis: '', cha: '',
 };
 
 interface Props {
@@ -223,7 +223,7 @@ export default function StonebinderPanel({
             />
           </div>
           <p className="text-xs text-destructive font-display text-center">
-            ⚠ The originals will be consumed forever.
+The originals will be consumed forever.
           </p>
         </>
       )}
@@ -250,7 +250,6 @@ export default function StonebinderPanel({
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="⚜"
       title="Stonebinder"
       subtitle={<span>Two stones, one bound essence.</span>}
       left={left}

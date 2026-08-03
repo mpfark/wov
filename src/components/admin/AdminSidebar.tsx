@@ -97,7 +97,7 @@ export default function AdminSidebar({ activeTab, onNavigate, isValar }: AdminSi
         {!collapsed && (
           <div className="flex items-center gap-2 min-w-0">
             <Badge variant="outline" className="text-[10px] font-display shrink-0 border-primary/40 text-primary">
-              {isValar ? '⚡ Overlord' : '✨ Steward'}
+              {isValar ? 'Overlord' : 'Steward'}
             </Badge>
           </div>
         )}

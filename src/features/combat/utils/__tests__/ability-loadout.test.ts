@@ -21,7 +21,6 @@ const row = (over: Partial<AbilityConfigRow> & {
   ability: {
     ability_key: over.abilityKey ?? over.label.toLowerCase(),
     label: over.label,
-    emoji: '✨',
     description: 'd',
     tooltip: 't',
     cp_cost: 10 * over.slot,

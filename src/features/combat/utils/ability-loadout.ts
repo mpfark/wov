@@ -75,7 +75,6 @@ export function setLoadoutOptions(rows: AbilityConfigRow[]): void {
       isDefault: row.is_default,
       ability: {
         label: row.ability.label,
-        emoji: row.ability.emoji,
         description: row.ability.description,
         tooltip: row.ability.tooltip,
         cpCost: row.ability.cp_cost,

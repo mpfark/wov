@@ -1,7 +1,7 @@
 /**
  * ability-calcs.ts — configurable ability *magnitudes*.
  *
- * Phase 2b made ability presentation (label, emoji, text, CP cost, unlock
+ * Phase 2b made ability presentation (label, text, CP cost, unlock
  * level) configurable. This module does the same for the numbers: the
  * structured `amount_calc` / `duration_calc` / `interval_ms` records stored on
  * the `abilities` table are loaded into a runtime registry and evaluated by

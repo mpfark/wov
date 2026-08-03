@@ -101,36 +101,36 @@ interface StanceFlavor { activate: string; drop: string }
 
 const STANCE_FLAVOR: Record<StanceKey, StanceFlavor> = {
   holy_shield: {
-    activate: '⚡ Radiant wards flare around you — Holy Shield burns ready.',
-    drop:     '⚡ The radiant wards dim and fade.',
+    activate: 'Radiant wards flare around you — Holy Shield burns ready.',
+    drop:     'The radiant wards dim and fade.',
   },
   force_shield: {
-    activate: '🛡️ Threads of arcane light braid into a shimmering barrier.',
-    drop:     '🛡️ The arcane barrier unravels into motes.',
+    activate: 'Threads of arcane light braid into a shimmering barrier.',
+    drop:     'The arcane barrier unravels into motes.',
   },
   eagle_eye: {
-    activate: '🦅 Your vision narrows — every flaw in your foe stands out.',
-    drop:     '🦅 The world widens again as Eagle Eye fades.',
+    activate: 'Your vision narrows — every flaw in your foe stands out.',
+    drop:     'The world widens again as Eagle Eye fades.',
   },
   arcane_surge: {
-    activate: '✨ Arcane current crackles down your arms.',
-    drop:     '✨ The arcane current ebbs and stills.',
+    activate: 'Arcane current crackles down your arms.',
+    drop:     'The arcane current ebbs and stills.',
   },
   battle_cry: {
-    activate: '📯 You bellow a battle cry — your blood runs cold and steady.',
-    drop:     '📯 Your battle cry falls silent.',
+    activate: 'You bellow a battle cry — your blood runs cold and steady.',
+    drop:     'Your battle cry falls silent.',
   },
   shield_wall: {
-    activate: '🛡️ You plant your shield and root your stance.',
-    drop:     '🛡️ You ease out of Shield Wall stance.',
+    activate: 'You plant your shield and root your stance.',
+    drop:     'You ease out of Shield Wall stance.',
   },
   ignite: {
-    activate: '🌋 Embers gather at your fingertips, waiting to leap.',
-    drop:     '🌋 The embers gutter out.',
+    activate: 'Embers gather at your fingertips, waiting to leap.',
+    drop:     'The embers gutter out.',
   },
   envenom: {
-    activate: '🐍 You coat your blade in slow, dark venom.',
-    drop:     '🐍 You wipe the last of the venom from your blade.',
+    activate: 'You coat your blade in slow, dark venom.',
+    drop:     'You wipe the last of the venom from your blade.',
   },
 };
 

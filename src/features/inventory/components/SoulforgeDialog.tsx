@@ -25,7 +25,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
       <DialogContent className="sm:max-w-2xl border-soulforged/30 bg-card max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-soulforged text-glow-soulforged flex items-center gap-2">
-            💍 The Soulwright
+The Soulwright
           </DialogTitle>
           <DialogDescription className="text-xs italic text-muted-foreground">
             An ancient artisan wreathed in spectral flame.

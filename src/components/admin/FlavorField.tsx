@@ -16,7 +16,6 @@ interface FlavorFieldProps {
   fallback?: string;
   /** Sample values used to render the preview. */
   sample: { creature: string; target?: string; cast?: string; damage?: number };
-  emoji?: string;
   hint?: string;
   rows?: number;
 }
@@ -28,13 +27,12 @@ export function FlavorField({
   placeholder,
   fallback,
   sample,
-  emoji,
   hint,
   rows = 2,
 }: FlavorFieldProps) {
   const trimmed = (value || '').trim();
   const preview = trimmed
-    ? `${emoji ? `${emoji} ` : ''}${renderFlavor(trimmed, sample)}`
+    ? renderFlavor(trimmed, sample)
     : fallback ?? '';
 
   return (

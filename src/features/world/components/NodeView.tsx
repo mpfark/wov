@@ -59,7 +59,7 @@ interface Props {
   sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
   rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
-  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; emoji: string; startedAt: number; expiresAt: number; castMs: number; amount?: number; storedPower: number; visualMax: number }>;
+  bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; startedAt: number; expiresAt: number; castMs: number; amount?: number; storedPower: number; visualMax: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -103,7 +103,7 @@ export default function NodeView({
     }
     prevInCombatRef.current = !!inCombat;
   }, [inCombat]);
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
 
   // ── Polish: aggro flash tracking (fire once per creature per node visit) ──
   const flashedRef = useRef<Set<string>>(new Set());
@@ -168,7 +168,7 @@ export default function NodeView({
            <div className="text-center pb-2 border-b border-border-strong/60">
             <h2
               className="font-display text-xl text-glow"
-              style={{ color: area ? getAreaHeaderColor(emojiMap[area.area_type] || '📍') : undefined }}
+              style={{ color: area ? getAreaHeaderColor(colorMap[area.area_type] || '') : undefined }}
             >
               {getNodeDisplayName(node, area)}
             </h2>
@@ -193,19 +193,19 @@ export default function NodeView({
                           className={`text-[10px] ${hasRecruiter ? 'text-glow' : 'opacity-70'}`}
                           title={hasRecruiter ? `Order Hall — recruits ${node.class_hall}` : `Order Hall (${node.class_hall}) — no recruiter on duty`}
                         >
-                          🏰
+
                         </span>
                       );
                     })()}
                     {(node as any).is_heraldry && (
-                      <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>
+                      <span className="text-[10px]" title="Heraldry — claim or change family names"> </span>
                     )}
                     {node.is_trainer && (
                       <span
                         className={`text-[10px] ${hasTrainerNpc ? 'text-glow' : 'opacity-70'}`}
                         title={hasTrainerNpc ? 'Renown Trainer — staffed' : 'Renown Trainer (no trainer on duty)'}
                       >
-                        🏛️
+
                       </span>
                     )}
                     {/* Trade & Craft */}
@@ -214,7 +214,7 @@ export default function NodeView({
                         className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
                         title={hasVendorNpc ? 'Vendor — shopkeeper present' : 'Vendor (no shopkeeper)'}
                       >
-                        🪙
+
                       </span>
                     )}
                     {node.is_blacksmith && (
@@ -222,7 +222,7 @@ export default function NodeView({
                         className={`text-[10px] ${hasBlacksmithNpc ? 'text-glow' : 'opacity-70'}`}
                         title={hasBlacksmithNpc ? 'Blacksmith — staffed' : 'Blacksmith (no smith on duty)'}
                       >
-                        🔨
+
                       </span>
                     )}
                     {(node as any).is_jewelcrafter && (
@@ -230,18 +230,18 @@ export default function NodeView({
                         className={`text-[10px] ${hasJewelcrafterNpc ? 'text-glow' : 'opacity-70'}`}
                         title={hasJewelcrafterNpc ? 'Jewelcrafter — staffed' : 'Jewelcrafter (no jeweler on duty)'}
                       >
-                        💎
+
                       </span>
                     )}
                     {(node as any).is_soulforge && (
-                      <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge">⚒️</span>
+                      <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge"> </span>
                     )}
                     {(node as any).is_stonebinder && (
-                      <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Ioun Stones">⚜</span>
+                      <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Ioun Stones"> </span>
                     )}
                     {/* Environment */}
-                    {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
-                    {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
+                    {node.is_inn && <span className="text-[10px]" title="Inn"> </span>}
+                    {node.is_teleport && <span className="text-[10px]" title="Teleport"> </span>}
                   </>
                 );
               })()}
@@ -321,13 +321,13 @@ export default function NodeView({
                             c.rarity === 'boss' ? 'text-primary text-glow' :
                             c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
                           }`}>{c.name}</span>
-                          {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive">⚠️</span>}
+                          {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive"> </span>}
                           <span className="text-[10px] text-muted-foreground">L{c.level}</span>
                           {hasPoisonStacks && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-elvish font-display animate-pulse">
-                                  🧪×{creaturePoisonStacks!.stacks}
+×{creaturePoisonStacks!.stacks}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
@@ -339,7 +339,7 @@ export default function NodeView({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-dwarvish font-display animate-flicker">
-                                  🔥×{creatureIgniteStacks!.stacks}
+×{creatureIgniteStacks!.stacks}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
@@ -351,7 +351,7 @@ export default function NodeView({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-dot-bleed font-display animate-drip">
-                                  🩸
+
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
@@ -363,7 +363,7 @@ export default function NodeView({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-dwarvish font-display">
-                                  🔨
+
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
@@ -375,7 +375,7 @@ export default function NodeView({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-elvish font-display animate-pulse">
-                                  🌿
+
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
@@ -386,10 +386,10 @@ export default function NodeView({
                           {/* Right: combat icon, HP bar, HP numbers, attack button */}
                           <div className="ml-auto flex items-center gap-1 shrink-0">
                             {(isActiveTarget || isEngaged) && (
-                              <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}>⚔️</span>
+                              <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}> </span>
                             )}
                             {isSelected && !isActiveTarget && !isEngaged && (
-                              <span className="text-[10px] text-primary">🎯</span>
+                              <span className="text-[10px] text-primary"> </span>
                             )}
                             <div className="flex flex-col items-stretch gap-[2px] w-[120px]">
                               <div
@@ -452,13 +452,13 @@ export default function NodeView({
                     const bo = b.service_role ? order[b.service_role] ?? 90 : 99;
                     return ao - bo;
                   }).map(npc => {
-                    const roleIcon = npc.service_role === 'vendor' ? '🪙'
-                      : npc.service_role === 'blacksmith' ? '🔨'
-                      : npc.service_role === 'jewelcrafter' ? '💎'
-                      : npc.service_role === 'trainer' ? '🏛️'
-                      : npc.service_role === 'recruiter' ? '🏰'
-                      : npc.service_role === 'heraldry' ? '📜'
-                      : '💬';
+                    const roleIcon = npc.service_role === 'vendor' ? ''
+                      : npc.service_role === 'blacksmith' ? ''
+                      : npc.service_role === 'jewelcrafter' ? ''
+                      : npc.service_role === 'trainer' ? ''
+                      : npc.service_role === 'recruiter' ? ''
+                      : npc.service_role === 'heraldry' ? ''
+                      : '';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
                       : npc.service_role === 'jewelcrafter' ? 'Craft'
@@ -609,7 +609,7 @@ export default function NodeView({
                             disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
                             className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
                           >
-                            {ability.emoji} {ability.label}
+                            {ability.label}
                             {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
                               <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
                             )}

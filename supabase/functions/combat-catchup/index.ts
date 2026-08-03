@@ -405,11 +405,11 @@ Deno.serve(async (req) => {
               const tokens: string[] = [];
               if (bxp > 0) tokens.push(`+${bxp} XP`);
               if (bgold > 0) tokens.push(`+${bgold} gold`);
-              if (bbhp > 0) tokens.push(`+${bbhp} 🏛️ Renown`);
+              if (bbhp > 0) tokens.push(`+${bbhp} Renown`);
               outcome.events.push({
                 type: 'contract_complete',
                 character_id: mr.memberId,
-                message: `🗡️ Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
+                message: `Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
               });
             }
             await db.rpc('award_party_member', {
@@ -461,7 +461,7 @@ Deno.serve(async (req) => {
               const partyChannel = db.channel(`party-broadcast-${partyIdForCreature}`);
               // Use the canonical kill log line from the resolver — same
               // wording as live combat — to keep formatting consistent.
-              const summary = outcome.events[0]?.message ?? `☠️ ${creature.name} has been slain by DoT!`;
+              const summary = outcome.events[0]?.message ?? `${creature.name} has been slain by DoT!`;
 
               await partyChannel.send({
                 type: 'broadcast',
@@ -504,7 +504,6 @@ Deno.serve(async (req) => {
                 event: 'world',
                 payload: {
                   kind: 'boss_death',
-                  icon: '🌫️',
                   text: outcome.bossDeathCryText,
                   actor: primaryChar.name || undefined,
                   nonce: `${creatureId}:catchup`,

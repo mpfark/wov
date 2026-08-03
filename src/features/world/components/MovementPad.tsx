@@ -94,7 +94,7 @@ export default function MovementPad({ currentNode, onMove, disabled, unlockedCon
         className="fixed z-40 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg flex items-center justify-center"
         style={{ left: pos.x, top: resolvedY }}
       >
-        <span className="text-lg">🧭</span>
+        <span className="text-lg"> </span>
       </button>
     );
   }
@@ -146,7 +146,7 @@ export default function MovementPad({ currentNode, onMove, disabled, unlockedCon
                 `}
                 title={isLocked ? `Locked — requires: ${lockedDirs.get(dir)}` : undefined}
               >
-                {isLocked ? '🔒' : DIR_ARROWS[dir]}
+                {isLocked ? '' : DIR_ARROWS[dir]}
               </button>
             );
           })}

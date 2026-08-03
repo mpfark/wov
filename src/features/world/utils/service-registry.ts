@@ -4,7 +4,7 @@
  * automatically appears in nearby-landmark sentences.
  *
  * Note: the icon strip at the top of NodeView still enumerates flags by
- * hand. That's an intentional separate concern (icons need bespoke emoji,
+ * hand. That's an intentional separate concern (service icons are bespoke,
  * tooltips, NPC-staffed glow, etc.).
  */
 

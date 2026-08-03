@@ -45,7 +45,7 @@ export function AbilityBarMeasurer({ onMeasure }: Props) {
             disabled
             className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
           >
-            {ability.emoji} {ability.label}
+            {ability.label}
             <span className="ml-0.5 text-[8px] text-muted-foreground">[{idx + 1}]</span>
           </Button>
         ))}

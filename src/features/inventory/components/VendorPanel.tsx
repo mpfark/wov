@@ -328,7 +328,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     <span className="inline-flex flex-col items-center gap-0.5">
       {npcName && (
         <span className="font-display text-elvish">
-          💬 {npcName}
+{npcName}
           {npcFlavor && <span className="text-muted-foreground italic"> — {npcFlavor}</span>}
         </span>
       )}
@@ -347,8 +347,8 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as 'buy' | 'sell')} className="w-full">
       <TabsList className="w-full grid grid-cols-2">
-        <TabsTrigger value="buy" className="t-label text-[11px] data-[state=active]:text-primary">🪙 Buy</TabsTrigger>
-        <TabsTrigger value="sell" className="t-label text-[11px] data-[state=active]:text-primary">📦 Sell</TabsTrigger>
+        <TabsTrigger value="buy" className="t-label text-[11px] data-[state=active]:text-primary"> Buy</TabsTrigger>
+        <TabsTrigger value="sell" className="t-label text-[11px] data-[state=active]:text-primary"> Sell</TabsTrigger>
       </TabsList>
       <TabsContent value="buy" className="hidden" />
       <TabsContent value="sell" className="hidden" />
@@ -401,7 +401,6 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="🪙"
       title="Vendor"
       subtitle={subtitle}
       tabs={tabs}

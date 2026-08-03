@@ -21,7 +21,6 @@ interface ProcEntry {
   type: string;
   chance: number;
   value: number;
-  emoji: string;
   text: string;
 }
 
@@ -988,15 +987,6 @@ export default function ItemManager() {
                               setForm(f => ({ ...f, procs }));
                             }} className="h-7 text-[10px]" />
                         </div>
-                        <div className="w-10">
-                          <label className="text-[9px] text-muted-foreground">Emoji</label>
-                          <Input value={proc.emoji} maxLength={4}
-                            onChange={e => {
-                              const procs = [...form.procs];
-                              procs[idx] = { ...procs[idx], emoji: e.target.value };
-                              setForm(f => ({ ...f, procs }));
-                            }} className="h-7 text-[10px] text-center" />
-                        </div>
                         <div className="flex-1 min-w-[100px]">
                           <label className="text-[9px] text-muted-foreground">Log text</label>
                           <Input value={proc.text} placeholder="%a's blade drains life from %e"
@@ -1021,7 +1011,7 @@ export default function ItemManager() {
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]"
-                    onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, emoji: '💚', text: 'drains life from' }] }))}>
+                    onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, text: 'drains life from' }] }))}>
                     <Plus className="w-3 h-3 mr-1" /> Add Proc
                   </Button>
                   <ProcExpectancyPanel procs={form.procs} />
@@ -1031,7 +1021,7 @@ export default function ItemManager() {
 
               {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0 || itemUsage.lootTables.length > 0) && (
                 <div className="space-y-2 border-t border-border pt-3">
-                  <p className="font-display text-xs text-primary">📍 Used In</p>
+                  <p className="font-display text-xs text-primary"> Used In</p>
                   {itemUsage.creatures.length > 0 && (
                     <div className="space-y-1">
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Skull className="w-3 h-3" /> Creature Loot Tables</p>

@@ -203,7 +203,7 @@ export default function PopulateNodeSelector({ nodes, selectedIds, creatureCount
               {/* Node flags */}
               {(() => {
                 const node = nodes.find(n => n.id === id);
-                const flags = [node?.is_inn && '🏨', node?.is_vendor && '🛒', node?.is_blacksmith && '🔨'].filter(Boolean).join('');
+                const flags = [node?.is_inn && '', node?.is_vendor && '', node?.is_blacksmith && ''].filter(Boolean).join('');
                 return flags ? (
                   <text x={px} y={py - 26} textAnchor="middle"
                     className="text-[8px] select-none pointer-events-none">{flags}</text>
@@ -226,7 +226,7 @@ export default function PopulateNodeSelector({ nodes, selectedIds, creatureCount
                     )}
                     {nc > 0 && (
                       <text x={px + 12} y={py + 22}
-                        className="text-[7px] select-none pointer-events-none">💬</text>
+                        className="text-[7px] select-none pointer-events-none"> </text>
                     )}
                     {(cc?.total || nc > 0) && (
                       <text x={px} y={py + 32} textAnchor="middle"

@@ -10,7 +10,7 @@
  *
  * As in every other stage, the server event type declares the category and the
  * payload carries the numbers; nothing downstream reads the prose. Server
- * prose still ships with decorative leading glyphs (💎/🎉/🗡️…) — those are
+ * prose still ships with decorative leading glyphs (/ / …) — those are
  * display noise, so the leading glyph is stripped here and the line's meaning
  * comes purely from `type`, `amountKind` and `severity`.
  */

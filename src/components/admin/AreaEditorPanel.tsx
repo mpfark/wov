@@ -159,7 +159,7 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
                 <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {areaTypes.map(t => (
-                    <SelectItem key={t.name} value={t.name} className="text-xs">{t.emoji} {t.name}</SelectItem>
+                    <SelectItem key={t.name} value={t.name} className="text-xs">{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

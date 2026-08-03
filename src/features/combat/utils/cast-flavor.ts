@@ -4,7 +4,7 @@
  * Emitted to the event log the moment a damage/heal ability is queued for
  * the next heartbeat tick. Replaces the silent "button-pulses-only" state.
  *
- * Format: `{emoji} {flavor sentence}` — no `[N]` suffix (no damage yet).
+ * Format: the flavor sentence alone — no `[N]` suffix (no damage yet).
  */
 
 function pick<T>(arr: T[]): T {
@@ -22,32 +22,32 @@ const FLAVOR: Record<string, FlavorVariants> = {
   // ── T0 openers ──────────────────────────────────────────────
   fireball: {
     withTarget: [
-      '🔥 You weave arcane flame between your fingers, aimed at {target}…',
-      '🔥 Embers spiral into a roaring sphere above your palm, drifting toward {target}…',
+      'You weave arcane flame between your fingers, aimed at {target}…',
+      'Embers spiral into a roaring sphere above your palm, drifting toward {target}…',
     ],
   },
   power_strike: {
     withTarget: [
-      '⚔️ You set your stance and ready a crushing blow against {target}…',
-      '⚔️ Knuckles whiten on your grip as you wind up on {target}…',
+      'You set your stance and ready a crushing blow against {target}…',
+      'Knuckles whiten on your grip as you wind up on {target}…',
     ],
   },
   aimed_shot: {
     withTarget: [
-      '🎯 You draw, breathe, and steady your aim on {target}…',
-      '🎯 The bowstring sings against your ear as you sight {target}…',
+      'You draw, breathe, and steady your aim on {target}…',
+      'The bowstring sings against your ear as you sight {target}…',
     ],
   },
   backstab: {
     withTarget: [
-      '🗡️ You slip behind {target}, blade reversed…',
-      '🗡️ Soft footfalls — and then you are at {target}\'s back…',
+      'You slip behind {target}, blade reversed…',
+      'Soft footfalls — and then you are at {target}\'s back…',
     ],
   },
   cutting_words: {
     withTarget: [
-      '🎵 You take a breath, voice sharpening for {target}…',
-      '🎵 A barbed verse rises in your throat, aimed at {target}…',
+      'You take a breath, voice sharpening for {target}…',
+      'A barbed verse rises in your throat, aimed at {target}…',
     ],
   },
   // smite is shared by healer and templar — branched in getCastFlavor()
@@ -55,58 +55,58 @@ const FLAVOR: Record<string, FlavorVariants> = {
   // ── Higher-tier server-resolved ─────────────────────────────
   multi_attack: {
     withTarget: [
-      '🏹 You nock three arrows and draw, sighting {target}…',
-      '🏹 Fletchings between your knuckles — the volley loosens toward {target}…',
+      'You nock three arrows and draw, sighting {target}…',
+      'Fletchings between your knuckles — the volley loosens toward {target}…',
     ],
   },
   dot_debuff: {
     withTarget: [
-      '🩸 You ready a tearing cut across {target}…',
-      '🩸 Your blade angles low for a wound that will not close on {target}…',
+      'You ready a tearing cut across {target}…',
+      'Your blade angles low for a wound that will not close on {target}…',
     ],
   },
   sunder_debuff: {
     withTarget: [
-      "🔨 You wind back to crush {target}'s guard…",
-      "🔨 You aim a shattering blow at {target}'s armor…",
+      "You wind back to crush {target}'s guard…",
+      "You aim a shattering blow at {target}'s armor…",
     ],
   },
   execute_attack: {
     withTarget: [
-      '🔪 You coil to detonate the venom in {target}…',
-      '🔪 Every poisoned stack burns — you draw to ignite {target}…',
+      'You coil to detonate the venom in {target}…',
+      'Every poisoned stack burns — you draw to ignite {target}…',
     ],
   },
   ignite_consume: {
     withTarget: [
-      '💥 You reach out to ignite the embers burning {target}…',
-      '💥 You will the smoldering coals on {target} to erupt…',
+      'You reach out to ignite the embers burning {target}…',
+      'You will the smoldering coals on {target} to erupt…',
     ],
   },
   burst_damage: {
     withTarget: [
-      '💥 You inhale, the final chord rising toward {target}…',
-      '💥 You gather every note for one shattering crescendo upon {target}…',
+      'You inhale, the final chord rising toward {target}…',
+      'You gather every note for one shattering crescendo upon {target}…',
     ],
   },
 
   // ── Heals / supports ────────────────────────────────────────
   hp_transfer: {
     withTarget: [
-      '💉 You open a vein of life, willing it toward {target}…',
-      '💉 You press your hand to your chest and pour warmth into {target}…',
+      'You open a vein of life, willing it toward {target}…',
+      'You press your hand to your chest and pour warmth into {target}…',
     ],
   },
   heal: {
     selfOrAlly: [
-      '💚 You gather warm light around yourself…',
-      '💚 You breathe deep and call radiance into your wounds…',
+      'You gather warm light around yourself…',
+      'You breathe deep and call radiance into your wounds…',
     ],
   },
   self_heal: {
     selfOrAlly: [
-      '💪 You plant your feet and catch your breath…',
-      '💪 You shake off the haze and steady yourself…',
+      'You plant your feet and catch your breath…',
+      'You shake off the haze and steady yourself…',
     ],
   },
 };
@@ -114,12 +114,12 @@ const FLAVOR: Record<string, FlavorVariants> = {
 // Smite is shared — separate tables keyed on character class.
 const SMITE_FLAVOR_BY_CLASS: Record<string, string[]> = {
   templar: [
-    '✝️ You raise your hand and call judgment down on {target}…',
-    '✝️ Holy light kindles at your fingertips, sentence pronounced on {target}…',
+    'You raise your hand and call judgment down on {target}…',
+    'Holy light kindles at your fingertips, sentence pronounced on {target}…',
   ],
   healer: [
-    '⭐ You channel divine light toward {target}…',
-    '⭐ A shaft of pale radiance gathers above {target}…',
+    'You channel divine light toward {target}…',
+    'A shaft of pale radiance gathers above {target}…',
   ],
 };
 

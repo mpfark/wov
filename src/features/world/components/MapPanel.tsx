@@ -363,7 +363,7 @@ export default function MapPanel({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[10px] font-display text-primary animate-pulse px-2 py-0.5 bg-primary/10 rounded-full border border-primary/30 cursor-default">
-                    ⚡ {xpMultiplier}x
+{xpMultiplier}x
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -459,7 +459,7 @@ export default function MapPanel({
                         onClick={onOpenJewelcrafter}
                         className="h-5 w-5 flex items-center justify-center rounded bg-elvish/15 border border-elvish/40 shadow-[0_0_6px_hsl(var(--elvish)/0.3)] hover:bg-elvish/25 transition-colors"
                       >
-                        <span className="text-[10px]">💎</span>
+                        <span className="text-[10px]"> </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Jewelcrafter</TooltipContent>
@@ -472,7 +472,7 @@ export default function MapPanel({
                         onClick={onOpenStonebinder}
                         className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
                       >
-                        <span className="text-[10px]">⚜</span>
+                        <span className="text-[10px]"> </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Stonebinder</TooltipContent>
@@ -485,7 +485,7 @@ export default function MapPanel({
                         onClick={onOpenTeleport}
                         className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
                       >
-                        <span className="text-[10px]">🌀</span>
+                        <span className="text-[10px]"> </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
@@ -500,7 +500,7 @@ export default function MapPanel({
                         onClick={onOpenTrainer}
                         className="h-5 w-5 flex items-center justify-center rounded bg-elvish/15 border border-elvish/40 shadow-[0_0_6px_hsl(var(--elvish)/0.3)] hover:bg-elvish/25 transition-colors"
                       >
-                        <span className="text-[10px]">🏛️</span>
+                        <span className="text-[10px]"> </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Renown Trainer</TooltipContent>
@@ -513,7 +513,7 @@ export default function MapPanel({
                         onClick={onOpenMarketplace}
                         className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
                       >
-                        <span className="text-[10px]">🏷️</span>
+                        <span className="text-[10px]"> </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Marketplace</TooltipContent>
@@ -567,10 +567,10 @@ export default function MapPanel({
                 </div>
                 <h4 className="font-display text-[10px] text-muted-foreground mt-2 mb-1">Services</h4>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🏨</span><span className="text-muted-foreground">Inn</span></div>
-                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🔨</span><span className="text-muted-foreground">Blacksmith</span></div>
-                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🪙</span><span className="text-muted-foreground">Vendor</span></div>
-                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🌀</span><span className="text-muted-foreground">Teleport</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]"> </span><span className="text-muted-foreground">Inn</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]"> </span><span className="text-muted-foreground">Blacksmith</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]"> </span><span className="text-muted-foreground">Vendor</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]"> </span><span className="text-muted-foreground">Teleport</span></div>
                 </div>
                 <h4 className="font-display text-[10px] text-muted-foreground mt-2 mb-1">Area Types</h4>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">

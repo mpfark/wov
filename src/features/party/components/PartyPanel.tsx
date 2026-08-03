@@ -44,17 +44,17 @@ export default function PartyPanel({
     p => p.id !== character.id && !members.some(m => m.character_id === p.id)
   );
 
-  const BUFF_ICONS: { key: keyof ActiveBuffs; emoji: string; label: string; color: string }[] = [
+  const BUFF_ICONS: { key: keyof ActiveBuffs; label: string; color: string }[] = [
     
-    { key: 'stealth', emoji: '🌑', label: 'Shadowstep', color: 'text-primary' },
-    { key: 'damageBuff', emoji: '✨', label: 'Arcane Surge', color: 'text-elvish' },
-    { key: 'battleCry', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },
-    { key: 'poison', emoji: '🐍', label: 'Envenom', color: 'text-elvish' },
-    { key: 'evasion', emoji: '🌫️', label: 'Evasion', color: 'text-primary' },
-    { key: 'ignite', emoji: '🔥', label: 'Ignite', color: 'text-dwarvish' },
-    { key: 'absorb', emoji: '🛡️', label: 'Force Shield', color: 'text-primary' },
-    { key: 'root', emoji: '🌿', label: 'Entangle', color: 'text-elvish' },
-    { key: 'sunder', emoji: '🔨', label: 'Sunder', color: 'text-dwarvish' },
+    { key: 'stealth', label: 'Shadowstep', color: 'text-primary' },
+    { key: 'damageBuff', label: 'Arcane Surge', color: 'text-elvish' },
+    { key: 'battleCry', label: 'Battle Cry', color: 'text-dwarvish' },
+    { key: 'poison', label: 'Envenom', color: 'text-elvish' },
+    { key: 'evasion', label: 'Evasion', color: 'text-primary' },
+    { key: 'ignite', label: 'Ignite', color: 'text-dwarvish' },
+    { key: 'absorb', label: 'Force Shield', color: 'text-primary' },
+    { key: 'root', label: 'Entangle', color: 'text-elvish' },
+    { key: 'sunder', label: 'Sunder', color: 'text-dwarvish' },
   ];
 
   return (
@@ -142,7 +142,7 @@ export default function PartyPanel({
                       {active.map(b => (
                         <Tooltip key={b.key}>
                           <TooltipTrigger asChild>
-                            <span className={`text-[10px] ${b.color} cursor-default`}>{b.emoji}</span>
+                            <span className={`text-[10px] ${b.color} cursor-default`}>{b.label}</span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="text-xs">
                             {b.label}

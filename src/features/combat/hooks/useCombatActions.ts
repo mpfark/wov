@@ -72,7 +72,7 @@ const T0_OPENER_TYPES = new Set([
   'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
-// (Queue-flavor "⏳ …" chat log was removed — the ability button's pulsing
+// (Queue-flavor chat log was removed — the ability button's pulsing
 // outline is the only pending-cast indicator now.)
 
 
@@ -151,10 +151,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const newDur = item.current_durability - 1;
       if (newDur <= 0) {
         if (item.item.rarity === 'unique') {
-          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`));
+          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} shatters and its essence returns to its origin...`));
           await supabase.from('character_inventory').delete().eq('id', item.id);
         } else {
-          p.addLogEvent(buildAbilityEvent(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
+          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
           await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null } as any).eq('id', item.id);
         }
       } else {
@@ -280,7 +280,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // Damage/heal abilities must be queued for the heartbeat tick.
     // No chat-log entry is emitted — the ability button itself pulses while
     // pending, which is sufficient visual feedback (and avoids the orphan
-    // ⏳ line landing on its own row when queued out of combat).
+    // queued line landing on its own row when queued out of combat).
     if (!isInstantBuff && !_fromTick) {
       const queueTargetId = resolvedT0TargetId ?? targetId;
       const targetName = queueTargetId

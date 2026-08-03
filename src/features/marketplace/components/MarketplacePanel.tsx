@@ -122,7 +122,6 @@ export default function MarketplacePanel({
     try {
       sendGlobal({
         kind: 'market_listed',
-        icon: '📜',
         text: `Market: ${characterName} lists ${result.data?.item_name} for ${price.toLocaleString()} gold.`,
         actor: characterName,
       });
@@ -475,7 +474,6 @@ export default function MarketplacePanel({
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="🏷️"
       title="Marketplace"
       subtitle={subtitle}
       headerActions={headerActions}

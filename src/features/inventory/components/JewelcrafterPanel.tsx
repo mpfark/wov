@@ -184,7 +184,7 @@ export default function JewelcrafterPanel({
   const repairRight = (
     <div className="gap-section text-[11px] text-muted-foreground">
       <p>The jeweler refurbishes <span className="text-elvish font-display">rings and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
-      <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
+      <p className="text-destructive"> Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
     </div>
   );
 
@@ -214,14 +214,14 @@ export default function JewelcrafterPanel({
       </div>
       {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
-        <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
+        <h3 className="t-label text-[11px]"> Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
           <div className="gap-group">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Amount:</span>
-              <span className="font-display text-dwarvish">🔩 {sellAmount} → {sellAmount}g</span>
+              <span className="font-display text-dwarvish"> {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
             <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || sellAmount < 1}
@@ -241,7 +241,7 @@ export default function JewelcrafterPanel({
         <GemPouch owned={ownedGems} />
       </div>
       <div className="gap-group">
-        <h3 className="t-label text-[11px]">🔩 Trade Salvage → Primary Gem</h3>
+        <h3 className="t-label text-[11px]"> Trade Salvage → Primary Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
           {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Apply gems to items via the Forge tab to add stats.
         </p>
@@ -286,7 +286,7 @@ export default function JewelcrafterPanel({
     <span className="inline-flex flex-col items-center gap-0.5">
       {npcName && (
         <span className="font-display text-elvish">
-          💬 {npcName}
+{npcName}
           {npcFlavor && <span className="text-muted-foreground italic"> — {npcFlavor}</span>}
         </span>
       )}
@@ -296,7 +296,7 @@ export default function JewelcrafterPanel({
           <span className="font-display tabular-nums text-primary">{gold}</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <span>🔩</span>
+          <span> </span>
           <span className="font-display tabular-nums text-dwarvish">{salvage}</span>
         </span>
       </span>
@@ -306,10 +306,10 @@ export default function JewelcrafterPanel({
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
       <TabsList className="w-full grid grid-cols-4">
-        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Refurbish</TabsTrigger>
-        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">💎 Forge</TabsTrigger>
-        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary">💠 Enhance</TabsTrigger>
-        <TabsTrigger value="gems" className="t-label text-[11px] data-[state=active]:text-primary">💠 Gemcutter</TabsTrigger>
+        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary"> Refurbish</TabsTrigger>
+        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary"> Forge</TabsTrigger>
+        <TabsTrigger value="enhance" className="t-label text-[11px] data-[state=active]:text-primary"> Enhance</TabsTrigger>
+        <TabsTrigger value="gems" className="t-label text-[11px] data-[state=active]:text-primary"> Gemcutter</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
@@ -365,7 +365,6 @@ export default function JewelcrafterPanel({
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="💎"
       title="Jewelcrafter"
       subtitle={subtitle}
       tabs={tabs}

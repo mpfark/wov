@@ -16,9 +16,9 @@ interface CreatureRow {
 }
 
 const MODE_LABELS: Record<string, string> = {
-  legacy_table: '📋 Legacy',
-  item_pool: '🎲 Item Pool',
-  salvage_only: '🔩 Salvage',
+  legacy_table: 'Legacy',
+  item_pool: 'Item Pool',
+  salvage_only: 'Salvage',
 };
 const MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
 
@@ -141,8 +141,8 @@ export default function CreatureLootModesTab() {
                   <td className={`px-3 py-1 ${RARITY_COLORS[c.rarity] || ''}`}>{c.name}</td>
                   <td className="text-center px-2 py-1">{c.level}</td>
                   <td className={`text-center px-2 py-1 ${RARITY_COLORS[c.rarity] || ''}`}>{c.rarity}</td>
-                  <td className="text-center px-2 py-1">{c.is_humanoid ? '✅' : '—'}</td>
-                  <td className="text-center px-2 py-1 text-muted-foreground">{c.loot_table_id ? '📋' : '—'}</td>
+                  <td className="text-center px-2 py-1">{c.is_humanoid ? '' : '—'}</td>
+                  <td className="text-center px-2 py-1 text-muted-foreground">{c.loot_table_id ? '' : '—'}</td>
                   <td className="text-center px-2 py-1">
                     <select
                       value={effectiveMode}

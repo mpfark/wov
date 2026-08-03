@@ -39,7 +39,7 @@ export default function MapItemDialog({
       <DialogContent className="sm:max-w-lg border-primary/30 bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-primary text-glow text-center tracking-wide">
-            🗺️ {inv.item.name}
+{inv.item.name}
           </DialogTitle>
           {region && (
             <DialogDescription className="text-xs italic text-center">

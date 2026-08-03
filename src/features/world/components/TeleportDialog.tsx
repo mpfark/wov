@@ -87,7 +87,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
   const subtitle = (
     <>
       {characterLevel >= 22 && !currentNode.is_teleport && (
-        <span className="text-primary font-display">⚡ Arcane Recall — </span>
+        <span className="text-primary font-display"> Arcane Recall — </span>
       )}
       Travel instantly to another teleport point. CP:{' '}
       <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>
@@ -100,7 +100,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
       {waymark && onReturnToWaymark && (
         <div className="flex items-center justify-between p-2 rounded border-2 border-primary/60 bg-primary/10 hover:bg-primary/20 transition-colors">
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm text-primary truncate">📍 Return to Waymark</p>
+            <p className="font-display text-sm text-primary truncate"> Return to Waymark</p>
             <p className="text-[10px] text-primary/80 truncate">
               {waymark.node.name}
               {waymark.region && <span> — {waymark.region.name}</span>}
@@ -113,14 +113,14 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
             onClick={() => onReturnToWaymark(waymarkCpCost)}
             className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAffordWaymark ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
           >
-            ⚡ {waymarkCpCost} CP
+{waymarkCpCost} CP
           </Button>
         </div>
       )}
 
       {partyDestinations.length > 0 && (
         <>
-          <p className="text-[10px] text-muted-foreground font-display pt-1">👥 Party Members</p>
+          <p className="text-[10px] text-muted-foreground font-display pt-1"> Party Members</p>
           {partyDestinations.map(d => {
             const canAfford = playerCp >= d.cpCost;
             return (
@@ -140,7 +140,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
                   onClick={() => onTeleport(d.node.id, d.cpCost)}
                   className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
                 >
-                  ⚡ {d.cpCost} CP
+{d.cpCost} CP
                 </Button>
               </div>
             );
@@ -168,7 +168,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
               onClick={() => onTeleport(d.node.id, d.cpCost)}
               className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
             >
-              ⚡ {d.cpCost} CP
+{d.cpCost} CP
             </Button>
           </div>
         );
@@ -180,7 +180,6 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="🌀"
       title="Teleport"
       subtitle={subtitle}
       size="md"

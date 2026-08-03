@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { NEUTRAL_AREA_COLOR } from '../utils/area-colors';
 
 export interface AreaTypeEntry {
   name: string;
-  emoji: string;
+  /** Stored `H S L` triplet used for map presentation. */
+  color: string;
 }
 
 export function useAreaTypes() {
@@ -11,15 +13,23 @@ export function useAreaTypes() {
   const [loading, setLoading] = useState(true);
 
   const fetchTypes = useCallback(async () => {
-    const { data } = await supabase.from('area_types').select('name, emoji').order('name');
-    if (data) setAreaTypes(data);
+    const { data } = await supabase.from('area_types').select('name, color').order('name');
+    if (data) {
+      setAreaTypes(
+        (data as { name: string; color: string | null }[]).map(t => ({
+          name: t.name,
+          color: t.color || NEUTRAL_AREA_COLOR,
+        })),
+      );
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchTypes(); }, [fetchTypes]);
 
-  const emojiMap: Record<string, string> = {};
-  for (const t of areaTypes) emojiMap[t.name] = t.emoji;
+  /** area_type name -> stored `H S L` triplet (neutral fallback when unknown). */
+  const colorMap: Record<string, string> = {};
+  for (const t of areaTypes) colorMap[t.name] = t.color;
 
-  return { areaTypes, loading, refetch: fetchTypes, emojiMap };
+  return { areaTypes, loading, refetch: fetchTypes, colorMap };
 }

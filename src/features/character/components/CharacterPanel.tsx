@@ -171,17 +171,16 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     return () => clearInterval(interval);
   }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, inspireActive]);
 
-  const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
+  const buffs: { label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
   if (isAtInn) {
-    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
+    buffs.push({ label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
   }
 
   if (foodActive) {
     const dur = BUFF_DURATIONS['Food'] || 120_000;
     const pct = Math.max(0, Math.min(100, ((foodBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🍞',
       label: 'Food',
       detail: `+${foodBuff!.flatRegen} regen`,
       color: 'text-elvish',
@@ -194,7 +193,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Eagle Eye'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((critBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🦅',
       label: 'Eagle Eye',
       detail: `Crit ${20 - critBuff!.bonus}-20`,
       color: 'text-primary',
@@ -207,7 +205,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Battle Cry'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((battleCryBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '📯',
       label: 'Battle Cry',
       detail: `DR ${Math.round(battleCryBuff!.damageReduction * 100)}%`,
       color: 'text-dwarvish',
@@ -220,7 +217,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Envenom'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((poisonBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🐍',
       label: 'Envenom',
       detail: '40% poison proc',
       color: 'text-elvish',
@@ -233,7 +229,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Arcane Surge'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((damageBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '✨',
       label: 'Arcane Surge',
       detail: `dmg ↑ (scales with INT)`,
       color: 'text-elvish',
@@ -247,7 +242,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = isDisengage ? 8_000 : (BUFF_DURATIONS['Cloak of Shadows'] || 15_000);
     const pct = Math.max(0, Math.min(100, ((evasionBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: isDisengage ? '🦘' : '🌫️',
       label: isDisengage ? 'Disengage' : 'Cloak of Shadows',
       detail: isDisengage ? '100% dodge + next hit bonus' : '50% dodge',
       color: isDisengage ? 'text-accent' : 'text-primary',
@@ -260,7 +254,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Ignite'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🌋',
       label: 'Ignite',
       detail: '40% burn proc',
       color: 'text-dwarvish',
@@ -273,7 +266,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
     const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🛡️',
       label: 'Force Shield',
       detail: `${absorbBuff!.shieldHp} HP`,
       color: 'text-primary',
@@ -286,7 +278,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Crescendo'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '✨',
       label: 'Crescendo',
       detail: `+${partyRegenBuff!.healPerTick} HP/3s`,
       color: 'text-elvish',
@@ -299,7 +290,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = inspireBuff!.durationMs || 90_000;
     const pct = Math.max(0, Math.min(100, ((inspireBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🎶',
       label: 'Inspire',
       detail: `+${inspireBuff!.hpPerTick} HP & +${inspireBuff!.cpPerTick} CP regen`,
       color: 'text-elvish',
@@ -322,7 +312,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
               className={`relative inline-flex items-center gap-0.5 px-1.5 py-1 rounded border border-border overflow-hidden text-sm font-display ${b.color} cursor-default`}
             >
               <span className={`absolute inset-0 ${b.bgColor} origin-left transition-transform duration-1000 ease-linear`} style={{ transform: `scaleX(${b.pct / 100})` }} />
-              <span className="relative z-10">{b.emoji}</span>
+              <span className="relative z-10">{b.label}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
@@ -426,7 +416,7 @@ export default function CharacterPanel({
                   badge={offHandIsShield ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="text-[9px] font-display bg-accent/20 text-accent-foreground border border-accent/30 rounded px-1 whitespace-nowrap cursor-help shrink-0">🛡️ Shield</span>
+                        <span className="text-[9px] font-display bg-accent/20 text-accent-foreground border border-accent/30 rounded px-1 whitespace-nowrap cursor-help shrink-0"> Shield</span>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="text-xs">+1 AC, +5% Crit Resistance, Block chance</TooltipContent>
                     </Tooltip>
@@ -448,7 +438,7 @@ export default function CharacterPanel({
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 gap-group rounded surface-row p-2">
                 <div className="t-label flex items-center gap-1">
-                  🧰 Material Pouch
+Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
                 <GemPouch owned={ownedGems} showEmpty={false} />
@@ -479,7 +469,7 @@ export default function CharacterPanel({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
-                                  {inv.is_pinned && <span className="text-primary mr-0.5">📌</span>}
+                                  {inv.is_pinned && <span className="text-primary mr-0.5"> </span>}
                                   {inv.item.name}
                                   {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
                                 </span>
@@ -500,7 +490,7 @@ export default function CharacterPanel({
                                   <TooltipTrigger asChild>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                                       onClick={() => onOpenMap(all[0].id)}>
-                                      <span className="text-xs">🗺️</span>
+                                      <span className="text-xs"> </span>
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="text-xs">Open map</TooltipContent>
@@ -551,7 +541,7 @@ export default function CharacterPanel({
                     const isOver = bagWeight > capacity;
                     return (
                       <h3 className="t-label">
-                        Items <span className="t-numeric text-xs ml-1">{inventoryItems.length}</span> — <span className={`t-numeric text-xs ${isOver ? 'text-destructive' : ''}`}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                        Items <span className="t-numeric text-xs ml-1">{inventoryItems.length}</span> — <span className={`t-numeric text-xs ${isOver ? 'text-destructive' : ''}`}>{bagWeight}/{capacity}{isOver ? '' : ''}</span>
                       </h3>
                     );
                   })()}
@@ -591,8 +581,8 @@ export default function CharacterPanel({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
-                              {inv.is_pinned && <span className="text-primary mr-0.5">📌</span>}
-                              {isBroken && <span className="text-destructive mr-1">⚒</span>}
+                              {inv.is_pinned && <span className="text-primary mr-0.5"> </span>}
+                              {isBroken && <span className="text-destructive mr-1"> </span>}
                               {inv.item.name}
                               {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
                               {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
@@ -802,7 +792,7 @@ export default function CharacterPanel({
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
                           {renown > 0 && (
-                            <p className="text-[10px] text-elvish mt-0.5">🏛️ +{renown} Renown trained</p>
+                            <p className="text-[10px] text-elvish mt-0.5"> +{renown} Renown trained</p>
                           )}
                         </TooltipContent>
                       </Tooltip>
@@ -814,7 +804,7 @@ export default function CharacterPanel({
                 {(character.bhp > 0 || (character.rp_total_earned || 0) > 0 || character.level >= 30) && (
                   <div className="gap-row">
                     <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
-                      <span className="font-display text-elvish">🏛️ Available Renown</span>
+                      <span className="font-display text-elvish"> Available Renown</span>
                       <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/5 rounded border border-elvish/10">
@@ -941,7 +931,7 @@ export default function CharacterPanel({
                   ];
 
                   const offenseRows: DerivedRow[] = [
-                    { label: 'Attack', value: `1d${weaponDie} ${dmgMod >= 0 ? '+' : ''}${dmgMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack damage: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}\nTo-hit uses DEX (separate from damage).${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
+                    { label: 'Attack', value: `1d${weaponDie} ${dmgMod >= 0 ? '+' : ''}${dmgMod}${isProficient ? '' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack damage: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}\nTo-hit uses DEX (separate from damage).${isProficient ? '\n Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${hitMod} DEX + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})\n(Damage scales from STR; accuracy from DEX.)` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critStanceActive ? `, +${critBonusAmount} Eagle Eye` : ''}`, buffed: critStanceActive, buffColor: 'text-primary' },
@@ -952,7 +942,7 @@ export default function CharacterPanel({
                   if (offHandIsWeapon) {
                     offenseRows.push({ label: 'Off-Hand', value: `${Math.round(OFFHAND_DAMAGE_MULT * 100)}% dmg`, tip: `Bonus attack each tick at ${Math.round(OFFHAND_DAMAGE_MULT * 100)}% of main-hand base damage (separate hit roll, can crit)` });
                   } else if (offHandIsShield) {
-                    offenseRows.push({ label: 'Off-Hand', value: '🛡️ Shield', tip: `+${SHIELD_AC_BONUS} AC, +${Math.round(SHIELD_ANTI_CRIT_BONUS * 100)}% Crit Resistance, Block chance (no bonus attack)` });
+                    offenseRows.push({ label: 'Off-Hand', value: 'Shield', tip: `+${SHIELD_AC_BONUS} AC, +${Math.round(SHIELD_ANTI_CRIT_BONUS * 100)}% Crit Resistance, Block chance (no bonus attack)` });
                   }
 
                   // Procs line
@@ -977,7 +967,7 @@ export default function CharacterPanel({
                     ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'Crit Resistance', value: wisAntiCritChance > 0 ? `${Math.round(wisAntiCritChance * 100)}%` : '–', tip: wisAntiCritChance > 0 ? `WIS bonus: chance to downgrade incoming crits${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for crit resistance' },
-                    ...(offHandIsShield ? [{ label: 'Block', value: `${Math.round(blockChance * 100)}% / ${blockAmount}${shieldWallActive ? ' ✦' : ''}`, tip: `${Math.round(blockChance * 100)}% chance to block, reducing damage by ${blockAmount} (DEX → chance, STR → amount)${shieldWallActive ? `\n⚓ Shield Wall: +${Math.round(swChanceBonus * 100)}% block chance (WIS), +${swAmountBonus} block amount (CON) — base ${Math.round(baseBlockChance * 100)}% / ${baseBlockAmount}` : ''}`, buffed: shieldWallActive, buffColor: 'text-dwarvish' }] : []),
+                    ...(offHandIsShield ? [{ label: 'Block', value: `${Math.round(blockChance * 100)}% / ${blockAmount}${shieldWallActive ? ' ✦' : ''}`, tip: `${Math.round(blockChance * 100)}% chance to block, reducing damage by ${blockAmount} (DEX → chance, STR → amount)${shieldWallActive ? `\n Shield Wall: +${Math.round(swChanceBonus * 100)}% block chance (WIS), +${swAmountBonus} block amount (CON) — base ${Math.round(baseBlockChance * 100)}% / ${baseBlockAmount}` : ''}`, buffed: shieldWallActive, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 

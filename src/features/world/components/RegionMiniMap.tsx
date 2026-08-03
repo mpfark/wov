@@ -34,7 +34,7 @@ export default function RegionMiniMap({
   visitedNodeIds,
   currentNodeId,
 }: Props) {
-  const { emojiMap } = useAreaTypes();
+  const { colorMap } = useAreaTypes();
 
   const regionNodes = useMemo(
     () => nodes.filter(n => n.region_id === regionId),
@@ -113,16 +113,16 @@ export default function RegionMiniMap({
       if (circles.length === 0) return;
       const { paths } = computeRegionOutline(circles);
       const area = areas.find(a => a.id === areaId);
-      const emoji = area ? emojiMap[area.area_type] || '📍' : '📍';
+      const areaColor = area ? colorMap[area.area_type] || '' : '';
       out.push({
         areaId,
         path: paths.join(' '),
-        fill: getAreaFillColor(emoji),
-        stroke: getAreaStrokeColor(emoji),
+        fill: getAreaFillColor(areaColor),
+        stroke: getAreaStrokeColor(areaColor),
       });
     });
     return out;
-  }, [regionNodes, positions, areas, emojiMap]);
+  }, [regionNodes, positions, areas, colorMap]);
 
   if (regionNodes.length === 0) {
     return (

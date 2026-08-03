@@ -142,7 +142,7 @@ export default function CharacterListColumn({
                     <span className="text-primary">Gold {char.gold}</span>
                   </div>
                   {nodeName && (
-                    <div className="text-[9px] text-muted-foreground/70 mt-1 truncate">📍 {nodeName}</div>
+                    <div className="text-[9px] text-muted-foreground/70 mt-1 truncate"> {nodeName}</div>
                   )}
                   <div className="h-1 bg-background rounded-full overflow-hidden border border-border/50 mt-1.5">
                     <div

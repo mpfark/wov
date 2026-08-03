@@ -104,10 +104,10 @@ export const SLOT_LABELS: Record<string, string> = {
 };
 
 export const EVENT_TYPE_ICONS: Record<string, string> = {
-  login: '🔑', combat_kill: '⚔️', combat_death: '💀', level_up: '🎉',
-  item_found: '🔍', item_loot: '💰', move: '🚶', search: '🔎',
-  party: '👥', vendor: '🛒', blacksmith: '🔨', revive: '💫',
-  admin: '🛡️', general: '📝',
+  login: '', combat_kill: '', combat_death: '', level_up: '',
+  item_found: '', item_loot: '', move: '', search: '',
+  party: '', vendor: '', blacksmith: '', revive: '',
+  admin: '', general: '',
 };
 
 export const EVENT_TYPE_COLORS: Record<string, string> = {

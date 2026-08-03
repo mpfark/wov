@@ -142,8 +142,8 @@ export function resolveCreatureKill(
   const tokens: string[] = [];
   if (!allCapped && displayReward.xp > 0) tokens.push(`+${displayReward.xp} XP`);
   if (goldEach > 0) tokens.push(`+${goldEach} gold`);
-  if (renownEach > 0) tokens.push(`+${renownEach} 🏛️ Renown`);
-  if (salvageEach > 0) tokens.push(`+${salvageEach} 🔩 salvage`);
+  if (renownEach > 0) tokens.push(`+${renownEach} Renown`);
+  if (salvageEach > 0) tokens.push(`+${salvageEach} salvage`);
 
   // Assemble the line — only the rewards gained, no penalty/bonus explanations
   const rewardsBody = tokens.length > 0
@@ -152,7 +152,7 @@ export function resolveCreatureKill(
 
   events.push({
     type: 'creature_kill',
-    message: `☠️ ${creature.name} has been slain${killerSuffix}!${rewardsBody}`,
+    message: `${creature.name} has been slain${killerSuffix}!${rewardsBody}`,
     creature_id: creature.id,
     creature_name: creature.name,
   });
@@ -240,7 +240,7 @@ export function resolveCreatureKill(
       const gemName = gemKey.charAt(0).toUpperCase() + gemKey.slice(1);
       events.push({
         type: 'gem_drop',
-        message: `💎 Found a ${gemName}!`,
+        message: `Found a ${gemName}!`,
         character_id: r.id,
       });
     }

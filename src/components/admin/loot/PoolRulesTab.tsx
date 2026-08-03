@@ -69,11 +69,11 @@ export default function PoolRulesTab() {
         <div className="grid grid-cols-2 gap-2 mt-2">
           <div className="p-2 bg-background/50 border border-border rounded text-xs">
             <strong>Humanoid</strong>
-            <p className="text-muted-foreground">🪙 Gold + 🎲 Item Pool + 🧴 Consumables</p>
+            <p className="text-muted-foreground"> Gold +Item Pool +Consumables</p>
           </div>
           <div className="p-2 bg-background/50 border border-border rounded text-xs">
             <strong>Non-Humanoid</strong>
-            <p className="text-muted-foreground">🔩 Salvage only (no item drops)</p>
+            <p className="text-muted-foreground"> Salvage only (no item drops)</p>
           </div>
         </div>
       </div>

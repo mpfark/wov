@@ -174,8 +174,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       const parts: string[] = [];
       if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
       if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
-      if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
-      if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
+      if (r.salvage_each > 0) parts.push(`${r.salvage_each}`);
+      if (r.bhp_each > 0) parts.push(`${r.bhp_each} Renown`);
       bus.emit('log:local', { event: buildRewardEvent(`${r.creature_name} was slain! Gained ${parts.join(', ')}.`, { effectType: 'offscreen_kill' }) });
     }
     // Salvage / gem drops live in character_materials. Realtime on that table
@@ -479,9 +479,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Unified global broadcast (`world-global`) ─────────────────
   // Receives flavor events visible to every online player:
-  //   - market_listed  — "📜 Market: X lists Y for Z gold"
-  //   - player_death   — "💀 X has fallen."
-  //   - boss_death     — "🌫️ <world emote>" (atmospheric narration, no boss name)
+  //   - market_listed  — "Market: X lists Y for Z gold"
+  //   - player_death   — "X has fallen."
+  //   - boss_death     — "<world emote>" (atmospheric narration, no boss name)
   // Self-echo is skipped via `actor === character.name`.
   const sendGlobal = useGlobalBroadcastSender();
   useGlobalBroadcastListener((p) => {
@@ -501,7 +501,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   useGameEvent(bus, 'player:death', () => {
     sendGlobal({
       kind: 'player_death',
-      icon: '💀',
       text: `${character.name} has fallen.`,
       actor: character.name,
     });
@@ -749,7 +748,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       // World emote — atmospheric narration, broadcast verbatim with no boss-name framing.
       sendGlobal({
         kind: 'boss_death',
-        icon: '🌫️',
         text,
       });
     },
@@ -1652,7 +1650,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {isDead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-polish-fade-in">
           <div className="text-center space-y-4">
-            <p className="font-display text-5xl text-destructive animate-pulse">💀</p>
+            <p className="font-display text-5xl text-destructive animate-pulse"> </p>
             <p className="font-display text-2xl text-destructive">You Have Fallen</p>
             <p className="font-display text-6xl text-destructive/80 tabular-nums">{deathCountdown}</p>
             <p className="text-sm text-muted-foreground">Respawning at the starting area...</p>

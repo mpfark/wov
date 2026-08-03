@@ -247,16 +247,16 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
                           <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
                           <span className="text-[9px] text-muted-foreground">HP {computed.hp}</span>
                           <span className="text-[9px] text-muted-foreground">AC {computed.ac}</span>
-                          {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
-                          {cr.is_humanoid && <Badge variant="outline" className="text-[9px]">🧑 Humanoid</Badge>}
+                          {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]"> Aggressive</Badge>}
+                          {cr.is_humanoid && <Badge variant="outline" className="text-[9px]"> Humanoid</Badge>}
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{cr.description}</p>
                         <div className="text-[9px] text-muted-foreground">
-                          📍 {getNodeName(cr.node_temp_id)}
+{getNodeName(cr.node_temp_id)}
                         </div>
                         {ltName && (
                           <div className="text-[9px] text-muted-foreground mt-0.5">
-                            📦 Loot: {ltName} ({Math.round((cr.drop_chance || 0.3) * 100)}% drop)
+Loot: {ltName} ({Math.round((cr.drop_chance || 0.3) * 100)}% drop)
                           </div>
                         )}
                       </Card>

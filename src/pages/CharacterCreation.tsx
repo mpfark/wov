@@ -271,7 +271,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
           {/* Wayfarer info card */}
           <div className="p-4 rounded-md border border-primary/40 bg-primary/5">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">🧭</span>
+              <span className="text-2xl"> </span>
               <div className="space-y-1">
                 <h3 className="font-display text-sm text-primary text-glow">You begin as a Wayfarer</h3>
                 <p className="text-xs text-muted-foreground leading-snug">

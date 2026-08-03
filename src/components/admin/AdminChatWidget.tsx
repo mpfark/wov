@@ -59,7 +59,7 @@ export default function AdminChatWidget() {
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === charId) return;
-        addMsg(`💬 ${payload.senderName}: ${payload.text}`);
+        addMsg(`${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
     // Also join the actual node channel for sending
@@ -79,7 +79,7 @@ export default function AdminChatWidget() {
     const channel = supabase.channel(`chat-whisper-${charId}`);
     channel
       .on('broadcast', { event: 'whisper' }, ({ payload }) => {
-        addMsg(`🤫 ${payload.senderName} whispers: ${payload.text}`);
+        addMsg(`${payload.senderName} whispers: ${payload.text}`);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -128,7 +128,7 @@ export default function AdminChatWidget() {
           .limit(1)
           .maybeSingle();
         if (!data) {
-          addMsg(`⚠️ Player "${targetName}" not found.`);
+          addMsg(`Player "${targetName}" not found.`);
           return;
         }
         const ch = supabase.channel(`chat-whisper-${data.id}`);
@@ -153,7 +153,7 @@ export default function AdminChatWidget() {
             cleanup();
           }
         });
-        addMsg(`🤫 To ${targetName}: ${msg}`);
+        addMsg(`To ${targetName}: ${msg}`);
       })();
       return;
     }
@@ -168,7 +168,7 @@ export default function AdminChatWidget() {
         });
       }
     }
-    addMsg(`💬 ${charName}: ${text}`);
+    addMsg(`${charName}: ${text}`);
   };
 
   if (!charId) return null;
@@ -195,7 +195,7 @@ export default function AdminChatWidget() {
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/50">
             <span className="text-xs font-display text-primary">
-              💬 Chat — {charName}
+Chat — {charName}
             </span>
             <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => setOpen(false)}>
               <X className="w-3 h-3" />
@@ -212,9 +212,6 @@ export default function AdminChatWidget() {
             {messages.map(m => (
               <p key={m.id} className={cn(
                 "text-[11px] leading-tight mb-1",
-                m.text.startsWith('🤫') ? 'text-purple-400' :
-                m.text.startsWith('💬') ? 'text-blue-300' :
-                m.text.startsWith('⚠️') ? 'text-yellow-400' :
                 'text-foreground'
               )}>
                 {m.text}

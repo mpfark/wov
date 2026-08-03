@@ -244,12 +244,12 @@ export default function NPCManager() {
           <SelectContent className="bg-popover border-border z-50">
             <SelectItem value="all" className="text-xs">All Roles</SelectItem>
             <SelectItem value="none" className="text-xs">None (regular)</SelectItem>
-            <SelectItem value="recruiter" className="text-xs">🏰 Recruiter</SelectItem>
-            <SelectItem value="heraldry" className="text-xs">📜 Herald</SelectItem>
-            <SelectItem value="trainer" className="text-xs">🏛️ Renown Trainer</SelectItem>
-            <SelectItem value="vendor" className="text-xs">🪙 Vendor</SelectItem>
-            <SelectItem value="blacksmith" className="text-xs">🔨 Blacksmith</SelectItem>
-            <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
+            <SelectItem value="recruiter" className="text-xs"> Recruiter</SelectItem>
+            <SelectItem value="heraldry" className="text-xs"> Herald</SelectItem>
+            <SelectItem value="trainer" className="text-xs"> Renown Trainer</SelectItem>
+            <SelectItem value="vendor" className="text-xs"> Vendor</SelectItem>
+            <SelectItem value="blacksmith" className="text-xs"> Blacksmith</SelectItem>
+            <SelectItem value="jewelcrafter" className="text-xs"> Jewelcrafter</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolSection>
@@ -285,11 +285,11 @@ export default function NPCManager() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">💬</span>
+                    <span className="text-sm"> </span>
                     <span className="font-display text-sm text-foreground">{npc.name}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-muted-foreground">📍 {getNodeName(npc.node_id)}</span>
+                    <span className="text-xs text-muted-foreground"> {getNodeName(npc.node_id)}</span>
                     {npc.dialogue && (
                       <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
                         "{npc.dialogue.slice(0, 40)}{npc.dialogue.length > 40 ? '...' : ''}"
@@ -331,12 +331,12 @@ export default function NPCManager() {
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
                       <SelectItem value="none" className="text-xs">None (regular NPC)</SelectItem>
-                      <SelectItem value="recruiter" className="text-xs">🏰 Order Recruiter</SelectItem>
-                      <SelectItem value="heraldry" className="text-xs">📜 Herald</SelectItem>
-                      <SelectItem value="trainer" className="text-xs">🏛️ Renown Trainer</SelectItem>
-                      <SelectItem value="vendor" className="text-xs">🪙 Vendor</SelectItem>
-                      <SelectItem value="blacksmith" className="text-xs">🔨 Blacksmith</SelectItem>
-                      <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
+                      <SelectItem value="recruiter" className="text-xs"> Order Recruiter</SelectItem>
+                      <SelectItem value="heraldry" className="text-xs"> Herald</SelectItem>
+                      <SelectItem value="trainer" className="text-xs"> Renown Trainer</SelectItem>
+                      <SelectItem value="vendor" className="text-xs"> Vendor</SelectItem>
+                      <SelectItem value="blacksmith" className="text-xs"> Blacksmith</SelectItem>
+                      <SelectItem value="jewelcrafter" className="text-xs"> Jewelcrafter</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[10px] text-muted-foreground mt-1">

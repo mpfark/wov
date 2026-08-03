@@ -72,10 +72,10 @@ export default function AdminGlobalSearch({ onNavigate }: AdminGlobalSearchProps
   };
 
   const TYPE_LABELS: Record<string, string> = {
-    creature: '🐾 Creature',
-    item: '⚔️ Item',
-    node: '🗺️ Node',
-    user: '👤 User',
+    creature: 'Creature',
+    item: 'Item',
+    node: 'Node',
+    user: 'User',
   };
 
   const grouped = results.reduce<Record<string, SearchResult[]>>((acc, r) => {

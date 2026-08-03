@@ -208,7 +208,6 @@ export default function HeraldryPanel({
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="📜"
       title={npcName ? `${npcName}, Herald` : 'Heraldry'}
       subtitle={npcFlavor || 'Claim, change, or steward a family name.'}
       tabs={
