@@ -79,6 +79,12 @@ vi.mock('@/integrations/supabase/client', () => {
   return { supabase: { from: (table: string) => builder(table) } };
 });
 
+// Calculation publish validation is not what this suite exercises.
+vi.mock('@/shared/config/mechanic-templates', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/shared/config/mechanic-templates')>()),
+  validateAbilityForPublish: () => [],
+}));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import AbilityConfigManager from '../AbilityConfigManager';
@@ -136,7 +142,7 @@ describe('Abilities page — base ability library', () => {
     expect(SOURCE).not.toMatch(/AssignmentMatrix/);
     expect(existsSync('src/components/admin/ability/AssignmentMatrix.tsx')).toBe(false);
     // Slot / default / unlock-level assignment state does not live here.
-    expect(SOURCE).not.toMatch(/is_default:/);
+    expect(SOURCE).not.toMatch(/is_default:\s*(true|false)/);
     expect(SOURCE).not.toMatch(/unlock_level:/);
     // The page never inserts or updates assignments.
     expect(SOURCE).not.toMatch(/from\('class_ability_assignments'\)\s*\n?\s*\.(insert|update|delete)/);

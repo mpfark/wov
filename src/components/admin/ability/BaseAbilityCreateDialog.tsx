@@ -133,6 +133,7 @@ export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated 
             <div className="col-span-2 space-y-1">
               <Label className="text-[11px]">Label</Label>
               <Input
+                aria-label="Label"
                 value={draft.label}
                 onChange={e => setDraft({
                   ...draft,
@@ -223,6 +224,7 @@ export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated 
           <div className="space-y-1">
             <Label className="text-[11px]">Description</Label>
             <Textarea
+              aria-label="Description"
               value={draft.description}
               rows={2}
               onChange={e => setDraft({ ...draft, description: e.target.value })}
