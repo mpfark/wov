@@ -911,6 +911,26 @@ Deno.serve(async (req) => {
       }
     };
 
+    // ── Equipped loadout (authoritative) ──────────────────────────
+    // `role_id -> ability_id` per caster. A queued technique is only allowed
+    // from the bar slot the character actually equipped; a role with no row
+    // resolves to that role's default.
+    const loadoutByCharacter: Record<string, Record<string, string>> = {};
+    if (pendingAbilities.length > 0) {
+      const casterIds = [...new Set(pendingAbilities.map(p => p.character_id).filter(Boolean))];
+      if (casterIds.length > 0) {
+        const { data: loadoutRows } = await db
+          .from('character_ability_loadout')
+          .select('character_id, role_id, ability_id')
+          .in('character_id', casterIds);
+        for (const r of loadoutRows || []) {
+          const bucket = loadoutByCharacter[r.character_id as string] ?? {};
+          bucket[r.role_id as string] = r.ability_id as string;
+          loadoutByCharacter[r.character_id as string] = bucket;
+        }
+      }
+    }
+
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
     const consumedBuffs: Record<string, string[]> = {};
     /** Actionable rows for casts rejected by the configuration preflight. */
@@ -934,6 +954,7 @@ Deno.serve(async (req) => {
         level: c.level || 1,
         abilityKey: pa.ability_key,
         abilityType: pa.ability_type,
+        equippedByRole: loadoutByCharacter[pa.character_id] ?? null,
       });
       if (auth.error || !auth.entry) {
         events.push({
@@ -970,7 +991,17 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const cpCost = pa.cp_cost || 0;
+      // Authoritative dispatch + cost: the queued row's `ability_type` and
+      // `cp_cost` are client claims and are never used past this point.
+      const paMech = auth.entry.mechanicKey;
+      const paDamageType = auth.entry.damageType;
+      /** Stamps the authoritative damage type on every event this cast emits. */
+      const pushAbilityEvent = (ev: Record<string, unknown>) => {
+        events.push(paDamageType && ev.damage_type === undefined
+          ? { ...ev, damage_type: paDamageType }
+          : ev);
+      };
+      const cpCost = auth.entry.cpCost;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
       const reservedTotal = sumReservedCp(member.c.reserved_buffs);
