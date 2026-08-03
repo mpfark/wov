@@ -11,9 +11,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 /** Every table operation the component performs, in order. */
-const ops: { table: string; op: string; payload?: unknown }[] = [];
+const ops = vi.hoisted(() => [] as { table: string; op: string; payload?: unknown }[]);
 
-const ABILITY_ROWS = [
+const ABILITY_ROWS = vi.hoisted(() => [
   {
     id: 'ab-fireball', ability_key: 'fireball', label: 'Fireball',
     description: 'Hurl fire.', tooltip: 'Fire damage.', cp_cost: 10,
@@ -38,14 +38,14 @@ const ABILITY_ROWS = [
     target_type: 'self', admin_notes: null, amount_calc: null,
     duration_calc: null, mechanic_calcs: {}, combat_text: {},
   },
-];
+]);
 
 /** Fireball is deliberately assigned to TWO classes — it must still list once. */
-const ASSIGNMENT_ROWS = [
+const ASSIGNMENT_ROWS = vi.hoisted(() => [
   { ability_id: 'ab-fireball', class_key: 'wizard', is_default: true, status: 'active', role: { slot: 0, name: 'Signature' } },
   { ability_id: 'ab-fireball', class_key: 'bard', is_default: false, status: 'active', role: { slot: 3, name: 'Pressure' } },
   { ability_id: 'ab-frost', class_key: 'wizard', is_default: false, status: 'active', role: { slot: 0, name: 'Signature' } },
-];
+]);
 
 vi.mock('@/integrations/supabase/client', () => {
   const abilitiesResult = { data: ABILITY_ROWS, error: null };
