@@ -81,12 +81,16 @@ export function useAbilityLoadout(
 
     setSaving(true);
     setError(null);
+    // Server-authoritative: the RPC re-checks ownership, alive, out-of-combat,
+    // stance state, class assignment and unlock level. Direct table writes are
+    // revoked, so this is the only mutation path.
     const { error: err } = isDefault
-      ? await supabase.from('character_ability_loadout').delete()
-          .eq('character_id', characterId).eq('role_id', roleId)
-      : await supabase.from('character_ability_loadout')
-          .upsert({ character_id: characterId, role_id: roleId, ability_id: abilityId },
-                   { onConflict: 'character_id,role_id' });
+      ? await supabase.rpc('clear_ability_loadout', {
+          _character_id: characterId, _role_id: roleId,
+        })
+      : await supabase.rpc('set_ability_loadout', {
+          _character_id: characterId, _role_id: roleId, _ability_id: abilityId,
+        });
     setSaving(false);
     if (err) {
       setError(err.message);
