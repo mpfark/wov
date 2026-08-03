@@ -66,8 +66,8 @@ beforeAll(async () => {
 beforeEach(() => {
   loader.resetServerAbilityCalcs();
   loader.setServerAbilityCalcs([
-    row({ abilityKey: 'rend', mechanicKey: 'dot_debuff', cpCost: 12, damageType: 'physical' }),
-    row({ abilityKey: 'lacerate', mechanicKey: 'dot_debuff', cpCost: 30, damageType: 'physical', isDefault: false }),
+    row({ abilityKey: 'rend', mechanicKey: 'power_strike', cpCost: 12, damageType: 'physical' }),
+    row({ abilityKey: 'lacerate', mechanicKey: 'power_strike', cpCost: 30, damageType: 'physical', isDefault: false }),
   ]);
 });
 
@@ -90,7 +90,7 @@ describe('Phase 3 — authoritative cost and damage type', () => {
   it('normalizes an unknown damage type to null rather than trusting it', () => {
     loader.resetServerAbilityCalcs();
     loader.setServerAbilityCalcs([
-      row({ abilityKey: 'rend', mechanicKey: 'dot_debuff', cpCost: 12, damageType: 'nonsense' }),
+      row({ abilityKey: 'rend', mechanicKey: 'power_strike', cpCost: 12, damageType: 'nonsense' }),
     ]);
     expect(loader.getServerAbilityCalcs('warrior', 'rend')?.damageType).toBeNull();
   });
