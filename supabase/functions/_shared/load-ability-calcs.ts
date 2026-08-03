@@ -25,6 +25,7 @@ import { type AbilityCalc, type CalcInputs, type CalcStat } from './formulas/abi
 import { getStatModifier } from './formulas/stats.ts';
 import { ABILITY_SEED, ABILITY_ROLE_SEED } from './config/ability-seed.ts';
 import { validateAbilityForPublish } from './config/mechanic-templates.ts';
+import { normalizeDamageType } from './combat/damage-types.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -110,6 +111,8 @@ function seedRegistry(): Record<string, ServerAbilityCalcEntry> {
       roleSlot: a.slot,
       isDefault: true,
       unlockLevel: SEED_UNLOCK_BY_SLOT[a.slot] ?? 1,
+      cpCost: Number(a.cp_cost ?? 0),
+      damageType: normalizeDamageType(a.damage_type),
     };
   }
   return out;
@@ -205,6 +208,9 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       roleSlot: row.role?.slot ?? 0,
       isDefault: Boolean(row.is_default),
       unlockLevel: Number(row.unlock_level ?? 1),
+      // Authoritative cast metadata: the client's queued `cp_cost` is ignored.
+      cpCost: Math.max(0, Math.round(Number(ability.cp_cost ?? 0))),
+      damageType: normalizeDamageType(ability.damage_type),
     };
   }
 
@@ -251,7 +257,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       }
       const { data, error } = await db
         .from('class_ability_assignments')
-        .select('class_key,ability_id,role_id,is_default,status,unlock_level,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
+        .select('class_key,ability_id,role_id,is_default,status,unlock_level,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs)');
       if (error) throw error;
       if (data && data.length > 0) {
         const result = setServerAbilityCalcs(data);
@@ -323,6 +329,13 @@ export function authorizeQueuedAbility(args: {
   level: number;
   abilityKey?: string | null;
   abilityType?: string | null;
+  /**
+   * The character's persisted loadout: `role_id -> ability_id`. When provided,
+   * the cast must match the equipped selection for that role (or the role's
+   * default when the character has made no selection). Omit for legacy /
+   * seed-only registries where role identity is unavailable.
+   */
+  equippedByRole?: Record<string, string> | null;
 }): AbilityAuthorization {
   const classKey = args.classKey || '';
   const claimed = (args.abilityKey || '').trim();
@@ -354,6 +367,31 @@ export function authorizeQueuedAbility(args: {
       error: `"${abilityKey}" unlocks at level ${entry.unlockLevel}`,
     };
   }
+  // ── Equipped-loadout enforcement ────────────────────────────────
+  // A technique may only be cast from the bar slot the character actually
+  // equipped. Skipped when the entry has no role identity (compiled seed).
+  const equipped = args.equippedByRole;
+  if (equipped && entry.roleId) {
+    const selectedId = equipped[entry.roleId] ?? null;
+    if (selectedId) {
+      if (selectedId !== entry.abilityId) {
+        const selected = getServerClassAbilities(classKey)
+          .find(e => e.abilityId === selectedId) ?? null;
+        return {
+          entry: null, abilityKey, roleSlot: entry.roleSlot,
+          error: selected
+            ? `"${abilityKey}" is not equipped in that slot`
+            : `the technique equipped in that slot is unavailable`,
+        };
+      }
+    } else if (!entry.isDefault) {
+      return {
+        entry: null, abilityKey, roleSlot: entry.roleSlot,
+        error: `"${abilityKey}" is not equipped in that slot`,
+      };
+    }
+  }
+
   return { entry, abilityKey: entry.abilityKey, roleSlot: entry.roleSlot, error: null };
 }
 
