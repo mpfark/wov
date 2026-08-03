@@ -11,6 +11,7 @@ import { Lock } from 'lucide-react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAbilityLoadout, type AbilityLoadoutState } from '@/hooks/useAbilityLoadout';
+import { damageTypeLabel, getDamageType } from '@/shared/combat/damage-types';
 
 interface Props {
   character: Character;
@@ -114,6 +115,8 @@ export default function AbilityLoadoutTab({ character, inCombat, loadout }: Prop
                         <p className="t-meta mt-0.5">{option.ability.tooltip}</p>
                         <p className="t-numeric text-[10px] text-primary/80 mt-1">
                           {option.ability.cpCost} CP · Lvl {option.ability.levelRequired}
+                          {getDamageType(option.damageType)
+                            && ` · ${damageTypeLabel(option.damageType)}`}
                         </p>
                       </TooltipContent>
                     </Tooltip>
