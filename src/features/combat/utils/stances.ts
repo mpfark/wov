@@ -8,7 +8,7 @@
  * Reservation cost = ceil(maxCp * tier%), minimum 5 CP.
  *   T1 = 10%  (Eagle Eye, Force Shield, Holy Shield)
  *   T2 = 15%  (Arcane Surge, Battle Cry)
- *   T3 = 20%  (Ignite, Envenom)
+ *   T3 = 20%  (Orbs of Fire, Envenom)
  *
  * Server is authoritative — clients call `activate_stance` / `drop_stance`
  * RPCs and read `character.reserved_buffs` for canonical state. Dropping a
@@ -35,7 +35,7 @@ export const STANCE_DEFS: StanceDef[] = [
   { key: 'arcane_surge', tier: 2, abilityType: 'damage_buff',   label: 'Arcane Surge' },
   { key: 'battle_cry',   tier: 2, abilityType: 'battle_cry',    label: 'Battle Cry' },
   { key: 'shield_wall',  tier: 2, abilityType: 'block_buff',    label: 'Shield Wall' },
-  { key: 'ignite',       tier: 3, abilityType: 'ignite_buff',   label: 'Ignite' },
+  { key: 'ignite',       tier: 3, abilityType: 'ignite_buff',   label: 'Orbs of Fire' },
   { key: 'envenom',      tier: 3, abilityType: 'poison_buff',   label: 'Envenom' },
 ];
 

@@ -51,7 +51,7 @@ export default function PartyPanel({
     { key: 'battleCry', label: 'Battle Cry', color: 'text-dwarvish' },
     { key: 'poison', label: 'Envenom', color: 'text-elvish' },
     { key: 'evasion', label: 'Evasion', color: 'text-primary' },
-    { key: 'ignite', label: 'Ignite', color: 'text-dwarvish' },
+    { key: 'ignite', label: 'Orbs of Fire', color: 'text-dwarvish' },
     { key: 'absorb', label: 'Force Shield', color: 'text-primary' },
     { key: 'root', label: 'Entangle', color: 'text-elvish' },
     { key: 'sunder', label: 'Sunder', color: 'text-dwarvish' },
