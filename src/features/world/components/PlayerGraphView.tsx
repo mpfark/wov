@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { GameNode, Area, useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world/utils/area-colors';
 import { computeRegionOutline, type Circle } from '@/features/world/utils/outline-geometry';
+import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
 import { markNodeVisited, primeVisitedNodes } from '@/features/world/utils/visitedNodesCache';
