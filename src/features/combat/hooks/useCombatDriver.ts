@@ -405,6 +405,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       ext.current.addLocalLogEvent(typeof line === 'string' ? legacyStringToEvent(line) : line);
     }
 
+    // Salvage / gem drops land in character_materials (no realtime on that
+    // table), so nudge mounted useMaterials hooks when this tick awarded any.
+    if (data.events?.some(ev =>
+      (ev.type === 'gem_drop' || ev.type === 'salvage_reward') &&
+      (!ev.character_id || ev.character_id === ext.current.character.id)
+    )) {
+      notifyMaterialsChanged(ext.current.character.id);
+    }
+
+
+
 
     // Character state
     if (result.characterUpdates) {
