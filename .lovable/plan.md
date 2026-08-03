@@ -79,9 +79,12 @@ validateAssignmentOverrides(baseRow, overrides) -> string[]
 resolveEffectiveAbility(baseRow, assignmentRow) -> { ability, errors }
 ```
 
-Authoritative TypeScript validation (mechanic-aware): allowed override keys, `scaling` roles that actually exist as tagged terms in the base calc, mechanic params belonging to the base mechanic, and `validateCalc` on any calc override.
+Authoritative TypeScript validation (mechanic-aware): allowed override keys, `scaling` roles that actually exist as tagged terms in the base calc, and mechanic params belonging to the base mechanic.
 
-**Validation-authority split (chosen approach 3, plus a parity test):** SQL validates *structural shape and primitive allowlists only* — `overrides` must be a JSON object, keys drawn from a small SQL allowlist (`label`, `description`, `tooltip`, `combat_text`, `scaling`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`), `scaling.*_attribute` in the six stat literals, coefficients numeric and finite, text within length limits. Whether a field is *supported by the selected mechanic* is decided by the shared TypeScript resolver used by client, server and admin preview. A parity test asserts the SQL key allowlist matches the TypeScript key union, failing loudly if either drifts. No mechanic-template duplication in SQL.
+**Override allowlist (narrow).** Exactly: `label`, `description`, `tooltip`, `combat_text`, `scaling` (`primary_attribute` / `secondary_attribute` only), `mechanic_calcs` (params of the base mechanic only). Whole-formula overrides — `amount_calc`, `duration_calc`, `interval_ms` — are **not** permitted: no repository evidence shows an existing class-specific need, so they remain base-ability properties. Unlock level, default/alternative state and lifecycle status stay as their existing dedicated assignment columns, not as JSON overrides. `cp_cost` is excluded (base property).
+
+**Validation-authority split (chosen approach 3, plus a parity test):** SQL validates *structural shape and primitive allowlists only* — `overrides` must be a JSON object, keys drawn from the SQL allowlist above, `scaling` containing only `primary_attribute`/`secondary_attribute` with values in the six stat literals, `combat_text` values as strings within length limits. Whether a field is *supported by the selected mechanic* is decided by the shared TypeScript resolver used by client, server and admin preview. A parity test asserts the SQL key allowlist matches the TypeScript key union, failing loudly if either drifts. No mechanic-template duplication in SQL.
+
 
 **Failure behaviour (deterministic, no silent partial merge):** if `validateAssignmentOverrides` returns any error, the resolver **discards the override object entirely** and resolves the assignment from its base configuration — never a partial deep-merge. It returns the errors alongside, and:
 
