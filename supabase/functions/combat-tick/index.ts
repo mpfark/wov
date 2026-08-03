@@ -15,7 +15,7 @@ import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs, authorizeQueuedAbility,
-  preflightAbilityConfig, getAbilityResolverMode,
+  preflightAbilityConfig, getAbilityResolverMode, drainAbilityOverrideAuditRows,
 } from "../_shared/load-ability-calcs.ts";
 import { ABILITY_CONFIG_FAILURE_TEXT } from "../_shared/combat/ability-magnitude.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
@@ -3193,6 +3193,7 @@ Deno.serve(async (req) => {
       const configRows = [
         ...abilityConfigFailures,
         ...drainAbilityCalcAuditRows(),
+        ...drainAbilityOverrideAuditRows(),
       ];
       const insertable = configRows.filter(r => r.character_id);
       if (insertable.length > 0) {

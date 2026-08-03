@@ -73,6 +73,26 @@ export const CLASS_CRIT_RANGE: Record<string, number> = {
 // ── Runtime registry (rows of the `classes` table) ───────────────
 
 /** Shape of a `classes` row, as far as gameplay math cares. */
+/**
+ * Per-class scaling attributes. `primary` is the class's defining attribute and
+ * `secondary` its support attribute; they tag the calc terms an ability
+ * assignment may retarget through `overrides.scaling`.
+ */
+export const CLASS_SCALING: Record<string, { primary: string; secondary: string | null }> = {
+  warrior: { primary: 'str', secondary: 'dex' },
+  wizard: { primary: 'int', secondary: null },
+  ranger: { primary: 'dex', secondary: 'wis' },
+  assassin: { primary: 'dex', secondary: 'cha' },
+  healer: { primary: 'wis', secondary: 'con' },
+  bard: { primary: 'cha', secondary: 'int' },
+  templar: { primary: 'wis', secondary: 'con' },
+};
+
+export function getClassScaling(classKey: string): { primary: string | null; secondary: string | null } {
+  const row = CLASS_SCALING[classKey];
+  return { primary: row?.primary ?? null, secondary: row?.secondary ?? null };
+}
+
 export interface ClassConfigRow {
   class_key: string;
   label?: string | null;
@@ -85,6 +105,8 @@ export interface ClassConfigRow {
   is_selectable?: boolean | null;
   sort_order?: number | null;
   status?: string | null;
+  primary_attribute?: string | null;
+  secondary_attribute?: string | null;
 }
 
 let registryLoaded = false;
@@ -112,6 +134,12 @@ export function setClassRegistry(rows: ClassConfigRow[]): void {
     if (row.level_bonuses) CLASS_LEVEL_BONUSES[key] = { ...row.level_bonuses };
     if (row.weapon_proficiencies && row.weapon_proficiencies.length > 0) {
       CLASS_WEAPON_AFFINITY[key] = [...row.weapon_proficiencies];
+    }
+    if (row.primary_attribute) {
+      CLASS_SCALING[key] = {
+        primary: row.primary_attribute,
+        secondary: row.secondary_attribute ?? null,
+      };
     }
     registryMeta[key] = {
       isPreClass: !!row.is_pre_class,

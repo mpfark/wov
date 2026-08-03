@@ -91,7 +91,17 @@ export interface GameLogEvent {
   amount?: number;
   amountKind?: LogAmountKind;
   damageType?: string;
+  /**
+   * Semantic classifier (`resist`, `stack`, `cleanse`, `xp`, …). Owns log
+   * classification, colour family, severity and effect handling. NEVER an
+   * ability identity — see `abilityKey`.
+   */
   effectType?: string;
+  /**
+   * Canonical `abilities.ability_key` of the ability that produced this line.
+   * Additive metadata only: no classifier reads it.
+   */
+  abilityKey?: string;
   /** Only set when it differs from the type's default severity. */
   severity?: LogSeverity;
   crit?: boolean;

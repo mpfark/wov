@@ -31,6 +31,13 @@ export interface ClassConfigDraft {
   crit_range: number;
   level_bonuses: Record<string, number>;
   weapon_proficiencies: string[];
+  /**
+   * Defining attribute of the class. Ability calc terms scaling off it are
+   * tagged `role: 'primary'`, which is what an assignment override may retarget.
+   */
+  primary_attribute?: string | null;
+  /** Support attribute; tags `role: 'secondary'` terms. Optional. */
+  secondary_attribute?: string | null;
 }
 
 export interface ClassValidation {
@@ -55,6 +62,18 @@ export function validateClassConfig(draft: ClassConfigDraft): ClassValidation {
     errors.push('Class key must be lowercase letters, digits and underscores.');
   }
   if (!draft.label?.trim()) errors.push('Label is required.');
+  if (!preClass && !draft.primary_attribute) {
+    errors.push('A primary attribute is required — ability scaling roles derive from it.');
+  }
+  for (const key of ['primary_attribute', 'secondary_attribute'] as const) {
+    const value = draft[key];
+    if (value && !CLASS_STAT_KEYS.includes(value as ClassStatKey)) {
+      errors.push(`${key.replace('_', ' ')} must be one of ${CLASS_STAT_KEYS.join(', ')}.`);
+    }
+  }
+  if (draft.primary_attribute && draft.primary_attribute === draft.secondary_attribute) {
+    errors.push('Primary and secondary attributes must differ.');
+  }
   if (!CLASS_STATUSES.includes(draft.status as ClassStatus)) {
     errors.push(`Status must be one of ${CLASS_STATUSES.join(', ')}.`);
   }

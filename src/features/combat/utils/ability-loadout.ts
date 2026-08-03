@@ -77,6 +77,7 @@ export function setLoadoutOptions(rows: AbilityConfigRow[]): void {
       damageType: row.ability.damage_type ?? null,
       isDefault: row.is_default,
       ability: {
+        abilityKey: row.ability.ability_key ?? '',
         label: row.ability.label,
         description: row.ability.description,
         tooltip: row.ability.tooltip,
@@ -84,7 +85,9 @@ export function setLoadoutOptions(rows: AbilityConfigRow[]): void {
         type: row.ability.mechanic_key as ClassAbility['type'],
         tier: row.role.slot, // normalized when the list is applied
         levelRequired: row.unlock_level,
+        damageType: row.ability.damage_type ?? null,
       },
+
       calc: toAbilityCalcEntry(row),
     });
     ROLE_OPTIONS[row.class_key] = roles;

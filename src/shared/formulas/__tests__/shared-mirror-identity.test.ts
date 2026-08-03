@@ -11,6 +11,8 @@ const PAIRS: Array<[string, string]> = [
   ['src/shared/formulas/ability-calc.ts', 'supabase/functions/_shared/formulas/ability-calc.ts'],
   ['src/shared/config/mechanic-templates.ts', 'supabase/functions/_shared/config/mechanic-templates.ts'],
   ['src/shared/combat/ability-magnitude.ts', 'supabase/functions/_shared/combat/ability-magnitude.ts'],
+  ['src/shared/config/effective-ability.ts', 'supabase/functions/_shared/config/effective-ability.ts'],
+
 ];
 
 /** Strip `.ts` extensions from relative import specifiers so both sides compare equal. */

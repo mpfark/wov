@@ -26,7 +26,7 @@ export function useClassRegistry(): { loaded: boolean } {
     (async () => {
       const { data, error } = await supabase
         .from('classes')
-        .select('class_key,label,base_hp,base_ac,crit_range,level_bonuses,weapon_proficiencies,is_pre_class,is_selectable,sort_order,status');
+        .select('class_key,label,base_hp,base_ac,crit_range,level_bonuses,weapon_proficiencies,is_pre_class,is_selectable,sort_order,status,primary_attribute,secondary_attribute');
       if (cancelled) return;
       if (error) {
         console.error('[class-registry] load failed, using fallback tables:', error);

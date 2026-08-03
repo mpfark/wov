@@ -789,6 +789,7 @@ export type Database = {
           created_at: string
           id: string
           is_default: boolean
+          overrides: Json
           role_id: string
           status: string
           unlock_level: number
@@ -800,6 +801,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean
+          overrides?: Json
           role_id: string
           status?: string
           unlock_level?: number
@@ -811,6 +813,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean
+          overrides?: Json
           role_id?: string
           status?: string
           unlock_level?: number
@@ -895,7 +898,9 @@ export type Database = {
           is_selectable: boolean
           label: string
           level_bonuses: Json
+          primary_attribute: string | null
           restrictions: Json
+          secondary_attribute: string | null
           sort_order: number
           status: string
           updated_at: string
@@ -914,7 +919,9 @@ export type Database = {
           is_selectable?: boolean
           label: string
           level_bonuses?: Json
+          primary_attribute?: string | null
           restrictions?: Json
+          secondary_attribute?: string | null
           sort_order?: number
           status?: string
           updated_at?: string
@@ -933,7 +940,9 @@ export type Database = {
           is_selectable?: boolean
           label?: string
           level_bonuses?: Json
+          primary_attribute?: string | null
           restrictions?: Json
+          secondary_attribute?: string | null
           sort_order?: number
           status?: string
           updated_at?: string

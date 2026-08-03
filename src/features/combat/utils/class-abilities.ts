@@ -1,4 +1,13 @@
+import { ABILITY_SEED } from '@/shared/config/ability-seed';
+
 export interface ClassAbility {
+  /**
+   * Canonical `abilities.ability_key` — the identity used for presentation,
+   * authored combat text, calc lookup and server authorization. Distinct from
+   * `type`, which is the *mechanic* (executable handler) key. Two abilities may
+   * share a mechanic (Fireball / Frost Bolt) without sharing identity.
+   */
+  abilityKey: string;
   label: string;
   description: string;
   /** Short one-liner shown in the center-panel ability tooltip. */
@@ -16,12 +25,18 @@ export interface ClassAbility {
     | 'fireball' | 'power_strike' | 'aimed_shot' | 'backstab' | 'smite' | 'cutting_words';
   tier: number;
   levelRequired: number;
+  /** Canonical damage type key (null for buffs, heals and utility). */
+  damageType: string | null;
 }
+
+/** Fallback literal without identity fields — they are derived from the seed. */
+type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType'>;
 
 // Phase 1 T0 abilities are class-specific (defined per-class below in CLASS_ABILITIES).
 // Focus Strike has been removed; there are no universal abilities at present.
 
-export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
+const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
+
   healer: [
     { label: 'Smite', description: 'Channel a burst of divine light at your target, scaling with WIS', tooltip: 'Damage one target. Scales with WIS.', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
     { label: 'Heal', description: 'Restore HP based on your Wisdom', tooltip: 'Restore your HP. Scales with WIS.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
@@ -72,6 +87,31 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Divine Challenge', description: 'Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.', tooltip: 'Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.', cpCost: 60, type: 'mitigation_buff', tier: 4, levelRequired: 20 },
   ],
 };
+
+/**
+ * Canonical identity for the compiled fallback: `ability_key` and `damage_type`
+ * come from `ABILITY_SEED` (the same rows seeded into `abilities`), matched by
+ * class + slot. Sealed mode therefore always carries a canonical `abilityKey`.
+ */
+const SEED_BY_SLOT = new Map(
+  ABILITY_SEED.map(s => [`${s.class_key}:${s.slot}`, s] as const),
+);
+
+export const CLASS_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntries(
+  Object.entries(FALLBACK_LITERALS).map(([classKey, list]) => [
+    classKey,
+    list.map((a): ClassAbility => {
+      const seed = SEED_BY_SLOT.get(`${classKey}:${a.tier}`);
+      return {
+        ...a,
+        abilityKey: seed?.ability_key ?? `${classKey}_slot_${a.tier}`,
+        damageType: seed?.damage_type ?? null,
+      };
+    }),
+  ]),
+);
+
+
 
 // ── Configurable ability registry (Phase 2b) ────────────────────
 //
@@ -164,6 +204,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
     }
     const list = byClass.get(row.class_key) ?? [];
     list.push({
+      abilityKey: row.ability.ability_key ?? '',
       label: row.ability.label,
       description: row.ability.description,
       tooltip: row.ability.tooltip,
@@ -171,7 +212,9 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       type: row.ability.mechanic_key as ClassAbility['type'],
       tier: row.role.slot, // provisional: normalized to a 0-based index below
       levelRequired: row.unlock_level,
+      damageType: row.ability.damage_type ?? null,
     });
+
     byClass.set(row.class_key, list);
   }
 
