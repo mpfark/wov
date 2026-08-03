@@ -98,7 +98,8 @@ export default function AbilityConfigManager() {
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
+          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs,
+          damage_type, ability_type, activation_mode
         )
 
       `);
