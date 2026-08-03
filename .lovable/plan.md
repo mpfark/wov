@@ -40,53 +40,73 @@ The reverted baseline already contains far more of the target architecture than 
 
 ---
 
-## Phase 1 — Inventory freeze + damage-type completion (recommended first)
+## Phase 1 — Inventory freeze + damage-type classification (recommended first)
 
-1. **Purpose / outcome.** No player-visible change. Produces a written, test-pinned inventory of all 35 abilities and gives every one an explicit authoritative `damage_type`.
+1. **Purpose / outcome.** No player-visible change. Produces a written, test-pinned inventory of all 35 abilities and settles what `damage_type` means for each one.
 2. **Current code.** `shared/config/ability-seed.ts` (+ `_shared` mirror), `abilities` table, `shared/combat/damage-types.ts`.
-3. **DB.** One additive migration: backfill `damage_type` on the 17 NULL rows to their existing implied type; add a validation-trigger rule requiring non-null `damage_type` for damaging mechanics. No column adds.
+3. **DB — damage-type nullability, classified from the actual 17 NULL rows.** No arbitrary types are assigned. The 17 NULLs, queried today, fall entirely into one category:
+   - **Damaging, requires an explicit type:** *none*. Every damaging ability (`ability_type='damage'`) already has a type (physical / fire / holy / psychic).
+   - **Non-damaging but applies a typed damaging effect:** already typed and unchanged — `rend` (physical DoT), `dissonance` + `natures_snare` (psychic/nature debuffs), `envenom` (poison), `ignite` (fire), `consecrate`/`holy_shield` (holy).
+   - **Genuinely non-damaging — NULL is correct and stays NULL:** `arcane_surge`, `battle_cry`, `cloak_of_shadows`, `crescendo`, `disengage`, `divine_aegis`, `divine_challenge`, `eagle_eye`, `force_shield`, `heal`, `inspire`, `purifying_light`, `second_wind`, `shadowstep`, `shield_wall`, `transfer_health`, `sunder_armor`. Note `arcane_surge` amplifies later damage but deals none itself, so it carries no type.
+   - **Validation, per category:** extend `validate_ability_row()` so `damage_type` is **required non-null** when the ability deals or applies damage (`ability_type='damage'`, or a DoT/damaging-effect mechanic: `dot_debuff`, `ignite_buff`, `poison_buff`, `consecrate`, `reactive_holy`, `ignite_consume`), and **required NULL** when `ability_type` is `heal`/`buff` with a non-damaging mechanic. Any value present must be a key in `DAMAGE_TYPE_REGISTRY`.
 4. **Server.** None.
 5. **Client.** None.
 6. **Admin.** None.
-7. **Compatibility.** Purely descriptive data; balance untouched.
-8. **Tests.** `ability-inventory.test.ts` snapshotting key/class/slot/mechanic/cp_cost/damage_type/calc for all 35; seed↔DB parity check.
-9. **Manual checks.** Every ability still fires; numbers in the log unchanged.
-10. **Out of scope.** Alternatives, ignite rework, admin edits.
-11. **Deploy/rollback.** Migration only; rollback = set the backfilled values back to NULL.
-12. **Later dependencies.** Phase 5 consumes the damage-type metadata.
+7. **Compatibility.** Descriptive metadata and a validation rule only; balance untouched.
+8. **Tests.** `ability-inventory.test.ts` snapshotting key/class/slot/mechanic/cp_cost/damage_type/calc for all 35; seed↔DB parity check; a table-driven test of the three damage-type categories.
+9. **Manual checks.** Every ability still fires; numbers in the log unchanged; admin cannot save a damaging ability with no type, nor a heal with one.
+10. **Out of scope.** Alternatives, ignite rework, admin field additions, event propagation (Phase 3).
+11. **Deploy/rollback.** Migration only; rollback = drop the added validation branch.
+12. **Later dependencies.** Phase 3 propagates this metadata into events.
 13. **Files.** `supabase/migrations/*`, `src/shared/config/ability-seed.ts`, `supabase/functions/_shared/config/ability-seed.ts`, new test.
 
-## Phase 2 — Close the server-authority gaps (G1, G2, G3, G9)
+## Phase 2 — Lock down loadout mutation before anything trusts it (G4)
 
-1. **Outcome.** Casts are fully server-derived; a tampered client cannot alter cost or mechanic.
-2. **Current code.** `combat-tick/index.ts` pending-ability loop; `load-ability-calcs.ts`.
-3. **DB.** None.
-4. **Server.** Take `cpCost` from `auth.entry.cpCost`. Dispatch handlers on `auth.entry.mechanicKey` instead of `pa.ability_type`. Extend `authorizeQueuedAbility` to require the ability be the character's equipped choice for its slot (equipped = explicit `character_ability_loadout` row, else the slot's `is_default`), reading loadout rows in the same tick query. Keep the `ability_type` legacy fallback behind a dated deprecation comment; it becomes removable once Phase 3 ships and telemetry shows zero uses.
-5. **Client.** `useCombatDriver` stops sending `cp_cost` (keeps sending `ability_key`; `ability_type` retained one release for rollback).
+**Order changed deliberately.** The previous draft made combat trust `character_ability_loadout` (Phase 2) before revoking direct client writes (Phase 3). That would ship a release where any authenticated client could write its own equipped row, bypassing the alive/out-of-combat/stance rules, and combat would honour it. Mutation authority therefore comes **first**; equipped-state enforcement (now Phase 3) only begins relying on those rows once they can no longer be forged.
+
+1. **Outcome.** Swapping a slot is validated by the server; illegal swaps fail even from a raw API call. No gameplay change yet (rows still only affect the client bar, exactly as today).
+2. **Current code.** `useAbilityLoadout.ts` direct table writes; `AbilityLoadoutTab.tsx`; `character_ability_loadout` (0 rows).
+3. **DB.** New `set_ability_loadout(_character_id, _role_id, _ability_id)` SECURITY DEFINER RPC (`search_path=public`) enforcing: ownership via `owns_character()`; character alive (`hp > 0`); no row in `combat_sessions` for the character or its party; the currently equipped ability for that slot is not an active stance in `reserved_buffs`/`stance_state`; the target ability is `status='active'`, assigned to the character's class on that exact role, and `unlock_level <= level`. Add `clear_ability_loadout(_character_id, _role_id)` for reverting to default. Then `REVOKE INSERT, UPDATE, DELETE ON public.character_ability_loadout FROM authenticated` (SELECT retained), and `GRANT EXECUTE` on both RPCs to `authenticated`.
+4. **Server.** None beyond the RPCs.
+5. **Client.** `useAbilityLoadout` calls the RPCs and surfaces their error text instead of writing the table.
 6. **Admin.** None.
-7. **Compatibility.** Characters with no loadout rows resolve to `is_default`, which is today's behaviour for all 20 characters.
-8. **Tests.** Extend `ability-identity-authorization.test.ts`: spoofed cost ignored, spoofed mechanic ignored, non-equipped ability rejected, unlock level respected, default fallback works.
-9. **Manual checks.** All five bar buttons behave identically; CP deductions unchanged.
-10. **Out of scope.** UI changes, new abilities.
-11. **Deploy/rollback.** Deploy edge function first, then client. Rollback = redeploy previous function.
-12. **Dependencies.** Phase 3 removes the legacy `ability_type` field.
-13. **Files.** `supabase/functions/combat-tick/index.ts`, `supabase/functions/_shared/load-ability-calcs.ts`, `src/features/combat/hooks/useCombatDriver.ts`.
-
-## Phase 3 — Authoritative loadout swaps (G4)
-
-1. **Outcome.** Swapping a slot is validated by the server; illegal swaps fail even from a raw API call.
-2. **Current code.** `useAbilityLoadout.ts` direct table writes; `AbilityLoadoutTab.tsx`.
-3. **DB.** New `set_ability_loadout(character_id, role_id, ability_id)` SECURITY DEFINER RPC (`search_path=public`) enforcing ownership, alive, not in an active `combat_session`, target slot's stance not active in `reserved_buffs`, ability active + assigned to the class + unlocked. Revoke direct INSERT/UPDATE/DELETE on `character_ability_loadout` from `authenticated`, keep SELECT.
-4. **Server.** None beyond the RPC.
-5. **Client.** `useAbilityLoadout` calls the RPC and surfaces its error text.
-6. **Admin.** None.
-7. **Compatibility.** Empty loadout stays valid (defaults).
-8. **Tests.** RPC rejection cases; hook error propagation.
-9. **Manual checks.** Try swapping while in combat, while dead, and with a stance up — each is refused with a clear reason.
-10. **Out of scope.** New alternatives.
-11. **Deploy/rollback.** Migration then client. Rollback = restore grants.
-12. **Dependencies.** Phase 4 relies on this enforcement.
+7. **Compatibility.** 0 existing rows, so nothing to migrate; an empty loadout stays valid and means "use the slot default".
+8. **Tests.** RPC rejection cases (not owner, dead, in combat, stance up, wrong class, locked level, retired ability); direct table write is denied; hook error propagation.
+9. **Manual checks.** Try swapping while in combat, while dead, and with that slot's stance active — each refused with a clear reason. A direct API write to the table fails.
+10. **Out of scope.** Combat reading these rows (Phase 3), new alternatives.
+11. **Deploy/rollback.** Migration, then client. Rollback = re-grant the direct DML; the client's RPC path keeps working.
+12. **Dependencies.** Phase 3 and Phase 4 both depend on this landing first.
 13. **Files.** migration, `src/hooks/useAbilityLoadout.ts`, `src/features/character/components/AbilityLoadoutTab.tsx`.
+
+## Phase 3 — Full server authority: identity, cost, mechanic, equipped state, damage type (G1, G2, G3, G5, G9)
+
+1. **Outcome.** Casts are entirely server-derived; a tampered client cannot alter cost, mechanic, damage type, or which ability is equipped. Player damage events start carrying authoritative damage types.
+2. **Current code.** `combat-tick/index.ts` pending-ability loop; `_shared/load-ability-calcs.ts` (`ServerAbilityCalcEntry`, `authorizeQueuedAbility`, the live registry query, the compiled-seed prime); `_shared/combat/damage-types.ts`; the tick event builders.
+3. **DB.** None.
+4. **Registry work — exact additions.** `ServerAbilityCalcEntry` already carries `abilityKey`, `mechanicKey`, `classKey`, `abilityId`, `roleId`, `roleSlot`, `isDefault`, `unlockLevel`. Add two fields: `cpCost: number` and `damageType: DamageTypeKey | null`.
+   - **Live registry query** (`class_ability_assignments` select in `load-ability-calcs.ts`): add `cp_cost` and `damage_type` to the nested `ability:abilities(...)` selection; map them onto the entry, running `damage_type` through `normalizeDamageType`.
+   - **Compiled fallback** (`_shared/config/ability-seed.ts` + client mirror): each seed row already carries `cp_cost`; add `damage_type` to the seed shape and populate all 35 from the Phase 1 inventory. The seed-prime path fills `cpCost`/`damageType` the same way, so sealed mode and cold start answer identically. `abilityId`/`roleId` remain null for seed entries (already the case) — see the fallback policy section for what that restricts.
+   - Extend `ability-seed-publish.test.ts` / `validateAbilityForPublish` so a row missing `cp_cost` or with an unknown `damage_type` cannot enter the registry.
+5. **Server — authorization then composition.** The order is strict: (a) resolve `ability_key` → registry entry for the character's real class; (b) verify active, class-assigned, unlocked; (c) verify **equipped**: the entry's `abilityId` equals the character's `character_ability_loadout` row for that `roleId`, or, when no row exists, the entry is that role's `is_default`. Only after (a)–(c) is the authoritative cast composed from `entry.cpCost`, `entry.mechanicKey`, `entry.damageType`, `entry.roleSlot`, and the entry's calcs. Loadout rows are read in the existing tick character query.
+   - `const cpCost = pa.cp_cost || 0` is replaced by `entry.cpCost`. Client-sent `cp_cost`, `ability_type` and any client `damage_type` are ignored entirely (never read after this phase).
+   - Handler dispatch switches from `pa.ability_type` to `entry.mechanicKey`.
+   - **Invalid / retired / wrong-class explicit selections must not silently fall back.** The loadout lookup is a plain read of `character_ability_loadout` (no inner join that can drop the row), so an explicit row is always seen. If the referenced ability is inactive, retired, no longer assigned to that role, or now above the character's level, the cast is **refused with a distinct reason** (`equipped_ability_unavailable`) and the Spellbook surfaces "this slot needs re-selecting" — it does not quietly resolve to the default.
+6. **Server — damage-type propagation (metadata only).** The authoritative `entry.damageType` is threaded into every applicable player-originated event construction path in `combat-tick/index.ts` and its shared builders:
+   - direct player ability damage (T0 nuke/strike branch, `power_strike`/`aimed_shot`/`backstab`/`fireball`/`smite`/`judgment`/`cutting_words`/`grand_finale`),
+   - multi-hit and execute branches (`multi_attack`, `execute_attack`),
+   - the Ignite-consume finisher (`ignite_consume`),
+   - timed-effect application and each tick of player-applied effects written to `active_effects` (`dot_debuff`, `ignite_buff`, `poison_buff`, `consecrate`, `reactive_holy`) — the type is stamped at application and re-emitted per tick,
+   - the same paths inside `combat-catchup` for offscreen DoT ticks,
+   - `tick-event-builder.ts` / `log-event.ts` `damageType` field, already present for creature casts.
+   Autoattacks keep their existing weapon-derived typing; abilities with NULL type emit no type, which renders exactly as today. **This adds metadata only: no resistance lookup, no mitigation change, no formula change.** A parity test asserts identical damage numbers before and after.
+7. **Client.** `useCombatDriver` stops sending `cp_cost` and `ability_type`. Log formatting reads `damageType` from the event (already supported).
+8. **Admin.** None.
+9. **Compatibility.** Characters with no loadout rows resolve to `is_default` — today's behaviour for all 20 characters. Legacy payload handling is described in the alias section of Phase 5.
+10. **Tests.** Extend `ability-identity-authorization.test.ts`: spoofed cost ignored, spoofed mechanic ignored, spoofed damage type ignored, non-equipped ability rejected, explicit-but-retired selection refused rather than defaulted, unlock level respected, default fallback works. Add a damage-type propagation test per event path and a numeric parity test.
+11. **Manual checks.** All five bar buttons behave identically; CP deductions unchanged; combat log now names the damage type on ability hits and DoT ticks; damage numbers match a pre-phase recording.
+12. **Out of scope.** Resistances, new abilities, UI redesign.
+13. **Deploy/rollback.** Requires Phase 2 already live. Deploy edge functions first, then client. Rollback = redeploy the previous functions (the client still sends nothing extra, which the old function tolerates by defaulting cost from the registry-primed seed).
+14. **Files.** `supabase/functions/combat-tick/index.ts`, `supabase/functions/combat-catchup/index.ts`, `supabase/functions/_shared/load-ability-calcs.ts`, `supabase/functions/_shared/config/ability-seed.ts`, `src/shared/config/ability-seed.ts`, `src/features/combat/events/{tick-event-builder,log-event}.ts`, `src/features/combat/hooks/useCombatDriver.ts`.
 
 ## Phase 4 — Frost Bolt: the first real alternative (G6)
 
