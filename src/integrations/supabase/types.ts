@@ -2993,6 +2993,10 @@ export type Database = {
         Args: { _ability_id: string; _character_id: string; _role_id: string }
         Returns: undefined
       }
+      set_assignment_default: {
+        Args: { _assignment_id: string }
+        Returns: undefined
+      }
       set_character_combat_trace: {
         Args: { _character_id: string; _enabled: boolean }
         Returns: undefined

@@ -33,6 +33,8 @@ import {
 } from '@/shared/formulas/ability-calc';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import { CLASS_LABELS } from '@/lib/game-data';
+import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
+import AssignmentMatrix from './ability/AssignmentMatrix';
 
 interface Row {
   assignment_id: string;
@@ -53,6 +55,10 @@ interface Row {
   /** False for player-selectable alternatives on the same role. */
   is_default: boolean;
   interval_ms: number | null;
+  /** Canonical damage type key, or null for non-damaging abilities. */
+  damage_type: string | null;
+  ability_type: string;
+  activation_mode: string;
   amount_calc: AbilityCalc | null;
   duration_calc: AbilityCalc | null;
   mechanic_calcs: Record<string, AbilityCalc>;
@@ -61,6 +67,8 @@ interface Row {
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
+const ABILITY_TYPES = ['damage', 'heal', 'buff', 'debuff'] as const;
+const ACTIVATION_MODES = ['instant', 'queued', 'stance'] as const;
 
 
 export default function AbilityConfigManager() {
@@ -92,7 +100,8 @@ export default function AbilityConfigManager() {
         role:class_ability_roles ( id, slot, name ),
         ability:abilities (
           id, ability_key, label, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs
+          mechanic_key, status, interval_ms, amount_calc, duration_calc, mechanic_calcs,
+          damage_type, ability_type, activation_mode
         )
 
       `);
@@ -120,6 +129,9 @@ export default function AbilityConfigManager() {
         is_default: !!r.is_default,
         role_id: r.role.id,
         interval_ms: r.ability.interval_ms,
+        damage_type: r.ability.damage_type ?? null,
+        ability_type: r.ability.ability_type ?? 'buff',
+        activation_mode: r.ability.activation_mode ?? 'instant',
         amount_calc: r.ability.amount_calc,
         duration_calc: r.ability.duration_calc,
         mechanic_calcs: (r.ability.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
@@ -189,18 +201,38 @@ export default function AbilityConfigManager() {
       amount_calc: draft.amount_calc as any,
       duration_calc: draft.duration_calc as any,
       mechanic_calcs: draft.mechanic_calcs as any,
+      damage_type: draft.damage_type,
+      ability_type: draft.ability_type,
+      activation_mode: draft.activation_mode,
       status: draft.ability_status,
     }).eq('id', draft.ability_id);
 
     const { error: assignmentError } = await supabase
       .from('class_ability_assignments')
-      .update({ unlock_level: draft.unlock_level, status: draft.assignment_status })
+      .update({
+        unlock_level: draft.unlock_level,
+        status: draft.assignment_status,
+        role_id: draft.role_id,
+      })
       .eq('id', draft.assignment_id);
     setSaving(false);
 
     const err = abilityError || assignmentError;
     if (err) { toast.error(err.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
+    await load();
+  };
+
+  /** Promote an alternative to its slot default (atomic, admin-only RPC). */
+  const promoteDefault = async () => {
+    if (!draft) return;
+    setSaving(true);
+    const { error } = await supabase.rpc('set_assignment_default' as any, {
+      _assignment_id: draft.assignment_id,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${draft.label} is now the default for ${draft.role_name}.`);
     await load();
   };
 
@@ -320,9 +352,10 @@ export default function AbilityConfigManager() {
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           {!draft ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              Select an ability to edit its text, cost and magnitude formulas.
-            </p>
+            <AssignmentMatrix
+              rows={rows}
+              onSelect={id => { const row = rows.find(r => r.assignment_id === id); if (row) select(row); }}
+            />
           ) : (
             <div className="p-4 space-y-4 max-w-3xl">
               <Card className="bg-card/80">
@@ -380,6 +413,71 @@ export default function AbilityConfigManager() {
                         onChange={e => setDraft({ ...draft, interval_ms: e.target.value === '' ? null : Number(e.target.value) })}
                         className="h-8 text-xs"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Ability type</Label>
+                      <Select value={draft.ability_type} onValueChange={v => setDraft({ ...draft, ability_type: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ABILITY_TYPES.map(t => (
+                            <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Activation</Label>
+                      <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ACTIVATION_MODES.map(m => (
+                            <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Damage type</Label>
+                      <Select
+                        value={draft.damage_type ?? DAMAGE_TYPE_NONE}
+                        onValueChange={v => setDraft({ ...draft, damage_type: v === DAMAGE_TYPE_NONE ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">None (non-damaging)</SelectItem>
+                          {DAMAGE_TYPES.map(d => (
+                            <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[11px]">Slot (role)</Label>
+                      <Select value={draft.role_id} onValueChange={v => setDraft({ ...draft, role_id: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {roles
+                            .filter(r => r.class_key === draft.class_key)
+                            .sort((a, b) => a.slot - b.slot)
+                            .map(r => (
+                              <SelectItem key={r.id} value={r.id} className="text-xs">
+                                Slot {r.slot} · {r.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[11px]">Default</Label>
+                      {draft.is_default ? (
+                        <p className="h-8 flex items-center text-[11px] text-muted-foreground">
+                          Default for this slot.
+                        </p>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8 text-[11px]" disabled={saving} onClick={promoteDefault}>
+                          Make default for {draft.role_name}
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-1">
