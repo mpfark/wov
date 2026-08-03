@@ -2583,6 +2583,10 @@ export type Database = {
         Returns: undefined
       }
       assassin_take_contract: { Args: { _character_id: string }; Returns: Json }
+      assert_loadout_swap_allowed: {
+        Args: { _character_id: string; _role_id: string }
+        Returns: Record<string, unknown>
+      }
       award_class_bond: {
         Args: { _amount: number; _character_id: string; _class: string }
         Returns: number
@@ -2638,6 +2642,10 @@ export type Database = {
       }
       check_family_name: { Args: { _display: string }; Returns: Json }
       cleanup_ground_loot: { Args: never; Returns: undefined }
+      clear_ability_loadout: {
+        Args: { _character_id: string; _role_id: string }
+        Returns: undefined
+      }
       clear_stances: { Args: { p_character_id: string }; Returns: Json }
       collect_marketplace_payouts: {
         Args: { p_character_id: string }
@@ -2980,6 +2988,10 @@ export type Database = {
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
+      }
+      set_ability_loadout: {
+        Args: { _ability_id: string; _character_id: string; _role_id: string }
+        Returns: undefined
       }
       set_character_combat_trace: {
         Args: { _character_id: string; _enabled: boolean }
