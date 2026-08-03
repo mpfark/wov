@@ -30,7 +30,6 @@ export type Database = {
           description: string
           duration_calc: Json | null
           effect_config: Json
-          emoji: string
           id: string
           interval_ms: number | null
           label: string
@@ -56,7 +55,6 @@ export type Database = {
           description?: string
           duration_calc?: Json | null
           effect_config?: Json
-          emoji?: string
           id?: string
           interval_ms?: number | null
           label: string
@@ -82,7 +80,6 @@ export type Database = {
           description?: string
           duration_calc?: Json | null
           effect_config?: Json
-          emoji?: string
           id?: string
           interval_ms?: number | null
           label?: string
@@ -281,19 +278,16 @@ export type Database = {
         Row: {
           color: string
           created_at: string
-          emoji: string
           name: string
         }
         Insert: {
           color?: string
           created_at?: string
-          emoji?: string
           name: string
         }
         Update: {
           color?: string
           created_at?: string
-          emoji?: string
           name?: string
         }
         Relationships: []
@@ -897,7 +891,6 @@ export type Database = {
           created_at: string
           crit_range: number
           description: string
-          icon: string
           is_pre_class: boolean
           is_selectable: boolean
           label: string
@@ -917,7 +910,6 @@ export type Database = {
           created_at?: string
           crit_range?: number
           description?: string
-          icon?: string
           is_pre_class?: boolean
           is_selectable?: boolean
           label: string
@@ -937,7 +929,6 @@ export type Database = {
           created_at?: string
           crit_range?: number
           description?: string
-          icon?: string
           is_pre_class?: boolean
           is_selectable?: boolean
           label?: string
@@ -1868,7 +1859,6 @@ export type Database = {
           category: string
           created_at: string
           description: string
-          icon: string
           key: string
           name: string
           rarity: string
@@ -1881,7 +1871,6 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
-          icon?: string
           key: string
           name: string
           rarity?: string
@@ -1894,7 +1883,6 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
-          icon?: string
           key?: string
           name?: string
           rarity?: string
