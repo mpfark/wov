@@ -2585,7 +2585,7 @@ export type Database = {
       assassin_take_contract: { Args: { _character_id: string }; Returns: Json }
       assert_loadout_swap_allowed: {
         Args: { _character_id: string; _role_id: string }
-        Returns: Record<string, unknown>
+        Returns: undefined
       }
       award_class_bond: {
         Args: { _amount: number; _character_id: string; _class: string }
