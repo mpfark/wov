@@ -162,14 +162,15 @@ One alternative per class per release, each reusing an existing mechanic handler
 - **Never overrides live config.** `setAbilityRegistry` already mutates in place only when rows load; the fallback is only read before the first successful load, when the payload is empty, or when `ABILITY_RESOLVER_MODE='sealed'`.
 - **Not a second authority.** No runtime path may prefer it over loaded configuration, and no new code may read it directly for magnitudes — magnitudes come from the evaluator only.
 - **Stays synchronized.** A test asserts `class-abilities.ts` matches `ABILITY_SEED` on label, `cp_cost`, mechanic, slot and unlock level for every ability. It is updated in the same commit as any seed/rename change (including the Phase 5 rename and the Phase 4 addition).
-- **Authorizes only verifiable behaviour.** In fallback mode the server authorizes only the slot **defaults** — alternatives (Frost Bolt) are not castable while running on the compiled fallback, because equipped-state cannot be verified against live config. This is stated in the Phase 2 authorization tests.
+- **Authorizes only verifiable behaviour.** In fallback mode the server authorizes only the slot **defaults** — alternatives (Frost Bolt) are not castable while running on the compiled fallback, because seed entries carry no `abilityId`/`roleId` and so equipped-state cannot be verified. This is stated in the Phase 3 authorization tests.
 
 ## Risks and contradictions
 
-- The request's Phase 1/2 largely already exist; implementing them again would duplicate working code. This plan replaces them with the specific closing of G1–G3.
+- The request's Phase 1/2 largely already exist; implementing them again would duplicate working code. This plan replaces them with the specific closing of G1–G3 and G5 in Phase 3.
 - `ignite` currently names both a stance and an effect. Phase 5 resolves the ambiguity by renaming the ability, not the effect — the reverse would require migrating live `active_effects` rows.
-- Removing the mechanic-hint fallback is a wire-protocol change; safe only after Phase 3 telemetry shows no legacy payloads.
+- Removing the mechanic-hint fallback (G9) is a wire-protocol change; safe only after Phase 3 telemetry shows no legacy payloads.
 - Frost Bolt being castable requires live config, so the sealed-mode fallback intentionally reduces wizards to Fireball. Worth confirming that is acceptable during an emergency.
+- Because Phase 3 refuses unavailable explicit selections instead of defaulting, every future retirement of an assigned ability must repoint or clear loadout rows first (see the Phase 4 rollback).
 
 ## Open items (no longer blocking)
 
