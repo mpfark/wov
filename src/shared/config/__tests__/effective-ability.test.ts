@@ -31,6 +31,7 @@ const base: BaseAbilityRow = {
       { source: 'stat', stat: 'dex', mult: 1000 },
       { source: 'level', mult: 1 / 3 },
     ],
+    unit: 'hp',
   },
   duration_calc: null,
   interval_ms: null,
@@ -80,12 +81,12 @@ describe('overrides are narrow and fail closed', () => {
   it('rejects fields outside the allowlist', () => {
     expect(validateAssignmentOverrides(base, { cp_cost: 1 }).join(' '))
       .toContain('not an overridable field');
-    expect(validateAssignmentOverrides(base, { amount_calc: { base: 0, terms: [] } }).join(' '))
+    expect(validateAssignmentOverrides(base, { amount_calc: { base: 0, terms: [], unit: 'hp' } }).join(' '))
       .toContain('not an overridable field');
   });
 
   it('rejects mechanic params that do not belong to the mechanic', () => {
-    expect(validateAssignmentOverrides(base, { mechanic_calcs: { nonsense: { base: 0, terms: [] } } }).join(' '))
+    expect(validateAssignmentOverrides(base, { mechanic_calcs: { nonsense: { base: 0, terms: [], unit: 'hp' } } }).join(' '))
       .toContain('not a parameter of mechanic');
   });
 
