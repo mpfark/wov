@@ -67,16 +67,41 @@ export default function AbilityAuthorDialog({
     setSaving(true);
 
     // Inherit the taxonomy columns from an existing ability on the same mechanic.
-    const { data: template } = await supabase
+    const { data: sourceAbility } = await supabase
       .from('abilities')
-      .select('ability_type, damage_type, target_type, activation_mode, effect_config, interval_ms')
+      .select('ability_type, damage_type, target_type, activation_mode, effect_config, interval_ms, cp_reserve_pct, amount_calc, duration_calc, mechanic_calcs')
       .eq('mechanic_key', draft.mechanic_key)
       .limit(1)
       .maybeSingle();
 
-    if (!template) {
+    if (!sourceAbility) {
       setSaving(false);
       toast.error('No existing ability uses that mechanic — cannot infer its type columns.');
+      return;
+    }
+
+    const { data: createdTemplate, error: templateError } = await supabase.from('ability_templates').insert({
+      template_key: draft.ability_key,
+      name: `${draft.label} template`,
+      description: `Mechanical template for ${draft.label}`,
+      mechanic_key: draft.mechanic_key,
+      ability_type: sourceAbility.ability_type,
+      target_type: sourceAbility.target_type,
+      activation_mode: sourceAbility.activation_mode,
+      cp_cost: draft.cp_cost,
+      cp_reserve_pct: sourceAbility.cp_reserve_pct,
+      amount_calc: sourceAbility.amount_calc,
+      duration_calc: sourceAbility.duration_calc,
+      interval_ms: sourceAbility.interval_ms,
+      effect_config: sourceAbility.effect_config,
+      mechanic_calcs: sourceAbility.mechanic_calcs,
+      status: 'draft',
+      admin_notes: `Authored for ${classLabel} · ${roleName}`,
+    }).select('id').single();
+
+    if (templateError || !createdTemplate) {
+      setSaving(false);
+      toast.error(templateError?.message ?? 'Template insert failed');
       return;
     }
 
@@ -86,12 +111,18 @@ export default function AbilityAuthorDialog({
       description: draft.description,
       tooltip: draft.tooltip || draft.description,
       mechanic_key: draft.mechanic_key,
-      ability_type: template.ability_type,
-      damage_type: template.damage_type,
-      target_type: template.target_type,
-      activation_mode: template.activation_mode,
+      template_id: createdTemplate.id,
+      ability_type: sourceAbility.ability_type,
+      damage_type: sourceAbility.damage_type,
+      target_type: sourceAbility.target_type,
+      activation_mode: sourceAbility.activation_mode,
       cp_cost: draft.cp_cost,
-      effect_config: template.effect_config,
+      cp_reserve_pct: sourceAbility.cp_reserve_pct,
+      amount_calc: sourceAbility.amount_calc,
+      duration_calc: sourceAbility.duration_calc,
+      interval_ms: sourceAbility.interval_ms,
+      effect_config: sourceAbility.effect_config,
+      mechanic_calcs: sourceAbility.mechanic_calcs,
       combat_text: {},
       status: 'draft',
       admin_notes: `Authored for ${classLabel} · ${roleName}`

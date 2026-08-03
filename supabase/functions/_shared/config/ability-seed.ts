@@ -64,6 +64,8 @@ export interface AbilitySeed {
   /** Class + role slot this ability is assigned to by default. */
   class_key: string;
   slot: number;
+  /** Final class-assignment magnitude multiplier; durations are unaffected. */
+  class_scale?: number;
 }
 
 const stat = (
@@ -498,9 +500,9 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Holy damage to one target. Scales with WIS.',
     mechanic_key: 'smite', ability_type: 'damage', damage_type: 'holy',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
-    amount_calc: spellT0('wis', 0.8), duration_calc: null, interval_ms: null,
+    amount_calc: spellT0('wis'), duration_calc: null, interval_ms: null,
     effect_config: { stat: 'wis', resolved_by: 'combat-tick' }, combat_text: {},
-    class_key: 'templar', slot: 0,
+    class_key: 'templar', slot: 0, class_scale: 0.8,
   },
   {
     ability_key: 'holy_shield', label: 'Holy Shield', description: 'Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.',
@@ -555,15 +557,14 @@ export const ABILITY_SEED: AbilitySeed[] = [
     amount_calc: {
       version: 2, base: 2,
       terms: [stat('wis', 1, { clampAtZero: true })],
-      finalMult: 0.65,
       rounding: 'none', floor: null, cap: null, unit: 'hp',
-      note: 'WIS heal/burn per tick, x0.65 balance rider',
+      note: 'WIS heal/burn per tick before class scaling',
     },
     duration_calc: { base: 6000, terms: [{ source: 'stat_threshold', stat: 'con', mult: 2000, steps: [{ at: 3, add: 1 }, { at: 6, add: 1 }] }], cap: 10000, unit: 'ms', note: 'CON tick ladder × 2000ms interval' },
     interval_ms: 2000,
     effect_config: { magnitude_stat: 'wis', magnitude_reduction: 0.35, resolved_by: 'combat-tick' },
     combat_text: {},
-    class_key: 'templar', slot: 3,
+    class_key: 'templar', slot: 3, class_scale: 0.65,
   },
   {
     ability_key: 'divine_challenge', label: 'Divine Challenge', description: 'Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.',
