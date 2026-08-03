@@ -468,7 +468,7 @@ export default function AbilityConfigManager() {
                       </Select>
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-[11px]">Slot role</Label>
+                      <Label className="text-[11px]">Default</Label>
                       {draft.is_default ? (
                         <p className="h-8 flex items-center text-[11px] text-muted-foreground">
                           Default for this slot.
