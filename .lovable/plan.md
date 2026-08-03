@@ -131,11 +131,14 @@ Existing assignments have empty overrides, so they are unaffected throughout dep
 - Fallback chain: no authored text → ability-key flavor → mechanic flavor.
 - Base abilities appear exactly once on the Abilities page (no class grouping, no matrix); assignments/overrides only editable via Class Config.
 - Numerical parity: every seeded assignment resolves to identical values pre/post migration across level 1–42 and modifier −2..+10.
-- Scaling: explicit attribute override resolves; "Primary"/"Secondary" admin shortcuts store the concrete attribute; untagged terms are never rewritten.
+- Scaling: explicit attribute override resolves; "Primary"/"Secondary" shortcuts resolve through the class's explicit `primary_attribute`/`secondary_attribute` and are stored as the concrete attribute; untagged terms are never rewritten; a tagged term's `mult` is always preserved.
+- No coefficient override exists: an override carrying `primary_coefficient`/`secondary_coefficient`, `amount_calc`, `duration_calc` or `interval_ms` is rejected by both SQL and the resolver.
 - `chance_on_hit`/`block_chance`/Envenom params are unaffected by `scaling` overrides.
+- Identity protection: `ability_key` cannot be changed after creation; a `mechanic_key` change is blocked while active or assigned (UI and DB trigger).
 - Invalid or unsupported override → whole override discarded, base config used, error recorded, deterministic result; admin save blocked and preview shows the errors.
 - Admin preview and server resolution agree for every seeded assignment (shared-resolver parity, extending `shared-mirror-identity.test.ts`).
 - Existing characters keep the same five effective abilities; Fireball default / Frost Bolt alternative preserved.
+
 
 ## Explicitly out of scope
 
