@@ -37,6 +37,7 @@ export type Database = {
           mechanic_key: string
           status: string
           target_type: string
+          template_id: string
           tooltip: string
           updated_at: string
         }
@@ -62,6 +63,7 @@ export type Database = {
           mechanic_key: string
           status?: string
           target_type?: string
+          template_id: string
           tooltip?: string
           updated_at?: string
         }
@@ -87,7 +89,85 @@ export type Database = {
           mechanic_key?: string
           status?: string
           target_type?: string
+          template_id?: string
           tooltip?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abilities_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "ability_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ability_templates: {
+        Row: {
+          activation_mode: string
+          admin_notes: string | null
+          allowed_overrides: Json
+          amount_calc: Json | null
+          ability_type: string
+          cp_cost: number
+          cp_reserve_pct: number | null
+          created_at: string
+          description: string
+          duration_calc: Json | null
+          effect_config: Json
+          id: string
+          interval_ms: number | null
+          mechanic_calcs: Json
+          mechanic_key: string
+          name: string
+          status: string
+          target_type: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          activation_mode?: string
+          admin_notes?: string | null
+          allowed_overrides?: Json
+          amount_calc?: Json | null
+          ability_type?: string
+          cp_cost?: number
+          cp_reserve_pct?: number | null
+          created_at?: string
+          description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
+          id?: string
+          interval_ms?: number | null
+          mechanic_calcs?: Json
+          mechanic_key: string
+          name: string
+          status?: string
+          target_type?: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          activation_mode?: string
+          admin_notes?: string | null
+          allowed_overrides?: Json
+          amount_calc?: Json | null
+          ability_type?: string
+          cp_cost?: number
+          cp_reserve_pct?: number | null
+          created_at?: string
+          description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
+          id?: string
+          interval_ms?: number | null
+          mechanic_calcs?: Json
+          mechanic_key?: string
+          name?: string
+          status?: string
+          target_type?: string
+          template_key?: string
           updated_at?: string
         }
         Relationships: []
@@ -786,6 +866,7 @@ export type Database = {
         Row: {
           ability_id: string
           class_key: string
+          class_scale: number
           created_at: string
           id: string
           is_default: boolean
@@ -797,6 +878,7 @@ export type Database = {
         Insert: {
           ability_id: string
           class_key: string
+          class_scale?: number
           created_at?: string
           id?: string
           is_default?: boolean
@@ -808,6 +890,7 @@ export type Database = {
         Update: {
           ability_id?: string
           class_key?: string
+          class_scale?: number
           created_at?: string
           id?: string
           is_default?: boolean

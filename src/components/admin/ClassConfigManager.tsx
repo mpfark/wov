@@ -31,7 +31,24 @@ import {
 } from '@/shared/formulas/class-validate';
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string }
-interface AssignmentRow { class_key: string; role_id: string; status: string }
+interface AssignmentRow {
+  id: string;
+  class_key: string;
+  role_id: string;
+  status: string;
+  unlock_level: number;
+  is_default: boolean;
+  class_scale: number;
+  ability: {
+    id: string;
+    label: string;
+    description: string;
+    tooltip: string;
+    damage_type: string | null;
+    mechanic_key: string;
+    template: { name: string; template_key: string; allowed_overrides: unknown } | null;
+  } | null;
+}
 
 export default function ClassConfigManager() {
   const [rows, setRows] = useState<ClassConfigDraft[]>([]);
@@ -49,7 +66,13 @@ export default function ClassConfigManager() {
     const [classRes, roleRes, assignRes, charRes] = await Promise.all([
       supabase.from('classes').select('*').order('sort_order'),
       supabase.from('class_ability_roles').select('id, class_key, slot, name'),
-      supabase.from('class_ability_assignments').select('class_key, role_id, status'),
+      supabase.from('class_ability_assignments').select(`
+        id, class_key, role_id, status, unlock_level, is_default, class_scale,
+        ability:abilities (
+          id, label, description, tooltip, damage_type, mechanic_key,
+          template:ability_templates ( name, template_key, allowed_overrides )
+        )
+      `),
       supabase.from('characters').select('class'),
     ]);
     setLoading(false);
@@ -73,7 +96,7 @@ export default function ClassConfigManager() {
     }));
     setRows(mapped);
     setRoles((roleRes.data as RoleRow[]) ?? []);
-    setAssignments((assignRes.data as AssignmentRow[]) ?? []);
+    setAssignments((assignRes.data as unknown as AssignmentRow[]) ?? []);
 
     const tally: Record<string, number> = {};
     for (const c of charRes.data ?? []) {
@@ -123,6 +146,9 @@ export default function ClassConfigManager() {
   const save = async () => {
     if (!draft) return;
     if (validation.errors.length) { toast.error(validation.errors[0]); return; }
+    const invalidScale = assignments.find(a =>
+      a.class_key === draft.class_key && (!Number.isFinite(a.class_scale) || a.class_scale <= 0 || a.class_scale > 10));
+    if (invalidScale) { toast.error('Class Scale must be greater than 0 and no more than 10.'); return; }
     setSaving(true);
     const { error } = await supabase.from('classes').update({
       label: draft.label,
@@ -137,10 +163,36 @@ export default function ClassConfigManager() {
       level_bonuses: draft.level_bonuses as never,
       weapon_proficiencies: draft.weapon_proficiencies,
     }).eq('class_key', draft.class_key);
+    if (error) { setSaving(false); toast.error(error.message); return; }
+
+    const classAssignments = assignments.filter(a => a.class_key === draft.class_key && a.ability);
+    for (const assignment of classAssignments) {
+      const { error: abilityError } = await supabase.from('abilities').update({
+        label: assignment.ability!.label,
+        description: assignment.ability!.description,
+        tooltip: assignment.ability!.tooltip,
+        damage_type: assignment.ability!.damage_type,
+      }).eq('id', assignment.ability!.id);
+      if (abilityError) { setSaving(false); toast.error(abilityError.message); return; }
+
+      const { error: assignmentError } = await supabase.from('class_ability_assignments').update({
+        class_scale: assignment.class_scale,
+        unlock_level: assignment.unlock_level,
+      }).eq('id', assignment.id);
+      if (assignmentError) { setSaving(false); toast.error(assignmentError.message); return; }
+    }
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(`${draft.label} saved — players pick it up on next reload.`);
     await load();
+  };
+
+  const patchAssignment = (id: string, patch: Partial<AssignmentRow>) => {
+    setAssignments(current => current.map(a => a.id === id ? { ...a, ...patch } : a));
+  };
+
+  const patchAbility = (id: string, patch: Partial<NonNullable<AssignmentRow['ability']>>) => {
+    setAssignments(current => current.map(a =>
+      a.id === id && a.ability ? { ...a, ability: { ...a.ability, ...patch } } : a));
   };
 
   const toggleProf = (tag: string) => {
@@ -329,6 +381,88 @@ export default function ClassConfigManager() {
                       })}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Class abilities */}
+              <Card className="bg-card/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display">Ability slots</CardTitle>
+                  <p className="text-[11px] text-muted-foreground">
+                    Class-facing identity and balance. Mechanical formulas stay on the linked template.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {roles
+                    .filter(role => role.class_key === draft.class_key)
+                    .sort((a, b) => a.slot - b.slot)
+                    .map(role => {
+                      const options = assignments
+                        .filter(a => a.role_id === role.id && a.ability)
+                        .sort((a, b) => Number(b.is_default) - Number(a.is_default));
+                      return (
+                        <div key={role.id} className="rounded-md border border-border/70 p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px]">Slot {role.slot}</Badge>
+                            <span className="text-xs font-medium">{role.name}</span>
+                          </div>
+                          {options.length === 0 ? (
+                            <p className="text-xs text-amber-400">No ability assigned.</p>
+                          ) : options.map(assignment => {
+                            const ability = assignment.ability!;
+                            return (
+                              <div key={assignment.id} className="rounded border border-border/50 bg-muted/15 p-3 space-y-2">
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                  <Badge variant={assignment.is_default ? 'secondary' : 'outline'} className="text-[9px]">
+                                    {assignment.is_default ? 'Default' : 'Alternative'}
+                                  </Badge>
+                                  <span>Template: {ability.template?.name ?? ability.mechanic_key}</span>
+                                  <span className="font-mono">{ability.template?.template_key ?? ability.mechanic_key}</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                  <div className="col-span-2 space-y-1">
+                                    <Label className="text-[10px]">Display name</Label>
+                                    <Input className="h-8 text-xs" value={ability.label}
+                                      onChange={e => patchAbility(assignment.id, { label: e.target.value })} />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-[10px]">Damage type</Label>
+                                    <Input className="h-8 text-xs" value={ability.damage_type ?? ''}
+                                      onChange={e => patchAbility(assignment.id, { damage_type: e.target.value || null })} />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-[10px]">Class Scale</Label>
+                                    <Input type="number" min="0.01" max="10" step="0.05" className="h-8 text-xs"
+                                      value={assignment.class_scale}
+                                      onChange={e => patchAssignment(assignment.id, { class_scale: Number(e.target.value) })} />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-[10px]">Unlock level</Label>
+                                    <Input type="number" min="1" max="42" className="h-8 text-xs"
+                                      value={assignment.unlock_level}
+                                      onChange={e => patchAssignment(assignment.id, { unlock_level: Number(e.target.value) })} />
+                                  </div>
+                                  <div className="col-span-3 space-y-1">
+                                    <Label className="text-[10px]">Tooltip</Label>
+                                    <Input className="h-8 text-xs" value={ability.tooltip}
+                                      onChange={e => patchAbility(assignment.id, { tooltip: e.target.value })} />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[10px]">Description / flavour</Label>
+                                  <Textarea rows={2} className="text-xs" value={ability.description}
+                                    onChange={e => patchAbility(assignment.id, { description: e.target.value })} />
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">
+                                  Effective: {ability.damage_type ? `${ability.damage_type} · ` : ''}
+                                  {ability.mechanic_key} · ×{assignment.class_scale} · level {assignment.unlock_level}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                 </CardContent>
               </Card>
 
