@@ -90,15 +90,44 @@ The reverted baseline already contains far more of the target architecture than 
 
 ## Phase 4 — Frost Bolt: the first real alternative (G6)
 
-Adds one `abilities` row (`frost_bolt`, `damage_type='frost'`, identical calc/CP/targeting to `fireball`) plus one `class_ability_assignments` row on the wizard's Signature slot with `is_default=false`. No new mechanic, no chill/slow. Proves DB → server authorization → equipped resolution → Spellbook UI → admin. Tests: only the equipped one casts; the other is refused by the server. Manual: equip Frost Bolt, confirm frost wording and that Fireball is refused.
+1. **Outcome.** Every existing wizard immediately sees a second option in the Signature slot. Fireball stays equipped by default; Frost Bolt must be deliberately equipped.
+2. **Current code.** `abilities` / `class_ability_assignments`; `ABILITY_SEED`; Spellbook; `combat-tick` T0 branch.
+3. **DB.** Insert one `abilities` row `frost_bolt` — same `mechanic_key` as `fireball`, identical `amount_calc`, `cp_cost`, `target_type`, `activation_mode`, only `damage_type='frost'` and its own label/description/combat text. Insert one `class_ability_assignments` row on the wizard Signature role with `unlock_level` **equal to Fireball's** and `is_default=false`, `status='active'`. No admin activation gate.
+4. **Server.** No new mechanic. Frost Bolt resolves through the same T0 handler; only the authoritative `damage_type` differs. Explicitly **no** chill, slow or other frost status.
+5. **Client.** None beyond what Phase 3 already renders; add the frost damage-type colour/wording to the log formatter if not already present.
+6. **Admin.** Visible and editable via `AbilityConfigManager` (full assignment editing arrives in Phase 6).
+7. **Compatibility.** Wizards with no loadout row keep casting Fireball (the default). Equipping Frost Bolt writes one loadout row.
+8. **Tests.** Only the equipped ability casts; the unequipped sibling is refused server-side; both keys resolve to identical damage numbers with different damage types.
+9. **Manual checks.** As a wizard, open Spellbook → Signature slot shows Fireball (equipped) and Frost Bolt; equip Frost Bolt, cast, confirm frost wording and identical damage; confirm the bar no longer offers Fireball.
+10. **Out of scope.** Frost status effects, resistances, other classes' alternatives.
+11. **Deploy/rollback.** Migration only. Rollback = set the assignment `status='retired'`; any loadout rows pointing at it fall back to the slot default.
+12. **Dependencies.** Requires Phases 2 and 3.
+13. **Files.** migration, `src/shared/config/ability-seed.ts` + `_shared` mirror, possibly `src/features/combat/utils/cast-flavor.ts`.
 
-## Phase 5 — Separate stances from timed effects (G7)
+## Phase 5 — Orbs of Fire (stance) and Ignite (timed effect) (G7)
 
-Move `ignite` and `envenom` from `activation_mode='stance'` to timed effects backed by `active_effects`, with stances remaining in `reserved_buffs`/`stance_state`. This is a **mechanic change, not a conversion** — it will alter feel and must be scheduled deliberately. The previously discussed formulas (`2 + intMod` pulse, `floor(wisMod × 0.7 × 0.67)` burn tick, `30s + wisMod` capped 45s) do **not** match the current seed values and are therefore a balance change, not parity. Decision required before implementation.
+1. **Outcome.** The wizard's tier-3 equippable ability is renamed **Orbs of Fire** and remains a stance. **Ignite** becomes the timed fire DoT that Orbs of Fire applies, and the state Conflagrate detects and consumes. Ignite is never equippable and never occupies a slot.
+2. **Identity migration (the safest path).** Today the single `ability_key='ignite'` carries both meanings, and `active_effects.effect_type='ignite'` already names the effect. End state:
+   - Equippable stance ability → `ability_key = 'orbs_of_fire'`.
+   - Timed effect/status → `effect_type = 'ignite'` (unchanged; no data migration on `active_effects`).
+   - `stances.ts` stance key becomes `orbs_of_fire`; `characters.reserved_buffs` is migrated in the same transaction (rename the `ignite` map key to `orbs_of_fire` for every row that has it), so stance state and effect state never share a name again.
+   - `mechanic_key` stays `ignite_buff` (the coded handler) and `ignite_consume` for Conflagrate — renaming handlers is not required and would widen the diff.
+   - **Legacy payload compatibility:** for one release, `authorizeQueuedAbility` maps an incoming `ability_key='ignite'` to `orbs_of_fire`. This is a one-line entry in the existing `LEGACY_ABILITY_KEY_BY_TYPE`-style map, removed once telemetry shows no legacy casts.
+3. **DB.** `update abilities set ability_key='orbs_of_fire', label='Orbs of Fire', description/tooltip/combat_text updated where ability_key='ignite'`; rename the `reserved_buffs` stance key on `characters`; no change to `active_effects` rows, `class_ability_assignments` (it references `ability_id`, not the key), or `character_ability_loadout`.
+4. **Server.** `combat-tick`: stance activation/drop keyed on `orbs_of_fire`; the orb pulse continues to write `active_effects.effect_type='ignite'`; Conflagrate keeps reading `ignite` stacks from `active_effects`. `activate_stance` / `drop_stance` RPCs accept the new key (and, for one release, the old one).
+5. **Client.** Rename in `stances.ts` (`STANCE_DEFS`, `STANCE_FLAVOR`), `useBuffState`, `mapServerEffectsToBuffState`, `interpretCombatTickResult`, `useOffscreenDotWakeup`, `cast-flavor.ts`, `useCombatActions`, `useCombatDriver`, `class-abilities.ts` fallback entry, log/legacy adapters (`log-event.ts`, `tick-event-builder.ts`, `legacy-adapter.ts` — the adapter must keep recognising historical `ignite` stance lines), and the ability tooltip text.
+6. **Admin.** `GameManual.tsx` wording; `AbilityConfigManager` picks up the rename from data automatically.
+7. **Compatibility.** Existing wizards with the stance up keep it: the `reserved_buffs` key rename runs in the same migration, and any in-flight client sends the legacy key which the server maps.
+8. **Balance decision, still open and deliberately not adopted here.** The previously discussed numbers (`2 + intMod` pulse, `floor(wisMod × 0.7 × 0.67)` burn tick, `30s + wisMod` capped 45s) do **not** match the current seed and would be a balance change. This phase performs the **rename and state separation at exactly today's numbers**; adopting the new curves is a separate, later, explicitly-labelled balance pass.
+9. **Tests.** Parity test that Orbs of Fire pulse/burn/Conflagrate output is numerically identical before and after; stance-key migration test; legacy `ignite` payload still authorizes; `legacy-adapter` still parses historical log rows; `active_effects` effect type untouched.
+10. **Manual checks.** Activate Orbs of Fire, confirm CP reservation and flavour; watch orbs apply Ignite; Conflagrate consumes the burn stacks for the same damage as before; drop the stance and confirm existing Ignite effects tick out normally.
+11. **Out of scope.** New ignite formulas, resistances, Envenom restructure (Envenom stays a stance applying `poison`, which already matches the design rule), any new frost behaviour.
+12. **Deploy/rollback.** Migration → edge function → client. Rollback = reverse the key rename migration; the legacy mapping means an older client keeps working either way.
+13. **Files.** migration, `supabase/functions/combat-tick/index.ts`, `supabase/functions/_shared/load-ability-calcs.ts`, `_shared/config/ability-seed.ts`, `src/shared/config/ability-seed.ts`, `src/features/combat/utils/{stances,cast-flavor,class-abilities,mapServerEffectsToBuffState,interpretCombatTickResult}.ts`, `src/features/combat/hooks/{useCombatActions,useCombatDriver,useBuffState,useOffscreenDotWakeup}.ts`, `src/features/combat/events/{log-event,tick-event-builder,legacy-adapter}.ts`, `src/components/admin/GameManual.tsx`.
 
 ## Phase 6 — Admin completion (G8)
 
-Add class assignment, slot, `is_default`, `damage_type`, `activation_mode`, and unlock-level editing to `AbilityConfigManager`, plus an assignment matrix view per class. Preview continues to use the shared evaluator.
+Add class assignment, slot, `is_default`, `damage_type`, `activation_mode`, and unlock-level editing to `AbilityConfigManager`, plus an assignment matrix view per class showing each slot's default and its alternatives. Preview continues to use the shared evaluator, so it cannot drift from combat.
 
 ## Phase 7 — Alternatives for the remaining classes
 
@@ -106,18 +135,25 @@ One alternative per class per release, each reusing an existing mechanic handler
 
 ---
 
+## Fallback policy for `class-abilities.ts` (decided)
+
+`class-abilities.ts` is retained purely as the sealed-mode / emergency fallback. The rules it must obey, enforced by tests:
+
+- **Never overrides live config.** `setAbilityRegistry` already mutates in place only when rows load; the fallback is only read before the first successful load, when the payload is empty, or when `ABILITY_RESOLVER_MODE='sealed'`.
+- **Not a second authority.** No runtime path may prefer it over loaded configuration, and no new code may read it directly for magnitudes — magnitudes come from the evaluator only.
+- **Stays synchronized.** A test asserts `class-abilities.ts` matches `ABILITY_SEED` on label, `cp_cost`, mechanic, slot and unlock level for every ability. It is updated in the same commit as any seed/rename change (including the Phase 5 rename and the Phase 4 addition).
+- **Authorizes only verifiable behaviour.** In fallback mode the server authorizes only the slot **defaults** — alternatives (Frost Bolt) are not castable while running on the compiled fallback, because equipped-state cannot be verified against live config. This is stated in the Phase 2 authorization tests.
+
 ## Risks and contradictions
 
 - The request's Phase 1/2 largely already exist; implementing them again would duplicate working code. This plan replaces them with the specific closing of G1–G3.
-- `ignite`/`envenom` as stances is a live contradiction with the stated design rules; it is isolated into Phase 5 so nothing else waits on it.
-- `class-abilities.ts` remains a hardcoded fallback. Recommendation: keep it as the sealed-mode safety net rather than delete it, since `ABILITY_RESOLVER_MODE='sealed'` depends on it.
+- `ignite` currently names both a stance and an effect. Phase 5 resolves the ambiguity by renaming the ability, not the effect — the reverse would require migrating live `active_effects` rows.
 - Removing the mechanic-hint fallback is a wire-protocol change; safe only after Phase 3 telemetry shows no legacy payloads.
+- Frost Bolt being castable requires live config, so the sealed-mode fallback intentionally reduces wizards to Fireball. Worth confirming that is acceptable during an emergency.
 
-## Decisions I need from you
+## Open items (no longer blocking)
 
-1. Phase 5: adopt the new ignite formulas as an explicit balance change, or convert ignite to a timed effect at exactly today's numbers first?
-2. Should Frost Bolt be visible to existing wizards immediately, or gated behind an admin activation toggle?
-3. Keep `class-abilities.ts` as the sealed-mode fallback (recommended), or plan its removal?
+Decisions 1–3 are resolved and folded in above. The one remaining question is timing, not design: whether the new Ignite curves should be scheduled as a labelled balance pass immediately after Phase 5 or deferred until Phase 7.
 
 ## Recommended first publishable step
 
