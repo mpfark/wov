@@ -31,9 +31,11 @@ Changes:
 Scaling attributes live inside `AbilityCalc.terms[].stat` (`ability-calc.ts`). The additive model:
 
 - Base calc stat terms may carry an optional `role: 'primary' | 'secondary'` marker (new optional field on `CalcTerm`; absent = not overridable).
-- Assignment override: `scaling: { primary_attribute?: CalcStat, secondary_attribute?: CalcStat, primary_coefficient?: number, secondary_coefficient?: number }`.
-- The resolver rewrites only tagged terms: substitutes `stat`, and `mult` only when a coefficient override is present and the base term already has a configurable `mult`.
+- Assignment override: `scaling: { primary_attribute?: CalcStat, secondary_attribute?: CalcStat }` — attributes only.
+- The resolver rewrites **only the `stat` field** of tagged terms. `mult`, transforms, rounding, thresholds and every other term property are copied through untouched, so a class override can never change a coefficient or curve.
 - `chance_on_hit` and every other mechanic parameter stay entirely separate — they are `mechanic_calcs` params, never touched by `scaling`.
+- Coefficient authoring is explicitly deferred; no `primary_coefficient` / `secondary_coefficient` field exists in the schema, resolver, validator or UI.
+
 
 ### Parameter classification inventory (`mechanic-templates.ts`, verified)
 
