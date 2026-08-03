@@ -98,8 +98,11 @@ Existing assignments have empty overrides, so they are unaffected throughout dep
 
 1. **Migration A** — additive only:
    - `ALTER TABLE public.class_ability_assignments ADD COLUMN overrides jsonb NOT NULL DEFAULT '{}'::jsonb;`
+   - `ALTER TABLE public.classes ADD COLUMN primary_attribute text, ADD COLUMN secondary_attribute text;` with a validation trigger restricting both to `str|dex|con|int|wis|cha` (nullable, so a class may ship without shortcuts), plus a backfill `UPDATE` setting each existing class to the attributes its current formulas already scale from.
    - `CREATE FUNCTION public.validate_assignment_overrides()` (structural/primitive checks above, `SECURITY DEFINER`, `SET search_path = public`) + `BEFORE INSERT OR UPDATE` trigger.
-   - Frost Bolt `combat_text` written in the same migration as an explicit `UPDATE public.abilities SET combat_text = jsonb_set(...) WHERE ability_key = 'frost_bolt'` — keeping the live row synchronized with the compiled seed. Nothing else is overwritten.
+   - Extend `public.validate_ability_row()` to reject a `mechanic_key` change while the ability is `active` or referenced by a non-retired assignment, and to reject any change to `ability_key` after creation.
+   - Frost Bolt `combat_text` written in the same migration as an explicit `UPDATE public.abilities SET combat_text = ... WHERE ability_key = 'frost_bolt'` — keeping the live row synchronized with the compiled seed. Nothing else is overwritten.
+
 2. Regenerate types.
 3. Land `effective-ability.ts` + Deno mirror, the `CalcTerm.role` tag, the `abilityKey`/`damageType`/`combat_text` wiring, `ability-text.ts` and the `cast-flavor` re-keying. Update `ability-seed.ts` (Frost Bolt text + role tags) so seed and DB match.
 4. Rewrite the Abilities page; move `AssignmentMatrix`; add the Class Config slot/override editors.
