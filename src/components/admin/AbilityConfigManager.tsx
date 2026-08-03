@@ -411,6 +411,71 @@ export default function AbilityConfigManager() {
                         className="h-8 text-xs"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Ability type</Label>
+                      <Select value={draft.ability_type} onValueChange={v => setDraft({ ...draft, ability_type: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ABILITY_TYPES.map(t => (
+                            <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Activation</Label>
+                      <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ACTIVATION_MODES.map(m => (
+                            <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Damage type</Label>
+                      <Select
+                        value={draft.damage_type ?? DAMAGE_TYPE_NONE}
+                        onValueChange={v => setDraft({ ...draft, damage_type: v === DAMAGE_TYPE_NONE ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">None (non-damaging)</SelectItem>
+                          {DAMAGE_TYPES.map(d => (
+                            <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[11px]">Slot (role)</Label>
+                      <Select value={draft.role_id} onValueChange={v => setDraft({ ...draft, role_id: v })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {roles
+                            .filter(r => r.class_key === draft.class_key)
+                            .sort((a, b) => a.slot - b.slot)
+                            .map(r => (
+                              <SelectItem key={r.id} value={r.id} className="text-xs">
+                                Slot {r.slot} · {r.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[11px]">Slot role</Label>
+                      {draft.is_default ? (
+                        <p className="h-8 flex items-center text-[11px] text-muted-foreground">
+                          Default for this slot.
+                        </p>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8 text-[11px]" disabled={saving} onClick={promoteDefault}>
+                          Make default for {draft.role_name}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Description</Label>
