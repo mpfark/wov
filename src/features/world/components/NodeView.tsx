@@ -9,6 +9,7 @@ import { getCharacterTitle } from '@/lib/game-data';
 import { ClassAbility } from '@/features/combat';
 import { getStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
+import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
