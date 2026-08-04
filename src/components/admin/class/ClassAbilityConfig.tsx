@@ -27,14 +27,18 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, Loader2, Plus, Save } from 'lucide-react';
-import AbilityAuthorDialog from '../AbilityAuthorDialog';
+import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import AbilityAssignPicker from './AbilityAssignPicker';
+import EffectiveAbilityPreview from './EffectiveAbilityPreview';
+import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
+import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
   validateAssignmentOverrides, CALC_STATS,
   type AssignmentOverrides, type BaseAbilityRow,
 } from '@/shared/config/effective-ability';
 import type { CalcStat } from '@/shared/formulas/ability-calc';
+
 
 const ASSIGNMENT_STATUSES = ['draft', 'active', 'retired'] as const;
 /** Combat-text slots an admin may author per class. */
