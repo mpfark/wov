@@ -483,19 +483,20 @@ export default function ClassAbilityConfig({
                 {slotRows.some(r => r.is_default) ? (
                   <Button
                     size="sm" variant="ghost" className="h-6 text-[10px] text-muted-foreground"
-                    onClick={() => { setAuthorAsAlternative(true); setAuthorRole(role); }}
+                    onClick={() => setPickerRole(role)}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> alternative for {role.name}
+                    <Plus className="w-3 h-3 mr-1" /> assign an alternative for {role.name}
                   </Button>
                 ) : (
                   <Button
                     size="sm" variant="outline" className="h-7 text-[11px] border-dashed"
-                    onClick={() => { setAuthorAsAlternative(false); setAuthorRole(role); }}
+                    onClick={() => setPickerRole(role)}
                   >
                     <Plus className="w-3 h-3 mr-1" /> assign an ability to {role.name}
                   </Button>
                 )}
               </div>
+
             </div>
           );
         })}
