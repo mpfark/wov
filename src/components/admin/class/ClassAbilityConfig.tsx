@@ -46,6 +46,12 @@ const TEXT_SLOTS: { key: string; label: string }[] = [
   { key: 'cast', label: 'Cast line' },
   { key: 'hit', label: 'Hit line' },
 ];
+/** Representative mid-game inputs used only to preview magnitudes in the editor. */
+const PREVIEW_SAMPLE = {
+  level: 20,
+  mods: { str: 4, dex: 4, con: 4, int: 4, wis: 4, cha: 4 },
+} as const;
+
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
