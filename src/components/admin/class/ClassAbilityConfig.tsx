@@ -269,6 +269,21 @@ export default function ClassAbilityConfig({
             <Loader2 className="w-3 h-3 animate-spin" /> Loading assignments…
           </p>
         )}
+        {defaultIssues.length > 0 && (
+          <div className="rounded border border-destructive/50 bg-destructive/5 p-2 space-y-1">
+            {defaultIssues.map(issue => {
+              const role = roles.find(r => r.id === issue.role_id);
+              return (
+                <p key={issue.role_id} className="text-[11px] text-destructive flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
+                  Slot {role?.slot ?? '?'} · {role?.name ?? issue.role_id} has {issue.defaults} defaults —
+                  every populated slot needs exactly one.
+                </p>
+              );
+            })}
+          </div>
+        )}
+
         {roles.map(role => {
           const slotRows = rows.filter(r => r.role_id === role.id);
           return (
