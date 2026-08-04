@@ -79,8 +79,8 @@ export default function ClassAbilityConfig({
   const [saving, setSaving] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AssignmentRow | null>(null);
-  const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
-  const [authorAsAlternative, setAuthorAsAlternative] = useState(false);
+  const [pickerRole, setPickerRole] = useState<RoleRow | null>(null);
+
 
   const load = useCallback(async () => {
     setLoading(true);
