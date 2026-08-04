@@ -427,6 +427,27 @@ export default function ClassAbilityConfig({
                         </p>
                       </div>
 
+                      {/* Named mechanic parameters supported by this mechanic */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Mechanic tunables (per class)
+                        </p>
+                        <MechanicCalcsEditor
+                          mechanicKey={draft.base.mechanic_key}
+                          value={draft.overrides.mechanic_calcs ?? (draft.base.mechanic_calcs ?? {})}
+                          onChange={next => patchOverride('mechanic_calcs', next)}
+                          sample={PREVIEW_SAMPLE}
+                        />
+                      </div>
+
+                      {preview && (
+                        <EffectiveAbilityPreview
+                          base={taggedBase ?? draft.base}
+                          effective={preview.ability}
+                          overriddenKeys={Object.keys(draft.overrides)}
+                        />
+                      )}
+
                       {errors.length > 0 && (
                         <div className="rounded border border-destructive/50 bg-destructive/5 p-2 space-y-1">
                           {errors.map(err => (
@@ -443,7 +464,16 @@ export default function ClassAbilityConfig({
                           Save assignment
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => open(row)}>Reset</Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          disabled={saving}
+                          onClick={() => removeAssignment(row)}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Unassign
+                        </Button>
                       </div>
+
                     </div>
                   )}
                 </div>
