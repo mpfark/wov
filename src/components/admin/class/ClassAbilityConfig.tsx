@@ -195,7 +195,6 @@ export default function ClassAbilityConfig({
     toast.success(`${preview?.ability.label ?? draft.base.label} saved for ${classLabel}.`);
     await load();
   };
-
   const promoteDefault = async () => {
     if (!draft) return;
     setSaving(true);
@@ -206,21 +205,51 @@ export default function ClassAbilityConfig({
     await load();
   };
 
+  /** Safe unassign: never silently invalidates an equipped loadout or a slot default. */
+  const removeAssignment = async (row: AssignmentRow) => {
+    setSaving(true);
+    const { count, error: countError } = await supabase
+      .from('character_ability_loadout')
+      .select('character_id', { count: 'exact', head: true })
+      .eq('role_id', row.role_id)
+      .eq('ability_id', row.base.id);
+    if (countError) { setSaving(false); toast.error(countError.message); return; }
+
+    const guard = canRemoveAssignment({
+      isDefault: row.is_default,
+      siblingCount: rows.filter(r => r.role_id === row.role_id && r.id !== row.id).length,
+      equippedCount: count ?? 0,
+    });
+    if (!guard.ok) { setSaving(false); toast.error(guard.reason); return; }
+
+    const { error } = await supabase.from('class_ability_assignments').delete().eq('id', row.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    if (openId === row.id) { setOpenId(null); setDraft(null); }
+    toast.success(`${row.base.label} unassigned from ${row.role_name}.`);
+    await load();
+  };
+
+  const defaultIssues = useMemo(() => slotsWithBadDefaults(rows), [rows]);
+
   return (
     <Card className="bg-card/80">
-      {authorRole && (
-        <AbilityAuthorDialog
-          open={!!authorRole}
-          onOpenChange={v => { if (!v) { setAuthorRole(null); setAuthorAsAlternative(false); } }}
+      {pickerRole && (
+        <AbilityAssignPicker
+          open={!!pickerRole}
+          onOpenChange={v => { if (!v) setPickerRole(null); }}
           classKey={classKey}
           classLabel={classLabel}
-          roleId={authorRole.id}
-          roleName={authorRole.name}
-          roleUnlockLevel={authorRole.unlock_level}
-          asAlternative={authorAsAlternative}
-          onCreated={load}
+          roleId={pickerRole.id}
+          roleName={pickerRole.name}
+          roleSlot={pickerRole.slot}
+          roleUnlockLevel={pickerRole.unlock_level}
+          assignedAbilityIds={rows.filter(r => r.role_id === pickerRole.id).map(r => r.base.id)}
+          slotHasDefault={rows.some(r => r.role_id === pickerRole.id && r.is_default)}
+          onAssigned={load}
         />
       )}
+
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-display">Ability configuration</CardTitle>
         <p className="text-[11px] text-muted-foreground">
