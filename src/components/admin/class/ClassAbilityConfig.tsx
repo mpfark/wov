@@ -27,8 +27,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, Loader2, Plus, Save } from 'lucide-react';
-import AbilityAuthorDialog from '../AbilityAuthorDialog';
+import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import AbilityAssignPicker from './AbilityAssignPicker';
+import EffectiveAbilityPreview from './EffectiveAbilityPreview';
+import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
+import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
   validateAssignmentOverrides, CALC_STATS,
@@ -36,12 +39,19 @@ import {
 } from '@/shared/config/effective-ability';
 import type { CalcStat } from '@/shared/formulas/ability-calc';
 
+
 const ASSIGNMENT_STATUSES = ['draft', 'active', 'retired'] as const;
 /** Combat-text slots an admin may author per class. */
 const TEXT_SLOTS: { key: string; label: string }[] = [
   { key: 'cast', label: 'Cast line' },
   { key: 'hit', label: 'Hit line' },
 ];
+/** Representative mid-game inputs used only to preview magnitudes in the editor. */
+const PREVIEW_SAMPLE = {
+  level: 20,
+  mods: { str: 4, dex: 4, con: 4, int: 4, wis: 4, cha: 4 },
+} as const;
+
 
 interface RoleRow { id: string; class_key: string; slot: number; name: string; unlock_level: number }
 
@@ -75,8 +85,8 @@ export default function ClassAbilityConfig({
   const [saving, setSaving] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<AssignmentRow | null>(null);
-  const [authorRole, setAuthorRole] = useState<RoleRow | null>(null);
-  const [authorAsAlternative, setAuthorAsAlternative] = useState(false);
+  const [pickerRole, setPickerRole] = useState<RoleRow | null>(null);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -191,7 +201,6 @@ export default function ClassAbilityConfig({
     toast.success(`${preview?.ability.label ?? draft.base.label} saved for ${classLabel}.`);
     await load();
   };
-
   const promoteDefault = async () => {
     if (!draft) return;
     setSaving(true);
@@ -202,21 +211,51 @@ export default function ClassAbilityConfig({
     await load();
   };
 
+  /** Safe unassign: never silently invalidates an equipped loadout or a slot default. */
+  const removeAssignment = async (row: AssignmentRow) => {
+    setSaving(true);
+    const { count, error: countError } = await supabase
+      .from('character_ability_loadout')
+      .select('character_id', { count: 'exact', head: true })
+      .eq('role_id', row.role_id)
+      .eq('ability_id', row.base.id);
+    if (countError) { setSaving(false); toast.error(countError.message); return; }
+
+    const guard = canRemoveAssignment({
+      isDefault: row.is_default,
+      siblingCount: rows.filter(r => r.role_id === row.role_id && r.id !== row.id).length,
+      equippedCount: count ?? 0,
+    });
+    if (!guard.ok) { setSaving(false); toast.error(guard.reason); return; }
+
+    const { error } = await supabase.from('class_ability_assignments').delete().eq('id', row.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    if (openId === row.id) { setOpenId(null); setDraft(null); }
+    toast.success(`${row.base.label} unassigned from ${row.role_name}.`);
+    await load();
+  };
+
+  const defaultIssues = useMemo(() => slotsWithBadDefaults(rows), [rows]);
+
   return (
     <Card className="bg-card/80">
-      {authorRole && (
-        <AbilityAuthorDialog
-          open={!!authorRole}
-          onOpenChange={v => { if (!v) { setAuthorRole(null); setAuthorAsAlternative(false); } }}
+      {pickerRole && (
+        <AbilityAssignPicker
+          open={!!pickerRole}
+          onOpenChange={v => { if (!v) setPickerRole(null); }}
           classKey={classKey}
           classLabel={classLabel}
-          roleId={authorRole.id}
-          roleName={authorRole.name}
-          roleUnlockLevel={authorRole.unlock_level}
-          asAlternative={authorAsAlternative}
-          onCreated={load}
+          roleId={pickerRole.id}
+          roleName={pickerRole.name}
+          roleSlot={pickerRole.slot}
+          roleUnlockLevel={pickerRole.unlock_level}
+          assignedAbilityIds={rows.filter(r => r.role_id === pickerRole.id).map(r => r.base.id)}
+          slotHasDefault={rows.some(r => r.role_id === pickerRole.id && r.is_default)}
+          onAssigned={load}
         />
       )}
+
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-display">Ability configuration</CardTitle>
         <p className="text-[11px] text-muted-foreground">
@@ -230,6 +269,21 @@ export default function ClassAbilityConfig({
             <Loader2 className="w-3 h-3 animate-spin" /> Loading assignments…
           </p>
         )}
+        {defaultIssues.length > 0 && (
+          <div className="rounded border border-destructive/50 bg-destructive/5 p-2 space-y-1">
+            {defaultIssues.map(issue => {
+              const role = roles.find(r => r.id === issue.role_id);
+              return (
+                <p key={issue.role_id} className="text-[11px] text-destructive flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
+                  Slot {role?.slot ?? '?'} · {role?.name ?? issue.role_id} has {issue.defaults} defaults —
+                  every populated slot needs exactly one.
+                </p>
+              );
+            })}
+          </div>
+        )}
+
         {roles.map(role => {
           const slotRows = rows.filter(r => r.role_id === role.id);
           return (
@@ -394,6 +448,27 @@ export default function ClassAbilityConfig({
                         </p>
                       </div>
 
+                      {/* Named mechanic parameters supported by this mechanic */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Mechanic tunables (per class)
+                        </p>
+                        <MechanicCalcsEditor
+                          mechanicKey={draft.base.mechanic_key}
+                          value={draft.overrides.mechanic_calcs ?? (draft.base.mechanic_calcs ?? {})}
+                          onChange={next => patchOverride('mechanic_calcs', next)}
+                          sample={PREVIEW_SAMPLE}
+                        />
+                      </div>
+
+                      {preview && (
+                        <EffectiveAbilityPreview
+                          base={taggedBase ?? draft.base}
+                          effective={preview.ability}
+                          overriddenKeys={Object.keys(draft.overrides)}
+                        />
+                      )}
+
                       {errors.length > 0 && (
                         <div className="rounded border border-destructive/50 bg-destructive/5 p-2 space-y-1">
                           {errors.map(err => (
@@ -410,7 +485,16 @@ export default function ClassAbilityConfig({
                           Save assignment
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => open(row)}>Reset</Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          disabled={saving}
+                          onClick={() => removeAssignment(row)}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Unassign
+                        </Button>
                       </div>
+
                     </div>
                   )}
                 </div>
@@ -420,19 +504,20 @@ export default function ClassAbilityConfig({
                 {slotRows.some(r => r.is_default) ? (
                   <Button
                     size="sm" variant="ghost" className="h-6 text-[10px] text-muted-foreground"
-                    onClick={() => { setAuthorAsAlternative(true); setAuthorRole(role); }}
+                    onClick={() => setPickerRole(role)}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> alternative for {role.name}
+                    <Plus className="w-3 h-3 mr-1" /> assign an alternative for {role.name}
                   </Button>
                 ) : (
                   <Button
                     size="sm" variant="outline" className="h-7 text-[11px] border-dashed"
-                    onClick={() => { setAuthorAsAlternative(false); setAuthorRole(role); }}
+                    onClick={() => setPickerRole(role)}
                   >
                     <Plus className="w-3 h-3 mr-1" /> assign an ability to {role.name}
                   </Button>
                 )}
               </div>
+
             </div>
           );
         })}
