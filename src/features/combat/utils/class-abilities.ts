@@ -166,13 +166,8 @@ export interface AbilityConfigRow {
 
 const KNOWN_MECHANICS = new Set<string>([
   ...Object.values(CLASS_ABILITIES).flatMap(list => list.map(a => a.type as string)),
-  // Legacy per-class mechanics: consolidated into `weapon_attack` / `spell_attack`
-  // / `heal`, but still handled by the runtime so archived assignments resolve.
-  'power_strike', 'aimed_shot', 'backstab',
-  'fireball', 'smite', 'cutting_words', 'self_heal',
-  // Legacy ally shield mechanic, consolidated into `absorb_buff` (Phase 6).
-  'ally_absorb',
 ]);
+
 
 
 /** Snapshot of the fallback tables, so a reload/registry reset can restore them. */
