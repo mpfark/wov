@@ -166,10 +166,15 @@ const PARTY_REGEN_CONFIG = { ticking_party_heal: true, resolved_by: 'client-loop
  * both without touching coefficients. Target scope (self vs ally) is the row's
  * `target_type`; the client targeting UI reads that, not the mechanic key.
  */
-const shieldPool = (s: 'wis' | 'int' | 'cha' | 'con', mult = 1, levelMult = 0.5): AbilityCalc => ({
+const shieldPool = (
+  s: 'wis' | 'int' | 'cha' | 'con',
+  mult = 1,
+  levelMult = 0.5,
+  floor: number | null = null,
+): AbilityCalc => ({
   base: 0,
   terms: [stat(s, mult, { role: 'primary' }), { source: 'level', mult: levelMult, rounding: 'floor' }],
-  floor: 1, cap: null, unit: 'hp', note: 'shield pool (primary attribute)',
+  floor, cap: null, unit: 'hp', note: 'shield pool (primary attribute)',
 });
 
 const shieldDuration = (
@@ -177,8 +182,9 @@ const shieldDuration = (
   perPoint: number,
   base: number,
   cap: number,
+  clampAtZero = true,
 ): AbilityCalc => ({
-  base, terms: [stat(s, perPoint, { clampAtZero: true, role: 'secondary' })],
+  base, terms: [stat(s, perPoint, { clampAtZero, role: 'secondary' })],
   cap, unit: 'ms', note: 'shield duration (secondary attribute)',
 });
 
@@ -259,8 +265,8 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.',
     mechanic_key: 'absorb_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
-    amount_calc: shieldPool('wis', 1, 0.5),
-    duration_calc: shieldDuration('int', 1000, 8000, 15000),
+    amount_calc: shieldPool('wis', 1, 0.5, 1),
+    duration_calc: shieldDuration('int', 1000, 8000, 15000, false),
     interval_ms: null,
     effect_config: { ...ABSORB_CONFIG, regen_stat: 'int', reforms_out_of_combat: true, stat: 'wis', duration_stat: 'int' },
     combat_text: {
