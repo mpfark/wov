@@ -31,6 +31,8 @@ import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import AbilityAssignPicker from './AbilityAssignPicker';
 import EffectiveAbilityPreview from './EffectiveAbilityPreview';
 import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
+import { OnHitEffectEditor } from './OnHitEffectEditor';
+import { type OnHitEffectConfig } from '@/shared/combat/on-hit-effects';
 import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
