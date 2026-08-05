@@ -382,14 +382,8 @@ export default function ClassConfigManager() {
                 </CardContent>
               </Card>
 
-              <ClassAbilityConfig
-                classKey={draft.class_key}
-                classLabel={draft.label}
-                primaryAttribute={draft.primary_attribute ?? null}
-                secondaryAttribute={draft.secondary_attribute ?? null}
-              />
 
-              <AssignmentOverview highlightClassKey={draft.class_key} />
+
 
 
               {/* Validation */}
