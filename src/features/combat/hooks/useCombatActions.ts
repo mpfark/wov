@@ -69,7 +69,7 @@ const INSTANT_WHEN_NOT_STANCE = new Set(['absorb_buff']);
 
 /** Ability types that require being in combat with a valid target */
 const COMBAT_REQUIRED_TYPES = new Set([
-  'multi_attack', 'dot_debuff', 'execute_attack', 'ignite_consume',
+  'multi_attack', 'dot_debuff', 'stack_consume', 'execute_attack', 'ignite_consume',
   'burst_damage', 'hp_transfer',
 ]);
 
@@ -462,8 +462,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setPoisonBuff({ expiresAt: Date.now() + durationMs });
       p.addLogEvent(buildBuffEvent(`Envenom! Your weapons drip with poison for 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
-    } else if (ability.type === 'execute_attack') {
-      // Processed server-side via combat-tick heartbeat
+    } else if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
+      // Consolidation Group D: stack finishers (Eviscerate / Conflagrate) run
+      // entirely server-side in the combat-tick heartbeat.
     } else if (ability.type === 'evasion_buff') {
       // Dual-primary (Assassin DEX+CHA): dodge magnitude = CHA (showmanship),
       // duration = DEX (footwork).
@@ -489,8 +490,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
       p.addLogEvent(buildBuffEvent(`Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
-    } else if (ability.type === 'ignite_consume') {
-      // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff' || ability.type === 'ally_absorb') {
       // Consolidation Phase 6: Force Shield and Divine Aegis share the one
       // `absorb_buff` base. Pool = primary attribute, duration = secondary, both
