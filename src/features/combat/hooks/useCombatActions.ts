@@ -491,16 +491,34 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLogEvent(buildBuffEvent(`Force Shield! An arcane ward wraps you for ${Math.round(durationMs / 1000)}s. [${shieldHp}]`));
 
     } else if (ability.type === 'party_regen') {
-      // Dual-primary split:
-      //   Healer (WIS+CON): heal/tick = WIS, duration = CON (stamina sustains the radiance).
-      //   Bard   (CHA+INT): heal/tick = CHA, duration = INT (knowledge stretches the melody).
-      const isHealer = p.character.class === 'healer';
+      // Consolidation Phase 5: Purifying Light and Crescendo share the one
+      // `party_regen` base. Attributes come from the configured calcs (primary =
+      // heal/tick, secondary = duration) and the wording from authored
+      // `combat_text` keyed by ability identity — never a per-class branch.
       const healPerTick = amountOf();
       const durationMs = durationOf();
-      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
+      const text = getAuthoredCombatText(ability.abilityKey);
+      const authored = (key: string): string | null => {
+        const raw = text[key];
+        return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+      };
       const who = p.party ? 'your party' : 'you';
-      const abilityName = isHealer ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
-      p.addLogEvent(buildHealEvent(`${abilityName} heals ${who} every 3s for ${Math.round(durationMs / 1000)}s. [${healPerTick}/tick]`));
+      const seconds = Math.round(durationMs / 1000);
+      const tickText = authored('tick_text') ?? `${ability.label} heals {who} for {amount} HP!`;
+      p.buffSetters.setPartyRegenBuff({
+        healPerTick,
+        expiresAt: Date.now() + durationMs,
+        source: p.character.class === 'healer' ? 'healer' : 'bard',
+        abilityKey: ability.abilityKey,
+        label: ability.label,
+        durationMs,
+        tickText,
+      });
+      const castLine = (authored('cast_text')
+        ?? `${ability.label}! Healing energy mends {who} every 3s for {seconds}s.`)
+        .replace('{who}', who)
+        .replace('{seconds}', String(seconds));
+      p.addLogEvent(buildHealEvent(`${castLine} [${healPerTick}/tick]`));
     } else if (ability.type === 'ally_absorb') {
       // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
       const shieldHp = amountOf();
