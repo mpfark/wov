@@ -541,7 +541,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setPartyRegenBuff({
         healPerTick,
         expiresAt: Date.now() + durationMs,
-        source: p.character.class === 'healer' ? 'healer' : 'bard',
+        source: ability.abilityKey,
         abilityKey: ability.abilityKey,
         label: ability.label,
         durationMs,
