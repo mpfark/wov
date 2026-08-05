@@ -448,6 +448,13 @@ export default function ClassAbilityConfig({
                         </p>
                       </div>
 
+                      {/* Optional On-Hit Effect (base-allowlisted, per class) */}
+                      <OnHitEffectEditor
+                        baseEffectConfig={draft.base.effect_config as Record<string, unknown> | null}
+                        value={(draft.overrides as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null}
+                        onChange={next => patchOverride('on_hit_effect' as never, next as never)}
+                      />
+
                       {/* Named mechanic parameters supported by this mechanic */}
                       <div className="space-y-2">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
