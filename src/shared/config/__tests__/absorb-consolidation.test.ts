@@ -53,7 +53,7 @@ describe('absorb shield consolidation', () => {
   });
 
   it('each keeps its own magnitude curve', () => {
-    const ctx = { level: 20, stats: { str: 10, dex: 10, con: 18, int: 18, wis: 18, cha: 10 } } as any;
+    const ctx = { level: 20, mods: { str: 0, dex: 0, con: 4, int: 4, wis: 4, cha: 0 } };
     const fsPool = evaluateCalc(FS.amount_calc!, ctx);
     const daPool = evaluateCalc(DA.amount_calc!, ctx);
     expect(daPool).toBeGreaterThan(fsPool);
