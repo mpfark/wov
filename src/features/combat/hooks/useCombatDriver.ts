@@ -66,7 +66,7 @@ export interface MemberBuffState {
   disengage_next_hit?: { bonus_mult: number };
   holy_shield?: { wis_mod: number; expires_at: number };
   
-  consecrate?: { wis_mod: number; expires_at: number };
+  aura_pulse?: { mag_mod: number; expires_at: number; ability_key?: string };
   divine_challenge?: { flat: number; expires_at: number };
 }
 

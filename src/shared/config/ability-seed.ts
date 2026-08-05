@@ -234,7 +234,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('str', 1.5, { clampAtZero: true, transform: { kind: 'soft', profile: 'dot' } })], postMult: 0.67, rounding: 'floor', floor: 1, cap: null, unit: 'hp', note: 'STR magnitude, per tick' },
     duration_calc: { base: 20000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: 2000, effect_config: {}, combat_text: {},
+    interval_ms: 2000,
+    effect_config: { effect_type: 'bleed', effect_noun: 'bleed', weapon_based: true, magnitude_stat: 'str', duration_stat: 'dex', max_stacks: 5 },
+    combat_text: {
+      apply_text: 'rends {target} — blood weeps from the gash! [{damage}/tick]',
+      miss_text: "Rend glances off {target} — no wound opens.",
+    },
     class_key: 'warrior', slot: 3,
   },
   {
@@ -671,7 +676,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'consecrate', label: 'Consecrate', description: 'Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).',
     tooltip: 'Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.',
-    mechanic_key: 'consecrate', ability_type: 'heal', damage_type: 'holy',
+    mechanic_key: 'aura_pulse', ability_type: 'heal', damage_type: 'holy',
     target_type: 'node', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: {
       version: 2, base: 2,
@@ -682,8 +687,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
     },
     duration_calc: { base: 6000, terms: [{ source: 'stat_threshold', stat: 'con', mult: 2000, steps: [{ at: 3, add: 1 }, { at: 6, add: 1 }] }], cap: 10000, unit: 'ms', note: 'CON tick ladder × 2000ms interval' },
     interval_ms: 2000,
-    effect_config: { magnitude_stat: 'wis', magnitude_reduction: 0.35, resolved_by: 'combat-tick' },
-    combat_text: {},
+    effect_config: { magnitude_stat: 'wis', magnitude_reduction: 0.35, heals_allies: true, damages_enemies: true, resolved_by: 'combat-tick' },
+    combat_text: {
+      cast_text: 'You consecrate the ground — hallowed light wells up beneath your feet for {duration}s, mending allies and searing the unholy.',
+      heal_text: 'Consecrated ground soothes {ally}. [{amount}]',
+      burn_text: 'Holy fire sears {target}! [{amount}]',
+    },
     class_key: 'templar', slot: 3,
   },
   {

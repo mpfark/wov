@@ -78,7 +78,13 @@ export interface SunderDebuff { acReduction: number; expiresAt: number; creature
 /** Holy Shield — reactive holy retaliation against attackers. */
 export interface HolyShieldBuff { wisMod: number; expiresAt: number }
 /** Consecrate — node-wide ground effect: heal allies, burn engaged creatures. */
-export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number }
+/**
+ * Node aura pulse (consolidated `aura_pulse`). `wisMod` is the resolved
+ * magnitude attribute modifier (WIS for the Templar's Consecrate, whatever the
+ * ability configures for another class); `abilityKey` carries identity so the
+ * server resolves the right calc without a class branch.
+ */
+export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number; abilityKey?: string }
 /** Divine Challenge — flat damage reduction. */
 export interface DivineChallengeBuff { flat: number; expiresAt: number }
 

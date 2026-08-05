@@ -127,7 +127,12 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // fireball / smite / cutting_words — were removed once every row moved to the
   // consolidated `weapon_attack` and `spell_attack` bases.)
 
-  t('consecrate', {
+  // Consolidation Group D: ONE reusable node aura. Whether it mends allies
+  // (`effect_config.heals_allies`), sears engaged creatures
+  // (`effect_config.damages_enemies`) and which attribute drives the pulse
+  // (`effect_config.magnitude_stat`) are configuration, so Consecrate is just
+  // the Templar identity of this base.
+  t('aura_pulse', {
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
   }),
@@ -194,6 +199,11 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // ── Control ───────────────────────────────────────────────────
   t('root_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('sunder_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),
+  // Consolidation Group D: ONE reusable ticking damage debuff. The persistent
+  // effect row it writes (`effect_config.effect_type`), whether the per-tick
+  // magnitude rolls the weapon die (`effect_config.weapon_based`), the scaling
+  // attributes and the stack ceiling (`effect_config.max_stacks`) are all
+  // configuration — Rend is the Warrior identity of this base.
   t('dot_debuff', {
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,

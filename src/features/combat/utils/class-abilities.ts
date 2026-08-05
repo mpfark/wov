@@ -20,7 +20,7 @@ export interface ClassAbility {
     | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff'
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
-    | 'reactive_holy' | 'block_buff' | 'consecrate' | 'mitigation_buff'
+    | 'reactive_holy' | 'block_buff' | 'aura_pulse' | 'mitigation_buff'
     // Consolidated reusable spell strike (+ legacy per-class mechanics).
     | 'spell_attack' | 'fireball' | 'smite' | 'cutting_words'
     // Consolidated reusable weapon strike (+ legacy per-class mechanics).
@@ -43,10 +43,16 @@ export interface ClassAbility {
    * burn stacks without a class branch.
    */
   effectConfig?: Record<string, unknown> | null;
+  /**
+   * Configured `abilities.combat_text` (raw). Consolidated bases read authored
+   * wording from here (Group D: `cast_text` for `aura_pulse`) so shared
+   * mechanics keep per-class flavour.
+   */
+  combatText?: Record<string, unknown> | null;
 }
 
 /** Fallback literal without identity fields — they are derived from the seed. */
-type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType' | 'effectConfig'>;
+type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType' | 'effectConfig' | 'combatText'>;
 
 // Phase 1 T0 abilities are class-specific (defined per-class below in CLASS_ABILITIES).
 // Focus Strike has been removed; there are no universal abilities at present.
@@ -99,7 +105,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Judgment',         description: 'Pass divine judgment, dealing holy damage scaling with WIS', tooltip: 'Holy damage to one target. Scales with WIS.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Holy Shield',      description: 'Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.', tooltip: 'Attackers take holy damage in return. WIS scaling reduced 20%, CON adds a kicker. Stance.', cpCost: 15, type: 'reactive_holy', tier: 1, levelRequired: 5 },
     { label: 'Shield Wall',      description: 'Stance. Dual-primary: WIS adds bonus block chance (+25.5% floor, up to +46.75% at high WIS), CON adds bonus block amount (+~4 floor, up to +~9 at high CON). Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.', tooltip: 'Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.', cpCost: 25, type: 'block_buff', tier: 2, levelRequired: 10 },
-    { label: 'Consecrate',       description: 'Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).', tooltip: 'Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.', cpCost: 40, type: 'consecrate', tier: 3, levelRequired: 15 },
+    { label: 'Consecrate',       description: 'Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).', tooltip: 'Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.', cpCost: 40, type: 'aura_pulse', tier: 3, levelRequired: 15 },
     { label: 'Divine Challenge', description: 'Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.', tooltip: 'Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.', cpCost: 60, type: 'mitigation_buff', tier: 4, levelRequired: 20 },
   ],
 };
@@ -168,6 +174,7 @@ export interface AbilityConfigRow {
     duration_calc?: unknown;
     interval_ms?: number | null;
     effect_config?: unknown;
+    combat_text?: unknown;
   } | null;
 }
 
@@ -239,6 +246,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       damageType: row.ability.damage_type ?? null,
       targetType: row.ability.target_type ?? null,
       effectConfig: (row.ability.effect_config as Record<string, unknown> | null) ?? null,
+      combatText: (row.ability.combat_text as Record<string, unknown> | null) ?? null,
     });
 
     byClass.set(row.class_key, list);

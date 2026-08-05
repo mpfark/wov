@@ -1,0 +1,1 @@
+- [Ticking Mechanic Consolidation](mem://game/class-abilities/ticking-consolidation) — Consecrate → reusable aura_pulse; dot_debuff fully config-driven (effect_type, weapon_based, stats, stacks, text)

@@ -1505,50 +1505,72 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, effCha, member.id);
         }
       } else if (paMech === 'dot_debuff') {
-        // Server-side Rend/bleed: create persistent active_effects row.
-        // Dual-primary (Warrior STR+DEX): magnitude = weapon damage + STR (the wound),
-        // duration = DEX (precision keeps it open). Rolls to hit on DEX.
-        // Per-tick bleed pulls from the equipped weapon die (avg) so big swords
-        // bleed harder; unarmed falls back to 1d4.
-        const effStr = (c.str || 10) + (eb.str || 0);
-        const effDex = (c.dex || 10) + (eb.dex || 0);
-        const strMod = sm(effStr);
-        const dexMod = sm(effDex);
+        // Consolidation Group D: ONE reusable ticking damage debuff. The effect
+        // row it writes, whether the per-tick magnitude rolls the weapon die,
+        // the scaling attributes, the stack ceiling and the wording all come
+        // from configuration — Rend is the Warrior identity of this base, not a
+        // hardcoded case.
+        const dotEntry = auth.entry;
+        const dotCfg = (dotEntry?.effectConfig ?? {}) as Record<string, unknown>;
+        const dotText = (dotEntry?.combatText ?? {}) as Record<string, unknown>;
+        const dotAuthored = (key: string): string | null => {
+          const raw = dotText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const asStat = (v: unknown, fallback: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha') =>
+          (['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(v as string) ? v as typeof fallback : fallback);
+        const dotEffectType = typeof dotCfg.effect_type === 'string' && dotCfg.effect_type.trim()
+          ? dotCfg.effect_type.trim() : 'bleed';
+        const dotWeaponBased = typeof dotCfg.weapon_based === 'boolean' ? dotCfg.weapon_based : true;
+        const dotMagStat = asStat(dotCfg.magnitude_stat, 'str');
+        const dotDurStat = asStat(dotCfg.duration_stat, 'dex');
+        const dotMaxStacks = typeof dotCfg.max_stacks === 'number' && dotCfg.max_stacks > 0
+          ? Math.floor(dotCfg.max_stacks) : 5;
+        const dotLabel = dotEntry?.label || 'Rend';
+
+        // Dual-primary: magnitude = the wound (weapon + magnitude attribute),
+        // duration = the configured duration attribute (which also rolls to hit).
+        const magMod = sm(((c as any)[dotMagStat] || 10) + ((eb as any)[dotMagStat] || 0));
+        const durMod = sm(((c as any)[dotDurStat] || 10) + ((eb as any)[dotDurStat] || 0));
         // Resolve weapon once so miss + apply event + per-tick math all share it.
         const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
-        const hit = rollAbilityHit(dexMod);
+        const hit = rollAbilityHit(durMod);
         if (!hit.hit) {
-          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+          const missMsg = dotAuthored('miss_text')
+            ? `${c.name}'s ${dotAuthored('miss_text')!.replace('{target}', target.name)}`
+            : `${c.name}'s ${dotLabel} glances off ${target.name} — no wound opens.`;
+          pushAbilityEvent({ type: 'ability_miss', message: `${missMsg}${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
-        // Soft-scaled STR contribution (profile 'dot') + weapon-die avg / 3.
-        const weaponAvg = (rendDie + 1) / 2; // average roll of 1d{die}
-        const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
-        let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
-        // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
-        // the bleed at apply time so the DoT inherits the boost for its full duration.
+        // Soft-scaled magnitude contribution (profile 'dot'); weapon-based DoTs
+        // fold in the equipped weapon die average so bigger weapons bleed harder.
+        const weaponAvg = dotWeaponBased ? (rendDie + 1) / 2 : 0; // average roll of 1d{die}
+        const effMagDot = getEffectiveCombatMod(Math.max(0, magMod), 'dot');
+        let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effMagDot + 2) / 3 * 0.67 + effMagDot * 0.5));
+        // Damage buffs (e.g. Arcane Surge) bake into the DoT at apply time so it
+        // inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
         const durationMs = paMag(
           'duration',
         );
-        // Rend's per-tick magnitude stays mechanic-owned for now: its existing
-        // `amount_calc` is a STR-only curve, while the live formula also folds
-        // in the weapon-die average. It joins the funnel at checkpoint 3, when
-        // dice terms make the two expressible as one calc.
+        // The per-tick magnitude stays mechanic-owned for now: the configured
+        // `amount_calc` is a stat-only curve while the live formula also folds
+        // in the weapon-die average. It joins the calc funnel at checkpoint 3,
+        // when dice terms make the two expressible as one calc.
 
-        const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
+        const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === dotEffectType);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: member.id,
-          session_id: null, effect_type: 'bleed',
+          session_id: null, effect_type: dotEffectType,
           // Canonical identity of the ability that opened this wound, so DoT
           // ticks (live and offscreen) can be attributed without prose parsing.
           source_ability_key: auth.abilityKey,
-          // Stacking (cap 5) and cadence-preserving refresh live in the
-          // shared status primitive so every DoT behaves identically.
+          // Stacking and cadence-preserving refresh live in the shared status
+          // primitive so every DoT behaves identically.
           ...applyStackingEffect(existing, {
-            now, durationMs, damagePerTick: dmgPerTick, maxStacks: 5, tickRateMs: TICK_RATE,
+            now, durationMs, damagePerTick: dmgPerTick, maxStacks: dotMaxStacks, tickRateMs: TICK_RATE,
           }),
         };
         if (existing) {
@@ -1556,7 +1578,11 @@ Deno.serve(async (req) => {
         } else {
           activeEffects.push({ id: crypto.randomUUID(), ...effData });
         }
-        pushAbilityEvent({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+        const applyMsg = dotAuthored('apply_text')
+          ? `${c.name} ${dotAuthored('apply_text')!.replace('{target}', target.name).replace('{damage}', String(dmgPerTick))}`
+          : `${c.name} afflicts ${target.name} with ${dotLabel}! [${dmgPerTick}/tick]`;
+        pushAbilityEvent({ type: 'bleed_applied', message: `${applyMsg}${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
+
       }
 
       // ── Optional On-Hit Effect (class-configured, base-allowed) ─────
@@ -1853,56 +1879,70 @@ Deno.serve(async (req) => {
       // Reset per-tick Holy Shield retaliation tracking
       for (const k of Object.keys(holyShieldHitThisTick)) delete holyShieldHitThisTick[k];
 
-      // ── Consecrate pulse phase (Templar) ────────────────────────
-      // While active, each tick the consecrated ground heals every party
-      // member at this node and burns every engaged creature for holy
-      // damage scaled to the templar's WIS at cast time.
+      // ── Aura pulse phase (consolidated `aura_pulse`) ────────────
+      // Consolidation Group D: ONE ticking node aura. While active it may mend
+      // every party member at this node (`heals_allies`) and/or sear every
+      // engaged creature (`damages_enemies`); the pulse magnitude, the scaling
+      // attribute and the wording all come from the ability's config, so
+      // Consecrate is the Templar identity of this base rather than a special
+      // case in the tick loop.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        const cons = mb.consecrate;
+        // Back-compat: older clients still send the class-named `consecrate` bag.
+        const cons = mb.aura_pulse ?? mb.consecrate;
         if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
 
-        const consWis = Math.max(0, cons.wis_mod ?? 0);
+        const auraAbilityKey = typeof cons.ability_key === 'string' ? cons.ability_key : 'consecrate';
+        const auraEntry = getServerAbilityCalcs(m.c.class || 'templar', auraAbilityKey);
+        const auraCfg = (auraEntry?.effectConfig ?? {}) as Record<string, unknown>;
+        const auraText = (auraEntry?.combatText ?? {}) as Record<string, unknown>;
+        const healsAllies = auraCfg.heals_allies !== false;
+        const damagesEnemies = auraCfg.damages_enemies !== false;
+
         const bm = mBondMult[m.id] ?? 1;
-        // Consecrate strength reduced by 35%. Post-cutover the ×0.65 rider lives
-        // INSIDE the configured `amount_calc` (`finalMult`), so it is only
-        // re-applied here when the legacy closure produced the magnitude.
+        // Balance rider (×0.65 for Consecrate) lives INSIDE the configured
+        // `amount_calc` (`finalMult`), so it is only re-applied here when the
+        // legacy closure produced the magnitude.
         const consInputs = buildServerCalcInputs(m.c.level || 1, {
           str: m.c.str || 10, dex: m.c.dex || 10, con: m.c.con || 10,
           int: m.c.int || 10, wis: (m.c.wis || 10), cha: m.c.cha || 10,
         });
         const consRes = resolveMagnitudeEx({
-          classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
+          classKey: m.c.class || 'templar', abilityKey: auraAbilityKey, kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
         });
         const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
-        const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
-        const burnAmt = healAmt;
-
+        const pulseAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
 
         // Heal all alive members on this node (members[] is already filtered)
-        for (const ally of members) {
+        if (healsAllies) for (const ally of members) {
           if (mHp[ally.id] <= 0) continue;
           // Shared heal primitive: clamps to max HP and reports the real delta.
-          const heal = resolveHeal({ amount: healAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
+          const heal = resolveHeal({ amount: pulseAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
           mHp[ally.id] = heal.hpAfter;
           if (heal.applied > 0) {
+            const authoredHeal = typeof auraText.heal_text === 'string'
+              ? auraText.heal_text.replace('{ally}', ally.c.name).replace('{amount}', String(heal.applied))
+              : `Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`;
             events.push({
               type: 'consecrate_heal',
-              message: `Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
+              message: authoredHeal,
               character_id: ally.id,
             });
           }
         }
 
         // Burn every engaged, alive creature
-        for (const cr of creatures) {
+        if (damagesEnemies) for (const cr of creatures) {
           if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
-          cHp[cr.id] = resolveDamage({ amount: burnAmt, hp: cHp[cr.id] }).hpAfter;
+          cHp[cr.id] = resolveDamage({ amount: pulseAmt, hp: cHp[cr.id] }).hpAfter;
+          const authoredBurn = typeof auraText.burn_text === 'string'
+            ? auraText.burn_text.replace('{target}', cr.name).replace('{amount}', String(pulseAmt))
+            : `Holy fire sears ${cr.name}! [${pulseAmt}]`;
           events.push({
             type: 'consecrate_burn',
-            message: `Holy fire sears ${cr.name}! [${burnAmt}]`,
+            message: authoredBurn,
             character_id: m.id,
             creature_id: cr.id,
           });
@@ -1912,6 +1952,7 @@ Deno.serve(async (req) => {
           }
         }
       }
+
 
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────

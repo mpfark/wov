@@ -95,7 +95,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "holy",
     "has_amount_calc": true,
     "has_duration_calc": true,
-    "mechanic_key": "consecrate",
+    "mechanic_key": "aura_pulse",
     "slot": 3,
   },
   {
