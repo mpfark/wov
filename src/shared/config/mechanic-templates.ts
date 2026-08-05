@@ -119,7 +119,11 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // every class signature weapon attack; the class assignment supplies the
   // name, wording and the primary scaling attribute.
   t('weapon_attack', { requiresAmount: true }),
-  // Legacy per-class weapon mechanics, kept resolvable for archived rows.
+  // Consolidated reusable spell strike (Phase 4). Fireball, Smite, Judgment and
+  // Cutting Words all run through this one base; the class assignment supplies
+  // the name, wording, damage type and the casting attribute.
+  t('spell_attack', { requiresAmount: true }),
+  // Legacy per-class mechanics, kept resolvable for archived rows.
   t('power_strike', { requiresAmount: true }),
   t('aimed_shot', { requiresAmount: true }),
   t('backstab', { requiresAmount: true }),
@@ -198,7 +202,10 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   }),
 
   // ── Healing / sustain ─────────────────────────────────────────
+  // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
+  // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
+  // Legacy self-heal mechanic, kept resolvable for archived rows.
   t('self_heal', { requiresAmount: true }),
   t('hp_transfer', {
     requiresAmount: true,
