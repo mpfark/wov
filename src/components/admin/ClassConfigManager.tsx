@@ -381,6 +381,9 @@ export default function ClassConfigManager() {
                 secondaryAttribute={draft.secondary_attribute ?? null}
               />
 
+              <AssignmentOverview highlightClassKey={draft.class_key} />
+
+
               {/* Validation */}
               <Card className="bg-card/80">
                 <CardContent className="pt-4 space-y-1.5">
