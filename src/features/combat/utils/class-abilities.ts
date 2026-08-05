@@ -16,7 +16,9 @@ export interface ClassAbility {
   type:
     | 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
     | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff'
-    | 'poison_buff' | 'evasion_buff' | 'ignite_buff'
+    // Consolidated reusable stack applier (+ legacy per-class mechanics).
+    | 'stack_apply' | 'poison_buff' | 'evasion_buff' | 'ignite_buff'
+
     | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff'
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
