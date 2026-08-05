@@ -46,17 +46,24 @@ function tableData(table: string) {
 
 vi.mock('@/integrations/supabase/client', () => {
   const builder = (table: string) => {
-    const result = { data: tableData(table), error: null };
+    const filters: [string, unknown][] = [];
+    const resolve = () => ({
+      data: tableData(table).filter((row: Record<string, unknown>) =>
+        filters.every(([column, value]) => row[column] === value)),
+      error: null,
+    });
     const chain: Record<string, unknown> = {
-      then: (fn: (r: unknown) => unknown) => Promise.resolve(result).then(fn),
+      then: (fn: (r: unknown) => unknown) => Promise.resolve(resolve()).then(fn),
+      eq: (column: string, value: unknown) => { filters.push([column, value]); return chain; },
     };
-    for (const method of ['select', 'eq', 'in', 'order', 'neq', 'limit']) {
+    for (const method of ['select', 'in', 'order', 'neq', 'limit']) {
       chain[method] = () => chain;
     }
     return chain;
   };
   return { supabase: { from: (table: string) => builder(table) } };
 });
+
 
 import ClassConfigManager from '@/components/admin/ClassConfigManager';
 
