@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Plus, Search } from 'lucide-react';
 import BaseAbilityCreateDialog from '../ability/BaseAbilityCreateDialog';
+import { deriveClassAbilityKey } from '@/shared/config/class-ability-identity';
+
 
 interface LibraryRow {
   id: string;
@@ -89,14 +91,23 @@ export default function AbilityAssignPicker({
 
   const assign = async (abilityId: string, level = unlockLevel) => {
     setSaving(true);
+    const baseKey = library.find(a => a.id === abilityId)?.ability_key ?? 'ability';
+    // Per-class identity (Phase 1): unique per class among active assignments.
+    const { data: takenRows } = await supabase
+      .from('class_ability_assignments')
+      .select('class_ability_key')
+      .eq('class_key', classKey);
+    const taken = (takenRows ?? []).map(r => r.class_ability_key as string);
     const { error } = await supabase.from('class_ability_assignments').insert({
       class_key: classKey,
       role_id: roleId,
       ability_id: abilityId,
+      class_ability_key: deriveClassAbilityKey(baseKey, classKey, taken),
       unlock_level: level,
       is_default: !slotHasDefault,
       status: 'draft',
     });
+
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(

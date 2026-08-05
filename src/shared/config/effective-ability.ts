@@ -30,6 +30,10 @@
 
 import type { AbilityCalc, CalcStat, CalcTerm } from '../formulas/ability-calc';
 import { getMechanicParams } from './mechanic-templates';
+import {
+  allowedOnHitEffects, validateOnHitEffect,
+  type OnHitEffectConfig,
+} from '../combat/on-hit-effects';
 
 /** Keys a class assignment may override. Mirrored by the SQL allowlist. */
 export const OVERRIDE_KEYS = [
@@ -39,6 +43,7 @@ export const OVERRIDE_KEYS = [
   'combat_text',
   'scaling',
   'mechanic_calcs',
+  'on_hit_effect',
 ] as const;
 
 export type OverrideKey = typeof OVERRIDE_KEYS[number];
@@ -59,6 +64,8 @@ export interface AssignmentOverrides {
   combat_text?: Record<string, string | string[]>;
   scaling?: ScalingOverride;
   mechanic_calcs?: Record<string, AbilityCalc>;
+  /** At most one optional On-Hit Effect, drawn from the base's allowlist. */
+  on_hit_effect?: OnHitEffectConfig | null;
 }
 
 /** The base-library fields the resolver reads. */
@@ -75,11 +82,15 @@ export interface BaseAbilityRow {
   interval_ms?: number | null;
   mechanic_calcs?: Record<string, AbilityCalc> | null;
   combat_text?: Record<string, unknown> | null;
+  /** Base declaration of which on-hit effects this ability supports. */
+  effect_config?: Record<string, unknown> | null;
 }
 
 export interface EffectiveAbility extends BaseAbilityRow {
   /** True when a validated override object was applied. */
   overridden: boolean;
+  /** Effective On-Hit Effect (class-configured, base-allowed) or null. */
+  on_hit_effect: OnHitEffectConfig | null;
 }
 
 const TEXT_KEYS: OverrideKey[] = ['label', 'description', 'tooltip'];
@@ -197,6 +208,12 @@ export function validateAssignmentOverrides(
     }
   }
 
+  if (o.on_hit_effect !== undefined && o.on_hit_effect !== null) {
+    for (const err of validateOnHitEffect(o.on_hit_effect, allowedOnHitEffects(base.effect_config))) {
+      errors.push(`overrides.${err}`);
+    }
+  }
+
   return errors;
 }
 
@@ -281,16 +298,20 @@ export function resolveEffectiveAbility(
   const raw = assignment?.overrides;
   const hasOverrides = !!raw && typeof raw === 'object' && !Array.isArray(raw)
     && Object.keys(raw as object).length > 0;
-  if (!hasOverrides) return { ability: { ...base, overridden: false }, errors: [] };
+  if (!hasOverrides) {
+    return { ability: { ...base, overridden: false, on_hit_effect: null }, errors: [] };
+  }
 
   const errors = validateAssignmentOverrides(base, raw);
   if (errors.length > 0) {
     // Deterministic failure: base configuration only, never a partial merge.
-    return { ability: { ...base, overridden: false }, errors };
+    return { ability: { ...base, overridden: false, on_hit_effect: null }, errors };
   }
 
   const o = raw as AssignmentOverrides;
-  const ability: EffectiveAbility = { ...base, overridden: true };
+  const ability: EffectiveAbility = {
+    ...base, overridden: true, on_hit_effect: o.on_hit_effect ?? null,
+  };
 
   if (o.label !== undefined) ability.label = o.label;
   if (o.description !== undefined) ability.description = o.description;

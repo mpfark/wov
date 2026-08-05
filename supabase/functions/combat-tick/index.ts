@@ -38,6 +38,7 @@ import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
 import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
+import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
@@ -1003,12 +1004,17 @@ Deno.serve(async (req) => {
        * client's claim), so log flavor, telemetry and the client event adapter
        * all read the same key.
        */
+      // Set when this cast actually lands damage — the ONLY gate for on-hit
+      // effects (a miss can never trigger one).
+      let abilityHitLanded = false;
       const pushAbilityEvent = (ev: Record<string, unknown>) => {
         const stamped: Record<string, unknown> = { ...ev };
         if (paDamageType && stamped.damage_type === undefined) stamped.damage_type = paDamageType;
         if (stamped.ability_key === undefined) stamped.ability_key = auth.abilityKey;
+        if (stamped.type === 'ability_hit') abilityHitLanded = true;
         events.push(stamped);
       };
+
       const cpCost = auth.entry.cpCost;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
@@ -1491,7 +1497,43 @@ Deno.serve(async (req) => {
         }
         pushAbilityEvent({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
       }
+
+      // ── Optional On-Hit Effect (class-configured, base-allowed) ─────
+      // Server-authoritative and post-hit only: rolled here, after the
+      // mechanic resolved, and only when the cast actually landed damage.
+      const onHit = abilityHitLanded
+        ? rollOnHitEffect(auth.entry.onHitEffect, Math.random())
+        : null;
+      if (onHit && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+        const existingOnHit = activeEffects.find(e =>
+          e.source_id === member.id && e.target_id === target.id
+          && e.effect_type === onHit.def.effectType);
+        const onHitData = {
+          node_id: combatNodeId, target_id: target.id, source_id: member.id,
+          session_id: null, effect_type: onHit.def.effectType,
+          source_ability_key: auth.abilityKey,
+          ...applyStackingEffect(existingOnHit, {
+            now,
+            durationMs: onHit.durationMs,
+            damagePerTick: Math.max(1, Math.floor(onHit.damagePerTick * mBondMult[member.id])),
+            maxStacks: onHit.maxStacks,
+            tickRateMs: TICK_RATE,
+          }),
+        };
+        if (existingOnHit) {
+          Object.assign(existingOnHit, onHitData);
+        } else {
+          activeEffects.push({ id: crypto.randomUUID(), ...onHitData });
+        }
+        pushAbilityEvent({
+          type: `${onHit.def.effectType}_applied`,
+          message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${onHitData.damage_per_tick}/tick]`,
+          character_id: member.id,
+          damage_type: onHit.def.damageType,
+        });
+      }
     }
+
 
     // ── Per-tick Holy Shield retaliation tracking ────────────────
     // Keyed by templar id → Set of creature ids that have already been

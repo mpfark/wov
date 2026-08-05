@@ -39,7 +39,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
       const { data, error } = await supabase
         .from('class_ability_assignments')
         .select(`
-          class_key, unlock_level, is_default, status, ability_id, overrides,
+          class_key, class_ability_key, unlock_level, is_default, status, ability_id, overrides,
           role:class_ability_roles ( id, slot, name ),
           ability:abilities (
             ability_key, label, description, tooltip, cp_cost, mechanic_key, status, damage_type,
@@ -69,10 +69,20 @@ export function useAbilityRegistry(): { loaded: boolean } {
         // Phase 4: the same payload carries non-default alternatives for loadouts.
         setLoadoutOptions(resolved);
         // Authored ability-identity combat text (Fireball vs Frost Bolt).
+        // Register authored text under BOTH the base key and the per-class key,
+        // because the server stamps events with the per-class identity.
         setAbilityTextRegistry(
-          (resolved as unknown as { ability: { ability_key?: string; combat_text?: unknown } | null }[])
-            .map(r => r.ability)
-            .filter((a): a is { ability_key?: string; combat_text?: unknown } => !!a),
+          (resolved as unknown as {
+            class_ability_key?: string | null;
+            ability: { ability_key?: string; combat_text?: unknown } | null;
+          }[]).flatMap(r => {
+            if (!r.ability) return [];
+            const rows = [r.ability];
+            if (r.class_ability_key && r.class_ability_key !== r.ability.ability_key) {
+              rows.push({ ...r.ability, ability_key: r.class_ability_key });
+            }
+            return rows;
+          }),
         );
         setLoaded(true);
       }

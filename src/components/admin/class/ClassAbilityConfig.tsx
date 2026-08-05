@@ -31,6 +31,8 @@ import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import AbilityAssignPicker from './AbilityAssignPicker';
 import EffectiveAbilityPreview from './EffectiveAbilityPreview';
 import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
+import { OnHitEffectEditor } from './OnHitEffectEditor';
+import { type OnHitEffectConfig } from '@/shared/combat/on-hit-effects';
 import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
@@ -447,6 +449,13 @@ export default function ClassAbilityConfig({
                           exactly as authored on the base ability.
                         </p>
                       </div>
+
+                      {/* Optional On-Hit Effect (base-allowlisted, per class) */}
+                      <OnHitEffectEditor
+                        baseEffectConfig={draft.base.effect_config as Record<string, unknown> | null}
+                        value={(draft.overrides as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null}
+                        onChange={next => patchOverride('on_hit_effect' as keyof typeof draft.overrides, next ?? undefined)}
+                      />
 
                       {/* Named mechanic parameters supported by this mechanic */}
                       <div className="space-y-2">
