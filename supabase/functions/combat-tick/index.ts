@@ -2156,52 +2156,27 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          // Envenom (Assassin / dual-primary DEX+CHA): proc chance scales with DEX,
-          // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
-          const dexMod = sm((c.dex || 10) + (eb.dex || 0));
-          const chaMod = sm((c.cha || 10) + (eb.cha || 0));
-          const envenomInputs = buildServerCalcInputs(c.level || 1, {
-            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          });
-          const envenomProc = resolveMagnitude({
-            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'amount',
-            inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
-          });
-          const envenomMaxStacks = resolveMagnitude({
-            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'mechanic',
-            param: 'max_stacks', inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
-          });
-          if (mb.poison_buff && Math.random() < envenomProc) {
-            // Server-side DoT creation: upsert poison into active_effects.
-            // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
-            // so the tick cadence isn't reset every proc — otherwise repeated
-            // procs in consecutive heartbeats would push the next tick forward
-            // forever and the DoT would never deal damage.
-            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
-            const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
-            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
-            const effData = {
-              node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: null, effect_type: 'poison',
-              source_ability_key: 'envenom',
-              ...applyStackingEffect(existing, {
-                now: tickTime, durationMs: 25000, damagePerTick: dmgPerTick,
-                maxStacks: envenomMaxStacks, tickRateMs: TICK_RATE,
-              }),
-            };
-            if (existing) {
-              Object.assign(existing, effData);
-            } else {
-              activeEffects.push({ id: crypto.randomUUID(), ...effData });
-            }
-            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `${c.name}'s attack poisons ${target.name}!` });
+          // On-hit stack appliers (`stack_apply`, e.g. Envenom): the proc chance
+          // is the ability's amount calc, everything else is config-driven.
+          for (const applier of stackAppliersFor(m, mb, 'on_hit')) {
+            const procInputs = buildServerCalcInputs(c.level || 1, {
+              str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+              con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+              wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+            });
+            const proc = resolveMagnitude({
+              classKey: c.class || '', abilityKey: applier.abilityKey, kind: 'amount',
+              inputs: procInputs, characterId: m.id, nodeId: combatNodeId,
+            });
+            if (Math.random() >= proc) continue;
+            const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
+            const authored = str(applier.text.proc_text);
+            const message = authored
+              ? authored.replace('{attacker}', c.name).replace('{target}', target.name).replace('{stacks}', String(stacks))
+              : `${c.name}'s attack afflicts ${target.name}!`;
+            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message });
           }
-          // (Ignite no longer procs from autoattacks — it now pulses
-          // independently each heartbeat as a "shield of fireballs". See the
-          // dedicated Ignite-pulse phase below.)
+
 
 
           // ── Proc-on-hit (main hand) ──
