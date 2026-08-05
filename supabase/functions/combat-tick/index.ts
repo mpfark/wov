@@ -961,6 +961,7 @@ Deno.serve(async (req) => {
           type: 'ability_fail',
           message: `${c.name} cannot use that technique — ${auth.error ?? 'unavailable'}.`,
           character_id: member.id,
+          ability_key: auth.abilityKey || pa.ability_key || undefined,
         });
         continue;
       }
@@ -975,6 +976,7 @@ Deno.serve(async (req) => {
           type: 'ability_fail',
           message: `${c.name}: ${ABILITY_CONFIG_FAILURE_TEXT}.`,
           character_id: member.id,
+          ability_key: auth.abilityKey,
         });
         abilityConfigFailures.push({
           character_id: member.id,
@@ -995,11 +997,17 @@ Deno.serve(async (req) => {
       // `cp_cost` are client claims and are never used past this point.
       const paMech = auth.entry.mechanicKey;
       const paDamageType = auth.entry.damageType;
-      /** Stamps the authoritative damage type on every event this cast emits. */
+      /**
+       * Stamps the authoritative damage type AND the canonical `ability_key`
+       * on every event this cast emits. Identity is server-resolved (never the
+       * client's claim), so log flavor, telemetry and the client event adapter
+       * all read the same key.
+       */
       const pushAbilityEvent = (ev: Record<string, unknown>) => {
-        events.push(paDamageType && ev.damage_type === undefined
-          ? { ...ev, damage_type: paDamageType }
-          : ev);
+        const stamped: Record<string, unknown> = { ...ev };
+        if (paDamageType && stamped.damage_type === undefined) stamped.damage_type = paDamageType;
+        if (stamped.ability_key === undefined) stamped.ability_key = auth.abilityKey;
+        events.push(stamped);
       };
       const cpCost = auth.entry.cpCost;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
@@ -1467,6 +1475,9 @@ Deno.serve(async (req) => {
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: member.id,
           session_id: null, effect_type: 'bleed',
+          // Canonical identity of the ability that opened this wound, so DoT
+          // ticks (live and offscreen) can be attributed without prose parsing.
+          source_ability_key: auth.abilityKey,
           // Stacking (cap 5) and cadence-preserving refresh live in the
           // shared status primitive so every DoT behaves identically.
           ...applyStackingEffect(existing, {
@@ -1928,6 +1939,7 @@ Deno.serve(async (req) => {
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
+              source_ability_key: 'envenom',
               ...applyStackingEffect(existing, {
                 now: tickTime, durationMs: 25000, damagePerTick: dmgPerTick,
                 maxStacks: envenomMaxStacks, tickRateMs: TICK_RATE,

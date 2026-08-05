@@ -39,6 +39,7 @@ const STAGE5_TYPES = new Set([
   'poison',
   'bleed',
   'consecrate_burn',
+  'dot_tick',
   // Kills / deaths (loot + rewards are stage 10)
   'creature_kill',
   'member_death',
@@ -206,6 +207,12 @@ export interface TickEventInput {
   stacks?: number;
   /** Stage 8: effect identity when the server distinguishes it (e.g. 'poison'). */
   effect_type?: string;
+  /**
+   * Phase 3: canonical `abilities.ability_key` stamped by the server for every
+   * event a cast emits (and for DoT ticks whose effect row records it).
+   * Additive metadata only — never used to classify or style the line.
+   */
+  ability_key?: string;
 }
 
 /**
@@ -322,6 +329,7 @@ export function buildTickLogEvent(
           ? STAGE6_EFFECT_TYPE[ev.type]
           : undefined,
     severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
+    abilityKey: ev.ability_key || undefined,
     crit: ev.is_crit ? true : undefined,
     scope: 'node',
   });
