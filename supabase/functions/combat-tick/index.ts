@@ -1234,85 +1234,105 @@ Deno.serve(async (req) => {
           }
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
-      } else if (paMech === 'execute_attack') {
-        // Eviscerate (Assassin / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
-        // Per-stack bonus scales with CHA showmanship. Rolls to hit on DEX.
-        const effDex = (c.dex || 10) + (eb.dex || 0);
-        const effCha = (c.cha || 10) + (eb.cha || 0);
-        const dexMod = sm(effDex);
-        const chaMod = sm(effCha);
-        const stacks = serverStacks('poison', target.id);
-        // Resolve weapon once so miss + hit + tag all share the same source.
-        const { die: evisDie, tag: evisTag } = getMemberWeaponDie();
-        const hit = rollAbilityHit(dexMod);
+      } else if (paMech === 'stack_consume' || paMech === 'execute_attack' || paMech === 'ignite_consume') {
+        // Consolidation Group D: Eviscerate (poison stacks, weapon damage) and
+        // Conflagrate (burn stacks, spell damage) share ONE `stack_consume` base.
+        // Stack type, damage path, scaling attribute and wording all come from
+        // configuration — never from a per-class branch. The two legacy mechanic
+        // keys stay accepted so archived rows keep resolving.
+        const legacyIgnite = paMech === 'ignite_consume';
+        const scEntry = auth.entry;
+        const scText = (scEntry?.combatText ?? {}) as Record<string, unknown>;
+        const scAuthored = (key: string): string | null => {
+          const raw = scText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const scCfg = (scEntry?.effectConfig ?? {}) as Record<string, unknown>;
+        const stackType: 'poison' | 'ignite' = scCfg.stack_type === 'ignite'
+          ? 'ignite'
+          : scCfg.stack_type === 'poison'
+            ? 'poison'
+            : (legacyIgnite ? 'ignite' : 'poison');
+        const stackNoun = typeof scCfg.stack_noun === 'string' && (scCfg.stack_noun as string).trim().length > 0
+          ? (scCfg.stack_noun as string).trim()
+          : (stackType === 'ignite' ? 'burn' : 'poison');
+        const weaponBased = typeof scCfg.weapon_based === 'boolean'
+          ? scCfg.weapon_based as boolean
+          : !legacyIgnite;
+        // Scaling attribute: primary role-tagged stat term of the effective
+        // amount calc (honouring class overrides), then `effect_config.stat`.
+        const scStat = ((): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' => {
+          const terms = ((scEntry?.amountCalc as any)?.terms ?? []) as any[];
+          const primary = terms.find(t => t?.source === 'stat' && t?.role === 'primary')
+            ?? terms.find(t => t?.source === 'stat');
+          const candidate = primary?.stat ?? (scCfg as any).stat;
+          return ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(candidate)
+            ? candidate
+            : (legacyIgnite ? 'int' : 'dex');
+        })();
+        const scMod = sm(((c as any)[scStat] || 10) + ((eb as any)[scStat] || 0));
+        const stacks = serverStacks(stackType, target.id);
+        const scLabel = scEntry?.label || (legacyIgnite ? 'Conflagrate' : 'Eviscerate');
+        const weapon = weaponBased ? getMemberWeaponDie() : null;
+        const plural = stacks === 1 ? '' : 's';
+        const stackNote = stacks > 0 ? `, wasting ${stacks} ${stackNoun} stack${plural}` : '';
+        const fill = (tpl: string, damage?: number): string => tpl
+          .replace(/\{target\}/g, target.name)
+          .replace(/\{stacks\}/g, String(stacks))
+          .replace(/\{noun\}/g, stackNoun)
+          .replace(/\{plural\}/g, plural)
+          .replace(/\{stacknote\}/g, stackNote)
+          .replace(/\{label\}/g, scLabel)
+          .replace(/\{damage\}/g, damage === undefined ? '' : String(damage));
+
+        const hit = rollAbilityHit(scMod);
         if (!hit.hit) {
-          // Strike committed — poison stacks still consumed on miss.
-          const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
-          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
-          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
+          // Strike committed — stacks are consumed even on a miss.
+          const missTpl = scAuthored('miss_text') ?? `${scLabel} misses {target}{stacknote}!`;
+          pushAbilityEvent({
+            type: 'ability_miss',
+            message: `${c.name}'s ${fill(missTpl)}${weapon ? tagSuffix(weapon.tag) : ''}`.replace(`${c.name}'s ${scLabel}`, `${c.name}'s ${scLabel}`),
+            character_id: member.id,
+            ...(weapon ? { weapon_tag: weapon.tag } : {}),
+          });
+          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: stackType });
           continue;
         }
+
         // Configured v2 `amount_calc` is the FULL pre-multiplier magnitude
-        // (weapon die + DEX + soft DEX + level/3), deliberately unrounded so the
-        // stack multiplier rounds once. The legacy closure mirrors that exactly.
-        const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
-        const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const baseDmg = paMagEx('amount',
-          undefined, evisDie,
-        ).value;
+        // (weapon die + stat + soft stat + level/3 for the weapon path, stat-only
+        // for the spell path), deliberately unrounded so the stack multiplier
+        // rounds once.
+        const scRes = weapon ? paMagEx('amount', undefined, weapon.die) : paMagEx('amount');
+        const baseDmg = scRes.value;
         // Named mechanic value: per_stack_multiplier (unit 'mult').
         const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
-
         const multiplier = 1 + perStackBonus * stacks;
-        const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
-        cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
-        if (stacks > 0) {
-          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
-          consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
-        } else {
-          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
+        let finalDmg = weaponBased
+          ? Math.max(1, Math.round(baseDmg * multiplier))
+          : Math.max(1, Math.floor(baseDmg * multiplier));
+        // Arcane Surge empowers any damage_buff holder's output.
+        if (buffs[member.id]?.damage_buff) {
+          finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int || 10) + (eb.int || 0), member.id, combatNodeId)), 1);
         }
-        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
-        }
-
-      } else if (paMech === 'ignite_consume') {
-        // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
-        // Per-stack bonus scales with INT. Burn stack count scales with WIS via Ignite. Rolls to hit on INT.
-        const effInt = (c.int || 10) + (eb.int || 0);
-        const intMod = sm(effInt);
-        const stacks = serverStacks('ignite', target.id);
-        const hit = rollAbilityHit(intMod);
-        if (!hit.hit) {
-          const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
-          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
-          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
-          continue;
-        }
-        // Soft-scaled INT base (profile 'burst'). Post-cutover the base lives in
-        // `amount_calc` and the per-stack rider in the named
-        // `per_stack_multiplier` mechanic calc; both keep the inline formula as
-        // their legacy closure.
-        const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
-        const baseDmg = paMag('amount');
-        const perStackBonus = paMag('mechanic', 'per_stack_multiplier');
-
-        const multiplier = 1 + perStackBonus * stacks;
-        let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
-        // Arcane Surge empowers all wizard damage
-        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
-        if (stacks > 0) {
-          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
-          consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
-        } else {
-          pushAbilityEvent({ type: 'ability_hit', message: `${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
-        }
+
+        const hitTpl = stacks > 0
+          ? (scAuthored('hit_text') ?? `consumes {stacks} {noun} stack{plural} on {target}! [{damage}]`)
+          : (scAuthored('hit_no_stacks_text') ?? `strikes {target} (no {noun} stacks). [{damage}]`);
+        pushAbilityEvent({
+          type: 'ability_hit',
+          message: `${c.name} ${fill(hitTpl, finalDmg)}${weapon ? tagSuffix(weapon.tag) : ''}`,
+          character_id: member.id,
+          ...(weapon ? { weapon_tag: weapon.tag } : {}),
+        });
+        if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: stackType });
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
       } else if (
         paMech === 'fireball' ||
         paMech === 'spell_attack' ||
