@@ -11,7 +11,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "physical",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "aimed_shot",
+    "mechanic_key": "weapon_attack",
     "slot": 0,
   },
   {
@@ -35,7 +35,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "physical",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "backstab",
+    "mechanic_key": "weapon_attack",
     "slot": 0,
   },
   {
@@ -323,7 +323,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "physical",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "power_strike",
+    "mechanic_key": "weapon_attack",
     "slot": 0,
   },
   {
