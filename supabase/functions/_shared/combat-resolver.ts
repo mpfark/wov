@@ -93,7 +93,7 @@ export function resolveEffectTicks(
   const expiredIds: string[] = [];
   const newKills = new Set<string>();
   const lootQueue: LootQueueEntry[] = [];
-  const events: { type: string; message: string }[] = [];
+  const events: { type: string; message: string; ability_key?: string }[] = [];
   const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
   const advancedEffects: any[] = [];
 
@@ -131,7 +131,13 @@ export function resolveEffectTicks(
           ? `${charName}'s Rend`
           : `${charName}'s ${eff.effect_type} (×${eff.stacks})`;
         const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
-        events.push({ type: 'dot_tick', message: `${creature.name} ${verb} ${sourceLabel}. [${dmgLabel}]` });
+        events.push({
+          type: 'dot_tick',
+          message: `${creature.name} ${verb} ${sourceLabel}. [${dmgLabel}]`,
+          // Canonical identity of the ability that applied the effect (when the
+          // row carries one) — additive metadata, never a classifier input.
+          ability_key: eff.source_ability_key ?? undefined,
+        });
 
         eff.next_tick_at += eff.tick_rate_ms;
         advancedEffects.push(eff);
