@@ -36,8 +36,8 @@ describe('stack finisher consolidation', () => {
   });
 
   it('the legacy per-class mechanics are retired from the template registry', () => {
-    expect(getMechanicTemplate('execute_attack')).toBeUndefined();
-    expect(getMechanicTemplate('ignite_consume')).toBeUndefined();
+    expect(getMechanicTemplate('execute_attack')).toBeNull();
+    expect(getMechanicTemplate('ignite_consume')).toBeNull();
   });
 
   it('stack type, damage path and scaling stat are configuration', () => {
@@ -51,7 +51,7 @@ describe('stack finisher consolidation', () => {
 
   it('only the weapon-based finisher rolls a weapon die term', () => {
     const dieTerms = (row: typeof EV) =>
-      (row.amount_calc?.terms ?? []).filter((t: any) => t.source === 'weapon_die');
+      (row.amount_calc?.terms ?? []).filter((t: any) => t.source === 'dice' && t.die === 'weapon_main');
     expect(dieTerms(EV).length).toBe(1);
     expect(dieTerms(CO).length).toBe(0);
   });
