@@ -16,7 +16,7 @@ export interface ClassAbility {
   type:
     | 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
     | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff'
-    | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume'
+    | 'poison_buff' | 'evasion_buff' | 'ignite_buff'
     | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff'
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
@@ -85,7 +85,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Backstab', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Shadowstep', description: 'Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).', tooltip: 'Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
     { label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.', tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.', cpCost: 50, type: 'poison_buff', tier: 2, levelRequired: 10 },
-    { label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.', tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).', cpCost: 40, type: 'execute_attack', tier: 3, levelRequired: 15 },
+    { label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.', tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).', cpCost: 40, type: 'stack_consume', tier: 3, levelRequired: 15 },
     { label: 'Cloak of Shadows', description: 'Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.', tooltip: 'Chance to dodge attacks. Dodge scales with CHA, duration with DEX.', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
   ],
   wizard: [
@@ -93,7 +93,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Force Shield', description: 'Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.', tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
     { label: 'Arcane Surge', description: 'Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.', tooltip: 'Increase all your damage. Bonus scales with INT. Stance.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
     { label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.', tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
-    { label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.', tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
+    { label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.', tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.', cpCost: 60, type: 'stack_consume', tier: 4, levelRequired: 20 },
   ],
   templar: [
     { label: 'Judgment',         description: 'Pass divine judgment, dealing holy damage scaling with WIS', tooltip: 'Holy damage to one target. Scales with WIS.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
