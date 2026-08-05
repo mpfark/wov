@@ -682,7 +682,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   useEffect(() => {
     if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
-    broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
+    broadcastPartyRegenBuff(
+      partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id,
+      {
+        abilityKey: partyRegenBuff.abilityKey,
+        label: partyRegenBuff.label,
+        durationMs: partyRegenBuff.durationMs,
+        tickText: partyRegenBuff.tickText,
+      },
+    );
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // Broadcast Inspire when this character casts it (only the caster's
