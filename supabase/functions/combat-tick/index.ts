@@ -1496,7 +1496,43 @@ Deno.serve(async (req) => {
         }
         pushAbilityEvent({ type: 'bleed_applied', message: `${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
       }
+
+      // ── Optional On-Hit Effect (class-configured, base-allowed) ─────
+      // Server-authoritative and post-hit only: rolled here, after the
+      // mechanic resolved, and only when the cast actually landed damage.
+      const onHit = abilityHitLanded
+        ? rollOnHitEffect(auth.entry.onHitEffect, Math.random())
+        : null;
+      if (onHit && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+        const existingOnHit = activeEffects.find(e =>
+          e.source_id === member.id && e.target_id === target.id
+          && e.effect_type === onHit.def.effectType);
+        const onHitData = {
+          node_id: combatNodeId, target_id: target.id, source_id: member.id,
+          session_id: null, effect_type: onHit.def.effectType,
+          source_ability_key: auth.abilityKey,
+          ...applyStackingEffect(existingOnHit, {
+            now,
+            durationMs: onHit.durationMs,
+            damagePerTick: Math.max(1, Math.floor(onHit.damagePerTick * mBondMult[member.id])),
+            maxStacks: onHit.maxStacks,
+            tickRateMs: TICK_RATE,
+          }),
+        };
+        if (existingOnHit) {
+          Object.assign(existingOnHit, onHitData);
+        } else {
+          activeEffects.push({ id: crypto.randomUUID(), ...onHitData });
+        }
+        pushAbilityEvent({
+          type: `${onHit.def.effectType}_applied`,
+          message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${onHitData.damage_per_tick}/tick]`,
+          character_id: member.id,
+          damage_type: onHit.def.damageType,
+        });
+      }
     }
+
 
     // ── Per-tick Holy Shield retaliation tracking ────────────────
     // Keyed by templar id → Set of creature ids that have already been
