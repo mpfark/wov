@@ -222,7 +222,10 @@ export function useBuffState(params: UseBuffStateParams) {
       };
     }
     if (divineChallengeBuff && now < divineChallengeBuff.expiresAt) {
-      buffs.divine_challenge = { flat: divineChallengeBuff.flat, expires_at: divineChallengeBuff.expiresAt };
+      buffs.divine_challenge = {
+        flat: divineChallengeBuff.flat, expires_at: divineChallengeBuff.expiresAt,
+        ...(divineChallengeBuff.text ? { text: divineChallengeBuff.text } : {}),
+      };
     }
     return buffs;
   }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, consecrateBuff, divineChallengeBuff]);

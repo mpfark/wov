@@ -609,8 +609,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (cfg.mitigation_mode === 'percent') return;
       const durationMs = durationOf();
       const flat = amountOf();
-      p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
       const authored = (ability.combatText || {}) as Record<string, unknown>;
+      p.buffSetters.setDivineChallengeBuff({
+        flat, expiresAt: Date.now() + durationMs,
+        ...(typeof authored.mitigate_text === 'string' ? { text: authored.mitigate_text } : {}),
+      });
       const seconds = String(Math.round(durationMs / 1000));
       const message = typeof authored.self_text === 'string'
         ? authored.self_text.replace('{seconds}', seconds).replace('{amount}', String(flat))
