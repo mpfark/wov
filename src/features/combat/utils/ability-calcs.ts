@@ -32,7 +32,10 @@ import { getStatModifier } from '@/shared/formulas/stats';
 
 export interface AbilityCalcEntry {
   abilityKey: string;
+  /** Underlying library key when the entry came from a class assignment. */
+  baseAbilityKey?: string;
   mechanicKey: string;
+
   amountCalc: AbilityCalc | null;
   durationCalc: AbilityCalc | null;
   intervalMs: number | null;
