@@ -20,6 +20,14 @@ interface FlavorVariants {
 
 const FLAVOR: Record<string, FlavorVariants> = {
   // ── T0 openers ──────────────────────────────────────────────
+  // Consolidated spell strike: generic mechanic-level fallback. Per-class
+  // identity lines live in ABILITY_FLAVOR (keyed by class ability key).
+  spell_attack: {
+    withTarget: [
+      'Power gathers in your hands, aimed at {target}…',
+      'You shape the spell and let it find {target}…',
+    ],
+  },
   fireball: {
     withTarget: [
       'You weave arcane flame between your fingers, aimed at {target}…',
@@ -123,6 +131,30 @@ const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
     withTarget: [
       'You slip behind {target}, blade reversed…',
       'Soft footfalls — and then you are at {target}\'s back…',
+    ],
+  },
+  cutting_words: {
+    withTarget: [
+      'You take a breath, voice sharpening for {target}…',
+      'A barbed verse rises in your throat, aimed at {target}…',
+    ],
+  },
+  smite: {
+    withTarget: [
+      'You channel divine light toward {target}…',
+      'A shaft of pale radiance gathers above {target}…',
+    ],
+  },
+  judgment: {
+    withTarget: [
+      'You raise your hand and call judgment down on {target}…',
+      'Holy light kindles at your fingertips, sentence pronounced on {target}…',
+    ],
+  },
+  second_wind: {
+    selfOrAlly: [
+      'You plant your feet and catch your breath…',
+      'You shake off the haze and steady yourself…',
     ],
   },
   frost_bolt: {

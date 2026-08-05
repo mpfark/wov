@@ -119,7 +119,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "psychic",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "cutting_words",
+    "mechanic_key": "spell_attack",
     "slot": 0,
   },
   {
@@ -215,7 +215,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "fire",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "fireball",
+    "mechanic_key": "spell_attack",
     "slot": 0,
   },
   {
@@ -299,7 +299,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "holy",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "smite",
+    "mechanic_key": "spell_attack",
     "slot": 0,
   },
   {
@@ -359,7 +359,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": null,
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "self_heal",
+    "mechanic_key": "heal",
     "slot": 1,
   },
   {
@@ -395,7 +395,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "holy",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "smite",
+    "mechanic_key": "spell_attack",
     "slot": 0,
   },
   {

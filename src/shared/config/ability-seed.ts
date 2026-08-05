@@ -116,7 +116,10 @@ const physicalT0 = (s: 'str' | 'dex'): AbilityCalc => ({
 const spellT0 = (s: 'int' | 'wis' | 'cha', finalMult?: number): AbilityCalc => ({
   version: 2, base: 5,
   terms: [
-    stat(s, 2, { clampAtZero: true, transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
+    // `role: 'primary'` keeps the casting attribute class-overridable, so the one
+    // consolidated `spell_attack` base scales on INT for a Wizard, WIS for a
+    // Healer/Templar and CHA for a Bard without duplicating the curve.
+    stat(s, 2, { clampAtZero: true, role: 'primary', transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
     lvl(1 / 3),
   ],
   ...(finalMult !== undefined ? { finalMult } : {}),
@@ -127,6 +130,9 @@ const spellT0 = (s: 'int' | 'wis' | 'cha', finalMult?: number): AbilityCalc => (
 });
 
 /** Standard weapon-scaled queued attack: magnitude stays server-owned for now. */
+/** Consolidated spell strike: one base ability, class-configured casting stat. */
+const SPELL_ATTACK_CONFIG = { resolved_by: 'combat-tick' };
+
 const WEAPON_ATTACK_CONFIG = {
   weapon_scaled: true, unarmed_die: '1d4', resolved_by: 'combat-tick',
   /** Class assignments may configure at most one of these (Phase 2 registry). */
@@ -148,10 +154,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'second_wind', label: 'Second Wind', description: 'Catch your breath and recover HP based on CON',
     tooltip: 'Recover your HP. Scales with CON.',
-    mechanic_key: 'self_heal', ability_type: 'heal', damage_type: null,
+    mechanic_key: 'heal', ability_type: 'heal', damage_type: null,
     target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
-    amount_calc: { base: 0, terms: [stat('con', 3), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'CON magnitude' },
-    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    amount_calc: { base: 0, terms: [stat('con', 3, { role: 'primary' }), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'CON magnitude' },
+    duration_calc: null, interval_ms: null, effect_config: {},
+    combat_text: {
+      self_text: 'You use Second Wind and catch your breath!',
+      self_full_text: "You use Second Wind but you're already at full health.",
+    },
+    base_ability_key: 'heal',
     class_key: 'warrior', slot: 1,
   },
   {
@@ -189,10 +200,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'fireball', label: 'Fireball', description: 'Hurl a ball of arcane flame at your target, scaling with INT',
     tooltip: 'Damage one target. Scales with INT.',
-    mechanic_key: 'fireball', ability_type: 'damage', damage_type: 'fire',
+    mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('int'), duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'int', resolved_by: 'combat-tick' }, combat_text: {},
+    effect_config: { ...SPELL_ATTACK_CONFIG, stat: 'int' },
+    combat_text: { hit_verb: 'hurls a fireball at', miss_verb: 'hurls a fireball past' },
+    base_ability_key: 'spell_attack',
     class_key: 'wizard', slot: 0,
   },
   {
@@ -386,10 +399,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'smite', label: 'Smite', description: 'Channel a burst of divine light at your target, scaling with WIS',
     tooltip: 'Damage one target. Scales with WIS.',
-    mechanic_key: 'smite', ability_type: 'damage', damage_type: 'holy',
+    mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'holy',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('wis'), duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'wis', resolved_by: 'combat-tick' }, combat_text: {},
+    effect_config: { ...SPELL_ATTACK_CONFIG, stat: 'wis' },
+    combat_text: { hit_verb: 'smites', miss_verb: 'calls down light upon' },
+    base_ability_key: 'spell_attack',
     class_key: 'healer', slot: 0,
   },
   {
@@ -397,8 +412,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Restore your HP. Scales with WIS.',
     mechanic_key: 'heal', ability_type: 'heal', damage_type: null,
     target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
-    amount_calc: { base: 0, terms: [stat('wis', 3), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
-    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    amount_calc: { base: 0, terms: [stat('wis', 3, { role: 'primary' }), { source: 'level', mult: 1 }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
+    duration_calc: null, interval_ms: null, effect_config: {},
+    combat_text: {
+      self_text: 'You cast Heal and mend your wounds!',
+      self_full_text: "You cast Heal but you're already at full health.",
+    },
     class_key: 'healer', slot: 1,
   },
   {
@@ -440,10 +459,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'cutting_words', label: 'Cutting Words', description: 'Unleash a barbed insult that wounds your target, scaling with CHA',
     tooltip: 'Damage one target. Scales with CHA.',
-    mechanic_key: 'cutting_words', ability_type: 'damage', damage_type: 'psychic',
+    mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'psychic',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('cha'), duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'cha', resolved_by: 'combat-tick' }, combat_text: {},
+    effect_config: { ...SPELL_ATTACK_CONFIG, stat: 'cha' },
+    combat_text: { hit_verb: 'mocks', miss_verb: 'jeers at' },
+    base_ability_key: 'spell_attack',
     class_key: 'bard', slot: 0,
   },
   {
@@ -512,10 +533,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'judgment', label: 'Judgment', description: 'Pass divine judgment, dealing holy damage scaling with WIS',
     tooltip: 'Holy damage to one target. Scales with WIS.',
-    mechanic_key: 'smite', ability_type: 'damage', damage_type: 'holy',
+    mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'holy',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('wis', 0.8), duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'wis', resolved_by: 'combat-tick' }, combat_text: {},
+    effect_config: { ...SPELL_ATTACK_CONFIG, stat: 'wis' },
+    combat_text: { hit_verb: 'passes divine judgment upon', miss_verb: 'pronounces sentence on' },
+    base_ability_key: 'spell_attack',
     class_key: 'templar', slot: 0,
   },
   {

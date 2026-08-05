@@ -39,7 +39,7 @@ const SERVER_ABILITY_TYPES = new Set([
   // T0 openers — resolved server-side; can also initiate combat against a Tab target
   // `weapon_attack` is the consolidated reusable weapon strike; the three
   // per-class mechanics stay listed for archived assignments.
-  'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+  'spell_attack', 'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
 
