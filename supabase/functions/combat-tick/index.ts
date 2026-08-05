@@ -1396,7 +1396,7 @@ Deno.serve(async (req) => {
         if (!hit.hit) {
           const missMsg = isBackstab
             ? `${c.name}'s blade slips wide — ${target.name} is untouched.`
-            : `${c.name} ${verb} ${target.name} — misses!${weaponSuffix}`;
+            : `${c.name} ${missVerb} ${target.name} — misses!${weaponSuffix}`;
           pushAbilityEvent({
             type: 'ability_miss',
             message: missMsg,
