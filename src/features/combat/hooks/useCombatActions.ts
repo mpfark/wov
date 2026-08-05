@@ -481,14 +481,37 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLogEvent(buildBuffEvent(`Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
-    } else if (ability.type === 'absorb_buff') {
-      // Force Shield (legacy timed preview — stance toggle intercepts in practice).
-      // Pool scales with WIS to match server authority (combat-tick) and the
-      // ability description. INT shapes regen; WIS shapes the ward.
+    } else if (ability.type === 'absorb_buff' || ability.type === 'ally_absorb') {
+      // Consolidation Phase 6: Force Shield and Divine Aegis share the one
+      // `absorb_buff` base. Pool = primary attribute, duration = secondary, both
+      // configured. Whether the ward can land on an ally is the row's
+      // `target_type`, and the wording comes from authored `combat_text` —
+      // never a per-class branch. (`ally_absorb` stays matched so archived
+      // assignments still resolve.)
       const shieldHp = amountOf();
       const durationMs = durationOf();
-      p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
-      p.addLogEvent(buildBuffEvent(`Force Shield! An arcane ward wraps you for ${Math.round(durationMs / 1000)}s. [${shieldHp}]`));
+      const allyCast = ability.targetType === 'ally' || ability.targetType === 'party';
+      p.buffSetters.setAbsorbBuff(
+        allyCast
+          ? { shieldHp, shieldCap: shieldHp, expiresAt: Date.now() + durationMs }
+          : { shieldHp, expiresAt: Date.now() + durationMs },
+      );
+      const text = getAuthoredCombatText(ability.abilityKey);
+      const authored = (key: string): string | null => {
+        const raw = text[key];
+        return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+      };
+      const seconds = Math.round(durationMs / 1000);
+      const otherTarget = allyCast && targetId && targetId !== p.character.id ? targetId : null;
+      const targetName = otherTarget
+        ? (p.partyMembers.find(m => m.character_id === otherTarget)?.character.name || 'ally')
+        : null;
+      const line = (targetName
+        ? (authored('ally_text') ?? `${ability.label}! You shield {target} for up to {seconds}s.`)
+        : (authored('self_text') ?? `${ability.label}! An absorb shield wraps you for {seconds}s.`))
+        .replace('{target}', targetName ?? 'you')
+        .replace('{seconds}', String(seconds));
+      p.addLogEvent(buildBuffEvent(`${line} [${shieldHp}]`));
 
     } else if (ability.type === 'party_regen') {
       // Consolidation Phase 5: Purifying Light and Crescendo share the one
@@ -519,19 +542,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
         .replace('{who}', who)
         .replace('{seconds}', String(seconds));
       p.addLogEvent(buildHealEvent(`${castLine} [${healPerTick}/tick]`));
-    } else if (ability.type === 'ally_absorb') {
-      // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
-      const shieldHp = amountOf();
-      const durationMs = durationOf();
-      p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: Date.now() + durationMs });
-      const durSec = Math.round(durationMs / 1000);
-      if (targetId && targetId !== p.character.id) {
-        const targetMember = p.partyMembers.find(m => m.character_id === targetId);
-        const targetName = targetMember?.character.name || 'ally';
-        p.addLogEvent(buildBuffEvent(`Divine Aegis! You shield ${targetName} for up to ${durSec}s. [${shieldHp}]`));
-      } else {
-        p.addLogEvent(buildBuffEvent(`Divine Aegis! An absorb shield wraps you for up to ${durSec}s. [${shieldHp}]`));
-      }
     } else if (ability.type === 'sunder_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
