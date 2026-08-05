@@ -204,7 +204,10 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.holy_shield = { wis_mod: holyShieldBuff.wisMod, expires_at: holyShieldBuff.expiresAt };
     }
     if (consecrateBuff && now < consecrateBuff.expiresAt) {
-      buffs.consecrate = { wis_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt };
+      buffs.aura_pulse = {
+        mag_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt,
+        ability_key: consecrateBuff.abilityKey,
+      };
     }
     if (divineChallengeBuff && now < divineChallengeBuff.expiresAt) {
       buffs.divine_challenge = { flat: divineChallengeBuff.flat, expires_at: divineChallengeBuff.expiresAt };

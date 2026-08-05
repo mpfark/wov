@@ -57,7 +57,7 @@ const INSTANT_BUFF_TYPES = new Set([
   'regen_buff', 'evasion_buff', 'disengage_buff',
   'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   // Templar instant buffs (non-stance)
-  'consecrate', 'mitigation_buff',
+  'aura_pulse', 'mitigation_buff',
 ]);
 
 /**
@@ -575,12 +575,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'block_buff') {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.
-    } else if (ability.type === 'consecrate') {
-      // Templar — Consecrate: dual-primary — magnitude (heal/burn) = WIS, number of ticks scales with CON.
-      const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
+    } else if (ability.type === 'aura_pulse') {
+      // Consolidated node aura (Group D). Which attribute drives the pulse and
+      // the authored cast wording both come from config, so any class can bind
+      // its own aura to this base — Consecrate is just the Templar identity.
+      const cfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const statKey = typeof cfg.magnitude_stat === 'string' ? cfg.magnitude_stat : 'wis';
+      const statRaw = (p.character as unknown as Record<string, number>)[statKey] ?? 10;
+      const statBonus = (p.equipmentBonuses as unknown as Record<string, number>)[statKey] ?? 0;
+      const magMod = Math.max(0, getStatModifier(statRaw + statBonus));
       const durationMs = durationOf();
-      p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
-      p.addLogEvent(buildHealEvent(`You consecrate the ground — hallowed light wells up beneath your feet for ${Math.round(durationMs / 1000)}s, mending allies and searing the unholy.`));
+      p.buffSetters.setConsecrateBuff({
+        wisMod: magMod, expiresAt: Date.now() + durationMs, durationMs,
+        abilityKey: ability.abilityKey,
+      });
+      const authored = (ability.combatText || {}) as Record<string, unknown>;
+      const castText = typeof authored.cast_text === 'string'
+        ? authored.cast_text.replace('{duration}', String(Math.round(durationMs / 1000)))
+        : `${ability.label}! Hallowed ground wells up beneath your feet for ${Math.round(durationMs / 1000)}s.`;
+      p.addLogEvent(buildHealEvent(castText));
     } else if (ability.type === 'mitigation_buff') {
       // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
       const durationMs = durationOf();
