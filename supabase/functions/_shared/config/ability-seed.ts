@@ -313,7 +313,11 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_calcs: {
       per_stack_multiplier: { base: 0.30, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'percent', note: 'INT bonus damage per consumed burn stack' },
     },
-    combat_text: {},
+    combat_text: {
+      hit_text: 'detonates {stacks} burn stack{plural} on {target}! [{damage}]',
+      hit_no_stacks_text: 'blasts {target} (no burn stacks). [{damage}]',
+      miss_text: 'Conflagrate gutters out against {target}{stacknote}!',
+    },
     class_key: 'wizard', slot: 4,
   },
 
