@@ -186,7 +186,7 @@ export default function ClassConfigManager() {
           </button>
         </div>
 
-        <ScrollArea className="h-[calc(100%-2.75rem)]">
+        <ScrollArea className="h-[calc(100%-5.25rem)]">
           <div className="p-3 space-y-1">
             {loading && (
               <p className="text-xs text-muted-foreground flex items-center gap-2">
