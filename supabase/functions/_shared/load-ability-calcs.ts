@@ -325,7 +325,12 @@ export function getServerAbilityCalcs(
 
 /** Every active assignment for `classKey` (identity + calcs). */
 export function getServerClassAbilities(classKey: string): ServerAbilityCalcEntry[] {
-  return Object.values(REGISTRY).filter(e => e.classKey === classKey);
+  // Alias keys point at the same entry object, so dedupe by identity.
+  const seen = new Set<ServerAbilityCalcEntry>();
+  for (const e of Object.values(REGISTRY)) {
+    if (e.classKey === classKey) seen.add(e);
+  }
+  return [...seen];
 }
 
 /**
