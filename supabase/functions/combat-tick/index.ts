@@ -695,8 +695,15 @@ Deno.serve(async (req) => {
           dex: cDex, con: cCon, int: cInt, wis: cWis,
           cha: (m.c.cha || 10) + ((eq[m.id] as any)?.cha || 0),
         });
-        if (reserved.ignite)       mb.ignite_buff = true;
-        if (reserved.envenom)      mb.poison_buff = true;
+        // Consolidated stack appliers (`stack_apply`): any reserved stance whose
+        // configured mechanic is `stack_apply` seeds the generic applier bag, so
+        // Envenom / Orbs of Fire are configuration rather than named branches.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          if (entry?.mechanicKey !== 'stack_apply') continue;
+          (mb.stack_apply = mb.stack_apply || []).push({ ability_key: stanceKey });
+        }
+
         if (reserved.eagle_eye) {
           // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
           // Magnitude is configurable (abilities.amount_calc); the inline
