@@ -131,6 +131,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntrie
 /** Shape of one joined `class_ability_assignments` row. */
 export interface AbilityConfigRow {
   class_key: string;
+  /** Per-class identity; preferred over the base `ability_key` (Phase 1). */
+  class_ability_key?: string | null;
   unlock_level: number;
   is_default: boolean;
   status: string;
@@ -209,7 +211,9 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
     }
     const list = byClass.get(row.class_key) ?? [];
     list.push({
-      abilityKey: row.ability.ability_key ?? '',
+      // Per-class identity first: consolidated bases are shared, so the class
+      // key is what keeps Power Strike and Backstab distinct.
+      abilityKey: row.class_ability_key || row.ability.ability_key || '',
       label: row.ability.label,
       description: row.ability.description,
       tooltip: row.ability.tooltip,
