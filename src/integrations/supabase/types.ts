@@ -785,6 +785,7 @@ export type Database = {
       class_ability_assignments: {
         Row: {
           ability_id: string
+          class_ability_key: string
           class_key: string
           created_at: string
           id: string
@@ -797,6 +798,7 @@ export type Database = {
         }
         Insert: {
           ability_id: string
+          class_ability_key: string
           class_key: string
           created_at?: string
           id?: string
@@ -809,6 +811,7 @@ export type Database = {
         }
         Update: {
           ability_id?: string
+          class_ability_key?: string
           class_key?: string
           created_at?: string
           id?: string
