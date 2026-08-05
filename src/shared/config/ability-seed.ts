@@ -159,6 +159,32 @@ const partyRegenDuration = (s: 'con' | 'int'): AbilityCalc => ({
 /** Shared party-regen contract: identity/presentation comes from the class row. */
 const PARTY_REGEN_CONFIG = { ticking_party_heal: true, resolved_by: 'client-loop' };
 
+/**
+ * Absorb shield (Consolidation Phase 6) — Force Shield and Divine Aegis share
+ * one `absorb_buff` base. The pool attribute is `role: 'primary'` and the
+ * duration attribute `role: 'secondary'`, so a class assignment can retarget
+ * both without touching coefficients. Target scope (self vs ally) is the row's
+ * `target_type`; the client targeting UI reads that, not the mechanic key.
+ */
+const shieldPool = (s: 'wis' | 'int' | 'cha' | 'con', mult = 1, levelMult = 0.5): AbilityCalc => ({
+  base: 0,
+  terms: [stat(s, mult, { role: 'primary' }), { source: 'level', mult: levelMult, rounding: 'floor' }],
+  floor: 1, cap: null, unit: 'hp', note: 'shield pool (primary attribute)',
+});
+
+const shieldDuration = (
+  s: 'int' | 'con' | 'wis' | 'cha',
+  perPoint: number,
+  base: number,
+  cap: number,
+): AbilityCalc => ({
+  base, terms: [stat(s, perPoint, { clampAtZero: true, role: 'secondary' })],
+  cap, unit: 'ms', note: 'shield duration (secondary attribute)',
+});
+
+/** Shared absorb contract: identity/presentation comes from the class row. */
+const ABSORB_CONFIG = { absorb_shield: true, resolved_by: 'client-cast' };
+
 export const ABILITY_SEED: AbilitySeed[] = [
   // ══════════════════ Warrior ══════════════════
   {
@@ -233,9 +259,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.',
     mechanic_key: 'absorb_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
-    amount_calc: { base: 0, terms: [stat('wis'), { source: 'level', mult: 0.5, rounding: 'floor' }], floor: 1, cap: null, unit: 'hp', note: 'WIS shield pool' },
-    duration_calc: { base: 8000, terms: [stat('int', 1000)], cap: 15000, unit: 'ms', note: 'legacy timed preview path (stance has no duration)' },
-    interval_ms: null, effect_config: { regen_stat: 'int', reforms_out_of_combat: true }, combat_text: {},
+    amount_calc: shieldPool('wis', 1, 0.5),
+    duration_calc: shieldDuration('int', 1000, 8000, 15000),
+    interval_ms: null,
+    effect_config: { ...ABSORB_CONFIG, regen_stat: 'int', reforms_out_of_combat: true, stat: 'wis', duration_stat: 'int' },
+    combat_text: {
+      self_text: 'Force Shield! An arcane ward wraps you for {seconds}s.',
+      ally_text: 'Force Shield! You ward {target} for {seconds}s.',
+    },
+    base_ability_key: 'absorb_buff',
     class_key: 'wizard', slot: 1,
   },
   {
@@ -472,11 +504,17 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'divine_aegis', label: 'Divine Aegis', description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.',
     tooltip: 'Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.',
-    mechanic_key: 'ally_absorb', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'absorb_buff', ability_type: 'buff', damage_type: null,
     target_type: 'ally', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
-    amount_calc: { base: 0, terms: [stat('wis', 2), { source: 'level', mult: 0.7, rounding: 'floor' }], floor: null, cap: null, unit: 'hp', note: 'WIS shield pool' },
-    duration_calc: { base: 30000, terms: [stat('con', 2000, { clampAtZero: true })], cap: 60000, unit: 'ms', note: 'CON duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    amount_calc: shieldPool('wis', 2, 0.7),
+    duration_calc: shieldDuration('con', 2000, 30000, 60000),
+    interval_ms: null,
+    effect_config: { ...ABSORB_CONFIG, stat: 'wis', duration_stat: 'con' },
+    combat_text: {
+      self_text: 'Divine Aegis! An absorb shield wraps you for up to {seconds}s.',
+      ally_text: 'Divine Aegis! You shield {target} for up to {seconds}s.',
+    },
+    base_ability_key: 'absorb_buff',
     class_key: 'healer', slot: 4,
   },
 
