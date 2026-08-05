@@ -139,18 +139,17 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     params: [P('max_stacks', 'Maximum stacks', 'count', 'threshold', true)],
     stackOp: { stackType: 'poison_stacks', op: 'apply', timing: 'on_hit', owner: 'target' },
   }),
-  t('execute_attack', {
+  // Consolidation Group D: ONE reusable stack finisher. Which stack it eats
+  // (`effect_config.stack_type`: poison | ignite) and whether it rolls the
+  // weapon die (`effect_config.weapon_based`) are configuration, so Eviscerate
+  // and Conflagrate are the same base ability with different identity.
+  t('stack_consume', {
     requiresAmount: true,
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
     stackOp: { stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
   }),
   // `amount_calc` is the orb pulse chance.
   t('ignite_buff', { requiresAmount: true }),
-  t('ignite_consume', {
-    requiresAmount: true,
-    params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
-    stackOp: { stackType: 'burn_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
-  }),
 
   // ── Multi-hit ─────────────────────────────────────────────────
   // `amount_calc` is the FULL per-arrow magnitude (weapon die + stat), so there
