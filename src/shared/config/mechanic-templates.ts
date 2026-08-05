@@ -123,13 +123,10 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Cutting Words all run through this one base; the class assignment supplies
   // the name, wording, damage type and the casting attribute.
   t('spell_attack', { requiresAmount: true }),
-  // Legacy per-class mechanics, kept resolvable for archived rows.
-  t('power_strike', { requiresAmount: true }),
-  t('aimed_shot', { requiresAmount: true }),
-  t('backstab', { requiresAmount: true }),
-  t('fireball', { requiresAmount: true }),
-  t('smite', { requiresAmount: true }),
-  t('cutting_words', { requiresAmount: true }),
+  // (Legacy per-class attack mechanics — power_strike / aimed_shot / backstab /
+  // fireball / smite / cutting_words — were removed once every row moved to the
+  // consolidated `weapon_attack` and `spell_attack` bases.)
+
   t('consecrate', {
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
