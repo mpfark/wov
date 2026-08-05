@@ -33,13 +33,26 @@ export const STANCE_DEFS: StanceDef[] = [
   { key: 'force_shield', tier: 1, abilityType: 'absorb_buff',   label: 'Force Shield' },
   { key: 'holy_shield',  tier: 1, abilityType: 'reactive_holy', label: 'Holy Shield' },
   { key: 'arcane_surge', tier: 2, abilityType: 'damage_buff',   label: 'Arcane Surge' },
-  { key: 'battle_cry',   tier: 2, abilityType: 'battle_cry',    label: 'Battle Cry' },
+  // Consolidation Group D: Battle Cry now runs the shared `mitigation_buff`
+  // base (percent mode). Identity, not mechanic, decides stance-ness.
+  { key: 'battle_cry',   tier: 2, abilityType: 'mitigation_buff', label: 'Battle Cry' },
   { key: 'shield_wall',  tier: 2, abilityType: 'block_buff',    label: 'Shield Wall' },
   { key: 'ignite',       tier: 3, abilityType: 'ignite_buff',   label: 'Orbs of Fire' },
   { key: 'envenom',      tier: 3, abilityType: 'poison_buff',   label: 'Envenom' },
 ];
 
 const BY_ABILITY_TYPE = new Map(STANCE_DEFS.map(d => [d.abilityType, d]));
+// Legacy mechanic aliases from before consolidation — archived assignments that
+// carry no ability identity still resolve to the right stance.
+BY_ABILITY_TYPE.set('battle_cry', STANCE_DEFS.find(d => d.key === 'battle_cry')!);
+
+/**
+ * Mechanics shared by a stance and a non-stance ability. A row with no ability
+ * identity may NOT be resolved as a stance through these keys (Battle Cry vs
+ * Divine Challenge both run `mitigation_buff`; Force Shield vs Divine Aegis
+ * both run `absorb_buff`).
+ */
+const SHARED_MECHANIC_KEYS = new Set(['mitigation_buff', 'absorb_buff']);
 const BY_KEY = new Map(STANCE_DEFS.map(d => [d.key, d]));
 
 /** Returns the stance def for an ability type, or null if it's not a stance. */
@@ -63,6 +76,7 @@ export function resolveStanceForAbility(ability: {
 }): StanceDef | null {
   if (ability.abilityKey) return BY_KEY.get(ability.abilityKey as StanceKey) ?? null;
   if (ability.targetType === 'ally' || ability.targetType === 'party') return null;
+  if (SHARED_MECHANIC_KEYS.has(ability.type)) return null;
   return BY_ABILITY_TYPE.get(ability.type) ?? null;
 }
 

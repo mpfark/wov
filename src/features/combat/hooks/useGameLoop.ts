@@ -86,7 +86,8 @@ export interface HolyShieldBuff { wisMod: number; expiresAt: number }
  */
 export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number; abilityKey?: string }
 /** Divine Challenge — flat damage reduction. */
-export interface DivineChallengeBuff { flat: number; expiresAt: number }
+/** Flat-mode mitigation buff. `text` is the authored mitigation line (optional). */
+export interface DivineChallengeBuff { flat: number; expiresAt: number; text?: string }
 
 // ─── Local type aliases ───────────────────────────────────────────
 interface EquippedItem {

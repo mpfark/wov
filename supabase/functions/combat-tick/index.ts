@@ -715,19 +715,30 @@ Deno.serve(async (req) => {
           mb.crit_buff = { bonus: blended };
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
-        if (reserved.battle_cry) {
-          // Dual-primary (Warrior STR+DEX): magnitude comes from the configured
-          // `battle_cry` amount calc (STR curve); duration is implicit via the
-          // stance. Crit reduction shares that curve, and an equipped shield
-          // adds the global shield anti-crit bonus on the damage-reduction leg.
-          const hasShield = isShield(offHandTag[m.id]);
+        // Consolidation Group D: ONE mitigation base. Any reserved stance whose
+        // mechanic is `mitigation_buff` in percent mode contributes percentage
+        // damage reduction; the shield kicker, crit softening and the mitigation
+        // line are all configuration — Battle Cry is the Warrior identity.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey ?? (stanceKey === 'battle_cry' ? 'mitigation_buff' : '');
+          if (mech !== 'mitigation_buff') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
+          if (entry && cfg.mitigation_mode !== 'percent') continue;
           const base = resolveMagnitude({
-            classKey: m.c.class || 'warrior', abilityKey: 'battle_cry', kind: 'amount',
+            classKey: m.c.class || 'warrior', abilityKey: stanceKey, kind: 'amount',
             inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
           });
-          const dr = base + (hasShield ? SHIELD_ANTI_CRIT_BONUS : 0);
-          const critReduction = base;
-          mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
+          const shieldBonus = typeof cfg.shield_dr_bonus === 'number'
+            ? cfg.shield_dr_bonus : SHIELD_ANTI_CRIT_BONUS;
+          const dr = base + (isShield(offHandTag[m.id]) ? shieldBonus : 0);
+          const critReduction = cfg.applies_crit_reduction === false ? 0 : base;
+          const authored = (entry?.combatText ?? {}) as Record<string, unknown>;
+          mb.battle_cry_dr = {
+            reduction: dr,
+            crit_reduction: critReduction,
+            ...(typeof authored.mitigate_text === 'string' ? { text: authored.mitigate_text } : {}),
+          };
         }
         if (reserved.holy_shield) {
           // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
@@ -1725,8 +1736,9 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
-        // 7. Battle Cry damage reduction — bond multiplier scales the DR
-        // magnitude (utility), clamped to 0.95 to never produce zero damage.
+        // 7. Percent mitigation (consolidated `mitigation_buff`) — bond
+        // multiplier scales the DR magnitude, clamped to 0.95 so a hit never
+        // reduces to zero. Wording is authored on the ability row.
         if (mb.battle_cry_dr) {
           const bondM = mBondMult[targetId] ?? 1;
           let dr = (mb.battle_cry_dr.reduction || 0) * bondM;
@@ -1734,17 +1746,26 @@ Deno.serve(async (req) => {
           dr = Math.min(0.95, dr);
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-          events.push({ type: 'battle_cry_dr', message: `${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
+          const mitText = typeof (mb.battle_cry_dr as { text?: string }).text === 'string'
+            ? (mb.battle_cry_dr as { text?: string }).text!
+                .replace('{target}', targetName).replace('{amount}', String(preDmg - dmg))
+            : `${targetName}'s war cry softens the blow! [${preDmg - dmg}]`;
+          events.push({ type: 'battle_cry_dr', message: mitText, character_id: targetId });
         }
 
-        // 7b. Divine Challenge (Templar) — flat damage reduction, bond multiplier scales magnitude.
+        // 7b. Flat mitigation (consolidated `mitigation_buff`, flat mode) — bond
+        // multiplier scales magnitude. Divine Challenge is the Templar identity.
         if (mb.divine_challenge && (mb.divine_challenge.expires_at ?? 0) > now) {
           const bondM = mBondMult[targetId] ?? 1;
           const flat = Math.max(0, Math.floor((mb.divine_challenge.flat || 0) * bondM));
           if (flat > 0 && dmg > 0) {
             const preDmg = dmg;
             dmg = Math.max(dmg - flat, 1);
-            events.push({ type: 'divine_challenge_dr', message: `${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
+            const flatText = typeof (mb.divine_challenge as { text?: string }).text === 'string'
+              ? (mb.divine_challenge as { text?: string }).text!
+                  .replace('{target}', targetName).replace('{amount}', String(preDmg - dmg))
+              : `${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`;
+            events.push({ type: 'divine_challenge_dr', message: flatText, character_id: targetId });
           }
         }
 
