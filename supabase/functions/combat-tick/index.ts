@@ -2311,87 +2311,79 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Ignite "shield of fireballs" pulse phase ────────────────
-      // While Ignite is active, an orb of flame circles the wizard and
-      // pulses every heartbeat at the current target. Proc chance scales with
-      // INT (no more flat 40%), pulse damage scales with INT, and the applied
-      // burn DoT scales with WIS — every Wizard primary contributes.
+      // ── Pulse-trigger stack appliers (`stack_apply`, trigger: 'pulse') ──
+      // Consolidation Group D: a pulsing applier fires on its own heartbeat
+      // rather than on weapon hits. Orbs of Fire is the Wizard identity of this
+      // base: proc chance is the amount calc, the spark damage attribute, the
+      // applied effect, its scaling and every line of text are configuration.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        if (!mb.ignite_buff) continue;
+        const appliers = stackAppliersFor(m, mb, 'pulse');
+        if (appliers.length === 0) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
 
         const c = m.c;
         const eb = eq[m.id] || {};
-        const intMod = sm((c.int || 10) + (eb.int || 0));
-        const wisMod = sm((c.wis || 10) + (eb.wis || 0));
-        const orbChance = resolveMagnitude({
-          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'amount',
-          inputs: buildServerCalcInputs(c.level || 1, {
-            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          }),
-          characterId: m.id, nodeId: combatNodeId,
-        });
-        if (Math.random() >= orbChance) continue;
-        // Direct pulse damage = INT (the spark / blast).
-        let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
-        pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
-
-        cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
-
-        // Upsert burn DoT — damage-per-tick + duration scale from WIS
-        // (sustained, lingering flame). Pulse and burn read different stats
-        // so wizards genuinely benefit from both primaries.
-        const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-        // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
-        const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
-        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
-        const duration = Math.min(45000, 30000 + wisMod * 1000);
-        const effData = {
-          node_id: combatNodeId, target_id: target.id, source_id: m.id,
-          session_id: null, effect_type: 'ignite',
-          ...applyStackingEffect(existing, {
-            now: tickTime, durationMs: duration, damagePerTick: dmgPerTick,
-            maxStacks: 5, tickRateMs: TICK_RATE,
-          }),
-        };
-        if (existing) {
-          Object.assign(existing, effData);
-        } else {
-          activeEffects.push({ id: crypto.randomUUID(), ...effData });
-        }
-
-        // Engage so the pulse can also start combat on a passive target
-        sessionEngaged.add(target.id);
-
-        events.push({
-          type: 'ignite_pulse',
-          character_id: m.id,
-          creature_id: target.id,
-          attacker_name: c.name,
-          target_name: target.name,
-          damage: pulseDmg,
-          message: `A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
-        });
-        // Re-emit the legacy ignite_proc event so the existing client wiring
-        // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
-        // updates the burn-stack badge without any new plumbing.
-        events.push({
-          type: 'ignite_proc',
-          character_id: m.id,
-          creature_id: target.id,
-          message: `${c.name}'s orb of fire seared ${target.name} with Ignite.`,
+        const inputs = buildServerCalcInputs(c.level || 1, {
+          str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+          con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+          wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
         });
 
-        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
+        for (const applier of appliers) {
+          if (cHp[target.id] <= 0 || cKilled.has(target.id)) break;
+          const chance = resolveMagnitude({
+            classKey: c.class || '', abilityKey: applier.abilityKey, kind: 'amount',
+            inputs, characterId: m.id, nodeId: combatNodeId,
+          });
+          if (Math.random() >= chance) continue;
+
+          // Direct pulse damage (the spark), from the configured attribute.
+          const pulseStat = (str(applier.cfg.pulse_damage_stat) ?? 'int') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+          const pulseMod = sm((c[pulseStat] || 10) + ((eb as any)[pulseStat] || 0));
+          let pulseDmg = Math.max(1, num(applier.cfg.pulse_damage_base, 2) + pulseMod);
+          if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
+          pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
+
+          cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
+
+          const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
+
+          // A pulse can also open combat on an otherwise passive target.
+          if (applier.cfg.engages_target !== false) sessionEngaged.add(target.id);
+
+          const fill = (s: string) => s
+            .replace('{attacker}', c.name).replace('{target}', target.name)
+            .replace('{stacks}', String(stacks)).replace('{damage}', String(pulseDmg));
+          const pulseAuthored = str(applier.text.pulse_text);
+          events.push({
+            type: 'ignite_pulse',
+            character_id: m.id,
+            creature_id: target.id,
+            attacker_name: c.name,
+            target_name: target.name,
+            damage: pulseDmg,
+            message: pulseAuthored
+              ? fill(pulseAuthored)
+              : `${c.name}'s ${applier.text.label ?? 'orb'} sears ${target.name}! [${pulseDmg}]`,
+          });
+          // Stack-badge event so the client stack counter updates with no new plumbing.
+          const stackAuthored = str(applier.text.stack_text);
+          events.push({
+            type: 'ignite_proc',
+            character_id: m.id,
+            creature_id: target.id,
+            message: stackAuthored ? fill(stackAuthored) : `${c.name} afflicted ${target.name}.`,
+          });
+
+          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
+          }
         }
       }
+
 
       // ── Server-side DoT ticking via shared resolver (active_effects rows) ─────
       {
