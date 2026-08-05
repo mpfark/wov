@@ -2897,6 +2897,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      heal_creatures_on_wake: { Args: never; Returns: number }
       heal_party_member:
         | {
             Args: {
