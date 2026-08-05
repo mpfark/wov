@@ -174,8 +174,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Divine Aegis (instant, ally) share this base; the class assignment supplies
   // the name, wording, target scope and the pool/duration attributes.
   t('absorb_buff', { duration: true, requiresAmount: true }),
-  // Legacy ally-shield mechanic, kept resolvable for archived rows.
-  t('ally_absorb', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('damage_buff', { duration: true, requiresAmount: true }),
   t('crit_buff', { duration: true, requiresAmount: true }),
   t('block_buff', {
