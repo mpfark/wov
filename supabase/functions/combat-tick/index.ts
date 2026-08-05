@@ -1384,7 +1384,8 @@ Deno.serve(async (req) => {
         const isPhysT0 = paMech === 'weapon_attack' || PHYSICAL_T0.has(paMech);
         // Backstab keeps its possessive phrasing, resolved by identity now that
         // the mechanic is shared.
-        const isBackstab = paMech === 'backstab' || auth.abilityKey === 'backstab';
+        const t0Identity = t0Entry?.classAbilityKey || auth.abilityKey;
+        const isBackstab = paMech === 'backstab' || t0Identity === 'backstab';
 
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
