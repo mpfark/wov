@@ -23,7 +23,7 @@
  * `supabase/functions/_shared/config/mechanic-templates.ts`.
  */
 
-import { validateCalc, type AbilityCalc } from '../formulas/ability-calc.ts';
+import { validateCalc, type AbilityCalc } from '../formulas/ability-calc';
 
 export type MechanicCalcParamKey =
   | 'arrow_count'
@@ -123,13 +123,10 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Cutting Words all run through this one base; the class assignment supplies
   // the name, wording, damage type and the casting attribute.
   t('spell_attack', { requiresAmount: true }),
-  // Legacy per-class mechanics, kept resolvable for archived rows.
-  t('power_strike', { requiresAmount: true }),
-  t('aimed_shot', { requiresAmount: true }),
-  t('backstab', { requiresAmount: true }),
-  t('fireball', { requiresAmount: true }),
-  t('smite', { requiresAmount: true }),
-  t('cutting_words', { requiresAmount: true }),
+  // (Legacy per-class attack mechanics — power_strike / aimed_shot / backstab /
+  // fireball / smite / cutting_words — were removed once every row moved to the
+  // consolidated `weapon_attack` and `spell_attack` bases.)
+
   t('consecrate', {
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
@@ -177,8 +174,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Divine Aegis (instant, ally) share this base; the class assignment supplies
   // the name, wording, target scope and the pool/duration attributes.
   t('absorb_buff', { duration: true, requiresAmount: true }),
-  // Legacy ally-shield mechanic, kept resolvable for archived rows.
-  t('ally_absorb', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('damage_buff', { duration: true, requiresAmount: true }),
   t('crit_buff', { duration: true, requiresAmount: true }),
   t('block_buff', {
@@ -209,8 +204,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
   // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
-  // Legacy self-heal mechanic, kept resolvable for archived rows.
-  t('self_heal', { requiresAmount: true }),
   t('hp_transfer', {
     requiresAmount: true,
     params: [P('reserve_hp', 'HP kept in reserve', 'hp', 'threshold', true)],
