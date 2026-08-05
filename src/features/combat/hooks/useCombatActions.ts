@@ -60,6 +60,13 @@ const INSTANT_BUFF_TYPES = new Set([
   'consecrate', 'mitigation_buff',
 ]);
 
+/**
+ * Mechanics shared by a stance and a non-stance ability (Consolidation Phase 6:
+ * Force Shield vs Divine Aegis on `absorb_buff`). They resolve instantly only
+ * when the cast ability is *not* a stance, so the stance path stays exclusive.
+ */
+const INSTANT_WHEN_NOT_STANCE = new Set(['absorb_buff']);
+
 /** Ability types that require being in combat with a valid target */
 const COMBAT_REQUIRED_TYPES = new Set([
   'multi_attack', 'dot_debuff', 'execute_attack', 'ignite_consume',
@@ -252,7 +259,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       return;
     }
 
-    const isInstantBuff = INSTANT_BUFF_TYPES.has(ability.type);
+    const isInstantBuff = INSTANT_BUFF_TYPES.has(ability.type)
+      // `stanceDef` is null here (the stance branch above returns), so a shared
+      // mechanic reaching this point is the non-stance variant.
+      || INSTANT_WHEN_NOT_STANCE.has(ability.type);
 
     // Early combat check before queuing
     if (!isInstantBuff && !_fromTick && COMBAT_REQUIRED_TYPES.has(ability.type)) {
