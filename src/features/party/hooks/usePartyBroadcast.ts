@@ -42,7 +42,7 @@ interface PartyRewardEvent {
 interface PartyRegenBuffEvent {
   healPerTick: number;
   expiresAt: number;
-  source: 'healer' | 'bard';
+  source: string;
   /** Consolidated `party_regen` identity so observers read the caster's ability name. */
   abilityKey?: string;
   label?: string;
@@ -67,7 +67,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   const [moveEvents, setMoveEvents] = useState<PartyMoveEvent[]>([]);
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
   const [rewardEvents, setRewardEvents] = useState<PartyRewardEvent[]>([]);
-  const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: 'healer' | 'bard'; abilityKey?: string; label?: string; durationMs?: number; tickText?: string } | null>(null);
+  const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: string; abilityKey?: string; label?: string; durationMs?: number; tickText?: string } | null>(null);
   const [incomingInspireBuff, setIncomingInspireBuff] = useState<{ hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -180,7 +180,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastPartyRegenBuff = useCallback((
-    healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string,
+    healPerTick: number, expiresAt: number, source: string, casterId: string,
     identity?: { abilityKey?: string; label?: string; durationMs?: number; tickText?: string },
   ) => {
     if (!channelRef.current) return;

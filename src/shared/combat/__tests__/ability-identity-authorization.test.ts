@@ -85,9 +85,9 @@ beforeEach(() => {
 
 describe('Phase E — alternative ability resolves its own numbers', () => {
   const ROWS = () => [
-    row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'power_strike', amount: 7, isDefault: true, slot: 3 }),
+    row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'weapon_attack', amount: 7, isDefault: true, slot: 3 }),
     // Deliberately differently tuned alternative sharing the same mechanic.
-    row({ classKey: 'warrior', abilityKey: 'lacerate', mechanicKey: 'power_strike', amount: 19, isDefault: false, slot: 3 }),
+    row({ classKey: 'warrior', abilityKey: 'lacerate', mechanicKey: 'weapon_attack', amount: 19, isDefault: false, slot: 3 }),
   ];
 
   it('loads non-default assignments too', () => {
@@ -99,12 +99,12 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
   it('queued by ability_key, the alternative keeps its own magnitude', () => {
     loader.setServerAbilityCalcs(ROWS());
     const auth = loader.authorizeQueuedAbility({
-      classKey: 'warrior', level: 20, abilityKey: 'lacerate', abilityType: 'power_strike',
+      classKey: 'warrior', level: 20, abilityKey: 'lacerate', abilityType: 'weapon_attack',
     });
     expect(auth.error).toBeNull();
     expect(auth.abilityKey).toBe('lacerate');
     expect(auth.entry?.amountCalc?.base).toBe(19);
-    expect(auth.entry?.mechanicKey).toBe('power_strike');
+    expect(auth.entry?.mechanicKey).toBe('weapon_attack');
   });
 
   it('the client cannot mint a role slot — it is derived from the registry', () => {
@@ -118,7 +118,7 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
   it('a legacy ability_type-only payload resolves the default, not the alternative', () => {
     loader.setServerAbilityCalcs(ROWS());
     const auth = loader.authorizeQueuedAbility({
-      classKey: 'warrior', level: 20, abilityType: 'power_strike',
+      classKey: 'warrior', level: 20, abilityType: 'weapon_attack',
     });
     expect(auth.error).toBeNull();
     expect(auth.abilityKey).toBe('rend');
@@ -129,8 +129,8 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
 describe('Phase E — rejection matrix', () => {
   beforeEach(() => {
     loader.setServerAbilityCalcs([
-      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'power_strike', amount: 7, slot: 3, unlockLevel: 12 }),
-      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'execute_attack', amount: 11, slot: 4,
+      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'weapon_attack', amount: 7, slot: 3, unlockLevel: 12 }),
+      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'stack_consume', amount: 11, slot: 4,
         mechanicCalcs: { per_stack_multiplier: calc(0.2) } }),
     ]);
   });
@@ -151,7 +151,7 @@ describe('Phase E — rejection matrix', () => {
   });
 
   it('rejects a forged identity (key of one class, mechanic of another)', () => {
-    reject({ classKey: 'warrior', level: 42, abilityKey: 'eviscerate', abilityType: 'power_strike' });
+    reject({ classKey: 'warrior', level: 42, abilityKey: 'eviscerate', abilityType: 'weapon_attack' });
   });
 
   it('rejects below the unlock level', () => {
@@ -166,8 +166,8 @@ describe('Phase E — rejection matrix', () => {
   it('rejects a retired ability: it is never loaded into the registry', () => {
     loader.resetServerAbilityCalcs();
     loader.setServerAbilityCalcs([
-      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'power_strike', amount: 7, slot: 3 }),
-      row({ classKey: 'warrior', abilityKey: 'old_cleave', mechanicKey: 'power_strike', amount: 99, slot: 3, abilityStatus: 'retired' }),
+      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'weapon_attack', amount: 7, slot: 3 }),
+      row({ classKey: 'warrior', abilityKey: 'old_cleave', mechanicKey: 'weapon_attack', amount: 99, slot: 3, abilityStatus: 'retired' }),
     ]);
     expect(loader.getServerAbilityCalcs('warrior', 'old_cleave')).toBeNull();
     reject({ classKey: 'warrior', level: 42, abilityKey: 'old_cleave' });
@@ -176,8 +176,8 @@ describe('Phase E — rejection matrix', () => {
   it('rejects an inactive assignment even when the ability is active', () => {
     loader.resetServerAbilityCalcs();
     loader.setServerAbilityCalcs([
-      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'power_strike', amount: 7, slot: 3 }),
-      row({ classKey: 'warrior', abilityKey: 'unassigned', mechanicKey: 'power_strike', amount: 99, slot: 3, status: 'draft' }),
+      row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'weapon_attack', amount: 7, slot: 3 }),
+      row({ classKey: 'warrior', abilityKey: 'unassigned', mechanicKey: 'weapon_attack', amount: 99, slot: 3, status: 'draft' }),
     ]);
     reject({ classKey: 'warrior', level: 42, abilityKey: 'unassigned' });
   });

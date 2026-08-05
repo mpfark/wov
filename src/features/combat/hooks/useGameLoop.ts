@@ -54,7 +54,7 @@ export interface AbsorbBuff { shieldHp: number; shieldCap?: number; expiresAt: n
 export interface PartyRegenBuff {
   healPerTick: number;
   expiresAt: number;
-  source?: 'healer' | 'bard';
+  source?: string;
   abilityKey?: string;
   label?: string;
   durationMs?: number;

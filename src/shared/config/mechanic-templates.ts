@@ -123,13 +123,10 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Cutting Words all run through this one base; the class assignment supplies
   // the name, wording, damage type and the casting attribute.
   t('spell_attack', { requiresAmount: true }),
-  // Legacy per-class mechanics, kept resolvable for archived rows.
-  t('power_strike', { requiresAmount: true }),
-  t('aimed_shot', { requiresAmount: true }),
-  t('backstab', { requiresAmount: true }),
-  t('fireball', { requiresAmount: true }),
-  t('smite', { requiresAmount: true }),
-  t('cutting_words', { requiresAmount: true }),
+  // (Legacy per-class attack mechanics — power_strike / aimed_shot / backstab /
+  // fireball / smite / cutting_words — were removed once every row moved to the
+  // consolidated `weapon_attack` and `spell_attack` bases.)
+
   t('consecrate', {
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
@@ -142,18 +139,17 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     params: [P('max_stacks', 'Maximum stacks', 'count', 'threshold', true)],
     stackOp: { stackType: 'poison_stacks', op: 'apply', timing: 'on_hit', owner: 'target' },
   }),
-  t('execute_attack', {
+  // Consolidation Group D: ONE reusable stack finisher. Which stack it eats
+  // (`effect_config.stack_type`: poison | ignite) and whether it rolls the
+  // weapon die (`effect_config.weapon_based`) are configuration, so Eviscerate
+  // and Conflagrate are the same base ability with different identity.
+  t('stack_consume', {
     requiresAmount: true,
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
     stackOp: { stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
   }),
   // `amount_calc` is the orb pulse chance.
   t('ignite_buff', { requiresAmount: true }),
-  t('ignite_consume', {
-    requiresAmount: true,
-    params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
-    stackOp: { stackType: 'burn_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
-  }),
 
   // ── Multi-hit ─────────────────────────────────────────────────
   // `amount_calc` is the FULL per-arrow magnitude (weapon die + stat), so there
@@ -177,8 +173,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Divine Aegis (instant, ally) share this base; the class assignment supplies
   // the name, wording, target scope and the pool/duration attributes.
   t('absorb_buff', { duration: true, requiresAmount: true }),
-  // Legacy ally-shield mechanic, kept resolvable for archived rows.
-  t('ally_absorb', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('damage_buff', { duration: true, requiresAmount: true }),
   t('crit_buff', { duration: true, requiresAmount: true }),
   t('block_buff', {
@@ -209,8 +203,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
   // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
-  // Legacy self-heal mechanic, kept resolvable for archived rows.
-  t('self_heal', { requiresAmount: true }),
   t('hp_transfer', {
     requiresAmount: true,
     params: [P('reserve_hp', 'HP kept in reserve', 'hp', 'threshold', true)],

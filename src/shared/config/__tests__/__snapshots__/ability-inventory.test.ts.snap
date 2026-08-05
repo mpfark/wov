@@ -83,7 +83,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "fire",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "ignite_consume",
+    "mechanic_key": "stack_consume",
     "slot": 4,
   },
   {
@@ -203,7 +203,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "physical",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "execute_attack",
+    "mechanic_key": "stack_consume",
     "slot": 3,
   },
   {

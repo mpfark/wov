@@ -35,7 +35,7 @@ import { createLogEvent, mapServerEventType } from '@/features/combat/events/log
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set([
-  'multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff',
+  'multi_attack', 'stack_consume', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff',
   // T0 openers — resolved server-side; can also initiate combat against a Tab target
   // `weapon_attack` is the consolidated reusable weapon strike; the three
   // per-class mechanics stay listed for archived assignments.
@@ -659,10 +659,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           // Resolve stacks for finishers (Eviscerate / Conflagrate).
           let consumeStacks = 0;
           if (targetId && p.getCreatureStacks) {
-            if (ability.type === 'execute_attack') {
-              consumeStacks = p.getCreatureStacks(targetId, 'poison');
-            } else if (ability.type === 'ignite_consume') {
-              consumeStacks = p.getCreatureStacks(targetId, 'ignite');
+            if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
+              // Stack type comes from configuration; the legacy mechanic keys
+              // only supply the fallback for archived rows.
+              const configured = ability.effectConfig?.stack_type;
+              const stackType = configured === 'ignite' || configured === 'poison'
+                ? configured
+                : (ability.type === 'ignite_consume' ? 'ignite' : 'poison');
+              consumeStacks = p.getCreatureStacks(targetId, stackType);
             }
           }
 

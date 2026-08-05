@@ -186,10 +186,10 @@ describe('mechanic templates', () => {
     expect(getMechanicTemplate('hp_transfer')?.params.map(p => p.key)).toContain('reserve_hp');
     // Fully-wired policy: mechanics whose only magnitude is `amount_calc` expose
     // no duplicate named knob.
-    expect(getMechanicTemplate('smite')?.params).toEqual([]);
-    expect(getMechanicTemplate('smite')?.requiresAmount).toBe(true);
+    expect(getMechanicTemplate('spell_attack')?.params).toEqual([]);
+    expect(getMechanicTemplate('spell_attack')?.requiresAmount).toBe(true);
 
-    expect(getMechanicTemplate('execute_attack')?.requiresStackOp).toEqual({
+    expect(getMechanicTemplate('stack_consume')?.requiresStackOp).toEqual({
       stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target',
     });
     expect(STACK_EFFECT_TYPE.poison_stacks).toBe('poison');

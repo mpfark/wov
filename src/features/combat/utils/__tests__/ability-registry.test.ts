@@ -49,7 +49,7 @@ describe('fallback ability lists match the seeded ability rows', () => {
 });
 
 function row(over: Partial<AbilityConfigRow> & { slot?: number; label?: string; mechanic?: string } = {}): AbilityConfigRow {
-  const { slot = 0, label = 'Configured', mechanic = 'power_strike', ...rest } = over;
+  const { slot = 0, label = 'Configured', mechanic = 'weapon_attack', ...rest } = over;
   return {
     class_key: 'warrior',
     unlock_level: 3,
@@ -77,7 +77,7 @@ describe('setAbilityRegistry overrides ability lists in place', () => {
     expect(isAbilityRegistryLoaded()).toBe(true);
     expect(CLASS_ABILITIES.warrior.map(a => a.label)).toEqual(['Configured', 'Configured Two']);
     expect(CLASS_ABILITIES.warrior[0]).toMatchObject({
-      cpCost: 7, type: 'power_strike', tier: 0, levelRequired: 3,
+      cpCost: 7, type: 'weapon_attack', tier: 0, levelRequired: 3,
       description: 'Configured description', tooltip: 'Configured tooltip',
     });
     expect(CLASS_ABILITIES.healer.map(a => a.label)).toEqual(healerBefore);

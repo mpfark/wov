@@ -34,9 +34,9 @@ const row = (over: Partial<AbilityConfigRow> & {
 });
 
 const ROWS: AbilityConfigRow[] = [
-  row({ slot: 1, roleId: 'r1', abilityId: 'a1', label: 'Fireball', mechanic: 'fireball', isDefault: true }),
+  row({ slot: 1, roleId: 'r1', abilityId: 'a1', label: 'Fireball', mechanic: 'spell_attack', isDefault: true }),
   row({
-    slot: 1, roleId: 'r1', abilityId: 'a2', label: 'Frost Bolt', mechanic: 'fireball',
+    slot: 1, roleId: 'r1', abilityId: 'a2', label: 'Frost Bolt', mechanic: 'spell_attack',
     isDefault: false, abilityKey: 'frost_bolt',
     amount: { base: 3, terms: [{ stat: 'int', mult: 2 }] },
   }),

@@ -683,7 +683,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(
-      partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id,
+      partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || partyRegenBuff.abilityKey || 'party_regen', character.id,
       {
         abilityKey: partyRegenBuff.abilityKey,
         label: partyRegenBuff.label,

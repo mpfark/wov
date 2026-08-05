@@ -69,16 +69,12 @@ const FLAVOR: Record<string, FlavorVariants> = {
       "You aim a shattering blow at {target}'s armor…",
     ],
   },
-  execute_attack: {
+  // Consolidated stack finisher: generic mechanic-level fallback. Per-class
+  // identity lines live in ABILITY_FLAVOR (keyed by class ability key).
+  stack_consume: {
     withTarget: [
-      'You coil to detonate the venom in {target}…',
-      'Every poisoned stack burns — you draw to ignite {target}…',
-    ],
-  },
-  ignite_consume: {
-    withTarget: [
-      'You reach out to ignite the embers burning {target}…',
-      'You will the smoldering coals on {target} to erupt…',
+      'You coil to detonate what festers in {target}…',
+      'Every lingering stack strains — you draw to set {target} off…',
     ],
   },
   burst_damage: {
@@ -155,6 +151,18 @@ const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
     selfOrAlly: [
       'You plant your feet and catch your breath…',
       'You shake off the haze and steady yourself…',
+    ],
+  },
+  eviscerate: {
+    withTarget: [
+      'You coil to detonate the venom in {target}…',
+      'Every poisoned stack burns — you draw to ignite {target}…',
+    ],
+  },
+  conflagrate: {
+    withTarget: [
+      'You reach out to ignite the embers burning {target}…',
+      'You will the smoldering coals on {target} to erupt…',
     ],
   },
   frost_bolt: {
