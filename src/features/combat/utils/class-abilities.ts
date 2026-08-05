@@ -29,10 +29,16 @@ export interface ClassAbility {
   levelRequired: number;
   /** Canonical damage type key (null for buffs, heals and utility). */
   damageType: string | null;
+  /**
+   * Configured `abilities.target_type` (self / ally / enemy / party / node).
+   * Consolidation Phase 6: targeting UI reads this instead of branching on a
+   * class-specific mechanic key, so one shared base can be self- or ally-cast.
+   */
+  targetType?: string | null;
 }
 
 /** Fallback literal without identity fields — they are derived from the seed. */
-type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType'>;
+type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType'>;
 
 // Phase 1 T0 abilities are class-specific (defined per-class below in CLASS_ABILITIES).
 // Focus Strike has been removed; there are no universal abilities at present.
@@ -44,7 +50,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Heal', description: 'Restore HP based on your Wisdom', tooltip: 'Restore your HP. Scales with WIS.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
     { label: 'Transfer Health', description: 'Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.', tooltip: 'Sacrifice HP to heal an ally. Scales with WIS; CON sets your safety floor.', cpCost: 25, type: 'hp_transfer', tier: 2, levelRequired: 10 },
     { label: 'Purifying Light', description: 'A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).', tooltip: 'Heal nearby allies over time. Heal scales with WIS, duration with CON.', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
-    { label: 'Divine Aegis', description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.', tooltip: 'Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.', cpCost: 60, type: 'ally_absorb', tier: 4, levelRequired: 20 },
+    { label: 'Divine Aegis', description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.', tooltip: 'Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.', cpCost: 60, type: 'absorb_buff', tier: 4, levelRequired: 20 },
   ],
   warrior: [
     { label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).', tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
@@ -108,6 +114,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntrie
         ...a,
         abilityKey: seed?.ability_key ?? `${classKey}_slot_${a.tier}`,
         damageType: seed?.damage_type ?? null,
+        targetType: seed?.target_type ?? null,
       };
     }),
   ]),
@@ -148,6 +155,7 @@ export interface AbilityConfigRow {
     mechanic_key: string;
     status: string;
     damage_type?: string | null;
+    target_type?: string | null;
     amount_calc?: unknown;
     duration_calc?: unknown;
     interval_ms?: number | null;
@@ -162,6 +170,8 @@ const KNOWN_MECHANICS = new Set<string>([
   // / `heal`, but still handled by the runtime so archived assignments resolve.
   'power_strike', 'aimed_shot', 'backstab',
   'fireball', 'smite', 'cutting_words', 'self_heal',
+  // Legacy ally shield mechanic, consolidated into `absorb_buff` (Phase 6).
+  'ally_absorb',
 ]);
 
 
@@ -224,6 +234,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       tier: row.role.slot, // provisional: normalized to a 0-based index below
       levelRequired: row.unlock_level,
       damageType: row.ability.damage_type ?? null,
+      targetType: row.ability.target_type ?? null,
     });
 
     byClass.set(row.class_key, list);

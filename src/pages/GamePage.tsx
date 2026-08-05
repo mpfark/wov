@@ -1148,7 +1148,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff]);
 
   const showTargetSelector = useMemo(() =>
-    (CLASS_ABILITIES[character.class] || []).some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
+    (CLASS_ABILITIES[character.class] || []).some(a => a.type === 'hp_transfer' || a.targetType === 'ally'),
     [character.class]
   );
 

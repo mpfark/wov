@@ -47,6 +47,25 @@ export function getStanceForAbility(abilityType: string): StanceDef | null {
   return BY_ABILITY_TYPE.get(abilityType) ?? null;
 }
 
+/**
+ * Identity-aware stance resolution (Consolidation Phase 6).
+ *
+ * Mechanics are now shared between classes, so the mechanic key alone can no
+ * longer decide "is this a stance": Force Shield (stance) and Divine Aegis
+ * (instant ally ward) both run `absorb_buff`. Canonical ability identity wins;
+ * the mechanic is only a fallback for rows with no identity, and never for an
+ * ally/party-targeted ward.
+ */
+export function resolveStanceForAbility(ability: {
+  abilityKey?: string | null;
+  type: string;
+  targetType?: string | null;
+}): StanceDef | null {
+  if (ability.abilityKey) return BY_KEY.get(ability.abilityKey as StanceKey) ?? null;
+  if (ability.targetType === 'ally' || ability.targetType === 'party') return null;
+  return BY_ABILITY_TYPE.get(ability.type) ?? null;
+}
+
 export function getStanceByKey(key: string): StanceDef | null {
   return BY_KEY.get(key as StanceKey) ?? null;
 }

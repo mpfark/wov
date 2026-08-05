@@ -86,6 +86,7 @@ export function setLoadoutOptions(rows: AbilityConfigRow[]): void {
         tier: row.role.slot, // normalized when the list is applied
         levelRequired: row.unlock_level,
         damageType: row.ability.damage_type ?? null,
+        targetType: row.ability.target_type ?? null,
       },
 
       calc: toAbilityCalcEntry(row),
