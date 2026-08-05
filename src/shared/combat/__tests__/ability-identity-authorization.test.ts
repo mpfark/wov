@@ -130,7 +130,7 @@ describe('Phase E — rejection matrix', () => {
   beforeEach(() => {
     loader.setServerAbilityCalcs([
       row({ classKey: 'warrior', abilityKey: 'rend', mechanicKey: 'weapon_attack', amount: 7, slot: 3, unlockLevel: 12 }),
-      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'execute_attack', amount: 11, slot: 4,
+      row({ classKey: 'rogue', abilityKey: 'eviscerate', mechanicKey: 'stack_consume', amount: 11, slot: 4,
         mechanicCalcs: { per_stack_multiplier: calc(0.2) } }),
     ]);
   });
