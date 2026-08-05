@@ -13,8 +13,7 @@ import { DAMAGE_TYPE_KEYS } from '@/shared/combat/damage-types';
 /** Mechanics that deal or apply damage even when `ability_type` is not `damage`. */
 const DAMAGING_MECHANICS = new Set([
   'dot_debuff',
-  'ignite_buff',
-  'poison_buff',
+  'stack_apply',
   'aura_pulse',
   'reactive_holy',
   'stack_consume',
