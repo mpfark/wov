@@ -33,7 +33,7 @@ import {
   type ReservedBuffsMap,
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
-import { resolveCastFlavor } from '@/features/combat/utils/ability-text';
+import { getAuthoredCombatText, resolveCastFlavor } from '@/features/combat/utils/ability-text';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
 import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
