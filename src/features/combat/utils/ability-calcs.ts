@@ -77,6 +77,8 @@ export function isAbilityCalcRegistryLoaded(): boolean {
 /** Shape of one joined `class_ability_assignments` row carrying calc data. */
 export interface AbilityCalcConfigRow {
   class_key: string;
+  /** Per-class identity (Phase 1). Falls back to the base `ability_key`. */
+  class_ability_key?: string | null;
   is_default: boolean;
   status: string;
   role: { slot: number } | null;
@@ -137,7 +139,10 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
     list.push({
       slot: row.role.slot,
       entry: {
-        abilityKey: row.ability.ability_key,
+        // Canonical identity is the per-class key so consolidated bases can be
+        // shared by several classes without colliding in the registry.
+        abilityKey: row.class_ability_key || row.ability.ability_key,
+        baseAbilityKey: row.ability.ability_key,
         mechanicKey: row.ability.mechanic_key,
         amountCalc: asCalc(row.ability.amount_calc),
         durationCalc: asCalc(row.ability.duration_calc),
@@ -154,6 +159,9 @@ export function setAbilityCalcRegistry(rows: AbilityCalcConfigRow[]): void {
     list.sort((a, b) => a.slot - b.slot);
     list.forEach((row, tier) => {
       ABILITY_CALCS[row.entry.abilityKey] = row.entry;
+      // The base key stays a resolution alias (seeded fallbacks use it).
+      const base = row.entry.baseAbilityKey;
+      if (base && base !== row.entry.abilityKey) ABILITY_CALCS[base] = row.entry;
       SLOT_KEYS[slotKey(classKey, tier)] = row.entry.abilityKey;
     });
   }

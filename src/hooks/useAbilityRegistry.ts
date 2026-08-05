@@ -39,7 +39,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
       const { data, error } = await supabase
         .from('class_ability_assignments')
         .select(`
-          class_key, unlock_level, is_default, status, ability_id, overrides,
+          class_key, class_ability_key, unlock_level, is_default, status, ability_id, overrides,
           role:class_ability_roles ( id, slot, name ),
           ability:abilities (
             ability_key, label, description, tooltip, cp_cost, mechanic_key, status, damage_type,
