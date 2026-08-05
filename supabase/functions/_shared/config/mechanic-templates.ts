@@ -115,6 +115,11 @@ function t(
  */
 export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // ── Weapon-scaled direct attacks ──────────────────────────────
+  // Consolidated reusable weapon strike (Phase 3). One base ability powers
+  // every class signature weapon attack; the class assignment supplies the
+  // name, wording and the primary scaling attribute.
+  t('weapon_attack', { requiresAmount: true }),
+  // Legacy per-class weapon mechanics, kept resolvable for archived rows.
   t('power_strike', { requiresAmount: true }),
   t('aimed_shot', { requiresAmount: true }),
   t('backstab', { requiresAmount: true }),
