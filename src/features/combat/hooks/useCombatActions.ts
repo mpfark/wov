@@ -69,7 +69,7 @@ const COMBAT_REQUIRED_TYPES = new Set([
 /** T0 damage abilities — usable as combat openers against a Tab-targeted creature.
  *  Resolved server-side by combat-tick; CP is reserved client-side and deducted by the server. */
 const T0_OPENER_TYPES = new Set([
-  'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+  'spell_attack', 'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
 // (Queue-flavor chat log was removed — the ability button's pulsing
@@ -338,20 +338,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
       p.addLogEvent(buildHealEvent(`${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`));
-    } else if (ability.type === 'heal') {
+    } else if (ability.type === 'heal' || ability.type === 'self_heal') {
+      // Consolidation Phase 4: Heal and Second Wind share the one `heal` base.
+      // The wording comes from authored `combat_text` keyed by ability identity,
+      // never from a per-class branch here. `self_heal` stays accepted so an
+      // archived row still resolves.
       const healAmount = amountOf();
       const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`You cast Heal and mend your wounds! [${restored}]`)); }
-      else p.addLogEvent(buildHealEvent(`You cast Heal but you're already at full health.`));
-    } else if (ability.type === 'self_heal') {
-      const healAmount = amountOf();
-      const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
-      const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
-      const restored = newHp - p.character.hp;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`You use Second Wind and catch your breath! [${restored}]`)); }
-      else p.addLogEvent(buildHealEvent(`You use Second Wind but you're already at full health.`));
+      const text = getAuthoredCombatText(ability.abilityKey);
+      const authored = (key: string): string | null => {
+        const raw = text[key];
+        return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+      };
+      const hitText = authored('self_text') ?? `You cast ${ability.label} and mend your wounds!`;
+      const fullText = authored('self_full_text')
+        ?? `You cast ${ability.label} but you're already at full health.`;
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
+      else p.addLogEvent(buildHealEvent(fullText));
     } else if (ability.type === 'regen_buff') {
       // Inspire — additive flat HP/CP regen.
       // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
@@ -555,7 +560,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       else p.addLogEvent(buildAbilityEvent(tauntEvent.message));
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
-    // smite / cutting_words) are resolved entirely server-side by combat-tick
+    // spell_attack) are resolved entirely server-side by combat-tick
     // via the queued pending_action above. No client branch needed.
 
     // Deduct CP — Envenom/Ignite drain all current CP

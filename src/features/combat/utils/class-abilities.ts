@@ -21,8 +21,8 @@ export interface ClassAbility {
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
     | 'reactive_holy' | 'block_buff' | 'consecrate' | 'mitigation_buff'
-    // Phase 1 T0 class identity abilities (in-combat only, single-target damage)
-    | 'fireball' | 'smite' | 'cutting_words'
+    // Consolidated reusable spell strike (+ legacy per-class mechanics).
+    | 'spell_attack' | 'fireball' | 'smite' | 'cutting_words'
     // Consolidated reusable weapon strike (+ legacy per-class mechanics).
     | 'weapon_attack' | 'power_strike' | 'aimed_shot' | 'backstab';
   tier: number;
@@ -40,7 +40,7 @@ type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType'>;
 const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
 
   healer: [
-    { label: 'Smite', description: 'Channel a burst of divine light at your target, scaling with WIS', tooltip: 'Damage one target. Scales with WIS.', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
+    { label: 'Smite', description: 'Channel a burst of divine light at your target, scaling with WIS', tooltip: 'Damage one target. Scales with WIS.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Heal', description: 'Restore HP based on your Wisdom', tooltip: 'Restore your HP. Scales with WIS.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
     { label: 'Transfer Health', description: 'Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.', tooltip: 'Sacrifice HP to heal an ally. Scales with WIS; CON sets your safety floor.', cpCost: 25, type: 'hp_transfer', tier: 2, levelRequired: 10 },
     { label: 'Purifying Light', description: 'A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).', tooltip: 'Heal nearby allies over time. Heal scales with WIS, duration with CON.', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
@@ -48,7 +48,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
   ],
   warrior: [
     { label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).', tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
-    { label: 'Second Wind', description: 'Catch your breath and recover HP based on CON', tooltip: 'Recover your HP. Scales with CON.', cpCost: 15, type: 'self_heal', tier: 1, levelRequired: 5 },
+    { label: 'Second Wind', description: 'Catch your breath and recover HP based on CON', tooltip: 'Recover your HP. Scales with CON.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
     { label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.', tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
     { label: 'Rend', description: 'Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).', tooltip: 'Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
     { label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
@@ -61,7 +61,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Disengage', description: 'Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).', tooltip: 'Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.', cpCost: 60, type: 'disengage_buff', tier: 4, levelRequired: 20 },
   ],
   bard: [
-    { label: 'Cutting Words', description: 'Unleash a barbed insult that wounds your target, scaling with CHA', tooltip: 'Damage one target. Scales with CHA.', cpCost: 10, type: 'cutting_words', tier: 0, levelRequired: 1 },
+    { label: 'Cutting Words', description: 'Unleash a barbed insult that wounds your target, scaling with CHA', tooltip: 'Damage one target. Scales with CHA.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Inspire', description: 'A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s). Recasting refreshes the duration and keeps the stronger regen values.', tooltip: 'Grant party HP & CP regen. Regen scales with CHA, duration with INT.', cpCost: 15, type: 'regen_buff', tier: 1, levelRequired: 5 },
     { label: 'Dissonance', description: "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.", tooltip: "Reduce target's damage. Reduction scales with CHA, duration with INT.", cpCost: 25, type: 'root_debuff', tier: 2, levelRequired: 10 },
     { label: 'Crescendo', description: 'A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.', tooltip: 'Heal nearby allies over time. Heal scales with CHA, duration with INT.', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
@@ -75,14 +75,14 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Cloak of Shadows', description: 'Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.', tooltip: 'Chance to dodge attacks. Dodge scales with CHA, duration with DEX.', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
   ],
   wizard: [
-    { label: 'Fireball', description: 'Hurl a ball of arcane flame at your target, scaling with INT', tooltip: 'Damage one target. Scales with INT.', cpCost: 10, type: 'fireball', tier: 0, levelRequired: 1 },
+    { label: 'Fireball', description: 'Hurl a ball of arcane flame at your target, scaling with INT', tooltip: 'Damage one target. Scales with INT.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Force Shield', description: 'Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.', tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
     { label: 'Arcane Surge', description: 'Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.', tooltip: 'Increase all your damage. Bonus scales with INT. Stance.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
     { label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.', tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.', tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
   ],
   templar: [
-    { label: 'Judgment',         description: 'Pass divine judgment, dealing holy damage scaling with WIS', tooltip: 'Holy damage to one target. Scales with WIS.', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
+    { label: 'Judgment',         description: 'Pass divine judgment, dealing holy damage scaling with WIS', tooltip: 'Holy damage to one target. Scales with WIS.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Holy Shield',      description: 'Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.', tooltip: 'Attackers take holy damage in return. WIS scaling reduced 20%, CON adds a kicker. Stance.', cpCost: 15, type: 'reactive_holy', tier: 1, levelRequired: 5 },
     { label: 'Shield Wall',      description: 'Stance. Dual-primary: WIS adds bonus block chance (+25.5% floor, up to +46.75% at high WIS), CON adds bonus block amount (+~4 floor, up to +~9 at high CON). Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.', tooltip: 'Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.', cpCost: 25, type: 'block_buff', tier: 2, levelRequired: 10 },
     { label: 'Consecrate',       description: 'Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).', tooltip: 'Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.', cpCost: 40, type: 'consecrate', tier: 3, levelRequired: 15 },
