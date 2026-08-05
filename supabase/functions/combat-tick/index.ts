@@ -1003,12 +1003,17 @@ Deno.serve(async (req) => {
        * client's claim), so log flavor, telemetry and the client event adapter
        * all read the same key.
        */
+      // Set when this cast actually lands damage — the ONLY gate for on-hit
+      // effects (a miss can never trigger one).
+      let abilityHitLanded = false;
       const pushAbilityEvent = (ev: Record<string, unknown>) => {
         const stamped: Record<string, unknown> = { ...ev };
         if (paDamageType && stamped.damage_type === undefined) stamped.damage_type = paDamageType;
         if (stamped.ability_key === undefined) stamped.ability_key = auth.abilityKey;
+        if (stamped.type === 'ability_hit') abilityHitLanded = true;
         events.push(stamped);
       };
+
       const cpCost = auth.entry.cpCost;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
       // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
