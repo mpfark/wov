@@ -26,6 +26,8 @@ import {
 import { AlertTriangle, Loader2, Plus, Save, ShieldCheck } from 'lucide-react';
 import ClassAuthorDialog from './ClassAuthorDialog';
 import ClassAbilityConfig from './class/ClassAbilityConfig';
+import AssignmentOverview from './class/AssignmentOverview';
+
 import {
   CLASS_STAT_KEYS, CLASS_STATUSES, WEAPON_TAGS, validateClassConfig,
   validateClassLifecycle, type ClassConfigDraft,
