@@ -454,14 +454,32 @@ export function useCombatActions(params: UseCombatActionsParams) {
         },
       }));
       p.addLogEvent(buildDebuffEvent(`Rend! ${creature.name} bleeds every ${intervalMs / 1000}s for ${durationMs / 1000}s. [${dmgPerTick}/tick]`));
-    } else if (ability.type === 'poison_buff') {
-      if (p.buffState.poisonBuff && p.buffState.poisonBuff.expiresAt > Date.now()) {
-        p.addLogEvent(buildErrorEvent(`Envenom is already active.`));
+    } else if (ability.type === 'stack_apply' || ability.type === 'poison_buff' || ability.type === 'ignite_buff') {
+      // Consolidation Group D: ONE stance that applies stacks. Which persistent
+      // effect it feeds (`effect_config.effect_type`) picks the local stack
+      // tracker, and the activation line is authored — Envenom and Orbs of Fire
+      // are configuration, not branches. (Legacy types stay matched so archived
+      // assignments still resolve.)
+      const cfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const effectType = typeof cfg.effect_type === 'string' && cfg.effect_type.trim()
+        ? cfg.effect_type.trim()
+        : (ability.type === 'ignite_buff' ? 'ignite' : 'poison');
+      const isIgnite = effectType === 'ignite';
+      const existing = isIgnite ? p.buffState.igniteBuff : p.buffState.poisonBuff;
+      if (existing && existing.expiresAt > Date.now()) {
+        p.addLogEvent(buildErrorEvent(`${ability.label} is already active.`));
         return;
       }
       const durationMs = 300_000; // 5 minutes
-      p.buffSetters.setPoisonBuff({ expiresAt: Date.now() + durationMs });
-      p.addLogEvent(buildBuffEvent(`Envenom! Your weapons drip with poison for 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
+      const next = { expiresAt: Date.now() + durationMs, abilityKey: ability.abilityKey };
+      if (isIgnite) p.buffSetters.setIgniteBuff(next);
+      else p.buffSetters.setPoisonBuff(next);
+      const text = getAuthoredCombatText(ability.abilityKey);
+      const authored = typeof text.activate_text === 'string' && text.activate_text.trim()
+        ? text.activate_text.trim()
+        : `${ability.label}! Active for 5 minutes.`;
+      p.addLogEvent(buildBuffEvent(`${authored} (${p.character.cp ?? 0} CP consumed)`));
+
     } else if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
       // Consolidation Group D: stack finishers (Eviscerate / Conflagrate) run
       // entirely server-side in the combat-tick heartbeat.
