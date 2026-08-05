@@ -220,11 +220,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'battle_cry', label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.',
     tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.',
-    mechanic_key: 'battle_cry', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'mitigation_buff', base_ability_key: 'mitigation_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
     amount_calc: { base: 0.10, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.12 } })], floor: null, cap: null, unit: 'percent', note: 'STR magnitude; +0.05 DR with a shield equipped' },
     duration_calc: null, interval_ms: null,
-    effect_config: { shield_dr_bonus: 0.05, applies_crit_reduction: true }, combat_text: {},
+    effect_config: { mitigation_mode: 'percent', shield_dr_bonus: 0.05, applies_crit_reduction: true, resolved_by: 'combat-tick' },
+    combat_text: { mitigate_text: "{target}'s war cry softens the blow! [{amount}]" },
     class_key: 'warrior', slot: 2,
   },
   {
@@ -725,7 +726,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 6, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 1.8, cap: 18 } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'WIS flat mitigation per hit' },
     duration_calc: { base: 30000, terms: [stat('con', 1000, { clampAtZero: true })], cap: 45000, unit: 'ms', note: 'CON duration' },
-    interval_ms: null, effect_config: { is_taunt: true }, combat_text: {},
+    interval_ms: null,
+    effect_config: { mitigation_mode: 'flat', is_taunt: true, resolved_by: 'combat-tick' },
+    combat_text: {
+      self_text: 'Divine Challenge! You mitigate incoming blows for {seconds}s. [{amount}]',
+      mitigate_text: "{target}'s Divine Challenge mitigates the strike! [{amount}]",
+    },
+    base_ability_key: 'mitigation_buff',
     class_key: 'templar', slot: 4,
   },
 ];

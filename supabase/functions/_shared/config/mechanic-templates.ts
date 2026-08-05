@@ -177,7 +177,15 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // ── Buffs / mitigation ────────────────────────────────────────
   // `amount_calc` carries the headline magnitude of each buff (damage
   // reduction, absorb pool, crit widening, ambush multiplier, …).
-  t('battle_cry', { duration: true, requiresAmount: true }),
+  // Consolidation Group D: ONE reusable incoming-damage mitigation buff.
+  // Whether it shaves a percentage of each hit or a flat amount
+  // (`effect_config.mitigation_mode`), whether it also softens crits
+  // (`effect_config.applies_crit_reduction`), the shield kicker
+  // (`effect_config.shield_dr_bonus`) and whether it taunts
+  // (`effect_config.is_taunt`) are all configuration — Battle Cry (percent
+  // stance) and Divine Challenge (flat, timed taunt) are class identities of
+  // this one base.
+  t('mitigation_buff', { duration: true, requiresAmount: true }),
   // Consolidated absorb shield (Phase 6). Force Shield (stance, self) and
   // Divine Aegis (instant, ally) share this base; the class assignment supplies
   // the name, wording, target scope and the pool/duration attributes.
@@ -195,7 +203,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     duration: true,
     params: [P('retaliation_damage', 'Retaliation damage', 'hp', 'magnitude', true)],
   }),
-  t('mitigation_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('evasion_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('stealth_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('disengage_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
