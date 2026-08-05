@@ -15,9 +15,9 @@ const DAMAGING_MECHANICS = new Set([
   'dot_debuff',
   'ignite_buff',
   'poison_buff',
-  'consecrate',
+  'aura_pulse',
   'reactive_holy',
-  'ignite_consume',
+  'stack_consume',
 ]);
 
 const isDamaging = (a: { ability_type: string; mechanic_key: string }) =>
