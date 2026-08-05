@@ -17,7 +17,7 @@ describe('aura_pulse consolidation', () => {
   it('registers aura_pulse and retires the class-named consecrate mechanic', () => {
     expect(getMechanicTemplate('aura_pulse')).toBeTruthy();
     expect(getMechanicTemplate('consecrate')).toBeFalsy();
-    expect(MECHANIC_TEMPLATES.some(t => t.key === 'aura_pulse')).toBe(true);
+    expect(MECHANIC_TEMPLATES.some(t => t.mechanicKey === 'aura_pulse')).toBe(true);
   });
 
   it('requires amount, duration and interval on the aura base', () => {
@@ -58,8 +58,8 @@ describe('dot_debuff consolidation', () => {
   it('keeps every ticking base on the shared amount/duration/interval contract', () => {
     for (const key of ['aura_pulse', 'dot_debuff', 'party_regen']) {
       const t = getMechanicTemplate(key)!;
-      expect(t.duration).toBe(true);
-      expect(t.interval).toBe(true);
+      expect(t.supportsDuration).toBe(true);
+      expect(t.supportsInterval).toBe(true);
     }
   });
 });
