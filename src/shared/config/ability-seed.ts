@@ -206,8 +206,14 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_key: 'ignite_buff', ability_type: 'buff', damage_type: 'fire',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
-    duration_calc: null, interval_ms: null,
+    duration_calc: { base: 30000, terms: [stat('wis', 1000, { clampAtZero: true })], cap: 45000, unit: 'ms', note: 'WIS burn duration' },
+    interval_ms: 2000,
     effect_config: { mutually_exclusive_with: ['envenom'], burn_stat: 'wis', consumes_all_cp: true }, combat_text: {},
+    mechanic_calcs: {
+      pulse_damage: { base: 2, terms: [stat('int')], rounding: 'floor', floor: 1, cap: null, unit: 'hp', note: 'INT orb pulse damage' },
+      burn_damage: { base: 0, terms: [stat('wis', 0.7, { clampAtZero: true, transform: { kind: 'soft', profile: 'dot' } })], finalMult: 0.67, rounding: 'floor', floor: 1, cap: null, unit: 'hp', note: 'WIS burn damage per tick before bond multiplier' },
+      max_stacks: { base: 5, terms: [], rounding: 'floor', floor: 1, cap: null, unit: 'count', note: 'Burn stack ceiling' },
+    },
     class_key: 'wizard', slot: 3,
   },
   {

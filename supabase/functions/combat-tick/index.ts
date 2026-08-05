@@ -2103,20 +2103,22 @@ Deno.serve(async (req) => {
 
         const c = m.c;
         const eb = eq[m.id] || {};
-        const intMod = sm((c.int || 10) + (eb.int || 0));
-        const wisMod = sm((c.wis || 10) + (eb.wis || 0));
+        const calcInputs = buildServerCalcInputs(c.level || 1, {
+          str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+          con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+          wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+        });
         const orbChance = resolveMagnitude({
           classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'amount',
-          inputs: buildServerCalcInputs(c.level || 1, {
-            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          }),
+          inputs: calcInputs,
           characterId: m.id, nodeId: combatNodeId,
         });
         if (Math.random() >= orbChance) continue;
-        // Direct pulse damage = INT (the spark / blast).
-        let pulseDmg = Math.max(1, 2 + intMod);
+        let pulseDmg = Math.max(1, Math.floor(resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'mechanic',
+          param: 'pulse_damage', inputs: calcInputs,
+          characterId: m.id, nodeId: combatNodeId,
+        })));
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
         pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
@@ -2126,16 +2128,31 @@ Deno.serve(async (req) => {
         // (sustained, lingering flame). Pulse and burn read different stats
         // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-        // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
-        const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
-        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
-        const duration = Math.min(45000, 30000 + wisMod * 1000);
+        const configuredBurnDamage = resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'mechanic',
+          param: 'burn_damage', inputs: calcInputs,
+          characterId: m.id, nodeId: combatNodeId,
+        });
+        const dmgPerTick = Math.max(1, Math.floor(configuredBurnDamage * (mBondMult[m.id] ?? 1)));
+        const duration = Math.max(1, Math.floor(resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'duration',
+          inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+        })));
+        const maxStacks = Math.max(1, Math.floor(resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'mechanic',
+          param: 'max_stacks', inputs: calcInputs,
+          characterId: m.id, nodeId: combatNodeId,
+        })));
+        const tickRateMs = Math.max(1, Math.floor(resolveMagnitude({
+          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'interval',
+          inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+        })));
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
           session_id: null, effect_type: 'ignite',
           ...applyStackingEffect(existing, {
             now: tickTime, durationMs: duration, damagePerTick: dmgPerTick,
-            maxStacks: 5, tickRateMs: TICK_RATE,
+            maxStacks, tickRateMs,
           }),
         };
         if (existing) {

@@ -23,13 +23,10 @@
  * `postMult` is the v1 spelling of `finalMult`; they are one concept and both
  * are honoured (finalMult wins when both are present).
  *
- * Randomness: this module NEVER generates randomness. Neither `dice` terms nor
- * bounded-random `range` spreads call `Math.random`. The caller injects a
- * `RollSource` through `CalcInputs.roll` and a `RandomSource` through
- * `CalcInputs.random`; without them the evaluator falls back to the
- * deterministic `diceMode` (default `average`) / `rangeMode` (default `mid`) so
- * the admin preview and parity tests stay reproducible. Given the same injected
- * randomness, the evaluator always produces the same result.
+ * Randomness: this module NEVER generates randomness. Dice terms receive an
+ * injected `RollSource` through `CalcInputs.roll`; without one the evaluator
+ * falls back to deterministic `diceMode` (default `average`) so admin previews
+ * and parity tests stay reproducible.
  *
  * Pure TS, zero deps beyond sibling formula primitives. Mirrored byte-for-byte
  * (modulo Deno `.ts` import specifiers) to
@@ -105,31 +102,11 @@ export interface CalcTerm {
   role?: 'primary' | 'secondary';
 }
 
-/**
- * Explicit bounded-random spread, added to `base + Σterms`.
- *
- * This is how a *variable* magnitude stays variable under configuration (e.g.
- * the 30–45 s poison duration). The evaluator never invents the random value:
- * it is supplied through `CalcInputs.random`. With no supplied randomness the
- * spread resolves deterministically through `CalcInputs.rangeMode`.
- *
- * `min === max` is legal and means "fixed" — a fixed-duration ability is simply
- * one with no `range` at all, or a degenerate one.
- */
-export interface CalcRange {
-  min: number;
-  max: number;
-  /** Rounding applied to the interpolated spread alone. */
-  rounding?: CalcRounding;
-}
-
 export interface AbilityCalc {
   /** Contract version. Absent / 1 = pre-rework record; 2 = current contract. */
   version?: 1 | 2;
   base: number;
   terms: CalcTerm[];
-  /** Bounded-random spread resolved from injected randomness (see `CalcRange`). */
-  range?: CalcRange;
   /** v1 spelling of `finalMult`. Kept for stored records. */
   postMult?: number;
   /** Constant ability rider (judgment 0.8, consecrate 0.65). */
@@ -152,15 +129,6 @@ export type RollSource = (sides: number) => number;
 /** Deterministic dice resolution used when no `RollSource` is injected. */
 export type DiceMode = 'average' | 'min' | 'max';
 
-/**
- * Injectable unit-random source for bounded `range` spreads: returns a value in
- * `[0, 1]`. `0` resolves to `range.min`, `1` resolves to `range.max`.
- */
-export type RandomSource = () => number;
-
-/** Deterministic range resolution used when no `RandomSource` is injected. */
-export type RangeMode = 'mid' | 'min' | 'max';
-
 export interface CalcInputs {
   level: number;
   /** Pre-computed stat *modifiers* (base + renown + gear, already modded). */
@@ -173,13 +141,6 @@ export interface CalcInputs {
   roll?: RollSource;
   /** Deterministic dice behaviour when `roll` is absent. Defaults to `average`. */
   diceMode?: DiceMode;
-  /**
-   * Injected unit-random source for bounded `range` spreads. Randomness lives
-   * at the call site, never in here.
-   */
-  random?: RandomSource;
-  /** Deterministic range behaviour when `random` is absent. Defaults to `mid`. */
-  rangeMode?: RangeMode;
 }
 
 const MAX_TERMS = 12;
@@ -236,38 +197,6 @@ function rollDice(term: CalcTerm, inputs: CalcInputs): number {
   }
 }
 
-/**
- * Resolve a bounded-random spread.
- *
- * Never calls `Math.random`: the unit-random value is supplied through
- * `inputs.random`. `0` → `min`, `1` → `max`, and any repeated supplied input
- * yields the same result. Without an injected source the spread resolves
- * deterministically via `inputs.rangeMode` (default `mid`).
- */
-export function resolveRange(range: CalcRange, inputs: CalcInputs): number {
-  const min = Number.isFinite(range.min) ? range.min : 0;
-  const max = Number.isFinite(range.max) ? range.max : min;
-  if (max <= min) return applyRounding(min, range.rounding);
-
-  let ratio: number;
-  if (inputs.random) {
-    const raw = inputs.random();
-    ratio = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0.5;
-  } else {
-    switch (inputs.rangeMode) {
-      case 'min': ratio = 0; break;
-      case 'max': ratio = 1; break;
-      default: ratio = 0.5; break;
-    }
-  }
-  // Exact endpoints at the boundaries — no float drift on min/max.
-  if (ratio === 0) return applyRounding(min, range.rounding);
-  if (ratio === 1) return applyRounding(max, range.rounding);
-  return applyRounding(min + (max - min) * ratio, range.rounding);
-}
-
-
-
 function termSourceValue(term: CalcTerm, inputs: CalcInputs): number {
   switch (term.source) {
     case 'const':
@@ -318,8 +247,6 @@ export function constantMultiplier(calc: AbilityCalc): number | undefined {
 export function evaluateCalc(calc: AbilityCalc, inputs: CalcInputs, depth = 0): number {
   let value = calc.base;
   for (const term of calc.terms) value += evaluateTerm(term, inputs);
-  if (calc.range) value += resolveRange(calc.range, inputs);
-
   const constMult = constantMultiplier(calc);
   if (constMult !== undefined) value *= constMult;
 
@@ -347,17 +274,6 @@ export function calcUsesDice(calc: AbilityCalc): boolean {
   if (calc.terms?.some(t => t.source === 'dice')) return true;
   return calc.multiplierCalc ? calcUsesDice(calc.multiplierCalc) : false;
 }
-
-/**
- * Does this calc (or a nested multiplier) carry a *variable* bounded-random
- * range? Fixed magnitudes answer `false` — that is the invariant the
- * variable-duration tests assert against.
- */
-export function calcUsesRange(calc: AbilityCalc): boolean {
-  if (calc.range && calc.range.max > calc.range.min) return true;
-  return calc.multiplierCalc ? calcUsesRange(calc.multiplierCalc) : false;
-}
-
 
 // ── Admin preview ─────────────────────────────────────────────────
 
@@ -408,15 +324,8 @@ function describeTerm(term: CalcTerm): string {
 /** Render a readable formula for the admin ability editor. */
 export function describeCalc(calc: AbilityCalc): string {
   const parts: string[] = [];
-  if (calc.base !== 0 || (calc.terms.length === 0 && !calc.range)) parts.push(`${calc.base}`);
+  if (calc.base !== 0 || calc.terms.length === 0) parts.push(`${calc.base}`);
   for (const term of calc.terms) parts.push(describeTerm(term));
-  if (calc.range) {
-    parts.push(
-      calc.range.max > calc.range.min
-        ? `random(${calc.range.min}–${calc.range.max})`
-        : `${calc.range.min}`,
-    );
-  }
   let out = parts.join(' + ');
   const constMult = constantMultiplier(calc);
   if (constMult !== undefined) out = `(${out}) × ${constMult}`;
@@ -454,18 +363,6 @@ export function validateCalc(calc: AbilityCalc, depth = 0): string[] {
   else if (calc.terms.length > MAX_TERMS) errors.push(`no more than ${MAX_TERMS} terms are allowed`);
   if (calc.floor != null && calc.cap != null && calc.floor > calc.cap) {
     errors.push('floor cannot exceed cap');
-  }
-  if (calc.range !== undefined) {
-    const r = calc.range;
-    if (!r || typeof r !== 'object') {
-      errors.push('range must be an object with min and max');
-    } else {
-      if (!Number.isFinite(r.min)) errors.push('range.min must be a finite number');
-      if (!Number.isFinite(r.max)) errors.push('range.max must be a finite number');
-      if (Number.isFinite(r.min) && Number.isFinite(r.max) && r.min > r.max) {
-        errors.push('range.min cannot exceed range.max');
-      }
-    }
   }
   if (calc.finalMult !== undefined && !Number.isFinite(calc.finalMult)) {
     errors.push('finalMult must be a finite number');

@@ -17,7 +17,9 @@ const PAIRS: Array<[string, string]> = [
 
 /** Strip `.ts` extensions from relative import specifiers so both sides compare equal. */
 function normalize(source: string): string {
-  return source.replace(/from '(\.[^']*?)\.ts'/g, "from '$1'");
+  return source
+    .replace(/\r\n/g, '\n')
+    .replace(/from '(\.[^']*?)\.ts'/g, "from '$1'");
 }
 
 describe('shared mirror identity', () => {
