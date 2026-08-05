@@ -204,8 +204,6 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
   // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
-  // Legacy self-heal mechanic, kept resolvable for archived rows.
-  t('self_heal', { requiresAmount: true }),
   t('hp_transfer', {
     requiresAmount: true,
     params: [P('reserve_hp', 'HP kept in reserve', 'hp', 'threshold', true)],
