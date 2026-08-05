@@ -59,7 +59,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": null,
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "battle_cry",
+    "mechanic_key": "mitigation_buff",
     "slot": 2,
   },
   {
