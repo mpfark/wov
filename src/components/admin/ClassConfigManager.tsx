@@ -172,12 +172,21 @@ export default function ClassConfigManager() {
       />
       {/* Class list */}
       <div className="w-64 shrink-0 border-r border-border min-h-0">
-        <div className="p-2 border-b border-border">
+        <div className="p-2 border-b border-border space-y-1">
           <Button size="sm" variant="outline" className="w-full h-7 text-[11px]" onClick={() => setAuthorOpen(true)}>
             <Plus className="w-3 h-3 mr-1" /> New class
           </Button>
+          <button
+            onClick={() => { setSelectedKey(null); setDraft(null); }}
+            className={`w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
+              draft ? 'border-border/60 hover:bg-muted/40' : 'border-primary bg-primary/10'
+            }`}
+          >
+            Overview — all classes
+          </button>
         </div>
-        <ScrollArea className="h-[calc(100%-2.75rem)]">
+
+        <ScrollArea className="h-[calc(100%-5.25rem)]">
           <div className="p-3 space-y-1">
             {loading && (
               <p className="text-xs text-muted-foreground flex items-center gap-2">
@@ -214,11 +223,17 @@ export default function ClassConfigManager() {
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           {!draft ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              Select a class to edit its lifecycle, base stats and proficiencies.
-            </p>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Select a class to edit its lifecycle, base stats and proficiencies.
+              </p>
+              <AssignmentOverview />
+            </div>
           ) : (
-            <div className="p-4 space-y-4 max-w-3xl">
+            <div className="p-4 grid grid-cols-1 xl:grid-cols-12 gap-4 items-start max-w-[1600px]">
+              {/* Class-wide configuration (left on wide screens, first when stacked) */}
+              <div className="xl:col-span-5 min-w-0 space-y-4">
+
               {/* Lifecycle */}
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
@@ -376,14 +391,8 @@ export default function ClassConfigManager() {
                 </CardContent>
               </Card>
 
-              <ClassAbilityConfig
-                classKey={draft.class_key}
-                classLabel={draft.label}
-                primaryAttribute={draft.primary_attribute ?? null}
-                secondaryAttribute={draft.secondary_attribute ?? null}
-              />
 
-              <AssignmentOverview highlightClassKey={draft.class_key} />
+
 
 
               {/* Validation */}
@@ -420,8 +429,20 @@ export default function ClassConfigManager() {
                   Reset
                 </Button>
               </div>
+              </div>
+
+              {/* Ability workflow (right on wide screens, second when stacked) */}
+              <div className="xl:col-span-7 min-w-0 space-y-4">
+                <ClassAbilityConfig
+                  classKey={draft.class_key}
+                  classLabel={draft.label}
+                  primaryAttribute={draft.primary_attribute ?? null}
+                  secondaryAttribute={draft.secondary_attribute ?? null}
+                />
+              </div>
             </div>
           )}
+
         </ScrollArea>
       </div>
     </div>
