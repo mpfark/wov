@@ -431,7 +431,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       note: 'base damage before the poison-stack multiplier',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex', consumes: 'poison_stacks', per_stack_stat: 'cha' },
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex', consumes: 'poison_stacks', stack_type: 'poison', stack_noun: 'poison', weapon_based: true, per_stack_stat: 'cha' },
     mechanic_calcs: {
       per_stack_multiplier: {
         version: 2, base: 0.50,
@@ -439,7 +439,11 @@ export const ABILITY_SEED: AbilitySeed[] = [
         floor: null, cap: null, unit: 'multiplier', note: 'CHA bonus per consumed poison stack',
       },
     },
-    combat_text: {},
+    combat_text: {
+      hit_text: 'eviscerates {target}, detonating {stacks} poison stack{plural}! [{damage}]',
+      hit_no_stacks_text: 'eviscerates {target} (no poison stacks). [{damage}]',
+      miss_text: 'Eviscerate misses {target}{stacknote}!',
+    },
     class_key: 'assassin', slot: 3,
   },
   {
