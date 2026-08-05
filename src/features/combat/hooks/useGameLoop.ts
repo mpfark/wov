@@ -49,7 +49,18 @@ export interface IgniteStack {
   maxHp: number; lastKnownHp: number;
 }
 export interface AbsorbBuff { shieldHp: number; shieldCap?: number; expiresAt: number }
-export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
+/** Ticking party heal (Purifying Light / Crescendo share one `party_regen` base).
+ *  `abilityKey` + `label` carry the class identity so no consumer branches on class. */
+export interface PartyRegenBuff {
+  healPerTick: number;
+  expiresAt: number;
+  source?: 'healer' | 'bard';
+  abilityKey?: string;
+  label?: string;
+  durationMs?: number;
+  /** Authored tick line with {who} / {amount} placeholders. */
+  tickText?: string;
+}
 /** Bard "Inspire" — flat additive HP/CP regen for caster + same-node party.
  *  Magnitude scales with caster CHA, duration scales with caster INT.
  *  Stored `durationMs` so the buff icon's progress bar fills correctly even
@@ -355,8 +366,11 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Crescendo / Purifying Light party regen ────────────────
   useEffect(() => {
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
-    const isHealer = partyRegenBuff.source === 'healer';
-    const abilityLabel = isHealer ? 'Purifying Light' : 'Crescendo';
+    const abilityLabel = partyRegenBuff.label ?? 'Regeneration';
+    const tickLine = (who: string) =>
+      (partyRegenBuff.tickText ?? `${abilityLabel} heals {who} for {amount} HP!`)
+        .replace('{who}', who)
+        .replace('{amount}', String(partyRegenBuff.healPerTick));
     const interval = setInterval(async () => {
       if (Date.now() >= partyRegenBuff.expiresAt) {
         setPartyRegenBuff(null); clearInterval(interval); return;
@@ -378,12 +392,12 @@ export function useGameLoop(params: UseGameLoopParams) {
           });
         }
         if (membersHere.length > 0) {
-          addLogEvent(buildHealEvent(`${abilityLabel} heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
+          addLogEvent(buildHealEvent(tickLine(`${membersHere.length + 1} allies`), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
         } else {
-          addLogEvent(buildHealEvent(`${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
+          addLogEvent(buildHealEvent(tickLine('you'), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
         }
       } else {
-        addLogEvent(buildHealEvent(`${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`, { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
+        addLogEvent(buildHealEvent(tickLine('you'), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
       }
     }, 2000);
     return () => clearInterval(interval);
