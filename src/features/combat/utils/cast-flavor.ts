@@ -105,7 +105,9 @@ const FLAVOR: Record<string, FlavorVariants> = {
  * Ability-key flavor. Keyed by canonical `abilities.ability_key`, checked before
  * the mechanic table so two abilities sharing one mechanic keep separate text.
  */
+const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
   power_strike: {
+
     withTarget: [
       'You set your stance and ready a crushing blow against {target}…',
       'Knuckles whiten on your grip as you wind up on {target}…',
