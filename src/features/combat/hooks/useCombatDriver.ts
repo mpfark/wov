@@ -37,7 +37,9 @@ import { createLogEvent, mapServerEventType } from '@/features/combat/events/log
 const SERVER_ABILITY_TYPES = new Set([
   'multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff',
   // T0 openers — resolved server-side; can also initiate combat against a Tab target
-  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+  // `weapon_attack` is the consolidated reusable weapon strike; the three
+  // per-class mechanics stay listed for archived assignments.
+  'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
 

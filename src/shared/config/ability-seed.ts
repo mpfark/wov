@@ -61,6 +61,11 @@ export interface AbilitySeed {
    */
   mechanic_calcs?: Record<string, AbilityCalc>;
   combat_text: Record<string, unknown>;
+  /**
+   * Reusable base ability this class entry resolves through, when it differs
+   * from `ability_key` (which is the per-class identity). Consolidation Phase 3.
+   */
+  base_ability_key?: string;
   /** Class + role slot this ability is assigned to by default. */
   class_key: string;
   slot: number;
@@ -92,8 +97,12 @@ const physicalT0 = (s: 'str' | 'dex'): AbilityCalc => ({
   version: 2, base: 3,
   terms: [
     weaponDie(),
-    stat(s, 1, { label: 'raw modifier' }),
-    stat(s, 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
+    // `role: 'primary'` makes the scaling attribute class-overridable through
+    // `class_ability_assignments.overrides.scaling.primary_attribute`, so the
+    // one consolidated base ability can scale on STR for a Warrior and DEX for
+    // a Ranger without duplicating the curve.
+    stat(s, 1, { label: 'raw modifier', role: 'primary' }),
+    stat(s, 1, { clampAtZero: true, role: 'primary', transform: { kind: 'soft', profile: 'damage' }, rounding: 'round' }),
     lvl(1 / 3),
   ],
   rounding: 'none', floor: 1, cap: null, unit: 'hp',
@@ -118,17 +127,22 @@ const spellT0 = (s: 'int' | 'wis' | 'cha', finalMult?: number): AbilityCalc => (
 });
 
 /** Standard weapon-scaled queued attack: magnitude stays server-owned for now. */
-const WEAPON_ATTACK_CONFIG = { weapon_scaled: true, unarmed_die: '1d4', resolved_by: 'combat-tick' };
+const WEAPON_ATTACK_CONFIG = {
+  weapon_scaled: true, unarmed_die: '1d4', resolved_by: 'combat-tick',
+  /** Class assignments may configure at most one of these (Phase 2 registry). */
+  on_hit_allowed: ['bleed', 'poison'],
+};
 
 export const ABILITY_SEED: AbilitySeed[] = [
   // ══════════════════ Warrior ══════════════════
   {
     ability_key: 'power_strike', label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.',
-    mechanic_key: 'power_strike', ability_type: 'damage', damage_type: 'physical',
+    mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('str'), duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'str' }, combat_text: {},
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'str' }, combat_text: { hit_verb: 'delivers a crushing blow to', miss_verb: 'swings at' },
+    base_ability_key: 'weapon_attack',
     class_key: 'warrior', slot: 0,
   },
   {
@@ -236,10 +250,11 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'aimed_shot', label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.',
-    mechanic_key: 'aimed_shot', ability_type: 'damage', damage_type: 'physical',
+    mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: {},
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: { hit_verb: 'looses an aimed shot at', miss_verb: 'looses an arrow at' },
+    base_ability_key: 'weapon_attack',
     class_key: 'ranger', slot: 0,
   },
   {
@@ -295,10 +310,11 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'backstab', label: 'Backstab', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.',
-    mechanic_key: 'backstab', ability_type: 'damage', damage_type: 'physical',
+    mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: {},
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: { hit_verb: 'backstabs', miss_verb: 'lunges at' },
+    base_ability_key: 'weapon_attack',
     class_key: 'assassin', slot: 0,
   },
   {

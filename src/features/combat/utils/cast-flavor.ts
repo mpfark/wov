@@ -26,22 +26,12 @@ const FLAVOR: Record<string, FlavorVariants> = {
       'Embers spiral into a roaring sphere above your palm, drifting toward {target}…',
     ],
   },
-  power_strike: {
+  // Consolidated weapon strike: generic mechanic-level fallback. Per-class
+  // identity lines live in ABILITY_FLAVOR (keyed by class ability key).
+  weapon_attack: {
     withTarget: [
-      'You set your stance and ready a crushing blow against {target}…',
-      'Knuckles whiten on your grip as you wind up on {target}…',
-    ],
-  },
-  aimed_shot: {
-    withTarget: [
-      'You draw, breathe, and steady your aim on {target}…',
-      'The bowstring sings against your ear as you sight {target}…',
-    ],
-  },
-  backstab: {
-    withTarget: [
-      'You slip behind {target}, blade reversed…',
-      'Soft footfalls — and then you are at {target}\'s back…',
+      'You set your grip and ready a strike against {target}…',
+      'You measure {target} and commit to the opening…',
     ],
   },
   cutting_words: {
@@ -116,6 +106,25 @@ const FLAVOR: Record<string, FlavorVariants> = {
  * the mechanic table so two abilities sharing one mechanic keep separate text.
  */
 const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
+  power_strike: {
+
+    withTarget: [
+      'You set your stance and ready a crushing blow against {target}…',
+      'Knuckles whiten on your grip as you wind up on {target}…',
+    ],
+  },
+  aimed_shot: {
+    withTarget: [
+      'You draw, breathe, and steady your aim on {target}…',
+      'The bowstring sings against your ear as you sight {target}…',
+    ],
+  },
+  backstab: {
+    withTarget: [
+      'You slip behind {target}, blade reversed…',
+      'Soft footfalls — and then you are at {target}\'s back…',
+    ],
+  },
   frost_bolt: {
     withTarget: [
       'Frost gathers into a jagged shard above your palm, angled at {target}…',

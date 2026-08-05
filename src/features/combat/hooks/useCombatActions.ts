@@ -69,7 +69,7 @@ const COMBAT_REQUIRED_TYPES = new Set([
 /** T0 damage abilities — usable as combat openers against a Tab-targeted creature.
  *  Resolved server-side by combat-tick; CP is reserved client-side and deducted by the server. */
 const T0_OPENER_TYPES = new Set([
-  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+  'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
 // (Queue-flavor chat log was removed — the ability button's pulsing

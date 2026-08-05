@@ -22,7 +22,9 @@ export interface ClassAbility {
     // Templar abilities (sword-and-shield holy defender)
     | 'reactive_holy' | 'block_buff' | 'consecrate' | 'mitigation_buff'
     // Phase 1 T0 class identity abilities (in-combat only, single-target damage)
-    | 'fireball' | 'power_strike' | 'aimed_shot' | 'backstab' | 'smite' | 'cutting_words';
+    | 'fireball' | 'smite' | 'cutting_words'
+    // Consolidated reusable weapon strike (+ legacy per-class mechanics).
+    | 'weapon_attack' | 'power_strike' | 'aimed_shot' | 'backstab';
   tier: number;
   levelRequired: number;
   /** Canonical damage type key (null for buffs, heals and utility). */
@@ -45,14 +47,14 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Divine Aegis', description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.', tooltip: 'Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.', cpCost: 60, type: 'ally_absorb', tier: 4, levelRequired: 20 },
   ],
   warrior: [
-    { label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).', tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.', cpCost: 10, type: 'power_strike', tier: 0, levelRequired: 1 },
+    { label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).', tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Second Wind', description: 'Catch your breath and recover HP based on CON', tooltip: 'Recover your HP. Scales with CON.', cpCost: 15, type: 'self_heal', tier: 1, levelRequired: 5 },
     { label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.', tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
     { label: 'Rend', description: 'Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).', tooltip: 'Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
     { label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
   ],
   ranger: [
-    { label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'aimed_shot', tier: 0, levelRequired: 1 },
+    { label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Eagle Eye', description: 'Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.', tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.', cpCost: 15, type: 'crit_buff', tier: 1, levelRequired: 5 },
     { label: 'Barrage', description: 'Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).', tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.', cpCost: 25, type: 'multi_attack', tier: 2, levelRequired: 10 },
     { label: "Nature's Snare", description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.", tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.", cpCost: 40, type: 'root_debuff', tier: 3, levelRequired: 15 },
@@ -66,7 +68,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Grand Finale', description: 'Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.', tooltip: 'Burst damage on one target. Damage scales with CHA, crit-edge with INT.', cpCost: 60, type: 'burst_damage', tier: 4, levelRequired: 20 },
   ],
   assassin: [
-    { label: 'Backstab', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'backstab', tier: 0, levelRequired: 1 },
+    { label: 'Backstab', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Shadowstep', description: 'Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).', tooltip: 'Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
     { label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.', tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.', cpCost: 50, type: 'poison_buff', tier: 2, levelRequired: 10 },
     { label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.', tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).', cpCost: 40, type: 'execute_attack', tier: 3, levelRequired: 15 },
@@ -129,6 +131,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntrie
 /** Shape of one joined `class_ability_assignments` row. */
 export interface AbilityConfigRow {
   class_key: string;
+  /** Per-class identity; preferred over the base `ability_key` (Phase 1). */
+  class_ability_key?: string | null;
   unlock_level: number;
   is_default: boolean;
   status: string;
@@ -152,9 +156,12 @@ export interface AbilityConfigRow {
 }
 
 
-const KNOWN_MECHANICS = new Set<string>(
-  Object.values(CLASS_ABILITIES).flatMap(list => list.map(a => a.type as string)),
-);
+const KNOWN_MECHANICS = new Set<string>([
+  ...Object.values(CLASS_ABILITIES).flatMap(list => list.map(a => a.type as string)),
+  // Legacy per-class weapon mechanics: consolidated into `weapon_attack`, but
+  // still handled by the runtime so archived assignments keep resolving.
+  'power_strike', 'aimed_shot', 'backstab',
+]);
 
 /** Snapshot of the fallback tables, so a reload/registry reset can restore them. */
 const FALLBACK_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntries(
@@ -204,7 +211,9 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
     }
     const list = byClass.get(row.class_key) ?? [];
     list.push({
-      abilityKey: row.ability.ability_key ?? '',
+      // Per-class identity first: consolidated bases are shared, so the class
+      // key is what keeps Power Strike and Backstab distinct.
+      abilityKey: row.class_ability_key || row.ability.ability_key || '',
       label: row.ability.label,
       description: row.ability.description,
       tooltip: row.ability.tooltip,
