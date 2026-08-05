@@ -139,6 +139,26 @@ const WEAPON_ATTACK_CONFIG = {
   on_hit_allowed: ['bleed', 'poison'],
 };
 
+/**
+ * Consolidated party regeneration (Phase 5, Group B):
+ *   heal/tick = 2 + primaryMod ; duration = 15s + secondaryMod × 1s (cap 30s)
+ * One curve, one mechanic. The healing attribute is `role: 'primary'` and the
+ * duration attribute `role: 'secondary'`, so Healer (WIS/CON) and Bard
+ * (CHA/INT) share the base and differ only through Class Config overrides.
+ */
+const partyRegenAmount = (s: 'wis' | 'cha'): AbilityCalc => ({
+  base: 2, terms: [stat(s, 1, { role: 'primary' })],
+  floor: 1, cap: null, unit: 'hp', note: 'heal per tick (primary attribute)',
+});
+
+const partyRegenDuration = (s: 'con' | 'int'): AbilityCalc => ({
+  base: 15000, terms: [stat(s, 1000, { clampAtZero: true, role: 'secondary' })],
+  cap: 30000, unit: 'ms', note: 'duration (secondary attribute)',
+});
+
+/** Shared party-regen contract: identity/presentation comes from the class row. */
+const PARTY_REGEN_CONFIG = { ticking_party_heal: true, resolved_by: 'client-loop' };
+
 export const ABILITY_SEED: AbilitySeed[] = [
   // ══════════════════ Warrior ══════════════════
   {
@@ -439,9 +459,14 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Heal nearby allies over time. Heal scales with WIS, duration with CON.',
     mechanic_key: 'party_regen', ability_type: 'heal', damage_type: null,
     target_type: 'party', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
-    amount_calc: { base: 2, terms: [stat('wis')], floor: 1, cap: null, unit: 'hp', note: 'WIS heal per tick' },
-    duration_calc: { base: 15000, terms: [stat('con', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'CON duration' },
-    interval_ms: 3000, effect_config: { source: 'healer' }, combat_text: {},
+    amount_calc: partyRegenAmount('wis'), duration_calc: partyRegenDuration('con'),
+    interval_ms: 3000,
+    effect_config: { ...PARTY_REGEN_CONFIG, source: 'healer', stat: 'wis', duration_stat: 'con' },
+    combat_text: {
+      cast_text: 'Purifying Light! Divine radiance heals {who} every 3s for {seconds}s.',
+      tick_text: 'Purifying Light heals {who} for {amount} HP!',
+    },
+    base_ability_key: 'party_regen',
     class_key: 'healer', slot: 3,
   },
   {
@@ -497,9 +522,14 @@ export const ABILITY_SEED: AbilitySeed[] = [
     tooltip: 'Heal nearby allies over time. Heal scales with CHA, duration with INT.',
     mechanic_key: 'party_regen', ability_type: 'heal', damage_type: null,
     target_type: 'party', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
-    amount_calc: { base: 2, terms: [stat('cha')], floor: 1, cap: null, unit: 'hp', note: 'CHA heal per tick' },
-    duration_calc: { base: 15000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 30000, unit: 'ms', note: 'INT duration' },
-    interval_ms: 3000, effect_config: { source: 'bard' }, combat_text: {},
+    amount_calc: partyRegenAmount('cha'), duration_calc: partyRegenDuration('int'),
+    interval_ms: 3000,
+    effect_config: { ...PARTY_REGEN_CONFIG, source: 'bard', stat: 'cha', duration_stat: 'int' },
+    combat_text: {
+      cast_text: 'Crescendo! A rising melody heals {who} every 3s for {seconds}s.',
+      tick_text: 'Crescendo heals {who} for {amount} HP!',
+    },
+    base_ability_key: 'party_regen',
     class_key: 'bard', slot: 3,
   },
   {

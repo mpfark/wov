@@ -43,6 +43,11 @@ interface PartyRegenBuffEvent {
   healPerTick: number;
   expiresAt: number;
   source: 'healer' | 'bard';
+  /** Consolidated `party_regen` identity so observers read the caster's ability name. */
+  abilityKey?: string;
+  label?: string;
+  durationMs?: number;
+  tickText?: string;
   caster_id: string;
 }
 
@@ -62,7 +67,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   const [moveEvents, setMoveEvents] = useState<PartyMoveEvent[]>([]);
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
   const [rewardEvents, setRewardEvents] = useState<PartyRewardEvent[]>([]);
-  const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: 'healer' | 'bard' } | null>(null);
+  const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: 'healer' | 'bard'; abilityKey?: string; label?: string; durationMs?: number; tickText?: string } | null>(null);
   const [incomingInspireBuff, setIncomingInspireBuff] = useState<{ hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -116,7 +121,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         const data = payload.payload as PartyRegenBuffEvent;
         if (!data || data.caster_id === characterId) return;
         logBroadcast('in', `party`, 'party_regen_buff');
-        setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source });
+        setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source, abilityKey: data.abilityKey, label: data.label, durationMs: data.durationMs, tickText: data.tickText });
       })
       .on('broadcast', { event: 'party_inspire_buff' }, (payload) => {
         const data = payload.payload as PartyInspireBuffEvent;
@@ -174,13 +179,16 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
-  const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
+  const broadcastPartyRegenBuff = useCallback((
+    healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string,
+    identity?: { abilityKey?: string; label?: string; durationMs?: number; tickText?: string },
+  ) => {
     if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_regen_buff');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_regen_buff',
-      payload: { healPerTick, expiresAt, source, caster_id: casterId } satisfies PartyRegenBuffEvent,
+      payload: { healPerTick, expiresAt, source, ...identity, caster_id: casterId } satisfies PartyRegenBuffEvent,
     });
   }, []);
 

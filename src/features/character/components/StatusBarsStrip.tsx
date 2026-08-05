@@ -31,7 +31,7 @@ export interface StatusBarsStripProps {
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; shieldCap?: number; expiresAt: number } | null;
-  partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
+  partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard'; label?: string; durationMs?: number } | null;
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   holyShieldBuff?: { wisMod: number; expiresAt: number } | null;
@@ -132,10 +132,10 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   }
 
   if (partyRegenActive) {
-    const isHealer = partyRegenBuff!.source === 'healer';
-    const dur = BUFF_DURATIONS[isHealer ? 'Purifying Light' : 'Crescendo'] || 25_000;
+    const label = partyRegenBuff!.label ?? 'Regeneration';
+    const dur = partyRegenBuff!.durationMs || BUFF_DURATIONS[label] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ label, detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (inspireActive) {
