@@ -1315,6 +1315,7 @@ Deno.serve(async (req) => {
         }
       } else if (
         paMech === 'fireball' ||
+        paMech === 'spell_attack' ||
         paMech === 'weapon_attack' ||
         paMech === 'power_strike' ||
         paMech === 'aimed_shot' ||
@@ -1329,14 +1330,14 @@ Deno.serve(async (req) => {
         //     Weapon die / tier / rarity feed directly through the autoattack helper.
         //     Unarmed falls back to 1d4. A bow-flavored strike uses whatever main-hand
         //     is equipped (a non-bow still rolls its die — fantasy nudge, not a gate).
-        //   • Spell (fireball / smite / cutting_words):
+        //   • Spell (`spell_attack`, plus legacy fireball / smite / cutting_words):
         //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
         // Rolls to hit on the class stat (no crit roll on the d20).
         //
-        // Consolidation Phase 3: `weapon_attack` is ONE reusable base ability.
-        // Its scaling attribute and its verbs come from configuration (the
-        // class assignment's `scaling.primary_attribute` and `combat_text`),
-        // never from a per-class branch here.
+        // Consolidation Phases 3-4: `weapon_attack` and `spell_attack` are each
+        // ONE reusable base ability. Their scaling attribute and their verbs come
+        // from configuration (the class assignment's `scaling.primary_attribute`
+        // and `combat_text`), never from a per-class branch here.
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
           backstab: 'dex', smite: 'wis', cutting_words: 'cha',
@@ -1362,30 +1363,36 @@ Deno.serve(async (req) => {
          * override of `primary_attribute` is honoured), then `effect_config.stat`,
          * then STR.
          */
-        const configuredStat = (): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' => {
+        const configuredStat = (
+          fallback: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' = 'str',
+        ): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' => {
           const terms = (t0Entry?.amountCalc?.terms ?? []) as any[];
           const primary = terms.find(t => t?.source === 'stat' && t?.role === 'primary')
             ?? terms.find(t => t?.source === 'stat');
           const candidate = primary?.stat ?? (t0Entry?.effectConfig as any)?.stat;
           return ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(candidate)
-            ? candidate : 'str';
+            ? candidate : fallback;
         };
-        const stat = paMech === 'weapon_attack' ? configuredStat() : T0_STAT[paMech];
+        const isConsolidated = paMech === 'weapon_attack' || paMech === 'spell_attack';
+        const stat = isConsolidated
+          ? configuredStat(paMech === 'spell_attack' ? 'wis' : 'str')
+          : T0_STAT[paMech];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
+        const t0IdentityKey = t0Entry?.classAbilityKey || auth.abilityKey;
         let verb = authoredVerb('hit_verb')
           ?? T0_LABEL[paMech]?.verb
           ?? 'strikes';
-        // Templars share the 'smite' handler with healers but flavor it as Judgment.
-        if (paMech === 'smite' && c.class === 'templar' && !authoredVerb('hit_verb')) {
+        // Legacy fallback only: archived Templar rows shared the 'smite' handler
+        // with healers but flavor it as Judgment. Live rows author the verb.
+        if ((paMech === 'smite' || t0IdentityKey === 'judgment') && c.class === 'templar' && !authoredVerb('hit_verb')) {
           verb = 'passes divine judgment upon';
         }
         const missVerb = authoredVerb('miss_verb') ?? verb;
         const isPhysT0 = paMech === 'weapon_attack' || PHYSICAL_T0.has(paMech);
         // Backstab keeps its possessive phrasing, resolved by identity now that
         // the mechanic is shared.
-        const t0Identity = t0Entry?.classAbilityKey || auth.abilityKey;
-        const isBackstab = paMech === 'backstab' || t0Identity === 'backstab';
+        const isBackstab = paMech === 'backstab' || t0IdentityKey === 'backstab';
 
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
@@ -1420,7 +1427,7 @@ Deno.serve(async (req) => {
         // Templar Judgment: intentional ability-specific nerf. Post-cutover the
         // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
         // applied here when the legacy closure produced the number.
-        if (paMech === 'smite' && c.class === 'templar' && t0Res.source !== 'config') {
+        if ((paMech === 'smite' || t0IdentityKey === 'judgment') && c.class === 'templar' && t0Res.source !== 'config') {
           dmg = Math.max(1, Math.floor(dmg * 0.8));
         }
 
