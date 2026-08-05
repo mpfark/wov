@@ -29,10 +29,16 @@ export interface ClassAbility {
   levelRequired: number;
   /** Canonical damage type key (null for buffs, heals and utility). */
   damageType: string | null;
+  /**
+   * Configured `abilities.target_type` (self / ally / enemy / party / node).
+   * Consolidation Phase 6: targeting UI reads this instead of branching on a
+   * class-specific mechanic key, so one shared base can be self- or ally-cast.
+   */
+  targetType?: string | null;
 }
 
 /** Fallback literal without identity fields — they are derived from the seed. */
-type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType'>;
+type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType'>;
 
 // Phase 1 T0 abilities are class-specific (defined per-class below in CLASS_ABILITIES).
 // Focus Strike has been removed; there are no universal abilities at present.
@@ -108,6 +114,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = Object.fromEntrie
         ...a,
         abilityKey: seed?.ability_key ?? `${classKey}_slot_${a.tier}`,
         damageType: seed?.damage_type ?? null,
+        targetType: seed?.target_type ?? null,
       };
     }),
   ]),
@@ -148,6 +155,7 @@ export interface AbilityConfigRow {
     mechanic_key: string;
     status: string;
     damage_type?: string | null;
+    target_type?: string | null;
     amount_calc?: unknown;
     duration_calc?: unknown;
     interval_ms?: number | null;
@@ -162,6 +170,8 @@ const KNOWN_MECHANICS = new Set<string>([
   // / `heal`, but still handled by the runtime so archived assignments resolve.
   'power_strike', 'aimed_shot', 'backstab',
   'fireball', 'smite', 'cutting_words', 'self_heal',
+  // Legacy ally shield mechanic, consolidated into `absorb_buff` (Phase 6).
+  'ally_absorb',
 ]);
 
 
@@ -224,6 +234,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       tier: row.role.slot, // provisional: normalized to a 0-based index below
       levelRequired: row.unlock_level,
       damageType: row.ability.damage_type ?? null,
+      targetType: row.ability.target_type ?? null,
     });
 
     byClass.set(row.class_key, list);

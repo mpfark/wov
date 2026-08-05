@@ -42,7 +42,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
           class_key, class_ability_key, unlock_level, is_default, status, ability_id, overrides,
           role:class_ability_roles ( id, slot, name ),
           ability:abilities (
-            ability_key, label, description, tooltip, cp_cost, mechanic_key, status, damage_type,
+            ability_key, label, description, tooltip, cp_cost, mechanic_key, status, damage_type, target_type,
             amount_calc, duration_calc, interval_ms, effect_config, mechanic_calcs, combat_text
           )
         `);

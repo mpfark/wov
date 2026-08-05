@@ -555,7 +555,7 @@ export default function NodeView({
                   const levelLocked = character.level < ability.levelRequired;
                   const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
                   const needsTarget = ability.type === 'hp_transfer';
-                  const selfFallback = ability.type === 'ally_absorb' ? character.id : undefined;
+                  const selfFallback = ability.targetType === 'ally' ? character.id : undefined;
                   const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
                   const stanceDef = getStanceForAbility(ability.type);
