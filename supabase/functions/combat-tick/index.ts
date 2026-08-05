@@ -1291,7 +1291,7 @@ Deno.serve(async (req) => {
           const missTpl = scAuthored('miss_text') ?? `${scLabel} misses {target}{stacknote}!`;
           pushAbilityEvent({
             type: 'ability_miss',
-            message: `${c.name}'s ${fill(missTpl)}${weapon ? tagSuffix(weapon.tag) : ''}`.replace(`${c.name}'s ${scLabel}`, `${c.name}'s ${scLabel}`),
+            message: `${c.name}'s ${fill(missTpl)}${weapon ? tagSuffix(weapon.tag) : ''}`,
             character_id: member.id,
             ...(weapon ? { weapon_tag: weapon.tag } : {}),
           });
