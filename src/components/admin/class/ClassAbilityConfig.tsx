@@ -454,7 +454,7 @@ export default function ClassAbilityConfig({
                       <OnHitEffectEditor
                         baseEffectConfig={draft.base.effect_config as Record<string, unknown> | null}
                         value={(draft.overrides as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null}
-                        onChange={next => patchOverride('on_hit_effect' as never, next as never)}
+                        onChange={next => patchOverride('on_hit_effect' as keyof typeof draft.overrides, next ?? undefined)}
                       />
 
                       {/* Named mechanic parameters supported by this mechanic */}
