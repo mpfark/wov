@@ -298,7 +298,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.',
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
-    mechanic_key: 'stack_consume', ability_type: 'damage', damage_type: 'fire',
+    mechanic_key: 'stack_consume', base_ability_key: 'stack_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: {
       version: 2, base: 4,
@@ -421,7 +421,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'eviscerate', label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.',
     tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).',
-    mechanic_key: 'stack_consume', ability_type: 'damage', damage_type: 'physical',
+    mechanic_key: 'stack_consume', base_ability_key: 'stack_consume', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: {
       version: 2, base: 2,
