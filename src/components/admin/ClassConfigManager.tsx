@@ -172,11 +172,20 @@ export default function ClassConfigManager() {
       />
       {/* Class list */}
       <div className="w-64 shrink-0 border-r border-border min-h-0">
-        <div className="p-2 border-b border-border">
+        <div className="p-2 border-b border-border space-y-1">
           <Button size="sm" variant="outline" className="w-full h-7 text-[11px]" onClick={() => setAuthorOpen(true)}>
             <Plus className="w-3 h-3 mr-1" /> New class
           </Button>
+          <button
+            onClick={() => { setSelectedKey(null); setDraft(null); }}
+            className={`w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
+              draft ? 'border-border/60 hover:bg-muted/40' : 'border-primary bg-primary/10'
+            }`}
+          >
+            Overview — all classes
+          </button>
         </div>
+
         <ScrollArea className="h-[calc(100%-2.75rem)]">
           <div className="p-3 space-y-1">
             {loading && (
