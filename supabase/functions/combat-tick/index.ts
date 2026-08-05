@@ -1315,6 +1315,7 @@ Deno.serve(async (req) => {
         }
       } else if (
         paMech === 'fireball' ||
+        paMech === 'weapon_attack' ||
         paMech === 'power_strike' ||
         paMech === 'aimed_shot' ||
         paMech === 'backstab' ||
@@ -1322,14 +1323,20 @@ Deno.serve(async (req) => {
         paMech === 'cutting_words'
       ) {
         // T0 class identity abilities. Two damage paths:
-        //   • Physical (power_strike / aimed_shot / backstab):
+        //   • Physical (`weapon_attack`, plus the legacy per-class mechanics
+        //     power_strike / aimed_shot / backstab):
         //       damage = 1d{weaponDie} + statMod + (3 + statMod + floor(level/3))
         //     Weapon die / tier / rarity feed directly through the autoattack helper.
-        //     Unarmed falls back to 1d4. Aimed Shot uses whatever main-hand is equipped
-        //     (a non-bow still rolls its die — fantasy nudge, not a hard gate).
+        //     Unarmed falls back to 1d4. A bow-flavored strike uses whatever main-hand
+        //     is equipped (a non-bow still rolls its die — fantasy nudge, not a gate).
         //   • Spell (fireball / smite / cutting_words):
         //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
         // Rolls to hit on the class stat (no crit roll on the d20).
+        //
+        // Consolidation Phase 3: `weapon_attack` is ONE reusable base ability.
+        // Its scaling attribute and its verbs come from configuration (the
+        // class assignment's `scaling.primary_attribute` and `combat_text`),
+        // never from a per-class branch here.
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
           backstab: 'dex', smite: 'wis', cutting_words: 'cha',
@@ -1343,16 +1350,42 @@ Deno.serve(async (req) => {
           cutting_words: { verb: 'mocks' },
         };
         const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
-        const stat = T0_STAT[paMech];
+        const t0Entry = auth.entry;
+        const t0Text = (t0Entry?.combatText ?? {}) as Record<string, unknown>;
+        const authoredVerb = (key: string): string | null => {
+          const raw = t0Text[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        /**
+         * Scaling attribute for the consolidated weapon strike: the primary
+         * role-tagged stat term of the EFFECTIVE amount calc (so a class
+         * override of `primary_attribute` is honoured), then `effect_config.stat`,
+         * then STR.
+         */
+        const configuredStat = (): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' => {
+          const terms = (t0Entry?.amountCalc?.terms ?? []) as any[];
+          const primary = terms.find(t => t?.source === 'stat' && t?.role === 'primary')
+            ?? terms.find(t => t?.source === 'stat');
+          const candidate = primary?.stat ?? (t0Entry?.effectConfig as any)?.stat;
+          return ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(candidate)
+            ? candidate : 'str';
+        };
+        const stat = paMech === 'weapon_attack' ? configuredStat() : T0_STAT[paMech];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        let { verb } = T0_LABEL[paMech];
+        let verb = authoredVerb('hit_verb')
+          ?? T0_LABEL[paMech]?.verb
+          ?? 'strikes';
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
-        if (paMech === 'smite' && c.class === 'templar') {
+        if (paMech === 'smite' && c.class === 'templar' && !authoredVerb('hit_verb')) {
           verb = 'passes divine judgment upon';
         }
-        const isPhysT0 = PHYSICAL_T0.has(paMech);
-        const isBackstab = paMech === 'backstab';
+        const missVerb = authoredVerb('miss_verb') ?? verb;
+        const isPhysT0 = paMech === 'weapon_attack' || PHYSICAL_T0.has(paMech);
+        // Backstab keeps its possessive phrasing, resolved by identity now that
+        // the mechanic is shared.
+        const isBackstab = paMech === 'backstab' || auth.abilityKey === 'backstab';
+
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
         // Backstab reads better as a possessive sentence so the local "You"
