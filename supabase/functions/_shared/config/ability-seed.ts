@@ -298,7 +298,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Ignite.',
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
-    mechanic_key: 'ignite_consume', ability_type: 'damage', damage_type: 'fire',
+    mechanic_key: 'stack_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: {
       version: 2, base: 4,
@@ -309,7 +309,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       rounding: 'none', floor: 1, cap: null, unit: 'hp', note: 'INT base damage before the burn-stack multiplier',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { consumes: 'burn_stacks', resolved_by: 'combat-tick' },
+    effect_config: { consumes: 'burn_stacks', stack_type: 'ignite', stack_noun: 'burn', weapon_based: false, stat: 'int', resolved_by: 'combat-tick' },
     mechanic_calcs: {
       per_stack_multiplier: { base: 0.30, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'percent', note: 'INT bonus damage per consumed burn stack' },
     },
@@ -417,7 +417,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'eviscerate', label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.',
     tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).',
-    mechanic_key: 'execute_attack', ability_type: 'damage', damage_type: 'physical',
+    mechanic_key: 'stack_consume', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: {
       version: 2, base: 2,
