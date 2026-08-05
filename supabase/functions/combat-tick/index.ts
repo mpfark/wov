@@ -1853,56 +1853,70 @@ Deno.serve(async (req) => {
       // Reset per-tick Holy Shield retaliation tracking
       for (const k of Object.keys(holyShieldHitThisTick)) delete holyShieldHitThisTick[k];
 
-      // ── Consecrate pulse phase (Templar) ────────────────────────
-      // While active, each tick the consecrated ground heals every party
-      // member at this node and burns every engaged creature for holy
-      // damage scaled to the templar's WIS at cast time.
+      // ── Aura pulse phase (consolidated `aura_pulse`) ────────────
+      // Consolidation Group D: ONE ticking node aura. While active it may mend
+      // every party member at this node (`heals_allies`) and/or sear every
+      // engaged creature (`damages_enemies`); the pulse magnitude, the scaling
+      // attribute and the wording all come from the ability's config, so
+      // Consecrate is the Templar identity of this base rather than a special
+      // case in the tick loop.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        const cons = mb.consecrate;
+        // Back-compat: older clients still send the class-named `consecrate` bag.
+        const cons = mb.aura_pulse ?? mb.consecrate;
         if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
 
-        const consWis = Math.max(0, cons.wis_mod ?? 0);
+        const auraAbilityKey = typeof cons.ability_key === 'string' ? cons.ability_key : 'consecrate';
+        const auraEntry = getServerAbilityCalcs(m.c.class || 'templar', auraAbilityKey);
+        const auraCfg = (auraEntry?.effectConfig ?? {}) as Record<string, unknown>;
+        const auraText = (auraEntry?.combatText ?? {}) as Record<string, unknown>;
+        const healsAllies = auraCfg.heals_allies !== false;
+        const damagesEnemies = auraCfg.damages_enemies !== false;
+
         const bm = mBondMult[m.id] ?? 1;
-        // Consecrate strength reduced by 35%. Post-cutover the ×0.65 rider lives
-        // INSIDE the configured `amount_calc` (`finalMult`), so it is only
-        // re-applied here when the legacy closure produced the magnitude.
+        // Balance rider (×0.65 for Consecrate) lives INSIDE the configured
+        // `amount_calc` (`finalMult`), so it is only re-applied here when the
+        // legacy closure produced the magnitude.
         const consInputs = buildServerCalcInputs(m.c.level || 1, {
           str: m.c.str || 10, dex: m.c.dex || 10, con: m.c.con || 10,
           int: m.c.int || 10, wis: (m.c.wis || 10), cha: m.c.cha || 10,
         });
         const consRes = resolveMagnitudeEx({
-          classKey: m.c.class || 'templar', abilityKey: 'consecrate', kind: 'amount',
+          classKey: m.c.class || 'templar', abilityKey: auraAbilityKey, kind: 'amount',
           inputs: consInputs, characterId: m.id, nodeId: combatNodeId,
         });
         const consFinalMult = consRes.source === 'config' ? 1 : 0.65;
-        const healAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
-        const burnAmt = healAmt;
-
+        const pulseAmt = Math.max(1, Math.floor(consRes.value * bm * consFinalMult));
 
         // Heal all alive members on this node (members[] is already filtered)
-        for (const ally of members) {
+        if (healsAllies) for (const ally of members) {
           if (mHp[ally.id] <= 0) continue;
           // Shared heal primitive: clamps to max HP and reports the real delta.
-          const heal = resolveHeal({ amount: healAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
+          const heal = resolveHeal({ amount: pulseAmt, hp: mHp[ally.id], maxHp: ally.c.max_hp || 1 });
           mHp[ally.id] = heal.hpAfter;
           if (heal.applied > 0) {
+            const authoredHeal = typeof auraText.heal_text === 'string'
+              ? auraText.heal_text.replace('{ally}', ally.c.name).replace('{amount}', String(heal.applied))
+              : `Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`;
             events.push({
               type: 'consecrate_heal',
-              message: `Consecrated ground soothes ${ally.c.name}. [${heal.applied}]`,
+              message: authoredHeal,
               character_id: ally.id,
             });
           }
         }
 
         // Burn every engaged, alive creature
-        for (const cr of creatures) {
+        if (damagesEnemies) for (const cr of creatures) {
           if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
-          cHp[cr.id] = resolveDamage({ amount: burnAmt, hp: cHp[cr.id] }).hpAfter;
+          cHp[cr.id] = resolveDamage({ amount: pulseAmt, hp: cHp[cr.id] }).hpAfter;
+          const authoredBurn = typeof auraText.burn_text === 'string'
+            ? auraText.burn_text.replace('{target}', cr.name).replace('{amount}', String(pulseAmt))
+            : `Holy fire sears ${cr.name}! [${pulseAmt}]`;
           events.push({
             type: 'consecrate_burn',
-            message: `Holy fire sears ${cr.name}! [${burnAmt}]`,
+            message: authoredBurn,
             character_id: m.id,
             creature_id: cr.id,
           });
@@ -1912,6 +1926,7 @@ Deno.serve(async (req) => {
           }
         }
       }
+
 
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
