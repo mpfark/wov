@@ -659,10 +659,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           // Resolve stacks for finishers (Eviscerate / Conflagrate).
           let consumeStacks = 0;
           if (targetId && p.getCreatureStacks) {
-            if (ability.type === 'execute_attack') {
-              consumeStacks = p.getCreatureStacks(targetId, 'poison');
-            } else if (ability.type === 'ignite_consume') {
-              consumeStacks = p.getCreatureStacks(targetId, 'ignite');
+            if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
+              // Stack type comes from configuration; the legacy mechanic keys
+              // only supply the fallback for archived rows.
+              const configured = ability.effectConfig?.stack_type;
+              const stackType = configured === 'ignite' || configured === 'poison'
+                ? configured
+                : (ability.type === 'ignite_consume' ? 'ignite' : 'poison');
+              consumeStacks = p.getCreatureStacks(targetId, stackType);
             }
           }
 

@@ -24,7 +24,9 @@ export interface ClassAbility {
     // Consolidated reusable spell strike (+ legacy per-class mechanics).
     | 'spell_attack' | 'fireball' | 'smite' | 'cutting_words'
     // Consolidated reusable weapon strike (+ legacy per-class mechanics).
-    | 'weapon_attack' | 'power_strike' | 'aimed_shot' | 'backstab';
+    | 'weapon_attack' | 'power_strike' | 'aimed_shot' | 'backstab'
+    // Consolidated reusable stack finisher (+ legacy per-class mechanics).
+    | 'stack_consume' | 'execute_attack' | 'ignite_consume';
   tier: number;
   levelRequired: number;
   /** Canonical damage type key (null for buffs, heals and utility). */
@@ -35,10 +37,16 @@ export interface ClassAbility {
    * class-specific mechanic key, so one shared base can be self- or ally-cast.
    */
   targetType?: string | null;
+  /**
+   * Configured `abilities.effect_config` (raw). Consolidation Group D reads
+   * `stack_type` from here so one shared stack finisher can consume poison or
+   * burn stacks without a class branch.
+   */
+  effectConfig?: Record<string, unknown> | null;
 }
 
 /** Fallback literal without identity fields — they are derived from the seed. */
-type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType'>;
+type FallbackAbility = Omit<ClassAbility, 'abilityKey' | 'damageType' | 'targetType' | 'effectConfig'>;
 
 // Phase 1 T0 abilities are class-specific (defined per-class below in CLASS_ABILITIES).
 // Focus Strike has been removed; there are no universal abilities at present.
@@ -230,6 +238,7 @@ export function setAbilityRegistry(rows: AbilityConfigRow[]): void {
       levelRequired: row.unlock_level,
       damageType: row.ability.damage_type ?? null,
       targetType: row.ability.target_type ?? null,
+      effectConfig: (row.ability.effect_config as Record<string, unknown> | null) ?? null,
     });
 
     byClass.set(row.class_key, list);
