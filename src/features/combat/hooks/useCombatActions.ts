@@ -23,7 +23,7 @@ import {
 } from '@/features/combat/utils/ability-calcs';
 
 import {
-  getStanceForAbility,
+  resolveStanceForAbility,
   isStanceActive,
   isMutuallyExcluded,
   sumStanceReserved,
@@ -194,7 +194,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // them or logs out. The server (`activate_stance` / `drop_stance` RPCs)
     // is authoritative; this branch never deducts CP locally — `combat-tick`
     // and the next character refresh will reconcile the canonical state.
-    const stanceDef = getStanceForAbility(ability.type);
+    const stanceDef = resolveStanceForAbility(ability);
     if (stanceDef) {
       const reservedBuffs: ReservedBuffsMap = (p.character as any).reserved_buffs ?? {};
       const alreadyActive = isStanceActive(reservedBuffs, stanceDef.key);

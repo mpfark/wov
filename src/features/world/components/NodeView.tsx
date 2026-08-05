@@ -7,7 +7,7 @@ import { Character } from '@/features/character';
 import { GroundLootItem } from '@/features/inventory';
 import { getCharacterTitle } from '@/lib/game-data';
 import { ClassAbility } from '@/features/combat';
-import { getStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
+import { resolveStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
 import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 
@@ -558,7 +558,7 @@ export default function NodeView({
                   const selfFallback = ability.targetType === 'ally' ? character.id : undefined;
                   const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
-                  const stanceDef = getStanceForAbility(ability.type);
+                  const stanceDef = resolveStanceForAbility(ability);
                   const stanceActive = !!(stanceDef && isStanceActive(reservedBuffs, stanceDef.key));
                   const isPending = pendingAbilityIndex === idx;
                   const stateClass = stanceActive
