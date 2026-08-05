@@ -500,14 +500,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitDurationMs });
       const bonusPct = Math.round((bonusMult - 1) * 100);
       p.addLogEvent(buildBuffEvent(`Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`));
-    } else if (ability.type === 'ignite_buff') {
-      if (p.buffState.igniteBuff && p.buffState.igniteBuff.expiresAt > Date.now()) {
-        p.addLogEvent(buildErrorEvent(`Ignite is already active.`));
-        return;
-      }
-      const durationMs = 300_000; // 5 minutes
-      p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
-      p.addLogEvent(buildBuffEvent(`Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`));
+      // (Orbs of Fire is handled by the consolidated `stack_apply` branch above.)
+
     } else if (ability.type === 'absorb_buff' || ability.type === 'ally_absorb') {
       // Consolidation Phase 6: Force Shield and Divine Aegis share the one
       // `absorb_buff` base. Pool = primary attribute, duration = secondary, both
