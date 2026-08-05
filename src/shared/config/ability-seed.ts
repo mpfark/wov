@@ -427,17 +427,25 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.',
     tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.',
-    mechanic_key: 'poison_buff', ability_type: 'buff', damage_type: 'poison',
+    mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'poison',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.20 } })], floor: null, cap: null, unit: 'percent', note: 'DEX hit-proc chance' },
     duration_calc: null, interval_ms: null,
     effect_config: {
       mutually_exclusive_with: ['ignite'], consumes_all_cp: true,
+      trigger: 'on_hit', effect_type: 'poison', stack_noun: 'poison',
+      dot_stat: 'dex', dot_stat_mult: 1.2, dot_global_mult: 0.67,
+      dot_duration_ms: 25000,
+      resolved_by: 'combat-tick',
     },
     mechanic_calcs: {
       max_stacks: { base: 3, terms: [{ source: 'stat', stat: 'cha', clampAtZero: true, transform: { kind: 'diminishing', cap: 4 } }], unit: 'count', note: 'CHA stack ceiling' },
     },
-    combat_text: {},
+    combat_text: {
+      activate_text: 'Envenom! Your weapons drip with poison for 5 minutes.',
+      proc_text: "{attacker}'s attack poisons {target}!",
+    },
+
     class_key: 'assassin', slot: 2,
   },
   {
