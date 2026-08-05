@@ -420,8 +420,20 @@ export default function ClassConfigManager() {
                   Reset
                 </Button>
               </div>
+              </div>
+
+              {/* Ability workflow (right on wide screens, second when stacked) */}
+              <div className="xl:col-span-7 min-w-0 space-y-4">
+                <ClassAbilityConfig
+                  classKey={draft.class_key}
+                  classLabel={draft.label}
+                  primaryAttribute={draft.primary_attribute ?? null}
+                  secondaryAttribute={draft.secondary_attribute ?? null}
+                />
+              </div>
             </div>
           )}
+
         </ScrollArea>
       </div>
     </div>
