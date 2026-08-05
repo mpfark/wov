@@ -57,7 +57,7 @@ const INSTANT_BUFF_TYPES = new Set([
   'regen_buff', 'evasion_buff', 'disengage_buff',
   'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   // Templar instant buffs (non-stance)
-  'aura_pulse', 'mitigation_buff',
+  'aura_pulse',
 ]);
 
 /**
@@ -65,7 +65,7 @@ const INSTANT_BUFF_TYPES = new Set([
  * Force Shield vs Divine Aegis on `absorb_buff`). They resolve instantly only
  * when the cast ability is *not* a stance, so the stance path stays exclusive.
  */
-const INSTANT_WHEN_NOT_STANCE = new Set(['absorb_buff']);
+const INSTANT_WHEN_NOT_STANCE = new Set(['absorb_buff', 'mitigation_buff']);
 
 /** Ability types that require being in combat with a valid target */
 const COMBAT_REQUIRED_TYPES = new Set([
@@ -424,11 +424,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const reduction = amountOf();
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
       p.addLogEvent(buildDebuffEvent(`${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`));
-    } else if (ability.type === 'battle_cry') {
-      // Stance — unreachable; intercepted by stance toggle block above.
-      // Magnitude is configured on the battle_cry ability row (damage_reduction /
-      // crit_reduction mechanic calcs) and applied server-side via buff flags.
-      return;
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Rend!`)); return; }
@@ -606,20 +601,26 @@ export function useCombatActions(params: UseCombatActionsParams) {
         ? authored.cast_text.replace('{duration}', String(Math.round(durationMs / 1000)))
         : `${ability.label}! Hallowed ground wells up beneath your feet for ${Math.round(durationMs / 1000)}s.`;
       p.addLogEvent(buildHealEvent(castText));
-    } else if (ability.type === 'mitigation_buff') {
-      // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
+    } else if (ability.type === 'mitigation_buff' || ability.type === 'battle_cry') {
+      // Consolidation Group D: ONE mitigation base. Percent mode (Battle Cry)
+      // is a stance and is intercepted above, so anything reaching here is the
+      // timed flat variant; whether it taunts and how it reads are config.
+      const cfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      if (cfg.mitigation_mode === 'percent') return;
       const durationMs = durationOf();
       const flat = amountOf();
       p.buffSetters.setDivineChallengeBuff({ flat, expiresAt: Date.now() + durationMs });
-      // Stage 9 — Divine Challenge is a taunt: the player forcing attention
-      // onto themselves. Structured so presentation follows the actor, not the
-      // ability emoji.
-      const tauntEvent = buildTauntEvent(
-        `Divine Challenge! You mitigate incoming blows for ${Math.round(durationMs / 1000)}s. [${flat}]`,
-        { kind: 'player', id: p.character.id, name: p.character.name },
-      );
-      if (p.addLogEvent) p.addLogEvent(tauntEvent);
-      else p.addLogEvent(buildAbilityEvent(tauntEvent.message));
+      const authored = (ability.combatText || {}) as Record<string, unknown>;
+      const seconds = String(Math.round(durationMs / 1000));
+      const message = typeof authored.self_text === 'string'
+        ? authored.self_text.replace('{seconds}', seconds).replace('{amount}', String(flat))
+        : `${ability.label}! You mitigate incoming blows for ${seconds}s. [${flat}]`;
+      // A mitigation buff only reads as a taunt when it is configured as one.
+      const event = cfg.is_taunt === true
+        ? buildTauntEvent(message, { kind: 'player', id: p.character.id, name: p.character.name })
+        : buildBuffEvent(message);
+      if (p.addLogEvent) p.addLogEvent(event);
+      else p.addLogEvent(buildAbilityEvent(event.message));
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // spell_attack) are resolved entirely server-side by combat-tick
