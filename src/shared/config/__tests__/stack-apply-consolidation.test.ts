@@ -26,8 +26,8 @@ describe('stack_apply consolidation', () => {
   });
 
   it('retires the per-class poison_buff / ignite_buff mechanics', () => {
-    expect(getMechanicTemplate('poison_buff')).toBeUndefined();
-    expect(getMechanicTemplate('ignite_buff')).toBeUndefined();
+    expect(getMechanicTemplate('poison_buff')).toBeNull();
+    expect(getMechanicTemplate('ignite_buff')).toBeNull();
   });
 
   it('routes both Envenom and Orbs of Fire through the shared base', () => {
