@@ -625,9 +625,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // spell_attack) are resolved entirely server-side by combat-tick
     // via the queued pending_action above. No client branch needed.
 
-    // Deduct CP — Envenom/Ignite drain all current CP
-    const isAllCpAbility = ability.type === 'poison_buff' || ability.type === 'ignite_buff';
-    const finalCpCost = isAllCpAbility ? (p.character.cp ?? 0) : ability.cpCost;
+    // Deduct CP — "consumes all CP" is configuration (`effect_config`), not a
+    // per-class mechanic check, so the consolidated stack appliers keep the
+    // drain-everything cost of Envenom / Orbs of Fire.
+    const consumesAllCp = ((ability.effectConfig || {}) as Record<string, unknown>).consumes_all_cp === true
+      || ability.type === 'poison_buff' || ability.type === 'ignite_buff';
+    const finalCpCost = consumesAllCp ? (p.character.cp ?? 0) : ability.cpCost;
+
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
