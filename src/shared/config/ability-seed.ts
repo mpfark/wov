@@ -293,12 +293,29 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'ignite', label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.',
     tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.',
-    mechanic_key: 'ignite_buff', ability_type: 'buff', damage_type: 'fire',
+    mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'fire',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
     duration_calc: null, interval_ms: null,
-    effect_config: { mutually_exclusive_with: ['envenom'], burn_stat: 'wis', consumes_all_cp: true }, combat_text: {},
+    effect_config: {
+      mutually_exclusive_with: ['envenom'], consumes_all_cp: true,
+      trigger: 'pulse', effect_type: 'ignite', stack_noun: 'burn',
+      pulse_damage_base: 2, pulse_damage_stat: 'int', engages_target: true,
+      dot_stat: 'wis', dot_stat_mult: 0.7, dot_global_mult: 0.67,
+      dot_duration_ms: 30000, dot_duration_stat: 'wis',
+      dot_duration_per_point_ms: 1000, dot_duration_cap_ms: 45000,
+      resolved_by: 'combat-tick',
+    },
+    mechanic_calcs: {
+      max_stacks: { base: 5, terms: [], unit: 'count', note: 'Burn stack ceiling' },
+    },
+    combat_text: {
+      activate_text: 'Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb may strike your target. Lasts 5 minutes.',
+      pulse_text: 'A flaming orb leaps from {attacker} and sears {target} (burn x{stacks})! [{damage}]',
+      stack_text: "{attacker}'s orb of fire seared {target} with Ignite.",
+    },
     class_key: 'wizard', slot: 3,
+
   },
   {
     ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.',
