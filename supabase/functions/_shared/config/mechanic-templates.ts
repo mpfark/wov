@@ -23,7 +23,7 @@
  * `supabase/functions/_shared/config/mechanic-templates.ts`.
  */
 
-import { validateCalc, type AbilityCalc } from '../formulas/ability-calc';
+import { validateCalc, type AbilityCalc } from '../formulas/ability-calc.ts';
 
 export type MechanicCalcParamKey =
   | 'arrow_count'
