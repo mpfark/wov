@@ -26,6 +26,8 @@ import {
 import { AlertTriangle, Loader2, Plus, Save, ShieldCheck } from 'lucide-react';
 import ClassAuthorDialog from './ClassAuthorDialog';
 import ClassAbilityConfig from './class/ClassAbilityConfig';
+import AssignmentOverview from './class/AssignmentOverview';
+
 import {
   CLASS_STAT_KEYS, CLASS_STATUSES, WEAPON_TAGS, validateClassConfig,
   validateClassLifecycle, type ClassConfigDraft,
@@ -380,6 +382,9 @@ export default function ClassConfigManager() {
                 primaryAttribute={draft.primary_attribute ?? null}
                 secondaryAttribute={draft.secondary_attribute ?? null}
               />
+
+              <AssignmentOverview highlightClassKey={draft.class_key} />
+
 
               {/* Validation */}
               <Card className="bg-card/80">
