@@ -22,7 +22,9 @@ export interface ClassAbility {
     // Templar abilities (sword-and-shield holy defender)
     | 'reactive_holy' | 'block_buff' | 'consecrate' | 'mitigation_buff'
     // Phase 1 T0 class identity abilities (in-combat only, single-target damage)
-    | 'fireball' | 'power_strike' | 'aimed_shot' | 'backstab' | 'smite' | 'cutting_words';
+    | 'fireball' | 'smite' | 'cutting_words'
+    // Consolidated reusable weapon strike (+ legacy per-class mechanics).
+    | 'weapon_attack' | 'power_strike' | 'aimed_shot' | 'backstab';
   tier: number;
   levelRequired: number;
   /** Canonical damage type key (null for buffs, heals and utility). */
