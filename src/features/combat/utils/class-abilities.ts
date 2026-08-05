@@ -15,7 +15,9 @@ export interface ClassAbility {
   cpCost: number;
   type:
     | 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
-    | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff'
+    | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'dot_debuff'
+    // Legacy mitigation mechanic (consolidated into `mitigation_buff`).
+    | 'battle_cry'
     // Consolidated reusable stack applier (+ legacy per-class mechanics).
     | 'stack_apply' | 'poison_buff' | 'evasion_buff' | 'ignite_buff'
 
@@ -71,7 +73,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
   warrior: [
     { label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).', tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Second Wind', description: 'Catch your breath and recover HP based on CON', tooltip: 'Recover your HP. Scales with CON.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
-    { label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.', tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
+    { label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.', tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.', cpCost: 25, type: 'mitigation_buff', tier: 2, levelRequired: 10 },
     { label: 'Rend', description: 'Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).', tooltip: 'Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
     { label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
   ],
