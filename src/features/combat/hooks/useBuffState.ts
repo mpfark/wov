@@ -190,9 +190,21 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.root_debuff_reduction = rootDebuff.damageReduction;
     }
     if (battleCryBuff && now < battleCryBuff.expiresAt) buffs.battle_cry_dr = { reduction: battleCryBuff.damageReduction, crit_reduction: battleCryBuff.critReduction };
-    if (poisonBuff && now < poisonBuff.expiresAt) buffs.poison_buff = true;
+    // Consolidated stack appliers: send the generic bag (the server resolves
+    // trigger / effect / scaling from the ability's config) and keep the legacy
+    // flags so an older deployed tick still behaves.
+    const stackAppliers: { ability_key: string }[] = [];
+    if (poisonBuff && now < poisonBuff.expiresAt) {
+      buffs.poison_buff = true;
+      stackAppliers.push({ ability_key: (poisonBuff as { abilityKey?: string }).abilityKey ?? 'envenom' });
+    }
     if (evasionBuff && now < evasionBuff.expiresAt) buffs.evasion_buff = { dodge_chance: evasionBuff.dodgeChance };
-    if (igniteBuff && now < igniteBuff.expiresAt) buffs.ignite_buff = true;
+    if (igniteBuff && now < igniteBuff.expiresAt) {
+      buffs.ignite_buff = true;
+      stackAppliers.push({ ability_key: (igniteBuff as { abilityKey?: string }).abilityKey ?? 'ignite' });
+    }
+    if (stackAppliers.length > 0) buffs.stack_apply = stackAppliers;
+
     if (absorbBuff && now < absorbBuff.expiresAt) buffs.absorb_buff = { shield_hp: absorbBuff.shieldHp };
     const activeSunder = Object.values(sunderDebuff).find(s => now < s.expiresAt);
     if (activeSunder) {

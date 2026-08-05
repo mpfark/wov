@@ -182,7 +182,7 @@ describe('mechanic templates', () => {
 
   it('declares the mechanics that own named tunables', () => {
     expect(getMechanicTemplate('multi_attack')?.params.map(p => p.key)).toContain('arrow_count');
-    expect(getMechanicTemplate('poison_buff')?.params.map(p => p.key)).toContain('max_stacks');
+    expect(getMechanicTemplate('stack_apply')?.params.map(p => p.key)).toContain('max_stacks');
     expect(getMechanicTemplate('hp_transfer')?.params.map(p => p.key)).toContain('reserve_hp');
     // Fully-wired policy: mechanics whose only magnitude is `amount_calc` expose
     // no duplicate named knob.

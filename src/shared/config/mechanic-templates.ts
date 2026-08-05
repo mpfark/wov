@@ -138,8 +138,13 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   }),
 
   // ── Stack mechanics ───────────────────────────────────────────
-  // `amount_calc` is the proc chance; `max_stacks` is the separate ceiling.
-  t('poison_buff', {
+  // Consolidation Group D: ONE reusable stack applier. `amount_calc` is the
+  // proc chance and `max_stacks` the ceiling; whether it fires on weapon hits
+  // or pulses each heartbeat (`effect_config.trigger`), which persistent effect
+  // it writes (`effect_config.effect_type`), which attribute drives the
+  // per-tick damage and how long the stack lingers are all configuration —
+  // Envenom and Orbs of Fire are class identities of this one base.
+  t('stack_apply', {
     requiresAmount: true,
     params: [P('max_stacks', 'Maximum stacks', 'count', 'threshold', true)],
     stackOp: { stackType: 'poison_stacks', op: 'apply', timing: 'on_hit', owner: 'target' },
@@ -153,8 +158,7 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
     stackOp: { stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
   }),
-  // `amount_calc` is the orb pulse chance.
-  t('ignite_buff', { requiresAmount: true }),
+
 
   // ── Multi-hit ─────────────────────────────────────────────────
   // `amount_calc` is the FULL per-arrow magnitude (weapon die + stat), so there

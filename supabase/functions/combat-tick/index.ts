@@ -695,8 +695,15 @@ Deno.serve(async (req) => {
           dex: cDex, con: cCon, int: cInt, wis: cWis,
           cha: (m.c.cha || 10) + ((eq[m.id] as any)?.cha || 0),
         });
-        if (reserved.ignite)       mb.ignite_buff = true;
-        if (reserved.envenom)      mb.poison_buff = true;
+        // Consolidated stack appliers (`stack_apply`): any reserved stance whose
+        // configured mechanic is `stack_apply` seeds the generic applier bag, so
+        // Envenom / Orbs of Fire are configuration rather than named branches.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          if (entry?.mechanicKey !== 'stack_apply') continue;
+          (mb.stack_apply = mb.stack_apply || []).push({ ability_key: stanceKey });
+        }
+
         if (reserved.eagle_eye) {
           // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
           // Magnitude is configurable (abilities.amount_calc); the inline
@@ -1861,6 +1868,102 @@ Deno.serve(async (req) => {
     // ── Multi-tick loop (deterministic time-based) ────────────────
     const previousLastTickAt = session.last_tick_at;
 
+    // ── Consolidated stack appliers (`stack_apply`) ───────────────
+    // Consolidation Group D: Envenom and Orbs of Fire are the same base
+    // mechanic. Which persistent effect the stack writes, whether it fires on a
+    // weapon hit or pulses on its own, the scaling attributes, the linger and
+    // all wording come from the ability's `effect_config` / `combat_text`.
+    interface StackApplier {
+      abilityKey: string;
+      cfg: Record<string, unknown>;
+      text: Record<string, unknown>;
+    }
+    const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+    const str = (v: unknown): string | null => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : null);
+
+    /** Active stack-apply stances for a member, filtered by trigger. */
+    const stackAppliersFor = (
+      member: { id: string; c: any },
+      mb: Record<string, any>,
+      trigger: 'on_hit' | 'pulse',
+    ): StackApplier[] => {
+      // Preferred: the generic bag. Legacy clients still send the class-named
+      // boolean flags, so those are mapped back onto their stance key.
+      const keys: string[] = Array.isArray(mb.stack_apply)
+        ? mb.stack_apply.map((s: any) => (typeof s === 'string' ? s : s?.ability_key)).filter(Boolean)
+        : [];
+      if (keys.length === 0) {
+        if (mb.poison_buff) keys.push('envenom');
+        if (mb.ignite_buff) keys.push('ignite');
+      }
+      const out: StackApplier[] = [];
+      for (const abilityKey of [...new Set(keys)]) {
+        const entry = getServerAbilityCalcs(member.c.class || '', abilityKey);
+        const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
+        const cfgTrigger = str(cfg.trigger) ?? (abilityKey === 'ignite' ? 'pulse' : 'on_hit');
+        if (cfgTrigger !== trigger) continue;
+        out.push({ abilityKey, cfg, text: (entry?.combatText ?? {}) as Record<string, unknown> });
+      }
+      return out;
+    };
+
+    /** Upsert the configured stacking DoT row and return the resulting stack count. */
+    const applyConfiguredStack = (
+      member: { id: string; c: any },
+      eb: Record<string, number>,
+      applier: StackApplier,
+      targetId: string,
+      tickTimeNow: number,
+    ): number => {
+      const { cfg, abilityKey } = applier;
+      const effectType = str(cfg.effect_type) ?? 'poison';
+      const dotStat = (str(cfg.dot_stat) ?? 'dex') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+      const statValue = (member.c[dotStat] || 10) + (eb[dotStat] || 0);
+      const statMod = sm(statValue);
+      const effMod = getEffectiveCombatMod(Math.max(0, statMod), 'dot');
+      const dmgPerTick = Math.max(1, Math.floor(
+        effMod * num(cfg.dot_stat_mult, 1) * num(cfg.dot_global_mult, 1) * (mBondMult[member.id] ?? 1),
+      ));
+
+      let durationMs = num(cfg.dot_duration_ms, 25000);
+      const durStat = str(cfg.dot_duration_stat);
+      if (durStat) {
+        const durMod = sm((member.c[durStat] || 10) + (eb[durStat] || 0));
+        durationMs += Math.max(0, durMod) * num(cfg.dot_duration_per_point_ms, 0);
+        const cap = cfg.dot_duration_cap_ms;
+        if (typeof cap === 'number') durationMs = Math.min(cap, durationMs);
+      }
+
+      const inputs = buildServerCalcInputs(member.c.level || 1, {
+        str: (member.c.str || 10) + (eb.str || 0), dex: (member.c.dex || 10) + (eb.dex || 0),
+        con: (member.c.con || 10) + (eb.con || 0), int: (member.c.int || 10) + (eb.int || 0),
+        wis: (member.c.wis || 10) + (eb.wis || 0), cha: (member.c.cha || 10) + (eb.cha || 0),
+      });
+      const maxStacks = resolveMagnitude({
+        classKey: member.c.class || '', abilityKey, kind: 'mechanic', param: 'max_stacks',
+        inputs, characterId: member.id, nodeId: combatNodeId,
+      });
+
+      // IMPORTANT: when refreshing an existing stack, `applyStackingEffect`
+      // preserves `next_tick_at` so repeated procs never push the cadence
+      // forward forever (which would make the DoT never deal damage).
+      const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === targetId && e.effect_type === effectType);
+      const effData = {
+        node_id: combatNodeId, target_id: targetId, source_id: member.id,
+        session_id: null, effect_type: effectType,
+        source_ability_key: abilityKey,
+        ...applyStackingEffect(existing, {
+          now: tickTimeNow, durationMs, damagePerTick: dmgPerTick,
+          maxStacks: Math.max(1, Math.floor(maxStacks || 1)), tickRateMs: TICK_RATE,
+        }),
+      };
+      if (existing) Object.assign(existing, effData);
+      else activeEffects.push({ id: crypto.randomUUID(), ...effData });
+      return (effData as { stacks?: number }).stacks ?? 1;
+    };
+
+
+
 
 
     for (let t = 0; t < ticks; t++) {
@@ -2053,52 +2156,27 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          // Envenom (Assassin / dual-primary DEX+CHA): proc chance scales with DEX,
-          // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
-          const dexMod = sm((c.dex || 10) + (eb.dex || 0));
-          const chaMod = sm((c.cha || 10) + (eb.cha || 0));
-          const envenomInputs = buildServerCalcInputs(c.level || 1, {
-            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          });
-          const envenomProc = resolveMagnitude({
-            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'amount',
-            inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
-          });
-          const envenomMaxStacks = resolveMagnitude({
-            classKey: c.class || 'assassin', abilityKey: 'envenom', kind: 'mechanic',
-            param: 'max_stacks', inputs: envenomInputs, characterId: m.id, nodeId: combatNodeId,
-          });
-          if (mb.poison_buff && Math.random() < envenomProc) {
-            // Server-side DoT creation: upsert poison into active_effects.
-            // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
-            // so the tick cadence isn't reset every proc — otherwise repeated
-            // procs in consecutive heartbeats would push the next tick forward
-            // forever and the DoT would never deal damage.
-            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
-            const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
-            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
-            const effData = {
-              node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: null, effect_type: 'poison',
-              source_ability_key: 'envenom',
-              ...applyStackingEffect(existing, {
-                now: tickTime, durationMs: 25000, damagePerTick: dmgPerTick,
-                maxStacks: envenomMaxStacks, tickRateMs: TICK_RATE,
-              }),
-            };
-            if (existing) {
-              Object.assign(existing, effData);
-            } else {
-              activeEffects.push({ id: crypto.randomUUID(), ...effData });
-            }
-            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `${c.name}'s attack poisons ${target.name}!` });
+          // On-hit stack appliers (`stack_apply`, e.g. Envenom): the proc chance
+          // is the ability's amount calc, everything else is config-driven.
+          for (const applier of stackAppliersFor(m, mb, 'on_hit')) {
+            const procInputs = buildServerCalcInputs(c.level || 1, {
+              str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+              con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+              wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+            });
+            const proc = resolveMagnitude({
+              classKey: c.class || '', abilityKey: applier.abilityKey, kind: 'amount',
+              inputs: procInputs, characterId: m.id, nodeId: combatNodeId,
+            });
+            if (Math.random() >= proc) continue;
+            const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
+            const authored = str(applier.text.proc_text);
+            const message = authored
+              ? authored.replace('{attacker}', c.name).replace('{target}', target.name).replace('{stacks}', String(stacks))
+              : `${c.name}'s attack afflicts ${target.name}!`;
+            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message });
           }
-          // (Ignite no longer procs from autoattacks — it now pulses
-          // independently each heartbeat as a "shield of fireballs". See the
-          // dedicated Ignite-pulse phase below.)
+
 
 
           // ── Proc-on-hit (main hand) ──
@@ -2233,87 +2311,79 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Ignite "shield of fireballs" pulse phase ────────────────
-      // While Ignite is active, an orb of flame circles the wizard and
-      // pulses every heartbeat at the current target. Proc chance scales with
-      // INT (no more flat 40%), pulse damage scales with INT, and the applied
-      // burn DoT scales with WIS — every Wizard primary contributes.
+      // ── Pulse-trigger stack appliers (`stack_apply`, trigger: 'pulse') ──
+      // Consolidation Group D: a pulsing applier fires on its own heartbeat
+      // rather than on weapon hits. Orbs of Fire is the Wizard identity of this
+      // base: proc chance is the amount calc, the spark damage attribute, the
+      // applied effect, its scaling and every line of text are configuration.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        if (!mb.ignite_buff) continue;
+        const appliers = stackAppliersFor(m, mb, 'pulse');
+        if (appliers.length === 0) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
 
         const c = m.c;
         const eb = eq[m.id] || {};
-        const intMod = sm((c.int || 10) + (eb.int || 0));
-        const wisMod = sm((c.wis || 10) + (eb.wis || 0));
-        const orbChance = resolveMagnitude({
-          classKey: c.class || 'wizard', abilityKey: 'ignite', kind: 'amount',
-          inputs: buildServerCalcInputs(c.level || 1, {
-            str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
-            con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
-            wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
-          }),
-          characterId: m.id, nodeId: combatNodeId,
-        });
-        if (Math.random() >= orbChance) continue;
-        // Direct pulse damage = INT (the spark / blast).
-        let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
-        pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
-
-        cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
-
-        // Upsert burn DoT — damage-per-tick + duration scale from WIS
-        // (sustained, lingering flame). Pulse and burn read different stats
-        // so wizards genuinely benefit from both primaries.
-        const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-        // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
-        const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
-        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
-        const duration = Math.min(45000, 30000 + wisMod * 1000);
-        const effData = {
-          node_id: combatNodeId, target_id: target.id, source_id: m.id,
-          session_id: null, effect_type: 'ignite',
-          ...applyStackingEffect(existing, {
-            now: tickTime, durationMs: duration, damagePerTick: dmgPerTick,
-            maxStacks: 5, tickRateMs: TICK_RATE,
-          }),
-        };
-        if (existing) {
-          Object.assign(existing, effData);
-        } else {
-          activeEffects.push({ id: crypto.randomUUID(), ...effData });
-        }
-
-        // Engage so the pulse can also start combat on a passive target
-        sessionEngaged.add(target.id);
-
-        events.push({
-          type: 'ignite_pulse',
-          character_id: m.id,
-          creature_id: target.id,
-          attacker_name: c.name,
-          target_name: target.name,
-          damage: pulseDmg,
-          message: `A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${effData.stacks})! [${pulseDmg}]`,
-        });
-        // Re-emit the legacy ignite_proc event so the existing client wiring
-        // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
-        // updates the burn-stack badge without any new plumbing.
-        events.push({
-          type: 'ignite_proc',
-          character_id: m.id,
-          creature_id: target.id,
-          message: `${c.name}'s orb of fire seared ${target.name} with Ignite.`,
+        const inputs = buildServerCalcInputs(c.level || 1, {
+          str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+          con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+          wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
         });
 
-        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
+        for (const applier of appliers) {
+          if (cHp[target.id] <= 0 || cKilled.has(target.id)) break;
+          const chance = resolveMagnitude({
+            classKey: c.class || '', abilityKey: applier.abilityKey, kind: 'amount',
+            inputs, characterId: m.id, nodeId: combatNodeId,
+          });
+          if (Math.random() >= chance) continue;
+
+          // Direct pulse damage (the spark), from the configured attribute.
+          const pulseStat = (str(applier.cfg.pulse_damage_stat) ?? 'int') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+          const pulseMod = sm((c[pulseStat] || 10) + ((eb as any)[pulseStat] || 0));
+          let pulseDmg = Math.max(1, num(applier.cfg.pulse_damage_base, 2) + pulseMod);
+          if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
+          pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
+
+          cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
+
+          const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
+
+          // A pulse can also open combat on an otherwise passive target.
+          if (applier.cfg.engages_target !== false) sessionEngaged.add(target.id);
+
+          const fill = (s: string) => s
+            .replace('{attacker}', c.name).replace('{target}', target.name)
+            .replace('{stacks}', String(stacks)).replace('{damage}', String(pulseDmg));
+          const pulseAuthored = str(applier.text.pulse_text);
+          events.push({
+            type: 'ignite_pulse',
+            character_id: m.id,
+            creature_id: target.id,
+            attacker_name: c.name,
+            target_name: target.name,
+            damage: pulseDmg,
+            message: pulseAuthored
+              ? fill(pulseAuthored)
+              : `${c.name}'s ${applier.text.label ?? 'orb'} sears ${target.name}! [${pulseDmg}]`,
+          });
+          // Stack-badge event so the client stack counter updates with no new plumbing.
+          const stackAuthored = str(applier.text.stack_text);
+          events.push({
+            type: 'ignite_proc',
+            character_id: m.id,
+            creature_id: target.id,
+            message: stackAuthored ? fill(stackAuthored) : `${c.name} afflicted ${target.name}.`,
+          });
+
+          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
+          }
         }
       }
+
 
       // ── Server-side DoT ticking via shared resolver (active_effects rows) ─────
       {
