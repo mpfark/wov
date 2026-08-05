@@ -191,7 +191,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "poison",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "poison_buff",
+    "mechanic_key": "stack_apply",
     "slot": 2,
   },
   {
@@ -275,7 +275,7 @@ exports[`ability inventory (frozen) > matches the pinned inventory snapshot 1`] 
     "damage_type": "fire",
     "has_amount_calc": true,
     "has_duration_calc": false,
-    "mechanic_key": "ignite_buff",
+    "mechanic_key": "stack_apply",
     "slot": 3,
   },
   {
