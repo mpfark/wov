@@ -46,7 +46,7 @@ describe('validateNewAbility', () => {
 
   it('exposes only code-backed mechanics', () => {
     expect(mechanics.length).toBeGreaterThan(20);
-    expect(mechanics).toContain('power_strike');
+    expect(mechanics).toContain('weapon_attack');
   });
 });
 
