@@ -214,11 +214,17 @@ export default function ClassConfigManager() {
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           {!draft ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              Select a class to edit its lifecycle, base stats and proficiencies.
-            </p>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Select a class to edit its lifecycle, base stats and proficiencies.
+              </p>
+              <AssignmentOverview />
+            </div>
           ) : (
-            <div className="p-4 space-y-4 max-w-3xl">
+            <div className="p-4 grid grid-cols-1 xl:grid-cols-12 gap-4 items-start max-w-[1600px]">
+              {/* Class-wide configuration (left on wide screens, first when stacked) */}
+              <div className="xl:col-span-5 min-w-0 space-y-4">
+
               {/* Lifecycle */}
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
