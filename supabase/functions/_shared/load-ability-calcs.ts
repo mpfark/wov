@@ -28,9 +28,15 @@ import { validateAbilityForPublish } from './config/mechanic-templates.ts';
 import { normalizeDamageType } from './combat/damage-types.ts';
 import { applyAssignmentOverrides } from './config/effective-ability.ts';
 import { getClassScaling } from './formulas/classes.ts';
+import { type OnHitEffectConfig } from './combat/on-hit-effects.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
+  /**
+   * Per-class identity (`class_ability_assignments.class_ability_key`). Stable
+   * across base-ability consolidation; the base `abilityKey` stays a valid alias.
+   */
+  classAbilityKey: string;
   mechanicKey: string;
   amountCalc: AbilityCalc | null;
   durationCalc: AbilityCalc | null;
@@ -57,6 +63,8 @@ export interface ServerAbilityCalcEntry {
   label: string;
   /** Effective (override-aware) authored combat text. */
   combatText: Record<string, unknown>;
+  /** Class-configured optional On-Hit Effect (server rolls it), or null. */
+  onHitEffect: OnHitEffectConfig | null;
 }
 
 const TTL_MS = 60_000;
@@ -106,6 +114,7 @@ function seedRegistry(): Record<string, ServerAbilityCalcEntry> {
   for (const a of ABILITY_SEED) {
     out[key(a.class_key, a.ability_key)] = {
       abilityKey: a.ability_key,
+      classAbilityKey: a.ability_key,
       mechanicKey: a.mechanic_key,
       amountCalc: a.amount_calc,
       durationCalc: a.duration_calc,
@@ -122,6 +131,7 @@ function seedRegistry(): Record<string, ServerAbilityCalcEntry> {
       damageType: normalizeDamageType(a.damage_type),
       label: a.label ?? a.ability_key,
       combatText: (a.combat_text as Record<string, unknown>) ?? {},
+      onHitEffect: null,
     };
   }
   return out;
@@ -209,8 +219,10 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       errors.push(`${label}: ${err}`);
     }
 
-    next[key(row.class_key, ability.ability_key)] = {
+    const classAbilityKey = String(row.class_ability_key ?? ability.ability_key);
+    const entry: ServerAbilityCalcEntry = {
       abilityKey: ability.ability_key,
+      classAbilityKey,
       mechanicKey: ability.mechanic_key,
       amountCalc,
       durationCalc,
@@ -228,7 +240,14 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       damageType: normalizeDamageType(ability.damage_type),
       label: ability.label ?? ability.ability_key,
       combatText: (ability.combat_text as Record<string, unknown>) ?? {},
+      onHitEffect: (ability as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null,
     };
+
+    // Registry identity is the per-class key; the base `ability_key` remains a
+    // resolution ALIAS so older clients (and shared bases) still resolve.
+    next[key(row.class_key, classAbilityKey)] = entry;
+    const alias = key(row.class_key, ability.ability_key);
+    if (!(alias in next)) next[alias] = entry;
   }
 
   const entries = Object.keys(next).length;
@@ -274,7 +293,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       }
       const { data, error } = await db
         .from('class_ability_assignments')
-        .select('class_key,ability_id,role_id,is_default,status,unlock_level,overrides,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,label,description,tooltip,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs,combat_text)');
+        .select('class_key,class_ability_key,ability_id,role_id,is_default,status,unlock_level,overrides,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,label,description,tooltip,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs,combat_text)');
       if (error) throw error;
       if (data && data.length > 0) {
         const result = setServerAbilityCalcs(data);
@@ -409,7 +428,8 @@ export function authorizeQueuedAbility(args: {
     }
   }
 
-  return { entry, abilityKey: entry.abilityKey, roleSlot: entry.roleSlot, error: null };
+  // Canonical identity for logs/effects is the per-class key.
+  return { entry, abilityKey: entry.classAbilityKey, roleSlot: entry.roleSlot, error: null };
 }
 
 
