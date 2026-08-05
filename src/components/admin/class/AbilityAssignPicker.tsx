@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Plus, Search } from 'lucide-react';
 import BaseAbilityCreateDialog from '../ability/BaseAbilityCreateDialog';
+import { deriveClassAbilityKey } from '@/shared/config/class-ability-identity';
+
 
 interface LibraryRow {
   id: string;
