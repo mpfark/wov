@@ -99,12 +99,12 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
   it('queued by ability_key, the alternative keeps its own magnitude', () => {
     loader.setServerAbilityCalcs(ROWS());
     const auth = loader.authorizeQueuedAbility({
-      classKey: 'warrior', level: 20, abilityKey: 'lacerate', abilityType: 'power_strike',
+      classKey: 'warrior', level: 20, abilityKey: 'lacerate', abilityType: 'weapon_attack',
     });
     expect(auth.error).toBeNull();
     expect(auth.abilityKey).toBe('lacerate');
     expect(auth.entry?.amountCalc?.base).toBe(19);
-    expect(auth.entry?.mechanicKey).toBe('power_strike');
+    expect(auth.entry?.mechanicKey).toBe('weapon_attack');
   });
 
   it('the client cannot mint a role slot — it is derived from the registry', () => {
@@ -118,7 +118,7 @@ describe('Phase E — alternative ability resolves its own numbers', () => {
   it('a legacy ability_type-only payload resolves the default, not the alternative', () => {
     loader.setServerAbilityCalcs(ROWS());
     const auth = loader.authorizeQueuedAbility({
-      classKey: 'warrior', level: 20, abilityType: 'power_strike',
+      classKey: 'warrior', level: 20, abilityType: 'weapon_attack',
     });
     expect(auth.error).toBeNull();
     expect(auth.abilityKey).toBe('rend');
@@ -151,7 +151,7 @@ describe('Phase E — rejection matrix', () => {
   });
 
   it('rejects a forged identity (key of one class, mechanic of another)', () => {
-    reject({ classKey: 'warrior', level: 42, abilityKey: 'eviscerate', abilityType: 'power_strike' });
+    reject({ classKey: 'warrior', level: 42, abilityKey: 'eviscerate', abilityType: 'weapon_attack' });
   });
 
   it('rejects below the unlock level', () => {
