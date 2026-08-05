@@ -38,6 +38,7 @@ import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
 import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
+import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
