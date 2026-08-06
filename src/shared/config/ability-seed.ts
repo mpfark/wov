@@ -693,7 +693,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
         note: 'WIS core (-20%) + CON kicker + level/4',
       },
     },
-    combat_text: {},
+    combat_text: { retaliate_text: "{caster}'s Holy Shield burns {target}! [{damage}]" },
     class_key: 'templar', slot: 1,
   },
   {
