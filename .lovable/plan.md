@@ -19,6 +19,7 @@ New table `public.base_abilities` (admin-editable, reusable, one row per family)
 - `id`, `base_key` (stable, immutable), `label`, `description`
 - `mechanic_key` — runtime mechanic; unchanged values
 - `activation_mode`, `default_target_type`, `allowed_target_types text[]`
+- `trigger_type` — `none` | `on_hit` (weapon hits) | `pulse` (automatic attacks), so the admin UI can label weapon-hit stances and orb stances distinctly
 - `capabilities jsonb` — which configuration sections the right column may show
   (`identity`, `scaling`, `damage_type`, `amount`, `duration`, `interval`, `combat_text`, `stance`, `applied_status`, `on_hit_effect`)
 - `on_hit_allowed text[]` — allowed On-Hit Effect types (`bleed|poison|ignite`), empty = unsupported
@@ -39,7 +40,8 @@ One base per existing runtime mechanic, named as an authoring family. Every curr
 | Multi Attack (`multi_attack`) | multi_attack | bleed, poison | barrage |
 | Burst Damage (`burst_damage`) | burst_damage | — | grand_finale |
 | Stack Finisher (`stack_consume`) | stack_consume | — | eviscerate, conflagrate |
-| On-Hit Stance (`on_hit_stance`) | stack_apply | poison, ignite, bleed | envenom, ignite |
+| On-Hit Stance (`on_hit_stance`) | stack_apply (`trigger: on_hit`) | poison, bleed, ignite | envenom |
+| Orb Stance (`orb_stance`) | stack_apply (`trigger: pulse`) | ignite, bleed, poison | orbs_of_fire (currently keyed `ignite`) |
 | Damage Over Time (`dot_debuff`) | dot_debuff | — | rend |
 | Control Debuff (`control_debuff`) | control_debuff | — | dissonance, natures_snare, sunder_armor |
 | Aura Pulse (`aura_pulse`) | aura_pulse | — | consecrate |
@@ -57,18 +59,33 @@ One base per existing runtime mechanic, named as an authoring family. Every curr
 
 Backfill is a single deterministic join on `mechanic_key`, so every one of the 34 rows lands on exactly one base. `on_hit_allowed` values come from the existing seed data (`ability-seed.ts`) so authoring finally matches intent.
 
-## On-Hit Effect vs On-Hit Stance (kept separate)
+## Three distinct on-hit concepts (kept separate)
 
-| | Optional On-Hit Effect | On-Hit Stance |
-|---|---|---|
-| Belongs to | one damaging class ability | a stance ability (Envenom) |
-| Stored in | `class_ability_assignments.overrides.on_hit_effect`, gated by `base_abilities.on_hit_allowed` | the ability's own `effect_config` (stack type, chance, magnitude, duration, stacks) |
-| Activation | rolled after that ability lands a hit | activated once on self, then rides subsequent weapon hits |
-| Runtime | existing generic on-hit path in `combat-tick` | existing `stack_apply` stance path |
+| | Optional On-Hit Effect | On-Hit Stance | Orb Stance |
+|---|---|---|---|
+| Example | Fireball → Burn rider | Envenom | Orbs of Fire |
+| Belongs to | one damaging class ability | a self-stance ability | a self-stance ability |
+| Trigger | that ability lands a hit | subsequent **weapon** hits | its own **automatic orb attack** hits the current enemy |
+| Stored in | `class_ability_assignments.overrides.on_hit_effect`, gated by `base_abilities.on_hit_allowed` | ability `effect_config` (`trigger: on_hit`, stack type, chance, magnitude, duration, stacks) | ability `effect_config` (`trigger: pulse`, orb damage/interval, stack type, chance, duration, stacks) |
+| Runtime | existing generic on-hit path in `combat-tick` | existing `stack_apply` on_hit path | existing `stack_apply` pulse path (unchanged tick cadence and damage) |
 
-Both remain executed by today's code. The admin UI labels the sections "Optional On-Hit Effect (this ability only)" and "On-Hit Stance (persistent self-stance)" so they cannot be confused.
+Both stance bases already exist in the runtime today — `combat-tick` reads `effect_config.trigger` (`pulse` vs `on_hit`). The correction is that they become two clearly named Base Abilities with distinct capability sets and admin labels: "Optional On-Hit Effect (this ability only)", "On-Hit Stance (self-stance, triggers on weapon hits)", "Orb Stance (self-stance, automatic attacks)".
 
-Envenom becomes an authored ability on the `on_hit_stance` base, with its configuration panel stating: activation Stance / target Self / trigger On weapon hit / applied status Poison / status target Enemy / classification DoT debuff, plus chance, magnitude, duration, stacks and scaling. Its numbers and runtime path are unchanged. Player-facing labels that call it a "buff" change to "Stance".
+### Envenom
+
+Authored ability on the `on_hit_stance` base. Its configuration panel states: activation Stance / activation target Self / trigger On weapon hit / applied status Poison / status target Enemy / classification Poison DoT debuff, plus chance, magnitude, duration, stack behaviour and scaling. Numbers and runtime path unchanged. Player-facing labels that call it a "buff" become "Stance".
+
+### Orbs of Fire (replaces the ability currently presented as "Ignite")
+
+The Wizard's authored stance ability on the `orb_stance` base. Ignite is **not** a player-activated stance — it is the enemy-side status the orbs apply. Its configuration panel states: activation Stance / activation target Self / triggered attack Automatic orb attack / triggered attack target Current enemy / applied status Ignite / status target Enemy / classification Fire DoT debuff, plus orb chance, damage, interval, duration, magnitude, stack behaviour and scaling. Only one selectable ability exists — Orbs of Fire; Ignite appears only as the applied status.
+
+Identity migration (audited references): the string `ignite` is used today for three different things — (a) the authored ability key, (b) the persistent stance-state key (`characters.stance_state`, the `activate_stance` / `drop_stance` allowlist and the ignite/envenom mutex, `mb.ignite_buff` in `combat-tick`), and (c) the `active_effects.effect_type` / on-hit effect key. Only (a) is renamed:
+
+- Rename the authored identity: `abilities.label` → "Orbs of Fire", description/tooltip/combat text, and `class_ability_assignments.class_ability_key` → `orbs_of_fire`, keeping the same `abilities.id` and the same assignment row, so default assignments and player loadouts are untouched.
+- `abilities.ability_key` stays `ignite` because it *is* the stance-state key: renaming it would orphan every live `characters.stance_state` entry and require changing the `activate_stance` allowlist and mutex. This is documented in the base ability's admin notes, and the admin UI shows the runtime key read-only next to the authored name.
+- (b) and (c) keep the `ignite` identifier — it remains the applied-status/effect name, which matches the intent.
+- Update seeds and the `_shared` mirror, `class-abilities.ts` fallback labels, `stances.ts`, cast flavour, `GameManual.tsx` and the stance/ability tests to the Orbs of Fire naming while keeping the runtime keys.
+
 
 ## Admin UI work
 
@@ -89,7 +106,7 @@ Component and query corrections:
 
 ## Validation
 
-Tests and manual checks covering: column 1 contains no finished abilities; selecting Spell Attack lists exactly fireball, frost_bolt, smite, judgment, cutting_words; creating an ability from a base; every `abilities` row has `base_ability_id`; on-hit permission editing on a base; enabling, saving and reloading an on-hit effect on a class ability; no editor shown for bases that disallow it; Envenom presented as a self On-Hit Stance applying enemy Poison; unchanged combat behaviour (existing 570-test suite plus calc parity), assignments and loadouts intact.
+Tests and manual checks covering: column 1 contains no finished abilities; selecting Spell Attack lists exactly fireball, frost_bolt, smite, judgment, cutting_words; creating an ability from a base; every `abilities` row has `base_ability_id`; on-hit permission editing on a base; enabling, saving and reloading an on-hit effect on a class ability; no editor shown for bases that disallow it; Envenom presented as a self On-Hit Stance applying enemy Poison; Orbs of Fire presented as a self Orb Stance whose automatic orb attacks apply enemy Ignite, with no separately selectable "Ignite" ability; unchanged combat behaviour (existing 570-test suite plus calc parity), assignments, stance state and loadouts intact.
 
 ## Technical notes
 
