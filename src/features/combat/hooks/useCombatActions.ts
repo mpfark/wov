@@ -644,22 +644,46 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
-      // Soft-scaled utility magnitude: floor of 2, plus soft-scaled STR contribution.
+      // Consolidation Group G: magnitude and duration attributes are configured
+      // on the ability row; the wording is authored `combat_text.activate_text`.
       const acReduction = amountOf();
-
-      // Dual-primary split: AC reduction = STR (crushing blow), duration = DEX (precise targeting lingers).
       const sunderDurationMs = durationOf();
       const durationSec = Math.round(sunderDurationMs / 1000);
       p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + sunderDurationMs, creatureId: cTargetId, creatureName: creature.name } }));
-      p.addLogEvent(buildDebuffEvent(`Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`));
+      const sunderTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const sunderLine = typeof sunderTpl === 'string' && sunderTpl.trim()
+        ? sunderTpl.trim()
+        : "{ability}! {target}'s AC reduced by {amount} for {seconds}s.";
+      p.addLogEvent(buildDebuffEvent(
+        sunderLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{target\}/g, creature.name)
+          .replace(/\{amount\}/g, String(acReduction))
+          .replace(/\{seconds\}/g, String(durationSec)),
+      ));
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {
-      // Templar — Holy Shield: 30s reactive holy retaliation.
-      const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
+      // Consolidation Group G: timed (non-stance) variant of the reactive
+      // retaliation base. The magnitude attribute comes from
+      // `effect_config.magnitude_stat`; wording is authored.
+      const reactiveCfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const magStat = typeof reactiveCfg.magnitude_stat === 'string' && reactiveCfg.magnitude_stat.trim()
+        ? reactiveCfg.magnitude_stat.trim() : 'wis';
+      const statTotal = ((p.character as unknown as Record<string, number>)[magStat] ?? 10)
+        + (((p.equipmentBonuses as unknown as Record<string, number>)[magStat]) || 0);
+      const wisMod = Math.max(0, getStatModifier(statTotal));
       const durationMs = durationOf();
       p.buffSetters.setHolyShieldBuff({ wisMod, expiresAt: Date.now() + durationMs });
-      p.addLogEvent(buildBuffEvent(`Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`));
+      const reactiveTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const reactiveLine = typeof reactiveTpl === 'string' && reactiveTpl.trim()
+        ? reactiveTpl.trim()
+        : '{ability}! Attackers will be burned in return for {seconds}s.';
+      p.addLogEvent(buildBuffEvent(
+        reactiveLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000))),
+      ));
     } else if (ability.type === 'block_buff') {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.
