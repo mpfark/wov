@@ -161,14 +161,21 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
 
 
   // ── Multi-hit ─────────────────────────────────────────────────
-  // `amount_calc` is the FULL per-arrow magnitude (weapon die + stat), so there
-  // is no separate per-arrow ratio knob.
+  // Consolidation Group G: ONE reusable volley. `amount_calc` is the FULL
+  // per-arrow magnitude (weapon die + stat), the attribute that rolls to hit is
+  // `effect_config.attack_stat`, and every log line is authored in
+  // `combat_text` (`cast_text` / `hit_text` / `miss_text`) — Barrage is the
+  // Ranger identity of this base.
   t('multi_attack', {
     requiresAmount: true,
     params: [
       P('arrow_count', 'Number of arrows', 'count', 'magnitude', true),
     ],
   }),
+  // Consolidation Group G: ONE reusable burst nuke. The rolling/scaling
+  // attribute (`effect_config.stat`), the crit-threshold floor
+  // (`effect_config.crit_threshold_floor`) and the wording are configuration —
+  // Grand Finale is the Bard identity of this base.
   t('burst_damage', {
     requiresAmount: true,
     params: [P('crit_edge', 'Crit range widening', 'flat', 'threshold', true)],
