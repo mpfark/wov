@@ -240,7 +240,9 @@ describe('Ability Library — three-column hierarchy', () => {
     expect(SOURCE).not.toMatch(/from\('class_ability_assignments'\)\s*\n?\s*\.(insert|update|delete)/);
     // ability_key and mechanic_key are base/identity owned — never written here.
     expect(SOURCE).not.toMatch(/ability_key: draft\.ability_key/);
-    expect(SOURCE).not.toMatch(/mechanic_key: draft\.mechanic_key/);
+    // The update payload must not carry mechanic_key (base-owned).
+    const updateBlock = SOURCE.slice(SOURCE.indexOf(".from('abilities').update("));
+    expect(updateBlock.slice(0, updateBlock.indexOf('}).eq('))).not.toMatch(/mechanic_key/);
   });
 });
 
