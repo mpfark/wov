@@ -19,6 +19,7 @@ import { setLoadoutOptions } from '@/features/combat/utils/ability-loadout';
 import { setAbilityTextRegistry } from '@/features/combat/utils/ability-text';
 import { USE_CONFIG_ABILITIES } from '@/shared/config/feature-flags';
 import { applyAssignmentOverrides } from '@/shared/config/effective-ability';
+import { composeAbilityRow, indexAppliedStatuses } from '@/shared/config/compose-ability';
 import { getClassScaling } from '@/shared/formulas/classes';
 
 let started = false;
@@ -36,16 +37,25 @@ export function useAbilityRegistry(): { loaded: boolean } {
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from('class_ability_assignments')
-        .select(`
-          class_key, class_ability_key, unlock_level, is_default, status, ability_id, overrides,
-          role:class_ability_roles ( id, slot, name ),
-          ability:abilities (
-            ability_key, label, description, tooltip, cp_cost, mechanic_key, status, damage_type, target_type,
-            amount_calc, duration_calc, interval_ms, effect_config, mechanic_calcs, combat_text
-          )
-        `);
+      const [{ data, error }, { data: statusRows }] = await Promise.all([
+        supabase
+          .from('class_ability_assignments')
+          .select(`
+            class_key, class_ability_key, unlock_level, is_default, status, ability_id, overrides,
+            role:class_ability_roles ( id, slot, name ),
+            ability:abilities (
+              ability_key, label, description, tooltip, mechanic_key, ability_type, status,
+              damage_type, combat_text, class_scale, primary_attribute, secondary_attribute,
+              applied_status, on_hit_effect,
+              base:base_abilities (
+                base_key, mechanic_key, activation_mode, target_type, default_target_type,
+                cp_cost, cp_reserve_pct, amount_calc, duration_calc, interval_ms,
+                mechanic_calcs, effect_config, on_hit_allowed, supports_secondary_scaling
+              )
+            )
+          `),
+        supabase.from('applied_statuses').select('*'),
+      ]);
       if (cancelled) return;
       if (error) {
         console.error('[ability-registry] load failed, using fallback lists:', error);
@@ -53,6 +63,14 @@ export function useAbilityRegistry(): { loaded: boolean } {
         return;
       }
       if (data && data.length > 0) {
+        // Two-layer composition first (base numbers + configured-use identity),
+        // then the class-override resolver.
+        const statuses = indexAppliedStatuses((statusRows ?? []) as any);
+        const rowsIn = (data as any[]).map(row => (
+          row?.ability
+            ? { ...row, ability: { ...row.ability, ...composeAbilityRow(row.ability, row.ability.base, statuses) } }
+            : row
+        ));
         // ONE resolver: base ability + validated class overrides, applied at the
         // fetch boundary so no consumer can read an unmerged base row.
         const { rows, errors: overrideErrors } = applyAssignmentOverrides(
