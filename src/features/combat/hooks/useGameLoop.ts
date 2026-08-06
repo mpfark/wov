@@ -19,7 +19,8 @@ export interface RegenBuff { multiplier: number; expiresAt: number } // kept for
 export interface FoodBuff { flatRegen: number; expiresAt: number }
 export interface CritBuff { bonus: number; expiresAt: number }
 export interface StealthBuff { expiresAt: number; mult?: number }
-export interface DamageBuff { expiresAt: number }
+/** Consolidated `offense_buff` (damage_mult mode). `abilityKey` names the granting ability. */
+export interface DamageBuff { expiresAt: number; abilityKey?: string }
 export interface RootDebuff { damageReduction: number; expiresAt: number; creatureId?: string }
 export interface BattleCryBuff { damageReduction: number; critReduction: number; expiresAt: number }
 export interface DotDebuff {

@@ -53,7 +53,8 @@ interface Party {
 export interface MemberBuffState {
   crit_buff?: { bonus: number };
   stealth_buff?: boolean | { mult?: number };
-  damage_buff?: boolean;
+  /** Consolidated `offense_buff` (damage_mult): carries the granting ability key. */
+  damage_buff?: boolean | { ability_key?: string };
   root_debuff_target?: string;
   root_debuff_reduction?: number;
   battle_cry_dr?: { reduction: number; crit_reduction: number };

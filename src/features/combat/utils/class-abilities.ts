@@ -14,7 +14,9 @@ export interface ClassAbility {
   tooltip: string;
   cpCost: number;
   type:
-    | 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
+    | 'heal' | 'regen_buff' | 'self_heal' | 'stealth_buff'
+    // Consolidated reusable offensive self-buff (+ legacy per-class mechanics).
+    | 'offense_buff' | 'crit_buff' | 'damage_buff'
     | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'dot_debuff'
     // Legacy mitigation mechanic (consolidated into `mitigation_buff`).
     | 'battle_cry'
