@@ -172,7 +172,11 @@ export default function AbilityConfigManager() {
         role_name: r.role.name,
         is_default: !!r.is_default,
         status: r.status ?? 'active',
+        class_ability_key: r.class_ability_key ?? null,
+        unlock_level: r.unlock_level ?? null,
+        overrides: (r.overrides ?? {}) as Record<string, unknown>,
       })));
+
   }, []);
 
   useEffect(() => { load(); }, [load]);
