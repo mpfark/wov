@@ -757,7 +757,7 @@ export default function AbilityConfigManager() {
                       <SelectTrigger className="h-8 text-xs max-w-xs" aria-label="Applied status"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none" className="text-xs">None</SelectItem>
-                        {statusOptions.map(st => (
+                        {statusOptions.filter(st => !!st.key).map(st => (
                           <SelectItem key={st.key} value={st.key} className="text-xs">
                             {st.label ?? st.key}
                           </SelectItem>
