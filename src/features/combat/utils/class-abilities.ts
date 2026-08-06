@@ -19,9 +19,11 @@ export interface ClassAbility {
     // Legacy mitigation mechanic (consolidated into `mitigation_buff`).
     | 'battle_cry'
     // Consolidated reusable stack applier (+ legacy per-class mechanics).
-    | 'stack_apply' | 'poison_buff' | 'evasion_buff' | 'ignite_buff'
+    | 'stack_apply' | 'poison_buff' | 'ignite_buff'
+    // Consolidated reusable evasion buff (+ legacy per-class mechanic).
+    | 'evasion_buff' | 'disengage_buff'
 
-    | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff'
+    | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff'
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
     | 'reactive_holy' | 'block_buff' | 'aura_pulse' | 'mitigation_buff'
