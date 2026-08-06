@@ -250,7 +250,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'utility' } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'STR magnitude (AC reduction)' },
     duration_calc: { base: 12000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 20000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s AC reduced by {amount} for {seconds}s." },
     class_key: 'warrior', slot: 4,
   },
 
@@ -398,7 +398,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'WIS-scaled damage reduction (live formula uses the scaling stat)' },
     duration_calc: { base: 8000, terms: [stat('wis', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'WIS duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'ranger', slot: 3,
   },
   {
@@ -434,7 +434,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('cha', 0.05, { clampAtZero: true })], floor: null, cap: 2.5, unit: 'multiplier', note: 'CHA ambush multiplier' },
     duration_calc: { base: 15000, terms: [stat('dex', 1000)], cap: 25000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).' },
     class_key: 'assassin', slot: 1,
   },
   {
@@ -544,7 +544,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_calcs: {
       reserve_hp: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' },
     },
-    combat_text: {},
+    combat_text: { transfer_text: '{caster} sacrifices life to heal {target}!' },
     class_key: 'healer', slot: 2,
   },
   {
@@ -603,7 +603,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_calcs: {
       cp_per_tick: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' },
     },
-    combat_text: {},
+    combat_text: { activate_text: '{caster} plays an inspiring song for {seconds}s!', renew_text: '{caster} renews the inspiring song! ({seconds}s remaining)' },
     class_key: 'bard', slot: 1,
   },
   {
@@ -613,7 +613,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'scaling stat = INT for bards' },
     duration_calc: { base: 8000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'INT duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'bard', slot: 2,
   },
   {
