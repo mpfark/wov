@@ -1474,7 +1474,6 @@ Deno.serve(async (req) => {
         const stat = configuredStat(paMech === 'spell_attack' ? 'wis' : 'str');
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        const t0IdentityKey = t0Entry?.classAbilityKey || auth.abilityKey;
         const verb = authoredVerb('hit_verb') ?? 'strikes';
         const missVerb = authoredVerb('miss_verb') ?? verb;
 
