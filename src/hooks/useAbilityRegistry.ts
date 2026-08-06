@@ -74,7 +74,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
         // ONE resolver: base ability + validated class overrides, applied at the
         // fetch boundary so no consumer can read an unmerged base row.
         const { rows, errors: overrideErrors } = applyAssignmentOverrides(
-          data as unknown as { class_key?: string; overrides?: unknown; ability?: any }[],
+          rowsIn as unknown as { class_key?: string; overrides?: unknown; ability?: any }[],
           k => getClassScaling(k) as any,
         );
         if (overrideErrors.length > 0) {
