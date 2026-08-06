@@ -40,15 +40,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import CalcBuilder from './ability/CalcBuilder';
-import MechanicCalcsEditor from './ability/MechanicCalcsEditor';
 import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import BaseAbilityCreateDialog from './ability/BaseAbilityCreateDialog';
 import ClassAbilityCreateDialog from './ability/ClassAbilityCreateDialog';
 import BaseAbilityEditor, { type BaseAbilityRow } from './ability/BaseAbilityEditor';
 import { OnHitEffectEditor } from './class/OnHitEffectEditor';
 import {
-  ABILITY_TYPES, ACTIVATION_MODES, TARGET_TYPES, capabilityList,
+  ABILITY_TYPES, capabilityList,
   type CapabilityKey,
 } from './ability/ability-taxonomy';
 import type { OnHitEffectConfig, OnHitEffectKey } from '@/shared/combat/on-hit-effects';
@@ -59,6 +57,9 @@ import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import {
   composeAbilityRow, indexAppliedStatuses, type AppliedStatusDef,
 } from '@/shared/config/compose-ability';
+
+/** Character attributes an ability's scaling roles can bind to. */
+const ATTRIBUTES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 import { CLASS_LABELS } from '@/lib/game-data';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 
