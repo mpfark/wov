@@ -229,8 +229,13 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   t('stealth_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
 
   // ── Control ───────────────────────────────────────────────────
-  t('root_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),
-  t('sunder_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),
+  // Consolidation Group H: ONE reusable control debuff. Whether it saps the
+  // target's outgoing damage or shears its armour
+  // (`effect_config.control_mode`: 'damage_reduction' | 'ac_reduction'), the
+  // scaling attributes and the wording (`combat_text.activate_text`) are all
+  // configuration — Nature's Snare, Dissonance and Sunder Armor are class
+  // identities of this one base.
+  t('control_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),
   // Consolidation Group D: ONE reusable ticking damage debuff. The persistent
   // effect row it writes (`effect_config.effect_type`), whether the per-tick
   // magnitude rolls the weapon die (`effect_config.weapon_based`), the scaling

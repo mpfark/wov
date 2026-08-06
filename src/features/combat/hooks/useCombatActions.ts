@@ -55,7 +55,7 @@ import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, b
 const INSTANT_BUFF_TYPES = new Set([
   'stealth_buff',
   'regen_buff', 'evasion_buff', 'disengage_buff',
-  'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  'party_regen', 'control_debuff', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   // Templar instant buffs (non-stance)
   'aura_pulse',
 ]);
@@ -467,27 +467,51 @@ export function useCombatActions(params: UseCombatActionsParams) {
       ));
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
-    } else if (ability.type === 'root_debuff') {
+    } else if (
+      ability.type === 'control_debuff'
+      || ability.type === 'root_debuff'
+      || ability.type === 'sunder_debuff'
+    ) {
+      // Consolidation Group H: ONE reusable control debuff. Whether it saps the
+      // target's outgoing damage or shears its armour comes from
+      // `effect_config.control_mode`; the scaling attributes live on the row's
+      // calcs and the wording is authored `combat_text.activate_text`.
+      // Nature's Snare, Dissonance and Sunder Armor are class identities here.
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use ${ability.label}!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for ${ability.label}.`)); return; }
-      // Consolidation Group G: the duration attribute is configuration on each
-      // ability row (Nature's Snare WIS, Dissonance INT) and the wording is
-      // authored `combat_text.activate_text` — no class branch here.
+      const controlCfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const controlMode = typeof controlCfg.control_mode === 'string' && controlCfg.control_mode.trim()
+        ? controlCfg.control_mode.trim()
+        // Legacy rows carry no mode: the retired mechanic key decides.
+        : (ability.type === 'sunder_debuff' ? 'ac_reduction' : 'damage_reduction');
       const durationMs = durationOf();
-      const reduction = amountOf();
-      p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
-      const rootTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
-      const rootLine = typeof rootTpl === 'string' && rootTpl.trim()
-        ? rootTpl.trim()
-        : "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.";
+      const magnitude = amountOf();
+      const seconds = Math.round(durationMs / 1000);
+
+      if (controlMode === 'ac_reduction') {
+        p.buffSetters.setSunderDebuff(prev => ({
+          ...prev,
+          [cTargetId]: { acReduction: magnitude, expiresAt: Date.now() + durationMs, creatureId: cTargetId, creatureName: creature.name },
+        }));
+      } else {
+        p.buffSetters.setRootDebuff({ damageReduction: magnitude, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
+      }
+
+      const controlTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const controlLine = typeof controlTpl === 'string' && controlTpl.trim()
+        ? controlTpl.trim()
+        : controlMode === 'ac_reduction'
+          ? "{ability}! {target}'s AC reduced by {amount} for {seconds}s."
+          : "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.";
       p.addLogEvent(buildDebuffEvent(
-        rootLine
+        controlLine
           .replace(/\{ability\}/g, ability.label)
           .replace(/\{target\}/g, creature.name)
-          .replace(/\{pct\}/g, String(Math.round(reduction * 100)))
-          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000))),
+          .replace(/\{amount\}/g, String(magnitude))
+          .replace(/\{pct\}/g, String(Math.round(magnitude * 100)))
+          .replace(/\{seconds\}/g, String(seconds)),
       ));
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
@@ -639,28 +663,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
         .replace('{who}', who)
         .replace('{seconds}', String(seconds));
       p.addLogEvent(buildHealEvent(`${castLine} [${healPerTick}/tick]`));
-    } else if (ability.type === 'sunder_debuff') {
-      const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
-      if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
-      // Consolidation Group G: magnitude and duration attributes are configured
-      // on the ability row; the wording is authored `combat_text.activate_text`.
-      const acReduction = amountOf();
-      const sunderDurationMs = durationOf();
-      const durationSec = Math.round(sunderDurationMs / 1000);
-      p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + sunderDurationMs, creatureId: cTargetId, creatureName: creature.name } }));
-      const sunderTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
-      const sunderLine = typeof sunderTpl === 'string' && sunderTpl.trim()
-        ? sunderTpl.trim()
-        : "{ability}! {target}'s AC reduced by {amount} for {seconds}s.";
-      p.addLogEvent(buildDebuffEvent(
-        sunderLine
-          .replace(/\{ability\}/g, ability.label)
-          .replace(/\{target\}/g, creature.name)
-          .replace(/\{amount\}/g, String(acReduction))
-          .replace(/\{seconds\}/g, String(durationSec)),
-      ));
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {

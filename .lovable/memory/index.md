@@ -3,3 +3,4 @@
 - [Evasion Consolidation](mem://game/class-abilities/evasion-consolidation) — Cloak of Shadows + Disengage share one evasion_buff base; dodge certainty/next-hit window/source are config
 - [Offense Buff Consolidation](mem://game/class-abilities/offense-consolidation) — Arcane Surge + Eagle Eye share one offense_buff base; offense_mode + wording are config
 - [Group G Consolidation](mem://game/class-abilities/group-g-consolidation) — Barrage/Grand Finale/Holy Shield/Shield Wall + stealth, root, sunder, transfer, regen holdouts now config-driven
+- [Control Debuff Consolidation](mem://game/class-abilities/control-consolidation) — root_debuff + sunder_debuff share one control_debuff base; control_mode picks damage vs AC reduction

@@ -59,7 +59,7 @@ describe('Group G consolidation', () => {
   it('every Group G mechanic is still a registered template', () => {
     for (const key of [
       'multi_attack', 'burst_damage', 'reactive_holy', 'block_buff',
-      'stealth_buff', 'root_debuff', 'sunder_debuff', 'hp_transfer', 'regen_buff',
+      'stealth_buff', 'control_debuff', 'hp_transfer', 'regen_buff',
     ]) {
       expect(getMechanicTemplate(key), key).not.toBeNull();
     }
