@@ -270,12 +270,26 @@ const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so l
 function surgeMult(
   classKey: string, level: number, intStat: number,
   characterId?: string | null, nodeId?: string | null,
+  abilityKey = 'arcane_surge',
 ): number {
   return resolveMagnitude({
-    classKey, abilityKey: 'arcane_surge', kind: 'amount',
+    classKey, abilityKey, kind: 'amount',
     inputs: buildServerCalcInputs(level, { int: intStat }),
     fallbackValue: 1, characterId, nodeId,
   });
+}
+
+/**
+ * Consolidation Group F: the damage-amplifying half of the shared
+ * `offense_buff` base carries its own ability identity in the buff bag, so the
+ * multiplier is resolved from whichever ability granted it (Arcane Surge today,
+ * any configured `offense_mode: 'damage_mult'` ability tomorrow). Legacy bags
+ * that only carry `damage_buff: true` fall back to Arcane Surge.
+ */
+function offenseBuffKey(bag: Record<string, any> | null | undefined): string {
+  const v = bag?.damage_buff;
+  return (v && typeof v === 'object' && typeof v.ability_key === 'string')
+    ? v.ability_key : 'arcane_surge';
 }
 
 Deno.serve(async (req) => {
@@ -704,17 +718,30 @@ Deno.serve(async (req) => {
           (mb.stack_apply = mb.stack_apply || []).push({ ability_key: stanceKey });
         }
 
-        if (reserved.eagle_eye) {
-          // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
-          // Magnitude is configurable (abilities.amount_calc); the inline
-          // expression stays as the fallback when no calc is configured.
-          const blended = resolveMagnitude({
-            classKey: m.c.class || 'ranger', abilityKey: 'eagle_eye', kind: 'amount',
-            inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
-          });
-          mb.crit_buff = { bonus: blended };
+        // Consolidation Group F: ONE offensive self-buff base. Whether a reserved
+        // stance widens the crit range or amplifies damage is configuration
+        // (`effect_config.offense_mode`), so Eagle Eye and Arcane Surge are
+        // identities of the same `offense_buff` base rather than named branches.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey
+            ?? (stanceKey === 'eagle_eye' || stanceKey === 'arcane_surge' ? 'offense_buff' : '');
+          if (mech !== 'offense_buff' && mech !== 'crit_buff' && mech !== 'damage_buff') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
+          const mode = typeof cfg.offense_mode === 'string'
+            ? cfg.offense_mode
+            : (mech === 'crit_buff' || stanceKey === 'eagle_eye') ? 'crit_edge' : 'damage_mult';
+          if (mode === 'crit_edge') {
+            mb.crit_buff = {
+              bonus: resolveMagnitude({
+                classKey: m.c.class || '', abilityKey: stanceKey, kind: 'amount',
+                inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
+              }),
+            };
+          } else {
+            mb.damage_buff = { ability_key: stanceKey };
+          }
         }
-        if (reserved.arcane_surge) mb.damage_buff = true;
         // Consolidation Group D: ONE mitigation base. Any reserved stance whose
         // mechanic is `mitigation_buff` in percent mode contributes percentage
         // damage reduction; the shield kicker, crit softening and the mitigation
@@ -1211,7 +1238,7 @@ Deno.serve(async (req) => {
             let arrowDmg = Math.max(1, Math.floor(rollArrow()));
             if (isCrit) arrowDmg *= 2;
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
-            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId));
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id])));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
@@ -1331,7 +1358,7 @@ Deno.serve(async (req) => {
           : Math.max(1, Math.floor(baseDmg * multiplier));
         // Arcane Surge empowers any damage_buff holder's output.
         if (buffs[member.id]?.damage_buff) {
-          finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int || 10) + (eb.int || 0), member.id, combatNodeId)), 1);
+          finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int || 10) + (eb.int || 0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         }
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
@@ -1472,7 +1499,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
-        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
         const hitMsg = isBackstab
@@ -1514,7 +1541,7 @@ Deno.serve(async (req) => {
         const isFinaleCrit = critRoll >= critThreshold;
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
-        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
+        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
@@ -1568,7 +1595,7 @@ Deno.serve(async (req) => {
         let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effMagDot + 2) / 3 * 0.67 + effMagDot * 0.5));
         // Damage buffs (e.g. Arcane Surge) bake into the DoT at apply time so it
         // inherits the boost for its full duration.
-        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId)), 1);
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
         const durationMs = paMag(
           'duration',
@@ -2147,7 +2174,7 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('stealth');
             events.push({ type: 'buff_consumed', message: `${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
-          if (isDmgBuff) dmg = Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId));
+          if (isDmgBuff) dmg = Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId, offenseBuffKey(buffs[m.id])));
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -2277,7 +2304,7 @@ Deno.serve(async (req) => {
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
-          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
+          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId, offenseBuffKey(buffs[m.id]))), 1);
 
           // Clamp minimum 1
           dmg2 = Math.max(dmg2, 1);
@@ -2365,7 +2392,7 @@ Deno.serve(async (req) => {
           const pulseStat = (str(applier.cfg.pulse_damage_stat) ?? 'int') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
           const pulseMod = sm((c[pulseStat] || 10) + ((eb as any)[pulseStat] || 0));
           let pulseDmg = Math.max(1, num(applier.cfg.pulse_damage_base, 2) + pulseMod);
-          if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId)), 1);
+          if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId, offenseBuffKey(buffs[m.id]))), 1);
           pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
           cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
