@@ -55,7 +55,7 @@ import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, b
 const INSTANT_BUFF_TYPES = new Set([
   'stealth_buff',
   'regen_buff', 'evasion_buff', 'disengage_buff',
-  'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  'party_regen', 'control_debuff', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   // Templar instant buffs (non-stance)
   'aura_pulse',
 ]);
