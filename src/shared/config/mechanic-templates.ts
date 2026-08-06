@@ -76,6 +76,14 @@ export const STACK_EFFECT_TYPE: Record<StackType, 'poison' | 'ignite'> = {
   burn_stacks: 'ignite',
 };
 
+/**
+ * Safety floor for the `stealth_buff` ambush multiplier. Only used when a buff
+ * bag arrives without a resolved multiplier (legacy boolean form) — a live cast
+ * always carries the value resolved from the ability's `amount_calc`.
+ */
+export const LEGACY_AMBUSH_MULT = 2;
+
+
 const P = (
   key: MechanicCalcParamKey,
   label: string,
