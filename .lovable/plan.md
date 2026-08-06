@@ -19,6 +19,7 @@ New table `public.base_abilities` (admin-editable, reusable, one row per family)
 - `id`, `base_key` (stable, immutable), `label`, `description`
 - `mechanic_key` — runtime mechanic; unchanged values
 - `activation_mode`, `default_target_type`, `allowed_target_types text[]`
+- `trigger_type` — `none` | `on_hit` (weapon hits) | `pulse` (automatic attacks), so the admin UI can label weapon-hit stances and orb stances distinctly
 - `capabilities jsonb` — which configuration sections the right column may show
   (`identity`, `scaling`, `damage_type`, `amount`, `duration`, `interval`, `combat_text`, `stance`, `applied_status`, `on_hit_effect`)
 - `on_hit_allowed text[]` — allowed On-Hit Effect types (`bleed|poison|ignite`), empty = unsupported
@@ -105,7 +106,7 @@ Component and query corrections:
 
 ## Validation
 
-Tests and manual checks covering: column 1 contains no finished abilities; selecting Spell Attack lists exactly fireball, frost_bolt, smite, judgment, cutting_words; creating an ability from a base; every `abilities` row has `base_ability_id`; on-hit permission editing on a base; enabling, saving and reloading an on-hit effect on a class ability; no editor shown for bases that disallow it; Envenom presented as a self On-Hit Stance applying enemy Poison; unchanged combat behaviour (existing 570-test suite plus calc parity), assignments and loadouts intact.
+Tests and manual checks covering: column 1 contains no finished abilities; selecting Spell Attack lists exactly fireball, frost_bolt, smite, judgment, cutting_words; creating an ability from a base; every `abilities` row has `base_ability_id`; on-hit permission editing on a base; enabling, saving and reloading an on-hit effect on a class ability; no editor shown for bases that disallow it; Envenom presented as a self On-Hit Stance applying enemy Poison; Orbs of Fire presented as a self Orb Stance whose automatic orb attacks apply enemy Ignite, with no separately selectable "Ignite" ability; unchanged combat behaviour (existing 570-test suite plus calc parity), assignments, stance state and loadouts intact.
 
 ## Technical notes
 
