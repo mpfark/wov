@@ -190,8 +190,12 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Divine Aegis (instant, ally) share this base; the class assignment supplies
   // the name, wording, target scope and the pool/duration attributes.
   t('absorb_buff', { duration: true, requiresAmount: true }),
-  t('damage_buff', { duration: true, requiresAmount: true }),
-  t('crit_buff', { duration: true, requiresAmount: true }),
+  // Consolidation Group F: ONE reusable offensive self-buff. Whether it
+  // multiplies outgoing damage or widens the crit range
+  // (`effect_config.offense_mode`: 'damage_mult' | 'crit_edge') is
+  // configuration, so Arcane Surge (Wizard) and Eagle Eye (Ranger) are class
+  // identities of this one base.
+  t('offense_buff', { duration: true, requiresAmount: true }),
   t('block_buff', {
     duration: true,
     params: [
