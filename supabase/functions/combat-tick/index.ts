@@ -1914,20 +1914,18 @@ Deno.serve(async (req) => {
 
         events.push(critEvent);
 
-        // ── Holy Shield (Templar) reactive retaliation ────────────
-        // After damage lands (even partial), holy aura strikes back at the
-        // attacker. Once per attacker per tick. Dual-primary (Templar WIS+CON):
-        // WIS is the magnitude core, CON is a durability kicker on the burn.
+        // ── Reactive retaliation stance (Group G) ─────────────────
+        // After damage lands (even partial), the reactive stance strikes back at
+        // the attacker, once per attacker per tick. The granting ability, its
+        // scaling attributes and the wording are all configuration — Holy Shield
+        // is the Templar identity of this one base.
         if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
-            // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
-            // WIS contribution is now reduced by 20% (CON/level portions remain unchanged).
-            const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
-            const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
+            const reactiveKey = mb.holy_shield.ability_key || 'holy_shield';
             const returnDmgBase = Math.max(1, resolveMagnitude({
-              classKey: targetC.class || 'templar', abilityKey: 'holy_shield', kind: 'mechanic',
+              classKey: targetC.class || '', abilityKey: reactiveKey, kind: 'mechanic',
               param: 'retaliation_damage',
               inputs: buildServerCalcInputs(targetC.level || 1, {
                 str: (targetC.str || 10) + (targetEq.str || 0), dex: (targetC.dex || 10) + (targetEq.dex || 0),
@@ -1938,9 +1936,15 @@ Deno.serve(async (req) => {
             }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
+            const retaliateTpl = typeof mb.holy_shield.text === 'string' && mb.holy_shield.text.trim()
+              ? mb.holy_shield.text.trim()
+              : "{caster}'s ward burns {target}! [{damage}]";
             events.push({
               type: 'holy_shield_return',
-              message: `${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
+              message: retaliateTpl
+                .replace(/\{caster\}/g, targetName)
+                .replace(/\{target\}/g, creature.name)
+                .replace(/\{damage\}/g, String(returnDmg)),
               character_id: targetId,
               creature_id: creature.id,
             });
