@@ -182,5 +182,8 @@ Untouched: `class_ability_roles`, `character_ability_loadout` shape, `characters
 - Class Config and assignment writes cannot alter CP, calcs, timing, targeting or duration.
 - Wizard keeps Fireball and Frost Bolt in slot 1 as loadout alternatives; damage type stays per use.
 - Envenom: self stance → Poison on enemy. Orbs of Fire: own pulses → Ignite on enemy. Ignite never listed as a player ability.
+- Orbs of Fire dual-attribute parity: with INT and WIS varied **independently** (e.g. INT 20/WIS 8 and INT 8/WIS 20 across several levels), assert separately that orb damage and orb proc chance track INT only, that Ignite damage per tick and Ignite duration track WIS only, and that Ignite max stacks stays 5 — each equal to the pre-migration value.
+- Envenom dual-attribute parity: proc chance tracks DEX only, Poison max stacks tracks CHA only.
+- No reader or writer of `abilities.effect_config` remains in runtime or admin code.
 - Assignment and loadout row counts unchanged; every configured use has exactly one class/slot.
 - Admin shell and responsive layout unchanged.
