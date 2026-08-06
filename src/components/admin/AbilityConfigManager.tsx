@@ -379,7 +379,7 @@ export default function AbilityConfigManager() {
                     key={`${u.class_key}-${u.slot}-${u.class_ability_key ?? draft.ability_key}-${u.is_default}`}
                     className="rounded border border-border/60 bg-muted/20 px-2 py-1.5 space-y-0.5"
                   >
-                    <p className="text-xs flex items-center gap-1 flex-wrap">
+                    <div className="text-xs flex items-center gap-1 flex-wrap">
                       <span className="font-medium">{label}</span>
                       {!u.is_default && (
                         <Badge variant="secondary" className="text-[9px]">alt</Badge>
@@ -387,7 +387,7 @@ export default function AbilityConfigManager() {
                       {u.status !== 'active' && (
                         <Badge variant="outline" className="text-[9px] capitalize">{u.status}</Badge>
                       )}
-                    </p>
+                    </div>
                     <p className="text-[10px] text-muted-foreground">
                       {CLASS_LABELS[u.class_key] ?? u.class_key} · slot {u.slot} · {u.role_name}
                       {u.unlock_level != null ? ` · Lvl ${u.unlock_level}` : ''}
