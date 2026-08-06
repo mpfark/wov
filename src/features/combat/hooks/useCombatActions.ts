@@ -640,7 +640,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
         .replace('{seconds}', String(seconds));
       p.addLogEvent(buildHealEvent(`${castLine} [${healPerTick}/tick]`));
     } else if (ability.type === 'burst_damage') {
-    } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {
       // Consolidation Group G: timed (non-stance) variant of the reactive
