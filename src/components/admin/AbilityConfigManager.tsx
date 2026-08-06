@@ -67,21 +67,19 @@ export interface AuthoredAbilityRowState {
   label: string;
   description: string;
   tooltip: string;
-  cp_cost: number;
   mechanic_key: string;
   status: string;
-  interval_ms: number | null;
   /** Canonical damage type key, or null for non-damaging abilities. */
   damage_type: string | null;
   ability_type: string;
-  activation_mode: string;
-  target_type: string;
   admin_notes: string | null;
-  amount_calc: AbilityCalc | null;
-  duration_calc: AbilityCalc | null;
-  mechanic_calcs: Record<string, AbilityCalc>;
   combat_text: Record<string, unknown>;
-  effect_config: Record<string, unknown>;
+  /** The ONE numeric class-balancing control. */
+  class_scale: number;
+  primary_attribute: string | null;
+  secondary_attribute: string | null;
+  applied_status: string | null;
+  on_hit_effect: OnHitEffectConfig | null;
 }
 
 /** Read-only reference: which classes/slots reference this ability. */
@@ -139,16 +137,18 @@ export default function AbilityConfigManager() {
         .select(`
           id, base_key, label, description, mechanic_key, activation_mode,
           default_target_type, allowed_target_types, trigger_type, capabilities,
-          on_hit_allowed, status, admin_notes
+          on_hit_allowed, status, admin_notes, cp_cost, cp_reserve_pct,
+          interval_ms, amount_calc, duration_calc, mechanic_calcs, effect_config,
+          supports_secondary_scaling, target_type
         `)
         .order('label'),
       supabase
         .from('abilities')
         .select(`
-          id, base_ability_id, ability_key, label, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, damage_type, ability_type,
-          activation_mode, target_type, admin_notes, amount_calc, duration_calc,
-          mechanic_calcs, combat_text, effect_config
+          id, base_ability_id, ability_key, label, description, tooltip,
+          mechanic_key, status, damage_type, ability_type, admin_notes,
+          combat_text, class_scale, primary_attribute, secondary_attribute,
+          applied_status, on_hit_effect
         `)
         .order('label'),
       supabase
@@ -176,6 +176,14 @@ export default function AbilityConfigManager() {
       on_hit_allowed: b.on_hit_allowed ?? [],
       status: b.status ?? 'active',
       admin_notes: b.admin_notes ?? null,
+      cp_cost: b.cp_cost ?? 0,
+      cp_reserve_pct: b.cp_reserve_pct ?? null,
+      interval_ms: b.interval_ms ?? null,
+      amount_calc: b.amount_calc ?? null,
+      duration_calc: b.duration_calc ?? null,
+      mechanic_calcs: (b.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
+      effect_config: (b.effect_config ?? {}) as Record<string, unknown>,
+      supports_secondary_scaling: !!b.supports_secondary_scaling,
     })));
 
     setRows(((abilityRes.data ?? []) as any[]).map(a => ({
@@ -185,20 +193,17 @@ export default function AbilityConfigManager() {
       label: a.label,
       description: a.description ?? '',
       tooltip: a.tooltip ?? '',
-      cp_cost: a.cp_cost ?? 0,
       mechanic_key: a.mechanic_key,
       status: a.status ?? 'active',
-      interval_ms: a.interval_ms,
       damage_type: a.damage_type ?? null,
       ability_type: a.ability_type ?? 'buff',
-      activation_mode: a.activation_mode ?? 'instant',
-      target_type: a.target_type ?? 'enemy',
       admin_notes: a.admin_notes ?? null,
-      amount_calc: a.amount_calc,
-      duration_calc: a.duration_calc,
-      mechanic_calcs: (a.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       combat_text: (a.combat_text ?? {}) as Record<string, unknown>,
-      effect_config: (a.effect_config ?? {}) as Record<string, unknown>,
+      class_scale: typeof a.class_scale === 'number' ? a.class_scale : 1,
+      primary_attribute: a.primary_attribute ?? null,
+      secondary_attribute: a.secondary_attribute ?? null,
+      applied_status: a.applied_status ?? null,
+      on_hit_effect: (a.on_hit_effect ?? null) as OnHitEffectConfig | null,
     })));
 
     setUsage(((usageRes.data ?? []) as any[])
@@ -220,12 +225,7 @@ export default function AbilityConfigManager() {
 
   const select = useCallback((row: AuthoredAbilityRowState) => {
     setSelectedId(row.id);
-    setDraft({
-      ...row,
-      mechanic_calcs: { ...row.mechanic_calcs },
-      combat_text: { ...row.combat_text },
-      effect_config: { ...row.effect_config },
-    });
+    setDraft({ ...row, combat_text: { ...row.combat_text } });
   }, []);
 
   const sample: CalcInputs = useMemo(() => ({
@@ -282,22 +282,29 @@ export default function AbilityConfigManager() {
   /** A base with no declared capabilities exposes everything (safe default). */
   const can = (key: CapabilityKey) => caps.length === 0 || caps.includes(key);
 
-  const draftOnHit = (draft?.effect_config?.on_hit_effect ?? null) as OnHitEffectConfig | null;
+  const draftOnHit = draft?.on_hit_effect ?? null;
+
+  /** Composed view (base numbers + this ability's identity/scaling). */
+  const composed = useMemo(() => (
+    draft && draftBase
+      ? composeAbilityRow(draft as any, draftBase as any, indexAppliedStatuses(statuses as any))
+      : null
+  ), [draft, draftBase, statuses]);
 
   /**
    * Publish gate — a draft with structurally invalid or incomplete calcs is
    * rejected before it can be written. There is no silent legacy fallback.
    */
-  const draftErrors = useMemo(() => draft ? validateAbilityForPublish({
-    mechanic_key: draft.mechanic_key,
-    amount_calc: draft.amount_calc,
-    duration_calc: draft.duration_calc,
-    mechanic_calcs: draft.mechanic_calcs,
-  }) : [], [draft]);
+  const draftErrors = useMemo(() => composed ? validateAbilityForPublish({
+    mechanic_key: composed.mechanic_key,
+    amount_calc: composed.amount_calc,
+    duration_calc: composed.duration_calc,
+    mechanic_calcs: composed.mechanic_calcs,
+  }) : [], [composed]);
 
   const previewMagnitude = useMemo(
-    () => draft?.amount_calc ? evaluateCalc(draft.amount_calc, sample) : 0,
-    [draft?.amount_calc, sample],
+    () => composed?.amount_calc ? evaluateCalc(composed.amount_calc, sample) : 0,
+    [composed?.amount_calc, sample],
   );
 
   const save = async () => {
@@ -312,17 +319,14 @@ export default function AbilityConfigManager() {
       label: draft.label,
       description: draft.description,
       tooltip: draft.tooltip,
-      cp_cost: draft.cp_cost,
-      interval_ms: draft.interval_ms,
-      amount_calc: draft.amount_calc as any,
-      duration_calc: draft.duration_calc as any,
-      mechanic_calcs: draft.mechanic_calcs as any,
       combat_text: draft.combat_text as any,
-      effect_config: draft.effect_config as any,
       damage_type: draft.damage_type,
       ability_type: draft.ability_type,
-      activation_mode: draft.activation_mode,
-      target_type: draft.target_type,
+      class_scale: draft.class_scale,
+      primary_attribute: draft.primary_attribute,
+      secondary_attribute: draftBase?.supports_secondary_scaling ? draft.secondary_attribute : null,
+      applied_status: draft.applied_status,
+      on_hit_effect: (draft.on_hit_effect ?? null) as any,
       admin_notes: draft.admin_notes,
       status: draft.status,
     }).eq('id', draft.id);
