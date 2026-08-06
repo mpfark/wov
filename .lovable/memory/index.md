@@ -1,2 +1,3 @@
 - [Ticking Mechanic Consolidation](mem://game/class-abilities/ticking-consolidation) — Consecrate → reusable aura_pulse; dot_debuff fully config-driven (effect_type, weapon_based, stats, stacks, text)
 - [Stack Applier Consolidation](mem://game/class-abilities/stack-apply-consolidation) — Envenom + Orbs of Fire share one stack_apply base; trigger/effect_type/scaling/linger/text are config
+- [Evasion Consolidation](mem://game/class-abilities/evasion-consolidation) — Cloak of Shadows + Disengage share one evasion_buff base; dodge certainty/next-hit window/source are config
