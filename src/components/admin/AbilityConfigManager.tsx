@@ -343,6 +343,72 @@ export default function AbilityConfigManager() {
         </ScrollArea>
       </div>
 
+      {/* Class variants of the selected base ability (read-only). */}
+      <div
+        className="w-72 shrink-0 border-r border-border min-h-0 flex flex-col"
+        data-testid="class-variant-column"
+      >
+        <div className="p-3 border-b border-border/60 space-y-1">
+          <p className="text-xs font-display">Class abilities</p>
+          <p className="text-[10px] text-muted-foreground">
+            {draft
+              ? `Class versions built on ${draft.label}`
+              : 'Pick a base ability to see its class versions.'}
+          </p>
+        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-3 space-y-1">
+            {draft && draftUsage.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                No class uses this base ability yet. Assign it in Class Config.
+              </p>
+            )}
+            {draft && draftUsage
+              .slice()
+              .sort((a, b) =>
+                (CLASS_LABELS[a.class_key] ?? a.class_key)
+                  .localeCompare(CLASS_LABELS[b.class_key] ?? b.class_key)
+                || a.slot - b.slot)
+              .map(u => {
+                const overrideKeys = Object.keys(u.overrides ?? {});
+                const label = typeof u.overrides?.label === 'string'
+                  ? (u.overrides.label as string)
+                  : draft.label;
+                return (
+                  <div
+                    key={`${u.class_key}-${u.slot}-${u.class_ability_key ?? draft.ability_key}-${u.is_default}`}
+                    className="rounded border border-border/60 bg-muted/20 px-2 py-1.5 space-y-0.5"
+                  >
+                    <p className="text-xs flex items-center gap-1 flex-wrap">
+                      <span className="font-medium">{label}</span>
+                      {!u.is_default && (
+                        <Badge variant="secondary" className="text-[9px]">alt</Badge>
+                      )}
+                      {u.status !== 'active' && (
+                        <Badge variant="outline" className="text-[9px] capitalize">{u.status}</Badge>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {CLASS_LABELS[u.class_key] ?? u.class_key} · slot {u.slot} · {u.role_name}
+                      {u.unlock_level != null ? ` · Lvl ${u.unlock_level}` : ''}
+                    </p>
+                    <p className="text-[10px] font-mono text-muted-foreground">
+                      {u.class_ability_key ?? draft.ability_key}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {overrideKeys.length === 0
+                        ? 'no overrides — uses base values'
+                        : `overrides: ${overrideKeys.join(', ')}`}
+                    </p>
+                  </div>
+                );
+              })}
+          </div>
+        </ScrollArea>
+      </div>
+
+
+
       {/* Editor */}
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">
