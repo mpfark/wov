@@ -141,9 +141,11 @@ describe('Abilities page — base ability library', () => {
   it('no longer renders AssignmentMatrix or class-assignment controls', () => {
     expect(SOURCE).not.toMatch(/AssignmentMatrix/);
     expect(existsSync('src/components/admin/ability/AssignmentMatrix.tsx')).toBe(false);
-    // Slot / default / unlock-level assignment state does not live here.
+    // Slot / default / unlock-level assignment state is never AUTHORED here —
+    // it may only be read for the read-only class-variant column.
     expect(SOURCE).not.toMatch(/is_default:\s*(true|false)/);
-    expect(SOURCE).not.toMatch(/unlock_level:/);
+    expect(SOURCE).not.toMatch(/setDraft\([^)]*unlock_level/);
+
     // The page never inserts or updates assignments.
     expect(SOURCE).not.toMatch(/from\('class_ability_assignments'\)\s*\n?\s*\.(insert|update|delete)/);
   });
