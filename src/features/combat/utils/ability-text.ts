@@ -85,5 +85,5 @@ export function resolveCastFlavor(
 ): string | null {
   return getAuthoredCastFlavor(ability.abilityKey, targetName)
     ?? getAbilityCastFlavor(ability.abilityKey, targetName)
-    ?? getCastFlavor(ability.type, characterClass, targetName);
+    ?? getCastFlavor(ability.type, targetName);
 }

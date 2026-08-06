@@ -48,7 +48,8 @@ const FLAVOR: Record<string, FlavorVariants> = {
       'A barbed verse rises in your throat, aimed at {target}…',
     ],
   },
-  // smite is shared by healer and templar — branched in getCastFlavor()
+  // Smite / Judgment flavor lives in the ability-identity table (ABILITY_FLAVOR),
+  // resolved before this mechanic table — no class branch.
 
   // ── Higher-tier server-resolved ─────────────────────────────
   multi_attack: {
@@ -173,18 +174,6 @@ const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
   },
 };
 
-// Smite is shared — separate tables keyed on character class.
-const SMITE_FLAVOR_BY_CLASS: Record<string, string[]> = {
-  templar: [
-    'You raise your hand and call judgment down on {target}…',
-    'Holy light kindles at your fingertips, sentence pronounced on {target}…',
-  ],
-  healer: [
-    'You channel divine light toward {target}…',
-    'A shaft of pale radiance gathers above {target}…',
-  ],
-};
-
 function substitute(template: string, target: string | null): string {
   return template.replace('{target}', target ?? 'your foe');
 }
@@ -213,14 +202,8 @@ export function getAbilityCastFlavor(
  */
 export function getCastFlavor(
   abilityType: string,
-  characterClass: string,
   targetName: string | null,
 ): string | null {
-  if (abilityType === 'smite') {
-    const variants = SMITE_FLAVOR_BY_CLASS[characterClass] ?? SMITE_FLAVOR_BY_CLASS.healer;
-    return substitute(pick(variants), targetName);
-  }
-
   const entry = FLAVOR[abilityType];
   if (!entry) return null;
 
