@@ -475,12 +475,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildBuffEvent(line));
       }
     } else if (ability.type === 'stealth_buff') {
-      // Consolidation Group G: ONE reusable stealth buff. Duration and ambush
-      // multiplier come from the configured calcs, wording from authored
+      // Consolidation Group I: ONE reusable stealth buff. Duration and ambush
+      // multiplier come from the configured calcs (attributes documented in
+      // `effect_config.ambush_stat` / `duration_stat`), the wording from authored
       // `combat_text.activate_text` — Shadowstep is the Assassin identity.
       const durationMs = durationOf();
-      const ambushMult = amountOf();
+      const ambushMult = Math.max(1, amountOf() || LEGACY_AMBUSH_MULT);
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
+
       const stealthTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
       const stealthLine = typeof stealthTpl === 'string' && stealthTpl.trim()
         ? stealthTpl.trim()
