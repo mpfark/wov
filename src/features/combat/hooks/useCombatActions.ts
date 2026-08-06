@@ -449,13 +449,22 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildBuffEvent(line));
       }
     } else if (ability.type === 'stealth_buff') {
-      // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
+      // Consolidation Group G: ONE reusable stealth buff. Duration and ambush
+      // multiplier come from the configured calcs, wording from authored
+      // `combat_text.activate_text` — Shadowstep is the Assassin identity.
       const durationMs = durationOf();
       const ambushMult = amountOf();
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
-      p.addLogEvent(buildBuffEvent(`Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`));
-
-
+      const stealthTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const stealthLine = typeof stealthTpl === 'string' && stealthTpl.trim()
+        ? stealthTpl.trim()
+        : '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).';
+      p.addLogEvent(buildBuffEvent(
+        stealthLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000)))
+          .replace(/\{mult\}/g, ambushMult.toFixed(2)),
+      ));
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
@@ -463,12 +472,23 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use ${ability.label}!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for ${ability.label}.`)); return; }
-      // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
-      // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
+      // Consolidation Group G: the duration attribute is configuration on each
+      // ability row (Nature's Snare WIS, Dissonance INT) and the wording is
+      // authored `combat_text.activate_text` — no class branch here.
       const durationMs = durationOf();
       const reduction = amountOf();
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
-      p.addLogEvent(buildDebuffEvent(`${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`));
+      const rootTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const rootLine = typeof rootTpl === 'string' && rootTpl.trim()
+        ? rootTpl.trim()
+        : "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.";
+      p.addLogEvent(buildDebuffEvent(
+        rootLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{target\}/g, creature.name)
+          .replace(/\{pct\}/g, String(Math.round(reduction * 100)))
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000))),
+      ));
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Rend!`)); return; }
