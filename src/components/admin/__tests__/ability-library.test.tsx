@@ -42,10 +42,11 @@ const ABILITY_ROWS = vi.hoisted(() => [
 
 /** Fireball is deliberately assigned to TWO classes — it must still list once. */
 const ASSIGNMENT_ROWS = vi.hoisted(() => [
-  { ability_id: 'ab-fireball', class_key: 'wizard', is_default: true, status: 'active', role: { slot: 0, name: 'Signature' } },
-  { ability_id: 'ab-fireball', class_key: 'bard', is_default: false, status: 'active', role: { slot: 3, name: 'Pressure' } },
-  { ability_id: 'ab-frost', class_key: 'wizard', is_default: false, status: 'active', role: { slot: 0, name: 'Signature' } },
+  { ability_id: 'ab-fireball', class_key: 'wizard', is_default: true, status: 'active', unlock_level: 1, class_ability_key: 'fireball', overrides: { label: 'Fireball' }, role: { slot: 0, name: 'Signature' } },
+  { ability_id: 'ab-fireball', class_key: 'bard', is_default: false, status: 'active', unlock_level: 15, class_ability_key: 'cutting_words', overrides: { label: 'Cutting Words' }, role: { slot: 3, name: 'Pressure' } },
+  { ability_id: 'ab-frost', class_key: 'wizard', is_default: false, status: 'active', unlock_level: 1, class_ability_key: 'frost_bolt', overrides: {}, role: { slot: 0, name: 'Signature' } },
 ]);
+
 
 vi.mock('@/integrations/supabase/client', () => {
   const abilitiesResult = { data: ABILITY_ROWS, error: null };
