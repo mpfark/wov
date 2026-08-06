@@ -1,26 +1,27 @@
 /**
- * AbilityConfigManager — admin editor for the reusable ability BASE LIBRARY.
+ * AbilityConfigManager — the Ability Library, a genuine three-column hierarchy.
  *
- * Phase 1 of the ability-ownership correction: this page queries `abilities`
- * DIRECTLY. Every base ability appears exactly once — including abilities no
- * class uses yet — and selection is keyed by the ability id, never by an
- * assignment id. The list is not grouped by class.
+ *   Column 1  BASE ABILITIES (`base_abilities`)
+ *             Reusable authoring foundations — Spell Attack, Weapon Attack,
+ *             Heal, On-Hit Stance, Orb Stance. Each names the runtime mechanic
+ *             that executes it, its activation/target rules, how a follow-up
+ *             status is triggered, which configuration sections its class
+ *             abilities may edit and which optional On-Hit Effects are allowed.
  *
- * Owns `abilities` rows only: presentation, taxonomy, damage type, base CP
- * cost, lifecycle and the structured calculations (`amount_calc`,
- * `duration_calc`, `mechanic_calcs`, `interval_ms`). `ability_key` is immutable
- * after creation and `mechanic_key` may only change while an ability is a draft
- * that no class has assigned.
+ *   Column 2  CLASS ABILITIES (`abilities` where base_ability_id = selected)
+ *             The playable, named abilities authored on the selected base
+ *             (Fireball and Smite under Spell Attack). Every ability belongs to
+ *             exactly one base through `abilities.base_ability_id`.
  *
- * Class-side concerns — which class uses an ability, in which slot, at which
- * unlock level, which entry is the slot default, and per-class overrides — live
- * ONLY in the class editor (`class/ClassAbilityConfig`). This page never
- * creates or edits `class_ability_assignments`; it shows their usage read-only.
+ *   Column 3  CONFIGURATION
+ *             The base editor when only a base is selected, otherwise the class
+ *             ability editor: identity, taxonomy, calculations, mechanic
+ *             tunables and the optional On-Hit Effect — each container shown
+ *             only when the base declares that capability.
  *
- * Calculations are authored through the no-code `CalcBuilder` (term rows, dice
- * pickers, threshold ladders, final multipliers) and the template-driven
- * `MechanicCalcsEditor`. Invalid drafts are rejected before save — abilities may
- * not be published with structurally invalid or incomplete calculations.
+ * Class-side concerns — which class uses an ability, its slot, unlock level,
+ * slot default and per-class overrides — live ONLY in Class Config. This page
+ * never creates or edits `class_ability_assignments`; it shows usage read-only.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,20 +43,26 @@ import {
 import CalcBuilder from './ability/CalcBuilder';
 import MechanicCalcsEditor from './ability/MechanicCalcsEditor';
 import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
-import BaseAbilityCreateDialog, {
-  ABILITY_TYPES, ACTIVATION_MODES, TARGET_TYPES,
-} from './ability/BaseAbilityCreateDialog';
+import BaseAbilityCreateDialog from './ability/BaseAbilityCreateDialog';
+import ClassAbilityCreateDialog from './ability/ClassAbilityCreateDialog';
+import BaseAbilityEditor, { type BaseAbilityRow } from './ability/BaseAbilityEditor';
+import { OnHitEffectEditor } from './class/OnHitEffectEditor';
+import {
+  ABILITY_TYPES, ACTIVATION_MODES, TARGET_TYPES, capabilityList,
+  type CapabilityKey,
+} from './ability/ability-taxonomy';
+import type { OnHitEffectConfig, OnHitEffectKey } from '@/shared/combat/on-hit-effects';
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
-import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
 import { CLASS_LABELS } from '@/lib/game-data';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 
-/** One row of the base library — an `abilities` row, never an assignment. */
-export interface BaseAbilityRowState {
+/** One authored class ability — an `abilities` row, never an assignment. */
+export interface AuthoredAbilityRowState {
   id: string;
+  base_ability_id: string;
   ability_key: string;
   label: string;
   description: string;
@@ -74,9 +81,10 @@ export interface BaseAbilityRowState {
   duration_calc: AbilityCalc | null;
   mechanic_calcs: Record<string, AbilityCalc>;
   combat_text: Record<string, unknown>;
+  effect_config: Record<string, unknown>;
 }
 
-/** Read-only reference: which classes/slots reference this base ability. */
+/** Read-only reference: which classes/slots reference this ability. */
 interface UsageRow {
   ability_id: string;
   class_key: string;
@@ -84,50 +92,63 @@ interface UsageRow {
   role_name: string;
   is_default: boolean;
   status: string;
-  /** Per-class identity key (falls back to the base key when unset). */
   class_ability_key: string | null;
   unlock_level: number | null;
-  /** Validated per-class override payload, authored in Class Config. */
   overrides: Record<string, unknown>;
 }
 
-
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 const STATUS_FILTERS = ['all', ...ABILITY_STATUSES] as const;
-/** Combat-text slots authored on the base ability. */
+/** Combat-text slots authored on the class ability. */
 const TEXT_SLOTS: { key: string; label: string }[] = [
   { key: 'cast', label: 'Cast line' },
   { key: 'hit', label: 'Hit line' },
 ];
 
+const TRIGGER_LABELS: Record<string, string> = {
+  none: 'resolves on activation',
+  on_hit: 'triggers on weapon hits',
+  pulse: 'attacks automatically on its own interval',
+};
+
 export default function AbilityConfigManager() {
-  const [rows, setRows] = useState<BaseAbilityRowState[]>([]);
+  const [bases, setBases] = useState<BaseAbilityRow[]>([]);
+  const [rows, setRows] = useState<AuthoredAbilityRowState[]>([]);
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<BaseAbilityRowState | null>(null);
+  const [draft, setDraft] = useState<AuthoredAbilityRowState | null>(null);
+  const [baseSearch, setBaseSearch] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<typeof STATUS_FILTERS[number]>('all');
-  const [creating, setCreating] = useState(false);
+  const [creatingBase, setCreatingBase] = useState(false);
+  const [creatingAbility, setCreatingAbility] = useState(false);
 
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
   const [sampleStacks, setSampleStacks] = useState(3);
   const [sampleWeaponDie, setSampleWeaponDie] = useState(8);
 
-  const mechanics = useMemo(() => getKnownAbilityMechanics(), []);
-
   const load = useCallback(async () => {
     setLoading(true);
-    const [abilityRes, usageRes] = await Promise.all([
+    const [baseRes, abilityRes, usageRes] = await Promise.all([
+      supabase
+        .from('base_abilities')
+        .select(`
+          id, base_key, label, description, mechanic_key, activation_mode,
+          default_target_type, allowed_target_types, trigger_type, capabilities,
+          on_hit_allowed, status, admin_notes
+        `)
+        .order('label'),
       supabase
         .from('abilities')
         .select(`
-          id, ability_key, label, description, tooltip, cp_cost, mechanic_key,
-          status, interval_ms, damage_type, ability_type, activation_mode,
-          target_type, admin_notes, amount_calc, duration_calc, mechanic_calcs,
-          combat_text
+          id, base_ability_id, ability_key, label, description, tooltip, cp_cost,
+          mechanic_key, status, interval_ms, damage_type, ability_type,
+          activation_mode, target_type, admin_notes, amount_calc, duration_calc,
+          mechanic_calcs, combat_text, effect_config
         `)
         .order('label'),
       supabase
@@ -136,13 +157,30 @@ export default function AbilityConfigManager() {
           ability_id, class_key, is_default, status, class_ability_key,
           unlock_level, overrides, role:class_ability_roles ( slot, name )
         `),
-
     ]);
     setLoading(false);
+    if (baseRes.error) { toast.error(baseRes.error.message); return; }
     if (abilityRes.error) { toast.error(abilityRes.error.message); return; }
 
-    const mapped: BaseAbilityRowState[] = (abilityRes.data ?? []).map((a: any) => ({
+    setBases(((baseRes.data ?? []) as any[]).map(b => ({
+      id: b.id,
+      base_key: b.base_key,
+      label: b.label,
+      description: b.description ?? '',
+      mechanic_key: b.mechanic_key,
+      activation_mode: b.activation_mode ?? 'instant',
+      default_target_type: b.default_target_type ?? 'enemy',
+      allowed_target_types: b.allowed_target_types ?? [],
+      trigger_type: b.trigger_type ?? 'none',
+      capabilities: b.capabilities ?? [],
+      on_hit_allowed: b.on_hit_allowed ?? [],
+      status: b.status ?? 'active',
+      admin_notes: b.admin_notes ?? null,
+    })));
+
+    setRows(((abilityRes.data ?? []) as any[]).map(a => ({
       id: a.id,
+      base_ability_id: a.base_ability_id,
       ability_key: a.ability_key,
       label: a.label,
       description: a.description ?? '',
@@ -160,8 +198,8 @@ export default function AbilityConfigManager() {
       duration_calc: a.duration_calc,
       mechanic_calcs: (a.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       combat_text: (a.combat_text ?? {}) as Record<string, unknown>,
-    }));
-    setRows(mapped);
+      effect_config: (a.effect_config ?? {}) as Record<string, unknown>,
+    })));
 
     setUsage(((usageRes.data ?? []) as any[])
       .filter(r => r.ability_id && r.role)
@@ -176,17 +214,17 @@ export default function AbilityConfigManager() {
         unlock_level: r.unlock_level ?? null,
         overrides: (r.overrides ?? {}) as Record<string, unknown>,
       })));
-
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const select = useCallback((row: BaseAbilityRowState) => {
+  const select = useCallback((row: AuthoredAbilityRowState) => {
     setSelectedId(row.id);
     setDraft({
       ...row,
       mechanic_calcs: { ...row.mechanic_calcs },
       combat_text: { ...row.combat_text },
+      effect_config: { ...row.effect_config },
     });
   }, []);
 
@@ -200,16 +238,35 @@ export default function AbilityConfigManager() {
     weaponDie: sampleWeaponDie,
   }), [sampleLevel, sampleMod, sampleStacks, sampleWeaponDie]);
 
-  /** Flat, de-duplicated library list: one entry per base ability. */
+  const visibleBases = useMemo(() => {
+    const q = baseSearch.trim().toLowerCase();
+    return bases.filter(b => !q
+      || b.label.toLowerCase().includes(q)
+      || b.base_key.toLowerCase().includes(q)
+      || b.mechanic_key.toLowerCase().includes(q));
+  }, [bases, baseSearch]);
+
+  const selectedBase = useMemo(
+    () => bases.find(b => b.id === selectedBaseId) ?? null,
+    [bases, selectedBaseId],
+  );
+
+  /** Class abilities authored on the selected base. */
   const visibleRows = useMemo(() => {
+    if (!selectedBaseId) return [];
     const q = search.trim().toLowerCase();
     return rows.filter(r =>
-      (statusFilter === 'all' || r.status === statusFilter)
+      r.base_ability_id === selectedBaseId
+      && (statusFilter === 'all' || r.status === statusFilter)
       && (!q
         || r.label.toLowerCase().includes(q)
-        || r.ability_key.toLowerCase().includes(q)
-        || r.mechanic_key.toLowerCase().includes(q)));
-  }, [rows, search, statusFilter]);
+        || r.ability_key.toLowerCase().includes(q)));
+  }, [rows, selectedBaseId, search, statusFilter]);
+
+  const countForBase = useCallback(
+    (baseId: string) => rows.filter(r => r.base_ability_id === baseId).length,
+    [rows],
+  );
 
   const usageFor = useCallback(
     (abilityId: string) => usage.filter(u => u.ability_id === abilityId),
@@ -217,8 +274,15 @@ export default function AbilityConfigManager() {
   );
 
   const draftUsage = draft ? usageFor(draft.id) : [];
-  /** Identity guard: mechanics may only change on an unassigned draft. */
-  const mechanicLocked = !!draft && (draft.status !== 'draft' || draftUsage.length > 0);
+  const draftBase = useMemo(
+    () => (draft ? bases.find(b => b.id === draft.base_ability_id) ?? null : null),
+    [draft, bases],
+  );
+  const caps = capabilityList(draftBase?.capabilities);
+  /** A base with no declared capabilities exposes everything (safe default). */
+  const can = (key: CapabilityKey) => caps.length === 0 || caps.includes(key);
+
+  const draftOnHit = (draft?.effect_config?.on_hit_effect ?? null) as OnHitEffectConfig | null;
 
   /**
    * Publish gate — a draft with structurally invalid or incomplete calcs is
@@ -254,13 +318,13 @@ export default function AbilityConfigManager() {
       duration_calc: draft.duration_calc as any,
       mechanic_calcs: draft.mechanic_calcs as any,
       combat_text: draft.combat_text as any,
+      effect_config: draft.effect_config as any,
       damage_type: draft.damage_type,
       ability_type: draft.ability_type,
       activation_mode: draft.activation_mode,
       target_type: draft.target_type,
       admin_notes: draft.admin_notes,
       status: draft.status,
-      ...(mechanicLocked ? {} : { mechanic_key: draft.mechanic_key }),
     }).eq('id', draft.id);
 
     setSaving(false);
@@ -272,50 +336,137 @@ export default function AbilityConfigManager() {
   return (
     <div className="h-full flex overflow-hidden" data-testid="ability-library">
       <BaseAbilityCreateDialog
-        open={creating}
-        onOpenChange={setCreating}
-        onCreated={async id => { await load(); setSelectedId(id); }}
+        open={creatingBase}
+        onOpenChange={setCreatingBase}
+        onCreated={async id => {
+          await load();
+          setSelectedBaseId(id);
+          setSelectedId(null);
+          setDraft(null);
+        }}
       />
+      {selectedBase && (
+        <ClassAbilityCreateDialog
+          open={creatingAbility}
+          onOpenChange={setCreatingAbility}
+          base={selectedBase}
+          onCreated={async id => { await load(); setSelectedId(id); }}
+        />
+      )}
 
-      {/* Base ability library */}
-      <div className="w-72 shrink-0 border-r border-border min-h-0 flex flex-col">
+      {/* Column 1 — base abilities */}
+      <div
+        className="w-64 shrink-0 border-r border-border min-h-0 flex flex-col"
+        data-testid="base-ability-column"
+      >
         <div className="p-3 space-y-2 border-b border-border/60">
-          <Button size="sm" className="w-full h-7 text-[11px]" onClick={() => setCreating(true)}>
+          <p className="text-xs font-display">Base abilities</p>
+          <Button size="sm" className="w-full h-7 text-[11px]" onClick={() => setCreatingBase(true)}>
             <Plus className="w-3 h-3 mr-1" /> New base ability
           </Button>
           <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search library…"
+            value={baseSearch}
+            onChange={e => setBaseSearch(e.target.value)}
+            placeholder="Search bases…"
             aria-label="Search base abilities"
             className="h-7 text-xs"
           />
-          <Select value={statusFilter} onValueChange={v => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="h-7 text-xs" aria-label="Filter by status"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {STATUS_FILTERS.map(s => (
-                <SelectItem key={s} value={s} className="text-xs capitalize">
-                  {s === 'all' ? 'All statuses' : s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <p className="text-[10px] text-muted-foreground">
-            {visibleRows.length} of {rows.length} base abilities
+            {visibleBases.length} of {bases.length} base abilities
           </p>
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-3 space-y-1">
             {loading && (
               <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="w-3 h-3 animate-spin" /> Loading abilities…
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading library…
               </p>
             )}
-            {!loading && visibleRows.length === 0 && (
+            {!loading && visibleBases.length === 0 && (
               <p className="text-xs text-muted-foreground">No base abilities match.</p>
+            )}
+            {visibleBases.map(base => {
+              const count = countForBase(base.id);
+              return (
+                <button
+                  key={base.id}
+                  onClick={() => {
+                    setSelectedBaseId(base.id);
+                    setSelectedId(null);
+                    setDraft(null);
+                  }}
+                  className={`w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
+                    selectedBaseId === base.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border/60 hover:bg-muted/40'
+                  }`}
+                >
+                  {base.label}
+                  {base.status !== 'active' && (
+                    <Badge variant="secondary" className="ml-1 text-[9px] capitalize">{base.status}</Badge>
+                  )}
+                  <span className="block text-[10px] font-mono text-muted-foreground">{base.mechanic_key}</span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    {count === 0 ? 'no abilities yet' : `${count} ability${count === 1 ? '' : 's'}`}
+                    {base.trigger_type !== 'none' ? ` · ${TRIGGER_LABELS[base.trigger_type]}` : ''}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Column 2 — class abilities authored on the selected base */}
+      <div
+        className="w-64 shrink-0 border-r border-border min-h-0 flex flex-col"
+        data-testid="class-variant-column"
+      >
+        <div className="p-3 border-b border-border/60 space-y-2">
+          <p className="text-xs font-display">Abilities</p>
+          <p className="text-[10px] text-muted-foreground">
+            {selectedBase
+              ? `Built on ${selectedBase.label}`
+              : 'Pick a base ability to see its class versions.'}
+          </p>
+          {selectedBase && (
+            <>
+              <Button
+                size="sm" variant="outline" className="w-full h-7 text-[11px]"
+                onClick={() => setCreatingAbility(true)}
+              >
+                <Plus className="w-3 h-3 mr-1" /> New ability on this base
+              </Button>
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search abilities…"
+                aria-label="Search abilities"
+                className="h-7 text-xs"
+              />
+              <Select value={statusFilter} onValueChange={v => setStatusFilter(v as typeof statusFilter)}>
+                <SelectTrigger className="h-7 text-xs" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_FILTERS.map(s => (
+                    <SelectItem key={s} value={s} className="text-xs capitalize">
+                      {s === 'all' ? 'All statuses' : s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-3 space-y-1">
+            {selectedBase && visibleRows.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                No ability uses this base yet.
+              </p>
             )}
             {visibleRows.map(row => {
               const used = usageFor(row.id);
+              const classes = Array.from(new Set(used.map(u => CLASS_LABELS[u.class_key] ?? u.class_key)));
               return (
                 <button
                   key={row.id}
@@ -331,10 +482,9 @@ export default function AbilityConfigManager() {
                     <Badge variant="secondary" className="ml-1 text-[9px] capitalize">{row.status}</Badge>
                   )}
                   <span className="ml-1 text-[10px] text-muted-foreground">{row.cp_cost} CP</span>
+                  <span className="block text-[10px] font-mono text-muted-foreground">{row.ability_key}</span>
                   <span className="block text-[10px] text-muted-foreground">
-                    {used.length === 0
-                      ? 'unassigned'
-                      : `used by ${used.length} class assignment${used.length === 1 ? '' : 's'}`}
+                    {classes.length === 0 ? 'unassigned' : classes.join(', ')}
                   </span>
                 </button>
               );
@@ -343,94 +493,44 @@ export default function AbilityConfigManager() {
         </ScrollArea>
       </div>
 
-      {/* Class variants of the selected base ability (read-only). */}
-      <div
-        className="w-72 shrink-0 border-r border-border min-h-0 flex flex-col"
-        data-testid="class-variant-column"
-      >
-        <div className="p-3 border-b border-border/60 space-y-1">
-          <p className="text-xs font-display">Class abilities</p>
-          <p className="text-[10px] text-muted-foreground">
-            {draft
-              ? `Class versions built on ${draft.label}`
-              : 'Pick a base ability to see its class versions.'}
-          </p>
-        </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-3 space-y-1">
-            {draft && draftUsage.length === 0 && (
-              <p className="text-[11px] text-muted-foreground">
-                No class uses this base ability yet. Assign it in Class Config.
-              </p>
-            )}
-            {draft && draftUsage
-              .slice()
-              .sort((a, b) =>
-                (CLASS_LABELS[a.class_key] ?? a.class_key)
-                  .localeCompare(CLASS_LABELS[b.class_key] ?? b.class_key)
-                || a.slot - b.slot)
-              .map(u => {
-                const overrideKeys = Object.keys(u.overrides ?? {});
-                const label = typeof u.overrides?.label === 'string'
-                  ? (u.overrides.label as string)
-                  : draft.label;
-                return (
-                  <div
-                    key={`${u.class_key}-${u.slot}-${u.class_ability_key ?? draft.ability_key}-${u.is_default}`}
-                    className="rounded border border-border/60 bg-muted/20 px-2 py-1.5 space-y-0.5"
-                  >
-                    <div className="text-xs flex items-center gap-1 flex-wrap">
-                      <span className="font-medium">{label}</span>
-                      {!u.is_default && (
-                        <Badge variant="secondary" className="text-[9px]">alt</Badge>
-                      )}
-                      {u.status !== 'active' && (
-                        <Badge variant="outline" className="text-[9px] capitalize">{u.status}</Badge>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      {CLASS_LABELS[u.class_key] ?? u.class_key} · slot {u.slot} · {u.role_name}
-                      {u.unlock_level != null ? ` · Lvl ${u.unlock_level}` : ''}
-                    </p>
-                    <p className="text-[10px] font-mono text-muted-foreground">
-                      {u.class_ability_key ?? draft.ability_key}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {overrideKeys.length === 0
-                        ? 'no overrides — uses base values'
-                        : `overrides: ${overrideKeys.join(', ')}`}
-                    </p>
-                  </div>
-                );
-              })}
-          </div>
-        </ScrollArea>
-      </div>
-
-
-
-      {/* Editor */}
-      <div className="flex-1 min-h-0">
+      {/* Column 3 — configuration */}
+      <div className="flex-1 min-h-0" data-testid="configuration-column">
         <ScrollArea className="h-full">
-          {!draft ? (
+          {!draft && !selectedBase && (
             <div className="p-6 max-w-xl space-y-2">
-              <p className="text-sm font-display">Base ability library</p>
+              <p className="text-sm font-display">Ability library</p>
               <p className="text-xs text-muted-foreground">
-                Every reusable ability definition lives here exactly once. Pick one
-                to edit its shared properties and calculations, or create a new
-                unassigned base ability. Slots, unlock levels, defaults,
-                alternatives and per-class overrides are configured in Class Config.
+                Pick a base ability on the left to see the abilities built on it,
+                or create a new base. Slots, unlock levels, defaults and per-class
+                overrides are configured in Class Config.
               </p>
             </div>
-          ) : (
+          )}
+
+          {!draft && selectedBase && (
+            <BaseAbilityEditor
+              row={selectedBase}
+              usageCount={countForBase(selectedBase.id)}
+              onSaved={load}
+            />
+          )}
+
+          {draft && (
             <div className="p-4 space-y-4 max-w-3xl">
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display flex items-center gap-2">
                     {draft.label}
                     <Badge variant="outline" className="text-[10px] capitalize">{draft.ability_type}</Badge>
-                    <Badge variant="secondary" className="text-[10px] font-mono">{draft.mechanic_key}</Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {draftBase?.label ?? draft.mechanic_key}
+                    </Badge>
                   </CardTitle>
+                  <p className="text-[10px] text-muted-foreground">
+                    Built on {draftBase?.label ?? 'an unknown base'} — runtime mechanic{' '}
+                    <span className="font-mono">{draft.mechanic_key}</span>, which{' '}
+                    {TRIGGER_LABELS[draftBase?.trigger_type ?? 'none']}.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-4 gap-3">
@@ -453,16 +553,18 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Tick interval (ms)</Label>
-                      <Input
-                        type="number"
-                        value={draft.interval_ms ?? ''}
-                        placeholder="—"
-                        onChange={e => setDraft({ ...draft, interval_ms: e.target.value === '' ? null : Number(e.target.value) })}
-                        className="h-8 text-xs"
-                      />
-                    </div>
+                    {can('interval') && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Tick interval (ms)</Label>
+                        <Input
+                          type="number"
+                          value={draft.interval_ms ?? ''}
+                          placeholder="—"
+                          onChange={e => setDraft({ ...draft, interval_ms: e.target.value === '' ? null : Number(e.target.value) })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <Label className="text-[11px]">Ability type</Label>
                       <Select value={draft.ability_type} onValueChange={v => setDraft({ ...draft, ability_type: v })}>
@@ -474,43 +576,51 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Activation</Label>
-                      <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {ACTIVATION_MODES.map(m => (
-                            <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Target</Label>
-                      <Select value={draft.target_type} onValueChange={v => setDraft({ ...draft, target_type: v })}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {TARGET_TYPES.map(t => (
-                            <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px]">Base damage type</Label>
-                      <Select
-                        value={draft.damage_type ?? DAMAGE_TYPE_NONE}
-                        onValueChange={v => setDraft({ ...draft, damage_type: v === DAMAGE_TYPE_NONE ? null : v })}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">None (non-damaging)</SelectItem>
-                          {DAMAGE_TYPES.map(d => (
-                            <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {can('activation') && (
+                      <>
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">Activation</Label>
+                          <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {ACTIVATION_MODES.map(m => (
+                                <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px]">Target</Label>
+                          <Select value={draft.target_type} onValueChange={v => setDraft({ ...draft, target_type: v })}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {(draftBase?.allowed_target_types?.length
+                                ? draftBase.allowed_target_types
+                                : [...TARGET_TYPES]).map(t => (
+                                  <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                    {can('damage_type') && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Damage type</Label>
+                        <Select
+                          value={draft.damage_type ?? DAMAGE_TYPE_NONE}
+                          onValueChange={v => setDraft({ ...draft, damage_type: v === DAMAGE_TYPE_NONE ? null : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">None (non-damaging)</SelectItem>
+                            {DAMAGE_TYPES.map(d => (
+                              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px]">Description</Label>
@@ -520,27 +630,28 @@ export default function AbilityConfigManager() {
                     <Label className="text-[11px]">Tooltip</Label>
                     <Input value={draft.tooltip} onChange={e => setDraft({ ...draft, tooltip: e.target.value })} className="h-8 text-xs" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {TEXT_SLOTS.map(slot => (
-                      <div key={slot.key} className="space-y-1">
-                        <Label className="text-[11px]">Base {slot.label.toLowerCase()}</Label>
-                        <Input
-                          value={String(draft.combat_text[slot.key] ?? '')}
-                          placeholder="—"
-                          onChange={e => setDraft({
-                            ...draft,
-                            combat_text: { ...draft.combat_text, [slot.key]: e.target.value },
-                          })}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  {can('combat_text') && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {TEXT_SLOTS.map(slot => (
+                        <div key={slot.key} className="space-y-1">
+                          <Label className="text-[11px]">{slot.label}</Label>
+                          <Input
+                            value={String(draft.combat_text[slot.key] ?? '')}
+                            placeholder="—"
+                            onChange={e => setDraft({
+                              ...draft,
+                              combat_text: { ...draft.combat_text, [slot.key]: e.target.value },
+                            })}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="rounded border border-border/60 bg-muted/20 px-2 py-1.5">
                     <p className="text-[10px] text-muted-foreground">
-                      Slot, unlock level, slot default, alternatives and per-class
-                      overrides are configured in Class Config. This library row is
-                      shared by every class that uses it.
+                      Slot, unlock level, slot default and per-class overrides are
+                      configured in Class Config.
                     </p>
                   </div>
                 </CardContent>
@@ -603,6 +714,31 @@ export default function AbilityConfigManager() {
                 </CardContent>
               </Card>
 
+              {caps.includes('on_hit_effect') && (
+                <Card className="bg-card/80" data-testid="on-hit-effect-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display">Optional on-hit effect</CardTitle>
+                    <p className="text-[10px] text-muted-foreground">
+                      A rider rolled only after this ability lands. Classes may replace it
+                      in Class Config. This is not a stance — persistent self-stances such as
+                      Envenom or Orbs of Fire are authored on their own base ability.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <OnHitEffectEditor
+                      allowed={(draftBase?.on_hit_allowed ?? []) as OnHitEffectKey[]}
+                      value={draftOnHit}
+                      onChange={next => {
+                        const nextConfig = { ...draft.effect_config };
+                        if (next) nextConfig.on_hit_effect = next;
+                        else delete nextConfig.on_hit_effect;
+                        setDraft({ ...draft, effect_config: nextConfig });
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display">Global pipeline rules</CardTitle>
@@ -628,26 +764,15 @@ export default function AbilityConfigManager() {
                           <Input value={draft.ability_key} readOnly disabled className="h-8 text-xs font-mono" />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[11px]">Mechanic key</Label>
-                          {mechanicLocked ? (
-                            <Input value={draft.mechanic_key} readOnly disabled className="h-8 text-xs font-mono" />
-                          ) : (
-                            <Select value={draft.mechanic_key} onValueChange={v => setDraft({ ...draft, mechanic_key: v })}>
-                              <SelectTrigger className="h-8 text-xs font-mono"><SelectValue /></SelectTrigger>
-                              <SelectContent className="max-h-72">
-                                {mechanics.map(m => (
-                                  <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
+                          <Label className="text-[11px]">Runtime mechanic (base-owned)</Label>
+                          <Input value={draft.mechanic_key} readOnly disabled className="h-8 text-xs font-mono" />
                         </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground flex items-start gap-1.5">
                         <AlertTriangle className="w-3 h-3 mt-px shrink-0" />
-                        {mechanicLocked
-                          ? 'Mechanic is locked: this ability is active or assigned to a class. Changing the code handler would silently change what combat executes for existing loadouts.'
-                          : 'This draft is unassigned, so its mechanic may still change. Once it is active or assigned, the mechanic is permanent.'}
+                        The runtime mechanic belongs to the base ability. Change it there —
+                        never on a single ability — so every ability in the family keeps
+                        executing the same combat code.
                       </p>
                       <div className="space-y-1">
                         <Label className="text-[11px]">Used by (read-only)</Label>
@@ -707,7 +832,6 @@ export default function AbilityConfigManager() {
                   Reset
                 </Button>
               </div>
-
             </div>
           )}
         </ScrollArea>

@@ -2,7 +2,8 @@
  * OnHitEffectEditor — the ONE admin surface for a class assignment's optional
  * On-Hit Effect (`class_ability_assignments.overrides.on_hit_effect`).
  *
- * The base ability decides WHICH effects are offered (`effect_config.on_hit_allowed`);
+ * The base ability decides WHICH effects are offered (`base_abilities.on_hit_allowed`,
+ * mirrored onto `abilities.effect_config.on_hit_allowed`);
  * this editor only picks one of them and tunes bounded numbers. Bounds mirror
  * `ON_HIT_BOUNDS` exactly, so the UI can never author a value the shared
  * validator or the SQL trigger would reject.
@@ -13,21 +14,20 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  ON_HIT_EFFECTS, ON_HIT_BOUNDS, allowedOnHitEffects,
+  ON_HIT_EFFECTS, ON_HIT_BOUNDS,
   type OnHitEffectConfig, type OnHitEffectKey,
 } from '@/shared/combat/on-hit-effects';
 
 interface Props {
-  /** Base ability's `effect_config` — source of the allowlist. */
-  baseEffectConfig: Record<string, unknown> | null | undefined;
+  /** Effects the base ability permits — the authoritative allowlist. */
+  allowed: OnHitEffectKey[];
   value: OnHitEffectConfig | null | undefined;
   onChange: (next: OnHitEffectConfig | null) => void;
 }
 
 const DEFAULTS = { chance_pct: 25, duration_ms: 6000, damage_per_tick: 3, max_stacks: 3 };
 
-export function OnHitEffectEditor({ baseEffectConfig, value, onChange }: Props) {
-  const allowed = allowedOnHitEffects(baseEffectConfig);
+export function OnHitEffectEditor({ allowed, value, onChange }: Props) {
 
   if (allowed.length === 0) {
     return (

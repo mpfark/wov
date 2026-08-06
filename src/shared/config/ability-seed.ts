@@ -298,7 +298,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'ignite', label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.',
     tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.',
-    mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'fire',
+    mechanic_key: 'stack_apply', base_ability_key: 'orb_stance', ability_type: 'buff', damage_type: 'fire',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
     duration_calc: null, interval_ms: null,
@@ -454,7 +454,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.',
     tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.',
-    mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'poison',
+    mechanic_key: 'stack_apply', base_ability_key: 'on_hit_stance', ability_type: 'buff', damage_type: 'poison',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('dex', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.20 } })], floor: null, cap: null, unit: 'percent', note: 'DEX hit-proc chance' },
     duration_calc: null, interval_ms: null,

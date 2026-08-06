@@ -32,7 +32,7 @@ import AbilityAssignPicker from './AbilityAssignPicker';
 import EffectiveAbilityPreview from './EffectiveAbilityPreview';
 import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
 import { OnHitEffectEditor } from './OnHitEffectEditor';
-import { type OnHitEffectConfig } from '@/shared/combat/on-hit-effects';
+import { allowedOnHitEffects, type OnHitEffectConfig } from '@/shared/combat/on-hit-effects';
 import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
@@ -102,7 +102,9 @@ export default function ClassAbilityConfig({
           ability:abilities (
             id, ability_key, label, description, tooltip, mechanic_key, status,
             cp_cost, damage_type, amount_calc, duration_calc, interval_ms,
-            mechanic_calcs, combat_text
+            mechanic_calcs, combat_text, effect_config, target_type,
+            activation_mode, base_ability_id,
+            base:base_abilities ( on_hit_allowed, capabilities )
           )
         `)
         .eq('class_key', classKey),
@@ -452,7 +454,8 @@ export default function ClassAbilityConfig({
 
                       {/* Optional On-Hit Effect (base-allowlisted, per class) */}
                       <OnHitEffectEditor
-                        baseEffectConfig={draft.base.effect_config as Record<string, unknown> | null}
+                        allowed={allowedOnHitEffects(draft.base.effect_config)}
+
                         value={(draft.overrides as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null}
                         onChange={next => patchOverride('on_hit_effect' as keyof typeof draft.overrides, next ?? undefined)}
                       />

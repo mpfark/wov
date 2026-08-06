@@ -21,6 +21,7 @@ export type Database = {
           activation_mode: string
           admin_notes: string | null
           amount_calc: Json | null
+          base_ability_id: string
           calc_version: number
           combat_text: Json
           cp_cost: number
@@ -46,6 +47,7 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          base_ability_id: string
           calc_version?: number
           combat_text?: Json
           cp_cost?: number
@@ -71,6 +73,7 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          base_ability_id?: string
           calc_version?: number
           combat_text?: Json
           cp_cost?: number
@@ -90,7 +93,15 @@ export type Database = {
           tooltip?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "abilities_base_ability_id_fkey"
+            columns: ["base_ability_id"]
+            isOneToOne: false
+            referencedRelation: "base_abilities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       active_effects: {
         Row: {
@@ -344,6 +355,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      base_abilities: {
+        Row: {
+          activation_mode: string
+          admin_notes: string | null
+          allowed_target_types: string[]
+          base_key: string
+          capabilities: Json
+          created_at: string
+          default_target_type: string
+          description: string
+          id: string
+          label: string
+          mechanic_key: string
+          on_hit_allowed: string[]
+          status: string
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          activation_mode?: string
+          admin_notes?: string | null
+          allowed_target_types?: string[]
+          base_key: string
+          capabilities?: Json
+          created_at?: string
+          default_target_type?: string
+          description?: string
+          id?: string
+          label: string
+          mechanic_key: string
+          on_hit_allowed?: string[]
+          status?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          activation_mode?: string
+          admin_notes?: string | null
+          allowed_target_types?: string[]
+          base_key?: string
+          capabilities?: Json
+          created_at?: string
+          default_target_type?: string
+          description?: string
+          id?: string
+          label?: string
+          mechanic_key?: string
+          on_hit_allowed?: string[]
+          status?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       character_ability_loadout: {
         Row: {
