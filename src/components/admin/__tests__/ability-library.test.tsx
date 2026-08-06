@@ -154,7 +154,38 @@ describe('Abilities page — base ability library', () => {
   it('immutable identity: ability_key is never written by this page', () => {
     expect(SOURCE).not.toMatch(/ability_key: draft\.ability_key/);
   });
+
+  it('class-variant column stays empty until a base ability is selected', async () => {
+    render(<AbilityConfigManager />);
+    await waitFor(() => expect(screen.getByText('Fireball')).toBeInTheDocument());
+    expect(screen.getByTestId('class-variant-column')).toBeInTheDocument();
+    expect(screen.getByText('Pick a base ability to see its class versions.')).toBeInTheDocument();
+  });
+
+  it('filters class variants to the selected base ability', async () => {
+    render(<AbilityConfigManager />);
+    await waitFor(() => expect(screen.getByText('Fireball')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Fireball'));
+
+    const column = await waitFor(() => screen.getByTestId('class-variant-column'));
+    // Both classes built on the Fireball base appear, with their own identity keys.
+    expect(column.textContent).toContain('Cutting Words');
+    expect(column.textContent).toContain('cutting_words');
+    expect(column.textContent).toContain('Wizard');
+    expect(column.textContent).toContain('Bard');
+    // A variant of a DIFFERENT base ability must not leak in.
+    expect(column.textContent).not.toContain('frost_bolt');
+  });
+
+  it('reports when the selected base ability has no class versions', async () => {
+    render(<AbilityConfigManager />);
+    await waitFor(() => expect(screen.getByText('Unbound Ward')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Unbound Ward'));
+    const column = await waitFor(() => screen.getByTestId('class-variant-column'));
+    expect(column.textContent).toContain('No class uses this base ability yet');
+  });
 });
+
 
 describe('Base ability creation', () => {
   beforeEach(() => { ops.length = 0; });
