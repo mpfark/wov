@@ -767,25 +767,53 @@ Deno.serve(async (req) => {
             ...(typeof authored.mitigate_text === 'string' ? { text: authored.mitigate_text } : {}),
           };
         }
-        if (reserved.holy_shield) {
-          // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
-          mb.holy_shield = { wis_mod: wisMod, con_mod: conMod, expires_at: farFuture };
+        // Consolidation Group G: ONE reactive-retaliation base. Any reserved
+        // stance whose mechanic is `reactive_holy` seeds the retaliation bag;
+        // which attribute is the magnitude core, which is the kicker
+        // (`effect_config.magnitude_stat` / `kicker_stat`) and the retaliation
+        // wording are configuration — Holy Shield is the Templar identity.
+        const statMod = (key: string) => {
+          const raw = (m.c as unknown as Record<string, number>)[key] ?? 10;
+          const bonus = ((eq[m.id] as any)?.[key] as number | undefined) ?? 0;
+          return Math.max(0, Math.floor((raw + bonus - 10) / 2));
+        };
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey ?? (stanceKey === 'holy_shield' ? 'reactive_holy' : '');
+          if (mech !== 'reactive_holy') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
+          const text = (entry?.combatText ?? {}) as Record<string, unknown>;
+          const magStat = typeof cfg.magnitude_stat === 'string' ? cfg.magnitude_stat : 'wis';
+          const kickStat = typeof cfg.kicker_stat === 'string' ? cfg.kicker_stat : 'con';
+          mb.holy_shield = {
+            ability_key: stanceKey,
+            magnitude_stat: magStat,
+            wis_mod: statMod(magStat),
+            con_mod: statMod(kickStat),
+            expires_at: farFuture,
+            ...(typeof text.retaliate_text === 'string' ? { text: text.retaliate_text } : {}),
+          };
         }
-        if (reserved.shield_wall) {
-          // Dual-primary (Templar WIS+CON): WIS → bonus block chance,
-          // CON → bonus block amount. Requires a shield equipped to actually
-          // benefit; the block step below reads both fields. Both are named
-          // mechanic values (block_chance / block_amount) resolved through the
-          // single funnel, with the coded helpers as the legacy fallback.
+        // Consolidation Group G: ONE reusable block-boost base. Any reserved
+        // stance whose mechanic is `block_buff` contributes bonus block chance
+        // and amount (named mechanic calcs `block_chance` / `block_amount`),
+        // with the final chance cap taken from `effect_config.block_chance_cap`.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey ?? (stanceKey === 'shield_wall' ? 'block_buff' : '');
+          if (mech !== 'block_buff') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
           mb.shield_wall_stance = {
+            ability_key: stanceKey,
             chance_bonus: resolveMagnitude({
-              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              classKey: m.c.class || '', abilityKey: stanceKey, kind: 'mechanic',
               param: 'block_chance', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
             }),
             amount_bonus: resolveMagnitude({
-              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              classKey: m.c.class || '', abilityKey: stanceKey, kind: 'mechanic',
               param: 'block_amount', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
             }),
+            chance_cap: typeof cfg.block_chance_cap === 'number' ? cfg.block_chance_cap : 0.95,
           };
         }
         if (reserved.force_shield) {
