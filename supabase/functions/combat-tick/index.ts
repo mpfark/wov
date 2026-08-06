@@ -1434,24 +1434,20 @@ Deno.serve(async (req) => {
         paMech === 'spell_attack' ||
         paMech === 'weapon_attack'
       ) {
-        // T0 class identity abilities. Two damage paths:
-        //   • Physical (`weapon_attack`, plus the legacy per-class mechanics
-        //     power_strike / aimed_shot / backstab):
+        // T0 identity abilities, now exactly two reusable bases. Two damage paths:
+        //   • Physical (`weapon_attack`):
         //       damage = 1d{weaponDie} + statMod + (3 + statMod + floor(level/3))
         //     Weapon die / tier / rarity feed directly through the autoattack helper.
         //     Unarmed falls back to 1d4. A bow-flavored strike uses whatever main-hand
         //     is equipped (a non-bow still rolls its die — fantasy nudge, not a gate).
-        //   • Spell (`spell_attack`, plus legacy fireball / smite / cutting_words):
-        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
-        // Rolls to hit on the class stat (no crit roll on the d20).
+        //   • Spell (`spell_attack`):
+        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (stat-only)
+        // Rolls to hit on the configured stat (no crit roll on the d20).
         //
-        // Consolidation Phases 3-4: `weapon_attack` and `spell_attack` are each
-        // ONE reusable base ability. Their scaling attribute and their verbs come
-        // from configuration (the class assignment's `scaling.primary_attribute`
-        // and `combat_text`), never from a per-class branch here.
-        // Legacy retirement: the per-class mechanic keys (power_strike, aimed_shot,
-        // backstab, fireball, smite, cutting_words) and their hardcoded stat/verb
-        // tables are gone. Everything below reads configuration only.
+        // Legacy retirement complete: the per-class mechanic keys (power_strike,
+        // aimed_shot, backstab, fireball, smite, cutting_words) and their hardcoded
+        // stat/verb tables are gone. Scaling attribute, verbs and full authored
+        // sentences all come from configuration — never from a class branch here.
         const t0Entry = auth.entry;
         const t0Text = (t0Entry?.combatText ?? {}) as Record<string, unknown>;
         const authoredVerb = (key: string): string | null => {
