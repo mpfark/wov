@@ -426,6 +426,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
           : `${ability.label}! Your crit range is now ${20 - magnitude}-20 for ${seconds}s.`;
         p.addLogEvent(buildBuffEvent(line));
       }
+    } else if (ability.type === 'stealth_buff') {
+      // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
+      const durationMs = durationOf();
+      const ambushMult = amountOf();
+      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
+      p.addLogEvent(buildBuffEvent(`Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`));
+
 
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
