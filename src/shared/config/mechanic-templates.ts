@@ -203,9 +203,12 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     duration: true,
     params: [P('retaliation_damage', 'Retaliation damage', 'hp', 'magnitude', true)],
   }),
+  // Consolidation Group E: ONE reusable evasion buff. Cloak of Shadows
+  // (chance-based dodge) and Disengage (certain dodge + next-hit window) share
+  // this base; `effect_config.dodge_chance`, `next_hit_window_ms` and
+  // `evasion_source` are configuration, not separate mechanics.
   t('evasion_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
   t('stealth_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
-  t('disengage_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
 
   // ── Control ───────────────────────────────────────────────────
   t('root_debuff', { duration: true, requiresAmount: true, requiresDuration: true }),

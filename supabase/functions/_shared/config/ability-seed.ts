@@ -395,11 +395,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'disengage', label: 'Disengage', description: 'Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).',
     tooltip: 'Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.',
-    mechanic_key: 'disengage_buff', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'evasion_buff', base_ability_key: 'evasion_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 1.30, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.05, cap: 0.40 } })], floor: null, cap: null, unit: 'multiplier', note: 'WIS next-hit damage multiplier' },
     duration_calc: { base: 5000, terms: [stat('dex', 500)], cap: 8000, unit: 'ms', note: 'DEX dodge duration' },
-    interval_ms: null, effect_config: { next_hit_window_ms: 15000, dodge_chance: 1.0 }, combat_text: {},
+    interval_ms: null,
+    effect_config: { next_hit_window_ms: 15000, dodge_chance: 1.0, evasion_source: 'disengage' },
+    combat_text: {
+      activate_text: 'Disengage! You leap back — dodging all attacks for {seconds}s. Your next strike deals +{bonus_pct}% bonus damage!',
+    },
     class_key: 'ranger', slot: 4,
   },
 
@@ -482,11 +486,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'cloak_of_shadows', label: 'Cloak of Shadows', description: 'Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.',
     tooltip: 'Chance to dodge attacks. Dodge scales with CHA, duration with DEX.',
-    mechanic_key: 'evasion_buff', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'evasion_buff', base_ability_key: 'evasion_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 0.40, terms: [stat('cha', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.03, cap: 0.20 } })], floor: null, cap: null, unit: 'percent', note: 'CHA dodge chance' },
     duration_calc: { base: 10000, terms: [stat('dex', 500)], cap: 15000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null,
+    effect_config: { evasion_source: 'cloak' },
+    combat_text: {
+      activate_text: 'Cloak of Shadows! {dodge_pct}% dodge chance for {seconds}s.',
+    },
     class_key: 'assassin', slot: 4,
   },
 
