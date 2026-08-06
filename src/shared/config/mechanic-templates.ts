@@ -203,6 +203,9 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // configuration, so Arcane Surge (Wizard) and Eagle Eye (Ranger) are class
   // identities of this one base.
   t('offense_buff', { duration: true, requiresAmount: true }),
+  // Consolidation Group G: ONE reusable block-boost stance. The bonus chance
+  // and amount are named calcs; the final block-chance ceiling is
+  // `effect_config.block_chance_cap` — Shield Wall is the Templar identity.
   t('block_buff', {
     duration: true,
     params: [
@@ -210,6 +213,10 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
       P('block_amount', 'Bonus block amount', 'flat', 'magnitude', true),
     ],
   }),
+  // Consolidation Group G: ONE reusable reactive-retaliation stance. The
+  // magnitude/kicker attributes (`effect_config.magnitude_stat` / `kicker_stat`)
+  // and the retaliation wording (`combat_text.retaliate_text`) are
+  // configuration — Holy Shield is the Templar identity of this base.
   t('reactive_holy', {
     duration: true,
     params: [P('retaliation_damage', 'Retaliation damage', 'hp', 'magnitude', true)],
