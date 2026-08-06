@@ -63,7 +63,7 @@ const FLAVOR: Record<string, FlavorVariants> = {
       'Your blade angles low for a wound that will not close on {target}…',
     ],
   },
-  sunder_debuff: {
+  control_debuff: {
     withTarget: [
       "You wind back to crush {target}'s guard…",
       "You aim a shattering blow at {target}'s armor…",

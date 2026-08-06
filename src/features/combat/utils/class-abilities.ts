@@ -17,7 +17,9 @@ export interface ClassAbility {
     | 'heal' | 'regen_buff' | 'self_heal' | 'stealth_buff'
     // Consolidated reusable offensive self-buff (+ legacy per-class mechanics).
     | 'offense_buff' | 'crit_buff' | 'damage_buff'
-    | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'dot_debuff'
+    | 'hp_transfer' | 'multi_attack' | 'dot_debuff'
+    // Consolidated reusable control debuff (+ legacy per-class mechanics).
+    | 'control_debuff' | 'root_debuff' | 'sunder_debuff'
     // Legacy mitigation mechanic (consolidated into `mitigation_buff`).
     | 'battle_cry'
     // Consolidated reusable stack applier (+ legacy per-class mechanics).
@@ -25,7 +27,7 @@ export interface ClassAbility {
     // Consolidated reusable evasion buff (+ legacy per-class mechanic).
     | 'evasion_buff' | 'disengage_buff'
 
-    | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff'
+    | 'absorb_buff' | 'party_regen' | 'ally_absorb'
     | 'burst_damage'
     // Templar abilities (sword-and-shield holy defender)
     | 'reactive_holy' | 'block_buff' | 'aura_pulse' | 'mitigation_buff'
@@ -79,19 +81,19 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
     { label: 'Second Wind', description: 'Catch your breath and recover HP based on CON', tooltip: 'Recover your HP. Scales with CON.', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
     { label: 'Battle Cry', description: 'Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.', tooltip: 'Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.', cpCost: 25, type: 'mitigation_buff', tier: 2, levelRequired: 10 },
     { label: 'Rend', description: 'Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).', tooltip: 'Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
-    { label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
+    { label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.", cpCost: 60, type: 'control_debuff', tier: 4, levelRequired: 20 },
   ],
   ranger: [
     { label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
     { label: 'Eagle Eye', description: 'Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.', tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.', cpCost: 15, type: 'offense_buff', tier: 1, levelRequired: 5 },
     { label: 'Barrage', description: 'Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).', tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.', cpCost: 25, type: 'multi_attack', tier: 2, levelRequired: 10 },
-    { label: "Nature's Snare", description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.", tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.", cpCost: 40, type: 'root_debuff', tier: 3, levelRequired: 15 },
+    { label: "Nature's Snare", description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.", tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.", cpCost: 40, type: 'control_debuff', tier: 3, levelRequired: 15 },
     { label: 'Disengage', description: 'Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).', tooltip: 'Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
   ],
   bard: [
     { label: 'Cutting Words', description: 'Unleash a barbed insult that wounds your target, scaling with CHA', tooltip: 'Damage one target. Scales with CHA.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Inspire', description: 'A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s). Recasting refreshes the duration and keeps the stronger regen values.', tooltip: 'Grant party HP & CP regen. Regen scales with CHA, duration with INT.', cpCost: 15, type: 'regen_buff', tier: 1, levelRequired: 5 },
-    { label: 'Dissonance', description: "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.", tooltip: "Reduce target's damage. Reduction scales with CHA, duration with INT.", cpCost: 25, type: 'root_debuff', tier: 2, levelRequired: 10 },
+    { label: 'Dissonance', description: "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.", tooltip: "Reduce target's damage. Reduction scales with CHA, duration with INT.", cpCost: 25, type: 'control_debuff', tier: 2, levelRequired: 10 },
     { label: 'Crescendo', description: 'A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.', tooltip: 'Heal nearby allies over time. Heal scales with CHA, duration with INT.', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
     { label: 'Grand Finale', description: 'Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.', tooltip: 'Burst damage on one target. Damage scales with CHA, crit-edge with INT.', cpCost: 60, type: 'burst_damage', tier: 4, levelRequired: 20 },
   ],
