@@ -132,7 +132,11 @@ export default function AbilityConfigManager() {
         .order('label'),
       supabase
         .from('class_ability_assignments')
-        .select('ability_id, class_key, is_default, status, role:class_ability_roles ( slot, name )'),
+        .select(`
+          ability_id, class_key, is_default, status, class_ability_key,
+          unlock_level, overrides, role:class_ability_roles ( slot, name )
+        `),
+
     ]);
     setLoading(false);
     if (abilityRes.error) { toast.error(abilityRes.error.message); return; }
