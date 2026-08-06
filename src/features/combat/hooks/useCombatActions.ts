@@ -379,8 +379,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
       else p.addLogEvent(buildHealEvent(fullText));
     } else if (ability.type === 'regen_buff') {
-      // Inspire — additive flat HP/CP regen.
-      // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
+      // Consolidation Group G: ONE reusable additive HP/CP regen buff. The
+      // magnitudes come from `amount_calc` / `mechanic_calcs.cp_per_tick`, the
+      // duration from `duration_calc` and the wording from authored
+      // `combat_text` (`activate_text` / `renew_text`) — Inspire is the Bard
+      // identity of this base.
       // Recast policy: refresh the timer to the new duration; keep the
       // best-of HP/CP regen across the prior and new cast (never weakens an
       // active buff). Does not stack.
@@ -401,11 +404,19 @@ export function useCombatActions(params: UseCombatActionsParams) {
         casterId: p.character.id,
       });
       const durSec = Math.round(durationMs / 1000);
-      if (wasActive) {
-        p.addLogEvent(buildBuffEvent(`${p.character.name} renews the inspiring song! (${durSec}s remaining) [+${mergedHp}HP +${mergedCp}CP]`));
-      } else {
-        p.addLogEvent(buildBuffEvent(`${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`));
-      }
+      const regenText = getAuthoredCombatText(ability.abilityKey);
+      const regenTpl = regenText[wasActive ? 'renew_text' : 'activate_text'];
+      const regenLine = typeof regenTpl === 'string' && regenTpl.trim()
+        ? regenTpl.trim()
+        : wasActive
+          ? '{caster} renews {ability}! ({seconds}s remaining)'
+          : '{caster} sustains {ability} for {seconds}s!';
+      p.addLogEvent(buildBuffEvent(
+        `${regenLine
+          .replace(/\{caster\}/g, p.character.name)
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(durSec))} [+${mergedHp}HP +${mergedCp}CP]`,
+      ));
     } else if (ability.type === 'offense_buff' || ability.type === 'crit_buff' || ability.type === 'damage_buff') {
       // Consolidation Group F: ONE offensive self-buff. Whether it widens the
       // crit range or amplifies damage is configuration
