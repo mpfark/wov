@@ -226,7 +226,13 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // this base; `effect_config.dodge_chance`, `next_hit_window_ms` and
   // `evasion_source` are configuration, not separate mechanics.
   t('evasion_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
+  // Consolidation Group I: ONE reusable stealth buff. The ambush multiplier and
+  // duration come from `amount_calc` / `duration_calc`, the scaling attributes
+  // are documented in `effect_config` (`ambush_stat` / `duration_stat`) and the
+  // wording is authored `combat_text.activate_text` — Shadowstep is the
+  // Assassin identity of this base.
   t('stealth_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
+
 
   // ── Control ───────────────────────────────────────────────────
   // Consolidation Group H: ONE reusable control debuff. Whether it saps the
