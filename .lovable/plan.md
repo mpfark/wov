@@ -1,107 +1,157 @@
-# Ability Ownership Simplification: Two Layers Only
+# Ability Ownership Simplification — Revised (Zero Balance Change)
 
-Goal: remove the independently balanced "authored ability" layer. Base Abilities own shared mechanics and big numbers; class-configured uses own identity, flavour, damage type, scaling attribute, class scale, and selected effect. Combat runtime and current balance stay as they are.
+Two layers only: **Base Ability** owns shared mechanics and numbers; **Class Ability Configuration** owns identity, flavour, damage type, scaling attribute(s), class scale and selected effect. No mechanical value is editable in two places. Combat runtime, timings, CP costs and damage output stay bit-for-bit identical.
 
-## Current state (audited)
+Corrections applied from review:
+- No balance changes at all. Frost Bolt keeps CP 12 and its own curve; Conflagrate keeps CP 60 and its curve.
+- No `class_configurable` mechanical-override allowlist. The only class controls are `class_scale` and scaling-attribute selection. Where numbers genuinely differ, the abilities get **separate Base Abilities**.
+- Eviscerate/Conflagrate and Cloak/Disengage are **not** merged: same runtime mechanic, non-inheritable numbers.
+- Class and slot stay owned exclusively by `class_ability_assignments`. No `class_key`/`role_id` on `abilities`.
+- `abilities.effect_config.on_hit_allowed` is removed; on-hit permissions live only on the base.
 
-- `base_abilities` (21 rows) currently owns **no numbers at all** — only mechanic key, activation mode, target rules, trigger type, capabilities, allowed on-hit effects.
-- `abilities` (35 rows) owns **all** numbers: `cp_cost`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `effect_config`, `target_type`, plus identity (`label`, `description`, `tooltip`, `combat_text`, `damage_type`).
-- `class_ability_assignments.overrides` can additionally re-edit identity, combat text, scaling attribute and `mechanic_calcs` — a third editable place.
-- One ability row is shared by three classes: `weapon_attack` → warrior `power_strike`, assassin `backstab`, ranger `aimed_shot`, differentiated only by assignment overrides.
-- One class already has two uses of one base: wizard `fireball` and `frost_bolt` share the same slot/role (loadout alternatives). Good — this must keep working.
-- All other 33 abilities are 1:1 with a single class assignment, and their `overrides` are empty except wizard `ignite` (`label: "Orbs of Fire"`).
+## Field ownership (authoritative)
 
-### Fields editable in more than one place today
+| Field | Owner | Notes |
+| --- | --- | --- |
+| mechanic_key | Base Ability | immutable once used |
+| activation_mode, default/allowed target types | Base Ability | |
+| cp_cost, cp_reserve_pct | Base Ability | never per class |
+| amount_calc, duration_calc, interval_ms, mechanic_calcs | Base Ability | whole calcs, dice, caps, floors |
+| mechanic behaviour knobs (`control_mode`, `offense_mode`, `evasion_source`, `requires_shield`, `consumes_all_cp`, `resolved_by`, pulse cadence, `refresh_policy`, `min_reserve_hp`, …) | Base Ability | moves out of `abilities.effect_config` |
+| trigger_type (none / on_hit / pulse) | Base Ability | |
+| capabilities (which config sections appear) | Base Ability | |
+| on-hit support + allowed effect types + which effect params are configurable | Base Ability | single source; ability mirror deleted |
+| class_key, role/slot, unlock_level, assignment status, is_default | `class_ability_assignments` | unchanged source of truth |
+| label, description, tooltip | Configured use (`abilities` row) | |
+| combat_text | Configured use | |
+| damage_type | Configured use | Fire / Frost / Radiant / Psychic per use |
+| primary_attribute, secondary_attribute (only if base has a role-tagged term) | Configured use | substitutes the attribute, never the curve |
+| class_scale (numeric, default 1.0) | Configured use | the only magnitude control |
+| selected on-hit effect / applied status | Configured use | must be in the base's allowlist |
+| status behaviour: DoT/debuff class, tick interval, duration rules, stacking, max stacks, default damage type | Applied-status definition | reusable, shared by every ability that applies it |
 
-| Field | Editable in |
+Runtime: `result = base calc (with the use's chosen attributes) × class_scale`. Class Config exposes no numeric editor.
+
+## effect_config decomposition
+
+| Current key(s) | New home |
 | --- | --- |
-| label / description / tooltip | Ability Library editor, Class Config, assignment `overrides` |
-| combat_text | Ability Library editor, Class Config, `overrides` |
-| scaling attribute | ability `amount_calc` terms, `overrides.scaling` |
-| mechanic_calcs | Ability Library editor, `overrides.mechanic_calcs` |
-| on_hit effect allowlist | `base_abilities.on_hit_allowed` and mirrored `abilities.effect_config.on_hit_allowed` (trigger-synced) |
-| cp_cost / amount_calc / duration_calc / interval_ms / target_type | ability row only, but presented as if per-class-authored |
+| `resolved_by`, `control_mode`, `offense_mode`, `evasion_source`, `dodge_chance`, `next_hit_window_ms`, `requires_shield`, `block_chance_cap`, `damages_enemies`, `heals_allies`, `magnitude_reduction`, `consumes_all_cp`, `engages_target`, `trigger`, `refresh_policy`, `absorb_shield`, `reforms_out_of_combat`, `crit_threshold_floor`, `min_reserve_hp` | Base Ability `effect_config` |
+| `stat`, `magnitude_stat`, `duration_stat`, `regen_stat`, `chance_stat`, `amount_stat`, `crit_edge_stat`, `dot_stat` (as *which role*) | Configured use scaling attributes (role-tagged terms) |
+| `effect_type`, `stack_noun`, `dot_stat_mult`, `dot_global_mult`, `dot_duration_ms`, `dot_duration_stat`, `dot_duration_per_point_ms`, `dot_duration_cap_ms`, `max_stacks_calc`, `mutually_exclusive_with` | Applied-status definition (`poison`, `ignite`, `bleed`, `frozen`) |
+| `on_hit_allowed` | deleted from `abilities`; base only |
+| `pulse_damage_base`, `pulse_damage_stat` | Base (cadence/base) + configured use (attribute) |
 
-## Proposed field ownership
+Poison and Ignite each keep their own current status numbers verbatim (Poison: DEX-scaled, ×1.2, 25 000 ms, CHA max-stack calc; Ignite: WIS-scaled, ×0.7, 30 000 ms base / 45 000 cap, +1 000 ms per WIS point). Sharing `stack_apply` runtime never makes them share numbers.
 
-| Field | Owner after change |
+## Complete mapping of all 36 configured uses
+
+CP, calc and timing below are the *current live* values and become the values of the listed base. `scale` is `class_scale`.
+
+| Class | Slot | Configured use | Base Ability | CP | Amount calc (live) | Duration / timing | Damage type | Attr | Scale |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| wizard | 1 | Fireball | spell_attack | 10 | 5 + 2×soft(stat) + lvl/3, floor 1 | — | fire | INT | 1.00 |
+| healer | 1 | Smite | spell_attack | 10 | same | — | holy | WIS | 1.00 |
+| templar | 1 | Judgment | spell_attack | 10 | same, ×0.8 rider | — | holy | WIS | **0.80** |
+| bard | 1 | Cutting Words | spell_attack | 10 | same | — | psychic | CHA | 1.00 |
+| wizard | 1 (alt) | Frost Bolt | **spell_bolt** (new) | 12 | 3 + 2.4×soft(stat) + lvl/3 | — | frost | INT | 1.00 |
+| warrior | 1 | Power Strike | weapon_attack | 10 | 3 + weapon die + raw + soft(stat) + lvl/3 | — | physical | STR | 1.00 |
+| assassin | 1 | Backstab | weapon_attack | 10 | same | — | physical | DEX | 1.00 |
+| ranger | 1 | Aimed Shot | weapon_attack | 10 | same | — | physical | DEX | 1.00 |
+| healer | 2 | Heal | heal | 15 | 3×mod(stat) + lvl, floor 3 | — | — | WIS | 1.00 |
+| warrior | 2 | Second Wind | heal | 15 | same | — | — | CON | 1.00 |
+| healer | 4 | Purifying Light | party_regen | 40 | 2 + mod(primary), floor 1 | 15 000 / cap 30 000, tick 3 000 | — | WIS / CON | 1.00 |
+| bard | 4 | Crescendo | party_regen | 40 | same | same | — | CHA / INT | 1.00 |
+| wizard | 2 | Force Shield | **absorb_self** | 15 | 1×WIS + 0.5×lvl, floor 1 | 8 000 / cap 15 000 (+1 000/pt) | — | WIS / INT | 1.00 |
+| healer | 5 | Divine Aegis | **absorb_ally** | 60 | 2×WIS + 0.7×lvl | 30 000 / cap 60 000 (+2 000/pt) | — | WIS / CON | 1.00 |
+| warrior | 3 | Battle Cry | **mitigation_percent** | 25 | 0.10 + STR (percent) | — | — | STR | 1.00 |
+| templar | 5 | Divine Challenge | **mitigation_flat** | 60 | 6 + WIS (flat) | 30 000 / cap 45 000 | — | WIS | 1.00 |
+| wizard | 3 | Arcane Surge | **offense_damage** | 25 | 1.1 + INT (multiplier) | — | — | INT | 1.00 |
+| ranger | 2 | Eagle Eye | **offense_crit** | 15 | 0.5×DEX (flat crit edge) | 30 000 | — | DEX | 1.00 |
+| assassin | 5 | Cloak of Shadows | **evasion_dodge** | 60 | 0.4 + CHA (dodge percent) | 10 000 / cap 15 000 (+500/pt) | — | CHA / DEX | 1.00 |
+| ranger | 5 | Disengage | **evasion_next_hit** | 60 | 1.3 + WIS (multiplier) | 5 000 / cap 8 000 (+500/pt) | — | WIS / DEX | 1.00 |
+| bard | 3 | Dissonance | **control_reduction_light** | 25 | 0.25 + INT (percent) | 8 000 / cap 15 000 | psychic | INT | 1.00 |
+| ranger | 4 | Nature's Snare | **control_reduction** | 40 | 0.25 + WIS (percent) | 8 000 / cap 15 000 | nature | WIS | 1.00 |
+| warrior | 5 | Sunder Armor | **control_armor** | 60 | 2 + STR (flat AC) | 12 000 / cap 20 000 | — | STR / DEX | 1.00 |
+| assassin | 4 | Eviscerate | **stack_consume_weapon** | 40 | 2 + weapon die + DEX + lvl/3 | — | physical | DEX | 1.00 |
+| wizard | 5 | Conflagrate | **stack_consume_spell** | 60 | 4 + 2×INT | — | fire | INT | 1.00 |
+| warrior | 4 | Rend | dot_debuff | 40 | 2 + 1.5×STR | 20 000 / cap 30 000, tick 2 000 | physical | STR | 1.00 |
+| templar | 4 | Consecrate | aura_pulse | 40 | 2 + WIS, ×0.65 rider | 6 000 / cap 10 000, tick 2 000 | holy | WIS / CON | 1.00 |
+| templar | 3 | Shield Wall | block_buff | 25 | mechanic calcs: block_amount 4.25+CON, block_chance 0.255+WIS | — | — | CON / WIS | 1.00 |
+| templar | 2 | Holy Shield | reactive_holy | 15 | mechanic-owned retaliation | 30 000 | holy | WIS / CON | 1.00 |
+| ranger | 3 | Barrage | multi_attack | 25 | per-arrow weapon roll, DEX count | — | physical | DEX / WIS | 1.00 |
+| bard | 5 | Grand Finale | burst_damage | 60 | 4×soft(CHA) + 1.5×lvl, floor 8; crit_edge INT | — | psychic | CHA / INT | 1.00 |
+| healer | 3 | Transfer Health | hp_transfer | 25 | 2×WIS | — | — | WIS / CON | 1.00 |
+| bard | 2 | Inspire | regen_buff | 15 | 2 + CHA per tick, floor 2 | 60 000 / cap 180 000 (+8 000/pt) | — | CHA / INT | 1.00 |
+| assassin | 2 | Shadowstep | stealth_buff | 15 | 2 + 0.05×CHA, cap 2.5 | 15 000 / cap 25 000 | — | CHA / DEX | 1.00 |
+| assassin | 3 | Envenom | on_hit_stance | 50 | 0.25 + DEX proc chance; max stacks CHA | applies **Poison** status | poison (via status) | DEX | 1.00 |
+| wizard | 4 | Orbs of Fire | orb_stance | 50 | 0.25 + INT proc chance; pulse base 2 + INT | own pulse cadence; applies **Ignite** status | fire | INT | 1.00 |
+
+Shared ability row currently spanning three classes: `weapon_attack` (warrior / assassin / ranger). It is split into three configured-use rows (Power Strike, Backstab, Aimed Shot) carrying today's override identity, then `class_ability_assignments.ability_id` and `character_ability_loadout.ability_id` are repointed inside the same migration. After that a unique constraint enforces one class assignment per configured use.
+
+### Multi-use bases — identity of shared numbers
+
+| Base | Uses | Shared numbers identical? |
+| --- | --- | --- |
+| spell_attack | Fireball, Smite, Judgment, Cutting Words | Yes — all CP 10, base 5, ×2 soft, +lvl/3, floor 1, enemy, instant. Judgment's live ×0.8 rider becomes `class_scale 0.80`, exact same output. |
+| weapon_attack | Power Strike, Backstab, Aimed Shot | Yes — one identical calc today; only the tagged attribute differs (STR/DEX/DEX). |
+| heal | Heal, Second Wind | Yes — CP 15, 3×mod + level, floor 3; attribute differs (WIS/CON). |
+| party_regen | Purifying Light, Crescendo | Yes — CP 40, base 2, 15 000/30 000 ms, 3 000 ms tick; attributes differ. |
+| every other base | one use | N/A; numbers lifted verbatim. |
+
+### Separate bases required (numbers not inheritable)
+
+| Abilities | Why a shared base is impossible without a balance change |
 | --- | --- |
-| mechanic_key, activation_mode, allowed/default target, trigger_type | Base Ability |
-| cp_cost, cp_reserve_pct | Base Ability |
-| amount_calc, duration_calc, interval_ms, mechanic_calcs | Base Ability |
-| dice / weapon requirement, tick behaviour, stack defaults, shared durations | Base Ability (`effect_config` shared knobs) |
-| capabilities, on_hit support + allowed effect types + configurable effect params | Base Ability |
-| class_key, role/slot, unlock level, assignment status | Configured use |
-| label, description, tooltip, combat_text | Configured use |
-| damage_type | Configured use |
-| primary / secondary scaling attribute (secondary only if base supports) | Configured use |
-| class_scale | Configured use |
-| selected on-hit effect / applied status + its flavour | Configured use |
-| status behaviour (DoT class, tick, duration, stacks) | Base Ability / shared status definition — never per class copy |
+| Frost Bolt vs Fireball family | CP 12 vs 10 and a different curve shape (3 + ×2.4 vs 5 + ×2.0); no single scale reproduces it. |
+| Force Shield vs Divine Aegis | CP 15 vs 60, magnitude ×1 vs ×2, duration 8/15 s vs 30/60 s with different per-point step — three independent ratios. |
+| Battle Cry vs Divine Challenge | percent mitigation, no duration vs flat 6 with 30/45 s duration; different units. |
+| Arcane Surge vs Eagle Eye | multiplier vs flat crit-edge, CP 25 vs 15, no duration vs 30 s. |
+| Cloak of Shadows vs Disengage | dodge-chance percent vs next-hit multiplier, 10/15 s vs 5/8 s; different units and windows. |
+| Dissonance vs Nature's Snare | identical calc but CP 25 vs 40. |
+| Sunder Armor vs the reduction pair | flat AC vs percent damage reduction, CP 60, longer duration. |
+| Eviscerate vs Conflagrate | weapon-die physical (CP 40, base 2) vs pure spell (CP 60, base 4, ×2 INT). |
 
-Runtime: `final = base calc(with class-chosen attribute) × class_scale`.
+Merge candidates for a **later, separately approved** balance pass (not part of this migration): Frost Bolt into spell_attack, Nature's Snare CP into control_reduction_light, Eviscerate/Conflagrate, Cloak/Disengage.
 
-## Base mapping and value differences to resolve
+## On-Hit Effect vs On-Hit Stance vs Automatic Attack Stance
 
-Bases whose uses already share identical numbers — safe lift, zero balance change:
+| Concept | Storage | Execution |
+| --- | --- | --- |
+| Optional On-Hit Effect (rider) | base declares support + allowed types + which params are configurable; configured use stores the single selected effect key and its flavour | rolled after that ability's own hit resolves |
+| On-Hit Stance (Envenom) | own base `on_hit_stance`, trigger `on_hit`, self activation, CP reservation; configured use picks applied status = Poison (enemy) | stance persists; subsequent weapon hits roll the stance proc |
+| Automatic Attack Stance (Orbs of Fire) | own base `orb_stance`, trigger `pulse`, self activation, own cadence; configured use picks applied status = Ignite (enemy), damage type Fire, INT | stance pulses its own attacks each heartbeat; each landed orb applies/stacks Ignite |
 
-- `heal`: heal / second_wind (CP 15, base 0, ×3, floor 3) — differ only by attribute (WIS vs CON).
-- `party_regen`: purifying_light / crescendo (CP 40, base 2, 15000/30000ms, 3000ms tick) — identical.
-- `spell_attack` (mostly): fireball, smite, judgment, cutting_words all CP 10, base 5, ×2.0 soft damage, +level/3.
-
-Divergent uses of one base (must be decided before migrating):
-
-| Base | Uses | Divergence | Recommendation |
-| --- | --- | --- | --- |
-| spell_attack | judgment | `finalMult 0.8` | becomes `class_scale 0.80` — identical live output |
-| spell_attack | frost_bolt | base 3, ×2.4, CP 12 vs base 5, ×2.0, CP 10 | unify to the shared shape, `class_scale 1.00`, CP 10 — small net change at low INT; flagged for approval |
-| absorb_buff | force_shield (CP 15, ×1, 8–15s) vs divine_aegis (CP 60, ×2, 30–60s) | far apart | split into two bases: `absorb_buff_self` and `absorb_buff_ally` |
-| mitigation_buff | battle_cry (CP 25, 10% mult, no duration) vs divine_challenge (CP 60, flat 6, 30–45s) | different modes | split: `mitigation_percent` and `mitigation_flat` |
-| offense_buff | arcane_surge (CP 25, dmg mult) vs eagle_eye (CP 15, crit edge, 30s) | different modes | split: `offense_damage` and `offense_crit` |
-| evasion_buff | cloak_of_shadows (CP 60, 0.4, 10–15s) vs disengage (CP 60, 1.3, 5–8s) | magnitude/duration | keep one base, magnitude via `class_scale`, duration split by config knob if needed |
-| control_debuff | dissonance / natures_snare (0.25 reduction, 8–15s) vs sunder_armor (flat 2 AC, 12–20s, CP 60) | different mode | split: `control_damage_reduction` (CP baseline 25, snare 1.60 scale) and `control_armor` |
-| stack_consume | eviscerate (CP 40, base 2) vs conflagrate (CP 60, base 4, ×2) | magnitude | one base at eviscerate baseline, conflagrate `class_scale 2.00` + CP override declared class-configurable |
-| party_regen / heal / block_buff / others with one use | — | none | lift as-is |
-
-Rule: no base value is silently chosen — every scale above reproduces current live output except the two flagged rows (frost_bolt shape, conflagrate CP).
-
-## Envenom, Poison, Orbs of Fire, Ignite
-
-- `on_hit_stance` base (mechanic `stack_apply`, trigger `on_hit`) owns: self activation, persistent stance, weapon-hit trigger, CP reservation, stack/DoT tick and duration rules. Assassin's configured use `envenom` provides name, applied status Poison (enemy target), primary attribute DEX, class scale, flavour.
-- `orb_stance` base (mechanic `stack_apply`, trigger `pulse`) owns: self activation, automatic pulse attacks against current target, existing tick frequency, engage behaviour, DoT duration/stack rules. Wizard's configured use provides name Orbs of Fire, damage type Fire, INT, class scale, flavour, applied status Ignite.
-- Ignite stays an enemy-side Fire DoT applied by successful orb attacks — never shown as a player ability. The ability row keeps key `ignite` for FK safety; its player-facing label stays "Orbs of Fire" and the label override on the wizard assignment is folded into the row.
-- Optional On-Hit Effect (rider on one successful ability use) remains distinct in storage (`effect_config.on_hit_effect` on the configured use, allowlisted by the base) from these stances (own base rows with a trigger type).
+Ignite and Poison are enemy-side DoTs defined once in the applied-status layer, never player-selectable abilities.
 
 ## Schema changes
 
-Additive first, destructive later:
+1. Add to `base_abilities`: `cp_cost`, `cp_reserve_pct`, `target_type`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `effect_config`, `supports_secondary_scaling`.
+2. Add to `abilities`: `class_scale numeric not null default 1.0`, `primary_attribute`, `secondary_attribute`, `applied_status`, `on_hit_effect`. No class or slot columns.
+3. New table `applied_statuses` (key, effect_type, classification, tick_interval_ms, duration rules, stack rules, default damage type) + GRANTs and read policies; seeded from the current Poison / Ignite / Bleed values.
+4. Create the new split bases listed above; backfill every base's numbers from its (single or identical) uses; set `class_scale` (only Judgment ≠ 1.0, replacing its `finalMult`); fold surviving `overrides` (identity, scaling attribute) onto the configured-use rows.
+5. Split the shared `weapon_attack` ability row into three; repoint assignments and loadouts; add the one-assignment-per-ability unique constraint.
+6. Drop the `on_hit_allowed` mirror on `abilities` and the two sync triggers.
+7. Only after runtime + admin read the new source and parity tests pass: drop `abilities.cp_cost`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `target_type`, and shrink `class_ability_assignments.overrides` to nothing (column kept nullable for archive).
 
-1. Add to `base_abilities`: `cp_cost`, `cp_reserve_pct`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `effect_config`, `target_type`, `supports_secondary_scaling`, `class_configurable` (jsonb allowlist of mechanical fields a class may override).
-2. Add to `abilities`: `class_key`, `role_id` (nullable during migration), `class_scale numeric not null default 1.0`, `primary_attribute`, `secondary_attribute`, `applied_status`.
-3. Backfill: for each base, write the recommended shared baseline into the base row; set each ability's `class_scale`, attributes, damage type, `class_key`/`role_id` from its single assignment.
-4. Split the shared `weapon_attack` row into three configured uses (`power_strike`, `backstab`, `aimed_shot`) carrying the current override identity, then repoint `class_ability_assignments.ability_id` and `character_ability_loadout.ability_id` for the affected classes inside the same migration.
-5. Create the new split bases listed above and repoint their uses.
-6. Retire, only after runtime and admin read the new source and tests pass: numeric columns on `abilities` (`cp_cost`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, shared `effect_config` knobs) and the identity/scaling/mechanic entries in `class_ability_assignments.overrides`.
+Untouched: `class_ability_roles`, `character_ability_loadout` shape, `characters`, `character_class_bonds`, combat/session/encounter tables, combat-tick mechanic implementations, kill/reward resolvers.
 
-Unchanged tables: `class_ability_roles`, `character_ability_loadout` (row shape), `characters`, `character_class_bonds`, all combat/session tables.
+## Code changes
 
-## Runtime changes
-
-- `src/shared/config/effective-ability.ts` and its `supabase/functions/_shared` mirror become: base numbers → apply class attribute swap → apply `class_scale` → apply damage type/identity. `OVERRIDABLE_KEYS` shrinks to what the base declares in `class_configurable`.
-- `useAbilityRegistry` query joins `base_abilities` numbers and passes `class_scale` through; `load-ability-calcs.ts` in edge functions does the same.
-- `combat-tick`, `combat-catchup`, `combat-resolver`, `kill-resolver` keep their mechanic implementations untouched; they only receive resolved values.
-- Parity tests assert resolved output per ability equals today's values (except the two flagged rows).
-
-## Admin UI changes
-
-- `AbilityConfigManager.tsx`: column 1 lists Base Abilities only (with use counts); column 2 lists configured uses of the selected base as `Name — Class`; "New configured use" asks class + slot then opens column 3. Column 3 shows identity, class/slot, description, combat text, damage type, primary/secondary attribute, class scale, selected effect/status, plus a compact read-only "Inherited from <Base>" mechanics summary with an "Edit shared <Base> mechanics" action.
-- `BaseAbilityEditor.tsx`: gains the shared numeric editors (CP, calc builder, duration, interval, mechanic calcs, target rules, capabilities, on-hit allowlist), a dependent-uses list, and a save warning naming affected abilities.
-- `ClassAbilityConfig.tsx`: keeps five slots for the selected class, drops every numeric/mechanic editor, shows inherited mechanics read-only with a link to the base, and edits only slot, base choice, name, description, flavour, damage type, attributes, class scale, selected effect.
-- `MechanicCalcsEditor.tsx` / `CalcBuilder.tsx` move to base-only usage. `OnHitEffectEditor.tsx` keeps selection-only behaviour driven by the base allowlist.
-- Existing admin shell, navigation and responsive breakpoints unchanged.
+- `src/shared/config/effective-ability.ts` + `supabase/functions/_shared` mirror: resolver becomes base numbers → attribute substitution → `class_scale`. `OVERRIDABLE_KEYS` and `mechanic_calcs` overrides removed.
+- `useAbilityRegistry.ts`, `ability-calcs.ts`, `load-ability-calcs.ts`: select numbers from `base_abilities`, identity/scale from `abilities`, class/slot from assignments.
+- `AbilityConfigManager.tsx`: column 1 Base Abilities (with use counts), column 2 configured uses of the selected base as `Name — Class`, "New configured use" asks class + slot, column 3 identity/flavour/damage type/attributes/class scale/selected effect plus a read-only "Inherited from <Base>" summary and an "Edit shared <Base> mechanics" action.
+- `BaseAbilityEditor.tsx`: gains the shared numeric editors (CP, calcs, duration, interval, mechanic calcs, target rules, capabilities, on-hit allowlist), dependent-use list, and a save warning naming affected abilities.
+- `ClassAbilityConfig.tsx`: five slots for the selected class only; no numeric editors; inherited mechanics read-only with a link to the base.
+- `MechanicCalcsEditor.tsx` / `CalcBuilder.tsx` become base-only. `OnHitEffectEditor.tsx` reads the allowlist from the base only.
+- Supabase types regenerated; seeds (`ability-seed.ts` and its mirror) restructured to the two layers; shared-mirror identity test kept green.
 
 ## Validation
 
-- Supabase types regenerated; shared mirror identity test still passes.
-- Parity test: every ability's resolved cp/amount/duration/interval matches pre-migration snapshot (frost_bolt and conflagrate CP listed as intentional deltas).
-- Tests: base number change propagates to all uses; class config cannot write cp/amount/duration; wizard keeps Fireball + Frostball on one base; damage type per use; loadouts and assignments row counts unchanged; Envenom stance→Poison and Orbs of Fire pulse→Ignite behaviour tests.
+- Snapshot parity test: for all 36 configured uses at several levels and stat spreads, resolved CP / amount / duration / interval equal the pre-migration values exactly — **zero** intentional deltas.
+- Changing a number on Spell Attack changes Fireball, Smite, Judgment and Cutting Words together.
+- Class Config and assignment writes cannot alter CP, calcs, timing, targeting or duration.
+- Wizard keeps Fireball and Frost Bolt in slot 1 as loadout alternatives; damage type stays per use.
+- Envenom: self stance → Poison on enemy. Orbs of Fire: own pulses → Ignite on enemy. Ignite never listed as a player ability.
+- Assignment and loadout row counts unchanged; every configured use has exactly one class/slot.
+- Admin shell and responsive layout unchanged.
