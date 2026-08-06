@@ -646,7 +646,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       note: 'CHA burst base (the CHA-sided bonus die stays mechanic-owned)',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'cha', crit_edge_stat: 'int', resolved_by: 'combat-tick' },
+    effect_config: { stat: 'cha', crit_edge_stat: 'int', crit_threshold_floor: 17, resolved_by: 'combat-tick' },
     mechanic_calcs: {
       crit_edge: {
         version: 2, base: 0,
@@ -654,7 +654,10 @@ export const ABILITY_SEED: AbilitySeed[] = [
         floor: null, cap: null, unit: 'flat', note: 'INT crit-threshold widening',
       },
     },
-    combat_text: {},
+    combat_text: {
+      hit_text: '{ability}!{crit} {caster} unleashes a devastating blast of sound at {target}! [{damage}]',
+      miss_text: "{caster}'s {ability} falls flat — {target} is untouched!",
+    },
     class_key: 'bard', slot: 4,
   },
 
