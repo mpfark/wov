@@ -184,7 +184,13 @@ export function useBuffState(params: UseBuffStateParams) {
     const buffs: Record<string, any> = {};
     if (critBuff && now < critBuff.expiresAt) buffs.crit_buff = { bonus: critBuff.bonus };
     if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = { mult: stealthBuff.mult ?? 2 };
-    if (damageBuff && now < damageBuff.expiresAt) buffs.damage_buff = true;
+    // Consolidated `offense_buff` (damage_mult mode): send the granting ability
+    // key so the server resolves the multiplier from that ability's calc.
+    if (damageBuff && now < damageBuff.expiresAt) {
+      buffs.damage_buff = damageBuff.abilityKey
+        ? { ability_key: damageBuff.abilityKey }
+        : true;
+    }
     if (rootDebuff && now < rootDebuff.expiresAt) {
       buffs.root_debuff_target = (rootDebuff as any).creatureId;
       buffs.root_debuff_reduction = rootDebuff.damageReduction;

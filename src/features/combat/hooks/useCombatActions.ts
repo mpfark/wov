@@ -395,22 +395,45 @@ export function useCombatActions(params: UseCombatActionsParams) {
       } else {
         p.addLogEvent(buildBuffEvent(`${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`));
       }
-    } else if (ability.type === 'crit_buff') {
-      // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
-      const critBonus = amountOf();
-      const critDurationMs = durationOf();
-      p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + critDurationMs });
-      p.addLogEvent(buildBuffEvent(`Eagle Eye! Your crit range is now ${20 - critBonus}-20 for ${Math.round(critDurationMs / 1000)}s.`));
+    } else if (ability.type === 'offense_buff' || ability.type === 'crit_buff' || ability.type === 'damage_buff') {
+      // Consolidation Group F: ONE offensive self-buff. Whether it widens the
+      // crit range or amplifies damage is configuration
+      // (`effect_config.offense_mode`), and the wording is authored — Eagle Eye
+      // and Arcane Surge are identities of the same base. Both ship as stances,
+      // so this path only runs for a timed (non-stance) variant.
+      const cfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const mode = typeof cfg.offense_mode === 'string' && cfg.offense_mode.trim()
+        ? cfg.offense_mode.trim()
+        : ability.type === 'damage_buff' ? 'damage_mult' : 'crit_edge';
+      const magnitude = amountOf();
+      const durationMs = durationOf();
+      const seconds = Math.round(durationMs / 1000);
+      const authoredLine = getAuthoredCombatText(ability.abilityKey).activate_text;
+      if (mode === 'damage_mult') {
+        p.buffSetters.setDamageBuff({ expiresAt: Date.now() + durationMs, abilityKey: ability.abilityKey });
+        const line = typeof authoredLine === 'string' && authoredLine.trim()
+          ? authoredLine
+              .replace(/\{mult\}/g, magnitude.toFixed(2))
+              .replace(/\{seconds\}/g, String(seconds))
+          : `${ability.label}! Your damage is amplified (x${magnitude.toFixed(2)}) for ${seconds}s.`;
+        p.addLogEvent(buildBuffEvent(line));
+      } else {
+        p.buffSetters.setCritBuff({ bonus: magnitude, expiresAt: Date.now() + durationMs });
+        const line = typeof authoredLine === 'string' && authoredLine.trim()
+          ? authoredLine
+              .replace(/\{crit_low\}/g, String(20 - magnitude))
+              .replace(/\{seconds\}/g, String(seconds))
+          : `${ability.label}! Your crit range is now ${20 - magnitude}-20 for ${seconds}s.`;
+        p.addLogEvent(buildBuffEvent(line));
+      }
     } else if (ability.type === 'stealth_buff') {
       // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
       const durationMs = durationOf();
       const ambushMult = amountOf();
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
       p.addLogEvent(buildBuffEvent(`Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`));
-    } else if (ability.type === 'damage_buff') {
-      // Stance — unreachable here; the stance toggle block at the top of
-      // handleUseAbility intercepts this ability type. Left as a no-op safety net.
-      return;
+
+
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {

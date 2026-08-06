@@ -285,10 +285,12 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'arcane_surge', label: 'Arcane Surge', description: 'Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.',
     tooltip: 'Increase all your damage. Bonus scales with INT. Stance.',
-    mechanic_key: 'damage_buff', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'offense_buff', base_ability_key: 'offense_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 25, cp_reserve_pct: 0.15,
     amount_calc: { base: 1.10, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.12 } })], floor: null, cap: null, unit: 'multiplier', note: 'INT magnitude' },
-    duration_calc: null, interval_ms: null, effect_config: {}, combat_text: {},
+    duration_calc: null, interval_ms: null,
+    effect_config: { offense_mode: 'damage_mult' },
+    combat_text: { activate_text: 'Arcane Surge! Your damage is amplified (x{mult}).' },
     class_key: 'wizard', slot: 2,
   },
   {
@@ -358,11 +360,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'eagle_eye', label: 'Eagle Eye', description: 'Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.',
     tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.',
-    mechanic_key: 'crit_buff', ability_type: 'buff', damage_type: null,
+    mechanic_key: 'offense_buff', base_ability_key: 'offense_buff', ability_type: 'buff', damage_type: null,
     target_type: 'self', activation_mode: 'stance', cp_cost: 15, cp_reserve_pct: 0.10,
     amount_calc: { base: 0, terms: [stat('dex', 0.5, { clampAtZero: true }), stat('wis', 0.5, { clampAtZero: true })], rounding: 'floor', floor: 1, cap: 5, unit: 'flat', note: 'DEX+WIS blend — crit range widening' },
     duration_calc: { base: 30000, terms: [], cap: null, unit: 'ms', note: 'legacy timed preview path (stance has no duration)' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null,
+    effect_config: { offense_mode: 'crit_edge' },
+    combat_text: { activate_text: 'Eagle Eye! Your crit range is now {crit_low}-20 for {seconds}s.' },
     class_key: 'ranger', slot: 1,
   },
   {

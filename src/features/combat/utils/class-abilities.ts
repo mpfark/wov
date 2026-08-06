@@ -14,7 +14,9 @@ export interface ClassAbility {
   tooltip: string;
   cpCost: number;
   type:
-    | 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
+    | 'heal' | 'regen_buff' | 'self_heal' | 'stealth_buff'
+    // Consolidated reusable offensive self-buff (+ legacy per-class mechanics).
+    | 'offense_buff' | 'crit_buff' | 'damage_buff'
     | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'dot_debuff'
     // Legacy mitigation mechanic (consolidated into `mitigation_buff`).
     | 'battle_cry'
@@ -81,7 +83,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
   ],
   ranger: [
     { label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'weapon_attack', tier: 0, levelRequired: 1 },
-    { label: 'Eagle Eye', description: 'Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.', tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.', cpCost: 15, type: 'crit_buff', tier: 1, levelRequired: 5 },
+    { label: 'Eagle Eye', description: 'Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.', tooltip: 'Widen your crit range. Scales with DEX and WIS. Stance.', cpCost: 15, type: 'offense_buff', tier: 1, levelRequired: 5 },
     { label: 'Barrage', description: 'Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).', tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.', cpCost: 25, type: 'multi_attack', tier: 2, levelRequired: 10 },
     { label: "Nature's Snare", description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.", tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.", cpCost: 40, type: 'root_debuff', tier: 3, levelRequired: 15 },
     { label: 'Disengage', description: 'Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).', tooltip: 'Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
@@ -103,7 +105,7 @@ const FALLBACK_LITERALS: Record<string, FallbackAbility[]> = {
   wizard: [
     { label: 'Fireball', description: 'Hurl a ball of arcane flame at your target, scaling with INT', tooltip: 'Damage one target. Scales with INT.', cpCost: 10, type: 'spell_attack', tier: 0, levelRequired: 1 },
     { label: 'Force Shield', description: 'Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.', tooltip: 'Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
-    { label: 'Arcane Surge', description: 'Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.', tooltip: 'Increase all your damage. Bonus scales with INT. Stance.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
+    { label: 'Arcane Surge', description: 'Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.', tooltip: 'Increase all your damage. Bonus scales with INT. Stance.', cpCost: 25, type: 'offense_buff', tier: 2, levelRequired: 10 },
     { label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.', tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.', cpCost: 50, type: 'stack_apply', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.', tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.', cpCost: 60, type: 'stack_consume', tier: 4, levelRequired: 20 },
   ],
