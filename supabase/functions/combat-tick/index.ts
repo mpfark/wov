@@ -1193,26 +1193,32 @@ Deno.serve(async (req) => {
 
 
       if (paMech === 'multi_attack') {
-        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
-        // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
-        // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
-        // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
-        // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
-        // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
-        // If main-hand isn't a bow, falls back to the unarmed 1d4 die.
-        const effDex = (c.dex || 10) + (eb.dex || 0);
-        const effWis = (c.wis || 10) + (eb.wis || 0);
-        const dexMod = sm(effDex);
-        const wisMod = sm(effWis);
+        // Consolidation Group G: ONE reusable volley. The attribute that rolls
+        // to hit (`effect_config.attack_stat`), the arrow count
+        // (`mechanic_calcs.arrow_count`), the per-arrow magnitude
+        // (`amount_calc`, the FULL weapon-die + stat value) and every log line
+        // (`combat_text.cast_text` / `hit_text` / `miss_text`) are configuration
+        // — Barrage is just the Ranger identity of this base.
+        // Buff parity with autoattacks: respects crit / damage / stealth /
+        // disengage buffs, consumed once per volley (not per arrow).
+        const maCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+        const maText = (auth.entry?.combatText ?? {}) as Record<string, unknown>;
+        const maAuthored = (key: string): string | null => {
+          const raw = maText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const maStatKey = typeof maCfg.attack_stat === 'string' && maCfg.attack_stat.trim()
+          ? maCfg.attack_stat.trim() : 'dex';
+        const statValue = (key: string) =>
+          ((c as unknown as Record<string, number>)[key] ?? 10)
+          + ((eb as unknown as Record<string, number>)[key] ?? 0);
+        const attackMod = sm(statValue(maStatKey));
         // Named mechanic value: arrow_count (unit 'count').
         const arrowCount = paMag(
           'mechanic',
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        // Per-arrow damage is configured: barrage's `amount_calc` is the FULL
-        // per-arrow magnitude (weapon die + half DEX), rolled once per arrow.
-        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const rollArrow = () => paMagEx(
           'amount',
           undefined, arrowDie,
@@ -1227,7 +1233,18 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
-        pushAbilityEvent({ type: 'ability_cast', message: `${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
+        const renderVolley = (
+          tpl: string,
+          vars: { index?: number; target?: string; damage?: number },
+        ) => tpl
+          .replace(/\{caster\}/g, c.name)
+          .replace(/\{count\}/g, String(arrowCount))
+          .replace(/\{index\}/g, String(vars.index ?? 0))
+          .replace(/\{target\}/g, vars.target ?? 'the target')
+          .replace(/\{damage\}/g, String(vars.damage ?? 0));
+        const maCast = maAuthored('cast_text')
+          ?? `{caster} unleashes ${auth.entry?.label ?? 'a volley'} of {count} arrows!`;
+        pushAbilityEvent({ type: 'ability_cast', message: renderVolley(maCast, {}), character_id: member.id });
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
