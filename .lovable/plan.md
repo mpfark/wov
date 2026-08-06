@@ -145,7 +145,7 @@ Merge candidates for a **later, separately approved** balance pass (not part of 
 | --- | --- | --- |
 | Optional On-Hit Effect (rider) | base declares support + allowed types + which params are configurable; configured use stores the single selected effect key and its flavour | rolled after that ability's own hit resolves |
 | On-Hit Stance (Envenom) | own base `on_hit_stance`, trigger `on_hit`, self activation, CP reservation; configured use picks applied status = Poison (enemy) | stance persists; subsequent weapon hits roll the stance proc |
-| Automatic Attack Stance (Orbs of Fire) | own base `orb_stance`, trigger `pulse`, self activation, own cadence; configured use picks applied status = Ignite (enemy), damage type Fire, INT | stance pulses its own attacks each heartbeat; each landed orb applies/stacks Ignite |
+| Automatic Attack Stance (Orbs of Fire) | own base `orb_stance`, trigger `pulse`, self activation, own cadence; configured use picks applied status = Ignite (enemy), damage type Fire, primary INT (proc chance + orb damage), secondary WIS (Ignite magnitude + duration roles) | stance pulses its own attacks each heartbeat; each landed orb applies/stacks Ignite |
 
 Ignite and Poison are enemy-side DoTs defined once in the applied-status layer, never player-selectable abilities.
 
