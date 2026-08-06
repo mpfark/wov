@@ -256,6 +256,11 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
   // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
+  // Consolidation Group I: ONE reusable life-sacrifice heal. The transferred
+  // amount is `amount_calc`, the safety floor the named `reserve_hp` calc, the
+  // absolute floor `effect_config.min_reserve_hp`, and both the success and
+  // "not enough HP" lines are authored (`combat_text.transfer_text` /
+  // `no_hp_text`) — Transfer Health is the Healer identity of this base.
   t('hp_transfer', {
     requiresAmount: true,
     params: [P('reserve_hp', 'HP kept in reserve', 'hp', 'threshold', true)],
@@ -264,11 +269,17 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
   }),
+  // Consolidation Group I: ONE reusable additive HP/CP regen buff. HP/tick is
+  // `amount_calc`, CP/tick the named `cp_per_tick` calc (floored by
+  // `effect_config.min_cp_per_tick`), and how a recast merges with an active
+  // buff is `effect_config.refresh_policy` ('best_of' | 'replace') — Inspire is
+  // the Bard identity of this base.
   t('regen_buff', {
     duration: true,
     requiresAmount: true, requiresDuration: true,
     params: [P('cp_per_tick', 'CP regen per tick', 'cp', 'rate', true)],
   }),
+
 ];
 
 const BY_KEY = new Map(MECHANIC_TEMPLATES.map(m => [m.mechanicKey, m]));
