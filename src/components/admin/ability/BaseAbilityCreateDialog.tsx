@@ -1,13 +1,11 @@
 /**
- * BaseAbilityCreateDialog — creates a reusable BASE ability row only.
+ * BaseAbilityCreateDialog — creates a reusable BASE ABILITY (`base_abilities`).
  *
- * Phase 1 of the ability-ownership correction: the Abilities page is a base
- * library. Creating a base ability here NEVER writes a
- * `class_ability_assignments` row — assignment is Class Config's job.
- *
- * New rows land as `draft` so they can never appear on a live ability bar
- * before an admin reviews their calculations and a class deliberately assigns
- * them.
+ * A Base Ability is the authoring foundation for a family of class abilities:
+ * it names the runtime mechanic that executes it, how it activates, what it may
+ * target, how a follow-up status is triggered, and which configuration sections
+ * its class abilities may edit. It is never a playable ability itself — those
+ * are authored in column two and point here through `abilities.base_ability_id`.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,95 +22,64 @@ import {
 } from '@/components/ui/select';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
-import {
-  suggestAbilityKey, validateNewAbility, type NewAbilityDraft,
-} from '@/shared/config/class-authoring';
-import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from '../damage-types';
-
-export const ABILITY_TYPES = ['damage', 'heal', 'buff', 'debuff', 'utility'] as const;
-export const ACTIVATION_MODES = ['instant', 'queued', 'stance'] as const;
-export const TARGET_TYPES = ['self', 'ally', 'enemy', 'party', 'node'] as const;
+import { suggestAbilityKey } from '@/shared/config/class-authoring';
+import { ACTIVATION_MODES, TARGET_TYPES, TRIGGER_TYPES } from './ability-taxonomy';
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** Called with the new ability id once the base row exists. */
-  onCreated: (abilityId: string) => void;
-}
-
-interface Taxonomy {
-  ability_type: string;
-  damage_type: string | null;
-  target_type: string;
-  activation_mode: string;
+  /** Called with the new base ability id once the row exists. */
+  onCreated: (baseAbilityId: string) => void;
 }
 
 export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated }: Props) {
   const mechanics = useMemo(() => getKnownAbilityMechanics(), []);
   const [existingKeys, setExistingKeys] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState<NewAbilityDraft>({
-    ability_key: '', label: '', description: '', tooltip: '',
-    mechanic_key: mechanics[0] ?? '', cp_cost: 10, unlock_level: 1,
-  });
-  const [taxonomy, setTaxonomy] = useState<Taxonomy>({
-    ability_type: 'damage', damage_type: 'physical',
-    target_type: 'enemy', activation_mode: 'instant',
+  const [draft, setDraft] = useState({
+    base_key: '',
+    label: '',
+    description: '',
+    mechanic_key: mechanics[0] ?? '',
+    activation_mode: 'instant',
+    default_target_type: 'enemy',
+    trigger_type: 'none',
   });
 
   useEffect(() => {
     if (!open) return;
-    supabase.from('abilities').select('ability_key').then(({ data }) => {
-      setExistingKeys((data ?? []).map(r => r.ability_key));
+    supabase.from('base_abilities').select('base_key').then(({ data }) => {
+      setExistingKeys((data ?? []).map(r => r.base_key));
     });
   }, [open]);
 
-  /** Suggest taxonomy from a sibling ability on the same mechanic, if any. */
-  useEffect(() => {
-    if (!open || !draft.mechanic_key) return;
-    let cancelled = false;
-    supabase
-      .from('abilities')
-      .select('ability_type, damage_type, target_type, activation_mode')
-      .eq('mechanic_key', draft.mechanic_key)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        setTaxonomy({
-          ability_type: data.ability_type,
-          damage_type: data.damage_type ?? null,
-          target_type: data.target_type,
-          activation_mode: data.activation_mode,
-        });
-      });
-    return () => { cancelled = true; };
-  }, [open, draft.mechanic_key]);
-
-  const errors = validateNewAbility(draft, { existingKeys, knownMechanics: mechanics });
+  const errors: string[] = [];
+  if (!draft.label.trim()) errors.push('Name is required.');
+  if (!draft.base_key.trim()) errors.push('Base key is required.');
+  if (existingKeys.includes(draft.base_key)) errors.push('That base key already exists.');
+  if (!draft.description.trim()) errors.push('Description is required.');
+  if (!mechanics.includes(draft.mechanic_key)) errors.push('Pick a known runtime mechanic.');
 
   const create = async () => {
     if (errors.length) { toast.error(errors[0]); return; }
     setSaving(true);
-    const { data: inserted, error } = await supabase.from('abilities').insert({
-      ability_key: draft.ability_key,
+    const { data: inserted, error } = await supabase.from('base_abilities').insert({
+      base_key: draft.base_key,
       label: draft.label,
       description: draft.description,
-      tooltip: draft.tooltip || draft.description,
       mechanic_key: draft.mechanic_key,
-      ability_type: taxonomy.ability_type,
-      damage_type: taxonomy.damage_type,
-      target_type: taxonomy.target_type,
-      activation_mode: taxonomy.activation_mode,
-      cp_cost: draft.cp_cost,
-      effect_config: {},
-      combat_text: {},
+      activation_mode: draft.activation_mode,
+      default_target_type: draft.default_target_type,
+      allowed_target_types: [draft.default_target_type],
+      trigger_type: draft.trigger_type,
+      capabilities: ['identity', 'activation', 'scaling', 'amount', 'combat_text'],
+      on_hit_allowed: [],
       status: 'draft',
-      admin_notes: 'Created in the base ability library (unassigned).',
+      admin_notes: 'Created in the Ability Library.',
     }).select('id').single();
     setSaving(false);
     if (error || !inserted) { toast.error(error?.message ?? 'Insert failed'); return; }
-    toast.success(`${draft.label} created as an unassigned draft — assign it from Class Config.`);
+    toast.success(`${draft.label} created — tick its configurable sections, then author class abilities on it.`);
     onOpenChange(false);
     onCreated(inserted.id);
   };
@@ -123,78 +90,37 @@ export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated 
         <DialogHeader>
           <DialogTitle className="font-display text-sm">New base ability</DialogTitle>
           <DialogDescription className="text-xs">
-            Creates a reusable library definition only. It is not assigned to any
-            class — do that from Class Config once its calculations are set.
+            A reusable foundation, not a playable ability. Author the named class
+            abilities (Fireball, Smite…) on top of it afterwards.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-3">
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px]">Label</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[11px]">Name</Label>
               <Input
                 aria-label="Label"
                 value={draft.label}
                 onChange={e => setDraft({
                   ...draft,
                   label: e.target.value,
-                  ability_key: draft.ability_key || suggestAbilityKey(e.target.value),
+                  base_key: draft.base_key || suggestAbilityKey(e.target.value),
                 })}
                 className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px]">Base CP cost</Label>
+              <Label className="text-[11px]">Base key (permanent)</Label>
               <Input
-                type="number"
-                value={draft.cp_cost}
-                onChange={e => setDraft({ ...draft, cp_cost: Number(e.target.value) })}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px]">Ability type</Label>
-              <Select value={taxonomy.ability_type} onValueChange={v => setTaxonomy({ ...taxonomy, ability_type: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ABILITY_TYPES.map(t => (
-                    <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px]">Ability key (permanent)</Label>
-              <Input
-                value={draft.ability_key}
-                onChange={e => setDraft({ ...draft, ability_key: suggestAbilityKey(e.target.value) })}
+                aria-label="Base key"
+                value={draft.base_key}
+                onChange={e => setDraft({ ...draft, base_key: suggestAbilityKey(e.target.value) })}
                 className="h-8 text-xs font-mono"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px]">Target</Label>
-              <Select value={taxonomy.target_type} onValueChange={v => setTaxonomy({ ...taxonomy, target_type: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TARGET_TYPES.map(t => (
-                    <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px]">Activation</Label>
-              <Select value={taxonomy.activation_mode} onValueChange={v => setTaxonomy({ ...taxonomy, activation_mode: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ACTIVATION_MODES.map(m => (
-                    <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px]">Mechanic (code handler, permanent)</Label>
+              <Label className="text-[11px]">Runtime mechanic</Label>
               <Select value={draft.mechanic_key} onValueChange={v => setDraft({ ...draft, mechanic_key: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -204,17 +130,35 @@ export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated 
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-[11px]">Base damage type</Label>
-              <Select
-                value={taxonomy.damage_type ?? DAMAGE_TYPE_NONE}
-                onValueChange={v => setTaxonomy({ ...taxonomy, damage_type: v === DAMAGE_TYPE_NONE ? null : v })}
-              >
+            <div className="space-y-1">
+              <Label className="text-[11px]">Activation mode</Label>
+              <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={DAMAGE_TYPE_NONE} className="text-xs">None (non-damaging)</SelectItem>
-                  {DAMAGE_TYPES.map(d => (
-                    <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                  {ACTIVATION_MODES.map(m => (
+                    <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Default target</Label>
+              <Select value={draft.default_target_type} onValueChange={v => setDraft({ ...draft, default_target_type: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TARGET_TYPES.map(t => (
+                    <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Status trigger</Label>
+              <Select value={draft.trigger_type} onValueChange={v => setDraft({ ...draft, trigger_type: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TRIGGER_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -229,14 +173,6 @@ export default function BaseAbilityCreateDialog({ open, onOpenChange, onCreated 
               rows={2}
               onChange={e => setDraft({ ...draft, description: e.target.value })}
               className="text-xs"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-[11px]">Tooltip (optional)</Label>
-            <Input
-              value={draft.tooltip}
-              onChange={e => setDraft({ ...draft, tooltip: e.target.value })}
-              className="h-8 text-xs"
             />
           </div>
 

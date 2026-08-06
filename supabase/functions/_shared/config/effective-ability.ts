@@ -288,6 +288,18 @@ function applyScalingToCalc(
 }
 
 /**
+ * The ability-level default On-Hit Effect authored on the base library row
+ * (`abilities.effect_config.on_hit_effect`). Used when a class assignment does
+ * not author its own. Invalid or disallowed configurations resolve to null.
+ */
+export function baseOnHitEffect(base: BaseAbilityRow): OnHitEffectConfig | null {
+  const raw = base.effect_config?.on_hit_effect;
+  if (!raw || typeof raw !== 'object') return null;
+  if (validateOnHitEffect(raw, allowedOnHitEffects(base.effect_config)).length > 0) return null;
+  return raw as OnHitEffectConfig;
+}
+
+/**
  * base ability + validated class overrides = effective class ability.
  * Invalid overrides are discarded wholesale and reported through `errors`.
  */
@@ -299,18 +311,18 @@ export function resolveEffectiveAbility(
   const hasOverrides = !!raw && typeof raw === 'object' && !Array.isArray(raw)
     && Object.keys(raw as object).length > 0;
   if (!hasOverrides) {
-    return { ability: { ...base, overridden: false, on_hit_effect: null }, errors: [] };
+    return { ability: { ...base, overridden: false, on_hit_effect: baseOnHitEffect(base) }, errors: [] };
   }
 
   const errors = validateAssignmentOverrides(base, raw);
   if (errors.length > 0) {
     // Deterministic failure: base configuration only, never a partial merge.
-    return { ability: { ...base, overridden: false, on_hit_effect: null }, errors };
+    return { ability: { ...base, overridden: false, on_hit_effect: baseOnHitEffect(base) }, errors };
   }
 
   const o = raw as AssignmentOverrides;
   const ability: EffectiveAbility = {
-    ...base, overridden: true, on_hit_effect: o.on_hit_effect ?? null,
+    ...base, overridden: true, on_hit_effect: o.on_hit_effect ?? baseOnHitEffect(base),
   };
 
   if (o.label !== undefined) ability.label = o.label;
