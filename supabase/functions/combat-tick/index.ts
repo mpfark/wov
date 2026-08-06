@@ -1539,38 +1539,71 @@ Deno.serve(async (req) => {
         }
 
       } else if (paMech === 'burst_damage') {
-        // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
-        // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
-        // Rolls to hit on CHA; crit edge applies only on a successful hit.
-        const effCha = (c.cha || 10) + (eb.cha || 0);
-        const effInt = (c.int || 10) + (eb.int || 0);
-        const chaMod = sm(effCha);
-        const intMod = sm(effInt);
-        const hit = rollAbilityHit(chaMod);
+        // Consolidation Group G: ONE reusable burst nuke. The attribute that
+        // rolls to hit and sizes the bonus die (`effect_config.stat`), the
+        // crit-edge knob (`mechanic_calcs.crit_edge`), the crit-threshold floor
+        // (`effect_config.crit_threshold_floor`) and the wording
+        // (`combat_text.hit_text` / `miss_text`) are configuration — Grand
+        // Finale is just the Bard identity of this base.
+        const bdCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+        const bdText = (auth.entry?.combatText ?? {}) as Record<string, unknown>;
+        const bdAuthored = (key: string): string | null => {
+          const raw = bdText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const bdStatKey = typeof bdCfg.stat === 'string' && bdCfg.stat.trim()
+          ? bdCfg.stat.trim() : 'cha';
+        const bdLabel = auth.entry?.label ?? 'the burst';
+        const bdStatValue = ((c as unknown as Record<string, number>)[bdStatKey] ?? 10)
+          + ((eb as unknown as Record<string, number>)[bdStatKey] ?? 0);
+        const bdMod = sm(bdStatValue);
+        const renderBurst = (tpl: string, vars: { damage?: number; crit?: boolean }) => tpl
+          .replace(/\{caster\}/g, c.name)
+          .replace(/\{ability\}/g, bdLabel)
+          .replace(/\{target\}/g, target.name)
+          .replace(/\{damage\}/g, String(vars.damage ?? 0))
+          .replace(/\{crit\}/g, vars.crit ? ' CRIT!' : '');
+        const hit = rollAbilityHit(bdMod);
         if (!hit.hit) {
-          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          pushAbilityEvent({
+            type: 'ability_miss',
+            message: renderBurst(
+              bdAuthored('miss_text') ?? "{caster}'s {ability} falls flat — {target} is untouched!",
+              {},
+            ),
+            character_id: member.id,
+          });
           continue;
         }
-        // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
-        // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
-        const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
+        // Soft-scaled magnitude (profile 'burst') — the base and the bonus die
+        // both taper past softCap. The crit-edge is a threshold, not a magnitude.
+        const effBurstMod = getEffectiveCombatMod(Math.max(0, bdMod), 'burst');
         const baseDmg = paMag('amount');
-        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
-        // INT crit-edge: named mechanic value (unit 'flat'), applied as a
-        // threshold reduction. d20 vs crit threshold. Floor 17.
+        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effBurstMod * 2)));
+        // Crit-edge: named mechanic value (unit 'flat'), applied as a threshold
+        // reduction against a d20, floored by configuration.
         const critRoll = rollD20();
         const critEdge = paMag('mechanic', 'crit_edge');
-        const critThreshold = Math.max(17, 20 - critEdge);
-        const isFinaleCrit = critRoll >= critThreshold;
-        if (isFinaleCrit) damage = damage * 2;
-        // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
+        const critFloor = typeof bdCfg.crit_threshold_floor === 'number'
+          ? bdCfg.crit_threshold_floor : 17;
+        const critThreshold = Math.max(critFloor, 20 - critEdge);
+        const isBurstCrit = critRoll >= critThreshold;
+        if (isBurstCrit) damage = damage * 2;
+        // Damage buffs (e.g. Arcane Surge) scale burst damage.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
-        const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
-        pushAbilityEvent({ type: 'ability_hit', message: `Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
+        pushAbilityEvent({
+          type: 'ability_hit',
+          message: renderBurst(
+            bdAuthored('hit_text')
+              ?? '{ability}!{crit} {caster} unleashes a devastating blast at {target}! [{damage}]',
+            { damage, crit: isBurstCrit },
+          ),
+          character_id: member.id,
+        });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, effCha, member.id);
+          handleCreatureKill(target, c.name, bdStatValue, member.id);
         }
       } else if (paMech === 'dot_debuff') {
         // Consolidation Group D: ONE reusable ticking damage debuff. The effect
