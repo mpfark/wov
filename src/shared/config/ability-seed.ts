@@ -427,7 +427,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' }, combat_text: { hit_verb: 'backstabs', miss_verb: 'lunges at' },
+    effect_config: { ...WEAPON_ATTACK_CONFIG, stat: 'dex' },
+    // Backstab authors FULL sentences (`hit_text` / `miss_text`) rather than verbs:
+    // the possessive phrasing reads better and conjugates naturally under the local
+    // "You" substitution. An authored line also suppresses the weapon tag suffix.
+    combat_text: {
+      hit_verb: 'backstabs', miss_verb: 'lunges at',
+      hit_text: "{caster}'s blade finds a vital point on {target} from behind. [{damage}]",
+      miss_text: "{caster}'s blade slips wide — {target} is untouched.",
+    },
     base_ability_key: 'weapon_attack',
     class_key: 'assassin', slot: 0,
   },

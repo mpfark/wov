@@ -80,10 +80,9 @@ export function getAuthoredCastFlavor(
  */
 export function resolveCastFlavor(
   ability: Pick<ClassAbility, 'abilityKey' | 'type'>,
-  characterClass: string,
   targetName: string | null,
 ): string | null {
   return getAuthoredCastFlavor(ability.abilityKey, targetName)
     ?? getAbilityCastFlavor(ability.abilityKey, targetName)
-    ?? getCastFlavor(ability.type, characterClass, targetName);
+    ?? getCastFlavor(ability.type, targetName);
 }

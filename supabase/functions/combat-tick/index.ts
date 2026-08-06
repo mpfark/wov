@@ -1431,43 +1431,23 @@ Deno.serve(async (req) => {
         }
 
       } else if (
-        paMech === 'fireball' ||
         paMech === 'spell_attack' ||
-        paMech === 'weapon_attack' ||
-        paMech === 'power_strike' ||
-        paMech === 'aimed_shot' ||
-        paMech === 'backstab' ||
-        paMech === 'smite' ||
-        paMech === 'cutting_words'
+        paMech === 'weapon_attack'
       ) {
-        // T0 class identity abilities. Two damage paths:
-        //   • Physical (`weapon_attack`, plus the legacy per-class mechanics
-        //     power_strike / aimed_shot / backstab):
+        // T0 identity abilities, now exactly two reusable bases. Two damage paths:
+        //   • Physical (`weapon_attack`):
         //       damage = 1d{weaponDie} + statMod + (3 + statMod + floor(level/3))
         //     Weapon die / tier / rarity feed directly through the autoattack helper.
         //     Unarmed falls back to 1d4. A bow-flavored strike uses whatever main-hand
         //     is equipped (a non-bow still rolls its die — fantasy nudge, not a gate).
-        //   • Spell (`spell_attack`, plus legacy fireball / smite / cutting_words):
-        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
-        // Rolls to hit on the class stat (no crit roll on the d20).
+        //   • Spell (`spell_attack`):
+        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (stat-only)
+        // Rolls to hit on the configured stat (no crit roll on the d20).
         //
-        // Consolidation Phases 3-4: `weapon_attack` and `spell_attack` are each
-        // ONE reusable base ability. Their scaling attribute and their verbs come
-        // from configuration (the class assignment's `scaling.primary_attribute`
-        // and `combat_text`), never from a per-class branch here.
-        const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
-          fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
-          backstab: 'dex', smite: 'wis', cutting_words: 'cha',
-        };
-        const T0_LABEL: Record<string, { verb: string }> = {
-          fireball:      { verb: 'hurls a fireball at' },
-          power_strike:  { verb: 'delivers a crushing blow to' },
-          aimed_shot:    { verb: 'looses an aimed shot at' },
-          backstab:      { verb: 'backstabs' },
-          smite:         { verb: 'smites' },
-          cutting_words: { verb: 'mocks' },
-        };
-        const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
+        // Legacy retirement complete: the per-class mechanic keys (power_strike,
+        // aimed_shot, backstab, fireball, smite, cutting_words) and their hardcoded
+        // stat/verb tables are gone. Scaling attribute, verbs and full authored
+        // sentences all come from configuration — never from a class branch here.
         const t0Entry = auth.entry;
         const t0Text = (t0Entry?.combatText ?? {}) as Record<string, unknown>;
         const authoredVerb = (key: string): string | null => {
@@ -1490,37 +1470,31 @@ Deno.serve(async (req) => {
           return ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(candidate)
             ? candidate : fallback;
         };
-        const isConsolidated = paMech === 'weapon_attack' || paMech === 'spell_attack';
-        const stat = isConsolidated
-          ? configuredStat(paMech === 'spell_attack' ? 'wis' : 'str')
-          : T0_STAT[paMech];
+        const isPhysT0 = paMech === 'weapon_attack';
+        const stat = configuredStat(paMech === 'spell_attack' ? 'wis' : 'str');
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        const t0IdentityKey = t0Entry?.classAbilityKey || auth.abilityKey;
-        let verb = authoredVerb('hit_verb')
-          ?? T0_LABEL[paMech]?.verb
-          ?? 'strikes';
-        // Legacy fallback only: archived Templar rows shared the 'smite' handler
-        // with healers but flavor it as Judgment. Live rows author the verb.
-        if ((paMech === 'smite' || t0IdentityKey === 'judgment') && c.class === 'templar' && !authoredVerb('hit_verb')) {
-          verb = 'passes divine judgment upon';
-        }
+        const verb = authoredVerb('hit_verb') ?? 'strikes';
         const missVerb = authoredVerb('miss_verb') ?? verb;
-        const isPhysT0 = paMech === 'weapon_attack' || PHYSICAL_T0.has(paMech);
-        // Backstab keeps its possessive phrasing, resolved by identity now that
-        // the mechanic is shared.
-        const isBackstab = paMech === 'backstab' || t0IdentityKey === 'backstab';
 
         // Resolve main-hand weapon once so both damage and event share the same tag.
         const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
-        // Backstab reads better as a possessive sentence so the local "You"
-        // substitution conjugates naturally ("Your blade slips…"). The weapon
-        // tag suffix is omitted — the flavor already implies a blade strike.
-        const weaponSuffix = (t0Weapon && !isBackstab) ? tagSuffix(t0Weapon.tag) : '';
+        // Identities that read better as a full sentence (Backstab's possessive
+        // phrasing, for instance) author `hit_text` / `miss_text` instead of verbs.
+        // A fully authored line suppresses the weapon tag suffix — the flavor
+        // already implies the strike.
+        const hitTextTpl = authoredVerb('hit_text');
+        const missTextTpl = authoredVerb('miss_text');
+        const weaponSuffix = (t0Weapon && !hitTextTpl) ? tagSuffix(t0Weapon.tag) : '';
+        const fillT0 = (tpl: string, damage: number) => tpl
+          .replace(/\{caster\}/g, c.name)
+          .replace(/\{target\}/g, target.name)
+          .replace(/\{damage\}/g, String(damage))
+          .replace(/\{weapon\}/g, t0Weapon?.tag ?? '');
         const hit = rollAbilityHit(mod);
         if (!hit.hit) {
-          const missMsg = isBackstab
-            ? `${c.name}'s blade slips wide — ${target.name} is untouched.`
+          const missMsg = missTextTpl
+            ? fillT0(missTextTpl, 0)
             : `${c.name} ${missVerb} ${target.name} — misses!${weaponSuffix}`;
           pushAbilityEvent({
             type: 'ability_miss',
@@ -1541,12 +1515,7 @@ Deno.serve(async (req) => {
           ? paMagEx('amount', undefined, t0Weapon.die)
           : paMagEx('amount');
         let dmg = Math.max(1, Math.floor(t0Res.value));
-        // Templar Judgment: intentional ability-specific nerf. Post-cutover the
-        // ×0.8 lives inside Judgment's configured `finalMult`, so it is only
-        // applied here when the legacy closure produced the number.
-        if ((paMech === 'smite' || t0IdentityKey === 'judgment') && c.class === 'templar' && t0Res.source !== 'config') {
-          dmg = Math.max(1, Math.floor(dmg * 0.8));
-        }
+        // Judgment's ×0.8 nerf lives in its configured `finalMult` — no branch here.
 
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
@@ -1554,8 +1523,8 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
-        const hitMsg = isBackstab
-          ? `${c.name}'s blade finds a vital point on ${target.name} from behind. [${dmg}]`
+        const hitMsg = hitTextTpl
+          ? fillT0(hitTextTpl, dmg)
           : `${c.name} ${verb} ${target.name}. [${dmg}]${weaponSuffix}`;
         pushAbilityEvent({
           type: 'ability_hit',

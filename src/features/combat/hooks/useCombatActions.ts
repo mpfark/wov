@@ -297,7 +297,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const targetName = queueTargetId
         ? (p.creatures.find((c: any) => c.id === queueTargetId)?.name ?? null)
         : null;
-      const castFlavor = resolveCastFlavor(ability, p.character.class, targetName);
+      const castFlavor = resolveCastFlavor(ability, targetName);
       if (castFlavor) {
         p.addLogEvent(buildAbilityEvent(castFlavor, {
           abilityKey: ability.abilityKey,
