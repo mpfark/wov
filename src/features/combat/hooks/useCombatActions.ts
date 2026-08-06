@@ -34,6 +34,7 @@ import {
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
 import { getAuthoredCombatText, resolveCastFlavor } from '@/features/combat/utils/ability-text';
+import { LEGACY_AMBUSH_MULT } from '@/shared/config/mechanic-templates';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
 import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
