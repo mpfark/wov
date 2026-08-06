@@ -767,25 +767,53 @@ Deno.serve(async (req) => {
             ...(typeof authored.mitigate_text === 'string' ? { text: authored.mitigate_text } : {}),
           };
         }
-        if (reserved.holy_shield) {
-          // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
-          mb.holy_shield = { wis_mod: wisMod, con_mod: conMod, expires_at: farFuture };
+        // Consolidation Group G: ONE reactive-retaliation base. Any reserved
+        // stance whose mechanic is `reactive_holy` seeds the retaliation bag;
+        // which attribute is the magnitude core, which is the kicker
+        // (`effect_config.magnitude_stat` / `kicker_stat`) and the retaliation
+        // wording are configuration — Holy Shield is the Templar identity.
+        const statMod = (key: string) => {
+          const raw = (m.c as unknown as Record<string, number>)[key] ?? 10;
+          const bonus = ((eq[m.id] as any)?.[key] as number | undefined) ?? 0;
+          return Math.max(0, Math.floor((raw + bonus - 10) / 2));
+        };
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey ?? (stanceKey === 'holy_shield' ? 'reactive_holy' : '');
+          if (mech !== 'reactive_holy') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
+          const text = (entry?.combatText ?? {}) as Record<string, unknown>;
+          const magStat = typeof cfg.magnitude_stat === 'string' ? cfg.magnitude_stat : 'wis';
+          const kickStat = typeof cfg.kicker_stat === 'string' ? cfg.kicker_stat : 'con';
+          mb.holy_shield = {
+            ability_key: stanceKey,
+            magnitude_stat: magStat,
+            wis_mod: statMod(magStat),
+            con_mod: statMod(kickStat),
+            expires_at: farFuture,
+            ...(typeof text.retaliate_text === 'string' ? { text: text.retaliate_text } : {}),
+          };
         }
-        if (reserved.shield_wall) {
-          // Dual-primary (Templar WIS+CON): WIS → bonus block chance,
-          // CON → bonus block amount. Requires a shield equipped to actually
-          // benefit; the block step below reads both fields. Both are named
-          // mechanic values (block_chance / block_amount) resolved through the
-          // single funnel, with the coded helpers as the legacy fallback.
+        // Consolidation Group G: ONE reusable block-boost base. Any reserved
+        // stance whose mechanic is `block_buff` contributes bonus block chance
+        // and amount (named mechanic calcs `block_chance` / `block_amount`),
+        // with the final chance cap taken from `effect_config.block_chance_cap`.
+        for (const stanceKey of Object.keys(reserved)) {
+          const entry = getServerAbilityCalcs(m.c.class || '', stanceKey);
+          const mech = entry?.mechanicKey ?? (stanceKey === 'shield_wall' ? 'block_buff' : '');
+          if (mech !== 'block_buff') continue;
+          const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
           mb.shield_wall_stance = {
+            ability_key: stanceKey,
             chance_bonus: resolveMagnitude({
-              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              classKey: m.c.class || '', abilityKey: stanceKey, kind: 'mechanic',
               param: 'block_chance', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
             }),
             amount_bonus: resolveMagnitude({
-              classKey: m.c.class || 'templar', abilityKey: 'shield_wall', kind: 'mechanic',
+              classKey: m.c.class || '', abilityKey: stanceKey, kind: 'mechanic',
               param: 'block_amount', inputs: calcInputs, characterId: m.id, nodeId: combatNodeId,
             }),
+            chance_cap: typeof cfg.block_chance_cap === 'number' ? cfg.block_chance_cap : 0.95,
           };
         }
         if (reserved.force_shield) {
@@ -1193,26 +1221,32 @@ Deno.serve(async (req) => {
 
 
       if (paMech === 'multi_attack') {
-        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
-        // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
-        // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
-        // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
-        // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
-        // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
-        // If main-hand isn't a bow, falls back to the unarmed 1d4 die.
-        const effDex = (c.dex || 10) + (eb.dex || 0);
-        const effWis = (c.wis || 10) + (eb.wis || 0);
-        const dexMod = sm(effDex);
-        const wisMod = sm(effWis);
+        // Consolidation Group G: ONE reusable volley. The attribute that rolls
+        // to hit (`effect_config.attack_stat`), the arrow count
+        // (`mechanic_calcs.arrow_count`), the per-arrow magnitude
+        // (`amount_calc`, the FULL weapon-die + stat value) and every log line
+        // (`combat_text.cast_text` / `hit_text` / `miss_text`) are configuration
+        // — Barrage is just the Ranger identity of this base.
+        // Buff parity with autoattacks: respects crit / damage / stealth /
+        // disengage buffs, consumed once per volley (not per arrow).
+        const maCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+        const maText = (auth.entry?.combatText ?? {}) as Record<string, unknown>;
+        const maAuthored = (key: string): string | null => {
+          const raw = maText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const maStatKey = typeof maCfg.attack_stat === 'string' && maCfg.attack_stat.trim()
+          ? maCfg.attack_stat.trim() : 'dex';
+        const statValue = (key: string) =>
+          ((c as unknown as Record<string, number>)[key] ?? 10)
+          + ((eb as unknown as Record<string, number>)[key] ?? 0);
+        const attackMod = sm(statValue(maStatKey));
         // Named mechanic value: arrow_count (unit 'count').
         const arrowCount = paMag(
           'mechanic',
           'arrow_count',
         );
         const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
-        // Per-arrow damage is configured: barrage's `amount_calc` is the FULL
-        // per-arrow magnitude (weapon die + half DEX), rolled once per arrow.
-        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const rollArrow = () => paMagEx(
           'amount',
           undefined, arrowDie,
@@ -1227,12 +1261,23 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
-        pushAbilityEvent({ type: 'ability_cast', message: `${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
+        const renderVolley = (
+          tpl: string,
+          vars: { index?: number; target?: string; damage?: number },
+        ) => tpl
+          .replace(/\{caster\}/g, c.name)
+          .replace(/\{count\}/g, String(arrowCount))
+          .replace(/\{index\}/g, String(vars.index ?? 0))
+          .replace(/\{target\}/g, vars.target ?? 'the target')
+          .replace(/\{damage\}/g, String(vars.damage ?? 0));
+        const maCast = maAuthored('cast_text')
+          ?? `{caster} unleashes ${auth.entry?.label ?? 'a volley'} of {count} arrows!`;
+        pushAbilityEvent({ type: 'ability_cast', message: renderVolley(maCast, {}), character_id: member.id });
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
           const roll = rollD20();
-          const totalAtk = roll + dexMod;
+          const totalAtk = roll + attackMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(1, Math.floor(rollArrow()));
@@ -1246,7 +1291,10 @@ Deno.serve(async (req) => {
             cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
             pushAbilityEvent({
               type: 'attack_hit',
-              message: `Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
+              message: renderVolley(
+                maAuthored('hit_text') ?? 'Arrow {index}/{count} strikes {target}! [{damage}]',
+                { index: i + 1, target: t.name, damage: arrowDmg },
+              ),
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -1258,7 +1306,10 @@ Deno.serve(async (req) => {
           } else {
             pushAbilityEvent({
               type: 'attack_miss',
-              message: `Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
+              message: renderVolley(
+                maAuthored('miss_text') ?? 'Arrow {index}/{count} misses {target}.',
+                { index: i + 1, target: t.name },
+              ),
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -1516,38 +1567,71 @@ Deno.serve(async (req) => {
         }
 
       } else if (paMech === 'burst_damage') {
-        // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
-        // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
-        // Rolls to hit on CHA; crit edge applies only on a successful hit.
-        const effCha = (c.cha || 10) + (eb.cha || 0);
-        const effInt = (c.int || 10) + (eb.int || 0);
-        const chaMod = sm(effCha);
-        const intMod = sm(effInt);
-        const hit = rollAbilityHit(chaMod);
+        // Consolidation Group G: ONE reusable burst nuke. The attribute that
+        // rolls to hit and sizes the bonus die (`effect_config.stat`), the
+        // crit-edge knob (`mechanic_calcs.crit_edge`), the crit-threshold floor
+        // (`effect_config.crit_threshold_floor`) and the wording
+        // (`combat_text.hit_text` / `miss_text`) are configuration — Grand
+        // Finale is just the Bard identity of this base.
+        const bdCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+        const bdText = (auth.entry?.combatText ?? {}) as Record<string, unknown>;
+        const bdAuthored = (key: string): string | null => {
+          const raw = bdText[key];
+          return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+        };
+        const bdStatKey = typeof bdCfg.stat === 'string' && bdCfg.stat.trim()
+          ? bdCfg.stat.trim() : 'cha';
+        const bdLabel = auth.entry?.label ?? 'the burst';
+        const bdStatValue = ((c as unknown as Record<string, number>)[bdStatKey] ?? 10)
+          + ((eb as unknown as Record<string, number>)[bdStatKey] ?? 0);
+        const bdMod = sm(bdStatValue);
+        const renderBurst = (tpl: string, vars: { damage?: number; crit?: boolean }) => tpl
+          .replace(/\{caster\}/g, c.name)
+          .replace(/\{ability\}/g, bdLabel)
+          .replace(/\{target\}/g, target.name)
+          .replace(/\{damage\}/g, String(vars.damage ?? 0))
+          .replace(/\{crit\}/g, vars.crit ? ' CRIT!' : '');
+        const hit = rollAbilityHit(bdMod);
         if (!hit.hit) {
-          pushAbilityEvent({ type: 'ability_miss', message: `${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          pushAbilityEvent({
+            type: 'ability_miss',
+            message: renderBurst(
+              bdAuthored('miss_text') ?? "{caster}'s {ability} falls flat — {target} is untouched!",
+              {},
+            ),
+            character_id: member.id,
+          });
           continue;
         }
-        // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
-        // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
-        const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
+        // Soft-scaled magnitude (profile 'burst') — the base and the bonus die
+        // both taper past softCap. The crit-edge is a threshold, not a magnitude.
+        const effBurstMod = getEffectiveCombatMod(Math.max(0, bdMod), 'burst');
         const baseDmg = paMag('amount');
-        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
-        // INT crit-edge: named mechanic value (unit 'flat'), applied as a
-        // threshold reduction. d20 vs crit threshold. Floor 17.
+        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effBurstMod * 2)));
+        // Crit-edge: named mechanic value (unit 'flat'), applied as a threshold
+        // reduction against a d20, floored by configuration.
         const critRoll = rollD20();
         const critEdge = paMag('mechanic', 'crit_edge');
-        const critThreshold = Math.max(17, 20 - critEdge);
-        const isFinaleCrit = critRoll >= critThreshold;
-        if (isFinaleCrit) damage = damage * 2;
-        // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
+        const critFloor = typeof bdCfg.crit_threshold_floor === 'number'
+          ? bdCfg.crit_threshold_floor : 17;
+        const critThreshold = Math.max(critFloor, 20 - critEdge);
+        const isBurstCrit = critRoll >= critThreshold;
+        if (isBurstCrit) damage = damage * 2;
+        // Damage buffs (e.g. Arcane Surge) scale burst damage.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
-        const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
-        pushAbilityEvent({ type: 'ability_hit', message: `Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
+        pushAbilityEvent({
+          type: 'ability_hit',
+          message: renderBurst(
+            bdAuthored('hit_text')
+              ?? '{ability}!{crit} {caster} unleashes a devastating blast at {target}! [{damage}]',
+            { damage, crit: isBurstCrit },
+          ),
+          character_id: member.id,
+        });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, effCha, member.id);
+          handleCreatureKill(target, c.name, bdStatValue, member.id);
         }
       } else if (paMech === 'dot_debuff') {
         // Consolidation Group D: ONE reusable ticking damage debuff. The effect
@@ -1734,7 +1818,8 @@ Deno.serve(async (req) => {
           const bondM = mBondMult[targetId] ?? 1;
           let blockChance = getShieldBlockChance(effectiveDex);
           if (sw) {
-            blockChance = Math.min(0.95, blockChance + (sw.chance_bonus ?? 0));
+            // Final chance cap is configuration (`effect_config.block_chance_cap`).
+            blockChance = Math.min(sw.chance_cap ?? 0.95, blockChance + (sw.chance_bonus ?? 0));
           }
           if (Math.random() < blockChance) {
             const baseAmt = getShieldBlockAmount(effectiveStr);
@@ -1829,20 +1914,18 @@ Deno.serve(async (req) => {
 
         events.push(critEvent);
 
-        // ── Holy Shield (Templar) reactive retaliation ────────────
-        // After damage lands (even partial), holy aura strikes back at the
-        // attacker. Once per attacker per tick. Dual-primary (Templar WIS+CON):
-        // WIS is the magnitude core, CON is a durability kicker on the burn.
+        // ── Reactive retaliation stance (Group G) ─────────────────
+        // After damage lands (even partial), the reactive stance strikes back at
+        // the attacker, once per attacker per tick. The granting ability, its
+        // scaling attributes and the wording are all configuration — Holy Shield
+        // is the Templar identity of this one base.
         if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
-            // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
-            // WIS contribution is now reduced by 20% (CON/level portions remain unchanged).
-            const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
-            const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
+            const reactiveKey = mb.holy_shield.ability_key || 'holy_shield';
             const returnDmgBase = Math.max(1, resolveMagnitude({
-              classKey: targetC.class || 'templar', abilityKey: 'holy_shield', kind: 'mechanic',
+              classKey: targetC.class || '', abilityKey: reactiveKey, kind: 'mechanic',
               param: 'retaliation_damage',
               inputs: buildServerCalcInputs(targetC.level || 1, {
                 str: (targetC.str || 10) + (targetEq.str || 0), dex: (targetC.dex || 10) + (targetEq.dex || 0),
@@ -1853,9 +1936,15 @@ Deno.serve(async (req) => {
             }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
+            const retaliateTpl = typeof mb.holy_shield.text === 'string' && mb.holy_shield.text.trim()
+              ? mb.holy_shield.text.trim()
+              : "{caster}'s ward burns {target}! [{damage}]";
             events.push({
               type: 'holy_shield_return',
-              message: `${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
+              message: retaliateTpl
+                .replace(/\{caster\}/g, targetName)
+                .replace(/\{target\}/g, creature.name)
+                .replace(/\{damage\}/g, String(returnDmg)),
               character_id: targetId,
               creature_id: creature.id,
             });

@@ -347,7 +347,18 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (error) { p.addLogEvent(buildErrorEvent(`Failed to transfer health: ${error.message}`)); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
-      p.addLogEvent(buildHealEvent(`${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`));
+      // Consolidation Group G: the wording is authored on the ability row
+      // (`combat_text.transfer_text`), never hardcoded per class.
+      const transferTpl = getAuthoredCombatText(ability.abilityKey).transfer_text;
+      const transferLine = typeof transferTpl === 'string' && transferTpl.trim()
+        ? transferTpl.trim()
+        : '{caster} sacrifices life to heal {target}!';
+      p.addLogEvent(buildHealEvent(
+        `${transferLine
+          .replace(/\{caster\}/g, p.character.name)
+          .replace(/\{target\}/g, targetName)
+          .replace(/\{ability\}/g, ability.label)} [${restored ?? actualTransfer}]`,
+      ));
     } else if (ability.type === 'heal' || ability.type === 'self_heal') {
       // Consolidation Phase 4: Heal and Second Wind share the one `heal` base.
       // The wording comes from authored `combat_text` keyed by ability identity,
@@ -368,8 +379,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
       else p.addLogEvent(buildHealEvent(fullText));
     } else if (ability.type === 'regen_buff') {
-      // Inspire — additive flat HP/CP regen.
-      // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
+      // Consolidation Group G: ONE reusable additive HP/CP regen buff. The
+      // magnitudes come from `amount_calc` / `mechanic_calcs.cp_per_tick`, the
+      // duration from `duration_calc` and the wording from authored
+      // `combat_text` (`activate_text` / `renew_text`) — Inspire is the Bard
+      // identity of this base.
       // Recast policy: refresh the timer to the new duration; keep the
       // best-of HP/CP regen across the prior and new cast (never weakens an
       // active buff). Does not stack.
@@ -390,11 +404,19 @@ export function useCombatActions(params: UseCombatActionsParams) {
         casterId: p.character.id,
       });
       const durSec = Math.round(durationMs / 1000);
-      if (wasActive) {
-        p.addLogEvent(buildBuffEvent(`${p.character.name} renews the inspiring song! (${durSec}s remaining) [+${mergedHp}HP +${mergedCp}CP]`));
-      } else {
-        p.addLogEvent(buildBuffEvent(`${p.character.name} plays an inspiring song for ${durSec}s! [+${mergedHp}HP +${mergedCp}CP]`));
-      }
+      const regenText = getAuthoredCombatText(ability.abilityKey);
+      const regenTpl = regenText[wasActive ? 'renew_text' : 'activate_text'];
+      const regenLine = typeof regenTpl === 'string' && regenTpl.trim()
+        ? regenTpl.trim()
+        : wasActive
+          ? '{caster} renews {ability}! ({seconds}s remaining)'
+          : '{caster} sustains {ability} for {seconds}s!';
+      p.addLogEvent(buildBuffEvent(
+        `${regenLine
+          .replace(/\{caster\}/g, p.character.name)
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(durSec))} [+${mergedHp}HP +${mergedCp}CP]`,
+      ));
     } else if (ability.type === 'offense_buff' || ability.type === 'crit_buff' || ability.type === 'damage_buff') {
       // Consolidation Group F: ONE offensive self-buff. Whether it widens the
       // crit range or amplifies damage is configuration
@@ -427,13 +449,22 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildBuffEvent(line));
       }
     } else if (ability.type === 'stealth_buff') {
-      // Shadowstep (Assassin): dual-primary — duration scales with DEX, ambush mult with CHA flair.
+      // Consolidation Group G: ONE reusable stealth buff. Duration and ambush
+      // multiplier come from the configured calcs, wording from authored
+      // `combat_text.activate_text` — Shadowstep is the Assassin identity.
       const durationMs = durationOf();
       const ambushMult = amountOf();
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
-      p.addLogEvent(buildBuffEvent(`Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`));
-
-
+      const stealthTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const stealthLine = typeof stealthTpl === 'string' && stealthTpl.trim()
+        ? stealthTpl.trim()
+        : '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).';
+      p.addLogEvent(buildBuffEvent(
+        stealthLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000)))
+          .replace(/\{mult\}/g, ambushMult.toFixed(2)),
+      ));
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
@@ -441,12 +472,23 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use ${ability.label}!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for ${ability.label}.`)); return; }
-      // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
-      // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
+      // Consolidation Group G: the duration attribute is configuration on each
+      // ability row (Nature's Snare WIS, Dissonance INT) and the wording is
+      // authored `combat_text.activate_text` — no class branch here.
       const durationMs = durationOf();
       const reduction = amountOf();
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
-      p.addLogEvent(buildDebuffEvent(`${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`));
+      const rootTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const rootLine = typeof rootTpl === 'string' && rootTpl.trim()
+        ? rootTpl.trim()
+        : "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.";
+      p.addLogEvent(buildDebuffEvent(
+        rootLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{target\}/g, creature.name)
+          .replace(/\{pct\}/g, String(Math.round(reduction * 100)))
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000))),
+      ));
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Rend!`)); return; }
@@ -602,22 +644,46 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
-      // Soft-scaled utility magnitude: floor of 2, plus soft-scaled STR contribution.
+      // Consolidation Group G: magnitude and duration attributes are configured
+      // on the ability row; the wording is authored `combat_text.activate_text`.
       const acReduction = amountOf();
-
-      // Dual-primary split: AC reduction = STR (crushing blow), duration = DEX (precise targeting lingers).
       const sunderDurationMs = durationOf();
       const durationSec = Math.round(sunderDurationMs / 1000);
       p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + sunderDurationMs, creatureId: cTargetId, creatureName: creature.name } }));
-      p.addLogEvent(buildDebuffEvent(`Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`));
+      const sunderTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const sunderLine = typeof sunderTpl === 'string' && sunderTpl.trim()
+        ? sunderTpl.trim()
+        : "{ability}! {target}'s AC reduced by {amount} for {seconds}s.";
+      p.addLogEvent(buildDebuffEvent(
+        sunderLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{target\}/g, creature.name)
+          .replace(/\{amount\}/g, String(acReduction))
+          .replace(/\{seconds\}/g, String(durationSec)),
+      ));
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {
-      // Templar — Holy Shield: 30s reactive holy retaliation.
-      const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
+      // Consolidation Group G: timed (non-stance) variant of the reactive
+      // retaliation base. The magnitude attribute comes from
+      // `effect_config.magnitude_stat`; wording is authored.
+      const reactiveCfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const magStat = typeof reactiveCfg.magnitude_stat === 'string' && reactiveCfg.magnitude_stat.trim()
+        ? reactiveCfg.magnitude_stat.trim() : 'wis';
+      const statTotal = ((p.character as unknown as Record<string, number>)[magStat] ?? 10)
+        + (((p.equipmentBonuses as unknown as Record<string, number>)[magStat]) || 0);
+      const wisMod = Math.max(0, getStatModifier(statTotal));
       const durationMs = durationOf();
       p.buffSetters.setHolyShieldBuff({ wisMod, expiresAt: Date.now() + durationMs });
-      p.addLogEvent(buildBuffEvent(`Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`));
+      const reactiveTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
+      const reactiveLine = typeof reactiveTpl === 'string' && reactiveTpl.trim()
+        ? reactiveTpl.trim()
+        : '{ability}! Attackers will be burned in return for {seconds}s.';
+      p.addLogEvent(buildBuffEvent(
+        reactiveLine
+          .replace(/\{ability\}/g, ability.label)
+          .replace(/\{seconds\}/g, String(Math.round(durationMs / 1000))),
+      ));
     } else if (ability.type === 'block_buff') {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.

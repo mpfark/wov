@@ -250,7 +250,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'utility' } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'STR magnitude (AC reduction)' },
     duration_calc: { base: 12000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 20000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s AC reduced by {amount} for {seconds}s." },
     class_key: 'warrior', slot: 4,
   },
 
@@ -294,8 +294,8 @@ export const ABILITY_SEED: AbilitySeed[] = [
     class_key: 'wizard', slot: 2,
   },
   {
-    ability_key: 'ignite', label: 'Ignite', description: 'Stance. While in combat, an orb pulses each heartbeat at your target — proc chance and spark damage scale with INT, the applied burn DoT (stacks/duration) scales with WIS. Mutually exclusive with Envenom. Click again to drop.',
-    tooltip: 'Orbs strike your target and apply burn. Proc/spark scale with INT, burn with WIS. Stance.',
+    ability_key: 'ignite', label: 'Orbs of Fire', description: 'Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.',
+    tooltip: 'Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.',
     mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'fire',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.04, cap: 0.25 } })], floor: null, cap: null, unit: 'percent', note: 'INT orb proc chance per heartbeat' },
@@ -318,9 +318,10 @@ export const ABILITY_SEED: AbilitySeed[] = [
       stack_text: "{attacker}'s orb of fire seared {target} with Ignite.",
     },
     class_key: 'wizard', slot: 3,
+
   },
   {
-    ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Ignite.',
+    ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.',
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
     mechanic_key: 'stack_consume', base_ability_key: 'stack_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
@@ -379,11 +380,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
       rounding: 'none', floor: 1, cap: null, unit: 'hp', note: 'per-arrow damage: weapon die + half DEX',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG },
+    effect_config: { ...WEAPON_ATTACK_CONFIG, attack_stat: 'dex' },
     mechanic_calcs: {
       arrow_count: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count', note: 'DEX/WIS arrow ladder' },
     },
-    combat_text: {},
+    combat_text: {
+      cast_text: '{caster} unleashes Barrage of {count} arrows!',
+      hit_text: 'Arrow {index}/{count} strikes {target}! [{damage}]',
+      miss_text: 'Arrow {index}/{count} misses {target}.',
+    },
     class_key: 'ranger', slot: 2,
   },
   {
@@ -393,7 +398,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'WIS-scaled damage reduction (live formula uses the scaling stat)' },
     duration_calc: { base: 8000, terms: [stat('wis', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'WIS duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'ranger', slot: 3,
   },
   {
@@ -429,11 +434,11 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('cha', 0.05, { clampAtZero: true })], floor: null, cap: 2.5, unit: 'multiplier', note: 'CHA ambush multiplier' },
     duration_calc: { base: 15000, terms: [stat('dex', 1000)], cap: 25000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).' },
     class_key: 'assassin', slot: 1,
   },
   {
-    ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Ignite. Click again to drop.',
+    ability_key: 'envenom', label: 'Envenom', description: 'Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.',
     tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.',
     mechanic_key: 'stack_apply', base_ability_key: 'stack_apply', ability_type: 'buff', damage_type: 'poison',
     target_type: 'self', activation_mode: 'stance', cp_cost: 50, cp_reserve_pct: 0.20,
@@ -453,6 +458,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       activate_text: 'Envenom! Your weapons drip with poison for 5 minutes.',
       proc_text: "{attacker}'s attack poisons {target}!",
     },
+
     class_key: 'assassin', slot: 2,
   },
   {
@@ -538,7 +544,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_calcs: {
       reserve_hp: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' },
     },
-    combat_text: {},
+    combat_text: { transfer_text: '{caster} sacrifices life to heal {target}!' },
     class_key: 'healer', slot: 2,
   },
   {
@@ -597,7 +603,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     mechanic_calcs: {
       cp_per_tick: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' },
     },
-    combat_text: {},
+    combat_text: { activate_text: '{caster} plays an inspiring song for {seconds}s!', renew_text: '{caster} renews the inspiring song! ({seconds}s remaining)' },
     class_key: 'bard', slot: 1,
   },
   {
@@ -607,7 +613,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'scaling stat = INT for bards' },
     duration_calc: { base: 8000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'INT duration' },
-    interval_ms: null, effect_config: {}, combat_text: {},
+    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'bard', slot: 2,
   },
   {
@@ -640,7 +646,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       note: 'CHA burst base (the CHA-sided bonus die stays mechanic-owned)',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { stat: 'cha', crit_edge_stat: 'int', resolved_by: 'combat-tick' },
+    effect_config: { stat: 'cha', crit_edge_stat: 'int', crit_threshold_floor: 17, resolved_by: 'combat-tick' },
     mechanic_calcs: {
       crit_edge: {
         version: 2, base: 0,
@@ -648,7 +654,10 @@ export const ABILITY_SEED: AbilitySeed[] = [
         floor: null, cap: null, unit: 'flat', note: 'INT crit-threshold widening',
       },
     },
-    combat_text: {},
+    combat_text: {
+      hit_text: '{ability}!{crit} {caster} unleashes a devastating blast of sound at {target}! [{damage}]',
+      miss_text: "{caster}'s {ability} falls flat — {target} is untouched!",
+    },
     class_key: 'bard', slot: 4,
   },
 
@@ -684,7 +693,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
         note: 'WIS core (-20%) + CON kicker + level/4',
       },
     },
-    combat_text: {},
+    combat_text: { retaliate_text: "{caster}'s Holy Shield burns {target}! [{damage}]" },
     class_key: 'templar', slot: 1,
   },
   {
