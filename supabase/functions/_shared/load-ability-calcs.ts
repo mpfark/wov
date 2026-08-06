@@ -291,12 +291,22 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
         loadedAt = Date.now();
         return;
       }
-      const { data, error } = await db
-        .from('class_ability_assignments')
-        .select('class_key,class_ability_key,ability_id,role_id,is_default,status,unlock_level,overrides,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,label,description,tooltip,mechanic_key,status,cp_cost,damage_type,amount_calc,duration_calc,interval_ms,effect_config,mechanic_calcs,combat_text)');
+      const [{ data, error }, { data: statusRows }] = await Promise.all([
+        db
+          .from('class_ability_assignments')
+          .select('class_key,class_ability_key,ability_id,role_id,is_default,status,unlock_level,overrides,role:class_ability_roles(id,slot),ability:abilities(id,ability_key,label,description,tooltip,mechanic_key,ability_type,status,damage_type,combat_text,class_scale,primary_attribute,secondary_attribute,applied_status,on_hit_effect,base:base_abilities(base_key,mechanic_key,activation_mode,target_type,default_target_type,cp_cost,cp_reserve_pct,amount_calc,duration_calc,interval_ms,mechanic_calcs,effect_config,on_hit_allowed,supports_secondary_scaling))'),
+        db.from('applied_statuses').select('*'),
+      ]);
       if (error) throw error;
       if (data && data.length > 0) {
-        const result = setServerAbilityCalcs(data);
+        // Two-layer composition: base numbers + configured-use identity.
+        const statuses = indexAppliedStatuses(statusRows ?? []);
+        const composed = (data as any[]).map(row => (
+          row?.ability
+            ? { ...row, ability: { ...row.ability, ...composeAbilityRow(row.ability, row.ability.base, statuses) } }
+            : row
+        ));
+        const result = setServerAbilityCalcs(composed);
         if (result.applied) {
           loadedAt = Date.now();
         } else {
