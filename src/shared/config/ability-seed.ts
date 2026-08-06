@@ -246,11 +246,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'sunder_armor', label: 'Sunder Armor', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).",
     tooltip: "Reduce target's AC. Amount scales with STR, duration with DEX.",
-    mechanic_key: 'sunder_debuff', ability_type: 'debuff', damage_type: null,
+    mechanic_key: 'control_debuff', base_ability_key: 'control_debuff', ability_type: 'debuff', damage_type: null,
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('str', 1, { clampAtZero: true, transform: { kind: 'soft', profile: 'utility' } })], rounding: 'round', floor: null, cap: null, unit: 'flat', note: 'STR magnitude (AC reduction)' },
     duration_calc: { base: 12000, terms: [stat('dex', 1000, { clampAtZero: true })], cap: 20000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s AC reduced by {amount} for {seconds}s." },
+    interval_ms: null,
+    effect_config: { control_mode: 'ac_reduction', magnitude_stat: 'str', duration_stat: 'dex' },
+    combat_text: { activate_text: "{ability}! {target}'s AC reduced by {amount} for {seconds}s." },
     class_key: 'warrior', slot: 4,
   },
 
@@ -394,11 +396,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'natures_snare', label: "Nature's Snare", description: "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.",
     tooltip: "Reduce target's damage. Reduction scales with DEX, duration with WIS.",
-    mechanic_key: 'root_debuff', ability_type: 'debuff', damage_type: 'nature',
+    mechanic_key: 'control_debuff', base_ability_key: 'control_debuff', ability_type: 'debuff', damage_type: 'nature',
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('wis', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'WIS-scaled damage reduction (live formula uses the scaling stat)' },
     duration_calc: { base: 8000, terms: [stat('wis', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'WIS duration' },
-    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
+    interval_ms: null,
+    effect_config: { control_mode: 'damage_reduction', magnitude_stat: 'wis', duration_stat: 'wis' },
+    combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'ranger', slot: 3,
   },
   {
@@ -609,11 +613,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'dissonance', label: 'Dissonance', description: "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.",
     tooltip: "Reduce target's damage. Reduction scales with CHA, duration with INT.",
-    mechanic_key: 'root_debuff', ability_type: 'debuff', damage_type: 'psychic',
+    mechanic_key: 'control_debuff', base_ability_key: 'control_debuff', ability_type: 'debuff', damage_type: 'psychic',
     target_type: 'enemy', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'scaling stat = INT for bards' },
     duration_calc: { base: 8000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'INT duration' },
-    interval_ms: null, effect_config: {}, combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
+    interval_ms: null,
+    effect_config: { control_mode: 'damage_reduction', magnitude_stat: 'wis', duration_stat: 'wis' },
+    combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'bard', slot: 2,
   },
   {
