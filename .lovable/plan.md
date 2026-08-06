@@ -28,9 +28,9 @@ Corrections applied from review:
 | primary_attribute, secondary_attribute (only if base has a role-tagged term) | Configured use | substitutes the attribute, never the curve |
 | class_scale (numeric, default 1.0) | Configured use | the only magnitude control |
 | selected on-hit effect / applied status | Configured use | must be in the base's allowlist |
-| status behaviour: DoT/debuff class, tick interval, duration rules, stacking, max stacks, default damage type | Applied-status definition | reusable, shared by every ability that applies it |
+| status behaviour: DoT/debuff class, tick interval, duration rules, stacking, max stacks, default damage type — expressed with **named scaling roles**, not fixed attributes | Applied-status definition | reusable, shared by every ability that applies it |
 
-Runtime: `result = base calc (with the use's chosen attributes) × class_scale`. Class Config exposes no numeric editor.
+Runtime: `result = base calc (with the use's chosen attributes) × class_scale`. Class Config exposes no shared mechanical-number editors; `class_scale` remains the one normal editable numeric class-balancing control.
 
 ## effect_config decomposition
 
@@ -38,11 +38,36 @@ Runtime: `result = base calc (with the use's chosen attributes) × class_scale`.
 | --- | --- |
 | `resolved_by`, `control_mode`, `offense_mode`, `evasion_source`, `dodge_chance`, `next_hit_window_ms`, `requires_shield`, `block_chance_cap`, `damages_enemies`, `heals_allies`, `magnitude_reduction`, `consumes_all_cp`, `engages_target`, `trigger`, `refresh_policy`, `absorb_shield`, `reforms_out_of_combat`, `crit_threshold_floor`, `min_reserve_hp` | Base Ability `effect_config` |
 | `stat`, `magnitude_stat`, `duration_stat`, `regen_stat`, `chance_stat`, `amount_stat`, `crit_edge_stat`, `dot_stat` (as *which role*) | Configured use scaling attributes (role-tagged terms) |
-| `effect_type`, `stack_noun`, `dot_stat_mult`, `dot_global_mult`, `dot_duration_ms`, `dot_duration_stat`, `dot_duration_per_point_ms`, `dot_duration_cap_ms`, `max_stacks_calc`, `mutually_exclusive_with` | Applied-status definition (`poison`, `ignite`, `bleed`, `frozen`) |
+| `effect_type`, `stack_noun`, `dot_stat_mult`, `dot_global_mult`, `dot_duration_ms`, `dot_duration_per_point_ms`, `dot_duration_cap_ms`, `max_stacks_calc`, `mutually_exclusive_with` | Applied-status definition (`poison`, `ignite`, `bleed`, `frozen`) |
 | `on_hit_allowed` | deleted from `abilities`; base only |
 | `pulse_damage_base`, `pulse_damage_stat` | Base (cadence/base) + configured use (attribute) |
 
-Poison and Ignite each keep their own current status numbers verbatim (Poison: DEX-scaled, ×1.2, 25 000 ms, CHA max-stack calc; Ignite: WIS-scaled, ×0.7, 30 000 ms base / 45 000 cap, +1 000 ms per WIS point). Sharing `stack_apply` runtime never makes them share numbers.
+### Applied statuses use scaling roles, not fixed attributes
+
+An applied-status definition owns formulas, intervals, duration rules and stack behaviour, but declares its attribute dependencies as **named roles** (e.g. `dot_magnitude_role`, `dot_duration_role`, `max_stacks_role`). The configured use maps each role to its own primary or secondary attribute. A future second source of Ignite can therefore scale its burn from a different attribute without duplicating the Ignite status.
+
+Current live mappings, preserved exactly:
+
+| Status | Numbers (status-owned) | Roles → attributes, per configured use |
+| --- | --- | --- |
+| Poison | ×1.2 magnitude mult, 25 000 ms duration, CHA-shaped max-stack calc, tick cadence unchanged | Envenom: magnitude → DEX (primary), max stacks → CHA (secondary) |
+| Ignite | ×0.7 stat mult, ×0.67 global mult, 30 000 ms base / 45 000 ms cap, +1 000 ms per point, max stacks 5 flat | Orbs of Fire: burn magnitude → WIS (secondary), burn duration → WIS (secondary) |
+
+Sharing `stack_apply` runtime never makes Poison and Ignite share numbers.
+
+### Orbs of Fire scaling, in full
+
+Its configured use must map both attributes exactly as they behave today:
+
+| Quantity | Owner | Attribute role → attribute |
+| --- | --- | --- |
+| orb proc chance (0.25 base, +0.04/pt diminishing, cap 0.25) | Base `orb_stance` | primary → INT |
+| orb (spark) damage (`pulse_damage_base` 2 + stat) | Base `orb_stance` | primary → INT |
+| pulse cadence (per heartbeat), stance CP reservation, mutual exclusivity | Base `orb_stance` | — |
+| Ignite burn damage per tick (×0.7 / ×0.67) | Ignite status | magnitude role → WIS |
+| Ignite duration (30 000 base, +1 000/pt, 45 000 cap) | Ignite status | duration role → WIS |
+| Ignite max stacks (5) | Ignite status | flat, no attribute |
+
 
 ## Complete mapping of all 36 configured uses
 
@@ -84,8 +109,8 @@ CP, calc and timing below are the *current live* values and become the values of
 | healer | 3 | Transfer Health | hp_transfer | 25 | 2×WIS | — | — | WIS / CON | 1.00 |
 | bard | 2 | Inspire | regen_buff | 15 | 2 + CHA per tick, floor 2 | 60 000 / cap 180 000 (+8 000/pt) | — | CHA / INT | 1.00 |
 | assassin | 2 | Shadowstep | stealth_buff | 15 | 2 + 0.05×CHA, cap 2.5 | 15 000 / cap 25 000 | — | CHA / DEX | 1.00 |
-| assassin | 3 | Envenom | on_hit_stance | 50 | 0.25 + DEX proc chance; max stacks CHA | applies **Poison** status | poison (via status) | DEX | 1.00 |
-| wizard | 4 | Orbs of Fire | orb_stance | 50 | 0.25 + INT proc chance; pulse base 2 + INT | own pulse cadence; applies **Ignite** status | fire | INT | 1.00 |
+| assassin | 3 | Envenom | on_hit_stance | 50 | 0.25 + DEX proc chance; Poison max stacks from CHA | applies **Poison** status | poison (via status) | DEX / CHA | 1.00 |
+| wizard | 4 | Orbs of Fire | orb_stance | 50 | 0.25 + INT proc chance; pulse base 2 + INT | own pulse cadence; applies **Ignite** status (burn damage + duration from WIS) | fire | INT / WIS | 1.00 |
 
 Shared ability row currently spanning three classes: `weapon_attack` (warrior / assassin / ranger). It is split into three configured-use rows (Power Strike, Backstab, Aimed Shot) carrying today's override identity, then `class_ability_assignments.ability_id` and `character_ability_loadout.ability_id` are repointed inside the same migration. After that a unique constraint enforces one class assignment per configured use.
 
@@ -120,7 +145,7 @@ Merge candidates for a **later, separately approved** balance pass (not part of 
 | --- | --- | --- |
 | Optional On-Hit Effect (rider) | base declares support + allowed types + which params are configurable; configured use stores the single selected effect key and its flavour | rolled after that ability's own hit resolves |
 | On-Hit Stance (Envenom) | own base `on_hit_stance`, trigger `on_hit`, self activation, CP reservation; configured use picks applied status = Poison (enemy) | stance persists; subsequent weapon hits roll the stance proc |
-| Automatic Attack Stance (Orbs of Fire) | own base `orb_stance`, trigger `pulse`, self activation, own cadence; configured use picks applied status = Ignite (enemy), damage type Fire, INT | stance pulses its own attacks each heartbeat; each landed orb applies/stacks Ignite |
+| Automatic Attack Stance (Orbs of Fire) | own base `orb_stance`, trigger `pulse`, self activation, own cadence; configured use picks applied status = Ignite (enemy), damage type Fire, primary INT (proc chance + orb damage), secondary WIS (Ignite magnitude + duration roles) | stance pulses its own attacks each heartbeat; each landed orb applies/stacks Ignite |
 
 Ignite and Poison are enemy-side DoTs defined once in the applied-status layer, never player-selectable abilities.
 
@@ -133,6 +158,10 @@ Ignite and Poison are enemy-side DoTs defined once in the applied-status layer, 
 5. Split the shared `weapon_attack` ability row into three; repoint assignments and loadouts; add the one-assignment-per-ability unique constraint.
 6. Drop the `on_hit_allowed` mirror on `abilities` and the two sync triggers.
 7. Only after runtime + admin read the new source and parity tests pass: drop `abilities.cp_cost`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `target_type`, and shrink `class_ability_assignments.overrides` to nothing (column kept nullable for archive).
+
+### Final fate of `abilities.effect_config`
+
+Once every runtime mechanic knob, status behaviour block and On-Hit permission has moved to `base_abilities.effect_config` and `applied_statuses`, `abilities.effect_config` must no longer be read or written by the runtime (`combat-tick`, `combat-catchup`, resolvers, shared config mirrors) or by any admin component. The preferred end state is dropping the column in the final cleanup step of this migration, once parity tests are green and a grep confirms zero readers/writers. If any residual reader is found that cannot be migrated in this pass, the column is retained **only** as a deprecated archive field: made nullable with a `-- DEPRECATED: archive only, no readers` comment, excluded from all admin forms and select lists, and paired with a named follow-up removal migration recorded here (`drop_abilities_effect_config`). No new code may read it in either case.
 
 Untouched: `class_ability_roles`, `character_ability_loadout` shape, `characters`, `character_class_bonds`, combat/session/encounter tables, combat-tick mechanic implementations, kill/reward resolvers.
 
@@ -153,5 +182,8 @@ Untouched: `class_ability_roles`, `character_ability_loadout` shape, `characters
 - Class Config and assignment writes cannot alter CP, calcs, timing, targeting or duration.
 - Wizard keeps Fireball and Frost Bolt in slot 1 as loadout alternatives; damage type stays per use.
 - Envenom: self stance → Poison on enemy. Orbs of Fire: own pulses → Ignite on enemy. Ignite never listed as a player ability.
+- Orbs of Fire dual-attribute parity: with INT and WIS varied **independently** (e.g. INT 20/WIS 8 and INT 8/WIS 20 across several levels), assert separately that orb damage and orb proc chance track INT only, that Ignite damage per tick and Ignite duration track WIS only, and that Ignite max stacks stays 5 — each equal to the pre-migration value.
+- Envenom dual-attribute parity: proc chance tracks DEX only, Poison max stacks tracks CHA only.
+- No reader or writer of `abilities.effect_config` remains in runtime or admin code.
 - Assignment and loadout row counts unchanged; every configured use has exactly one class/slot.
 - Admin shell and responsive layout unchanged.
