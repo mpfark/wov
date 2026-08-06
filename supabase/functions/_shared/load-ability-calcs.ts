@@ -27,6 +27,7 @@ import { ABILITY_SEED, ABILITY_ROLE_SEED } from './config/ability-seed.ts';
 import { validateAbilityForPublish } from './config/mechanic-templates.ts';
 import { normalizeDamageType } from './combat/damage-types.ts';
 import { applyAssignmentOverrides } from './config/effective-ability.ts';
+import { composeAbilityRow, indexAppliedStatuses } from './config/compose-ability.ts';
 import { getClassScaling } from './formulas/classes.ts';
 import { type OnHitEffectConfig } from './combat/on-hit-effects.ts';
 
