@@ -1249,7 +1249,7 @@ Deno.serve(async (req) => {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
           const roll = rollD20();
-          const totalAtk = roll + dexMod;
+          const totalAtk = roll + attackMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(1, Math.floor(rollArrow()));
@@ -1263,7 +1263,10 @@ Deno.serve(async (req) => {
             cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
             pushAbilityEvent({
               type: 'attack_hit',
-              message: `Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
+              message: renderVolley(
+                maAuthored('hit_text') ?? 'Arrow {index}/{count} strikes {target}! [{damage}]',
+                { index: i + 1, target: t.name, damage: arrowDmg },
+              ),
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -1275,7 +1278,10 @@ Deno.serve(async (req) => {
           } else {
             pushAbilityEvent({
               type: 'attack_miss',
-              message: `Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
+              message: renderVolley(
+                maAuthored('miss_text') ?? 'Arrow {index}/{count} misses {target}.',
+                { index: i + 1, target: t.name },
+              ),
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
