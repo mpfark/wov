@@ -1818,7 +1818,8 @@ Deno.serve(async (req) => {
           const bondM = mBondMult[targetId] ?? 1;
           let blockChance = getShieldBlockChance(effectiveDex);
           if (sw) {
-            blockChance = Math.min(0.95, blockChance + (sw.chance_bonus ?? 0));
+            // Final chance cap is configuration (`effect_config.block_chance_cap`).
+            blockChance = Math.min(sw.chance_cap ?? 0.95, blockChance + (sw.chance_bonus ?? 0));
           }
           if (Math.random() < blockChance) {
             const baseAmt = getShieldBlockAmount(effectiveStr);
