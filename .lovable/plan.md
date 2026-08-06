@@ -28,9 +28,9 @@ Corrections applied from review:
 | primary_attribute, secondary_attribute (only if base has a role-tagged term) | Configured use | substitutes the attribute, never the curve |
 | class_scale (numeric, default 1.0) | Configured use | the only magnitude control |
 | selected on-hit effect / applied status | Configured use | must be in the base's allowlist |
-| status behaviour: DoT/debuff class, tick interval, duration rules, stacking, max stacks, default damage type | Applied-status definition | reusable, shared by every ability that applies it |
+| status behaviour: DoT/debuff class, tick interval, duration rules, stacking, max stacks, default damage type — expressed with **named scaling roles**, not fixed attributes | Applied-status definition | reusable, shared by every ability that applies it |
 
-Runtime: `result = base calc (with the use's chosen attributes) × class_scale`. Class Config exposes no numeric editor.
+Runtime: `result = base calc (with the use's chosen attributes) × class_scale`. Class Config exposes no shared mechanical-number editors; `class_scale` remains the one normal editable numeric class-balancing control.
 
 ## effect_config decomposition
 
@@ -38,11 +38,36 @@ Runtime: `result = base calc (with the use's chosen attributes) × class_scale`.
 | --- | --- |
 | `resolved_by`, `control_mode`, `offense_mode`, `evasion_source`, `dodge_chance`, `next_hit_window_ms`, `requires_shield`, `block_chance_cap`, `damages_enemies`, `heals_allies`, `magnitude_reduction`, `consumes_all_cp`, `engages_target`, `trigger`, `refresh_policy`, `absorb_shield`, `reforms_out_of_combat`, `crit_threshold_floor`, `min_reserve_hp` | Base Ability `effect_config` |
 | `stat`, `magnitude_stat`, `duration_stat`, `regen_stat`, `chance_stat`, `amount_stat`, `crit_edge_stat`, `dot_stat` (as *which role*) | Configured use scaling attributes (role-tagged terms) |
-| `effect_type`, `stack_noun`, `dot_stat_mult`, `dot_global_mult`, `dot_duration_ms`, `dot_duration_stat`, `dot_duration_per_point_ms`, `dot_duration_cap_ms`, `max_stacks_calc`, `mutually_exclusive_with` | Applied-status definition (`poison`, `ignite`, `bleed`, `frozen`) |
+| `effect_type`, `stack_noun`, `dot_stat_mult`, `dot_global_mult`, `dot_duration_ms`, `dot_duration_per_point_ms`, `dot_duration_cap_ms`, `max_stacks_calc`, `mutually_exclusive_with` | Applied-status definition (`poison`, `ignite`, `bleed`, `frozen`) |
 | `on_hit_allowed` | deleted from `abilities`; base only |
 | `pulse_damage_base`, `pulse_damage_stat` | Base (cadence/base) + configured use (attribute) |
 
-Poison and Ignite each keep their own current status numbers verbatim (Poison: DEX-scaled, ×1.2, 25 000 ms, CHA max-stack calc; Ignite: WIS-scaled, ×0.7, 30 000 ms base / 45 000 cap, +1 000 ms per WIS point). Sharing `stack_apply` runtime never makes them share numbers.
+### Applied statuses use scaling roles, not fixed attributes
+
+An applied-status definition owns formulas, intervals, duration rules and stack behaviour, but declares its attribute dependencies as **named roles** (e.g. `dot_magnitude_role`, `dot_duration_role`, `max_stacks_role`). The configured use maps each role to its own primary or secondary attribute. A future second source of Ignite can therefore scale its burn from a different attribute without duplicating the Ignite status.
+
+Current live mappings, preserved exactly:
+
+| Status | Numbers (status-owned) | Roles → attributes, per configured use |
+| --- | --- | --- |
+| Poison | ×1.2 magnitude mult, 25 000 ms duration, CHA-shaped max-stack calc, tick cadence unchanged | Envenom: magnitude → DEX (primary), max stacks → CHA (secondary) |
+| Ignite | ×0.7 stat mult, ×0.67 global mult, 30 000 ms base / 45 000 ms cap, +1 000 ms per point, max stacks 5 flat | Orbs of Fire: burn magnitude → WIS (secondary), burn duration → WIS (secondary) |
+
+Sharing `stack_apply` runtime never makes Poison and Ignite share numbers.
+
+### Orbs of Fire scaling, in full
+
+Its configured use must map both attributes exactly as they behave today:
+
+| Quantity | Owner | Attribute role → attribute |
+| --- | --- | --- |
+| orb proc chance (0.25 base, +0.04/pt diminishing, cap 0.25) | Base `orb_stance` | primary → INT |
+| orb (spark) damage (`pulse_damage_base` 2 + stat) | Base `orb_stance` | primary → INT |
+| pulse cadence (per heartbeat), stance CP reservation, mutual exclusivity | Base `orb_stance` | — |
+| Ignite burn damage per tick (×0.7 / ×0.67) | Ignite status | magnitude role → WIS |
+| Ignite duration (30 000 base, +1 000/pt, 45 000 cap) | Ignite status | duration role → WIS |
+| Ignite max stacks (5) | Ignite status | flat, no attribute |
+
 
 ## Complete mapping of all 36 configured uses
 
