@@ -84,7 +84,13 @@ interface UsageRow {
   role_name: string;
   is_default: boolean;
   status: string;
+  /** Per-class identity key (falls back to the base key when unset). */
+  class_ability_key: string | null;
+  unlock_level: number | null;
+  /** Validated per-class override payload, authored in Class Config. */
+  overrides: Record<string, unknown>;
 }
+
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 const STATUS_FILTERS = ['all', ...ABILITY_STATUSES] as const;
