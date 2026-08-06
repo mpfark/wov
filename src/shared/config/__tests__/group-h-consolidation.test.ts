@@ -7,11 +7,11 @@
  * never a coded mechanic key per class.
  */
 import { describe, it, expect } from 'vitest';
-import { ABILITY_SEEDS } from '../ability-seed';
+import { ABILITY_SEED } from '../ability-seed';
 import { getMechanicTemplate, MECHANIC_TEMPLATES } from '../mechanic-templates';
 
 const seed = (key: string) => {
-  const row = ABILITY_SEEDS.find(a => a.ability_key === key);
+  const row = ABILITY_SEED.find(a => a.ability_key === key);
   if (!row) throw new Error(`missing ability seed "${key}"`);
   return row;
 };
