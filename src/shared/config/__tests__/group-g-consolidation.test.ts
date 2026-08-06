@@ -5,11 +5,11 @@
  * know a class name.
  */
 import { describe, it, expect } from 'vitest';
-import { ABILITY_SEEDS } from '@/shared/config/ability-seed';
+import { ABILITY_SEED } from '@/shared/config/ability-seed';
 import { getMechanicTemplate } from '@/shared/config/mechanic-templates';
 
 const seed = (key: string) => {
-  const row = ABILITY_SEEDS.find(a => a.ability_key === key);
+  const row = ABILITY_SEED.find(a => a.ability_key === key);
   if (!row) throw new Error(`missing seed ${key}`);
   return row;
 };
