@@ -618,7 +618,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     amount_calc: { base: 0.25, terms: [stat('int', 1, { clampAtZero: true, transform: { kind: 'diminishing_float', perPoint: 0.02, cap: 0.15 } })], floor: null, cap: null, unit: 'percent', note: 'scaling stat = INT for bards' },
     duration_calc: { base: 8000, terms: [stat('int', 1000, { clampAtZero: true })], cap: 15000, unit: 'ms', note: 'INT duration' },
     interval_ms: null,
-    effect_config: { control_mode: 'damage_reduction', magnitude_stat: 'wis', duration_stat: 'wis' },
+    effect_config: { control_mode: 'damage_reduction', magnitude_stat: 'int', duration_stat: 'int' },
     combat_text: { activate_text: "{ability}! {target}'s damage reduced by {pct}% for {seconds}s." },
     class_key: 'bard', slot: 2,
   },
