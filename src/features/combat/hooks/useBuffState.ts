@@ -9,6 +9,7 @@
  */
 import { useState, useCallback } from 'react';
 import { getStatModifier } from '@/lib/game-data';
+import { LEGACY_AMBUSH_MULT } from '@/shared/config/mechanic-templates';
 import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServerEffectsToBuffState';
 import type {
   FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
@@ -183,7 +184,7 @@ export function useBuffState(params: UseBuffStateParams) {
     const now = Date.now();
     const buffs: Record<string, any> = {};
     if (critBuff && now < critBuff.expiresAt) buffs.crit_buff = { bonus: critBuff.bonus };
-    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = { mult: stealthBuff.mult ?? 2 };
+    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = { mult: stealthBuff.mult ?? LEGACY_AMBUSH_MULT };
     // Consolidated `offense_buff` (damage_mult mode): send the granting ability
     // key so the server resolves the multiplier from that ability's calc.
     if (damageBuff && now < damageBuff.expiresAt) {

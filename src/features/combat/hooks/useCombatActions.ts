@@ -34,6 +34,7 @@ import {
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
 import { getAuthoredCombatText, resolveCastFlavor } from '@/features/combat/utils/ability-text';
+import { LEGACY_AMBUSH_MULT } from '@/shared/config/mechanic-templates';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTauntEvent } from '@/features/combat/events/threat-event-builder';
 import { buildAbilityEvent, buildBuffEvent, buildDebuffEvent, buildErrorEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
@@ -328,17 +329,34 @@ export function useCombatActions(params: UseCombatActionsParams) {
 
     // ── Ability type switch ──
     if (ability.type === 'hp_transfer') {
+      // Consolidation Group I: ONE reusable life-sacrifice heal. The sacrificed
+      // amount is `amount_calc`, the safety floor the named `reserve_hp` calc
+      // (never below `effect_config.min_reserve_hp`), and both lines are
+      // authored — Transfer Health is the Healer identity of this base.
       if (!targetId || targetId === p.character.id) {
         p.addLogEvent(buildHealEvent(`You must target an ally to transfer health.`));
         return;
       }
+      const transferCfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const minReserve = typeof transferCfg.min_reserve_hp === 'number'
+        ? Math.max(0, Math.floor(transferCfg.min_reserve_hp))
+        : 1;
       const transferAmount = amountOf();
-      // Dual-primary split: amount = WIS, safety floor scales with CON (hardy
-      // healers can safely sacrifice deeper without dropping themselves dangerously low).
-      // The floor is the configured `reserve_hp` mechanic calc.
-      const reserveHp = Math.max(1, Math.floor(mechanicOf('reserve_hp', 1)));
+      const reserveHp = Math.max(minReserve, Math.floor(mechanicOf('reserve_hp', minReserve)));
       const maxTransfer = p.character.hp - reserveHp;
-      if (maxTransfer <= 0) { p.addLogEvent(buildErrorEvent(`You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`)); return; }
+      const transferText = getAuthoredCombatText(ability.abilityKey);
+      if (maxTransfer <= 0) {
+        const noHpTpl = transferText.no_hp_text;
+        const noHpLine = typeof noHpTpl === 'string' && noHpTpl.trim()
+          ? noHpTpl.trim()
+          : "You don't have enough HP to transfer! (need to keep {reserve} HP)";
+        p.addLogEvent(buildErrorEvent(
+          noHpLine
+            .replace(/\{ability\}/g, ability.label)
+            .replace(/\{reserve\}/g, String(reserveHp)),
+        ));
+        return;
+      }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
       await p.updateCharacter({ hp: p.character.hp - actualTransfer });
       const { data: restored, error } = await supabase.rpc('heal_party_member', {
@@ -347,9 +365,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (error) { p.addLogEvent(buildErrorEvent(`Failed to transfer health: ${error.message}`)); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
-      // Consolidation Group G: the wording is authored on the ability row
-      // (`combat_text.transfer_text`), never hardcoded per class.
-      const transferTpl = getAuthoredCombatText(ability.abilityKey).transfer_text;
+      // The wording is authored on the ability row (`combat_text.transfer_text`),
+      // never hardcoded per class.
+      const transferTpl = transferText.transfer_text;
       const transferLine = typeof transferTpl === 'string' && transferTpl.trim()
         ? transferTpl.trim()
         : '{caster} sacrifices life to heal {target}!';
@@ -359,6 +377,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
           .replace(/\{target\}/g, targetName)
           .replace(/\{ability\}/g, ability.label)} [${restored ?? actualTransfer}]`,
       ));
+
     } else if (ability.type === 'heal' || ability.type === 'self_heal') {
       // Consolidation Phase 4: Heal and Second Wind share the one `heal` base.
       // The wording comes from authored `combat_text` keyed by ability identity,
@@ -379,23 +398,31 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
       else p.addLogEvent(buildHealEvent(fullText));
     } else if (ability.type === 'regen_buff') {
-      // Consolidation Group G: ONE reusable additive HP/CP regen buff. The
+      // Consolidation Group I: ONE reusable additive HP/CP regen buff. The
       // magnitudes come from `amount_calc` / `mechanic_calcs.cp_per_tick`, the
-      // duration from `duration_calc` and the wording from authored
+      // duration from `duration_calc`, how a recast merges with a live buff from
+      // `effect_config.refresh_policy` and the wording from authored
       // `combat_text` (`activate_text` / `renew_text`) — Inspire is the Bard
       // identity of this base.
-      // Recast policy: refresh the timer to the new duration; keep the
-      // best-of HP/CP regen across the prior and new cast (never weakens an
-      // active buff). Does not stack.
+      const regenCfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const minCp = typeof regenCfg.min_cp_per_tick === 'number'
+        ? Math.max(0, Math.floor(regenCfg.min_cp_per_tick))
+        : 1;
+      // 'best_of' never weakens a live buff; 'replace' always takes the new cast.
+      const refreshPolicy = typeof regenCfg.refresh_policy === 'string' && regenCfg.refresh_policy.trim()
+        ? regenCfg.refresh_policy.trim()
+        : 'best_of';
       const newHp = amountOf();
       // CP regen per tick is the configured `cp_per_tick` mechanic calc.
-      const newCp = Math.max(1, Math.ceil(mechanicOf('cp_per_tick', 1)));
+      const newCp = Math.max(minCp, Math.ceil(mechanicOf('cp_per_tick', minCp)));
       const durationMs = durationOf();
       const now = Date.now();
       const prev = p.buffState.inspireBuff;
       const wasActive = !!(prev && prev.expiresAt > now);
-      const mergedHp = wasActive ? Math.max(prev!.hpPerTick, newHp) : newHp;
-      const mergedCp = wasActive ? Math.max(prev!.cpPerTick, newCp) : newCp;
+      const keepBest = wasActive && refreshPolicy === 'best_of';
+      const mergedHp = keepBest ? Math.max(prev!.hpPerTick, newHp) : newHp;
+      const mergedCp = keepBest ? Math.max(prev!.cpPerTick, newCp) : newCp;
+
       p.buffSetters.setInspireBuff({
         hpPerTick: mergedHp,
         cpPerTick: mergedCp,
@@ -449,12 +476,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLogEvent(buildBuffEvent(line));
       }
     } else if (ability.type === 'stealth_buff') {
-      // Consolidation Group G: ONE reusable stealth buff. Duration and ambush
-      // multiplier come from the configured calcs, wording from authored
+      // Consolidation Group I: ONE reusable stealth buff. Duration and ambush
+      // multiplier come from the configured calcs (attributes documented in
+      // `effect_config.ambush_stat` / `duration_stat`), the wording from authored
       // `combat_text.activate_text` — Shadowstep is the Assassin identity.
       const durationMs = durationOf();
-      const ambushMult = amountOf();
+      const ambushMult = Math.max(1, amountOf() || LEGACY_AMBUSH_MULT);
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
+
       const stealthTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
       const stealthLine = typeof stealthTpl === 'string' && stealthTpl.trim()
         ? stealthTpl.trim()

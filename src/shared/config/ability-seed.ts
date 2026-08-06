@@ -438,7 +438,9 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'self', activation_mode: 'instant', cp_cost: 15, cp_reserve_pct: null,
     amount_calc: { base: 2, terms: [stat('cha', 0.05, { clampAtZero: true })], floor: null, cap: 2.5, unit: 'multiplier', note: 'CHA ambush multiplier' },
     duration_calc: { base: 15000, terms: [stat('dex', 1000)], cap: 25000, unit: 'ms', note: 'DEX duration' },
-    interval_ms: null, effect_config: {}, combat_text: { activate_text: '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).' },
+    interval_ms: null,
+    effect_config: { ambush_stat: 'cha', duration_stat: 'dex', consumed_on_attack: true },
+    combat_text: { activate_text: '{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).' },
     class_key: 'assassin', slot: 1,
   },
   {
@@ -544,11 +546,14 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'ally', activation_mode: 'instant', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: { base: 0, terms: [stat('wis', 2), { source: 'level', mult: 0.5, rounding: 'floor' }], floor: 3, cap: null, unit: 'hp', note: 'WIS magnitude' },
     duration_calc: null, interval_ms: null,
-    effect_config: {},
+    effect_config: { magnitude_stat: 'wis', reserve_stat: 'con', min_reserve_hp: 1 },
     mechanic_calcs: {
       reserve_hp: { base: 0, terms: [{ source: 'stat', stat: 'con' }], floor: 1, unit: 'hp', note: 'CON safety floor' },
     },
-    combat_text: { transfer_text: '{caster} sacrifices life to heal {target}!' },
+    combat_text: {
+      transfer_text: '{caster} sacrifices life to heal {target}!',
+      no_hp_text: "You don't have enough HP to transfer! (need to keep {reserve} HP)",
+    },
     class_key: 'healer', slot: 2,
   },
   {
@@ -603,7 +608,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     amount_calc: { base: 2, terms: [stat('cha', 1, { clampAtZero: true })], floor: 2, cap: null, unit: 'hp', note: 'CHA HP regen per tick' },
     duration_calc: { base: 60000, terms: [stat('int', 8000, { clampAtZero: true })], floor: 60000, cap: 180000, unit: 'ms', note: 'INT duration' },
     interval_ms: null,
-    effect_config: { refresh_policy: 'best_of' },
+    effect_config: { refresh_policy: 'best_of', hp_stat: 'cha', cp_stat: 'cha', duration_stat: 'int', min_cp_per_tick: 1 },
     mechanic_calcs: {
       cp_per_tick: { base: 1, terms: [{ source: 'stat', stat: 'cha', mult: 0.5, clampAtZero: true, rounding: 'ceil' }], floor: 1, unit: 'flat', note: 'CHA CP regen per tick' },
     },

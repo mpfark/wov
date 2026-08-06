@@ -38,6 +38,7 @@ import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
 import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/resolution.ts";
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
+import { LEGACY_AMBUSH_MULT } from "../_shared/config/mechanic-templates.ts";
 import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
@@ -1255,7 +1256,7 @@ Deno.serve(async (req) => {
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
-        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? LEGACY_AMBUSH_MULT) : (mb.stealth_buff ? LEGACY_AMBUSH_MULT : 0);
         const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;
@@ -2217,7 +2218,7 @@ Deno.serve(async (req) => {
         const baseCrit = getClassCritRange(c.class);
         const effCrit = baseCrit - dcb - critBonusFromBuff;
         const sdf = strDmgFloor(effStr);
-        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? LEGACY_AMBUSH_MULT) : (mb.stealth_buff ? LEGACY_AMBUSH_MULT : 0);
         const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;

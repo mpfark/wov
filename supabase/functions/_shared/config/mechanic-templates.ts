@@ -76,6 +76,14 @@ export const STACK_EFFECT_TYPE: Record<StackType, 'poison' | 'ignite'> = {
   burn_stacks: 'ignite',
 };
 
+/**
+ * Safety floor for the `stealth_buff` ambush multiplier. Only used when a buff
+ * bag arrives without a resolved multiplier (legacy boolean form) — a live cast
+ * always carries the value resolved from the ability's `amount_calc`.
+ */
+export const LEGACY_AMBUSH_MULT = 2;
+
+
 const P = (
   key: MechanicCalcParamKey,
   label: string,
@@ -226,7 +234,13 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // this base; `effect_config.dodge_chance`, `next_hit_window_ms` and
   // `evasion_source` are configuration, not separate mechanics.
   t('evasion_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
+  // Consolidation Group I: ONE reusable stealth buff. The ambush multiplier and
+  // duration come from `amount_calc` / `duration_calc`, the scaling attributes
+  // are documented in `effect_config` (`ambush_stat` / `duration_stat`) and the
+  // wording is authored `combat_text.activate_text` — Shadowstep is the
+  // Assassin identity of this base.
   t('stealth_buff', { duration: true, requiresAmount: true, requiresDuration: true }),
+
 
   // ── Control ───────────────────────────────────────────────────
   // Consolidation Group H: ONE reusable control debuff. Whether it saps the
@@ -250,6 +264,11 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated self/target heal (Phase 4): Heal and Second Wind share this
   // base, differing only by configured attribute and authored text.
   t('heal', { requiresAmount: true }),
+  // Consolidation Group I: ONE reusable life-sacrifice heal. The transferred
+  // amount is `amount_calc`, the safety floor the named `reserve_hp` calc, the
+  // absolute floor `effect_config.min_reserve_hp`, and both the success and
+  // "not enough HP" lines are authored (`combat_text.transfer_text` /
+  // `no_hp_text`) — Transfer Health is the Healer identity of this base.
   t('hp_transfer', {
     requiresAmount: true,
     params: [P('reserve_hp', 'HP kept in reserve', 'hp', 'threshold', true)],
@@ -258,11 +277,17 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
     duration: true, interval: true,
     requiresAmount: true, requiresDuration: true, requiresInterval: true,
   }),
+  // Consolidation Group I: ONE reusable additive HP/CP regen buff. HP/tick is
+  // `amount_calc`, CP/tick the named `cp_per_tick` calc (floored by
+  // `effect_config.min_cp_per_tick`), and how a recast merges with an active
+  // buff is `effect_config.refresh_policy` ('best_of' | 'replace') — Inspire is
+  // the Bard identity of this base.
   t('regen_buff', {
     duration: true,
     requiresAmount: true, requiresDuration: true,
     params: [P('cp_per_tick', 'CP regen per tick', 'cp', 'rate', true)],
   }),
+
 ];
 
 const BY_KEY = new Map(MECHANIC_TEMPLATES.map(m => [m.mechanicKey, m]));
