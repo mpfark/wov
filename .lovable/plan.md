@@ -159,6 +159,10 @@ Ignite and Poison are enemy-side DoTs defined once in the applied-status layer, 
 6. Drop the `on_hit_allowed` mirror on `abilities` and the two sync triggers.
 7. Only after runtime + admin read the new source and parity tests pass: drop `abilities.cp_cost`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `target_type`, and shrink `class_ability_assignments.overrides` to nothing (column kept nullable for archive).
 
+### Final fate of `abilities.effect_config`
+
+Once every runtime mechanic knob, status behaviour block and On-Hit permission has moved to `base_abilities.effect_config` and `applied_statuses`, `abilities.effect_config` must no longer be read or written by the runtime (`combat-tick`, `combat-catchup`, resolvers, shared config mirrors) or by any admin component. The preferred end state is dropping the column in the final cleanup step of this migration, once parity tests are green and a grep confirms zero readers/writers. If any residual reader is found that cannot be migrated in this pass, the column is retained **only** as a deprecated archive field: made nullable with a `-- DEPRECATED: archive only, no readers` comment, excluded from all admin forms and select lists, and paired with a named follow-up removal migration recorded here (`drop_abilities_effect_config`). No new code may read it in either case.
+
 Untouched: `class_ability_roles`, `character_ability_loadout` shape, `characters`, `character_class_bonds`, combat/session/encounter tables, combat-tick mechanic implementations, kill/reward resolvers.
 
 ## Code changes
