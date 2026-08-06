@@ -478,24 +478,40 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
       // Consolidation Group D: stack finishers (Eviscerate / Conflagrate) run
       // entirely server-side in the combat-tick heartbeat.
-    } else if (ability.type === 'evasion_buff') {
-      // Dual-primary (Assassin DEX+CHA): dodge magnitude = CHA (showmanship),
-      // duration = DEX (footwork).
+    } else if (ability.type === 'evasion_buff' || ability.type === 'disengage_buff') {
+      // Consolidation Group E: ONE reusable evasion buff. Whether the dodge
+      // chance comes from the calc (Cloak of Shadows: CHA magnitude) or is a
+      // configured certainty with a next-hit damage window (Disengage: DEX
+      // duration, WIS next-hit bonus) is `effect_config`, not a class branch.
+      // Wording comes from authored `combat_text.activate_text`.
+      // (`disengage_buff` stays matched so archived assignments still resolve.)
+      const cfg = (ability.effectConfig || {}) as Record<string, unknown>;
+      const configuredDodge = typeof cfg.dodge_chance === 'number' ? cfg.dodge_chance : null;
+      const nextHitWindowMs = typeof cfg.next_hit_window_ms === 'number' ? cfg.next_hit_window_ms : 0;
+      const source = cfg.evasion_source === 'disengage' || ability.type === 'disengage_buff'
+        ? ('disengage' as const)
+        : ('cloak' as const);
       const durationMs = durationOf();
-      const dodgeChance = amountOf();
-      p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
-      p.addLogEvent(buildBuffEvent(`Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`));
-    } else if (ability.type === 'disengage_buff') {
-      // Dual-primary (Ranger DEX+WIS): dodge duration = DEX, next-hit
-      // bonus magnitude = WIS (calm aim after the leap).
-      const dodgeDurationMs = durationOf();
-      const nextHitDurationMs = 15000;
-      const bonusMult = amountOf();
-      p.buffSetters.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
-      p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitDurationMs });
-      const bonusPct = Math.round((bonusMult - 1) * 100);
-      p.addLogEvent(buildBuffEvent(`Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`));
+      const amount = amountOf();
+      // With a configured dodge certainty the calc amount is the next-hit
+      // multiplier; otherwise the calc amount IS the dodge chance.
+      const dodgeChance = configuredDodge ?? amount;
+      const bonusMult = configuredDodge != null ? amount : 1;
+      p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source });
+      if (nextHitWindowMs > 0 && bonusMult > 1) {
+        p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitWindowMs });
+      }
+      const text = getAuthoredCombatText(ability.abilityKey);
+      const raw = typeof text.activate_text === 'string' && text.activate_text.trim()
+        ? text.activate_text.trim()
+        : `${ability.label}! {dodge_pct}% dodge chance for {seconds}s.`;
+      p.addLogEvent(buildBuffEvent(raw
+        .replace('{dodge_pct}', String(Math.round(dodgeChance * 100)))
+        .replace('{seconds}', String(Math.round(durationMs / 1000)))
+        .replace('{bonus_pct}', String(Math.round((bonusMult - 1) * 100)))));
       // (Orbs of Fire is handled by the consolidated `stack_apply` branch above.)
+
+
 
     } else if (ability.type === 'absorb_buff' || ability.type === 'ally_absorb') {
       // Consolidation Phase 6: Force Shield and Divine Aegis share the one
