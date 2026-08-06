@@ -639,28 +639,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         .replace('{who}', who)
         .replace('{seconds}', String(seconds));
       p.addLogEvent(buildHealEvent(`${castLine} [${healPerTick}/tick]`));
-    } else if (ability.type === 'sunder_debuff') {
-      const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
-      if (!p.inCombat || !cTargetId) { p.addLogEvent(buildErrorEvent(`You must be in combat to use Sunder Armor!`)); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLogEvent(buildErrorEvent(`No valid target for Sunder Armor.`)); return; }
-      // Consolidation Group G: magnitude and duration attributes are configured
-      // on the ability row; the wording is authored `combat_text.activate_text`.
-      const acReduction = amountOf();
-      const sunderDurationMs = durationOf();
-      const durationSec = Math.round(sunderDurationMs / 1000);
-      p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + sunderDurationMs, creatureId: cTargetId, creatureName: creature.name } }));
-      const sunderTpl = getAuthoredCombatText(ability.abilityKey).activate_text;
-      const sunderLine = typeof sunderTpl === 'string' && sunderTpl.trim()
-        ? sunderTpl.trim()
-        : "{ability}! {target}'s AC reduced by {amount} for {seconds}s.";
-      p.addLogEvent(buildDebuffEvent(
-        sunderLine
-          .replace(/\{ability\}/g, ability.label)
-          .replace(/\{target\}/g, creature.name)
-          .replace(/\{amount\}/g, String(acReduction))
-          .replace(/\{seconds\}/g, String(durationSec)),
-      ));
+    } else if (ability.type === 'burst_damage') {
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'reactive_holy') {
