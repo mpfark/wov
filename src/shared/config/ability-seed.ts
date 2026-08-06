@@ -380,11 +380,15 @@ export const ABILITY_SEED: AbilitySeed[] = [
       rounding: 'none', floor: 1, cap: null, unit: 'hp', note: 'per-arrow damage: weapon die + half DEX',
     },
     duration_calc: null, interval_ms: null,
-    effect_config: { ...WEAPON_ATTACK_CONFIG },
+    effect_config: { ...WEAPON_ATTACK_CONFIG, attack_stat: 'dex' },
     mechanic_calcs: {
       arrow_count: { base: 2, terms: [{ source: 'stat_threshold', stat: 'dex', steps: [{ at: 3, add: 1 }] }, { source: 'stat_threshold', stat: 'wis', steps: [{ at: 4, add: 1 }] }], cap: 4, unit: 'count', note: 'DEX/WIS arrow ladder' },
     },
-    combat_text: {},
+    combat_text: {
+      cast_text: '{caster} unleashes Barrage of {count} arrows!',
+      hit_text: 'Arrow {index}/{count} strikes {target}! [{damage}]',
+      miss_text: 'Arrow {index}/{count} misses {target}.',
+    },
     class_key: 'ranger', slot: 2,
   },
   {
