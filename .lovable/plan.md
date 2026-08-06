@@ -109,8 +109,8 @@ CP, calc and timing below are the *current live* values and become the values of
 | healer | 3 | Transfer Health | hp_transfer | 25 | 2×WIS | — | — | WIS / CON | 1.00 |
 | bard | 2 | Inspire | regen_buff | 15 | 2 + CHA per tick, floor 2 | 60 000 / cap 180 000 (+8 000/pt) | — | CHA / INT | 1.00 |
 | assassin | 2 | Shadowstep | stealth_buff | 15 | 2 + 0.05×CHA, cap 2.5 | 15 000 / cap 25 000 | — | CHA / DEX | 1.00 |
-| assassin | 3 | Envenom | on_hit_stance | 50 | 0.25 + DEX proc chance; max stacks CHA | applies **Poison** status | poison (via status) | DEX | 1.00 |
-| wizard | 4 | Orbs of Fire | orb_stance | 50 | 0.25 + INT proc chance; pulse base 2 + INT | own pulse cadence; applies **Ignite** status | fire | INT | 1.00 |
+| assassin | 3 | Envenom | on_hit_stance | 50 | 0.25 + DEX proc chance; Poison max stacks from CHA | applies **Poison** status | poison (via status) | DEX / CHA | 1.00 |
+| wizard | 4 | Orbs of Fire | orb_stance | 50 | 0.25 + INT proc chance; pulse base 2 + INT | own pulse cadence; applies **Ignite** status (burn damage + duration from WIS) | fire | INT / WIS | 1.00 |
 
 Shared ability row currently spanning three classes: `weapon_attack` (warrior / assassin / ranger). It is split into three configured-use rows (Power Strike, Backstab, Aimed Shot) carrying today's override identity, then `class_ability_assignments.ability_id` and `character_ability_loadout.ability_id` are repointed inside the same migration. After that a unique constraint enforces one class assignment per configured use.
 
