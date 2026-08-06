@@ -16,6 +16,7 @@ import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs, authorizeQueuedAbility,
   preflightAbilityConfig, getAbilityResolverMode, drainAbilityOverrideAuditRows,
+  getServerAbilityCalcs,
 } from "../_shared/load-ability-calcs.ts";
 import { ABILITY_CONFIG_FAILURE_TEXT } from "../_shared/combat/ability-magnitude.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
