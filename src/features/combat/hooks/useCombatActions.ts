@@ -347,7 +347,18 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (error) { p.addLogEvent(buildErrorEvent(`Failed to transfer health: ${error.message}`)); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
-      p.addLogEvent(buildHealEvent(`${p.character.name} sacrifices life to heal ${targetName}! [${restored ?? actualTransfer}]`));
+      // Consolidation Group G: the wording is authored on the ability row
+      // (`combat_text.transfer_text`), never hardcoded per class.
+      const transferTpl = getAuthoredCombatText(ability.abilityKey).transfer_text;
+      const transferLine = typeof transferTpl === 'string' && transferTpl.trim()
+        ? transferTpl.trim()
+        : '{caster} sacrifices life to heal {target}!';
+      p.addLogEvent(buildHealEvent(
+        `${transferLine
+          .replace(/\{caster\}/g, p.character.name)
+          .replace(/\{target\}/g, targetName)
+          .replace(/\{ability\}/g, ability.label)} [${restored ?? actualTransfer}]`,
+      ));
     } else if (ability.type === 'heal' || ability.type === 'self_heal') {
       // Consolidation Phase 4: Heal and Second Wind share the one `heal` base.
       // The wording comes from authored `combat_text` keyed by ability identity,
