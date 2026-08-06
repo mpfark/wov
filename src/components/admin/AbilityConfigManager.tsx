@@ -40,15 +40,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import CalcBuilder from './ability/CalcBuilder';
-import MechanicCalcsEditor from './ability/MechanicCalcsEditor';
 import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import BaseAbilityCreateDialog from './ability/BaseAbilityCreateDialog';
 import ClassAbilityCreateDialog from './ability/ClassAbilityCreateDialog';
 import BaseAbilityEditor, { type BaseAbilityRow } from './ability/BaseAbilityEditor';
 import { OnHitEffectEditor } from './class/OnHitEffectEditor';
 import {
-  ABILITY_TYPES, ACTIVATION_MODES, TARGET_TYPES, capabilityList,
+  ABILITY_TYPES, capabilityList,
   type CapabilityKey,
 } from './ability/ability-taxonomy';
 import type { OnHitEffectConfig, OnHitEffectKey } from '@/shared/combat/on-hit-effects';
@@ -56,6 +54,12 @@ import {
   evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
+import {
+  composeAbilityRow, indexAppliedStatuses, type AppliedStatusDef,
+} from '@/shared/config/compose-ability';
+
+/** Character attributes an ability's scaling roles can bind to. */
+const ATTRIBUTES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 import { CLASS_LABELS } from '@/lib/game-data';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 
@@ -67,21 +71,19 @@ export interface AuthoredAbilityRowState {
   label: string;
   description: string;
   tooltip: string;
-  cp_cost: number;
   mechanic_key: string;
   status: string;
-  interval_ms: number | null;
   /** Canonical damage type key, or null for non-damaging abilities. */
   damage_type: string | null;
   ability_type: string;
-  activation_mode: string;
-  target_type: string;
   admin_notes: string | null;
-  amount_calc: AbilityCalc | null;
-  duration_calc: AbilityCalc | null;
-  mechanic_calcs: Record<string, AbilityCalc>;
   combat_text: Record<string, unknown>;
-  effect_config: Record<string, unknown>;
+  /** The ONE numeric class-balancing control. */
+  class_scale: number;
+  primary_attribute: string | null;
+  secondary_attribute: string | null;
+  applied_status: string | null;
+  on_hit_effect: OnHitEffectConfig | null;
 }
 
 /** Read-only reference: which classes/slots reference this ability. */
@@ -115,6 +117,7 @@ export default function AbilityConfigManager() {
   const [bases, setBases] = useState<BaseAbilityRow[]>([]);
   const [rows, setRows] = useState<AuthoredAbilityRowState[]>([]);
   const [usage, setUsage] = useState<UsageRow[]>([]);
+  const [statuses, setStatuses] = useState<AppliedStatusDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
@@ -133,22 +136,24 @@ export default function AbilityConfigManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [baseRes, abilityRes, usageRes] = await Promise.all([
+    const [baseRes, abilityRes, usageRes, statusRes] = await Promise.all([
       supabase
         .from('base_abilities')
         .select(`
           id, base_key, label, description, mechanic_key, activation_mode,
           default_target_type, allowed_target_types, trigger_type, capabilities,
-          on_hit_allowed, status, admin_notes
+          on_hit_allowed, status, admin_notes, cp_cost, cp_reserve_pct,
+          interval_ms, amount_calc, duration_calc, mechanic_calcs, effect_config,
+          supports_secondary_scaling, target_type
         `)
         .order('label'),
       supabase
         .from('abilities')
         .select(`
-          id, base_ability_id, ability_key, label, description, tooltip, cp_cost,
-          mechanic_key, status, interval_ms, damage_type, ability_type,
-          activation_mode, target_type, admin_notes, amount_calc, duration_calc,
-          mechanic_calcs, combat_text, effect_config
+          id, base_ability_id, ability_key, label, description, tooltip,
+          mechanic_key, status, damage_type, ability_type, admin_notes,
+          combat_text, class_scale, primary_attribute, secondary_attribute,
+          applied_status, on_hit_effect
         `)
         .order('label'),
       supabase
@@ -157,10 +162,12 @@ export default function AbilityConfigManager() {
           ability_id, class_key, is_default, status, class_ability_key,
           unlock_level, overrides, role:class_ability_roles ( slot, name )
         `),
+      supabase.from('applied_statuses').select('*').order('label'),
     ]);
     setLoading(false);
     if (baseRes.error) { toast.error(baseRes.error.message); return; }
     if (abilityRes.error) { toast.error(abilityRes.error.message); return; }
+    setStatuses(((statusRes.data ?? []) as unknown as AppliedStatusDef[]));
 
     setBases(((baseRes.data ?? []) as any[]).map(b => ({
       id: b.id,
@@ -176,6 +183,14 @@ export default function AbilityConfigManager() {
       on_hit_allowed: b.on_hit_allowed ?? [],
       status: b.status ?? 'active',
       admin_notes: b.admin_notes ?? null,
+      cp_cost: b.cp_cost ?? 0,
+      cp_reserve_pct: b.cp_reserve_pct ?? null,
+      interval_ms: b.interval_ms ?? null,
+      amount_calc: b.amount_calc ?? null,
+      duration_calc: b.duration_calc ?? null,
+      mechanic_calcs: (b.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
+      effect_config: (b.effect_config ?? {}) as Record<string, unknown>,
+      supports_secondary_scaling: !!b.supports_secondary_scaling,
     })));
 
     setRows(((abilityRes.data ?? []) as any[]).map(a => ({
@@ -185,20 +200,17 @@ export default function AbilityConfigManager() {
       label: a.label,
       description: a.description ?? '',
       tooltip: a.tooltip ?? '',
-      cp_cost: a.cp_cost ?? 0,
       mechanic_key: a.mechanic_key,
       status: a.status ?? 'active',
-      interval_ms: a.interval_ms,
       damage_type: a.damage_type ?? null,
       ability_type: a.ability_type ?? 'buff',
-      activation_mode: a.activation_mode ?? 'instant',
-      target_type: a.target_type ?? 'enemy',
       admin_notes: a.admin_notes ?? null,
-      amount_calc: a.amount_calc,
-      duration_calc: a.duration_calc,
-      mechanic_calcs: (a.mechanic_calcs ?? {}) as Record<string, AbilityCalc>,
       combat_text: (a.combat_text ?? {}) as Record<string, unknown>,
-      effect_config: (a.effect_config ?? {}) as Record<string, unknown>,
+      class_scale: typeof a.class_scale === 'number' ? a.class_scale : 1,
+      primary_attribute: a.primary_attribute ?? null,
+      secondary_attribute: a.secondary_attribute ?? null,
+      applied_status: a.applied_status ?? null,
+      on_hit_effect: (a.on_hit_effect ?? null) as OnHitEffectConfig | null,
     })));
 
     setUsage(((usageRes.data ?? []) as any[])
@@ -220,12 +232,7 @@ export default function AbilityConfigManager() {
 
   const select = useCallback((row: AuthoredAbilityRowState) => {
     setSelectedId(row.id);
-    setDraft({
-      ...row,
-      mechanic_calcs: { ...row.mechanic_calcs },
-      combat_text: { ...row.combat_text },
-      effect_config: { ...row.effect_config },
-    });
+    setDraft({ ...row, combat_text: { ...row.combat_text } });
   }, []);
 
   const sample: CalcInputs = useMemo(() => ({
@@ -282,22 +289,37 @@ export default function AbilityConfigManager() {
   /** A base with no declared capabilities exposes everything (safe default). */
   const can = (key: CapabilityKey) => caps.length === 0 || caps.includes(key);
 
-  const draftOnHit = (draft?.effect_config?.on_hit_effect ?? null) as OnHitEffectConfig | null;
+  const draftOnHit = draft?.on_hit_effect ?? null;
+  /** Statuses are offered when the base can trigger one. */
+  const statusOptions = useMemo(() => (
+    draftBase && (draftBase.trigger_type !== 'none' || draft?.applied_status) ? statuses : []
+  ), [draftBase, draft?.applied_status, statuses]);
+  const activeStatus = useMemo(
+    () => statuses.find(st => st.key === draft?.applied_status) ?? null,
+    [statuses, draft?.applied_status],
+  );
+
+  /** Composed view (base numbers + this ability's identity/scaling). */
+  const composed = useMemo(() => (
+    draft && draftBase
+      ? composeAbilityRow(draft as any, draftBase as any, indexAppliedStatuses(statuses as any))
+      : null
+  ), [draft, draftBase, statuses]);
 
   /**
    * Publish gate — a draft with structurally invalid or incomplete calcs is
    * rejected before it can be written. There is no silent legacy fallback.
    */
-  const draftErrors = useMemo(() => draft ? validateAbilityForPublish({
-    mechanic_key: draft.mechanic_key,
-    amount_calc: draft.amount_calc,
-    duration_calc: draft.duration_calc,
-    mechanic_calcs: draft.mechanic_calcs,
-  }) : [], [draft]);
+  const draftErrors = useMemo(() => composed ? validateAbilityForPublish({
+    mechanic_key: composed.mechanic_key,
+    amount_calc: composed.amount_calc,
+    duration_calc: composed.duration_calc,
+    mechanic_calcs: composed.mechanic_calcs,
+  }) : [], [composed]);
 
   const previewMagnitude = useMemo(
-    () => draft?.amount_calc ? evaluateCalc(draft.amount_calc, sample) : 0,
-    [draft?.amount_calc, sample],
+    () => composed?.amount_calc ? evaluateCalc(composed.amount_calc, sample) : 0,
+    [composed?.amount_calc, sample],
   );
 
   const save = async () => {
@@ -312,17 +334,14 @@ export default function AbilityConfigManager() {
       label: draft.label,
       description: draft.description,
       tooltip: draft.tooltip,
-      cp_cost: draft.cp_cost,
-      interval_ms: draft.interval_ms,
-      amount_calc: draft.amount_calc as any,
-      duration_calc: draft.duration_calc as any,
-      mechanic_calcs: draft.mechanic_calcs as any,
       combat_text: draft.combat_text as any,
-      effect_config: draft.effect_config as any,
       damage_type: draft.damage_type,
       ability_type: draft.ability_type,
-      activation_mode: draft.activation_mode,
-      target_type: draft.target_type,
+      class_scale: draft.class_scale,
+      primary_attribute: draft.primary_attribute,
+      secondary_attribute: draftBase?.supports_secondary_scaling ? draft.secondary_attribute : null,
+      applied_status: draft.applied_status,
+      on_hit_effect: (draft.on_hit_effect ?? null) as any,
       admin_notes: draft.admin_notes,
       status: draft.status,
     }).eq('id', draft.id);
@@ -481,7 +500,9 @@ export default function AbilityConfigManager() {
                   {row.status !== 'active' && (
                     <Badge variant="secondary" className="ml-1 text-[9px] capitalize">{row.status}</Badge>
                   )}
-                  <span className="ml-1 text-[10px] text-muted-foreground">{row.cp_cost} CP</span>
+                  {row.class_scale !== 1 && (
+                    <span className="ml-1 text-[10px] text-muted-foreground">×{row.class_scale}</span>
+                  )}
                   <span className="block text-[10px] font-mono text-muted-foreground">{row.ability_key}</span>
                   <span className="block text-[10px] text-muted-foreground">
                     {classes.length === 0 ? 'unassigned' : classes.join(', ')}
@@ -539,8 +560,15 @@ export default function AbilityConfigManager() {
                       <Input value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} className="h-8 text-xs" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px]">Base CP cost</Label>
-                      <Input type="number" value={draft.cp_cost} onChange={e => setDraft({ ...draft, cp_cost: Number(e.target.value) })} className="h-8 text-xs" />
+                      <Label className="text-[11px]">Class scale</Label>
+                      <Input
+                        type="number" step="0.05" min={0.05} max={4}
+                        aria-label="Class scale"
+                        value={draft.class_scale}
+                        onChange={e => setDraft({ ...draft, class_scale: Number(e.target.value) || 1 })}
+                        className="h-8 text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Magnitude multiplier — the only number owned here.</p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[11px]">Lifecycle status</Label>
@@ -553,18 +581,6 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {can('interval') && (
-                      <div className="space-y-1">
-                        <Label className="text-[11px]">Tick interval (ms)</Label>
-                        <Input
-                          type="number"
-                          value={draft.interval_ms ?? ''}
-                          placeholder="—"
-                          onChange={e => setDraft({ ...draft, interval_ms: e.target.value === '' ? null : Number(e.target.value) })}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    )}
                     <div className="space-y-1">
                       <Label className="text-[11px]">Ability type</Label>
                       <Select value={draft.ability_type} onValueChange={v => setDraft({ ...draft, ability_type: v })}>
@@ -576,33 +592,37 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {can('activation') && (
-                      <>
-                        <div className="space-y-1">
-                          <Label className="text-[11px]">Activation</Label>
-                          <Select value={draft.activation_mode} onValueChange={v => setDraft({ ...draft, activation_mode: v })}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {ACTIVATION_MODES.map(m => (
-                                <SelectItem key={m} value={m} className="text-xs capitalize">{m}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[11px]">Target</Label>
-                          <Select value={draft.target_type} onValueChange={v => setDraft({ ...draft, target_type: v })}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {(draftBase?.allowed_target_types?.length
-                                ? draftBase.allowed_target_types
-                                : [...TARGET_TYPES]).map(t => (
-                                  <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Primary attribute</Label>
+                      <Select
+                        value={draft.primary_attribute ?? 'none'}
+                        onValueChange={v => setDraft({ ...draft, primary_attribute: v === 'none' ? null : v })}
+                      >
+                        <SelectTrigger className="h-8 text-xs" aria-label="Primary attribute"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">None</SelectItem>
+                          {ATTRIBUTES.map(a => (
+                            <SelectItem key={a} value={a} className="text-xs uppercase">{a}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {draftBase?.supports_secondary_scaling && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Secondary attribute</Label>
+                        <Select
+                          value={draft.secondary_attribute ?? 'none'}
+                          onValueChange={v => setDraft({ ...draft, secondary_attribute: v === 'none' ? null : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Secondary attribute"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-xs">None</SelectItem>
+                            {ATTRIBUTES.map(a => (
+                              <SelectItem key={a} value={a} className="text-xs uppercase">{a}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
                     {can('damage_type') && (
                       <div className="space-y-1">
@@ -657,9 +677,35 @@ export default function AbilityConfigManager() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-card/80">
+              <Card className="bg-card/80" data-testid="inherited-numbers-card">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display">Calculations</CardTitle>
+                  <CardTitle className="text-sm font-display">Inherited numbers (base-owned)</CardTitle>
+                  <p className="text-[10px] text-muted-foreground">
+                    CP cost, formulas, timing and mechanic tunables belong to{' '}
+                    {draftBase?.label ?? 'the base ability'}. Edit them there — every ability
+                    on that base changes together. Class scale above is the only number
+                    owned by this ability.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-[11px]">
+                    <div>
+                      <span className="block text-muted-foreground">CP cost</span>
+                      {draftBase?.cp_cost ?? 0}
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">Target</span>
+                      <span className="capitalize">{composed?.target_type ?? '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">Activation</span>
+                      <span className="capitalize">{composed?.activation_mode ?? '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">Tick interval</span>
+                      {draftBase?.interval_ms ? `${draftBase.interval_ms} ms` : '—'}
+                    </div>
+                  </div>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     <div className="flex items-center gap-1">
                       <Label className="text-[10px] text-muted-foreground">Preview level</Label>
@@ -678,41 +724,61 @@ export default function AbilityConfigManager() {
                       <Input type="number" min={2} value={sampleWeaponDie} onChange={e => setSampleWeaponDie(Number(e.target.value))} className="h-7 w-16 text-xs" />
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <CalcBuilder
-                    title="Amount calc"
-                    value={draft.amount_calc}
-                    onChange={c => setDraft({ ...draft, amount_calc: c })}
-                    sample={sample}
-                    hint="Magnitude in the unit chosen above — damage, healing, shield pool, flat reduction."
-                  />
-                  <CalcBuilder
-                    title="Duration calc (ms)"
-                    value={draft.duration_calc}
-                    onChange={c => setDraft({ ...draft, duration_calc: c })}
-                    sample={sample}
-                    hint="Durations are wall-clock milliseconds. Bond and Arcane Surge never touch durations."
-                  />
+                  <p className="text-[11px]">
+                    Composed magnitude at these inputs:{' '}
+                    <span className="font-mono">{Math.round(previewMagnitude)}</span>
+                    {draft.class_scale !== 1 && (
+                      <span className="text-muted-foreground"> (includes class scale ×{draft.class_scale})</span>
+                    )}
+                  </p>
+                  {draftErrors.length > 0 && (
+                    <ul className="text-[10px] text-destructive space-y-0.5">
+                      {draftErrors.map(e => <li key={e}>{e}</li>)}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
 
-              <Card className="bg-card/80">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-display flex items-center gap-2">
-                    Mechanic tunables
-                    <Badge variant="secondary" className="text-[10px] font-mono">{draft.mechanic_key}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MechanicCalcsEditor
-                    mechanicKey={draft.mechanic_key}
-                    value={draft.mechanic_calcs}
-                    onChange={next => setDraft({ ...draft, mechanic_calcs: next })}
-                    sample={sample}
-                  />
-                </CardContent>
-              </Card>
+              {statusOptions.length > 0 && (
+                <Card className="bg-card/80" data-testid="applied-status-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display">Applied status</CardTitle>
+                    <p className="text-[10px] text-muted-foreground">
+                      The reusable status this ability applies. The status owns its damage,
+                      duration and stacking rules and binds its scaling roles to the
+                      attributes chosen above.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Select
+                      value={draft.applied_status ?? 'none'}
+                      onValueChange={v => setDraft({ ...draft, applied_status: v === 'none' ? null : v })}
+                    >
+                      <SelectTrigger className="h-8 text-xs max-w-xs" aria-label="Applied status"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">None</SelectItem>
+                        {statusOptions.filter(st => !!st.key).map(st => (
+                          <SelectItem key={st.key} value={st.key} className="text-xs">
+                            {st.label ?? st.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {activeStatus && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Magnitude role{' '}
+                        <span className="font-mono">{activeStatus.magnitude?.role ?? 'none'}</span>
+                        {' '}→{' '}
+                        <span className="font-mono uppercase">{composed?.effect_config?.dot_stat as string ?? '—'}</span>
+                        {' · '}duration role{' '}
+                        <span className="font-mono">{activeStatus.duration?.role ?? 'none'}</span>
+                        {' '}→{' '}
+                        <span className="font-mono uppercase">{composed?.effect_config?.dot_duration_stat as string ?? '—'}</span>
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {caps.includes('on_hit_effect') && (
                 <Card className="bg-card/80" data-testid="on-hit-effect-card">
@@ -728,12 +794,7 @@ export default function AbilityConfigManager() {
                     <OnHitEffectEditor
                       allowed={(draftBase?.on_hit_allowed ?? []) as OnHitEffectKey[]}
                       value={draftOnHit}
-                      onChange={next => {
-                        const nextConfig = { ...draft.effect_config };
-                        if (next) nextConfig.on_hit_effect = next;
-                        else delete nextConfig.on_hit_effect;
-                        setDraft({ ...draft, effect_config: nextConfig });
-                      }}
+                      onChange={next => setDraft({ ...draft, on_hit_effect: next })}
                     />
                   </CardContent>
                 </Card>

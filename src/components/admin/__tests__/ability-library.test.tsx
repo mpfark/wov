@@ -202,7 +202,7 @@ describe('Ability Library — three-column hierarchy', () => {
     expect(ops.some(o => o.table === 'class_ability_assignments' && o.op !== 'select')).toBe(false);
   });
 
-  it('saves the optional on-hit effect into the ability effect_config', async () => {
+  it('saves class-owned identity fields and leaves base numbers alone', async () => {
     render(<AbilityConfigManager />);
     await waitFor(() => expect(screen.getByText('Spell Attack')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Spell Attack'));
@@ -213,7 +213,13 @@ describe('Ability Library — three-column hierarchy', () => {
     fireEvent.click(screen.getByText('Save ability'));
     await waitFor(() => expect(ops.some(o => o.table === 'abilities' && o.op === 'update')).toBe(true));
     const update = ops.find(o => o.table === 'abilities' && o.op === 'update')!;
-    expect((update.payload as any).effect_config).toBeTruthy();
+    const payload = update.payload as Record<string, unknown>;
+    expect('on_hit_effect' in payload).toBe(true);
+    expect(payload.class_scale).toBeDefined();
+    // Base-owned numbers must never be written from the class ability editor.
+    for (const owned of ['cp_cost', 'amount_calc', 'duration_calc', 'mechanic_calcs', 'interval_ms', 'effect_config']) {
+      expect(owned in payload).toBe(false);
+    }
   });
 
   it('hides the on-hit editor when the base does not declare the capability', async () => {

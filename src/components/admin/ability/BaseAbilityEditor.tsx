@@ -27,6 +27,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Save } from 'lucide-react';
+import CalcBuilder from './CalcBuilder';
+import MechanicCalcsEditor from './MechanicCalcsEditor';
+import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
+import type { AbilityCalc, CalcInputs } from '@/shared/formulas/ability-calc';
 import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
 import { ON_HIT_EFFECTS, ON_HIT_EFFECT_KEYS, type OnHitEffectKey } from '@/shared/combat/on-hit-effects';
 import {
@@ -48,6 +52,15 @@ export interface BaseAbilityRow {
   on_hit_allowed: string[];
   status: string;
   admin_notes: string | null;
+  // ── Shared mechanical numbers (base-owned, never per class) ─────
+  cp_cost: number | null;
+  cp_reserve_pct: number | null;
+  interval_ms: number | null;
+  amount_calc: AbilityCalc | null;
+  duration_calc: AbilityCalc | null;
+  mechanic_calcs: Record<string, AbilityCalc>;
+  effect_config: Record<string, unknown>;
+  supports_secondary_scaling: boolean;
 }
 
 interface Props {
@@ -60,7 +73,28 @@ interface Props {
 export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
   const [draft, setDraft] = useState<BaseAbilityRow>(row);
   const [saving, setSaving] = useState(false);
+  const [sampleLevel, setSampleLevel] = useState(20);
+  const [sampleMod, setSampleMod] = useState(4);
+  const [sampleStacks, setSampleStacks] = useState(3);
+  const [sampleWeaponDie, setSampleWeaponDie] = useState(8);
   useEffect(() => { setDraft(row); }, [row]);
+
+  const sample: CalcInputs = {
+    level: sampleLevel,
+    mods: {
+      str: sampleMod, dex: sampleMod, con: sampleMod,
+      int: sampleMod, wis: sampleMod, cha: sampleMod,
+    },
+    context: { active_stacks: sampleStacks, consumed_stacks: sampleStacks },
+    weaponDie: sampleWeaponDie,
+  };
+
+  const calcErrors = validateAbilityForPublish({
+    mechanic_key: draft.mechanic_key,
+    amount_calc: draft.amount_calc,
+    duration_calc: draft.duration_calc,
+    mechanic_calcs: draft.mechanic_calcs,
+  });
 
   const caps = capabilityList(draft.capabilities);
   const mechanicLocked = usageCount > 0;
@@ -76,6 +110,10 @@ export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
   };
 
   const save = async () => {
+    if (calcErrors.length > 0) {
+      toast.error(`Cannot save — ${calcErrors.length} calculation problem(s) must be fixed first.`);
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from('base_abilities').update({
       label: draft.label,
@@ -88,6 +126,13 @@ export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
       on_hit_allowed: draft.on_hit_allowed ?? [],
       status: draft.status,
       admin_notes: draft.admin_notes,
+      cp_cost: draft.cp_cost ?? 0,
+      cp_reserve_pct: draft.cp_reserve_pct,
+      interval_ms: draft.interval_ms,
+      amount_calc: draft.amount_calc as any,
+      duration_calc: draft.duration_calc as any,
+      mechanic_calcs: draft.mechanic_calcs as any,
+      supports_secondary_scaling: draft.supports_secondary_scaling,
       ...(mechanicLocked ? {} : { mechanic_key: draft.mechanic_key }),
     }).eq('id', draft.id);
     setSaving(false);
@@ -219,6 +264,98 @@ export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
               className="text-xs"
             />
           </div>
+        </CardContent>
+      </Card>
+
+
+      <Card className="bg-card/80" data-testid="base-numbers-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display">Shared numbers</CardTitle>
+          <p className="text-[10px] text-muted-foreground">
+            Every class ability built on this base uses these numbers. Class Config only
+            picks the scaling attributes and one class scale multiplier.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex items-center gap-1">
+              <Label className="text-[10px] text-muted-foreground">Preview level</Label>
+              <Input type="number" value={sampleLevel} onChange={e => setSampleLevel(Number(e.target.value))} className="h-7 w-16 text-xs" />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-[10px] text-muted-foreground">Stat mod</Label>
+              <Input type="number" value={sampleMod} onChange={e => setSampleMod(Number(e.target.value))} className="h-7 w-16 text-xs" />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-[10px] text-muted-foreground">Stacks</Label>
+              <Input type="number" min={0} value={sampleStacks} onChange={e => setSampleStacks(Number(e.target.value))} className="h-7 w-16 text-xs" />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-[10px] text-muted-foreground">Weapon die</Label>
+              <Input type="number" min={2} value={sampleWeaponDie} onChange={e => setSampleWeaponDie(Number(e.target.value))} className="h-7 w-16 text-xs" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[11px]">CP cost</Label>
+              <Input
+                type="number" aria-label="Base CP cost"
+                value={draft.cp_cost ?? 0}
+                onChange={e => setDraft({ ...draft, cp_cost: Number(e.target.value) })}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">CP reserve %</Label>
+              <Input
+                type="number" step="0.01" placeholder="—"
+                value={draft.cp_reserve_pct ?? ''}
+                onChange={e => setDraft({ ...draft, cp_reserve_pct: e.target.value === '' ? null : Number(e.target.value) })}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Tick interval (ms)</Label>
+              <Input
+                type="number" placeholder="—"
+                value={draft.interval_ms ?? ''}
+                onChange={e => setDraft({ ...draft, interval_ms: e.target.value === '' ? null : Number(e.target.value) })}
+                className="h-8 text-xs"
+              />
+            </div>
+            <label className="flex items-end gap-2 text-[11px] pb-1">
+              <Checkbox
+                checked={draft.supports_secondary_scaling}
+                onCheckedChange={c => setDraft({ ...draft, supports_secondary_scaling: !!c })}
+              />
+              Uses a second attribute
+            </label>
+          </div>
+          <CalcBuilder
+            title="Amount calc"
+            value={draft.amount_calc}
+            onChange={c => setDraft({ ...draft, amount_calc: c })}
+            sample={sample}
+            hint="Magnitude — damage, healing, shield pool, flat reduction. Stat terms tagged with a role are bound to each class ability's attributes."
+          />
+          <CalcBuilder
+            title="Duration calc (ms)"
+            value={draft.duration_calc}
+            onChange={c => setDraft({ ...draft, duration_calc: c })}
+            sample={sample}
+            hint="Durations are wall-clock milliseconds."
+          />
+          <MechanicCalcsEditor
+            mechanicKey={draft.mechanic_key}
+            value={draft.mechanic_calcs}
+            onChange={next => setDraft({ ...draft, mechanic_calcs: next })}
+            sample={sample}
+          />
+          {calcErrors.length > 0 && (
+            <ul className="text-[10px] text-destructive space-y-0.5">
+              {calcErrors.map(e => <li key={e}>{e}</li>)}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

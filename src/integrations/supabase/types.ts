@@ -21,8 +21,10 @@ export type Database = {
           activation_mode: string
           admin_notes: string | null
           amount_calc: Json | null
+          applied_status: string | null
           base_ability_id: string
           calc_version: number
+          class_scale: number
           combat_text: Json
           cp_cost: number
           cp_reserve_pct: number | null
@@ -36,6 +38,9 @@ export type Database = {
           label: string
           mechanic_calcs: Json
           mechanic_key: string
+          on_hit_effect: Json | null
+          primary_attribute: string | null
+          secondary_attribute: string | null
           status: string
           target_type: string
           tooltip: string
@@ -47,8 +52,10 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          applied_status?: string | null
           base_ability_id: string
           calc_version?: number
+          class_scale?: number
           combat_text?: Json
           cp_cost?: number
           cp_reserve_pct?: number | null
@@ -62,6 +69,9 @@ export type Database = {
           label: string
           mechanic_calcs?: Json
           mechanic_key: string
+          on_hit_effect?: Json | null
+          primary_attribute?: string | null
+          secondary_attribute?: string | null
           status?: string
           target_type?: string
           tooltip?: string
@@ -73,8 +83,10 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           amount_calc?: Json | null
+          applied_status?: string | null
           base_ability_id?: string
           calc_version?: number
+          class_scale?: number
           combat_text?: Json
           cp_cost?: number
           cp_reserve_pct?: number | null
@@ -88,6 +100,9 @@ export type Database = {
           label?: string
           mechanic_calcs?: Json
           mechanic_key?: string
+          on_hit_effect?: Json | null
+          primary_attribute?: string | null
+          secondary_attribute?: string | null
           status?: string
           target_type?: string
           tooltip?: string
@@ -285,6 +300,54 @@ export type Database = {
         }
         Relationships: []
       }
+      applied_statuses: {
+        Row: {
+          admin_notes: string | null
+          classification: string
+          created_at: string
+          default_damage_type: string | null
+          duration: Json
+          effect_type: string
+          key: string
+          label: string
+          magnitude: Json
+          stack_noun: string
+          stacks: Json
+          tick_interval_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          classification?: string
+          created_at?: string
+          default_damage_type?: string | null
+          duration?: Json
+          effect_type: string
+          key: string
+          label: string
+          magnitude?: Json
+          stack_noun?: string
+          stacks?: Json
+          tick_interval_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          classification?: string
+          created_at?: string
+          default_damage_type?: string | null
+          duration?: Json
+          effect_type?: string
+          key?: string
+          label?: string
+          magnitude?: Json
+          stack_noun?: string
+          stacks?: Json
+          tick_interval_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       area_types: {
         Row: {
           color: string
@@ -361,16 +424,25 @@ export type Database = {
           activation_mode: string
           admin_notes: string | null
           allowed_target_types: string[]
+          amount_calc: Json | null
           base_key: string
           capabilities: Json
+          cp_cost: number | null
+          cp_reserve_pct: number | null
           created_at: string
           default_target_type: string
           description: string
+          duration_calc: Json | null
+          effect_config: Json
           id: string
+          interval_ms: number | null
           label: string
+          mechanic_calcs: Json
           mechanic_key: string
           on_hit_allowed: string[]
           status: string
+          supports_secondary_scaling: boolean
+          target_type: string | null
           trigger_type: string
           updated_at: string
         }
@@ -378,16 +450,25 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           allowed_target_types?: string[]
+          amount_calc?: Json | null
           base_key: string
           capabilities?: Json
+          cp_cost?: number | null
+          cp_reserve_pct?: number | null
           created_at?: string
           default_target_type?: string
           description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
           id?: string
+          interval_ms?: number | null
           label: string
+          mechanic_calcs?: Json
           mechanic_key: string
           on_hit_allowed?: string[]
           status?: string
+          supports_secondary_scaling?: boolean
+          target_type?: string | null
           trigger_type?: string
           updated_at?: string
         }
@@ -395,16 +476,25 @@ export type Database = {
           activation_mode?: string
           admin_notes?: string | null
           allowed_target_types?: string[]
+          amount_calc?: Json | null
           base_key?: string
           capabilities?: Json
+          cp_cost?: number | null
+          cp_reserve_pct?: number | null
           created_at?: string
           default_target_type?: string
           description?: string
+          duration_calc?: Json | null
+          effect_config?: Json
           id?: string
+          interval_ms?: number | null
           label?: string
+          mechanic_calcs?: Json
           mechanic_key?: string
           on_hit_allowed?: string[]
           status?: string
+          supports_secondary_scaling?: boolean
+          target_type?: string | null
           trigger_type?: string
           updated_at?: string
         }
