@@ -547,7 +547,7 @@ Deno.serve(async (req) => {
           // empty result and let the client keep its current state.
           return json({
             events: [],
-            creature_states,
+            creature_states: [],
             member_states: [],
             ticks_processed: 0,
             roster_unavailable: true,
