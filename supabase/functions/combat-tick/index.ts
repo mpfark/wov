@@ -1000,6 +1000,8 @@ Deno.serve(async (req) => {
     const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
+      // Durable roster: a dead creature holds no engagements (Phase 2).
+      dropEngagementsForCreature(creature.id);
       // Purge all active_effects targeting this creature (and track for client)
       const killedEffects = activeEffects.filter(e => e.target_id === creature.id);
       for (const e of killedEffects) {
