@@ -240,6 +240,113 @@ Deno.serve(async (req) => {
     }
 
     const appliedStatusDefs = getAppliedStatusDefs();
+
+    /**
+     * ── Status persistence authority (shared with combat-tick) ──────────────
+     *
+     * The offscreen path writes status rows through the SAME runtime the live
+     * tick uses, so stacking, refresh, timing (`started_at` / `expires_at` /
+     * `next_tick_at`) and attribution (`source_id` / `source_ability_key`)
+     * rules have exactly one implementation. Chance samples are the only
+     * difference: live combat passes `Math.random()`, this path passes
+     * `statusSample(...)`, which is stable per historical event and therefore
+     * cannot be rerolled by repeated catch-up processing.
+     */
+    const statusChars: Record<string, Record<string, unknown>> = {};
+    const statusRuntime = createStatusRuntime({
+      nodeId: node_id,
+      tickRateMs: TICK_RATE,
+      effects,
+      statModifier: getStatModifier,
+      // Offscreen replay has no member equipment fold; attribute scores come
+      // straight from the character row (same reader as the live path).
+      bondMultFor: () => 1,
+    });
+
+    /**
+     * Repair pass for status rows whose stored magnitude or window is unusable
+     * (legacy rows, or a row written by a tick that died mid-flight). The row's
+     * existence proves the trigger already succeeded historically, so the
+     * ability's Status Application is re-derived through the shared applier
+     * with the deterministic sample for that original application. If the
+     * deterministic decision does not land, the stored numbers are kept — a
+     * repair may never delete a status a player already earned.
+     */
+    const brokenRows = effects.filter(e => {
+      const def = appliedStatusDefs[e.effect_type];
+      const periodic = def ? isPeriodicStatus(def) : (e.next_tick_at ?? null) !== null;
+      if (!periodic) return (e.expires_at ?? 0) <= (e.started_at ?? 0);
+      return !(Number(e.damage_per_tick) > 0) || !(Number(e.tick_rate_ms) > 0);
+    });
+
+    if (brokenRows.length > 0) {
+      const abilityKeys = [...new Set(brokenRows.map(e => e.source_ability_key).filter(Boolean))];
+      const sourceIds = [...new Set(brokenRows.map(e => e.source_id).filter(Boolean))];
+      const [{ data: abilityRows }, { data: sourceChars }] = await Promise.all([
+        abilityKeys.length > 0
+          ? db.from('abilities').select('ability_key, effect_config').in('ability_key', abilityKeys)
+          : Promise.resolve({ data: [] as any[] }),
+        sourceIds.length > 0
+          ? db.from('characters').select('id, str, dex, con, int, wis, cha').in('id', sourceIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      for (const c of (sourceChars || [])) statusChars[(c as any).id] = c as any;
+      const cfgByKey = new Map<string, Record<string, unknown>>(
+        (abilityRows || []).map((a: any) => [a.ability_key, a.effect_config || {}]),
+      );
+
+      let repaired = 0;
+      for (const row of brokenRows) {
+        const character = statusChars[row.source_id];
+        const spec = readStatusApplication(cfgByKey.get(row.source_ability_key ?? '') ?? null);
+        const at = Number(row.started_at) || now;
+        const applied = spec && character
+          ? statusRuntime.applyStatusFromSource({
+              sourceId: row.source_id,
+              character,
+              eb: {},
+              spec,
+              abilityKey: row.source_ability_key,
+              targetId: row.target_id,
+              at,
+              // Identity of the ORIGINAL application — stable across replays.
+              sample: statusSample([
+                row.source_ability_key ?? spec.statusKey,
+                row.source_id, row.target_id, at,
+              ]),
+              maxStacks: Math.max(1, Number(row.stacks) || 1),
+            })
+          : null;
+        if (!applied) {
+          // Keep what the player already has, normalised onto live timing rules.
+          const def = appliedStatusDefs[row.effect_type];
+          const periodic = def ? isPeriodicStatus(def) : (row.next_tick_at ?? null) !== null;
+          statusRuntime.writeStatusRow({
+            sourceId: row.source_id, targetId: row.target_id,
+            abilityKey: row.source_ability_key ?? row.effect_type,
+            effectType: row.effect_type, at, isPeriodic: periodic,
+            durationMs: Math.max(0, Number(row.expires_at) - at),
+            durationTicks: def?.duration_ticks ?? 1,
+            damagePerTick: Math.max(1, Number(row.damage_per_tick) || 1),
+            maxStacks: Math.max(1, Number(row.stacks) || 1),
+            tickRateMs: Number(row.tick_rate_ms) > 0 ? Number(row.tick_rate_ms) : TICK_RATE,
+          });
+        }
+        repaired++;
+        if (row.id) {
+          await db.from('active_effects').update({
+            stacks: row.stacks, damage_per_tick: row.damage_per_tick,
+            next_tick_at: row.next_tick_at, expires_at: row.expires_at,
+            tick_rate_ms: row.tick_rate_ms, started_at: row.started_at,
+          }).eq('id', row.id);
+        }
+      }
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', node_id, status_rows_repaired: repaired,
+        note: 'rewritten through the shared status runtime',
+      }));
+    }
+
     const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, {
       now,
       // Bulk mode recomputes amplification for every simulated historical tick
@@ -247,6 +354,7 @@ Deno.serve(async (req) => {
       amp: { effects, defs: appliedStatusDefs },
       statusDefs: appliedStatusDefs,
     });
+
 
     // Check wall-clock safety limit after resolution
     const resolveElapsed = Date.now() - t0;
