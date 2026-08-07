@@ -213,10 +213,10 @@ Chilled correctness:
 - eligibility read from the status definition: narrowing `eligible_sources` to `['weapon']` amplifies only weapon damage, with no code change.
 - **zero/non-positive damage stays zero** (0 -> 0, negative -> unchanged).
 - no periodic damage of its own; no change to tick rate or attack cadence.
-- does not stack; reapply refreshes duration; expires after 6s.
-- **exact tick count, single application**: one Chilled application amplifies exactly **three** subsequent ticks (t+2000, t+4000, t+6000) and not the fourth (t+8000).
-- **exact tick count, refreshed application**: a refresh at t+4000 preserves `started_at`, moves `expires_at` to t+11000, and yields amplified ticks at 2000, 4000, 6000, 8000, 10000 — five in total, no gap, no fourth-tick-after-refresh overshoot.
-- does not stack; reapply refreshes duration; expires after the configured window.
+- **exact tick count, single application**: `duration_ticks = 3` amplifies exactly **three** subsequent ticks and not a fourth. No assertion on a six-second wall-clock lifetime.
+- **configurable tick count**: `duration_ticks = 4` amplifies exactly four subsequent ticks, with no code change.
+- **exact tick count, refreshed application**: a refresh mid-window preserves `started_at`, re-derives `expires_at` from the tick count, and amplifies the promised number of ticks after the refresh with no gap and no overshoot.
+- does not stack; reapply refreshes duration; expires after the configured tick count.
 - **two party members apply Chilled**: two rows coexist under the uniqueness key, aggregate to +10% (not +20%), each refreshes independently.
 - distinct amp keys add after per-key strongest selection.
 - **catch-up boundaries**: replayed ticks before `started_at` are unamplified, ticks inside the window are amplified, ticks at/after `expires_at` are unamplified — asserted on a multi-tick bulk replay.
