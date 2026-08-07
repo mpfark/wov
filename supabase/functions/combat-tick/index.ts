@@ -51,6 +51,8 @@ import {
   statusDurationMs,
   type StatusApplicationSpec,
 } from "../_shared/combat/status-application.ts";
+import { evaluateOptionalCalc } from "../_shared/formulas/ability-calc.ts";
+
 
 import {
   amplify,
