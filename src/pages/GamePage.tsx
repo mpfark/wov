@@ -875,8 +875,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const first = groundLoot[0];
     const result = await pickUpItem(first.id);
     if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
-    else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
-  }, [isDead, groundLoot, pickUpItem, addLogEvent, fetchInventory]);
+    else {
+      addLogEvent(buildLootEvent(`You pick up ${first.item?.name ?? 'an item'}.`, {
+        player: { kind: 'player', id: character.id, name: character.name },
+        remoteMessage: `${character.name} picks up ${first.item?.name ?? 'an item'}.`,
+      }));
+      fetchInventory();
+    }
+  }, [isDead, groundLoot, pickUpItem, addLogEvent, fetchInventory, character.id, character.name]);
+
 
   /** Stage 9 — the player deliberately picking a target is a structured aggro event. */
   const emitEngage = useCallback((creature: { id: string; name: string }) => {
