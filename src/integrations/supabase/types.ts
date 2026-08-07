@@ -125,12 +125,13 @@ export type Database = {
           effect_type: string
           expires_at: number
           id: string
-          next_tick_at: number
+          next_tick_at: number | null
           node_id: string
           session_id: string | null
           source_ability_key: string | null
           source_id: string
           stacks: number
+          started_at: number | null
           target_id: string
           tick_rate_ms: number
         }
@@ -140,12 +141,13 @@ export type Database = {
           effect_type: string
           expires_at: number
           id?: string
-          next_tick_at: number
+          next_tick_at?: number | null
           node_id: string
           session_id?: string | null
           source_ability_key?: string | null
           source_id: string
           stacks?: number
+          started_at?: number | null
           target_id: string
           tick_rate_ms?: number
         }
@@ -155,12 +157,13 @@ export type Database = {
           effect_type?: string
           expires_at?: number
           id?: string
-          next_tick_at?: number
+          next_tick_at?: number | null
           node_id?: string
           session_id?: string | null
           source_ability_key?: string | null
           source_id?: string
           stacks?: number
+          started_at?: number | null
           target_id?: string
           tick_rate_ms?: number
         }
@@ -308,9 +311,11 @@ export type Database = {
           default_damage_type: string | null
           duration: Json
           effect_type: string
+          is_periodic: boolean | null
           key: string
           label: string
           magnitude: Json
+          modifier: Json | null
           stack_noun: string
           stacks: Json
           tick_interval_ms: number | null
@@ -323,9 +328,11 @@ export type Database = {
           default_damage_type?: string | null
           duration?: Json
           effect_type: string
+          is_periodic?: boolean | null
           key: string
           label: string
           magnitude?: Json
+          modifier?: Json | null
           stack_noun?: string
           stacks?: Json
           tick_interval_ms?: number | null
@@ -338,9 +345,11 @@ export type Database = {
           default_damage_type?: string | null
           duration?: Json
           effect_type?: string
+          is_periodic?: boolean | null
           key?: string
           label?: string
           magnitude?: Json
+          modifier?: Json | null
           stack_noun?: string
           stacks?: Json
           tick_interval_ms?: number | null

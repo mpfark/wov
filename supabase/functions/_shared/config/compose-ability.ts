@@ -47,11 +47,23 @@ export interface AppliedStatusDef {
     base_ms?: number;
     per_point_ms?: number;
     cap_ms?: number;
+    /**
+     * Authoritative duration for non-periodic combat statuses: a whole number
+     * of combat ticks. The runtime derives the expiry boundary from the live
+     * tick cadence, so the promise ("the next N ticks") survives cadence changes.
+     */
+    duration_ticks?: number;
     role?: ScalingRoleName | null;
   } | null;
   stacks?: {
     role?: ScalingRoleName | null;
     max_stacks_calc?: AbilityCalc | null;
+  } | null;
+  /** Non-DoT modifier payload (damage-amplification statuses only). */
+  modifier?: {
+    kind?: string;
+    value?: number;
+    eligible_sources?: string[];
   } | null;
   default_damage_type?: string | null;
 }
@@ -172,14 +184,33 @@ function applyClassScale(calc: AbilityCalc | null, scale: number): AbilityCalc |
 /**
  * Expand an applied-status definition into the `effect_config` keys the combat
  * runtime reads, binding the status's scaling roles to the use's attributes.
+ *
+ * Non-periodic (damage-amplification) statuses take a separate branch: they own
+ * no periodic magnitude and must never leak `dot_*` keys or the DoT
+ * `effect_type` into a mechanic that would then treat them as a DoT.
  */
 export function statusEffectConfig(
   status: AppliedStatusDef,
   use: ConfiguredUseRow,
 ): Record<string, unknown> {
+  if (status.classification === 'damage_amp') {
+    const cfg: Record<string, unknown> = {
+      amp_status_key: status.key,
+      amp_effect_type: status.effect_type,
+      amp_label: status.label ?? status.key,
+      amp_kind: status.modifier?.kind ?? 'damage_taken_pct',
+      amp_pct: typeof status.modifier?.value === 'number' ? status.modifier.value : 0,
+      amp_eligible_sources: status.modifier?.eligible_sources ?? [],
+    };
+    const ticks = status.duration?.duration_ticks;
+    if (typeof ticks === 'number') cfg.amp_duration_ticks = Math.max(1, Math.floor(ticks));
+    return cfg;
+  }
+
   const cfg: Record<string, unknown> = { effect_type: status.effect_type };
   if (status.stack_noun) cfg.stack_noun = status.stack_noun;
   if (typeof status.tick_interval_ms === 'number') cfg.tick_rate_ms = status.tick_interval_ms;
+
 
   const mag = status.magnitude ?? {};
   if (typeof mag.stat_mult === 'number') cfg.dot_stat_mult = mag.stat_mult;
