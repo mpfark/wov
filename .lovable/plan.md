@@ -100,24 +100,32 @@ Authority corrections only; no numbers change.
 - `member_buffs`, `member_buff_state`, `client_cp`, `consume_stacks` and `engaged_creature_ids` all leave the request body by the end of migration.
 
 ### Recoverable claim — one logical tick at a time
-New `encounters` columns: `tick_number bigint`, `tick_at bigint`, `tick_state text` (`idle|resolving`), `resolving_tick bigint`, `tick_mode text` (`live|effects_only`), `resolver_id uuid`, `lease_until bigint`, `attempt int`.
+New `encounters` columns: `tick_number bigint`, `tick_at bigint`, `tick_state text` (`idle|resolving`), `resolving_tick bigint`, `tick_mode text` (`live|effects_only`), `resolver_id uuid`, `claim_token uuid`, `lease_until bigint`, `attempt int`.
 
-`claim_encounter_tick(_encounter_id, _rate_ms, _lease_ms, _caller text)` — advisory xact lock, then:
+`claim_encounter_tick(_encounter_id, _rate_ms, _lease_ms, _caller text, _supported_modes text[])` — advisory xact lock, then, **all under the lock**:
+- Derive the authoritative mode first (see below).
+- If the derived mode is not in `_supported_modes` → return `claimed=false, reason='mode_refused', mode=<derived>` and change **nothing**: no `tick_state`, `resolver_id`, `claim_token`, `lease_until`, `attempt` or cursor write. A caller can never hold a lease for a tick it cannot execute.
 - `resolving` with a live lease → `claimed=false, reason='in_flight'`.
-- `resolving` with an expired lease → returns the **same** `resolving_tick` and `tick_mode` again with a fresh lease and `attempt+1`. Same resolution contract, so a retry cannot silently switch modes.
-- `idle` and `now - tick_at >= rate` → claim exactly **one** step: `resolving_tick = tick_number + 1`, mode computed as below.
+- `resolving` with an expired lease → returns the **same** `resolving_tick` and stored `tick_mode` again (still subject to the capability check) with a fresh lease, a **new `claim_token`** and `attempt+1`.
+- `idle` and `now - tick_at >= rate` → claim exactly **one** step: `resolving_tick = tick_number + 1`, stored derived mode, new `claim_token`.
 - otherwise `claimed=false, reason='not_due'`.
 
-It never advances `tick_at`. `commit_encounter_tick(_encounter_id, _tick, _batch_id, deltas...)` — same lock — verifies `resolving_tick = _tick`, applies **all** deltas for that one tick in a single transaction (creature HP/deaths, character HP/CP/resources, status rows, action consumption, contributions, reward claims, batch row), sets `tick_number = _tick`, `tick_at = tick_at + rate`, `tick_state='idle'`. A commit for an already-committed tick is a no-op.
+Every successful claim (new or reclaimed) returns a unique `claim_token`. It never advances `tick_at`.
+
+`commit_encounter_tick(_encounter_id, _tick, _claim_token, _batch_id, deltas...)` — same lock — verifies encounter id, `resolving_tick = _tick` **and** `claim_token = _claim_token` before applying anything. On mismatch it applies nothing and returns `committed=false, reason='stale_claim'`, so a resolver whose lease was reclaimed can never commit late. On success it applies **all** deltas for that one tick in a single transaction (creature HP/deaths, character HP/CP/resources, status rows, action consumption, contributions, reward claims, batch row), sets `tick_number = _tick`, `tick_at = tick_at + rate`, `tick_state='idle'`, clears `claim_token`. A commit for an already-committed tick is a no-op.
 
 An invocation loops `claim N → resolve N → commit N` up to the existing three-step cap, each with its own snapshot, action consumption, creature actions, batch and recoverable claim. **Recovery if the resolver dies after committing N but before N+1:** N is durable and published, N+1 was never claimed, so the next invocation (or the next heartbeat) claims N+1 normally. If it dies *inside* N, nothing from N is applied; the lease expires and the identical tick N is re-resolved and committed once. Under a held lease other callers get `claimed=false` and return the current snapshot, so nothing double-advances.
 
+### Deterministic resolution — retry-stable
+Every nondeterministic tick choice is seeded from stable inputs `(encounter_id, tick_number)` (plus the entity id where a per-entity stream is needed): `random_alive` creature targeting, tank-pool selection, status chance sampling (`statusSample`), proc rolls, attack/damage rolls, loot rolls inside a committed tick. No `Math.random()` on any tick-resolution path. Consequence: an expired-lease retry of tick N reproduces the same resolution byte-for-byte regardless of which resolver instance runs it, and `attempt` never changes outcomes.
+
 ### Resolution mode — derived, not first-come
-`tick_mode` is computed **inside the claim** from authoritative state, never from which function called:
+`tick_mode` is computed **inside the claim, under the lock**, from authoritative state, never from which function called:
 - `live` when the encounter has at least one eligible participant: alive, `current_node_id = encounter node`, at least one engagement, and a `combat_sessions` heartbeat within the grace window.
 - `effects_only` when there is none.
 
-Consequences: `combat-catchup` can never claim an active combat interval — with eligible participants present the claim returns `live`, and catch-up (which does not resolve player/creature actions) refuses a `live` claim and returns `claimed=false, reason='live_encounter'`, leaving the interval for the live resolver. Equally, `combat-tick` refuses an `effects_only` claim. `encounter_reconcile` stops resetting any cursor; offscreen effect intervals advance only through `claim/commit`, so live and catch-up can never hold the same interval. The mode is stored, so an expired-lease retry repeats the same contract.
+Callers declare capability: `combat-tick` passes `{live}`, `combat-catchup` passes `{effects_only}`. An incompatible derived mode yields `mode_refused` with no state mutation, so catch-up can never touch a live interval and live can never resolve an effects-only interval. (Acceptable alternative if we prefer one endpoint: route both through a single resolver that supports `{live, effects_only}` and executes whichever mode was derived — capability then always matches. The plan implements the capability-passing form.) `encounter_reconcile` stops resetting any cursor; offscreen effect intervals advance only through `claim/commit`. The mode is stored, so an expired-lease retry repeats the same contract.
+
 
 ### Dual-delivery safety during migration
 The resolver executes `combat_actions` rows **exclusively**. `member_pending_ability` becomes a presentation-only "Elyra prepares Frost Bolt" message carrying the *same* action `id`, purely so clients can match preparing → resolved. No resolver path reads, reconstructs or executes an action from a broadcast.
