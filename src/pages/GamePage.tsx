@@ -773,14 +773,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setIgniteBuff: buffSetters.setIgniteBuff,
     clearReservedBuffsLocal: () => clearCharacterFields?.({ reserved_buffs: {} as any }),
     onIncomingPlayerHp: (newHp) => wimpFleeRef.current?.(newHp) ?? false,
-
-    getCreatureStacks: (creatureId, stackType) => {
-      const map = stackType === 'poison' ? poisonStacks : igniteStacks;
-      const entry = map?.[creatureId];
-      if (!entry) return 0;
-      if (entry.expiresAt && entry.expiresAt < Date.now()) return 0;
-      return Math.min(entry.stacks || 0, 5);
-    },
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,

@@ -90,8 +90,6 @@ export interface UseCombatDriverParams {
   onIgniteProc?: (creatureId: string) => void;
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
-  /** Resolver for stacks to consume on execute_attack/ignite_consume. Returns current stack count for the given creature. */
-  getCreatureStacks?: (creatureId: string, stackType: 'poison' | 'ignite') => number;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
   /** Callback with merged creature-centric debuffs for shared party display */
@@ -783,7 +781,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
               pending_abilities: pendingAbilitiesForServer,
-              client_cp: p.character.cp ?? 0,
             }
           : {
               party_id: p.party!.id,
