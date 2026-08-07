@@ -1,5 +1,5 @@
 /**
- * Phase 7 — catch-up runs on the shared encounter claim in `effects_only` mode.
+ * Catch-up runs on the shared encounter claim in `effects_only` mode.
  *
  * These cases pin the decision table `combat-catchup` uses when interpreting
  * `claim_encounter_tick`: it may only resolve effects while it actually holds a
@@ -58,18 +58,13 @@ describe('catch-up effects_only claim', () => {
       .toEqual({ action: 'skip', reason: 'not_due' });
   });
 
-  it('falls back to unclaimed reconciliation for legacy-owned encounters', () => {
-    expect(interpretEffectsOnlyClaim({ claimed: false, reason: 'legacy_owner', tick_owner: 'legacy' }))
-      .toEqual({ action: 'legacy', reason: 'legacy_owner' });
-  });
-
   it('falls back when the node has no encounter row', () => {
     expect(interpretEffectsOnlyClaim({ claimed: false, reason: 'no_encounter' }))
-      .toEqual({ action: 'legacy', reason: 'no_encounter' });
+      .toEqual({ action: 'unclaimed', reason: 'no_encounter' });
   });
 
   it('falls back when the claim RPC failed', () => {
-    expect(interpretEffectsOnlyClaim(null)).toEqual({ action: 'legacy', reason: 'claim_error' });
-    expect(interpretEffectsOnlyClaim(undefined)).toEqual({ action: 'legacy', reason: 'claim_error' });
+    expect(interpretEffectsOnlyClaim(null)).toEqual({ action: 'unclaimed', reason: 'claim_error' });
+    expect(interpretEffectsOnlyClaim(undefined)).toEqual({ action: 'unclaimed', reason: 'claim_error' });
   });
 });
