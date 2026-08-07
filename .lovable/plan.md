@@ -190,7 +190,11 @@ Automated (vitest + edge tests):
 - Fleeing one engagement leaves the character's other engagement intact.
 - Failure after tick N commits but before N+1 is claimed: N durable, N+1 resolved cleanly next invocation.
 - Crash inside tick N: nothing applied, lease expires, N re-resolved and committed once.
-- Catch-up racing live resolution with active participants present: catch-up gets `claimed=false`, no effects-only resolution of a live interval.
+- Catch-up racing live resolution with active participants present: catch-up gets `claimed=false, reason='mode_refused'` **and captures no lease** — `tick_state`, `resolver_id`, `claim_token`, `lease_until` and cursors unchanged.
+- Live combat attempting to claim an authoritatively `effects_only` tick: `mode_refused`, no lease captured, no state mutation.
+- Resolver A finishes after its lease was reclaimed by resolver B: A's commit returns `stale_claim` and applies nothing; B's commit applies exactly once.
+- Retry stability: the same tick re-resolved after lease expiry produces an identical batch and identical deltas (seeded targeting, status chance, procs and rolls).
+- Rollout matrix for the `shared_encounter_tick` flag — disabled (legacy session ticks only), enabled (shared encounter ticks only), and mid-deployment with both code paths present — proving exactly one ownership model writes to a given encounter and no encounter is mutated by both.
 - Leaving a party mid-combat keeps the enemy engagement; party-targeted actions are revalidated and rejected with a reason.
 - Publication failure followed by batch recovery by tick number.
 - Duplicate action `id` executes once; retry idempotent; CP charged once; rejected actions reconcile optimistic CP.
