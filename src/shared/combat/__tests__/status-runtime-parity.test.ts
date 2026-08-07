@@ -38,7 +38,7 @@ const chilledCfg = {
   status_classification: 'damage_amp',
   status_trigger: 'ability_hit',
   status_chance_pct: 100,
-  status_duration_ticks: 3,
+  amp_duration_ticks: 3,
 };
 
 const character = { str: 18, dex: 12, con: 10, int: 10, wis: 10, cha: 10 };
@@ -76,8 +76,10 @@ describe('status runtime live/replay parity', () => {
     const live = apply(chilledCfg, 0.1);
     const replay = apply(chilledCfg, 0.1);
     expect(replay.effects).toEqual(live.effects);
-    // 3 combat ticks from the application time.
-    expect(replay.effects[0].expires_at).toBe(10_000 + 3 * TICK);
+    // 3 combat ticks from the application time (plus the shared half-tick
+    // grace the live path uses, so a tick landing exactly on the boundary
+    // still counts).
+    expect(replay.effects[0].expires_at).toBe(10_000 + 3 * TICK + TICK / 2);
     expect(replay.effects[0].next_tick_at).toBeNull();
   });
 
