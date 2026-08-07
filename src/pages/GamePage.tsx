@@ -1099,7 +1099,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const handleDropItem = useCallback(async (inventoryId: string) => {
     const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
     if (inv && character.current_node_id) {
-      await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
+      await dropItemToGround(inventoryId, inv.item_id, character.current_node_id, inv.item.name);
       fetchInventory();
       addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`, {
         player: { kind: 'player', id: character.id, name: character.name },
