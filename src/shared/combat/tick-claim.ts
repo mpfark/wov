@@ -22,7 +22,6 @@ export const EFFECTS_ONLY_MODES: readonly TickMode[] = ['effects_only'];
 
 export type ClaimRefusal =
   | 'no_encounter'
-  | 'legacy_owner'
   | 'in_flight'
   | 'not_due'
   | 'mode_refused';
@@ -42,7 +41,6 @@ export interface ClaimRefused {
   claimed: false;
   reason: ClaimRefusal;
   mode?: TickMode | null;
-  tick_owner?: string | null;
 }
 
 export type ClaimResult = ClaimGranted | ClaimRefused;
@@ -84,7 +82,7 @@ export function shouldStopLoop(r: ClaimResult): boolean {
 }
 
 /**
- * Phase 7 — how `combat-catchup` interprets its own claim attempt.
+ * How `combat-catchup` interprets its own claim attempt.
  *
  * Catch-up declares only `effects_only`. Three outcomes exist:
  *
@@ -93,30 +91,27 @@ export function shouldStopLoop(r: ClaimResult): boolean {
  * - `skip` — another resolver owns the tick, live combat owns the encounter
  *   (`mode_refused`), or the tick is not due. No lease was captured and no
  *   state may be mutated; the caller returns fresh creature state only.
- * - `legacy` — this encounter is not on the shared cursor (`legacy_owner`), has
- *   no encounter row, or the RPC failed. Catch-up falls back to its historic
- *   unclaimed reconciliation, which is idempotent.
+ * - `unclaimed` — this encounter has no encounter row, or the RPC failed.
+ *   Catch-up falls back to unclaimed reconciliation, which is idempotent.
  */
 export type EffectsOnlyDecision =
   | { action: 'resolve'; claim: ClaimGranted }
   | { action: 'skip'; reason: Extract<ClaimRefusal, 'in_flight' | 'not_due' | 'mode_refused'> }
-  | { action: 'legacy'; reason: 'no_encounter' | 'legacy_owner' | 'claim_error' };
+  | { action: 'unclaimed'; reason: 'no_encounter' | 'claim_error' };
 
 export function interpretEffectsOnlyClaim(
   result: ClaimResult | null | undefined,
 ): EffectsOnlyDecision {
-  if (!result) return { action: 'legacy', reason: 'claim_error' };
+  if (!result) return { action: 'unclaimed', reason: 'claim_error' };
   if (isClaimGranted(result)) return { action: 'resolve', claim: result };
   switch (result.reason) {
     case 'in_flight':
     case 'not_due':
     case 'mode_refused':
       return { action: 'skip', reason: result.reason };
-    case 'legacy_owner':
-      return { action: 'legacy', reason: 'legacy_owner' };
     case 'no_encounter':
-      return { action: 'legacy', reason: 'no_encounter' };
+      return { action: 'unclaimed', reason: 'no_encounter' };
     default:
-      return { action: 'legacy', reason: 'claim_error' };
+      return { action: 'unclaimed', reason: 'claim_error' };
   }
 }
