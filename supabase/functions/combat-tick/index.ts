@@ -2489,9 +2489,11 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          // On-hit stack appliers (`stack_apply`, e.g. Envenom): the proc chance
-          // is the ability's amount calc, everything else is config-driven.
-          for (const applier of stackAppliersFor(m, mb, 'on_hit')) {
+          // Status Application, trigger `weapon_hit` (e.g. Envenom): reached only
+          // on a landed autoattack. The proc chance is the stance's amount calc;
+          // every other mechanical number comes from the reusable status.
+          for (const applier of stackAppliersFor(m, mb, 'weapon_hit')) {
+
             const procInputs = buildServerCalcInputs(c.level || 1, {
               str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
               con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
