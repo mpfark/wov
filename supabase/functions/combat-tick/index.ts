@@ -40,7 +40,18 @@ import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { LEGACY_AMBUSH_MULT } from "../_shared/config/mechanic-templates.ts";
+// Legacy compatibility ONLY: the retired one-off On-Hit Effect. Read for the
+// last ability whose Status Application is not switched on yet, so no deployed
+// phase silently loses a proc.
 import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
+import {
+  readStatusApplication,
+  statusChanceSucceeds,
+  statusDamagePerTick,
+  statusDurationMs,
+  type StatusApplicationSpec,
+} from "../_shared/combat/status-application.ts";
+
 import {
   amplify,
   buildAmpSnapshot,
