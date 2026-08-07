@@ -1312,9 +1312,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               bossCasts={bossCasts}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
+                const picked = groundLoot.find(g => g.id === id);
+                const itemName = picked?.item?.name ?? 'an item';
                 const result = await pickUpItem(id);
                 if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
-                else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
+                else {
+                  addLogEvent(buildLootEvent(`You pick up ${itemName}.`, {
+                    player: { kind: 'player', id: character.id, name: character.name },
+                    remoteMessage: `${character.name} picks up ${itemName}.`,
+                  }));
+                  fetchInventory();
+                }
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               creaturesLoading={creaturesLoading}
