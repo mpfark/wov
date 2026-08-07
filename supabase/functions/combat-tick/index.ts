@@ -535,12 +535,26 @@ Deno.serve(async (req) => {
           .select('creature_id, character_id, last_action_at')
           .in('character_id', memberIdList);
         if (engErr) {
+          // Phase 3 safety gate: the roster is an INPUT to authoritative
+          // resolution (targeting, retaliation, engagement set). Simulating
+          // with a partial roster would write HP, effects and rewards derived
+          // from the wrong combatant set, so we resolve nothing this
+          // invocation. No authoritative effect has been written yet at this
+          // point — only session bookkeeping — so bailing out is clean and the
+          // next tick simply picks the elapsed time up again.
           console.error('[combat-tick] engagement roster load failed', engErr.message);
-        } else {
-          for (const row of engRows || []) {
-            const at = Date.parse((row as any).last_action_at ?? '') || 0;
-            recordEngagement((row as any).character_id, (row as any).creature_id, at);
-          }
+          const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: cr.hp > 0 }));
+          return json({
+            events: [],
+            creature_states,
+            member_states: [],
+            ticks_processed: 0,
+            roster_unavailable: true,
+          });
+        }
+        for (const row of engRows || []) {
+          const at = Date.parse((row as any).last_action_at ?? '') || 0;
+          recordEngagement((row as any).character_id, (row as any).creature_id, at);
         }
       }
       // Creatures on the durable roster are engaged for this node's simulation.
