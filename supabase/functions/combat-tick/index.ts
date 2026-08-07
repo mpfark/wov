@@ -346,15 +346,48 @@ Deno.serve(async (req) => {
       engaged_creature_ids, pending_abilities: rawPendingAbilities,
       // New: client can request session creation
       action,
-      // Client-side CP for freshness sync (solo only)
-      client_cp,
     } = await req.json();
 
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
-    const buffs: Record<string, any> = member_buffs || {};
+
+    // ── Phase 5: authoritative buff state ────────────────────────
+    // The client's buff bag is advisory presentation state. Everything the
+    // server can derive itself (stances from `reserved_buffs`, ward pools from
+    // `stance_state`, DoT stacks from `active_effects`) is stripped from the
+    // client payload here and re-seeded from authoritative sources further
+    // down, and any entry whose own `expires_at` has passed is dropped. The
+    // durable base is the previous tick's server-persisted
+    // `combat_sessions.member_buffs`, so a client can no longer resurrect,
+    // extend or inflate a buff by re-sending it.
+    const SERVER_DERIVED_BUFF_KEYS = new Set([
+      'stack_apply', 'crit_buff', 'damage_buff', 'battle_cry_dr',
+      'holy_shield', 'shield_wall_stance', 'absorb_buff',
+      'poison_buff', 'ignite_buff',
+    ]);
+    const nowMs = Date.now();
+    const sanitizeClientBuffs = (raw: unknown): Record<string, any> => {
+      const out: Record<string, any> = {};
+      if (!raw || typeof raw !== 'object') return out;
+      for (const [charId, bag] of Object.entries(raw as Record<string, any>)) {
+        if (!bag || typeof bag !== 'object') continue;
+        const clean: Record<string, any> = {};
+        for (const [key, value] of Object.entries(bag as Record<string, any>)) {
+          if (SERVER_DERIVED_BUFF_KEYS.has(key)) continue;
+          const exp = (value && typeof value === 'object') ? Number((value as any).expires_at) : NaN;
+          if (Number.isFinite(exp) && exp <= nowMs) continue;
+          clean[key] = value;
+        }
+        if (Object.keys(clean).length > 0) out[charId] = clean;
+      }
+      return out;
+    };
+    const clientBuffs = sanitizeClientBuffs(member_buffs);
+    /** Authoritative per-tick buff bag. Seeded from the persisted session below. */
+    const buffs: Record<string, any> = {};
     const engagedIds: string[] = engaged_creature_ids || [];
     const pendingAbilities: any[] = rawPendingAbilities || [];
+
 
     // Server-authoritative time
     const now = Date.now();
