@@ -101,6 +101,12 @@ interface UsageRow {
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 const STATUS_FILTERS = ['all', ...ABILITY_STATUSES] as const;
+/**
+ * Server combat heartbeat. Non-periodic statuses are configured in combat
+ * TICKS (the authority); this constant only renders the approximate seconds.
+ */
+const COMBAT_TICK_MS = 2000;
+
 /** Combat-text slots authored on the class ability. */
 const TEXT_SLOTS: { key: string; label: string }[] = [
   { key: 'cast', label: 'Cast line' },
