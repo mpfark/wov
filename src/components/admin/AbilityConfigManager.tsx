@@ -44,12 +44,14 @@ import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import BaseAbilityCreateDialog from './ability/BaseAbilityCreateDialog';
 import ClassAbilityCreateDialog from './ability/ClassAbilityCreateDialog';
 import BaseAbilityEditor, { type BaseAbilityRow } from './ability/BaseAbilityEditor';
-import { OnHitEffectEditor } from './class/OnHitEffectEditor';
 import {
   ABILITY_TYPES, capabilityList,
   type CapabilityKey,
 } from './ability/ability-taxonomy';
-import type { OnHitEffectConfig, OnHitEffectKey } from '@/shared/combat/on-hit-effects';
+import {
+  STATUS_TRIGGERS, STATUS_TRIGGER_LABELS, type StatusTrigger,
+} from '@/shared/combat/status-application';
+
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
