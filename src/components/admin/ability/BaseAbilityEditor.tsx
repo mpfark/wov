@@ -32,7 +32,6 @@ import MechanicCalcsEditor from './MechanicCalcsEditor';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import type { AbilityCalc, CalcInputs } from '@/shared/formulas/ability-calc';
 import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
-import { ON_HIT_EFFECTS, ON_HIT_EFFECT_KEYS, type OnHitEffectKey } from '@/shared/combat/on-hit-effects';
 import {
   ACTIVATION_MODES, CAPABILITY_SECTIONS, TARGET_TYPES, TRIGGER_TYPES,
   capabilityList, type CapabilityKey,
@@ -102,11 +101,6 @@ export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
   const toggleCap = (key: CapabilityKey, on: boolean) => {
     const next = on ? [...caps, key] : caps.filter(c => c !== key);
     setDraft({ ...draft, capabilities: next });
-  };
-
-  const toggleOnHit = (key: OnHitEffectKey, on: boolean) => {
-    const current = (draft.on_hit_allowed ?? []).filter(k => k !== key);
-    setDraft({ ...draft, on_hit_allowed: on ? [...current, key] : current });
   };
 
   const save = async () => {
