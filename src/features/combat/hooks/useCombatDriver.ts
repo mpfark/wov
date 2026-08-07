@@ -723,9 +723,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             ability_key: abilityKey,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: consumeStacks,
             cp_cost: cpCost,
-            client_cp_before: p.character.cp ?? 0,
+
             client_expected_cp_after: expectedCpAfter,
           };
 
