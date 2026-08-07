@@ -884,18 +884,13 @@ Deno.serve(async (req) => {
     for (const m of members) {
       mHp[m.id] = m.c.hp;
 
-      // Trust DB for CP, but allow client to report a LOWER value (i.e. an
-      // ability cost the server hasn't seen yet). Never adopt a higher
-      // client value — that would let stale client-side regen leak in
-      // during combat and make the CP bar visibly tick upward.
-      const dbCp = m.c.cp ?? 0;
-      // SERVER AUTHORITY: client_cp is advisory only.
-      // Math.min(client_cp, dbCp) guarantees the client can only *reduce* perceived
-      // CP (UI sync for in-flight ability cost) and can never raise server CP.
-      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
-        ? Math.min(client_cp, dbCp)
-        : dbCp;
-      mCp[m.id] = freshCp;
+      // ── Phase 5: CP is server-authoritative ─────────────────────
+      // Durable action submission (`combat_actions`) makes the client's CP
+      // report redundant: every cost the server has not yet applied is already
+      // represented by a pending row, so CP comes straight from
+      // `characters.cp`. `client_cp` is no longer accepted in any form.
+      mCp[m.id] = m.c.cp ?? 0;
+
 
       // ── Hydrate stance buffs from reserved_buffs ─────────────────
       // Stances (Ignite, Envenom, Holy Shield, Force Shield, Eagle Eye,
