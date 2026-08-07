@@ -5,7 +5,7 @@
  * today, any configured `offense_mode: 'damage_mult'` ability tomorrow).
  * Extracted verbatim from `combat-tick/index.ts`.
  */
-import { resolveMagnitude } from "./ability-magnitude.ts";
+import { resolveMagnitude } from "../ability-telemetry.ts";
 import { buildServerCalcInputs } from "../load-ability-calcs.ts";
 
 /**
