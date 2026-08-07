@@ -3717,6 +3717,27 @@ Deno.serve(async (req) => {
       console.error('[combat-tick] audit log write failed', e);
     }
 
+    // ── Durable action bookkeeping (Phase 1) ─────────────────────
+    // The client mirrors every dispatched server ability into
+    // `combat_actions` so an intent survives a dropped request. The tick that
+    // actually executed the intent retires the row here; the shared-encounter
+    // resolver will later read these rows as the sole source of intent.
+    try {
+      const consumedActionIds = pendingAbilities
+        .map((a: any) => a?.action_id)
+        .filter((id: any): id is string => typeof id === 'string' && id.length > 0);
+      if (consumedActionIds.length > 0) {
+        await db
+          .from('combat_actions')
+          .update({ status: 'consumed' })
+          .in('id', consumedActionIds)
+          .eq('status', 'pending');
+      }
+    } catch (e) {
+      console.error('[combat-tick] durable action retire failed', e);
+    }
+
+
     return json({
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,

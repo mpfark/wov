@@ -1126,6 +1126,96 @@ export type Database = {
         }
         Relationships: []
       }
+      combat_actions: {
+        Row: {
+          ability_key: string
+          character_id: string
+          client_seq: number
+          consumed_tick: number | null
+          created_at: string
+          eligible_after_ms: number | null
+          encounter_id: string
+          id: string
+          node_id: string
+          reject_reason: string | null
+          status: string
+          submitted_at: string
+          target_character_id: string | null
+          target_creature_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ability_key: string
+          character_id: string
+          client_seq?: number
+          consumed_tick?: number | null
+          created_at?: string
+          eligible_after_ms?: number | null
+          encounter_id: string
+          id: string
+          node_id: string
+          reject_reason?: string | null
+          status?: string
+          submitted_at?: string
+          target_character_id?: string | null
+          target_creature_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ability_key?: string
+          character_id?: string
+          client_seq?: number
+          consumed_tick?: number | null
+          created_at?: string
+          eligible_after_ms?: number | null
+          encounter_id?: string
+          id?: string
+          node_id?: string
+          reject_reason?: string | null
+          status?: string
+          submitted_at?: string
+          target_character_id?: string | null
+          target_creature_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat_actions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_actions_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_actions_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_actions_target_character_id_fkey"
+            columns: ["target_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_actions_target_creature_id_fkey"
+            columns: ["target_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat_audit_log: {
         Row: {
           character_id: string
@@ -1553,6 +1643,55 @@ export type Database = {
           },
         ]
       }
+      encounter_engagements: {
+        Row: {
+          character_id: string
+          creature_id: string
+          encounter_id: string
+          joined_at: string
+          last_action_at: string
+          party_id_at_join: string | null
+        }
+        Insert: {
+          character_id: string
+          creature_id: string
+          encounter_id: string
+          joined_at?: string
+          last_action_at?: string
+          party_id_at_join?: string | null
+        }
+        Update: {
+          character_id?: string
+          creature_id?: string
+          encounter_id?: string
+          joined_at?: string
+          last_action_at?: string
+          party_id_at_join?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_engagements_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_engagements_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_engagements_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encounter_participants: {
         Row: {
           character_id: string
@@ -1589,52 +1728,114 @@ export type Database = {
           },
         ]
       }
+      encounter_tick_batches: {
+        Row: {
+          batch_id: string
+          created_at: string
+          encounter_id: string
+          payload: Json
+          tick_number: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          encounter_id: string
+          payload?: Json
+          tick_number: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          encounter_id?: string
+          payload?: Json
+          tick_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_tick_batches_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encounters: {
         Row: {
+          attempt: number
+          claim_token: string | null
           created_at: string
           encounter_key: string
           ended_at: string | null
           id: string
           last_activity_at: string
+          lease_until: number | null
           node_id: string
+          resolver_id: string | null
+          resolving_tick: number | null
           started_at: string
           state: Json
           status: string
           stored_power: number
           stored_power_cap: number | null
           stored_power_source_id: string | null
+          tick_at: number
+          tick_mode: string | null
+          tick_number: number
+          tick_owner: string | null
+          tick_state: string
           updated_at: string
           version: number
         }
         Insert: {
+          attempt?: number
+          claim_token?: string | null
           created_at?: string
           encounter_key?: string
           ended_at?: string | null
           id?: string
           last_activity_at?: string
+          lease_until?: number | null
           node_id: string
+          resolver_id?: string | null
+          resolving_tick?: number | null
           started_at?: string
           state?: Json
           status?: string
           stored_power?: number
           stored_power_cap?: number | null
           stored_power_source_id?: string | null
+          tick_at?: number
+          tick_mode?: string | null
+          tick_number?: number
+          tick_owner?: string | null
+          tick_state?: string
           updated_at?: string
           version?: number
         }
         Update: {
+          attempt?: number
+          claim_token?: string | null
           created_at?: string
           encounter_key?: string
           ended_at?: string | null
           id?: string
           last_activity_at?: string
+          lease_until?: number | null
           node_id?: string
+          resolver_id?: string | null
+          resolving_tick?: number | null
           started_at?: string
           state?: Json
           status?: string
           stored_power?: number
           stored_power_cap?: number | null
           stored_power_source_id?: string | null
+          tick_at?: number
+          tick_mode?: string | null
+          tick_number?: number
+          tick_owner?: string | null
+          tick_state?: string
           updated_at?: string
           version?: number
         }
@@ -2816,6 +3017,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      cancel_combat_action: {
+        Args: { _id: string; _reason?: string }
+        Returns: undefined
+      }
       cancel_family_request: { Args: { _request_id: string }; Returns: Json }
       cancel_unique_listing: {
         Args: { p_character_id: string; p_listing_id: string }
@@ -2826,6 +3031,16 @@ export type Database = {
         Returns: Json
       }
       check_family_name: { Args: { _display: string }; Returns: Json }
+      claim_encounter_tick: {
+        Args: {
+          _caller: string
+          _encounter_id: string
+          _lease_ms: number
+          _rate_ms: number
+          _supported_modes: string[]
+        }
+        Returns: Json
+      }
       cleanup_ground_loot: { Args: never; Returns: undefined }
       clear_ability_loadout: {
         Args: { _character_id: string; _role_id: string }
@@ -2834,6 +3049,17 @@ export type Database = {
       clear_stances: { Args: { p_character_id: string }; Returns: Json }
       collect_marketplace_payouts: {
         Args: { p_character_id: string }
+        Returns: Json
+      }
+      commit_encounter_tick: {
+        Args: {
+          _batch_id: string
+          _claim_token: string
+          _encounter_id: string
+          _payload?: Json
+          _rate_ms: number
+          _tick: number
+        }
         Returns: Json
       }
       consume_maps_for_node: {
@@ -3116,9 +3342,17 @@ export type Database = {
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
+      join_encounter_engagement: {
+        Args: { _character_id: string; _creature_id: string }
+        Returns: string
+      }
       join_order: {
         Args: { _character_id: string; _class: string }
         Returns: Json
+      }
+      leave_encounter_engagements: {
+        Args: { _character_id: string; _creature_id?: string }
+        Returns: undefined
       }
       leave_family: { Args: { _family_id: string }; Returns: Json }
       list_unique_item: {
@@ -3149,6 +3383,10 @@ export type Database = {
       }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
+      purge_creature_engagements: {
+        Args: { _creature_id: string }
+        Returns: undefined
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -3187,6 +3425,7 @@ export type Database = {
         Args: { _character_id: string; _enabled: boolean }
         Returns: undefined
       }
+      shared_encounter_tick_enabled: { Args: never; Returns: boolean }
       shutdown_world: { Args: never; Returns: undefined }
       stonebinder_commit_fuse: {
         Args: {
@@ -3197,6 +3436,39 @@ export type Database = {
           p_source_inv_b: string
         }
         Returns: string
+      }
+      submit_combat_action: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _client_seq?: number
+          _id: string
+          _target_character_id?: string
+          _target_creature_id?: string
+        }
+        Returns: {
+          ability_key: string
+          character_id: string
+          client_seq: number
+          consumed_tick: number | null
+          created_at: string
+          eligible_after_ms: number | null
+          encounter_id: string
+          id: string
+          node_id: string
+          reject_reason: string | null
+          status: string
+          submitted_at: string
+          target_character_id: string | null
+          target_creature_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "combat_actions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       switch_order: {
         Args: { _character_id: string; _class: string }

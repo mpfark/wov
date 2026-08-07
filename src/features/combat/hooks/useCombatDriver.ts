@@ -136,6 +136,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
   const tickSeqRef = useRef(0);
+  // Monotonic per-session sequence for durable combat action submissions.
+  const durableSeqRef = useRef(0);
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
@@ -266,6 +268,18 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const p = ext.current;
     if (p.isDead || p.character.hp <= 0) return;
 
+    // Durable engagement roster: every character records its own
+    // character↔creature engagement, independent of party role. The shared
+    // encounter resolver reads this roster instead of client-sent ids.
+    void supabase
+      .rpc('join_encounter_engagement', {
+        _character_id: p.character.id,
+        _creature_id: creatureId,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[combat] engagement join failed', error.message);
+      });
+
     if (p.party && !p.isLeader) {
       channelRef.current?.send({
         type: 'broadcast',
@@ -274,6 +288,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       });
       return;
     }
+
 
     setEngagedCreatureIds(prev => {
       if (prev.includes(creatureId)) return prev;
@@ -675,8 +690,31 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           // slot. `ability_type` stays only as the mechanic dispatch hint.
           const abilityKey = getAbilityKeyForSlot(p.character.class, pending.index);
 
+          // Durable intent: mirror the dispatch into `combat_actions` so the
+          // action survives a dropped tick request. The same id travels on the
+          // wire payload, letting the resolving tick retire exactly this row.
+          const actionId =
+            typeof crypto !== 'undefined' && 'randomUUID' in crypto
+              ? crypto.randomUUID()
+              : `${p.character.id}-${Date.now()}`;
+          durableSeqRef.current += 1;
+          const clientSeq = durableSeqRef.current;
+          void supabase
+            .rpc('submit_combat_action', {
+              _id: actionId,
+              _character_id: p.character.id,
+              _ability_key: abilityKey,
+              _target_creature_id: targetId ?? null,
+              _target_character_id: null,
+              _client_seq: clientSeq,
+            })
+            .then(({ error }) => {
+              if (error) console.warn('[combat] durable action submit failed', error.message);
+            });
+
           const abilityPayload = {
             character_id: p.character.id,
+            action_id: actionId,
             ability_key: abilityKey,
             ability_type: ability.type,
             target_creature_id: targetId,
@@ -685,6 +723,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             client_cp_before: p.character.cp ?? 0,
             client_expected_cp_after: expectedCpAfter,
           };
+
 
           if (p.party && !p.isLeader) {
             channelRef.current?.send({
