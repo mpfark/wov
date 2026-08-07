@@ -1719,24 +1719,9 @@ Deno.serve(async (req) => {
           character_id: member.id,
           ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
-        // Reusable applied status (e.g. Frost Bolt -> Chilled). Applied only on
-        // a landed hit, and only while the target still lives.
-        if (cHp[target.id] > 0 && !cKilled.has(target.id)) {
-          const applied = applyAmpStatus(
-            member.id,
-            (auth.entry?.effectConfig ?? {}) as Record<string, unknown>,
-            auth.abilityKey,
-            target.id,
-            now,
-          );
-          if (applied) {
-            pushAbilityEvent({
-              type: 'status_applied',
-              message: `${target.name} is ${applied.label}.`,
-              character_id: member.id,
-            });
-          }
-        }
+        // Status Application (e.g. Frost Bolt -> Chilled) is resolved once for
+        // every mechanic in the shared `ability_hit` block below.
+
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
