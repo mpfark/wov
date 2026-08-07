@@ -3807,6 +3807,34 @@ Deno.serve(async (req) => {
       console.error('[combat-tick] audit log write failed', e);
     }
 
+    // ── Durable engagement bookkeeping (Phase 2) ─────────────────
+    // Persist the roster this tick discovered so a dropped request can never
+    // lose "who is fighting what", and purge engagements for creatures we
+    // killed so nothing keeps swinging at a corpse.
+    try {
+      const writes = [...engagementWrites.values()].filter(
+        w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
+      );
+      await Promise.all([
+        ...writes.map(w =>
+          db.rpc('join_encounter_engagement', {
+            _character_id: w.character_id,
+            _creature_id: w.creature_id,
+          }).then(({ error }: any) => {
+            if (error) console.warn('[combat-tick] engagement join failed', error.message);
+          }),
+        ),
+        ...[...purgedEngagementCreatures].map(creatureId =>
+          db.rpc('purge_creature_engagements', { _creature_id: creatureId })
+            .then(({ error }: any) => {
+              if (error) console.warn('[combat-tick] engagement purge failed', error.message);
+            }),
+        ),
+      ]);
+    } catch (e) {
+      console.error('[combat-tick] engagement bookkeeping failed', e);
+    }
+
     // ── Durable action bookkeeping (Phase 1) ─────────────────────
     // The client mirrors every dispatched server ability into
     // `combat_actions` so an intent survives a dropped request. The tick that
