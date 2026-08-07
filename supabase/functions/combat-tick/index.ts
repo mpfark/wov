@@ -482,6 +482,71 @@ Deno.serve(async (req) => {
     const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
     for (const id of engagedIds) sessionEngaged.add(id);
 
+    // ── Phase 2: durable engagement roster ───────────────────────
+    // `encounter_engagements` is the authoritative "who is fighting what"
+    // record. It survives dropped requests and spans parties, so both
+    // auto-attack targeting and creature retaliation read from it. The legacy
+    // client-supplied `engaged_creature_ids` remains as fallback until every
+    // caller writes engagements.
+    const engagedByCreature = new Map<string, Map<string, number>>();
+    const engagedByCharacter = new Map<string, Map<string, number>>();
+    /** (characterId, creatureId) pairs this tick discovered or refreshed. */
+    const engagementWrites = new Map<string, { character_id: string; creature_id: string }>();
+    const purgedEngagementCreatures = new Set<string>();
+
+    const recordEngagement = (characterId: string, creatureId: string, atMs: number) => {
+      if (!characterId || !creatureId) return;
+      let byCreature = engagedByCreature.get(creatureId);
+      if (!byCreature) { byCreature = new Map(); engagedByCreature.set(creatureId, byCreature); }
+      byCreature.set(characterId, Math.max(byCreature.get(characterId) ?? 0, atMs));
+      let byCharacter = engagedByCharacter.get(characterId);
+      if (!byCharacter) { byCharacter = new Map(); engagedByCharacter.set(characterId, byCharacter); }
+      byCharacter.set(creatureId, Math.max(byCharacter.get(creatureId) ?? 0, atMs));
+    };
+
+    /** Engage a creature: session set, in-memory roster, and durable write. */
+    const engageCreature = (characterId: string | null | undefined, creatureId: string, atMs: number) => {
+      sessionEngaged.add(creatureId);
+      if (!characterId) return;
+      recordEngagement(characterId, creatureId, atMs);
+      engagementWrites.set(`${characterId}|${creatureId}`, {
+        character_id: characterId,
+        creature_id: creatureId,
+      });
+    };
+
+    const dropEngagementsForCreature = (creatureId: string) => {
+      const byCreature = engagedByCreature.get(creatureId);
+      if (byCreature) {
+        for (const charId of byCreature.keys()) engagedByCharacter.get(charId)?.delete(creatureId);
+        engagedByCreature.delete(creatureId);
+      }
+      for (const key of [...engagementWrites.keys()]) {
+        if (key.endsWith(`|${creatureId}`)) engagementWrites.delete(key);
+      }
+      purgedEngagementCreatures.add(creatureId);
+    };
+
+    {
+      const memberIdList = members.map(m => m.id);
+      if (memberIdList.length > 0) {
+        const { data: engRows, error: engErr } = await db
+          .from('encounter_engagements')
+          .select('creature_id, character_id, last_action_at')
+          .in('character_id', memberIdList);
+        if (engErr) {
+          console.error('[combat-tick] engagement roster load failed', engErr.message);
+        } else {
+          for (const row of engRows || []) {
+            const at = Date.parse((row as any).last_action_at ?? '') || 0;
+            recordEngagement((row as any).character_id, (row as any).creature_id, at);
+          }
+        }
+      }
+      // Creatures on the durable roster are engaged for this node's simulation.
+      for (const creatureId of engagedByCreature.keys()) sessionEngaged.add(creatureId);
+    }
+
     // ── Calculate ticks to process ──────────────────────────────
     const elapsedMs = now - session.last_tick_at;
     const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
