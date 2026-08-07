@@ -42,6 +42,14 @@ const SERVER_ABILITY_TYPES = new Set([
   'spell_attack', 'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
+/**
+ * Phase 6: how stale the tick stream must be before a non-leader party member
+ * wakes the tick itself. Longer than the 2s leader heartbeat so a healthy
+ * leader always stays the natural driver, short enough that a suspended or
+ * offline leader cannot freeze the fight.
+ */
+const FOLLOWER_WAKE_STALE_MS = 6000;
+
 
 
 interface Party {
@@ -647,7 +655,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         }
       }
     }, 1800);
-    return () => clearInterval(interval);
+    // Phase 6 fallback heartbeat: if the leader's ticks stop landing, wake the
+    // tick from here. doTick itself decides whether the gap is large enough.
+    const wake = setInterval(() => {
+      if (!inCombatRef.current) return;
+      const since = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
+      if (since > FOLLOWER_WAKE_STALE_MS) doTickRef.current();
+    }, 2000);
+    return () => { clearInterval(interval); clearInterval(wake); };
   }, [params.party, params.isLeader]);
 
   // ── Driver (solo or party leader): tick function ───────────────
@@ -760,8 +775,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
 
       // Combat tick (drivers only)
+      // Phase 6: the leader is no longer the only participant allowed to wake
+      // a tick. If no tick result has landed for a while (leader suspended,
+      // offline or its request dropped), any member wakes the tick itself. The
+      // server accepts any eligible participant and serializes concurrent
+      // wakeups on the session cursor, so at most one of them resolves.
       const solo = !p.party;
-      const driver = solo || p.isLeader;
+      const sinceLastTick = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
+      const followerWake =
+        !solo && !p.isLeader && inCombatRef.current && sinceLastTick > FOLLOWER_WAKE_STALE_MS;
+      const driver = solo || p.isLeader || followerWake;
 
       if (driver && !solo) {
         pendingAbilitiesForServer = [...pendingAbilitiesForServer, ...memberAbilitiesRef.current];
@@ -859,13 +882,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
             stopCombat();
+          } else if ((result as any).tick_reserved_elsewhere) {
+            // Another participant reserved this tick — it resolved nothing.
+            // The winner's result arrives via broadcast / realtime.
+            setPendingCpCost(0);
           } else if ((result as any).roster_unavailable) {
             // The resolver refused to simulate because the engagement roster
             // could not be loaded. Nothing authoritative changed — hold state
             // and let the next tick pick the elapsed time up.
             setPendingCpCost(0);
           } else {
-            if (!solo) {
+            if (!solo && p.isLeader) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
             // Reservation was already converted to a real local CP debit

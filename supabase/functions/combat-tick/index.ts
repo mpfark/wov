@@ -403,8 +403,22 @@ Deno.serve(async (req) => {
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
       if (!party) throw new Error('Party not found');
+      // ── Phase 6: any eligible participant may wake the tick ──────
+      // The leader is no longer a required transport. Eligibility is simply
+      // "the caller owns an accepted member of this party": the tick is
+      // resolved server-side for the whole roster either way, and concurrent
+      // wakeups are serialized by the session tick reservation below.
       const { data: userChars } = await db.from('characters').select('id').eq('user_id', userId);
-      if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
+      const userCharIds = new Set((userChars || []).map(c => c.id));
+      const { data: eligibleRows } = await db
+        .from('party_members')
+        .select('character_id')
+        .eq('party_id', party_id)
+        .eq('status', 'accepted');
+      if (!(eligibleRows || []).some(r => userCharIds.has(r.character_id))) {
+        throw new Error('Not a party participant');
+      }
+
 
       const { data: membersRaw } = await db
         .from('party_members')
@@ -622,6 +636,33 @@ Deno.serve(async (req) => {
     const elapsedMs = now - session.last_tick_at;
     const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
     const ticks = Math.min(ticksToProcess, TICK_CAP);
+
+    // ── Phase 6: session tick reservation ────────────────────────
+    // Now that any participant can wake the tick, two members can call in the
+    // same window. The session cursor is the mutex: we advance it with a
+    // compare-and-set on the value we read, and only the winner simulates.
+    // The loser resolved nothing (no authoritative write has happened yet) and
+    // returns an empty result — it will pick up the winner's state from the
+    // published batch / realtime, exactly like a dropped response.
+    if (ticks > 0) {
+      const { data: reserved } = await db
+        .from('combat_sessions')
+        .update({ last_tick_at: session.last_tick_at + ticks * TICK_RATE })
+        .eq('id', session.id)
+        .eq('last_tick_at', session.last_tick_at)
+        .select('id');
+      if (!reserved || reserved.length === 0) {
+        return json({
+          events: [],
+          creature_states: [],
+          member_states: [],
+          ticks_processed: 0,
+          tick_reserved_elsewhere: true,
+        });
+      }
+    }
+
+
 
     if (ticks === 0 && pendingAbilities.length === 0) {
       // Not enough time has passed for a tick — parallelize the two idle-path reads
