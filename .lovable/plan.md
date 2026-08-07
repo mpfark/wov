@@ -59,8 +59,8 @@ Typed columns on `abilities` (matches the project's existing "typed columns for 
 - `applied_status` — kept, becomes the application's status reference (FK-style text to `applied_statuses.key`).
 - `status_trigger text` — enum-checked: `ability_hit`, `weapon_hit`, `successful_pulse_hit`, `activation`. Every trigger name denotes a **successful qualifying event** (see 4).
 - `status_chance_pct integer` (**0..100**, default 100) — one authoritative unit; percent integers. `0` is valid and means the application never fires (an explicitly disabled application that keeps its authored configuration).
-- `status_target text` — `enemy` only for now, derived from the base's target when inherent, stored for clarity.
-- `status_application_enabled boolean default true`.
+- `status_target` — **derived from the Base Ability, not stored.** Every live application targets the base's resolved enemy target, so there is no second source of truth to contradict. If a future application needs self/ally targeting, the column is added then with a check constraint asserting the value is one of the base's `allowed_target_types` (so a stored value can never contradict the base).
+- `status_application_enabled boolean default true`. **`enabled = false` vs `chance_pct = 0`:** `enabled = false` means the application does not exist at runtime — no trigger is registered, no sample is drawn, nothing is logged, and admin fields collapse; it is the switch for authoring-in-progress or retired applications. `chance_pct = 0` means the application is live and wired (trigger registered, compatibility validated) but its roll can never succeed; it is the deliberate "0% for now" balance value. Validation and compatibility rules apply to `chance_pct = 0` rows and are skipped for disabled rows.
 - Drop after cutover: `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, `effect_config.on_hit_*` keys, `on_hit_effect` capability.
 - `base_abilities.capabilities` gains `applied_status` on `spell_attack`, `spell_bolt`, `weapon_attack`, `multi_attack`; `on_hit_effect` removed everywhere.
 
