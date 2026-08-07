@@ -637,6 +637,33 @@ Deno.serve(async (req) => {
     const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
     const ticks = Math.min(ticksToProcess, TICK_CAP);
 
+    // ── Phase 6: session tick reservation ────────────────────────
+    // Now that any participant can wake the tick, two members can call in the
+    // same window. The session cursor is the mutex: we advance it with a
+    // compare-and-set on the value we read, and only the winner simulates.
+    // The loser resolved nothing (no authoritative write has happened yet) and
+    // returns an empty result — it will pick up the winner's state from the
+    // published batch / realtime, exactly like a dropped response.
+    if (ticks > 0) {
+      const { data: reserved } = await db
+        .from('combat_sessions')
+        .update({ last_tick_at: session.last_tick_at + ticks * TICK_RATE })
+        .eq('id', session.id)
+        .eq('last_tick_at', session.last_tick_at)
+        .select('id');
+      if (!reserved || reserved.length === 0) {
+        return json({
+          events: [],
+          creature_states: [],
+          member_states: [],
+          ticks_processed: 0,
+          tick_reserved_elsewhere: true,
+        });
+      }
+    }
+
+
+
     if (ticks === 0 && pendingAbilities.length === 0) {
       // Not enough time has passed for a tick — parallelize the two idle-path reads
       const [creaturesIdleRes, effectsIdleRes] = await Promise.all([
