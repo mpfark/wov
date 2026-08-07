@@ -32,7 +32,7 @@ import {
 
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
-import { loadAbilityCalcs, getAppliedStatusDefs } from "../_shared/load-ability-calcs.ts";
+import { loadAbilityCalcs, getAppliedStatusDefs, getServerAbilityCalcs } from "../_shared/load-ability-calcs.ts";
 import { createStatusRuntime } from "../_shared/combat/status-runtime.ts";
 import {
   readStatusApplication,
