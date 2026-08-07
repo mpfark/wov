@@ -40,6 +40,10 @@ import {
 } from "../_shared/combat/status-application.ts";
 import { getStatModifier } from "../_shared/formulas/stats.ts";
 import { isPeriodicStatus } from "../_shared/combat/creature-damage-modifiers.ts";
+import {
+  EFFECTS_ONLY_MODES,
+  interpretEffectsOnlyClaim,
+} from "../_shared/combat/tick-claim.ts";
 
 /**
  * Live combat's tick cadence. Non-periodic statuses store their duration as a
@@ -190,11 +194,77 @@ Deno.serve(async (req) => {
       return json({ caught_up: false, effects_processed: 0, creatures: creatures || [], partial: false });
     }
 
+    // ── Shared encounter claim (Phase 7) ─────────────────────────
+    // Offscreen reconciliation is a tick of the SAME shared node encounter that
+    // live combat advances. Catch-up therefore takes the shared claim in
+    // `effects_only` mode instead of running an independent cursor. When live
+    // participants are present the claim is refused with `mode_refused` and NO
+    // lease is captured — live combat keeps sole ownership of effects.
+    let heldClaim: { tick: number; claim_token: string; encounter_id: string } | null = null;
+    {
+      const { data: encRow } = await db
+        .from('encounters')
+        .select('id')
+        .eq('node_id', node_id)
+        .eq('encounter_key', 'default')
+        .in('status', ['active', 'idle'])
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const encounterId = (encRow as any)?.id as string | undefined;
+      let claimResult: any = null;
+      if (encounterId) {
+        const { data: claimRaw, error: claimErr } = await db.rpc('claim_encounter_tick', {
+          _encounter_id: encounterId,
+          _rate_ms: TICK_RATE,
+          _lease_ms: 15000,
+          _caller: 'combat-catchup',
+          _supported_modes: EFFECTS_ONLY_MODES as unknown as string[],
+        });
+        if (claimErr) {
+          console.warn('[combat-catchup] tick claim failed', claimErr.message);
+        } else {
+          claimResult = claimRaw;
+        }
+      } else {
+        claimResult = { claimed: false, reason: 'no_encounter' };
+      }
+
+      const decision = interpretEffectsOnlyClaim(claimResult);
+      if (decision.action === 'skip') {
+        const { data: creaturesNow } = await db
+          .from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
+        console.log(JSON.stringify({
+          fn: 'combat-catchup', node_id, claim: 'skipped', reason: decision.reason,
+          creatures_alive: (creaturesNow || []).length, duration_ms: Date.now() - t0,
+        }));
+        return json({
+          caught_up: false, effects_processed: 0,
+          creatures: creaturesNow || [], partial: false, skipped: decision.reason,
+        });
+      }
+      if (decision.action === 'resolve' && encounterId) {
+        heldClaim = {
+          tick: Number(decision.claim.tick),
+          claim_token: String(decision.claim.claim_token),
+          encounter_id: encounterId,
+        };
+      }
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', node_id, claim: decision.action,
+        reason: decision.action === 'legacy' ? decision.reason : undefined,
+        tick: heldClaim?.tick ?? null, tick_mode: 'effects_only',
+      }));
+    }
+
     // Parallelize: fetch effects, creatures, and run encounter reconciliation.
     // encounter_reconcile owns:
     //   - purging stale participants
-    //   - resetting last_tick_at on stale combat_sessions
     //   - flipping encounter status (active/idle/ended)
+    // It no longer touches `combat_sessions.last_tick_at`: the tick cursor is
+    // owned by the encounter claim, and resetting session cursors here used to
+    // silently discard a live interval mid-fight.
     const now = Date.now();
     const [{ data: effects }, { data: creaturesRaw }] = await Promise.all([
       db.from('active_effects').select('*').eq('node_id', node_id),
@@ -204,12 +274,46 @@ Deno.serve(async (req) => {
 
     const creatures = creaturesRaw || [];
 
+    /**
+     * Publish + release the held shared claim. `commit_encounter_tick` is
+     * token-gated, so a claim reclaimed by another resolver after a lease
+     * expiry makes this a no-op (`stale_claim`).
+     */
+    const commitHeldClaim = async (batch: Record<string, unknown>) => {
+      if (!heldClaim) return;
+      const claim = heldClaim;
+      heldClaim = null;
+      const { data: commitRaw, error: commitErr } = await db.rpc('commit_encounter_tick', {
+        _encounter_id: claim.encounter_id,
+        _tick: claim.tick,
+        _claim_token: claim.claim_token,
+        _batch_id: crypto.randomUUID(),
+        _rate_ms: TICK_RATE,
+        _payload: {
+          consumed_action_ids: [],
+          rejected_actions: [],
+          batch: { ...batch, mode: 'effects_only', resolved_at: Date.now() },
+        },
+      });
+      if (commitErr) {
+        console.warn('[combat-catchup] tick commit failed', commitErr.message);
+      } else if (!(commitRaw as any)?.committed) {
+        console.log(JSON.stringify({
+          fn: 'combat-catchup', tick_commit_refused: (commitRaw as any)?.reason ?? 'unknown',
+          encounter_id: claim.encounter_id, tick: claim.tick,
+        }));
+      }
+    };
+
+
+
     if (!effects || effects.length === 0) {
       recentReconcileMap.set(node_id, Date.now());
       console.log(JSON.stringify({
         fn: 'combat-catchup', node_id, effects_count: 0, effects_resolved: false,
         creatures_alive: creatures.length, duration_ms: Date.now() - t0,
       }));
+      await commitHeldClaim({ effects_processed: 0, creature_states: [], kill_rewards: [] });
       return json({ caught_up: false, effects_processed: 0, creatures, partial: false });
     }
 
@@ -223,6 +327,7 @@ Deno.serve(async (req) => {
         fn: 'combat-catchup', node_id, effects_count: effects.length, effects_resolved: true,
         creatures_alive: 0, duration_ms: Date.now() - t0,
       }));
+      await commitHeldClaim({ effects_processed: effects.length, creature_states: [], kill_rewards: [] });
       return json({ caught_up: true, effects_processed: effects.length, partial: false });
     }
 
@@ -692,6 +797,16 @@ Deno.serve(async (req) => {
       duration_ms: Date.now() - t0,
       ...(reason ? { wake_up_source: reason } : {}),
     }));
+
+    await commitHeldClaim({
+      effects_processed: effects.length,
+      creature_states: finalCreatures.map(cr => ({ id: cr.id, hp: cr.hp, max_hp: cr.max_hp })),
+      killed_creature_ids: Array.from(cKilled),
+      kill_rewards: killRewards,
+      loot_events: lootEvents,
+      ticks_resolved: result.advancedEffects.length,
+      partial: isPartial,
+    });
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures, partial: isPartial, kill_rewards: killRewards, loot_events: lootEvents });
   } catch (err) {
