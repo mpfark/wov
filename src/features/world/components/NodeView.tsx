@@ -496,7 +496,8 @@ export default function NodeView({
                   {groundLoot.map(g => {
                      const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
                       g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
-                    const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
+                    const statEntries = Object.entries((g.stat_override ?? g.item.stats) || {}).filter(([, v]) => v !== 0);
+                    const gemCount = (g.applied_gems ?? []).length;
                     return (
                       <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
                         <Tooltip>
