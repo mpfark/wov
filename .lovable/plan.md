@@ -167,8 +167,8 @@ Integration: set `abilities.applied_status = 'chilled'` and allow the `spell_bol
 
 `AbilityConfigManager.tsx` currently reads `applied_statuses` read-only. Changes:
 
-- New applied-status editor pane with fields conditional on classification: `dot` shows periodic damage, tick interval, damage type, stacks; `damage_amp` shows damage-taken percent, eligible source categories (multi-select, excluding the never-amplified set), duration, stack and refresh behaviour. DoT magnitude/tick-damage/stack-noun inputs are hidden for `damage_amp`.
-- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, a read-only inherited Chilled summary (+10% damage taken, 6s, no stacking, refresh, no periodic damage), and a link to edit the reusable status. No per-ability copy of the 10%.
+- New applied-status editor pane with fields conditional on classification: `dot` shows periodic damage, tick interval, damage type, stacks; `damage_amp` shows damage-taken percent, eligible source categories (multi-select, excluding the never-amplified set), duration as a **whole combat-tick count** with a derived read-out ("3 combat ticks — approximately 6 seconds at the current 2-second tick rate"), stack and refresh behaviour. DoT magnitude/tick-damage/stack-noun inputs are hidden for `damage_amp`. The tick input accepts positive integers only, so every admin change converts predictably to a whole number of affected ticks.
+- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, a read-only inherited Chilled summary (+10% damage taken, 3 combat ticks / approximately 6 seconds, no stacking, refresh, no periodic damage), and a link to edit the reusable status. Frost Bolt stores neither the 10% nor any duration of its own.
 
 ## 10. Player-facing presentation (revised — concrete emit sites)
 
