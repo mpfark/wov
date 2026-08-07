@@ -29,76 +29,92 @@ Confirmed creature-damage call sites (all funnel through `resolveDamage`, all mu
 | Stance pulse spark (Orbs of Fire) | `combat-tick/index.ts:2458` |
 | DoT ticks (Ignite/Poison/Bleed), live + offscreen | `_shared/combat-resolver.ts:127` and `:172` (shared with `combat-catchup`) |
 
-So every path already converges on `resolveDamage` immediately before the in-memory HP mutation. That convergence point is where the new modifier stage goes — one insertion per site, no new write path, `writeCreatureState` untouched.
+Every path already converges on `resolveDamage` immediately before the in-memory HP mutation. That convergence point is where the new modifier stage goes — one insertion per site, no new write path, `writeCreatureState` untouched.
 
 **Source classification today:** only aggregate (`WriteCreatureStateOpts.sourceKind: 'autoattack' | 'ability' | 'dot' | 'proc'`) on the combined write — there is no per-hit classifier. Smallest safe extension: a per-hit `CreatureDamageSource` union passed explicitly at each call site (no inference from log text or ability names).
 
-**Reflected damage:** the runtime has no true damage-reflection mechanic. The closest is Holy Shield retaliation (`:1909`), which is a reactive strike, not reflection. It will be classified `'reflect'` and excluded, giving the exclusion a real home now and a safe default for any future reflect path.
+**Reflected damage:** the runtime has no true damage-reflection mechanic. The closest is Holy Shield retaliation (`:1909`), a reactive strike. It will be classified `'reflect'` and hard-excluded, giving the exclusion a real home now and a safe default for any future reflect path.
 
-## 2. Shared modifier stage
+## 2. Shared modifier stage (revised — single owner of eligibility)
 
 New pure module `src/shared/combat/creature-damage-modifiers.ts` (mirrored to `supabase/functions/_shared/combat/creature-damage-modifiers.ts`):
 
 ```ts
 export type CreatureDamageSource =
-  | 'weapon'      // main/off-hand auto-attacks
-  | 'ability'     // direct ability damage, volleys, finishers, burst
-  | 'stance'      // automatic stance pulses (Orbs of Fire)
-  | 'dot'         // Ignite / Poison / Bleed ticks
-  | 'proc'        // item/ability procs that damage the creature
-  | 'reflect'     // retaliation / reflected damage — never amplified
-  | 'environment' // never amplified unless explicitly reclassified
-  | 'self';       // creature self-damage — never amplified
+  | 'weapon' | 'ability' | 'stance' | 'dot' | 'proc'   // amplifiable-capable
+  | 'reflect' | 'self' | 'environment';                // hard-excluded
 
-const AMPLIFIABLE: ReadonlySet<CreatureDamageSource> =
-  new Set(['weapon', 'ability', 'stance', 'dot', 'proc']);
+/** Hard runtime safety rule, NOT a definition of eligibility. */
+const NEVER_AMPLIFIED: ReadonlySet<CreatureDamageSource> =
+  new Set(['reflect', 'self', 'environment']);
+
+/** One active amplification instance, already resolved from a status row. */
+export interface DamageAmpInstance {
+  statusKey: string;                        // e.g. 'chilled'
+  pct: number;                              // whole percent, from the status def
+  eligibleSources: CreatureDamageSource[];  // from the status def — the only owner
+}
+
+export function resolveAmpPct(
+  instances: DamageAmpInstance[],
+  source: CreatureDamageSource,
+): number;
 
 export function applyCreatureDamageModifiers(input: {
   amount: number;
   source: CreatureDamageSource;
-  /** Pre-computed, tick-frozen amp percent for this creature (see §5). */
   ampPct: number;
 }): number;
 ```
 
-Rules: returns `amount` unchanged for non-amplifiable sources or `ampPct <= 0`; otherwise `Math.max(1, Math.floor(amount * (1 + ampPct / 100)))` — one rounding, matching the project's existing floor-then-clamp-to-1 convention. The function never reads or writes DB state, never recalculates source damage, and cannot amplify twice because it is called exactly once per damage instance, immediately before `resolveDamage`.
+Eligibility ownership: the **reusable status definition** (`applied_statuses.modifier.eligible_sources`) is the single authoritative source of which categories a given amplification status affects. There is no hardcoded `AMPLIFIABLE` allowlist. `NEVER_AMPLIFIED` is a separate hard safety rule: `reflect`, `self` and `environment` are dropped even if a status definition lists them, and a config that lists them fails admin validation. A future mechanic that deliberately amplifies one of those categories requires an explicit, approved change to this rule.
 
-`resolveEffectTicks` in `_shared/combat-resolver.ts` gains an optional `ampPctByCreature` argument so DoT ticks (live and `combat-catchup`) use the same stage; when omitted, behaviour is byte-identical to today.
+Zero/non-positive preservation: `applyCreatureDamageModifiers` returns `amount` **unchanged** when `amount <= 0`, when `ampPct <= 0`, or when the source is not eligible. Chilled can never turn 0 damage into 1. Otherwise `Math.max(1, Math.floor(amount * (1 + ampPct / 100)))` — one rounding, matching the project's floor-then-clamp-to-1 convention.
 
-## 3. Status schema extension
+## 3. Status schema extension (revised)
 
-`applied_statuses` today: `classification` is `'dot'` for all three rows (bleed/poison/ignite), with role-based `magnitude`, `duration`, `stacks` and `tick_interval_ms`.
+`applied_statuses` today: `classification = 'dot'` for bleed/poison/ignite, with role-based `magnitude`, `duration`, `stacks`, plus `tick_interval_ms` and `default_damage_type`.
 
-Extension (backward-safe, additive):
+Additive, backward-safe changes:
 
 - Allow `classification = 'damage_amp'` alongside `'dot'`.
-- Add nullable `modifier jsonb` — for `damage_amp` statuses: `{ "kind": "damage_taken_pct", "value": 10, "eligible_sources": ["weapon","ability","stance","dot","proc"] }`.
-- Add a validation trigger: `dot` rows must have `magnitude` and no `modifier`; `damage_amp` rows must have `modifier` and no periodic damage. Bleed/Poison/Ignite rows are untouched, so their behaviour cannot drift into amplification.
-- Seed the Chilled row: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `duration = { base_ms: 6000, role: null }`, `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = null`, `default_damage_type = 'frost'`.
+- Add nullable `modifier jsonb`; for Chilled:
+  `{ "kind": "damage_taken_pct", "value": 10, "eligible_sources": ["weapon","ability","stance","dot","proc"] }`
+- Add `is_periodic boolean` derived-and-stored flag (`true` for `dot`, `false` for `damage_amp`) so the runtime never infers periodicity from field shapes.
+- Validation trigger: `dot` rows require `magnitude`, forbid `modifier`; `damage_amp` rows require `modifier` with `kind`, integer `value > 0` and a non-empty `eligible_sources` containing none of `reflect`/`self`/`environment`, and must have `tick_interval_ms IS NULL` and no periodic magnitude. Bleed/Poison/Ignite rows are untouched and cannot drift into amplification.
+- `ALTER TABLE public.active_effects ALTER COLUMN next_tick_at DROP NOT NULL` (audited: currently `NOT NULL`) and add nullable `started_at bigint`. Non-periodic effects store `next_tick_at = NULL`; no artificial timestamps.
+- Seed Chilled: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `is_periodic=false`, `duration = { base_ms: 6000, role: null }`, `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = NULL`.
 
-**Authoritative unit:** whole percent integer (`10`) stored once in `applied_statuses.modifier.value`. Runtime derives `1 + value/100` locally; nothing stores `0.10` or `1.10`, and no per-ability copy of the value exists.
+**Authoritative unit:** whole percent integer (`10`), stored once in `applied_statuses.modifier.value`. Runtime derives `1 + value/100` locally; no `0.10`/`1.10` field anywhere and no per-ability copy.
 
-## 4. Lifecycle reuse
+**`default_damage_type`:** omitted (left `NULL`) for Chilled. It exists to type periodic tick damage; Chilled deals none, so setting `frost` there would imply damage that never happens. Thematic school is already carried by Frost Bolt's own `damage_type = frost` and by the status label — no new field is introduced for flavour.
 
-Chilled reuses `active_effects` exactly as DoTs do: same insert/refresh path, same node-scoped load at tick start, same `expires_at` expiry sweep, same upsert (`onConflict: source_id,target_id,effect_type`), same purge on creature death, same client payload in `active_effects` of the tick response. Differences: no `next_tick_at` progression (set beyond `expires_at` so `resolveEffectTicks` never ticks it) and `damage_per_tick = 0`. Refresh uses the shared `applyStackingEffect` primitive with `maxStacks: 1`, which already refreshes duration without resetting cadence.
+## 4. Lifecycle reuse (revised — periodic vs non-periodic)
+
+Chilled reuses the existing `active_effects` lifecycle: same application/refresh code path (`applyStackingEffect` with `maxStacks: 1`, which refreshes duration without resetting cadence), same node-scoped load at tick start, same `expires_at` expiry sweep and `cleanupEffects` delete, same purge on creature death, same `active_effects` payload in the tick response. Non-periodic rows carry `damage_per_tick = 0`, `next_tick_at = NULL`, `started_at = <apply/refresh time>`.
+
+`resolveEffectTicks` is split explicitly by classification rather than by field values:
+
+- **Periodic branch** (unchanged behaviour): only effects whose `effect_type` maps to a periodic status are considered for damage ticks. Ignite/Poison/Bleed math, messages and cadence are byte-identical.
+- **Non-periodic branch** (new): iterates non-periodic effects and performs expiry only — marks `_expired`, pushes the expiry id, pushes a `clearedDots`-equivalent entry and an expiry event. No damage, no `next_tick_at` arithmetic.
 
 No Chilled-only tracker is introduced.
 
-## 5. Deterministic same-tick activation
+## 5. Deterministic same-tick activation (live ticks)
 
-Within one tick the current order is: pending abilities -> creature attacks/retaliation -> aura pulses -> auto-attacks -> stance pulses -> DoT ticks. A status applied by an ability would therefore reach later-processed members but not earlier ones — order-dependent.
+Within one live tick the order is: pending abilities -> creature attacks/retaliation -> aura pulses -> auto-attacks -> stance pulses -> DoT ticks. A status applied mid-tick would otherwise reach later-processed members only.
 
-Rule (recommended): **snapshot amplification at tick start.** Immediately after `active_effects` is loaded, build a frozen `ampPctByCreature` map from statuses already active at tick start; every damage instance in that tick reads only the frozen map. Consequences:
+Rule: **snapshot amplification at tick start.** Right after `active_effects` is loaded, build a frozen `ampByCreature: Record<creatureId, DamageAmpInstance[]>` from instances active at `tickTime`; every damage instance in that tick reads only the frozen map. Therefore:
 
-- Frost Bolt's own triggering hit does not benefit.
+- Frost Bolt's triggering hit does not benefit.
 - No other party damage in the same tick benefits.
 - From the next tick, all eligible party damage benefits identically, regardless of iteration order.
 
-This matches the existing tick-time convention (`now`/`tickTime` are captured once per tick) and requires no change to the status lifecycle.
+This matches the existing per-tick `now`/`tickTime` capture convention.
 
 ## 6. Ordering and rounding
 
-Live ordering is preserved everywhere; the new stage is inserted only between the final per-source amount and `resolveDamage`:
+Live ordering is preserved; the new stage is inserted only between the final per-source amount and `resolveDamage`:
 
 ```text
 base calc -> attribute scaling -> class_scale -> crit -> hit-quality/glancing caps
@@ -107,63 +123,90 @@ base calc -> attribute scaling -> class_scale -> crit -> hit-quality/glancing ca
   -> resolveDamage() -> HP / ward result
 ```
 
-No existing multiplier moves, so damage without Chilled stays numerically identical. Chilled rounds once (`floor`, min 1) at the new stage.
+No existing multiplier moves, so damage without Chilled stays numerically identical. Chilled rounds once (`floor`, min 1) at the new stage, and never modifies a non-positive amount.
 
-## 7. Multiple amplification modifiers
+## 7. Multiple instances and multiple statuses (revised)
 
-Distinct `damage_taken_pct` statuses **add** (10% + 15% = 25%), computed as a single sum then one rounding. Same-key statuses from different sources do not add — the strongest single instance of a given status key wins. Chilled itself does not stack.
+The `active_effects` uniqueness key is `(source_id, target_id, effect_type)`, so **two party members can each hold their own Chilled row on the same creature**. Aggregation rule:
+
+1. Load all non-expired amplification rows for the creature at snapshot time.
+2. **Group by reusable status key** (`effect_type` -> status definition key). Within a key, select the **single strongest active instance** (highest `pct`; tie broken by latest `expires_at`) — same-key instances never add, so N wizards applying Chilled still yield +10%.
+3. Across **distinct** status keys, the selected instances **add** their percentages (10% + 15% = 25%), filtered per damage source by each status's own `eligible_sources`, then one rounding.
+
+Each source's row refreshes independently; refreshing one does not extend another's duration.
 
 ## 8. Frost Bolt integration
 
-Audited record: ability `3084fd4b-cb78-4833-bcbe-702c3b14d6ad`, `ability_key = frost_bolt`, base `spell_bolt` (mechanic `spell_attack`), `cp_cost = 12`, `amount_calc = 3 + 2.4x soft INT + level/3`, `class_scale = 1.0`, `damage_type = frost`, `applied_status = NULL`, assigned to `wizard`. CP cost and damage calc are unchanged by this work.
+Audited record: ability `3084fd4b-cb78-4833-bcbe-702c3b14d6ad`, `ability_key = frost_bolt`, base `spell_bolt` (mechanic `spell_attack`), `cp_cost = 12`, `amount_calc = 3 + 2.4x soft INT + level/3`, `class_scale = 1.0`, `damage_type = frost`, `applied_status = NULL`, assigned to `wizard`. CP cost and damage calc unchanged by this work.
 
-Integration: set `abilities.applied_status = 'chilled'` for Frost Bolt and allow the `spell_bolt` base to trigger a status on a successful hit. Application is composed in the existing successful-hit block in `combat-tick/index.ts` (~`:1690`), right beside the on-hit-effect roll, gated on `abilityHitLanded`. The typed on-hit **DoT** registry (`on-hit-effects.ts`) is not extended — Chilled arrives through the `applied_status` layer, which is where non-DoT statuses belong.
+Integration: set `abilities.applied_status = 'chilled'` and allow the `spell_bolt` base to trigger a status on a successful hit. Application is composed in the existing successful-hit block in `combat-tick/index.ts` (~`:1690`), beside the on-hit-effect roll, gated on `abilityHitLanded`. The typed on-hit **DoT** registry (`on-hit-effects.ts`) is not extended — Chilled arrives via the `applied_status` layer, where non-DoT statuses belong.
 
 ## 9. Admin interface
 
 `AbilityConfigManager.tsx` currently reads `applied_statuses` read-only. Changes:
 
-- New applied-status editor pane with conditional fields by classification: `dot` shows periodic damage / tick interval / damage type / stacks; `damage_amp` shows the damage-taken percent, eligible source categories, duration, stack and refresh behaviour. DoT magnitude, tick-damage and stack-noun inputs are hidden for `damage_amp`.
-- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, an inherited read-only Chilled summary (+10% damage taken, 6s, no stacking, refresh), and a link to edit the reusable status. No per-ability copy of the 10%.
+- New applied-status editor pane with fields conditional on classification: `dot` shows periodic damage, tick interval, damage type, stacks; `damage_amp` shows damage-taken percent, eligible source categories (multi-select, excluding the never-amplified set), duration, stack and refresh behaviour. DoT magnitude/tick-damage/stack-noun inputs are hidden for `damage_amp`.
+- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, a read-only inherited Chilled summary (+10% damage taken, 6s, no stacking, refresh, no periodic damage), and a link to edit the reusable status. No per-ability copy of the 10%.
 
-## 10. Player-facing presentation
+## 10. Player-facing presentation (revised — concrete emit sites)
 
-Creature debuffs are currently surfaced as poison/ignite/bleed chips in `NodeView.tsx` plus structured log events (`*_applied`, `dot_tick`). Chilled adds structured events only (no emoji):
+- **Apply / refresh:** emitted in the successful-hit status-application block in `combat-tick/index.ts` (~`:1690`), the same place DoT `*_applied` events are pushed. Whether the row already existed decides apply vs refresh text.
+- **Expiry:** emitted by the new non-periodic branch of `resolveEffectTicks` in `_shared/combat-resolver.ts`, which is the code that already detects `expires_at <= tickTime` and returns events consumed by `combat-tick` (`:2496-2515`). This makes "Chilled fades" genuinely emittable — it is not promised anywhere else. `combat-catchup` also consumes resolver events, so offscreen expiry is covered.
 
-- apply: "The creature is Chilled and takes 10% increased damage."
-- refresh: "Chilled has been refreshed."
-- expiry: "Chilled fades."
+Text (no emoji): "The creature is Chilled and takes 10% increased damage." / "Chilled has been refreshed." / "Chilled fades."
 
-Plus a neutral Chilled chip on the creature row reusing the existing debuff chip layout. No per-damage-instance log lines; damage text keeps showing the final resolved amount.
+Plus a neutral Chilled chip on the creature row reusing the existing debuff chip layout (`NodeView.tsx`). No per-damage-instance log lines; damage text keeps showing the final resolved amount.
 
-## 11. Migration and compatibility
+## 11. combat-catchup behaviour (new section)
 
-Backward-safe migration: additive column + widened classification + validation trigger + one seed row + one `abilities.applied_status` update. Nothing is deleted; ability IDs, base relationships, class assignments and loadouts are untouched. Regenerate Supabase types, update both shared mirrors, and update ability seed/validation so the new classification passes the publish gate.
+`combat-catchup` runs `resolveEffectTicks` in **bulk mode** (`TICK_CAP = 1000`), replaying each periodic effect's missed ticks at synthetic timestamps `tt = next_tick_at + t * tick_rate_ms`. Chilled must therefore be evaluated **per simulated tick**, not once from present time:
+
+- For each simulated `tt`, amplification uses only instances whose active window contains `tt`, i.e. `started_at <= tt < expires_at` (this is why `started_at` is added in §3 — `expires_at` alone cannot reconstruct the activation edge).
+- Ticks before a Chilled instance's `started_at` and at/after its `expires_at` receive no amplification.
+- Same-key/multi-key aggregation follows §7, recomputed per `tt`.
+- Chilled itself is never ticked in bulk mode (non-periodic branch: expiry only).
+
+Given Chilled's 6s life, this typically amplifies at most the first few replayed ticks — correctness, not throughput, is the point.
 
 ## 12. Files touched
 
 - New: `src/shared/combat/creature-damage-modifiers.ts` + server mirror.
-- `supabase/functions/combat-tick/index.ts` (frozen amp map, 10 call sites, Chilled application + events).
-- `supabase/functions/_shared/combat-resolver.ts` (optional amp map for DoT ticks) and `supabase/functions/combat-catchup/index.ts` (pass-through).
+- `supabase/functions/combat-tick/index.ts` (frozen amp snapshot, 10 call sites, Chilled apply/refresh events).
+- `supabase/functions/_shared/combat-resolver.ts` (periodic/non-periodic split, per-tick amp map, expiry events) and `supabase/functions/combat-catchup/index.ts` (pass amp instances).
 - `src/shared/config/{compose-ability,effective-ability,mechanic-templates}.ts` + server mirrors (damage_amp status shape).
-- `src/hooks/useAbilityRegistry.ts`, `supabase/functions/_shared/load-ability-calcs.ts` (load `modifier`).
-- `src/components/admin/AbilityConfigManager.tsx` (+ status editor component).
+- `src/hooks/useAbilityRegistry.ts`, `supabase/functions/_shared/load-ability-calcs.ts` (load `modifier`, `is_periodic`).
+- `src/components/admin/AbilityConfigManager.tsx` (+ applied-status editor component).
 - `src/features/world/components/NodeView.tsx`, `src/features/combat/utils/mapServerEffectsToBuffState.ts`, combat event presentation.
 - One migration; `src/integrations/supabase/types.ts` regenerated.
 
-## 13. Tests
+## 13. Tests (revised)
 
-Parity: existing damage without Chilled numerically identical; Ignite/Poison/Bleed behaviour unchanged; ward/HP clamping unchanged; assignments and loadouts intact.
+Parity: damage without Chilled numerically identical; Ignite/Poison/Bleed behaviour, cadence and messages unchanged; ward/HP clamping unchanged; assignments and loadouts intact.
 
-Chilled: applied only on a successful hit; triggering hit not amplified; amp frozen at tick start so party iteration order is irrelevant; +10% applied to weapon, off-hand, direct ability, volley, finisher, burst, stance pulse, DoT ticks and eligible procs; excluded for `reflect`, `self` and `environment`; deals no periodic damage; does not alter tick rate; does not stack; reapply refreshes; expires after 6s; all party members benefit equally; single floor rounding; additive stacking rule across distinct amp statuses; admin shows mechanic-appropriate fields; events pass the no-emoji guard; no new raw HP write path (`writeCreatureState` remains sole writer).
+Chilled correctness:
+- applied only on a successful hit; triggering hit not amplified.
+- amp frozen at tick start -> party iteration order irrelevant.
+- +10% applied to weapon, off-hand, direct ability, volley, finisher, burst, stance pulse, DoT ticks, eligible procs.
+- excluded for `reflect`, `self`, `environment` even if a status config lists them (validation rejects, runtime drops).
+- eligibility read from the status definition: narrowing `eligible_sources` to `['weapon']` amplifies only weapon damage, with no code change.
+- **zero/non-positive damage stays zero** (0 -> 0, negative -> unchanged).
+- no periodic damage of its own; no change to tick rate or attack cadence.
+- does not stack; reapply refreshes duration; expires after 6s.
+- **two party members apply Chilled**: two rows coexist under the uniqueness key, aggregate to +10% (not +20%), each refreshes independently.
+- distinct amp keys add after per-key strongest selection.
+- **catch-up boundaries**: replayed ticks before `started_at` are unamplified, ticks inside the window are amplified, ticks at/after `expires_at` are unamplified — asserted on a multi-tick bulk replay.
+- **expiry event emission**: the non-periodic resolver branch emits the expiry event and expired id in both live and bulk mode.
+- `next_tick_at` stays `NULL` for Chilled rows and no code path performs cadence arithmetic on them.
+- admin shows mechanic-appropriate fields only; events pass the no-emoji guard; `writeCreatureState` remains the sole HP writer.
 
 ## 14. Balance notes (not implemented here)
 
-Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If it proves too strong once Chilled lands, options are lowering Chilled to 8%, shortening it to 4s, or trimming Frost Bolt's `class_scale` — each a separate, separately approved change.
+Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If it proves too strong, options are lowering Chilled to 8%, shortening it to 4s, or trimming Frost Bolt's `class_scale` — each a separate, separately approved change.
 
 ## 15. Assumptions needing approval
 
-1. Frost Bolt's own hit does not benefit; Chilled starts amplifying from the next tick (frozen-snapshot rule).
-2. Holy Shield retaliation is classified `reflect` and therefore never amplified.
-3. Eligible source categories are stored on the status but treated as fixed for Chilled.
-4. Distinct amplification statuses add; same-key instances take the strongest.
+1. Frost Bolt's own hit does not benefit; Chilled amplifies from the next tick (frozen-snapshot rule).
+2. Holy Shield retaliation is classified `reflect` and never amplified.
+3. `active_effects.next_tick_at` becomes nullable and `started_at` is added, for correct non-periodic representation and catch-up windows.
+4. Same status key: strongest active instance wins; distinct keys add.
+5. Chilled stores no `default_damage_type`.
