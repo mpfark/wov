@@ -42,6 +42,14 @@ const SERVER_ABILITY_TYPES = new Set([
   'spell_attack', 'fireball', 'weapon_attack', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
+/**
+ * Phase 6: how stale the tick stream must be before a non-leader party member
+ * wakes the tick itself. Longer than the 2s leader heartbeat so a healthy
+ * leader always stays the natural driver, short enough that a suspended or
+ * offline leader cannot freeze the fight.
+ */
+const FOLLOWER_WAKE_STALE_MS = 6000;
+
 
 
 interface Party {
