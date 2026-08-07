@@ -132,36 +132,33 @@ DoT fields never render for `damage_amp` statuses and amplification fields never
 
 ## 8. Migration (staged, no dual authority)
 
-1. **Migration A** — add the new columns + checks; backfill: every ability with `applied_status` gets its derived trigger, target `enemy`, chance 100; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists. **Fireball's status backfill is held out of Migration A** until the balance decision below is answered, so the structural pass can land without changing any live combat number.
+1. **Migration A** — add the new columns + checks; create the new reusable status **Scorched** (see below); backfill: every ability with `applied_status` gets its derived trigger and chance 100; **Fireball is migrated in this same migration** to `applied_status = scorched`, `status_trigger = ability_hit`, `status_chance_pct = 25`; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists.
 2. **Step 2** — regenerate Supabase types; land the shared application module, both mirrors, `compose-ability`, `effective-ability` validation, seeds (`ability-seed.ts` `on_hit_allowed` removed), and switch all four runtime call sites in one change so legacy and new paths never both execute.
 3. **Step 3** — admin UI replacement.
 4. **Migration B** (after verification) — drop `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, the SQL on-hit validation trigger, the `on_hit_effect` capability, and delete `src/shared/combat/on-hit-effects.ts` + its Deno mirror and `ability-taxonomy` entry.
+
+**No phase may exist where Fireball silently loses its proc.** Migration A migrates Fireball atomically with every other status-bearing ability, so the runtime cutover in Step 2 (which stops executing `rollOnHitEffect`) always finds Fireball already on the new path. Ordering guard: Step 2 is not deployed unless Migration A has been applied, and Step 2 keeps a **single narrowly scoped compatibility read for exactly one condition** — an ability that still has `on_hit_effect` set and no `applied_status` — which logs a diagnostic and applies the legacy effect. That fallback exists only to make the ordering failure harmless; it is deleted in Migration B, and a test asserts zero live rows match it.
 
 `spell_bolt` is **preserved as-is for this pass.** Frost Bolt keeps its existing `base_ability_id -> spell_bolt` relationship; any later consolidation of `spell_bolt` into `spell_attack` is explicitly out of scope. `spell_bolt` only gains the `applied_status` capability so the capability list matches the runtime path Frost Bolt already uses.
 
 IDs, base relationships, class assignments, defaults/alternatives and player loadouts are untouched throughout (only new columns added, legacy columns dropped last). Migration A is reversible until Migration B.
 
-### Fireball: explicit balance decision required (not a small buff)
+### Fireball: decided — Option A, as a distinct reusable status called Scorched
 
-Fireball is the one ability whose numbers change, and the change is **substantial** — not cosmetic. Live values: legacy on-hit ignite = 25% chance, 3 damage/tick, 6000 ms, max 3 stacks. Reusable `ignite` = fire, magnitude `secondary * 0.7 * 0.67` (0.469/point), duration `30000 + 1000/point` capped at 45000 ms, max 5 stacks, no explicit tick interval (inherits the 2000 ms combat cadence).
+This structural pass changes **no** live combat number. Fireball's burn is preserved by modelling it as its own reusable status rather than a variant name of Ignite:
 
-Before/after for one landed 25% proc, at representative Wizard stats (2 s ticks):
+**Scorched** (new row in `applied_statuses`) — a shallow, short fire burn, distinct in identity from Ignite:
+- `classification` periodic DoT, `effect_type = scorched`, `default_damage_type = fire`, stack noun "scorch".
+- Magnitude: flat **3 damage per tick**, **no attribute scaling** (no `magnitude.role`), `min_per_tick = 1`.
+- Duration: the current **three-tick-equivalent** (6000 ms at the 2000 ms cadence), no per-point extension, no cap term.
+- Stacks: **max 3**, no stack role.
+- Fireball keeps `status_chance_pct = 25` and gains **no** `secondary_attribute`.
 
-| Character | Legacy per application | Reusable ignite per application | Factor |
-|---|---|---|---|
-| INT 14 (early) | 3 dmg x 3 ticks = **9** | 6 dmg x 22 ticks (44 s) = **132** | ~15x |
-| INT 20 (mid) | 3 dmg x 3 ticks = **9** | 9 dmg x 22 ticks (45 s cap) = **198** | ~22x |
-| INT 28 (late) | 3 dmg x 3 ticks = **9** | 13 dmg x 22 ticks (45 s cap) = **286** | ~32x |
+Because Scorched is a first-class reusable status, other abilities can adopt it later, and a future balance pass can deliberately move Fireball to shared Ignite (or retune Scorched) as an explicit decision rather than a side effect of consolidation.
 
-Fully stacked ceiling: legacy 3 stacks x 3 dmg = 9 dmg/tick for 6 s (**27**); reusable 5 stacks x 13 dmg = 65 dmg/tick for 45 s (**~1430** at INT 28). Because the duration (45 s) far exceeds a normal Fireball cooldown, repeated casts realistically hold Fireball near the stack ceiling in sustained fights, so this is closer to a new damage pillar for the Wizard than a tuning nudge. Setting `secondary_attribute = int` (Fireball has none today) is what unlocks the scaled magnitude and duration, so it is part of the same decision.
+For reference, the change that is **not** being made: shared Ignite is `secondary * 0.7 * 0.67` (0.469/point) per tick over `30000 + 1000/point` ms capped at 45000, max 5 stacks. Per single landed proc that is ~9 damage today versus ~132 (INT 14), ~198 (INT 20) and ~286 (INT 28) — 15x to 32x.
 
-Options, ranked:
-
-- **A (recommended, zero balance change): add an `ignite_light` reusable status** — 3 damage/tick equivalent, 6000 ms, max 3 stacks, no attribute scaling. Fireball backfills to `applied_status = ignite_light`, `status_chance_pct = 25`, no `secondary_attribute` change. Consolidation completes with live damage byte-identical, and any Fireball buff becomes a separate, deliberate balance pass.
-- **B (adopt shared ignite as-is)** — Fireball gets `applied_status = ignite`, `secondary_attribute = int`, chance 25%. Accepts the 15x-32x per-proc increase above.
-- **C (adopt shared ignite, retuned)** — as B, but lower Fireball's chance and/or `class_scale` so measured sustained fire DoT output lands near today's; requires a tuning target from you.
-
-**Nothing is applied to Fireball until you pick A, B or C.**
+Sustained reachability, computed without any cooldown concept (WoV has none): Fireball costs **10 CP** and is gated purely by CP throughput and the 2000 ms combat cadence. At a typical mid-level CP regeneration in combat, a Wizard sustains roughly one Fireball every 2-3 ticks (4-6 s); at 25% proc chance that is a successful application about every 16-24 s. Against shared Ignite's 45 s duration, a typical 60-90 s boss fight lands 3-5 applications, so 3-5 stacks (its ceiling) are reliably reached and held — which is exactly why adopting shared Ignite here would be a balance change and is deferred. Against Scorched's 6 s duration, applications almost never overlap, so realistic stacking stays at 1, matching today.
 
 ## 9. Tests
 
