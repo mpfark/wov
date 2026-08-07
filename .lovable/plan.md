@@ -96,13 +96,16 @@ Call sites converted: `combat-tick` ability branch (replaces both `applyAmpStatu
 
 `combat-catchup` does not get a parallel implementation. It calls the **same** `applyStatusFromSource()` from the Deno mirror, once per reconstructed tick, with the same compatibility check, chance semantics, magnitude/duration composition, stacking, refresh (cadence-preserving `next_tick_at`), tick-boundary timing and source attribution. The only difference is the clock: catch-up passes the reconstructed tick timestamp instead of `now`.
 
-Determinism of historical chance samples: catch-up never calls `Math.random()`. The sample is produced by a seeded, pure PRNG derived from a stable tuple — `(source_character_id, target_creature_id, ability_key, status_key, tick_index)` — so:
+Determinism of historical chance samples: catch-up never calls `Math.random()`. The sample is produced by a seeded, pure PRNG derived from a stable tuple — `(source_character_id, target_creature_id, ability_key, status_key, tick_index)` — so the same historical event always resolves to the same sample, and a re-run over the same tick range yields identical outcomes rather than a fresh roll.
 
-- Re-running catch-up over the same tick range yields byte-identical outcomes; a repeated or overlapping run cannot reroll a proc into existence.
-- Application writes stay idempotent: a status row already carrying the same `source_ability_key` and a `started_at` at that tick index is treated as already applied and is not stacked again.
-- Catch-up advances `last_tick_at` (and therefore the tick index) under the existing reconcile lock, so two concurrent invocations cannot both claim the same tick.
+**Double-processing authority (not `started_at`).** `active_effects.started_at` keeps its existing single meaning: the beginning of the uninterrupted status instance. Refreshes and stack applications never rewrite it and it is never used as an idempotency key. What prevents a historical tick from being processed twice is the mechanism that already exists:
 
-Live ticks keep using `Math.random()` (unchanged behaviour); only reconstructed history is seeded, and the seeded sampler lives in the shared module so both paths share one code path for everything else.
+- the **reconcile lock** (`encounter_lock_key` / reconcile advisory lock) serialises catch-up and live tick processing, so two invocations cannot resolve the same tick concurrently; and
+- the **monotonic catch-up cursor** (`combat_sessions.last_tick_at`, advanced inside the same locked transaction that writes the tick's effects) means a tick index below the cursor is never revisited.
+
+Seeded sampling is therefore a determinism guarantee for a single processing pass, not a licence to replay. If replay of already-processed history is ever required, it gets an explicit application identity — a stable `application_id` (hash of the same tuple) recorded per application — rather than overloading `started_at`. That column is out of scope for this pass.
+
+Live ticks keep using `Math.random()` (unchanged behaviour); only reconstructed history is seeded. Both paths call the same `applyStatusFromSource()` and differ only in which sampler supplies the 0..1 value and which clock supplies the tick time.
 
 Timing preserved exactly as today: periodic statuses tick from `now + tick_rate`; `damage_amp` statuses use the frozen per-tick `ampSnap`, so Frost Bolt's own hit is never amplified and Chilled starts on the following tick, identical for every party member regardless of iteration order.
 
