@@ -84,8 +84,14 @@ export interface AuthoredAbilityRowState {
   class_scale: number;
   primary_attribute: string | null;
   secondary_attribute: string | null;
+  /** Status Application — which reusable status, and when/how often it lands. */
   applied_status: string | null;
-  on_hit_effect: OnHitEffectConfig | null;
+  status_trigger: StatusTrigger | null;
+  /** null = chance comes from this ability's own amount calc. 0 = never lands. */
+  status_chance_pct: number | null;
+  /** false = the application does not exist at all. */
+  status_application_enabled: boolean;
+
 }
 
 /** Read-only reference: which classes/slots reference this ability. */
