@@ -1876,40 +1876,63 @@ Deno.serve(async (req) => {
 
       }
 
-      // ── Optional On-Hit Effect (class-configured, base-allowed) ─────
-      // Server-authoritative and post-hit only: rolled here, after the
-      // mechanic resolved, and only when the cast actually landed damage.
-      const onHit = abilityHitLanded
-        ? rollOnHitEffect(auth.entry.onHitEffect, Math.random())
-        : null;
-      if (onHit && cHp[target.id] > 0 && !cKilled.has(target.id)) {
-        const existingOnHit = activeEffects.find(e =>
-          e.source_id === member.id && e.target_id === target.id
-          && e.effect_type === onHit.def.effectType);
-        const onHitData = {
-          node_id: combatNodeId, target_id: target.id, source_id: member.id,
-          session_id: null, effect_type: onHit.def.effectType,
-          source_ability_key: auth.abilityKey,
-          ...applyStackingEffect(existingOnHit, {
-            now,
+      // ── Status Application, trigger `ability_hit` ─────────────────
+      // ONE path for every mechanic: the status is applied only on a SUCCESSFUL
+      // qualifying event — the cast landed damage and the target is still alive.
+      // A miss, an invalid target or a cancelled attack never applies it.
+      // `dot_debuff` is skipped: that mechanic IS the status application and has
+      // already written its row above (its magnitude folds in the weapon die).
+      const ahCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+      const ahSpec = paMech === 'dot_debuff' ? null : readStatusApplication(ahCfg);
+      const ahAlive = cHp[target.id] > 0 && !cKilled.has(target.id);
+      if (ahSpec && ahSpec.trigger === 'ability_hit' && abilityHitLanded && ahAlive) {
+        const ahStacks = ahSpec.isPeriodic
+          ? Math.max(1, Math.floor(evaluateOptionalCalc(
+            (ahSpec.maxStacksCalc ?? null) as any,
+            buildServerCalcInputs(c.level || 1, {
+              str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+              con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+              wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+            }),
+          ) ?? 1))
+          : 1;
+        const applied = applyStatusFromSource({
+          sourceId: member.id, character: c, eb: eb as Record<string, number>,
+          spec: ahSpec, abilityKey: auth.abilityKey, targetId: target.id,
+          at: now, sample: Math.random(), maxStacks: ahStacks,
+        });
+        if (applied) {
+          pushAbilityEvent({
+            type: ahSpec.isPeriodic ? `${ahSpec.effectType}_applied` : 'status_applied',
+            message: ahSpec.isPeriodic
+              ? `${c.name}'s ${auth.entry?.label ?? 'attack'} leaves ${target.name} ${applied.label.toLowerCase()}. [${applied.damagePerTick}/tick]`
+              : `${target.name} is ${applied.label}.`,
+            character_id: member.id,
+          });
+        }
+      } else if (!ahSpec && abilityHitLanded && ahAlive) {
+        // ── Legacy compatibility read (temporary) ───────────────────
+        // The retired one-off On-Hit Effect, still honoured for any ability
+        // whose Status Application has not been switched on yet. Removed once
+        // the last such ability is migrated.
+        const onHit = rollOnHitEffect(auth.entry.onHitEffect, Math.random());
+        if (onHit) {
+          const written = writeStatusRow({
+            sourceId: member.id, targetId: target.id, abilityKey: auth.abilityKey,
+            effectType: onHit.def.effectType, at: now, isPeriodic: true,
             durationMs: onHit.durationMs,
             damagePerTick: Math.max(1, Math.floor(onHit.damagePerTick * mBondMult[member.id])),
-            maxStacks: onHit.maxStacks,
-            tickRateMs: TICK_RATE,
-          }),
-        };
-        if (existingOnHit) {
-          Object.assign(existingOnHit, onHitData);
-        } else {
-          activeEffects.push({ id: crypto.randomUUID(), ...onHitData });
+            maxStacks: onHit.maxStacks, tickRateMs: TICK_RATE,
+          });
+          pushAbilityEvent({
+            type: `${onHit.def.effectType}_applied`,
+            message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${written.damagePerTick}/tick]`,
+            character_id: member.id,
+            damage_type: onHit.def.damageType,
+          });
         }
-        pushAbilityEvent({
-          type: `${onHit.def.effectType}_applied`,
-          message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${onHitData.damage_per_tick}/tick]`,
-          character_id: member.id,
-          damage_type: onHit.def.damageType,
-        });
       }
+
     }
 
 
