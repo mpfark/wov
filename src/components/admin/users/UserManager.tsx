@@ -306,6 +306,12 @@ export default function UserManager({ isValar }: Props) {
           setGrantSalvageAmount={setGrantSalvageAmount}
           grantGoldAmount={grantGoldAmount}
           setGrantGoldAmount={setGrantGoldAmount}
+          grantGemKey={grantGemKey}
+          setGrantGemKey={setGrantGemKey}
+          grantGemAmount={grantGemAmount}
+          setGrantGemAmount={setGrantGemAmount}
+          onGrantGem={handleGrantGem}
+
           removeItemId={removeItemId}
           setRemoveItemId={setRemoveItemId}
           onGiveItem={handleGiveItem}
