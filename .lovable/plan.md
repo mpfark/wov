@@ -72,16 +72,37 @@ Compatibility is **derived**, not a new list: a base ability may apply a status 
 |---|---|---|
 | spell_attack, spell_bolt, weapon_attack, multi_attack, burst_damage, dot_debuff | `ability_hit` | derived, read-only |
 | on_hit_stance (`trigger_type = on_hit`) | `weapon_hit` | derived, read-only |
-| orb_stance (`trigger_type = pulse`) | `stance_pulse` | derived, read-only |
+| orb_stance (`trigger_type = pulse`) | `successful_pulse_hit` | derived, read-only |
 | defensive / heal / buff bases | none | Status Application section hidden |
 
 Triggers are never inferred from names, log text or damage type; the name-based `abilityKey === 'ignite'` fallback and the `poison_buff`/`ignite_buff` name mapping are removed.
 
+**Triggers are successful qualifying events, not attempts.** Formal semantics, enforced in the single application module (not at call sites):
+
+- `ability_hit` — the ability's own attack resolved against a valid, living target and **landed** (not a miss, not a fizzle, not a cancelled or invalid-target cast).
+- `weapon_hit` — a later autoattack from the stance owner **landed** on a valid living target.
+- `successful_pulse_hit` (renamed from `stance_pulse`) — the stance's automatic attack (Orbs of Fire's orb) fired **and its attack roll landed damage** on a living target. A pulse that occurs but misses, has no valid target, or is cancelled applies nothing. Orbs of Fire therefore applies Ignite only on a landed orb hit, exactly as today.
+- `activation` — the only non-hit trigger: the ability's own activation succeeded and paid its cost (used by self/ally applications; no live row uses it yet).
+
+`applyStatusFromSource()` takes an explicit `landed: boolean` (plus target-alive check) and returns `null` without consuming a chance sample when it is false, so no call site can shortcut the rule.
+
 ## 5. Shared runtime application point
 
-New shared module `applyStatusFromSource()` (`src/shared/combat/status-application.ts` + Deno mirror), used by every path: does status lookup, compatibility assertion, chance roll (caller supplies the sample for determinism), target-alive validation, magnitude/duration composition from the reusable definition, stack/refresh via `applyStackingEffect`, source attribution (`source_id`, `source_ability_key`), activation timing, and returns a structured event. It never computes the source attack.
+New shared module `applyStatusFromSource()` (`src/shared/combat/status-application.ts` + Deno mirror), used by every path: does status lookup, compatibility assertion, successful-event gate (`landed` + target alive), chance roll (caller supplies the sample for determinism), magnitude/duration composition from the reusable definition, stack/refresh via `applyStackingEffect`, source attribution (`source_id`, `source_ability_key`), activation timing, and returns a structured event. It never computes the source attack.
 
-Call sites converted: `combat-tick` ability branch (replaces both `applyAmpStatus` and the `rollOnHitEffect` block), `dot_debuff` branch, `stack_apply` on-hit branch, `stack_apply` pulse branch; `combat-catchup` reuses the same definitions for historical ticks. Client mirror `src/features/combat/utils/combat-resolver.ts` stays in sync for tests.
+Call sites converted: `combat-tick` ability branch (replaces both `applyAmpStatus` and the `rollOnHitEffect` block), `dot_debuff` branch, `stack_apply` on-hit branch, `stack_apply` pulse branch. Client mirror `src/features/combat/utils/combat-resolver.ts` stays in sync for tests.
+
+### Catch-up integration point
+
+`combat-catchup` does not get a parallel implementation. It calls the **same** `applyStatusFromSource()` from the Deno mirror, once per reconstructed tick, with the same compatibility check, chance semantics, magnitude/duration composition, stacking, refresh (cadence-preserving `next_tick_at`), tick-boundary timing and source attribution. The only difference is the clock: catch-up passes the reconstructed tick timestamp instead of `now`.
+
+Determinism of historical chance samples: catch-up never calls `Math.random()`. The sample is produced by a seeded, pure PRNG derived from a stable tuple — `(source_character_id, target_creature_id, ability_key, status_key, tick_index)` — so:
+
+- Re-running catch-up over the same tick range yields byte-identical outcomes; a repeated or overlapping run cannot reroll a proc into existence.
+- Application writes stay idempotent: a status row already carrying the same `source_ability_key` and a `started_at` at that tick index is treated as already applied and is not stacked again.
+- Catch-up advances `last_tick_at` (and therefore the tick index) under the existing reconcile lock, so two concurrent invocations cannot both claim the same tick.
+
+Live ticks keep using `Math.random()` (unchanged behaviour); only reconstructed history is seeded, and the seeded sampler lives in the shared module so both paths share one code path for everything else.
 
 Timing preserved exactly as today: periodic statuses tick from `now + tick_rate`; `damage_amp` statuses use the frozen per-tick `ampSnap`, so Frost Bolt's own hit is never amplified and Chilled starts on the following tick, identical for every party member regardless of iteration order.
 
