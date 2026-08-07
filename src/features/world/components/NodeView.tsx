@@ -522,8 +522,13 @@ export default function NodeView({
                                 ))}
                               </div>
                             )}
+                            {gemCount > 0 && (
+                              <p className="text-[10px] text-primary">{gemCount} gem{gemCount === 1 ? '' : 's'} set</p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">Durability {g.current_durability}/{g.item.max_durability}</p>
                             <p className="text-[10px] text-dwarvish">{g.item.value}g</p>
                           </TooltipContent>
+
                         </Tooltip>
                         <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
                           Pick Up
