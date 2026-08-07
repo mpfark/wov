@@ -35,6 +35,9 @@ export default function UserManager({ isValar }: Props) {
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
   const [grantSalvageAmount, setGrantSalvageAmount] = useState<number>(100);
   const [grantGoldAmount, setGrantGoldAmount] = useState<number>(100);
+  const [grantGemKey, setGrantGemKey] = useState<string>('garnet');
+  const [grantGemAmount, setGrantGemAmount] = useState<number>(1);
+
   const [removeItemId, setRemoveItemId] = useState<string>('');
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
