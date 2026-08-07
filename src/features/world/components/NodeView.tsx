@@ -496,7 +496,8 @@ export default function NodeView({
                   {groundLoot.map(g => {
                      const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
                       g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
-                    const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
+                    const statEntries = Object.entries((g.stat_override ?? g.item.stats) || {}).filter(([, v]) => v !== 0);
+                    const gemCount = (g.applied_gems ?? []).length;
                     return (
                       <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
                         <Tooltip>
@@ -521,8 +522,13 @@ export default function NodeView({
                                 ))}
                               </div>
                             )}
+                            {gemCount > 0 && (
+                              <p className="text-[10px] text-primary">{gemCount} gem{gemCount === 1 ? '' : 's'} set</p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">Durability {g.current_durability}/{g.item.max_durability}</p>
                             <p className="text-[10px] text-dwarvish">{g.item.value}g</p>
                           </TooltipContent>
+
                         </Tooltip>
                         <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
                           Pick Up

@@ -2278,28 +2278,40 @@ export type Database = {
       }
       node_ground_loot: {
         Row: {
+          applied_gems: Json
+          crafted_level: number | null
           creature_name: string | null
+          current_durability: number
           dropped_at: string
           dropped_by: string | null
           id: string
           item_id: string
           node_id: string
+          stat_override: Json | null
         }
         Insert: {
+          applied_gems?: Json
+          crafted_level?: number | null
           creature_name?: string | null
+          current_durability?: number
           dropped_at?: string
           dropped_by?: string | null
           id?: string
           item_id: string
           node_id: string
+          stat_override?: Json | null
         }
         Update: {
+          applied_gems?: Json
+          crafted_level?: number | null
           creature_name?: string | null
+          current_durability?: number
           dropped_at?: string
           dropped_by?: string | null
           id?: string
           item_id?: string
           node_id?: string
+          stat_override?: Json | null
         }
         Relationships: [
           {
