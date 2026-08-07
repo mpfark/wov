@@ -10,6 +10,11 @@ export interface GroundLootItem {
   dropped_by: string | null;
   dropped_at: string;
   creature_name: string | null;
+  /** Item condition carried with the drop — gems and wear survive the ground. */
+  applied_gems: string[];
+  stat_override: Record<string, number> | null;
+  current_durability: number;
+  crafted_level: number | null;
   item: {
     id: string;
     name: string;
