@@ -511,9 +511,32 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
     }
 
+    // ── Seed the authoritative buff bag (Phase 5) ────────────────
+    // Base = what the server persisted last tick; the sanitized client bag only
+    // fills in transient presentation buffs the server does not own yet.
+    {
+      const persisted = (session.member_buffs && typeof session.member_buffs === 'object')
+        ? session.member_buffs as Record<string, any>
+        : {};
+      for (const [charId, bag] of Object.entries(persisted)) {
+        if (bag && typeof bag === 'object') buffs[charId] = { ...(bag as Record<string, any>) };
+      }
+      for (const [charId, bag] of Object.entries(clientBuffs)) {
+        buffs[charId] = { ...(buffs[charId] || {}), ...bag };
+      }
+      // Prune anything (persisted or client-supplied) that has expired.
+      for (const bag of Object.values(buffs)) {
+        for (const [key, value] of Object.entries(bag as Record<string, any>)) {
+          const exp = (value && typeof value === 'object') ? Number((value as any).expires_at) : NaN;
+          if (Number.isFinite(exp) && exp <= nowMs) delete (bag as Record<string, any>)[key];
+        }
+      }
+    }
+
     // ── Update session with latest engaged creatures from client ──
     const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
     for (const id of engagedIds) sessionEngaged.add(id);
+
 
     // ── Phase 2: durable engagement roster ───────────────────────
     // `encounter_engagements` is the authoritative "who is fighting what"
