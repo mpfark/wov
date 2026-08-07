@@ -528,6 +528,39 @@ Deno.serve(async (req) => {
     const xpB = xpRes.data;
     const weaponProgression = weaponCfgRes.data ?? undefined;
 
+    /**
+     * ── Absent DoT owners are reward-eligible for their own DoT kills ────────
+     * A player can poison a creature and walk away. If the live tick (rather
+     * than combat-catchup) lands the killing DoT tick, the owner is no longer a
+     * session member and used to receive nothing at all — no XP, no Renown, no
+     * salvage. Mirror the catch-up rule here: the DoT owner is credited for a
+     * kill their own effect landed, regardless of where they now stand.
+     *
+     * They are added as reward-only recipients (same writer as the grace pool)
+     * and are filtered per-kill in `handleCreatureKill` so they never collect
+     * from kills their effects had no part in.
+     */
+    const absentDotOwnerIds = new Set<string>();
+    {
+      const sourceIds = new Set<string>();
+      for (const e of (activeEffectsRaw || [])) {
+        const sid = (e as any).source_id as string | null;
+        if (sid && !atNodeIds.has(sid) && !gracedExtras.some(g => g.id === sid)) sourceIds.add(sid);
+      }
+      if (sourceIds.size > 0) {
+        const { data: absentChars } = await db
+          .from('characters').select('*').in('id', Array.from(sourceIds));
+        for (const ch of (absentChars || [])) {
+          if (!ch || (ch.hp ?? 0) <= 0) continue;
+          absentDotOwnerIds.add((ch as any).id);
+          gracedExtras.push({ id: (ch as any).id, c: ch });
+          killRecipients.push({ id: (ch as any).id, c: ch });
+          charIds.push((ch as any).id);
+        }
+      }
+    }
+
+
     // Per-member bond multiplier for the *active* class. Classless = 1.00×.
     // Used to scale direct damage and DoT/HoT magnitudes (NOT durations).
     const mBondMult: Record<string, number> = {};
