@@ -188,7 +188,7 @@ Plus a neutral Chilled chip on the creature row reusing the existing debuff chip
 - Same-key/multi-key aggregation follows §7, recomputed per `tt`.
 - Chilled itself is never ticked in bulk mode (non-periodic branch: expiry only).
 
-Given Chilled's ~7s life, this typically amplifies only the first few replayed ticks — correctness, not throughput, is the point. Because refreshes preserve `started_at` and only push `expires_at` out, a replayed window that spans a refresh is amplified continuously across it with no gap and no double counting.
+Given Chilled's three-tick life, this typically amplifies only the first few replayed ticks — correctness, not throughput, is the point. Because refreshes preserve `started_at` and only push `expires_at` out, a replayed window that spans a refresh is amplified continuously across it with no gap and no double counting.
 
 ## 12. Files touched
 
