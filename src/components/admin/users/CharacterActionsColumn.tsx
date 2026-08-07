@@ -34,8 +34,14 @@ interface Props {
   setGrantSalvageAmount: (n: number) => void;
   grantGoldAmount: number;
   setGrantGoldAmount: (n: number) => void;
+  grantGemKey: string;
+  setGrantGemKey: (k: string) => void;
+  grantGemAmount: number;
+  setGrantGemAmount: (n: number) => void;
+  onGrantGem: (charId: string) => void;
   removeItemId: string;
   setRemoveItemId: (id: string) => void;
+
   onGiveItem: (charId: string) => void;
   onTeleport: (charId: string) => void;
   onGrantXp: (charId: string) => void;
