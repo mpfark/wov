@@ -403,8 +403,22 @@ Deno.serve(async (req) => {
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
       if (!party) throw new Error('Party not found');
+      // ── Phase 6: any eligible participant may wake the tick ──────
+      // The leader is no longer a required transport. Eligibility is simply
+      // "the caller owns an accepted member of this party": the tick is
+      // resolved server-side for the whole roster either way, and concurrent
+      // wakeups are serialized by the session tick reservation below.
       const { data: userChars } = await db.from('characters').select('id').eq('user_id', userId);
-      if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
+      const userCharIds = new Set((userChars || []).map(c => c.id));
+      const { data: eligibleRows } = await db
+        .from('party_members')
+        .select('character_id')
+        .eq('party_id', party_id)
+        .eq('status', 'accepted');
+      if (!(eligibleRows || []).some(r => userCharIds.has(r.character_id))) {
+        throw new Error('Not a party participant');
+      }
+
 
       const { data: membersRaw } = await db
         .from('party_members')
