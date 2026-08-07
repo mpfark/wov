@@ -30,6 +30,7 @@ import { applyAssignmentOverrides } from './config/effective-ability.ts';
 import { composeAbilityRow, indexAppliedStatuses } from './config/compose-ability.ts';
 import { getClassScaling } from './formulas/classes.ts';
 import { type OnHitEffectConfig } from './combat/on-hit-effects.ts';
+import { type DamageAmpStatusDef } from './combat/creature-damage-modifiers.ts';
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -269,6 +270,31 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
   return { applied: true, entries, errors };
 }
 
+/**
+ * Applied-status definitions indexed by `effect_type` — the runtime lookup used
+ * by the shared creature-damage modifier stage and by the periodic/non-periodic
+ * split in the effect resolver. Refreshed with the ability registry.
+ */
+const STATUS_DEFS_BY_EFFECT_TYPE: Record<string, DamageAmpStatusDef> = {};
+
+export function setAppliedStatusDefs(rows: any[]): void {
+  for (const k of Object.keys(STATUS_DEFS_BY_EFFECT_TYPE)) delete STATUS_DEFS_BY_EFFECT_TYPE[k];
+  for (const row of rows || []) {
+    if (!row?.effect_type) continue;
+    STATUS_DEFS_BY_EFFECT_TYPE[row.effect_type] = {
+      key: row.key,
+      effect_type: row.effect_type,
+      classification: row.classification ?? null,
+      modifier: row.modifier ?? null,
+      label: row.label ?? row.key,
+    } as DamageAmpStatusDef & { label?: string };
+  }
+}
+
+export function getAppliedStatusDefs(): Record<string, DamageAmpStatusDef> {
+  return STATUS_DEFS_BY_EFFECT_TYPE;
+}
+
 export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
   if (!force && Date.now() - loadedAt < TTL_MS && Object.keys(REGISTRY).length > 0) return;
   if (inflight) return inflight;
@@ -302,6 +328,7 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       if (data && data.length > 0) {
         // Two-layer composition: base numbers + configured-use identity.
         const statuses = indexAppliedStatuses(statusRows ?? []);
+        setAppliedStatusDefs(statusRows ?? []);
         const composed = (data as any[]).map(row => (
           row?.ability
             ? { ...row, ability: { ...row.ability, ...composeAbilityRow(row.ability, row.ability.base, statuses) } }

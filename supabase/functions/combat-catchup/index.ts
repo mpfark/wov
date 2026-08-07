@@ -32,6 +32,7 @@ import {
 
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
+import { loadAbilityCalcs, getAppliedStatusDefs } from "../_shared/load-ability-calcs.ts";
 
 
 const corsHeaders = {
@@ -72,6 +73,9 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
     await loadClassRegistry(db);
+    // Applied-status definitions own periodicity and amplification; the
+    // offscreen path must read the same authority as the live tick.
+    await loadAbilityCalcs(db);
 
     // ── Authentication ────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
@@ -220,7 +224,14 @@ Deno.serve(async (req) => {
       }));
     }
 
-    const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
+    const appliedStatusDefs = getAppliedStatusDefs();
+    const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, {
+      now,
+      // Bulk mode recomputes amplification for every simulated historical tick
+      // from each instance's own active window — never one present-time value.
+      amp: { effects, defs: appliedStatusDefs },
+      statusDefs: appliedStatusDefs,
+    });
 
     // Check wall-clock safety limit after resolution
     const resolveElapsed = Date.now() - t0;

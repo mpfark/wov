@@ -16,7 +16,7 @@ import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import {
   loadAbilityCalcs, buildServerCalcInputs, authorizeQueuedAbility,
   preflightAbilityConfig, getAbilityResolverMode, drainAbilityOverrideAuditRows,
-  getServerAbilityCalcs,
+  getServerAbilityCalcs, getAppliedStatusDefs,
 } from "../_shared/load-ability-calcs.ts";
 import { ABILITY_CONFIG_FAILURE_TEXT } from "../_shared/combat/ability-magnitude.ts";
 // Every ability magnitude funnels through resolveMagnitude — configuration is
@@ -41,6 +41,13 @@ import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { LEGACY_AMBUSH_MULT } from "../_shared/config/mechanic-templates.ts";
 import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
+import {
+  amplify,
+  buildAmpSnapshot,
+  expiryFromTicks,
+  type CreatureDamageSource,
+  type DamageAmpInstance,
+} from "../_shared/combat/creature-damage-modifiers.ts";
 import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
@@ -120,6 +127,12 @@ function resolveProcs(
   maxHp: number,
   events: any[],
   cKilled: Set<string>,
+  /**
+   * Target-side incoming-damage modifier stage (Chilled). Injected so this
+   * module-level helper shares the caller's frozen per-tick snapshot.
+   */
+  ampCreature: (amount: number, source: CreatureDamageSource, creatureId: string) => number
+    = (amount) => amount,
 ) {
   for (const proc of procs) {
     if (Math.random() >= proc.chance) continue;
@@ -133,7 +146,10 @@ function resolveProcs(
       }
       case 'burst_damage': {
         if (cKilled.has(targetId)) break;
-        cHp[targetId] = resolveDamage({ amount: proc.value, hp: cHp[targetId] }).hpAfter;
+        // Target-side incoming-damage modifiers (Chilled) before final resolution.
+        cHp[targetId] = resolveDamage({
+          amount: ampCreature(proc.value, 'proc', targetId), hp: cHp[targetId],
+        }).hpAfter;
         events.push({ type: 'proc', message, character_id: attackerId });
         break;
       }
@@ -465,7 +481,7 @@ Deno.serve(async (req) => {
       // Not enough time has passed for a tick — parallelize the two idle-path reads
       const [creaturesIdleRes, effectsIdleRes] = await Promise.all([
         db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true),
-        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id),
+        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, started_at, tick_rate_ms').eq('node_id', session.node_id),
       ]);
       const creature_states = (creaturesIdleRes.data || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
@@ -603,6 +619,58 @@ Deno.serve(async (req) => {
     const dotTargetIds = new Set<string>();
     const activeEffects: any[] = activeEffectsRaw || [];
     for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
+
+    // ── Target-side incoming-damage modifiers (e.g. Chilled) ─────
+    // Reusable applied-status definitions own eligibility, percent and
+    // duration; this runtime only resolves and applies them. The snapshot is
+    // FROZEN per tick so the outcome never depends on party iteration order:
+    // a status applied during a tick first amplifies on the NEXT tick.
+    const appliedStatusDefs = getAppliedStatusDefs();
+    let ampSnap: Record<string, DamageAmpInstance[]> =
+      buildAmpSnapshot(activeEffects, appliedStatusDefs, now);
+    const ampCreature = (
+      amount: number, source: CreatureDamageSource, creatureId: string,
+    ): number => amplify(amount, source, ampSnap[creatureId]);
+
+    /**
+     * Apply or refresh a non-periodic amplification status on a creature.
+     * Same key never stacks: a re-application restarts the window (the fresh
+     * `started_at` also makes the instance visible from the next snapshot on).
+     */
+    const applyAmpStatus = (
+      sourceId: string,
+      cfg: Record<string, unknown>,
+      abilityKey: string,
+      targetId: string,
+      at: number,
+    ): { label: string } | null => {
+      const effectType = typeof cfg.amp_effect_type === 'string' ? cfg.amp_effect_type : null;
+      const ticks = typeof cfg.amp_duration_ticks === 'number' ? cfg.amp_duration_ticks : 0;
+      if (!effectType || ticks <= 0) return null;
+      const expiresAt = expiryFromTicks(at, ticks, TICK_RATE);
+      const existing = activeEffects.find(e =>
+        e.source_id === sourceId && e.target_id === targetId && e.effect_type === effectType);
+      if (existing) {
+        existing.started_at = at;
+        existing.expires_at = expiresAt;
+        existing.next_tick_at = null;
+        existing.source_ability_key = abilityKey;
+        delete existing._expired;
+      } else {
+        activeEffects.push({
+          node_id: combatNodeId, target_id: targetId, source_id: sourceId,
+          session_id: null, effect_type: effectType,
+          source_ability_key: abilityKey,
+          stacks: 1, damage_per_tick: 0,
+          // Non-periodic: no tick cadence, ever.
+          next_tick_at: null, tick_rate_ms: TICK_RATE,
+          started_at: at, expires_at: expiresAt,
+        });
+      }
+      dotTargetIds.add(targetId);
+      return { label: typeof cfg.amp_label === 'string' ? cfg.amp_label : effectType };
+    };
+
 
     // ── Fold active item_buff:* effects into per-member stats ────
     // Buff procs persist in `active_effects` with effect_type `item_buff:<sub>`
@@ -1289,6 +1357,7 @@ Deno.serve(async (req) => {
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
+            arrowDmg = ampCreature(arrowDmg, 'ability', t.id);
             totalDmg += arrowDmg;
             cHp[t.id] = resolveDamage({ amount: arrowDmg, hp: cHp[t.id] }).hpAfter;
             pushAbilityEvent({
@@ -1414,6 +1483,7 @@ Deno.serve(async (req) => {
           finalDmg = Math.max(Math.floor(finalDmg * surgeMult(c.class || '', c.level || 1, (c.int || 10) + (eb.int || 0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         }
         finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
+        finalDmg = ampCreature(finalDmg, 'ability', target.id);
         cHp[target.id] = resolveDamage({ amount: finalDmg, hp: cHp[target.id] }).hpAfter;
 
         const hitTpl = stacks > 0
@@ -1523,6 +1593,7 @@ Deno.serve(async (req) => {
         // that ever picks it up).
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
+        dmg = ampCreature(dmg, 'ability', target.id);
         cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
         const hitMsg = hitTextTpl
           ? fillT0(hitTextTpl, dmg)
@@ -1533,9 +1604,28 @@ Deno.serve(async (req) => {
           character_id: member.id,
           ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
+        // Reusable applied status (e.g. Frost Bolt -> Chilled). Applied only on
+        // a landed hit, and only while the target still lives.
+        if (cHp[target.id] > 0 && !cKilled.has(target.id)) {
+          const applied = applyAmpStatus(
+            member.id,
+            (auth.entry?.effectConfig ?? {}) as Record<string, unknown>,
+            auth.abilityKey,
+            target.id,
+            now,
+          );
+          if (applied) {
+            pushAbilityEvent({
+              type: 'status_applied',
+              message: `${target.name} is ${applied.label}.`,
+              character_id: member.id,
+            });
+          }
+        }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
 
       } else if (paMech === 'burst_damage') {
         // Consolidation Group G: ONE reusable burst nuke. The attribute that
@@ -1591,6 +1681,7 @@ Deno.serve(async (req) => {
         // Damage buffs (e.g. Arcane Surge) scale burst damage.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), member.id, combatNodeId, offenseBuffKey(buffs[member.id]))), 1);
         damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
+        damage = ampCreature(damage, 'ability', target.id);
         cHp[target.id] = resolveDamage({ amount: damage, hp: cHp[target.id] }).hpAfter;
         pushAbilityEvent({
           type: 'ability_hit',
@@ -1906,7 +1997,11 @@ Deno.serve(async (req) => {
               characterId: targetId, nodeId: combatNodeId,
             }));
             const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
-            cHp[creature.id] = resolveDamage({ amount: returnDmg, hp: cHp[creature.id] }).hpAfter;
+            // Classified 'reflect': retaliation is NEVER amplified by target-side
+            // incoming-damage modifiers (hard runtime rule).
+            cHp[creature.id] = resolveDamage({
+              amount: ampCreature(returnDmg, 'reflect', creature.id), hp: cHp[creature.id],
+            }).hpAfter;
             const retaliateTpl = typeof mb.holy_shield.text === 'string' && mb.holy_shield.text.trim()
               ? mb.holy_shield.text.trim()
               : "{caster}'s ward burns {target}! [{damage}]";
@@ -2077,6 +2172,10 @@ Deno.serve(async (req) => {
     for (let t = 0; t < ticks; t++) {
       const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
 
+      // Freeze incoming-damage amplification for the whole tick: every damage
+      // source in this tick sees the same instances, in any iteration order.
+      ampSnap = buildAmpSnapshot(activeEffects, appliedStatusDefs, tickTime);
+
       // Check if all creatures dead or all members dead — stop early
       const anyCreatureAlive = creatures.some(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
       const anyMemberAlive = members.some(m => mHp[m.id] > 0);
@@ -2147,7 +2246,8 @@ Deno.serve(async (req) => {
         // Burn every engaged, alive creature
         if (damagesEnemies) for (const cr of creatures) {
           if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
-          cHp[cr.id] = resolveDamage({ amount: pulseAmt, hp: cHp[cr.id] }).hpAfter;
+          const auraAmt = ampCreature(pulseAmt, 'stance', cr.id);
+          cHp[cr.id] = resolveDamage({ amount: auraAmt, hp: cHp[cr.id] }).hpAfter;
           const authoredBurn = typeof auraText.burn_text === 'string'
             ? auraText.burn_text.replace('{target}', cr.name).replace('{amount}', String(pulseAmt))
             : `Holy fire sears ${cr.name}! [${pulseAmt}]`;
@@ -2249,6 +2349,7 @@ Deno.serve(async (req) => {
 
           // Bond multiplier (mastery scalar; class-only, 1.00–1.15×).
           dmg = Math.max(1, Math.floor(dmg * mBondMult[m.id]));
+          dmg = ampCreature(dmg, 'weapon', target.id);
 
           cHp[target.id] = resolveDamage({ amount: dmg, hp: cHp[target.id] }).hpAfter;
           events.push({
@@ -2289,7 +2390,7 @@ Deno.serve(async (req) => {
 
           // ── Proc-on-hit (main hand) ──
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
-            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled, ampCreature);
           }
           // ── Buff-on-hit (self-buff procs) ──
           if ((memberProcs[m.id] || []).length > 0) {
@@ -2374,6 +2475,7 @@ Deno.serve(async (req) => {
 
           // Bond multiplier (class-only mastery scalar).
           dmg2 = Math.max(1, Math.floor(dmg2 * mBondMult[m.id]));
+          dmg2 = ampCreature(dmg2, 'weapon', target.id);
 
           cHp[target.id] = resolveDamage({ amount: dmg2, hp: cHp[target.id] }).hpAfter;
           events.push({
@@ -2392,7 +2494,7 @@ Deno.serve(async (req) => {
 
           // ── Proc-on-hit (off hand) ──
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
-            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled, ampCreature);
           }
           // ── Buff-on-hit (self-buff procs, off-hand swing) ──
           if ((memberProcs[m.id] || []).length > 0) {
@@ -2454,6 +2556,7 @@ Deno.serve(async (req) => {
           let pulseDmg = Math.max(1, num(applier.cfg.pulse_damage_base, 2) + pulseMod);
           if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * surgeMult(c.class || '', c.level || 1, (c.int||10)+(eb.int||0), m.id, combatNodeId, offenseBuffKey(buffs[m.id]))), 1);
           pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
+          pulseDmg = ampCreature(pulseDmg, 'stance', target.id);
 
           cHp[target.id] = resolveDamage({ amount: pulseDmg, hp: cHp[target.id] }).hpAfter;
 
@@ -2500,6 +2603,10 @@ Deno.serve(async (req) => {
         const dotResult = resolveEffectTicks(activeEffects, cHp, cKilled, creatures, TICK_CAP, {
           tickTime,
           memberNameMap,
+          // Player DoTs are amplified too; the frozen snapshot keeps the result
+          // independent of when in the tick the DoT stage runs.
+          amp: { snapshot: ampSnap },
+          statusDefs: appliedStatusDefs,
         });
         events.push(...dotResult.events);
         clearedDots.push(...dotResult.clearedDots);
@@ -3596,7 +3703,7 @@ Deno.serve(async (req) => {
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
-      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
+      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, started_at: e.started_at ?? null, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
       buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,

@@ -101,6 +101,12 @@ interface UsageRow {
 
 const ABILITY_STATUSES = ['draft', 'active', 'retired'] as const;
 const STATUS_FILTERS = ['all', ...ABILITY_STATUSES] as const;
+/**
+ * Server combat heartbeat. Non-periodic statuses are configured in combat
+ * TICKS (the authority); this constant only renders the approximate seconds.
+ */
+const COMBAT_TICK_MS = 2000;
+
 /** Combat-text slots authored on the class ability. */
 const TEXT_SLOTS: { key: string; label: string }[] = [
   { key: 'cast', label: 'Cast line' },
@@ -764,7 +770,27 @@ export default function AbilityConfigManager() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {activeStatus && (
+                    {activeStatus && activeStatus.classification === 'damage_amp' && (
+                      <p className="text-[10px] text-muted-foreground" data-testid="amp-status-summary">
+                        Increases eligible incoming damage by{' '}
+                        <span className="font-mono">
+                          {Number(composed?.effect_config?.amp_pct ?? 0)}%
+                        </span>
+                        {' · '}
+                        <span className="font-mono">
+                          {Number(composed?.effect_config?.amp_duration_ticks ?? 0)}
+                        </span>
+                        {' '}combat ticks (approximately{' '}
+                        {(Number(composed?.effect_config?.amp_duration_ticks ?? 0) * COMBAT_TICK_MS / 1000)
+                          .toFixed(0)}
+                        s){' · '}sources{' '}
+                        <span className="font-mono">
+                          {((composed?.effect_config?.amp_eligible_sources as string[] | undefined) ?? []).join(', ') || 'none'}
+                        </span>
+                        {'. '}Does not stack with itself; reflected damage is never amplified.
+                      </p>
+                    )}
+                    {activeStatus && activeStatus.classification !== 'damage_amp' && (
                       <p className="text-[10px] text-muted-foreground">
                         Magnitude role{' '}
                         <span className="font-mono">{activeStatus.magnitude?.role ?? 'none'}</span>
@@ -776,6 +802,7 @@ export default function AbilityConfigManager() {
                         <span className="font-mono uppercase">{composed?.effect_config?.dot_duration_stat as string ?? '—'}</span>
                       </p>
                     )}
+
                   </CardContent>
                 </Card>
               )}

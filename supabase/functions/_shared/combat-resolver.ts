@@ -27,6 +27,15 @@
  */
 
 import { resolveDamage } from "./combat/resolution.ts";
+import {
+  amplify,
+  buildAmpSnapshot,
+  isPeriodicStatus,
+  type ActiveEffectRow,
+  type DamageAmpInstance,
+  type DamageAmpStatusDef,
+} from "./combat/creature-damage-modifiers.ts";
+
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -85,9 +94,24 @@ export function resolveEffectTicks(
     tickTime?: number;
     now?: number;
     memberNameMap?: Record<string, string>;
+    /**
+     * Target-side incoming-damage amplification (e.g. Chilled).
+     * - `snapshot`: frozen per-creature instances for single-tick mode, so the
+     *   result never depends on party iteration order.
+     * - `effects` + `defs`: source rows for bulk mode, where amplification is
+     *   recomputed for every simulated historical tick from each instance's
+     *   active window.
+     */
+    amp?: {
+      snapshot?: Record<string, DamageAmpInstance[]>;
+      effects?: ActiveEffectRow[];
+      defs?: Record<string, DamageAmpStatusDef>;
+    };
+    /** Applied-status definitions by `effect_type` (periodicity authority). */
+    statusDefs?: Record<string, DamageAmpStatusDef>;
   } = {},
 ): EffectTickResult {
-  const { tickTime, now, memberNameMap } = opts;
+  const { tickTime, now, memberNameMap, amp, statusDefs } = opts;
   const isSingleTick = tickTime !== undefined;
 
   const expiredIds: string[] = [];
@@ -96,6 +120,33 @@ export function resolveEffectTicks(
   const events: { type: string; message: string; ability_key?: string }[] = [];
   const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
   const advancedEffects: any[] = [];
+
+  /**
+   * Periodicity has ONE authority: the status classification. When definitions
+   * are unavailable (seeded/offline paths) a row that carries no tick cadence
+   * cannot be periodic, which is the safe fallback.
+   */
+  const isPeriodic = (eff: any): boolean => {
+    const def = statusDefs?.[eff.effect_type];
+    if (def) return isPeriodicStatus(def);
+    return eff.next_tick_at !== null && eff.next_tick_at !== undefined;
+  };
+
+  const statusLabel = (effectType: string): string => {
+    const def = (statusDefs?.[effectType] ?? amp?.defs?.[effectType]) as
+      (DamageAmpStatusDef & { label?: string }) | undefined;
+    if (def?.label) return def.label;
+    return effectType.charAt(0).toUpperCase() + effectType.slice(1);
+  };
+
+  /** Amplification instances active on `creatureId` at time `at`. */
+  const ampFor = (creatureId: string, at: number): DamageAmpInstance[] | undefined => {
+    if (amp?.snapshot) return amp.snapshot[creatureId];
+    if (amp?.effects && amp?.defs) {
+      return buildAmpSnapshot(amp.effects, amp.defs, at)[creatureId];
+    }
+    return undefined;
+  };
 
   for (const eff of effects) {
     // Skip effects on already-dead targets
@@ -111,6 +162,25 @@ export function resolveEffectTicks(
 
     const charName = memberNameMap?.[eff.source_id] || 'Unknown';
 
+    // ── Non-periodic statuses ────────────────────────────────
+    // They share the application/refresh/expiry lifecycle but never tick
+    // damage and never touch tick cadence.
+    if (!isPeriodic(eff)) {
+      const at = isSingleTick ? tickTime! : now!;
+      if (eff.expires_at <= at) {
+        eff._expired = true;
+        expiredIds.push(eff.id);
+        clearedDots.push({ character_id: eff.source_id, creature_id: eff.target_id, dot_type: eff.effect_type });
+        events.push({
+          type: `${eff.effect_type}_expired`,
+          message: `${statusLabel(eff.effect_type)} fades from ${creature.name}.`,
+          ability_key: eff.source_ability_key ?? undefined,
+        });
+      }
+      continue;
+    }
+
+
     if (isSingleTick) {
       // ── Single-tick mode ─────────────────────────────────────
       // Check expiry
@@ -123,14 +193,18 @@ export function resolveEffectTicks(
 
       // Apply tick if due
       if (eff.next_tick_at <= tickTime!) {
-        const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
+        const rawDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
+        // Target-side incoming-damage modifiers (Chilled) — the ONE shared stage,
+        // applied immediately before the final HP resolution.
+        const totalDmg = amplify(rawDmg, 'dot', ampFor(eff.target_id, tickTime!));
         cHp[eff.target_id] = resolveDamage({ amount: totalDmg, hp: cHp[eff.target_id] }).hpAfter;
 
         const verb = eff.effect_type === 'bleed' ? 'bleeds from' : eff.effect_type === 'poison' ? 'suffers' : 'burns from';
         const sourceLabel = eff.effect_type === 'bleed'
           ? `${charName}'s Rend`
           : `${charName}'s ${eff.effect_type} (×${eff.stacks})`;
-        const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
+        const dmgLabel = totalDmg;
+
         events.push({
           type: 'dot_tick',
           message: `${creature.name} ${verb} ${sourceLabel}. [${dmgLabel}]`,
@@ -168,8 +242,12 @@ export function resolveEffectTicks(
         if (tt > eff.expires_at) break;
         if (cKilled.has(eff.target_id) || cHp[eff.target_id] <= 0) break;
 
-        const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
+        const rawDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
+        // Amplification is resolved per simulated historical tick from each
+        // instance's active window — never one present-time snapshot.
+        const totalDmg = amplify(rawDmg, 'dot', ampFor(eff.target_id, tt));
         cHp[eff.target_id] = resolveDamage({ amount: totalDmg, hp: cHp[eff.target_id] }).hpAfter;
+
 
         if (cHp[eff.target_id] <= 0 && !cKilled.has(eff.target_id)) {
           cKilled.add(eff.target_id);
