@@ -30,10 +30,6 @@
 
 import type { AbilityCalc, CalcStat, CalcTerm } from '../formulas/ability-calc.ts';
 import { getMechanicParams } from './mechanic-templates.ts';
-import {
-  allowedOnHitEffects, validateOnHitEffect,
-  type OnHitEffectConfig,
-} from '../combat/on-hit-effects.ts';
 
 /** Keys a class assignment may override. Mirrored by the SQL allowlist. */
 export const OVERRIDE_KEYS = [
@@ -43,7 +39,6 @@ export const OVERRIDE_KEYS = [
   'combat_text',
   'scaling',
   'mechanic_calcs',
-  'on_hit_effect',
 ] as const;
 
 export type OverrideKey = typeof OVERRIDE_KEYS[number];
@@ -64,8 +59,6 @@ export interface AssignmentOverrides {
   combat_text?: Record<string, string | string[]>;
   scaling?: ScalingOverride;
   mechanic_calcs?: Record<string, AbilityCalc>;
-  /** At most one optional On-Hit Effect, drawn from the base's allowlist. */
-  on_hit_effect?: OnHitEffectConfig | null;
 }
 
 /** The base-library fields the resolver reads. */
@@ -82,15 +75,13 @@ export interface BaseAbilityRow {
   interval_ms?: number | null;
   mechanic_calcs?: Record<string, AbilityCalc> | null;
   combat_text?: Record<string, unknown> | null;
-  /** Base declaration of which on-hit effects this ability supports. */
+  /** Composed mechanic configuration, including the Status Application spec. */
   effect_config?: Record<string, unknown> | null;
 }
 
 export interface EffectiveAbility extends BaseAbilityRow {
   /** True when a validated override object was applied. */
   overridden: boolean;
-  /** Effective On-Hit Effect (class-configured, base-allowed) or null. */
-  on_hit_effect: OnHitEffectConfig | null;
 }
 
 const TEXT_KEYS: OverrideKey[] = ['label', 'description', 'tooltip'];
@@ -208,12 +199,6 @@ export function validateAssignmentOverrides(
     }
   }
 
-  if (o.on_hit_effect !== undefined && o.on_hit_effect !== null) {
-    for (const err of validateOnHitEffect(o.on_hit_effect, allowedOnHitEffects(base.effect_config))) {
-      errors.push(`overrides.${err}`);
-    }
-  }
-
   return errors;
 }
 
@@ -288,18 +273,6 @@ function applyScalingToCalc(
 }
 
 /**
- * The ability-level default On-Hit Effect authored on the base library row
- * (`abilities.effect_config.on_hit_effect`). Used when a class assignment does
- * not author its own. Invalid or disallowed configurations resolve to null.
- */
-export function baseOnHitEffect(base: BaseAbilityRow): OnHitEffectConfig | null {
-  const raw = base.effect_config?.on_hit_effect;
-  if (!raw || typeof raw !== 'object') return null;
-  if (validateOnHitEffect(raw, allowedOnHitEffects(base.effect_config)).length > 0) return null;
-  return raw as OnHitEffectConfig;
-}
-
-/**
  * base ability + validated class overrides = effective class ability.
  * Invalid overrides are discarded wholesale and reported through `errors`.
  */
@@ -311,18 +284,18 @@ export function resolveEffectiveAbility(
   const hasOverrides = !!raw && typeof raw === 'object' && !Array.isArray(raw)
     && Object.keys(raw as object).length > 0;
   if (!hasOverrides) {
-    return { ability: { ...base, overridden: false, on_hit_effect: baseOnHitEffect(base) }, errors: [] };
+    return { ability: { ...base, overridden: false }, errors: [] };
   }
 
   const errors = validateAssignmentOverrides(base, raw);
   if (errors.length > 0) {
     // Deterministic failure: base configuration only, never a partial merge.
-    return { ability: { ...base, overridden: false, on_hit_effect: baseOnHitEffect(base) }, errors };
+    return { ability: { ...base, overridden: false }, errors };
   }
 
   const o = raw as AssignmentOverrides;
   const ability: EffectiveAbility = {
-    ...base, overridden: true, on_hit_effect: o.on_hit_effect ?? baseOnHitEffect(base),
+    ...base, overridden: true,
   };
 
   if (o.label !== undefined) ability.label = o.label;

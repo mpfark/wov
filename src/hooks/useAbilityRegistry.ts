@@ -46,11 +46,13 @@ export function useAbilityRegistry(): { loaded: boolean } {
             ability:abilities (
               ability_key, label, description, tooltip, mechanic_key, ability_type, status,
               damage_type, combat_text, class_scale, primary_attribute, secondary_attribute,
-              applied_status, on_hit_effect,
+              applied_status, status_trigger, status_chance_pct, status_application_enabled,
+              on_hit_effect,
               base:base_abilities (
                 base_key, mechanic_key, activation_mode, target_type, default_target_type,
                 cp_cost, cp_reserve_pct, amount_calc, duration_calc, interval_ms,
-                mechanic_calcs, effect_config, on_hit_allowed, supports_secondary_scaling
+                mechanic_calcs, effect_config, supports_secondary_scaling
+
               )
             )
           `),

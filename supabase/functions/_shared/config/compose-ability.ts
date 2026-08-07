@@ -39,10 +39,13 @@ export interface AppliedStatusDef {
   stack_noun?: string | null;
   tick_interval_ms?: number | null;
   magnitude?: {
+    /** Flat per-tick magnitude — no attribute scaling at all. */
+    flat?: number;
     stat_mult?: number;
     global_mult?: number;
     role?: ScalingRoleName | null;
   } | null;
+
   duration?: {
     base_ms?: number;
     per_point_ms?: number;
@@ -82,7 +85,6 @@ export interface BaseLayerRow {
   interval_ms?: number | null;
   mechanic_calcs?: Record<string, AbilityCalc> | null;
   effect_config?: Record<string, unknown> | null;
-  on_hit_allowed?: string[] | null;
   supports_secondary_scaling?: boolean | null;
 }
 
@@ -100,11 +102,20 @@ export interface ConfiguredUseRow {
   class_scale?: number | null;
   primary_attribute?: string | null;
   secondary_attribute?: string | null;
+  /** Status Application: which reusable status, when, how likely, and whether at all. */
   applied_status?: string | null;
+  status_trigger?: string | null;
+  status_chance_pct?: number | null;
+  status_application_enabled?: boolean | null;
+  /**
+   * @deprecated Legacy one-off On-Hit Effect. Read ONLY as a narrowly scoped
+   * compatibility path while the last ability migrates to Status Application.
+   */
   on_hit_effect?: Record<string, unknown> | null;
   /** @deprecated Archive only — never read by the runtime. */
   effect_config?: Record<string, unknown> | null;
 }
+
 
 /** The flat, composed row shape the rest of the system already consumes. */
 export interface ComposedAbilityRow {
@@ -193,8 +204,20 @@ export function statusEffectConfig(
   status: AppliedStatusDef,
   use: ConfiguredUseRow,
 ): Record<string, unknown> {
+  // Status Application: identity + trigger + chance, shared by every branch so
+  // the runtime resolves ONE spec regardless of classification.
+  const application: Record<string, unknown> = {
+    status_key: status.key,
+    status_label: status.label ?? status.key,
+    status_classification: status.classification ?? 'dot',
+    status_trigger: use.status_trigger ?? null,
+    status_chance_pct: typeof use.status_chance_pct === 'number' ? use.status_chance_pct : null,
+    status_enabled: use.status_application_enabled === true,
+  };
+
   if (status.classification === 'damage_amp') {
     const cfg: Record<string, unknown> = {
+      ...application,
       amp_status_key: status.key,
       amp_effect_type: status.effect_type,
       amp_label: status.label ?? status.key,
@@ -207,12 +230,15 @@ export function statusEffectConfig(
     return cfg;
   }
 
-  const cfg: Record<string, unknown> = { effect_type: status.effect_type };
+  const cfg: Record<string, unknown> = { ...application, effect_type: status.effect_type };
   if (status.stack_noun) cfg.stack_noun = status.stack_noun;
   if (typeof status.tick_interval_ms === 'number') cfg.tick_rate_ms = status.tick_interval_ms;
 
 
   const mag = status.magnitude ?? {};
+  // A flat status (e.g. Scorched) deals a fixed amount per tick and ignores
+  // attributes entirely — no role is bound and no multipliers apply.
+  if (typeof mag.flat === 'number') cfg.dot_flat_damage = mag.flat;
   if (typeof mag.stat_mult === 'number') cfg.dot_stat_mult = mag.stat_mult;
   if (typeof mag.global_mult === 'number') cfg.dot_global_mult = mag.global_mult;
   const magAttr = resolveRoleAttribute(use, mag.role);
@@ -252,14 +278,15 @@ export function composeAbilityRow(
     if (attr) baseCfg[key] = attr;
   }
 
-  // On-hit permissions are base-owned; the chosen effect is use-owned.
-  baseCfg.on_hit_allowed = base?.on_hit_allowed ?? [];
+  // Legacy compatibility ONLY: the last ability still on the retired one-off
+  // On-Hit Effect keeps working until its Status Application is switched on.
   if (use.on_hit_effect) baseCfg.on_hit_effect = use.on_hit_effect;
 
   const statusDef = use.applied_status ? statuses?.[use.applied_status] : undefined;
   const effectConfig = statusDef
     ? { ...baseCfg, ...statusEffectConfig(statusDef, use) }
     : baseCfg;
+
 
   const mechanicCalcs: Record<string, AbilityCalc> = {};
   for (const [k, v] of Object.entries(base?.mechanic_calcs ?? {})) {

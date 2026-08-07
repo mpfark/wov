@@ -633,10 +633,130 @@ Deno.serve(async (req) => {
     ): number => amplify(amount, source, ampSnap[creatureId]);
 
     /**
-     * Apply or refresh a non-periodic amplification status on a creature.
-     * Same key never stacks: a re-application restarts the window (the fresh
-     * `started_at` also makes the instance visible from the next snapshot on).
+     * THE single writer of a reusable status row on a target.
+     *
+     * Periodic statuses (Bleed / Poison / Ignite / Scorched) stack and refresh
+     * through the shared `applyStackingEffect` primitive; non-periodic ones
+     * (Chilled and any future amplifier) never stack and a re-application
+     * restarts the window. `started_at` always marks the beginning of the
+     * uninterrupted instance — it is never used as an idempotency key.
      */
+    const writeStatusRow = (o: {
+      sourceId: string;
+      targetId: string;
+      abilityKey: string;
+      effectType: string;
+      at: number;
+      isPeriodic: boolean;
+      durationMs?: number;
+      durationTicks?: number | null;
+      damagePerTick?: number;
+      maxStacks?: number;
+      tickRateMs?: number;
+    }): { stacks: number; damagePerTick: number } => {
+      const existing = activeEffects.find(e =>
+        e.source_id === o.sourceId && e.target_id === o.targetId && e.effect_type === o.effectType);
+
+      if (!o.isPeriodic) {
+        const expiresAt = expiryFromTicks(o.at, Math.max(1, o.durationTicks ?? 1), TICK_RATE);
+        if (existing) {
+          existing.started_at = o.at;
+          existing.expires_at = expiresAt;
+          existing.next_tick_at = null;
+          existing.source_ability_key = o.abilityKey;
+          delete existing._expired;
+        } else {
+          activeEffects.push({
+            node_id: combatNodeId, target_id: o.targetId, source_id: o.sourceId,
+            session_id: null, effect_type: o.effectType,
+            source_ability_key: o.abilityKey,
+            stacks: 1, damage_per_tick: 0,
+            // Non-periodic: no tick cadence, ever.
+            next_tick_at: null, tick_rate_ms: TICK_RATE,
+            started_at: o.at, expires_at: expiresAt,
+          });
+        }
+        dotTargetIds.add(o.targetId);
+        return { stacks: 1, damagePerTick: 0 };
+      }
+
+      const tickRate = o.tickRateMs ?? TICK_RATE;
+      const state = applyStackingEffect(existing, {
+        now: o.at,
+        durationMs: Math.max(0, o.durationMs ?? 0),
+        damagePerTick: Math.max(1, o.damagePerTick ?? 1),
+        maxStacks: Math.max(1, Math.floor(o.maxStacks ?? 1)),
+        tickRateMs: tickRate,
+      });
+      const effData = {
+        node_id: combatNodeId, target_id: o.targetId, source_id: o.sourceId,
+        session_id: null, effect_type: o.effectType,
+        source_ability_key: o.abilityKey,
+        ...state,
+      };
+      if (existing) Object.assign(existing, effData, { _expired: undefined });
+      else activeEffects.push({ id: crypto.randomUUID(), ...effData });
+      dotTargetIds.add(o.targetId);
+      return { stacks: state.stacks, damagePerTick: state.damage_per_tick };
+    };
+
+    /**
+     * Status Application on a SUCCESSFUL qualifying event.
+     *
+     * One entry point for every trigger: the caller has already established
+     * that the event landed (hit, valid living target, not cancelled) and
+     * supplies the 0..1 chance `sample`. Live combat passes `Math.random()`;
+     * a deterministic replay would pass `statusSample(...)` — both paths share
+     * this function so compatibility, chance, magnitude, stacking, refresh,
+     * timing and attribution rules can never diverge.
+     */
+    const applyStatusFromSource = (o: {
+      sourceId: string;
+      character: any;
+      eb: Record<string, number>;
+      spec: StatusApplicationSpec;
+      abilityKey: string;
+      targetId: string;
+      at: number;
+      sample: number;
+      /** Ability-scaled chance (0..1), used when the config leaves chance empty. */
+      scaledChance?: number | null;
+      maxStacks?: number;
+    }): { label: string; stacks: number; damagePerTick: number } | null => {
+      const { spec } = o;
+      if (!statusChanceSucceeds(spec, o.sample, o.scaledChance)) return null;
+
+      if (!spec.isPeriodic) {
+        writeStatusRow({
+          sourceId: o.sourceId, targetId: o.targetId, abilityKey: o.abilityKey,
+          effectType: spec.effectType, at: o.at, isPeriodic: false,
+          durationTicks: spec.durationTicks,
+        });
+        return { label: spec.label, stacks: 1, damagePerTick: 0 };
+      }
+
+      const statMod = spec.statAttr
+        ? sm(((o.character as any)[spec.statAttr] || 10) + ((o.eb as any)[spec.statAttr] || 0))
+        : 0;
+      const durMod = spec.durationStat
+        ? sm(((o.character as any)[spec.durationStat] || 10) + ((o.eb as any)[spec.durationStat] || 0))
+        : 0;
+      const damagePerTick = statusDamagePerTick(spec, {
+        effectiveStatMod: spec.flat !== null ? 0 : getEffectiveCombatMod(Math.max(0, statMod), 'dot'),
+        bondMult: mBondMult[o.sourceId] ?? 1,
+      });
+      const written = writeStatusRow({
+        sourceId: o.sourceId, targetId: o.targetId, abilityKey: o.abilityKey,
+        effectType: spec.effectType, at: o.at, isPeriodic: true,
+        durationMs: statusDurationMs(spec, durMod),
+        damagePerTick,
+        maxStacks: o.maxStacks ?? 1,
+        tickRateMs: spec.tickRateMs ?? TICK_RATE,
+      });
+      return { label: spec.label, ...written };
+    };
+
+    /** Legacy shape kept for the amplification call sites. */
     const applyAmpStatus = (
       sourceId: string,
       cfg: Record<string, unknown>,
@@ -647,29 +767,13 @@ Deno.serve(async (req) => {
       const effectType = typeof cfg.amp_effect_type === 'string' ? cfg.amp_effect_type : null;
       const ticks = typeof cfg.amp_duration_ticks === 'number' ? cfg.amp_duration_ticks : 0;
       if (!effectType || ticks <= 0) return null;
-      const expiresAt = expiryFromTicks(at, ticks, TICK_RATE);
-      const existing = activeEffects.find(e =>
-        e.source_id === sourceId && e.target_id === targetId && e.effect_type === effectType);
-      if (existing) {
-        existing.started_at = at;
-        existing.expires_at = expiresAt;
-        existing.next_tick_at = null;
-        existing.source_ability_key = abilityKey;
-        delete existing._expired;
-      } else {
-        activeEffects.push({
-          node_id: combatNodeId, target_id: targetId, source_id: sourceId,
-          session_id: null, effect_type: effectType,
-          source_ability_key: abilityKey,
-          stacks: 1, damage_per_tick: 0,
-          // Non-periodic: no tick cadence, ever.
-          next_tick_at: null, tick_rate_ms: TICK_RATE,
-          started_at: at, expires_at: expiresAt,
-        });
-      }
-      dotTargetIds.add(targetId);
+      writeStatusRow({
+        sourceId, targetId, abilityKey, effectType, at,
+        isPeriodic: false, durationTicks: ticks,
+      });
       return { label: typeof cfg.amp_label === 'string' ? cfg.amp_label : effectType };
     };
+
 
 
     // ── Fold active item_buff:* effects into per-member stats ────
