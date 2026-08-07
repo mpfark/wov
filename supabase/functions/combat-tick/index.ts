@@ -2209,11 +2209,17 @@ Deno.serve(async (req) => {
     const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
     const str = (v: unknown): string | null => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : null);
 
-    /** Active stack-apply stances for a member, filtered by trigger. */
+    /**
+     * Active stance-driven Status Applications for a member, filtered by trigger.
+     *
+     * `weapon_hit` fires on a landed autoattack; `successful_pulse_hit` fires
+     * only when a stance's own attack (an Orbs of Fire orb) actually lands.
+     * Legacy trigger spellings are still accepted while stored configs migrate.
+     */
     const stackAppliersFor = (
       member: { id: string; c: any },
       mb: Record<string, any>,
-      trigger: 'on_hit' | 'pulse',
+      trigger: 'weapon_hit' | 'successful_pulse_hit',
     ): StackApplier[] => {
       // Preferred: the generic bag. Legacy clients still send the class-named
       // boolean flags, so those are mapped back onto their stance key.
@@ -2224,18 +2230,30 @@ Deno.serve(async (req) => {
         if (mb.poison_buff) keys.push('envenom');
         if (mb.ignite_buff) keys.push('ignite');
       }
+      const normalize = (t: string | null, abilityKey: string): string => {
+        if (t === 'on_hit' || t === 'weapon_hit') return 'weapon_hit';
+        if (t === 'pulse' || t === 'stance_pulse' || t === 'orb_hit' || t === 'successful_pulse_hit') {
+          return 'successful_pulse_hit';
+        }
+        return abilityKey === 'ignite' ? 'successful_pulse_hit' : 'weapon_hit';
+      };
       const out: StackApplier[] = [];
       for (const abilityKey of [...new Set(keys)]) {
         const entry = getServerAbilityCalcs(member.c.class || '', abilityKey);
         const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
-        const cfgTrigger = str(cfg.trigger) ?? (abilityKey === 'ignite' ? 'pulse' : 'on_hit');
-        if (cfgTrigger !== trigger) continue;
+        if (normalize(str(cfg.status_trigger) ?? str(cfg.trigger), abilityKey) !== trigger) continue;
         out.push({ abilityKey, cfg, text: (entry?.combatText ?? {}) as Record<string, unknown> });
       }
       return out;
     };
 
-    /** Upsert the configured stacking DoT row and return the resulting stack count. */
+    /**
+     * Apply a stance's Status Application to a target and return the stack count.
+     *
+     * Delegates every mechanical decision (chance, magnitude, duration, stacking,
+     * refresh cadence, attribution) to the shared `applyStatusFromSource`, so a
+     * stance proc and an ability proc of the same status behave identically.
+     */
     const applyConfiguredStack = (
       member: { id: string; c: any },
       eb: Record<string, number>,
@@ -2244,23 +2262,8 @@ Deno.serve(async (req) => {
       tickTimeNow: number,
     ): number => {
       const { cfg, abilityKey } = applier;
-      const effectType = str(cfg.effect_type) ?? 'poison';
-      const dotStat = (str(cfg.dot_stat) ?? 'dex') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-      const statValue = (member.c[dotStat] || 10) + (eb[dotStat] || 0);
-      const statMod = sm(statValue);
-      const effMod = getEffectiveCombatMod(Math.max(0, statMod), 'dot');
-      const dmgPerTick = Math.max(1, Math.floor(
-        effMod * num(cfg.dot_stat_mult, 1) * num(cfg.dot_global_mult, 1) * (mBondMult[member.id] ?? 1),
-      ));
-
-      let durationMs = num(cfg.dot_duration_ms, 25000);
-      const durStat = str(cfg.dot_duration_stat);
-      if (durStat) {
-        const durMod = sm((member.c[durStat] || 10) + (eb[durStat] || 0));
-        durationMs += Math.max(0, durMod) * num(cfg.dot_duration_per_point_ms, 0);
-        const cap = cfg.dot_duration_cap_ms;
-        if (typeof cap === 'number') durationMs = Math.min(cap, durationMs);
-      }
+      const spec = readStatusApplication(cfg);
+      if (!spec) return 1;
 
       const inputs = buildServerCalcInputs(member.c.level || 1, {
         str: (member.c.str || 10) + (eb.str || 0), dex: (member.c.dex || 10) + (eb.dex || 0),
@@ -2272,23 +2275,19 @@ Deno.serve(async (req) => {
         inputs, characterId: member.id, nodeId: combatNodeId,
       });
 
-      // IMPORTANT: when refreshing an existing stack, `applyStackingEffect`
-      // preserves `next_tick_at` so repeated procs never push the cadence
-      // forward forever (which would make the DoT never deal damage).
-      const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === targetId && e.effect_type === effectType);
-      const effData = {
-        node_id: combatNodeId, target_id: targetId, source_id: member.id,
-        session_id: null, effect_type: effectType,
-        source_ability_key: abilityKey,
-        ...applyStackingEffect(existing, {
-          now: tickTimeNow, durationMs, damagePerTick: dmgPerTick,
-          maxStacks: Math.max(1, Math.floor(maxStacks || 1)), tickRateMs: TICK_RATE,
-        }),
-      };
-      if (existing) Object.assign(existing, effData);
-      else activeEffects.push({ id: crypto.randomUUID(), ...effData });
-      return (effData as { stacks?: number }).stacks ?? 1;
+      const applied = applyStatusFromSource({
+        sourceId: member.id, character: member.c, eb, spec, abilityKey,
+        targetId, at: tickTimeNow,
+        // The caller has already established the qualifying event landed, and
+        // stance procs carry their own gating, so the chance roll always passes
+        // here unless the status itself defines one.
+        sample: Math.random(),
+        scaledChance: 1,
+        maxStacks: Math.max(1, Math.floor(maxStacks || 1)),
+      });
+      return applied?.stacks ?? 1;
     };
+
 
 
 
