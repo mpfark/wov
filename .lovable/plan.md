@@ -57,8 +57,8 @@ Source-provided inputs stay where they already are: the configured use's `primar
 Typed columns on `abilities` (matches the project's existing "typed columns for authored config" pattern; one application per configured use is sufficient — no live ability needs two):
 
 - `applied_status` — kept, becomes the application's status reference (FK-style text to `applied_statuses.key`).
-- `status_trigger text` — enum-checked: `ability_hit`, `weapon_hit`, `stance_pulse`, `activation`.
-- `status_chance_pct integer` (1..100, default 100) — one authoritative unit; percent integers.
+- `status_trigger text` — enum-checked: `ability_hit`, `weapon_hit`, `successful_pulse_hit`, `activation`. Every trigger name denotes a **successful qualifying event** (see 4).
+- `status_chance_pct integer` (**0..100**, default 100) — one authoritative unit; percent integers. `0` is valid and means the application never fires (an explicitly disabled application that keeps its authored configuration).
 - `status_target text` — `enemy` only for now, derived from the base's target when inherent, stored for clarity.
 - `status_application_enabled boolean default true`.
 - Drop after cutover: `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, `effect_config.on_hit_*` keys, `on_hit_effect` capability.
@@ -72,16 +72,37 @@ Compatibility is **derived**, not a new list: a base ability may apply a status 
 |---|---|---|
 | spell_attack, spell_bolt, weapon_attack, multi_attack, burst_damage, dot_debuff | `ability_hit` | derived, read-only |
 | on_hit_stance (`trigger_type = on_hit`) | `weapon_hit` | derived, read-only |
-| orb_stance (`trigger_type = pulse`) | `stance_pulse` | derived, read-only |
+| orb_stance (`trigger_type = pulse`) | `successful_pulse_hit` | derived, read-only |
 | defensive / heal / buff bases | none | Status Application section hidden |
 
 Triggers are never inferred from names, log text or damage type; the name-based `abilityKey === 'ignite'` fallback and the `poison_buff`/`ignite_buff` name mapping are removed.
 
+**Triggers are successful qualifying events, not attempts.** Formal semantics, enforced in the single application module (not at call sites):
+
+- `ability_hit` — the ability's own attack resolved against a valid, living target and **landed** (not a miss, not a fizzle, not a cancelled or invalid-target cast).
+- `weapon_hit` — a later autoattack from the stance owner **landed** on a valid living target.
+- `successful_pulse_hit` (renamed from `stance_pulse`) — the stance's automatic attack (Orbs of Fire's orb) fired **and its attack roll landed damage** on a living target. A pulse that occurs but misses, has no valid target, or is cancelled applies nothing. Orbs of Fire therefore applies Ignite only on a landed orb hit, exactly as today.
+- `activation` — the only non-hit trigger: the ability's own activation succeeded and paid its cost (used by self/ally applications; no live row uses it yet).
+
+`applyStatusFromSource()` takes an explicit `landed: boolean` (plus target-alive check) and returns `null` without consuming a chance sample when it is false, so no call site can shortcut the rule.
+
 ## 5. Shared runtime application point
 
-New shared module `applyStatusFromSource()` (`src/shared/combat/status-application.ts` + Deno mirror), used by every path: does status lookup, compatibility assertion, chance roll (caller supplies the sample for determinism), target-alive validation, magnitude/duration composition from the reusable definition, stack/refresh via `applyStackingEffect`, source attribution (`source_id`, `source_ability_key`), activation timing, and returns a structured event. It never computes the source attack.
+New shared module `applyStatusFromSource()` (`src/shared/combat/status-application.ts` + Deno mirror), used by every path: does status lookup, compatibility assertion, successful-event gate (`landed` + target alive), chance roll (caller supplies the sample for determinism), magnitude/duration composition from the reusable definition, stack/refresh via `applyStackingEffect`, source attribution (`source_id`, `source_ability_key`), activation timing, and returns a structured event. It never computes the source attack.
 
-Call sites converted: `combat-tick` ability branch (replaces both `applyAmpStatus` and the `rollOnHitEffect` block), `dot_debuff` branch, `stack_apply` on-hit branch, `stack_apply` pulse branch; `combat-catchup` reuses the same definitions for historical ticks. Client mirror `src/features/combat/utils/combat-resolver.ts` stays in sync for tests.
+Call sites converted: `combat-tick` ability branch (replaces both `applyAmpStatus` and the `rollOnHitEffect` block), `dot_debuff` branch, `stack_apply` on-hit branch, `stack_apply` pulse branch. Client mirror `src/features/combat/utils/combat-resolver.ts` stays in sync for tests.
+
+### Catch-up integration point
+
+`combat-catchup` does not get a parallel implementation. It calls the **same** `applyStatusFromSource()` from the Deno mirror, once per reconstructed tick, with the same compatibility check, chance semantics, magnitude/duration composition, stacking, refresh (cadence-preserving `next_tick_at`), tick-boundary timing and source attribution. The only difference is the clock: catch-up passes the reconstructed tick timestamp instead of `now`.
+
+Determinism of historical chance samples: catch-up never calls `Math.random()`. The sample is produced by a seeded, pure PRNG derived from a stable tuple — `(source_character_id, target_creature_id, ability_key, status_key, tick_index)` — so:
+
+- Re-running catch-up over the same tick range yields byte-identical outcomes; a repeated or overlapping run cannot reroll a proc into existence.
+- Application writes stay idempotent: a status row already carrying the same `source_ability_key` and a `started_at` at that tick index is treated as already applied and is not stacked again.
+- Catch-up advances `last_tick_at` (and therefore the tick index) under the existing reconcile lock, so two concurrent invocations cannot both claim the same tick.
+
+Live ticks keep using `Math.random()` (unchanged behaviour); only reconstructed history is seeded, and the seeded sampler lives in the shared module so both paths share one code path for everything else.
 
 Timing preserved exactly as today: periodic statuses tick from `now + tick_rate`; `damage_amp` statuses use the frozen per-tick `ampSnap`, so Frost Bolt's own hit is never amplified and Chilled starts on the following tick, identical for every party member regardless of iteration order.
 
@@ -108,14 +129,36 @@ DoT fields never render for `damage_amp` statuses and amplification fields never
 
 ## 8. Migration (staged, no dual authority)
 
-1. **Migration A** — add the new columns + checks; backfill: every ability with `applied_status` gets its derived trigger, target `enemy`, chance 100; Fireball is backfilled to `applied_status = ignite`, trigger `ability_hit`, `status_chance_pct = 25`; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists.
+1. **Migration A** — add the new columns + checks; backfill: every ability with `applied_status` gets its derived trigger, target `enemy`, chance 100; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists. **Fireball's status backfill is held out of Migration A** until the balance decision below is answered, so the structural pass can land without changing any live combat number.
 2. **Step 2** — regenerate Supabase types; land the shared application module, both mirrors, `compose-ability`, `effective-ability` validation, seeds (`ability-seed.ts` `on_hit_allowed` removed), and switch all four runtime call sites in one change so legacy and new paths never both execute.
 3. **Step 3** — admin UI replacement.
 4. **Migration B** (after verification) — drop `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, the SQL on-hit validation trigger, the `on_hit_effect` capability, and delete `src/shared/combat/on-hit-effects.ts` + its Deno mirror and `ability-taxonomy` entry.
 
+`spell_bolt` is **preserved as-is for this pass.** Frost Bolt keeps its existing `base_ability_id -> spell_bolt` relationship; any later consolidation of `spell_bolt` into `spell_attack` is explicitly out of scope. `spell_bolt` only gains the `applied_status` capability so the capability list matches the runtime path Frost Bolt already uses.
+
 IDs, base relationships, class assignments, defaults/alternatives and player loadouts are untouched throughout (only new columns added, legacy columns dropped last). Migration A is reversible until Migration B.
 
-**Decision required:** Fireball's legacy ignite (25%, 3 dmg/tick, 6 s, 3 stacks) is weaker and shorter than reusable `ignite` (WIS-scaled magnitude, 30-45 s, 5 stacks). Recommendation: keep chance at 25% and adopt the reusable ignite definition (a small buff), because per-source duration/damage overrides are explicitly out of scope. The alternative is a second `ignite_light` status row preserving the old numbers exactly. Fireball has no `secondary_attribute` today, so adopting reusable ignite also requires setting one (recommend `wis` -> `int` reuse: set `secondary_attribute = int`) — also needs approval.
+### Fireball: explicit balance decision required (not a small buff)
+
+Fireball is the one ability whose numbers change, and the change is **substantial** — not cosmetic. Live values: legacy on-hit ignite = 25% chance, 3 damage/tick, 6000 ms, max 3 stacks. Reusable `ignite` = fire, magnitude `secondary * 0.7 * 0.67` (0.469/point), duration `30000 + 1000/point` capped at 45000 ms, max 5 stacks, no explicit tick interval (inherits the 2000 ms combat cadence).
+
+Before/after for one landed 25% proc, at representative Wizard stats (2 s ticks):
+
+| Character | Legacy per application | Reusable ignite per application | Factor |
+|---|---|---|---|
+| INT 14 (early) | 3 dmg x 3 ticks = **9** | 6 dmg x 22 ticks (44 s) = **132** | ~15x |
+| INT 20 (mid) | 3 dmg x 3 ticks = **9** | 9 dmg x 22 ticks (45 s cap) = **198** | ~22x |
+| INT 28 (late) | 3 dmg x 3 ticks = **9** | 13 dmg x 22 ticks (45 s cap) = **286** | ~32x |
+
+Fully stacked ceiling: legacy 3 stacks x 3 dmg = 9 dmg/tick for 6 s (**27**); reusable 5 stacks x 13 dmg = 65 dmg/tick for 45 s (**~1430** at INT 28). Because the duration (45 s) far exceeds a normal Fireball cooldown, repeated casts realistically hold Fireball near the stack ceiling in sustained fights, so this is closer to a new damage pillar for the Wizard than a tuning nudge. Setting `secondary_attribute = int` (Fireball has none today) is what unlocks the scaled magnitude and duration, so it is part of the same decision.
+
+Options, ranked:
+
+- **A (recommended, zero balance change): add an `ignite_light` reusable status** — 3 damage/tick equivalent, 6000 ms, max 3 stacks, no attribute scaling. Fireball backfills to `applied_status = ignite_light`, `status_chance_pct = 25`, no `secondary_attribute` change. Consolidation completes with live damage byte-identical, and any Fireball buff becomes a separate, deliberate balance pass.
+- **B (adopt shared ignite as-is)** — Fireball gets `applied_status = ignite`, `secondary_attribute = int`, chance 25%. Accepts the 15x-32x per-proc increase above.
+- **C (adopt shared ignite, retuned)** — as B, but lower Fireball's chance and/or `class_scale` so measured sustained fire DoT output lands near today's; requires a tuning target from you.
+
+**Nothing is applied to Fireball until you pick A, B or C.**
 
 ## 9. Tests
 
@@ -123,12 +166,14 @@ New/extended Vitest suites (`src/test/combat/status-application.test.ts`, extend
 - Frost Bolt applies Chilled at 100% on a landed hit; its own hit is not amplified; Chilled behaviour, damage and CP cost unchanged.
 - Bleed / Poison / Ignite resolve from one reusable definition on every path (ability hit, on-hit stance, orb pulse, DoT ability, catch-up).
 - Editing a reusable status changes new applications from all sources.
-- Chance lives on the relationship: 0% never applies, 100% always applies on the qualifying trigger, intermediate values roll only at the trigger, a miss never applies.
+- Chance lives on the relationship: 0% is valid and never applies, 100% always applies on the qualifying successful event, intermediate values roll only at that event.
+- Successful-event semantics: a missed attack, a dead/invalid target and a cancelled cast apply nothing and consume no chance sample; an Orbs of Fire pulse that misses applies no Ignite while a landed orb hit does.
 - Unsupported base/status combinations fail validation and cannot be saved; every selectable admin option has a runtime path.
 - No double application from one landed hit; intentional stacking and refresh follow the status definition (cadence preserved).
 - Non-damaging status never ticks; 0 calculated damage stays 0; bleed/poison/ignite keep their explicit minimum of 1.
+- Catch-up parity: catch-up and live paths produce identical rows for the same tick; re-running catch-up over an already-processed range is idempotent and cannot reroll a proc (seeded sampler + idempotent write).
 - Party determinism, catch-up tick-accurate application/expiry, kill credit and source attribution, structured apply/refresh/stack/expiry events, no emoji.
-- Parity: combat numbers unchanged for abilities with no status application.
+- Parity: combat numbers unchanged for abilities with no status application; Frost Bolt keeps its `spell_bolt` base.
 
 ## 10. Balance observations (not implemented)
 
