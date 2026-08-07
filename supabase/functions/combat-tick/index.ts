@@ -2741,10 +2741,19 @@ Deno.serve(async (req) => {
         // Shared targeting primitive: a designated tank soaks everything while
         // alive (`tank_strict` — nobody else is hit if the tank is down),
         // otherwise a uniformly random living member takes the swing.
-        const candidates = members.map(m => ({ id: m.id, hp: mHp[m.id] }));
+        // Phase 2: only characters durably engaged with THIS creature are
+        // eligible (cross-party encounters stay independent). When the roster
+        // is empty we fall back to every member at the node.
+        const engagedWithCreature = engagedByCreature.get(creature.id);
+        const eligible = (engagedWithCreature && engagedWithCreature.size > 0)
+          ? members.filter(m => engagedWithCreature.has(m.id))
+          : members;
+        const pool = eligible.length > 0 ? eligible : members;
+        const tankEligible = tankAtNode && pool.some(m => m.id === tankId);
+        const candidates = pool.map(m => ({ id: m.id, hp: mHp[m.id] }));
         const picked = selectPrimaryTarget(candidates, {
-          mode: tankAtNode ? 'tank_strict' : 'random_alive',
-          tankId: tankAtNode ? tankId : null,
+          mode: tankEligible ? 'tank_strict' : 'random_alive',
+          tankId: tankEligible ? tankId : null,
         });
         if (!picked) continue;
         const target = members.find(m => m.id === picked.id)!;
