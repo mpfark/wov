@@ -30,7 +30,6 @@ interface EncounterRow {
   claim_token: string | null;
   lease_until: number | null;
   attempt: number;
-  tick_owner: 'legacy' | 'shared' | null;
 }
 
 const RATE = 2000;
@@ -49,11 +48,9 @@ class TickMachine {
     claim_token: null,
     lease_until: null,
     attempt: 0,
-    tick_owner: null,
   };
 
   constructor(
-    private flagEnabled: boolean,
     /** Authoritative derived mode, independent of who calls. */
     public derivedMode: TickMode,
   ) {}
@@ -64,13 +61,6 @@ class TickMachine {
 
   claim(supported: readonly TickMode[]): ClaimResult {
     const r = this.row;
-
-    if (r.tick_owner === null) {
-      r.tick_owner = this.flagEnabled ? 'shared' : 'legacy';
-    }
-    if (r.tick_owner !== 'shared') {
-      return { claimed: false, reason: 'legacy_owner', tick_owner: r.tick_owner };
-    }
 
     const mode = this.derivedMode;
 
@@ -139,15 +129,15 @@ class TickMachine {
 
 describe('encounter tick claim ownership', () => {
   it('catch-up cannot claim an authoritatively live tick and captures no lease', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
     const before = m.snapshot();
 
     const res = m.claim(EFFECTS_ONLY_MODES);
 
     expect(res).toMatchObject({ claimed: false, reason: 'mode_refused', mode: 'live' });
-    // no lease, no cursor movement, no resolver identity — only the owner latch
-    expect({ ...m.snapshot(), tick_owner: null }).toEqual({ ...before, tick_owner: null });
+    // no lease, no cursor movement, no resolver identity
+    expect(m.snapshot()).toEqual(before);
     expect(m.row.tick_state).toBe('idle');
     expect(m.row.claim_token).toBeNull();
     expect(m.row.lease_until).toBeNull();
@@ -156,7 +146,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('live combat cannot claim an effects-only tick and captures no lease', () => {
-    const m = new TickMachine(true, 'effects_only');
+    const m = new TickMachine('effects_only');
     m.now += RATE;
 
     const res = m.claim(LIVE_MODES);
@@ -168,7 +158,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('the live resolver claims a live tick, then commits it once', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
 
     const claim = m.claim(LIVE_MODES);
@@ -186,7 +176,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('a second caller under a live lease is refused as in_flight', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
     const first = m.claim(LIVE_MODES);
     expect(isClaimGranted(first)).toBe(true);
@@ -195,7 +185,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('resolver A finishing after resolver B reclaimed its lease cannot commit', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
 
     const a = m.claim(LIVE_MODES);
@@ -226,7 +216,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('a reclaimed tick keeps its stored mode and is still capability-checked', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
     const a = m.claim(LIVE_MODES);
     expect(isClaimGranted(a)).toBe(true);
@@ -247,7 +237,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('crash after committing N leaves N durable and N+1 claimable', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     m.now += RATE;
     const first = m.claim(LIVE_MODES);
     if (!isClaimGranted(first)) throw new Error('claim failed');
@@ -263,50 +253,7 @@ describe('encounter tick claim ownership', () => {
   });
 
   it('a tick is refused before its rate window elapses', () => {
-    const m = new TickMachine(true, 'live');
+    const m = new TickMachine('live');
     expect(m.claim(LIVE_MODES)).toMatchObject({ claimed: false, reason: 'not_due' });
-  });
-});
-
-describe('rollout: exactly one ownership model writes an encounter', () => {
-  it('flag disabled — the shared claim is inert, legacy session ticks own it', () => {
-    const m = new TickMachine(false, 'live');
-    m.now += RATE;
-    expect(m.claim(LIVE_MODES)).toMatchObject({ claimed: false, reason: 'legacy_owner' });
-    expect(m.row.tick_owner).toBe('legacy');
-    expect(m.row.tick_number).toBe(0);
-    expect(m.row.claim_token).toBeNull();
-  });
-
-  it('flag enabled — the shared claim owns it and legacy ticks are locked out', () => {
-    const m = new TickMachine(true, 'live');
-    m.now += RATE;
-    const claim = m.claim(LIVE_MODES);
-    expect(isClaimGranted(claim)).toBe(true);
-    expect(m.row.tick_owner).toBe('shared');
-  });
-
-  it('mid-deployment — an encounter latched to legacy stays legacy even after the flag flips', () => {
-    const m = new TickMachine(false, 'live');
-    m.now += RATE;
-    m.claim(LIVE_MODES); // latches 'legacy'
-    // deployment flips the flag while this fight is in progress
-    (m as unknown as { flagEnabled: boolean }).flagEnabled = true;
-    m.now += RATE;
-    expect(m.claim(LIVE_MODES)).toMatchObject({ claimed: false, reason: 'legacy_owner' });
-    expect(m.row.tick_owner).toBe('legacy');
-  });
-
-  it('mid-deployment — an encounter latched to shared never falls back to legacy', () => {
-    const m = new TickMachine(true, 'live');
-    m.now += RATE;
-    const claim = m.claim(LIVE_MODES);
-    if (!isClaimGranted(claim)) throw new Error('claim failed');
-    m.commit(claim.tick, claim.claim_token, 'b1');
-    (m as unknown as { flagEnabled: boolean }).flagEnabled = false;
-    m.now += RATE;
-    const next = m.claim(LIVE_MODES);
-    expect(isClaimGranted(next)).toBe(true);
-    expect(m.row.tick_owner).toBe('shared');
   });
 });

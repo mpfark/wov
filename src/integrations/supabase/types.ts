@@ -1782,7 +1782,6 @@ export type Database = {
           tick_at: number
           tick_mode: string | null
           tick_number: number
-          tick_owner: string | null
           tick_state: string
           updated_at: string
           version: number
@@ -1808,7 +1807,6 @@ export type Database = {
           tick_at?: number
           tick_mode?: string | null
           tick_number?: number
-          tick_owner?: string | null
           tick_state?: string
           updated_at?: string
           version?: number
@@ -1834,7 +1832,6 @@ export type Database = {
           tick_at?: number
           tick_mode?: string | null
           tick_number?: number
-          tick_owner?: string | null
           tick_state?: string
           updated_at?: string
           version?: number
@@ -3425,7 +3422,6 @@ export type Database = {
         Args: { _character_id: string; _enabled: boolean }
         Returns: undefined
       }
-      shared_encounter_tick_enabled: { Args: never; Returns: boolean }
       shutdown_world: { Args: never; Returns: undefined }
       stonebinder_commit_fuse: {
         Args: {

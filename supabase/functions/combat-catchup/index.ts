@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
       }
       console.log(JSON.stringify({
         fn: 'combat-catchup', node_id, claim: decision.action,
-        reason: decision.action === 'legacy' ? decision.reason : undefined,
+        reason: decision.action === 'unclaimed' ? decision.reason : undefined,
         tick: heldClaim?.tick ?? null, tick_mode: 'effects_only',
       }));
     }
