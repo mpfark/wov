@@ -2662,7 +2662,7 @@ Deno.serve(async (req) => {
           const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
 
           // A pulse can also open combat on an otherwise passive target.
-          if (applier.cfg.engages_target !== false) sessionEngaged.add(target.id);
+          if (applier.cfg.engages_target !== false) engageCreature(m.id, target.id, Date.now());
 
           const fill = (s: string) => s
             .replace('{attacker}', c.name).replace('{target}', target.name)
