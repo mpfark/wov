@@ -169,14 +169,13 @@ Publication happens **after** commit: the edge function broadcasts the committed
 
 1. `combat_actions`, `encounter_engagements`, `submit_combat_action`, `join_encounter_engagement`. Clients submit durably and also emit the presentation broadcast with the same action `id`; the resolver reads only the DB rows.
 2. Auto-attacks and targeting driven by `encounter_engagements` instead of `engaged_creature_ids`.
-3. Encounter tick columns + `claim_encounter_tick` / `commit_encounter_tick` with derived mode; `combat-tick` resolves one tick per claim inside the loop. `combat_sessions.last_tick_at` becomes advisory.
-4. Roster cutover: all engaged participants across parties and solos resolve in one tick; per-tick batches; `encounter_tick_batches` with inline retention; server-side publication; client duplicate/gap handling and batch fetch.
+3+4. **One production cutover boundary** behind a single shared feature flag (`shared_encounter_tick`). Phases 3 and 4 ship together and are never separately enabled in production: encounter tick columns, `claim_encounter_tick` / `commit_encounter_tick` with derived mode and claim token, **plus** the resolver loading the complete encounter-wide engagement roster (all solos and all parties) and publishing the shared per-tick batch (`encounter_tick_batches` with inline retention, server-side publication, client duplicate/gap handling and batch fetch). The encounter tick becomes authoritative only when both halves are live. With the flag off, legacy session ticks own the encounter and the encounter claim path is inert; with it on, legacy session ticks are refused for that encounter. The flag is read server-side per encounter and latched for the life of an encounter, so during deployment a mid-fight encounter keeps exactly one ownership model — mixed writers are impossible. `combat_sessions.last_tick_at` becomes advisory at cutover.
 5. Authority corrections: authoritative buffs, server-derived `consume_stacks`, removal of `client_cp` lowering.
 6. Any eligible participant may wake the tick (drop the leader-only check; keep the heartbeat).
-7. Catch-up moved onto the shared claim in `effects_only` mode; `encounter_reconcile` cursor reset removed.
-8. Module decomposition; drop compatibility fields, refs and broadcasts; demote `combat_sessions` to heartbeat state.
+7. Catch-up moved onto the shared claim in `effects_only` mode with declared capability; `encounter_reconcile` cursor reset removed.
+8. Module decomposition; drop compatibility fields, refs and broadcasts; demote `combat_sessions` to heartbeat state; remove the flag once stable.
 
-Compatibility safeguard throughout: only durable action rows execute, and every applied side effect is keyed by `(encounter_id, tick_number)` or a stable action `id`.
+Compatibility safeguard throughout: only durable action rows execute, every applied side effect is keyed by `(encounter_id, tick_number)` or a stable action `id`, and every commit is gated on the current `claim_token`.
 
 ## Part 5 — Validation
 
