@@ -101,11 +101,13 @@ Player-facing text stays "the next three combat ticks"; the admin editor shows t
 
 ## 4. Lifecycle reuse (revised — periodic vs non-periodic)
 
-Chilled reuses the existing `active_effects` lifecycle: same application/refresh code path (`applyStackingEffect` with `maxStacks: 1`, which refreshes duration without resetting cadence), same node-scoped load at tick start, same `expires_at` expiry sweep and `cleanupEffects` delete, same purge on creature death, same `active_effects` payload in the tick response. Non-periodic rows carry `damage_per_tick = 0`, `next_tick_at = NULL`, `started_at = <apply/refresh time>`.
+Chilled reuses the existing `active_effects` lifecycle: same application/refresh code path (`applyStackingEffect` with `maxStacks: 1`, which refreshes duration without resetting cadence), same node-scoped load at tick start, same `expires_at` expiry sweep and `cleanupEffects` delete, same purge on creature death, same `active_effects` payload in the tick response. Non-periodic rows carry `damage_per_tick = 0` and `next_tick_at = NULL`.
 
-`resolveEffectTicks` is split explicitly by classification rather than by field values:
+**`started_at` semantics:** `started_at` marks the beginning of the current **uninterrupted** instance. First application sets it. A refresh of an already-active row extends `expires_at` only and **preserves the existing `started_at`**. A new `started_at` is assigned only when the previous instance has expired or been removed (row deleted, or `expires_at <= now` at apply time). This keeps catch-up windows historically accurate across refreshes.
 
-- **Periodic branch** (unchanged behaviour): only effects whose `effect_type` maps to a periodic status are considered for damage ticks. Ignite/Poison/Bleed math, messages and cadence are byte-identical.
+`resolveEffectTicks` is split explicitly by classification (derived from the typed status classification — see §3) rather than by field values:
+
+- **Periodic branch** (unchanged behaviour): only effects whose status classification is periodic are considered for damage ticks. Ignite/Poison/Bleed math, messages and cadence are byte-identical.
 - **Non-periodic branch** (new): iterates non-periodic effects and performs expiry only — marks `_expired`, pushes the expiry id, pushes a `clearedDots`-equivalent entry and an expiry event. No damage, no `next_tick_at` arithmetic.
 
 No Chilled-only tracker is introduced.
