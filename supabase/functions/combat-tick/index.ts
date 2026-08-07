@@ -2647,15 +2647,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Pulse-trigger stack appliers (`stack_apply`, trigger: 'pulse') ──
+      // ── Status Application, trigger `successful_pulse_hit` ─────────────
       // Consolidation Group D: a pulsing applier fires on its own heartbeat
       // rather than on weapon hits. Orbs of Fire is the Wizard identity of this
       // base: proc chance is the amount calc, the spark damage attribute, the
       // applied effect, its scaling and every line of text are configuration.
+      // The status is applied only when the orb itself LANDS — the proc rolled
+      // through and the spark actually hit a living target.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        const appliers = stackAppliersFor(m, mb, 'pulse');
+        const appliers = stackAppliersFor(m, mb, 'successful_pulse_hit');
+
         if (appliers.length === 0) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
