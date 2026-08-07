@@ -247,6 +247,18 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleGrantGem = async (characterId: string) => {
+    if (!grantGemKey || !grantGemAmount || grantGemAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-gem', 'POST', {
+        character_id: characterId, gem_key: grantGemKey, amount: grantGemAmount,
+      });
+      toast.success(`Granted ${grantGemAmount} ${grantGemKey} (total: ${data.new_total})`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
   const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId) || null;
 
