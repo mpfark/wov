@@ -310,10 +310,12 @@ export default function AbilityConfigManager() {
   const can = (key: CapabilityKey) => caps.length === 0 || caps.includes(key);
 
   
-  /** Statuses are offered when the base can trigger one. */
-  const statusOptions = useMemo(() => (
-    draftBase && (draftBase.trigger_type !== 'none' || draft?.applied_status) ? statuses : []
-  ), [draftBase, draft?.applied_status, statuses]);
+  /**
+   * Status Application is the ONE status surface, so it is offered on every
+   * authored ability: any ability can choose to apply a reusable status, and
+   * leaving the status as None keeps the application non-existent.
+   */
+  const statusOptions = useMemo(() => (draftBase ? statuses : []), [draftBase, statuses]);
   const activeStatus = useMemo(
     () => statuses.find(st => st.key === draft?.applied_status) ?? null,
     [statuses, draft?.applied_status],
