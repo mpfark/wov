@@ -3950,6 +3950,10 @@ Deno.serve(async (req) => {
       session_ended: sessionEnded,
       ticks_processed: ticks,
       buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,
+      // Shared batch identity (Phase 3): lets a client that missed this
+      // response recover the identical result from `encounter_tick_batches`.
+      encounter_tick: publishedTick,
+      encounter_batch_id: publishedBatchId,
     });
 
   } catch (err) {
