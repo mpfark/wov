@@ -237,6 +237,6 @@ Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If
 3. `active_effects.next_tick_at` becomes nullable and `started_at` is added, for correct non-periodic representation and catch-up windows.
 4. Same status key: strongest active instance wins; distinct keys add.
 5. Chilled stores no `default_damage_type`.
-6. Chilled's duration is stored as 7000 ms so it amplifies exactly the next three combat ticks, with existing DoT expiry semantics untouched.
+6. Chilled's authoritative duration is `duration_ticks = 3` (approximately 6 seconds at the current 2-second tick rate); the expiry boundary is derived at runtime and existing DoT `base_ms` durations are untouched.
 7. `started_at` marks the current uninterrupted instance and is preserved across refreshes.
 8. Periodicity is owned solely by `classification`; `is_periodic`, if stored, is a generated column.
