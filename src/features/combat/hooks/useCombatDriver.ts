@@ -174,6 +174,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   }, []);
 
   const stopCombat = useCallback(() => {
+    // Durable disengage (Phase 2): drop this character's engagement rows so
+    // the server-side roster stops treating us as a combatant, and cancel any
+    // still-pending durable intent.
+    const leavingCharacterId = ext.current?.character?.id;
+    if (leavingCharacterId) {
+      void supabase
+        .rpc('leave_encounter_engagements', {
+          _character_id: leavingCharacterId,
+          _creature_id: null,
+        })
+        .then(({ error }) => {
+          if (error) console.warn('[combat] disengage failed', error.message);
+        });
+    }
     inCombatRef.current = false;
     tickBusyRef.current = false;
     tickSeqRef.current = 0;

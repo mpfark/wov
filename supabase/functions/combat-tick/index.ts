@@ -482,6 +482,71 @@ Deno.serve(async (req) => {
     const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
     for (const id of engagedIds) sessionEngaged.add(id);
 
+    // ── Phase 2: durable engagement roster ───────────────────────
+    // `encounter_engagements` is the authoritative "who is fighting what"
+    // record. It survives dropped requests and spans parties, so both
+    // auto-attack targeting and creature retaliation read from it. The legacy
+    // client-supplied `engaged_creature_ids` remains as fallback until every
+    // caller writes engagements.
+    const engagedByCreature = new Map<string, Map<string, number>>();
+    const engagedByCharacter = new Map<string, Map<string, number>>();
+    /** (characterId, creatureId) pairs this tick discovered or refreshed. */
+    const engagementWrites = new Map<string, { character_id: string; creature_id: string }>();
+    const purgedEngagementCreatures = new Set<string>();
+
+    const recordEngagement = (characterId: string, creatureId: string, atMs: number) => {
+      if (!characterId || !creatureId) return;
+      let byCreature = engagedByCreature.get(creatureId);
+      if (!byCreature) { byCreature = new Map(); engagedByCreature.set(creatureId, byCreature); }
+      byCreature.set(characterId, Math.max(byCreature.get(characterId) ?? 0, atMs));
+      let byCharacter = engagedByCharacter.get(characterId);
+      if (!byCharacter) { byCharacter = new Map(); engagedByCharacter.set(characterId, byCharacter); }
+      byCharacter.set(creatureId, Math.max(byCharacter.get(creatureId) ?? 0, atMs));
+    };
+
+    /** Engage a creature: session set, in-memory roster, and durable write. */
+    const engageCreature = (characterId: string | null | undefined, creatureId: string, atMs: number) => {
+      sessionEngaged.add(creatureId);
+      if (!characterId) return;
+      recordEngagement(characterId, creatureId, atMs);
+      engagementWrites.set(`${characterId}|${creatureId}`, {
+        character_id: characterId,
+        creature_id: creatureId,
+      });
+    };
+
+    const dropEngagementsForCreature = (creatureId: string) => {
+      const byCreature = engagedByCreature.get(creatureId);
+      if (byCreature) {
+        for (const charId of byCreature.keys()) engagedByCharacter.get(charId)?.delete(creatureId);
+        engagedByCreature.delete(creatureId);
+      }
+      for (const key of [...engagementWrites.keys()]) {
+        if (key.endsWith(`|${creatureId}`)) engagementWrites.delete(key);
+      }
+      purgedEngagementCreatures.add(creatureId);
+    };
+
+    {
+      const memberIdList = members.map(m => m.id);
+      if (memberIdList.length > 0) {
+        const { data: engRows, error: engErr } = await db
+          .from('encounter_engagements')
+          .select('creature_id, character_id, last_action_at')
+          .in('character_id', memberIdList);
+        if (engErr) {
+          console.error('[combat-tick] engagement roster load failed', engErr.message);
+        } else {
+          for (const row of engRows || []) {
+            const at = Date.parse((row as any).last_action_at ?? '') || 0;
+            recordEngagement((row as any).character_id, (row as any).creature_id, at);
+          }
+        }
+      }
+      // Creatures on the durable roster are engaged for this node's simulation.
+      for (const creatureId of engagedByCreature.keys()) sessionEngaged.add(creatureId);
+    }
+
     // ── Calculate ticks to process ──────────────────────────────
     const elapsedMs = now - session.last_tick_at;
     const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
@@ -935,6 +1000,8 @@ Deno.serve(async (req) => {
     const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
+      // Durable roster: a dead creature holds no engagements (Phase 2).
+      dropEngagementsForCreature(creature.id);
       // Purge all active_effects targeting this creature (and track for client)
       const killedEffects = activeEffects.filter(e => e.target_id === creature.id);
       for (const e of killedEffects) {
@@ -1182,7 +1249,7 @@ Deno.serve(async (req) => {
 
       // Any ability landing on a creature engages it for the rest of the session
       // (so T0 openers transition out-of-combat → in-combat correctly).
-      sessionEngaged.add(target.id);
+      engageCreature(member.id, target.id, Date.now());
 
       // ── Ability to-hit helper ─────────────────────────────────────
       // All damaging abilities (except Barrage which rolls per-arrow) call this
@@ -2307,8 +2374,22 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const affinity = weaponAffinity(c.class, wTag);
 
-        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        // Phase 2: auto-attacks follow the durable engagement roster — the
+        // most recently engaged living creature this character is fighting.
+        // The legacy "first living creature" scan stays as the fallback for
+        // sessions that predate roster writes.
+        let target: any = null;
+        const engagedForMember = engagedByCharacter.get(m.id);
+        if (engagedForMember && engagedForMember.size > 0) {
+          const ordered = [...engagedForMember.entries()].sort((a, b) => b[1] - a[1]);
+          for (const [crId] of ordered) {
+            const cr = creatures.find(c2 => c2.id === crId);
+            if (cr && cHp[cr.id] > 0 && !cKilled.has(cr.id)) { target = cr; break; }
+          }
+        }
+        if (!target) target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id)) ?? null;
         if (!target) break;
+        engageCreature(m.id, target.id, Date.now());
 
         let creatureAc = target.ac;
         if (mb.sunder_target === target.id && mb.sunder_reduction) {
@@ -2581,7 +2662,7 @@ Deno.serve(async (req) => {
           const stacks = applyConfiguredStack(m, eb as Record<string, number>, applier, target.id, tickTime);
 
           // A pulse can also open combat on an otherwise passive target.
-          if (applier.cfg.engages_target !== false) sessionEngaged.add(target.id);
+          if (applier.cfg.engages_target !== false) engageCreature(m.id, target.id, Date.now());
 
           const fill = (s: string) => s
             .replace('{attacker}', c.name).replace('{target}', target.name)
@@ -2660,10 +2741,19 @@ Deno.serve(async (req) => {
         // Shared targeting primitive: a designated tank soaks everything while
         // alive (`tank_strict` — nobody else is hit if the tank is down),
         // otherwise a uniformly random living member takes the swing.
-        const candidates = members.map(m => ({ id: m.id, hp: mHp[m.id] }));
+        // Phase 2: only characters durably engaged with THIS creature are
+        // eligible (cross-party encounters stay independent). When the roster
+        // is empty we fall back to every member at the node.
+        const engagedWithCreature = engagedByCreature.get(creature.id);
+        const eligible = (engagedWithCreature && engagedWithCreature.size > 0)
+          ? members.filter(m => engagedWithCreature.has(m.id))
+          : members;
+        const pool = eligible.length > 0 ? eligible : members;
+        const tankEligible = tankAtNode && pool.some(m => m.id === tankId);
+        const candidates = pool.map(m => ({ id: m.id, hp: mHp[m.id] }));
         const picked = selectPrimaryTarget(candidates, {
-          mode: tankAtNode ? 'tank_strict' : 'random_alive',
-          tankId: tankAtNode ? tankId : null,
+          mode: tankEligible ? 'tank_strict' : 'random_alive',
+          tankId: tankEligible ? tankId : null,
         });
         if (!picked) continue;
         const target = members.find(m => m.id === picked.id)!;
@@ -3715,6 +3805,34 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.error('[combat-tick] audit log write failed', e);
+    }
+
+    // ── Durable engagement bookkeeping (Phase 2) ─────────────────
+    // Persist the roster this tick discovered so a dropped request can never
+    // lose "who is fighting what", and purge engagements for creatures we
+    // killed so nothing keeps swinging at a corpse.
+    try {
+      const writes = [...engagementWrites.values()].filter(
+        w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
+      );
+      await Promise.all([
+        ...writes.map(w =>
+          db.rpc('join_encounter_engagement', {
+            _character_id: w.character_id,
+            _creature_id: w.creature_id,
+          }).then(({ error }: any) => {
+            if (error) console.warn('[combat-tick] engagement join failed', error.message);
+          }),
+        ),
+        ...[...purgedEngagementCreatures].map(creatureId =>
+          db.rpc('purge_creature_engagements', { _creature_id: creatureId })
+            .then(({ error }: any) => {
+              if (error) console.warn('[combat-tick] engagement purge failed', error.message);
+            }),
+        ),
+      ]);
+    } catch (e) {
+      console.error('[combat-tick] engagement bookkeeping failed', e);
     }
 
     // ── Durable action bookkeeping (Phase 1) ─────────────────────
