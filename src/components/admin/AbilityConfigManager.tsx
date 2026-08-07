@@ -226,7 +226,10 @@ export default function AbilityConfigManager() {
       primary_attribute: a.primary_attribute ?? null,
       secondary_attribute: a.secondary_attribute ?? null,
       applied_status: a.applied_status ?? null,
-      on_hit_effect: (a.on_hit_effect ?? null) as OnHitEffectConfig | null,
+      status_trigger: (a.status_trigger ?? null) as StatusTrigger | null,
+      status_chance_pct: typeof a.status_chance_pct === 'number' ? a.status_chance_pct : null,
+      status_application_enabled: a.status_application_enabled === true,
+
     })));
 
     setUsage(((usageRes.data ?? []) as any[])
