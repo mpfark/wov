@@ -76,21 +76,42 @@ export function useGroundLoot(
       fetchGroundLoot();
     };
     handle.onLootPickedUp.current = (payload: any) => {
-      const { ground_loot_id, picker_id } = payload.payload as { ground_loot_id: string; picker_id: string };
+      const { ground_loot_id, picker_id, picker_name, item_name } = payload.payload as {
+        ground_loot_id: string; picker_id: string; picker_name?: string; item_name?: string;
+      };
       if (picker_id === characterId) return;
       logBroadcast('in', `node`, 'loot_picked_up');
       if (ground_loot_id) {
         setGroundLoot(prev => prev.filter(g => g.id !== ground_loot_id));
         suppressRefetchUntilRef.current = Date.now() + 3000;
       }
+      if (picker_name) {
+        optionsRef.current.onRemoteLootLog?.({
+          actorId: picker_id,
+          actorName: picker_name,
+          itemName: item_name ?? 'an item',
+          kind: 'pickup',
+        });
+      }
     };
     handle.onLootDropped.current = (payload: any) => {
-      const { dropper_id } = payload.payload as { dropper_id: string };
+      const { dropper_id, dropper_name, item_name } = payload.payload as {
+        dropper_id: string; dropper_name?: string; item_name?: string;
+      };
       if (dropper_id === characterId) return;
       logBroadcast('in', `node`, 'loot_dropped');
       fetchGroundLoot();
       suppressRefetchUntilRef.current = Date.now() + 3000;
+      if (dropper_name) {
+        optionsRef.current.onRemoteLootLog?.({
+          actorId: dropper_id,
+          actorName: dropper_name,
+          itemName: item_name ?? 'an item',
+          kind: 'drop',
+        });
+      }
     };
+
 
     return () => {
       handle.onGroundLootDbChange.current = null;
