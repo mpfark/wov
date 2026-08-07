@@ -308,7 +308,7 @@ export default function AbilityConfigManager() {
   /** A base with no declared capabilities exposes everything (safe default). */
   const can = (key: CapabilityKey) => caps.length === 0 || caps.includes(key);
 
-  const draftOnHit = draft?.on_hit_effect ?? null;
+  
   /** Statuses are offered when the base can trigger one. */
   const statusOptions = useMemo(() => (
     draftBase && (draftBase.trigger_type !== 'none' || draft?.applied_status) ? statuses : []
