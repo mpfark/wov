@@ -12,6 +12,7 @@ import { AdminFormSection, AdminEmptyState } from '../common';
 import ItemPicker from '../ItemPicker';
 import NodePicker from '../NodePicker';
 import CharacterSummaryCard from './CharacterSummaryCard';
+import { GEM_CATALOG, PRIMARY_GEM_KEYS } from '@/shared/formulas/gems';
 import type { AdminCharacter, AdminUser, AdminNode } from './constants';
 
 interface Props {
@@ -34,8 +35,14 @@ interface Props {
   setGrantSalvageAmount: (n: number) => void;
   grantGoldAmount: number;
   setGrantGoldAmount: (n: number) => void;
+  grantGemKey: string;
+  setGrantGemKey: (k: string) => void;
+  grantGemAmount: number;
+  setGrantGemAmount: (n: number) => void;
+  onGrantGem: (charId: string) => void;
   removeItemId: string;
   setRemoveItemId: (id: string) => void;
+
   onGiveItem: (charId: string) => void;
   onTeleport: (charId: string) => void;
   onGrantXp: (charId: string) => void;
@@ -55,9 +62,11 @@ export default function CharacterActionsColumn({
   grantRespecAmount, setGrantRespecAmount,
   grantSalvageAmount, setGrantSalvageAmount,
   grantGoldAmount, setGrantGoldAmount,
+  grantGemKey, setGrantGemKey, grantGemAmount, setGrantGemAmount,
   removeItemId, setRemoveItemId,
-  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold,
+  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold, onGrantGem,
   onRevive, onResetStats, onRemoveItem,
+
 }: Props) {
   const nodeName = selectedChar?.current_node_id
     ? allNodes.find(n => n.id === selectedChar.current_node_id)?.name
@@ -169,6 +178,31 @@ Grant Salvage
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                   disabled={grantGoldAmount <= 0} onClick={() => onGrantGold(selectedChar.id)}>
                   <Coins className="w-3 h-3" /> Grant Gold
+                </Button>
+              </div>
+
+              <div className="flex gap-1">
+                <Input type="number" min={1} max={1000} value={grantGemAmount}
+                  onChange={e => setGrantGemAmount(parseInt(e.target.value) || 0)}
+                  className="h-7 text-[10px] w-20" placeholder="Qty" />
+                <Select value={grantGemKey} onValueChange={setGrantGemKey}>
+                  <SelectTrigger className="h-7 flex-1 text-[10px]">
+                    <SelectValue placeholder="Gem..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    {PRIMARY_GEM_KEYS.map(k => (
+                      <SelectItem key={k} value={k} className="text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full" style={{ background: GEM_CATALOG[k].color }} />
+                          {GEM_CATALOG[k].name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                  disabled={grantGemAmount <= 0 || !grantGemKey} onClick={() => onGrantGem(selectedChar.id)}>
+                  Grant Gem
                 </Button>
               </div>
             </div>

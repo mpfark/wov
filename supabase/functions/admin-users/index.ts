@@ -490,6 +490,21 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, new_total: newTotal });
     }
 
+    // GRANT GEM
+    if (action === "grant-gem" && req.method === "POST") {
+      const { character_id, gem_key, amount } = await req.json();
+      const GEMS = ['garnet', 'topaz', 'emerald', 'sapphire', 'pearl', 'amethyst'];
+      if (!character_id || !GEMS.includes(gem_key) || !amount || amount < 1 || amount > 1000) {
+        throw { message: "character_id, valid gem_key and amount (1..1000) required", status: 400 };
+      }
+      const { data: newTotal, error } = await adminClient.rpc('add_material', {
+        _character_id: character_id, _key: gem_key, _delta: amount,
+      });
+      if (error) throw error;
+      return jsonResponse({ success: true, new_total: newTotal });
+    }
+
+
     // GRANT GOLD
     if (action === "grant-gold" && req.method === "POST") {
       const { character_id, amount } = await req.json();
