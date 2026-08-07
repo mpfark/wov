@@ -33,6 +33,21 @@ import {
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import { loadClassRegistry } from "../_shared/load-class-registry.ts";
 import { loadAbilityCalcs, getAppliedStatusDefs } from "../_shared/load-ability-calcs.ts";
+import { createStatusRuntime } from "../_shared/combat/status-runtime.ts";
+import {
+  readStatusApplication,
+  statusSample,
+} from "../_shared/combat/status-application.ts";
+import { getStatModifier } from "../_shared/formulas/stats.ts";
+import { isPeriodicStatus } from "../_shared/combat/creature-damage-modifiers.ts";
+
+/**
+ * Live combat's tick cadence. Non-periodic statuses store their duration as a
+ * COUNT OF COMBAT TICKS, so the offscreen replay must interpret them with the
+ * same cadence the live tick used to write them.
+ */
+const TICK_RATE = 2000;
+
 
 
 const corsHeaders = {
