@@ -29,10 +29,30 @@ export interface GroundLootItem {
   };
 }
 
-export function useGroundLoot(handle: NodeChannelHandle, nodeId: string | null, characterId: string | null) {
+export interface GroundLootOptions {
+  /** Name broadcast with pickup/drop so co-located players can log the action. */
+  characterName?: string | null;
+  /**
+   * Called when ANOTHER character at this node picks up or drops an item.
+   * Party members already receive this through the party log, so the caller
+   * is responsible for skipping party mates to avoid duplicate lines.
+   */
+  onRemoteLootLog?: (info: { actorId: string; actorName: string; itemName: string; kind: 'pickup' | 'drop' }) => void;
+}
+
+export function useGroundLoot(
+  handle: NodeChannelHandle,
+  nodeId: string | null,
+  characterId: string | null,
+  options: GroundLootOptions = {},
+) {
   const [groundLoot, setGroundLoot] = useState<GroundLootItem[]>([]);
   // Suppress Postgres Changes refetch when broadcast already handled the update
   const suppressRefetchUntilRef = useRef(0);
+  // Latest options without re-subscribing the node callbacks.
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
 
   const fetchGroundLoot = useCallback(async () => {
     if (!nodeId) { setGroundLoot([]); return; }
