@@ -40,7 +40,20 @@ import { absorbFromShield, resolveDamage, resolveHeal } from "../_shared/combat/
 import { selectPrimaryTarget } from "../_shared/combat/targeting.ts";
 import { applyStackingEffect } from "../_shared/combat/status.ts";
 import { LEGACY_AMBUSH_MULT } from "../_shared/config/mechanic-templates.ts";
+// Legacy compatibility ONLY: the retired one-off On-Hit Effect. Read for the
+// last ability whose Status Application is not switched on yet, so no deployed
+// phase silently loses a proc.
 import { rollOnHitEffect } from "../_shared/combat/on-hit-effects.ts";
+import {
+  readStatusApplication,
+  statusChanceSucceeds,
+  statusDamagePerTick,
+  statusDurationMs,
+  type StatusApplicationSpec,
+} from "../_shared/combat/status-application.ts";
+import { evaluateOptionalCalc } from "../_shared/formulas/ability-calc.ts";
+
+
 import {
   amplify,
   buildAmpSnapshot,
@@ -633,10 +646,130 @@ Deno.serve(async (req) => {
     ): number => amplify(amount, source, ampSnap[creatureId]);
 
     /**
-     * Apply or refresh a non-periodic amplification status on a creature.
-     * Same key never stacks: a re-application restarts the window (the fresh
-     * `started_at` also makes the instance visible from the next snapshot on).
+     * THE single writer of a reusable status row on a target.
+     *
+     * Periodic statuses (Bleed / Poison / Ignite / Scorched) stack and refresh
+     * through the shared `applyStackingEffect` primitive; non-periodic ones
+     * (Chilled and any future amplifier) never stack and a re-application
+     * restarts the window. `started_at` always marks the beginning of the
+     * uninterrupted instance — it is never used as an idempotency key.
      */
+    const writeStatusRow = (o: {
+      sourceId: string;
+      targetId: string;
+      abilityKey: string;
+      effectType: string;
+      at: number;
+      isPeriodic: boolean;
+      durationMs?: number;
+      durationTicks?: number | null;
+      damagePerTick?: number;
+      maxStacks?: number;
+      tickRateMs?: number;
+    }): { stacks: number; damagePerTick: number } => {
+      const existing = activeEffects.find(e =>
+        e.source_id === o.sourceId && e.target_id === o.targetId && e.effect_type === o.effectType);
+
+      if (!o.isPeriodic) {
+        const expiresAt = expiryFromTicks(o.at, Math.max(1, o.durationTicks ?? 1), TICK_RATE);
+        if (existing) {
+          existing.started_at = o.at;
+          existing.expires_at = expiresAt;
+          existing.next_tick_at = null;
+          existing.source_ability_key = o.abilityKey;
+          delete existing._expired;
+        } else {
+          activeEffects.push({
+            node_id: combatNodeId, target_id: o.targetId, source_id: o.sourceId,
+            session_id: null, effect_type: o.effectType,
+            source_ability_key: o.abilityKey,
+            stacks: 1, damage_per_tick: 0,
+            // Non-periodic: no tick cadence, ever.
+            next_tick_at: null, tick_rate_ms: TICK_RATE,
+            started_at: o.at, expires_at: expiresAt,
+          });
+        }
+        dotTargetIds.add(o.targetId);
+        return { stacks: 1, damagePerTick: 0 };
+      }
+
+      const tickRate = o.tickRateMs ?? TICK_RATE;
+      const state = applyStackingEffect(existing, {
+        now: o.at,
+        durationMs: Math.max(0, o.durationMs ?? 0),
+        damagePerTick: Math.max(1, o.damagePerTick ?? 1),
+        maxStacks: Math.max(1, Math.floor(o.maxStacks ?? 1)),
+        tickRateMs: tickRate,
+      });
+      const effData = {
+        node_id: combatNodeId, target_id: o.targetId, source_id: o.sourceId,
+        session_id: null, effect_type: o.effectType,
+        source_ability_key: o.abilityKey,
+        ...state,
+      };
+      if (existing) Object.assign(existing, effData, { _expired: undefined });
+      else activeEffects.push({ id: crypto.randomUUID(), ...effData });
+      dotTargetIds.add(o.targetId);
+      return { stacks: state.stacks, damagePerTick: state.damage_per_tick };
+    };
+
+    /**
+     * Status Application on a SUCCESSFUL qualifying event.
+     *
+     * One entry point for every trigger: the caller has already established
+     * that the event landed (hit, valid living target, not cancelled) and
+     * supplies the 0..1 chance `sample`. Live combat passes `Math.random()`;
+     * a deterministic replay would pass `statusSample(...)` — both paths share
+     * this function so compatibility, chance, magnitude, stacking, refresh,
+     * timing and attribution rules can never diverge.
+     */
+    const applyStatusFromSource = (o: {
+      sourceId: string;
+      character: any;
+      eb: Record<string, number>;
+      spec: StatusApplicationSpec;
+      abilityKey: string;
+      targetId: string;
+      at: number;
+      sample: number;
+      /** Ability-scaled chance (0..1), used when the config leaves chance empty. */
+      scaledChance?: number | null;
+      maxStacks?: number;
+    }): { label: string; stacks: number; damagePerTick: number } | null => {
+      const { spec } = o;
+      if (!statusChanceSucceeds(spec, o.sample, o.scaledChance)) return null;
+
+      if (!spec.isPeriodic) {
+        writeStatusRow({
+          sourceId: o.sourceId, targetId: o.targetId, abilityKey: o.abilityKey,
+          effectType: spec.effectType, at: o.at, isPeriodic: false,
+          durationTicks: spec.durationTicks,
+        });
+        return { label: spec.label, stacks: 1, damagePerTick: 0 };
+      }
+
+      const statMod = spec.statAttr
+        ? sm(((o.character as any)[spec.statAttr] || 10) + ((o.eb as any)[spec.statAttr] || 0))
+        : 0;
+      const durMod = spec.durationStat
+        ? sm(((o.character as any)[spec.durationStat] || 10) + ((o.eb as any)[spec.durationStat] || 0))
+        : 0;
+      const damagePerTick = statusDamagePerTick(spec, {
+        effectiveStatMod: spec.flat !== null ? 0 : getEffectiveCombatMod(Math.max(0, statMod), 'dot'),
+        bondMult: mBondMult[o.sourceId] ?? 1,
+      });
+      const written = writeStatusRow({
+        sourceId: o.sourceId, targetId: o.targetId, abilityKey: o.abilityKey,
+        effectType: spec.effectType, at: o.at, isPeriodic: true,
+        durationMs: statusDurationMs(spec, durMod),
+        damagePerTick,
+        maxStacks: o.maxStacks ?? 1,
+        tickRateMs: spec.tickRateMs ?? TICK_RATE,
+      });
+      return { label: spec.label, ...written };
+    };
+
+    /** Legacy shape kept for the amplification call sites. */
     const applyAmpStatus = (
       sourceId: string,
       cfg: Record<string, unknown>,
@@ -647,29 +780,13 @@ Deno.serve(async (req) => {
       const effectType = typeof cfg.amp_effect_type === 'string' ? cfg.amp_effect_type : null;
       const ticks = typeof cfg.amp_duration_ticks === 'number' ? cfg.amp_duration_ticks : 0;
       if (!effectType || ticks <= 0) return null;
-      const expiresAt = expiryFromTicks(at, ticks, TICK_RATE);
-      const existing = activeEffects.find(e =>
-        e.source_id === sourceId && e.target_id === targetId && e.effect_type === effectType);
-      if (existing) {
-        existing.started_at = at;
-        existing.expires_at = expiresAt;
-        existing.next_tick_at = null;
-        existing.source_ability_key = abilityKey;
-        delete existing._expired;
-      } else {
-        activeEffects.push({
-          node_id: combatNodeId, target_id: targetId, source_id: sourceId,
-          session_id: null, effect_type: effectType,
-          source_ability_key: abilityKey,
-          stacks: 1, damage_per_tick: 0,
-          // Non-periodic: no tick cadence, ever.
-          next_tick_at: null, tick_rate_ms: TICK_RATE,
-          started_at: at, expires_at: expiresAt,
-        });
-      }
-      dotTargetIds.add(targetId);
+      writeStatusRow({
+        sourceId, targetId, abilityKey, effectType, at,
+        isPeriodic: false, durationTicks: ticks,
+      });
       return { label: typeof cfg.amp_label === 'string' ? cfg.amp_label : effectType };
     };
+
 
 
     // ── Fold active item_buff:* effects into per-member stats ────
@@ -1604,24 +1721,9 @@ Deno.serve(async (req) => {
           character_id: member.id,
           ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
-        // Reusable applied status (e.g. Frost Bolt -> Chilled). Applied only on
-        // a landed hit, and only while the target still lives.
-        if (cHp[target.id] > 0 && !cKilled.has(target.id)) {
-          const applied = applyAmpStatus(
-            member.id,
-            (auth.entry?.effectConfig ?? {}) as Record<string, unknown>,
-            auth.abilityKey,
-            target.id,
-            now,
-          );
-          if (applied) {
-            pushAbilityEvent({
-              type: 'status_applied',
-              message: `${target.name} is ${applied.label}.`,
-              character_id: member.id,
-            });
-          }
-        }
+        // Status Application (e.g. Frost Bolt -> Chilled) is resolved once for
+        // every mechanic in the shared `ability_hit` block below.
+
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
@@ -1776,40 +1878,63 @@ Deno.serve(async (req) => {
 
       }
 
-      // ── Optional On-Hit Effect (class-configured, base-allowed) ─────
-      // Server-authoritative and post-hit only: rolled here, after the
-      // mechanic resolved, and only when the cast actually landed damage.
-      const onHit = abilityHitLanded
-        ? rollOnHitEffect(auth.entry.onHitEffect, Math.random())
-        : null;
-      if (onHit && cHp[target.id] > 0 && !cKilled.has(target.id)) {
-        const existingOnHit = activeEffects.find(e =>
-          e.source_id === member.id && e.target_id === target.id
-          && e.effect_type === onHit.def.effectType);
-        const onHitData = {
-          node_id: combatNodeId, target_id: target.id, source_id: member.id,
-          session_id: null, effect_type: onHit.def.effectType,
-          source_ability_key: auth.abilityKey,
-          ...applyStackingEffect(existingOnHit, {
-            now,
+      // ── Status Application, trigger `ability_hit` ─────────────────
+      // ONE path for every mechanic: the status is applied only on a SUCCESSFUL
+      // qualifying event — the cast landed damage and the target is still alive.
+      // A miss, an invalid target or a cancelled attack never applies it.
+      // `dot_debuff` is skipped: that mechanic IS the status application and has
+      // already written its row above (its magnitude folds in the weapon die).
+      const ahCfg = (auth.entry?.effectConfig ?? {}) as Record<string, unknown>;
+      const ahSpec = paMech === 'dot_debuff' ? null : readStatusApplication(ahCfg);
+      const ahAlive = cHp[target.id] > 0 && !cKilled.has(target.id);
+      if (ahSpec && ahSpec.trigger === 'ability_hit' && abilityHitLanded && ahAlive) {
+        const ahStacks = ahSpec.isPeriodic
+          ? Math.max(1, Math.floor(evaluateOptionalCalc(
+            (ahSpec.maxStacksCalc ?? null) as any,
+            buildServerCalcInputs(c.level || 1, {
+              str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
+              con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
+              wis: (c.wis || 10) + (eb.wis || 0), cha: (c.cha || 10) + (eb.cha || 0),
+            }),
+          ) ?? 1))
+          : 1;
+        const applied = applyStatusFromSource({
+          sourceId: member.id, character: c, eb: eb as Record<string, number>,
+          spec: ahSpec, abilityKey: auth.abilityKey, targetId: target.id,
+          at: now, sample: Math.random(), maxStacks: ahStacks,
+        });
+        if (applied) {
+          pushAbilityEvent({
+            type: ahSpec.isPeriodic ? `${ahSpec.effectType}_applied` : 'status_applied',
+            message: ahSpec.isPeriodic
+              ? `${c.name}'s ${auth.entry?.label ?? 'attack'} leaves ${target.name} ${applied.label.toLowerCase()}. [${applied.damagePerTick}/tick]`
+              : `${target.name} is ${applied.label}.`,
+            character_id: member.id,
+          });
+        }
+      } else if (!ahSpec && abilityHitLanded && ahAlive) {
+        // ── Legacy compatibility read (temporary) ───────────────────
+        // The retired one-off On-Hit Effect, still honoured for any ability
+        // whose Status Application has not been switched on yet. Removed once
+        // the last such ability is migrated.
+        const onHit = rollOnHitEffect(auth.entry.onHitEffect, Math.random());
+        if (onHit) {
+          const written = writeStatusRow({
+            sourceId: member.id, targetId: target.id, abilityKey: auth.abilityKey,
+            effectType: onHit.def.effectType, at: now, isPeriodic: true,
             durationMs: onHit.durationMs,
             damagePerTick: Math.max(1, Math.floor(onHit.damagePerTick * mBondMult[member.id])),
-            maxStacks: onHit.maxStacks,
-            tickRateMs: TICK_RATE,
-          }),
-        };
-        if (existingOnHit) {
-          Object.assign(existingOnHit, onHitData);
-        } else {
-          activeEffects.push({ id: crypto.randomUUID(), ...onHitData });
+            maxStacks: onHit.maxStacks, tickRateMs: TICK_RATE,
+          });
+          pushAbilityEvent({
+            type: `${onHit.def.effectType}_applied`,
+            message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${written.damagePerTick}/tick]`,
+            character_id: member.id,
+            damage_type: onHit.def.damageType,
+          });
         }
-        pushAbilityEvent({
-          type: `${onHit.def.effectType}_applied`,
-          message: `${c.name}'s strike leaves ${target.name} afflicted — ${onHit.def.label.toLowerCase()} takes hold. [${onHitData.damage_per_tick}/tick]`,
-          character_id: member.id,
-          damage_type: onHit.def.damageType,
-        });
       }
+
     }
 
 
@@ -2084,11 +2209,17 @@ Deno.serve(async (req) => {
     const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
     const str = (v: unknown): string | null => (typeof v === 'string' && v.trim().length > 0 ? v.trim() : null);
 
-    /** Active stack-apply stances for a member, filtered by trigger. */
+    /**
+     * Active stance-driven Status Applications for a member, filtered by trigger.
+     *
+     * `weapon_hit` fires on a landed autoattack; `successful_pulse_hit` fires
+     * only when a stance's own attack (an Orbs of Fire orb) actually lands.
+     * Legacy trigger spellings are still accepted while stored configs migrate.
+     */
     const stackAppliersFor = (
       member: { id: string; c: any },
       mb: Record<string, any>,
-      trigger: 'on_hit' | 'pulse',
+      trigger: 'weapon_hit' | 'successful_pulse_hit',
     ): StackApplier[] => {
       // Preferred: the generic bag. Legacy clients still send the class-named
       // boolean flags, so those are mapped back onto their stance key.
@@ -2099,18 +2230,30 @@ Deno.serve(async (req) => {
         if (mb.poison_buff) keys.push('envenom');
         if (mb.ignite_buff) keys.push('ignite');
       }
+      const normalize = (t: string | null, abilityKey: string): string => {
+        if (t === 'on_hit' || t === 'weapon_hit') return 'weapon_hit';
+        if (t === 'pulse' || t === 'stance_pulse' || t === 'orb_hit' || t === 'successful_pulse_hit') {
+          return 'successful_pulse_hit';
+        }
+        return abilityKey === 'ignite' ? 'successful_pulse_hit' : 'weapon_hit';
+      };
       const out: StackApplier[] = [];
       for (const abilityKey of [...new Set(keys)]) {
         const entry = getServerAbilityCalcs(member.c.class || '', abilityKey);
         const cfg = (entry?.effectConfig ?? {}) as Record<string, unknown>;
-        const cfgTrigger = str(cfg.trigger) ?? (abilityKey === 'ignite' ? 'pulse' : 'on_hit');
-        if (cfgTrigger !== trigger) continue;
+        if (normalize(str(cfg.status_trigger) ?? str(cfg.trigger), abilityKey) !== trigger) continue;
         out.push({ abilityKey, cfg, text: (entry?.combatText ?? {}) as Record<string, unknown> });
       }
       return out;
     };
 
-    /** Upsert the configured stacking DoT row and return the resulting stack count. */
+    /**
+     * Apply a stance's Status Application to a target and return the stack count.
+     *
+     * Delegates every mechanical decision (chance, magnitude, duration, stacking,
+     * refresh cadence, attribution) to the shared `applyStatusFromSource`, so a
+     * stance proc and an ability proc of the same status behave identically.
+     */
     const applyConfiguredStack = (
       member: { id: string; c: any },
       eb: Record<string, number>,
@@ -2119,23 +2262,8 @@ Deno.serve(async (req) => {
       tickTimeNow: number,
     ): number => {
       const { cfg, abilityKey } = applier;
-      const effectType = str(cfg.effect_type) ?? 'poison';
-      const dotStat = (str(cfg.dot_stat) ?? 'dex') as 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-      const statValue = (member.c[dotStat] || 10) + (eb[dotStat] || 0);
-      const statMod = sm(statValue);
-      const effMod = getEffectiveCombatMod(Math.max(0, statMod), 'dot');
-      const dmgPerTick = Math.max(1, Math.floor(
-        effMod * num(cfg.dot_stat_mult, 1) * num(cfg.dot_global_mult, 1) * (mBondMult[member.id] ?? 1),
-      ));
-
-      let durationMs = num(cfg.dot_duration_ms, 25000);
-      const durStat = str(cfg.dot_duration_stat);
-      if (durStat) {
-        const durMod = sm((member.c[durStat] || 10) + (eb[durStat] || 0));
-        durationMs += Math.max(0, durMod) * num(cfg.dot_duration_per_point_ms, 0);
-        const cap = cfg.dot_duration_cap_ms;
-        if (typeof cap === 'number') durationMs = Math.min(cap, durationMs);
-      }
+      const spec = readStatusApplication(cfg);
+      if (!spec) return 1;
 
       const inputs = buildServerCalcInputs(member.c.level || 1, {
         str: (member.c.str || 10) + (eb.str || 0), dex: (member.c.dex || 10) + (eb.dex || 0),
@@ -2147,23 +2275,19 @@ Deno.serve(async (req) => {
         inputs, characterId: member.id, nodeId: combatNodeId,
       });
 
-      // IMPORTANT: when refreshing an existing stack, `applyStackingEffect`
-      // preserves `next_tick_at` so repeated procs never push the cadence
-      // forward forever (which would make the DoT never deal damage).
-      const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === targetId && e.effect_type === effectType);
-      const effData = {
-        node_id: combatNodeId, target_id: targetId, source_id: member.id,
-        session_id: null, effect_type: effectType,
-        source_ability_key: abilityKey,
-        ...applyStackingEffect(existing, {
-          now: tickTimeNow, durationMs, damagePerTick: dmgPerTick,
-          maxStacks: Math.max(1, Math.floor(maxStacks || 1)), tickRateMs: TICK_RATE,
-        }),
-      };
-      if (existing) Object.assign(existing, effData);
-      else activeEffects.push({ id: crypto.randomUUID(), ...effData });
-      return (effData as { stacks?: number }).stacks ?? 1;
+      const applied = applyStatusFromSource({
+        sourceId: member.id, character: member.c, eb, spec, abilityKey,
+        targetId, at: tickTimeNow,
+        // The caller has already established the qualifying event landed, and
+        // stance procs carry their own gating, so the chance roll always passes
+        // here unless the status itself defines one.
+        sample: Math.random(),
+        scaledChance: 1,
+        maxStacks: Math.max(1, Math.floor(maxStacks || 1)),
+      });
+      return applied?.stacks ?? 1;
     };
+
 
 
 
@@ -2365,9 +2489,11 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          // On-hit stack appliers (`stack_apply`, e.g. Envenom): the proc chance
-          // is the ability's amount calc, everything else is config-driven.
-          for (const applier of stackAppliersFor(m, mb, 'on_hit')) {
+          // Status Application, trigger `weapon_hit` (e.g. Envenom): reached only
+          // on a landed autoattack. The proc chance is the stance's amount calc;
+          // every other mechanical number comes from the reusable status.
+          for (const applier of stackAppliersFor(m, mb, 'weapon_hit')) {
+
             const procInputs = buildServerCalcInputs(c.level || 1, {
               str: (c.str || 10) + (eb.str || 0), dex: (c.dex || 10) + (eb.dex || 0),
               con: (c.con || 10) + (eb.con || 0), int: (c.int || 10) + (eb.int || 0),
@@ -2521,15 +2647,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Pulse-trigger stack appliers (`stack_apply`, trigger: 'pulse') ──
+      // ── Status Application, trigger `successful_pulse_hit` ─────────────
       // Consolidation Group D: a pulsing applier fires on its own heartbeat
       // rather than on weapon hits. Orbs of Fire is the Wizard identity of this
       // base: proc chance is the amount calc, the spark damage attribute, the
       // applied effect, its scaling and every line of text are configuration.
+      // The status is applied only when the orb itself LANDS — the proc rolled
+      // through and the spark actually hit a living target.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
-        const appliers = stackAppliersFor(m, mb, 'pulse');
+        const appliers = stackAppliersFor(m, mb, 'successful_pulse_hit');
+
         if (appliers.length === 0) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;

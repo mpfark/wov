@@ -207,14 +207,18 @@ describe('Ability Library — three-column hierarchy', () => {
     await waitFor(() => expect(screen.getByText('Spell Attack')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Spell Attack'));
     fireEvent.click(await screen.findByText('Fireball'));
-    await waitFor(() => expect(screen.getByTestId('on-hit-effect-card')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('status-application-card')).toBeInTheDocument());
 
     ops.length = 0;
     fireEvent.click(screen.getByText('Save ability'));
     await waitFor(() => expect(ops.some(o => o.table === 'abilities' && o.op === 'update')).toBe(true));
     const update = ops.find(o => o.table === 'abilities' && o.op === 'update')!;
     const payload = update.payload as Record<string, unknown>;
-    expect('on_hit_effect' in payload).toBe(true);
+    // Status Application is class-ability-owned; the legacy on-hit column is gone.
+    expect('status_trigger' in payload).toBe(true);
+    expect('status_chance_pct' in payload).toBe(true);
+    expect('status_application_enabled' in payload).toBe(true);
+    expect('on_hit_effect' in payload).toBe(false);
     expect(payload.class_scale).toBeDefined();
     // Base-owned numbers must never be written from the class ability editor.
     for (const owned of ['cp_cost', 'amount_calc', 'duration_calc', 'mechanic_calcs', 'interval_ms', 'effect_config']) {
@@ -222,13 +226,14 @@ describe('Ability Library — three-column hierarchy', () => {
     }
   });
 
-  it('hides the on-hit editor when the base does not declare the capability', async () => {
+  it('offers exactly one status surface — no legacy on-hit editor anywhere', async () => {
     render(<AbilityConfigManager />);
     await waitFor(() => expect(screen.getByText('Orb Stance')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Orb Stance'));
     fireEvent.click(await screen.findByText('Orbs of Fire'));
     await waitFor(() => expect(screen.getByText('Save ability')).toBeInTheDocument());
     expect(screen.queryByTestId('on-hit-effect-card')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('status-application-card')).toHaveLength(1);
   });
 
   it('does not group the library by class', async () => {

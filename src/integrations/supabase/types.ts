@@ -42,6 +42,9 @@ export type Database = {
           primary_attribute: string | null
           secondary_attribute: string | null
           status: string
+          status_application_enabled: boolean
+          status_chance_pct: number | null
+          status_trigger: string | null
           target_type: string
           tooltip: string
           updated_at: string
@@ -73,6 +76,9 @@ export type Database = {
           primary_attribute?: string | null
           secondary_attribute?: string | null
           status?: string
+          status_application_enabled?: boolean
+          status_chance_pct?: number | null
+          status_trigger?: string | null
           target_type?: string
           tooltip?: string
           updated_at?: string
@@ -104,6 +110,9 @@ export type Database = {
           primary_attribute?: string | null
           secondary_attribute?: string | null
           status?: string
+          status_application_enabled?: boolean
+          status_chance_pct?: number | null
+          status_trigger?: string | null
           target_type?: string
           tooltip?: string
           updated_at?: string

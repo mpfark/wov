@@ -31,8 +31,6 @@ import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import AbilityAssignPicker from './AbilityAssignPicker';
 import EffectiveAbilityPreview from './EffectiveAbilityPreview';
 import MechanicCalcsEditor from '../ability/MechanicCalcsEditor';
-import { OnHitEffectEditor } from './OnHitEffectEditor';
-import { allowedOnHitEffects, type OnHitEffectConfig } from '@/shared/combat/on-hit-effects';
 import { canRemoveAssignment, slotsWithBadDefaults } from './assignment-guard';
 import {
   resolveEffectiveAbility, tagScalingRoles, taggedScalingRoles,
@@ -452,13 +450,11 @@ export default function ClassAbilityConfig({
                         </p>
                       </div>
 
-                      {/* Optional On-Hit Effect (base-allowlisted, per class) */}
-                      <OnHitEffectEditor
-                        allowed={allowedOnHitEffects(draft.base.effect_config)}
-
-                        value={(draft.overrides as { on_hit_effect?: OnHitEffectConfig | null }).on_hit_effect ?? null}
-                        onChange={next => patchOverride('on_hit_effect' as keyof typeof draft.overrides, next ?? undefined)}
-                      />
+                      {/*
+                        Status Application is authored ONCE on the ability itself
+                        (Ability Library). Class Config exposes no status editor,
+                        so a class can never contradict the shared status.
+                      */}
 
                       {/* Named mechanic parameters supported by this mechanic */}
                       <div className="space-y-2">

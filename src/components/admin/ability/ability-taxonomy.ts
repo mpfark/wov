@@ -27,8 +27,7 @@ export const CAPABILITY_SECTIONS = [
   { key: 'interval', label: 'Tick interval' },
   { key: 'combat_text', label: 'Combat flavour text' },
   { key: 'stance', label: 'Stance configuration' },
-  { key: 'applied_status', label: 'Applied status' },
-  { key: 'on_hit_effect', label: 'Optional On-Hit Effect' },
+  { key: 'status_application', label: 'Status application' },
 ] as const;
 
 export type CapabilityKey = typeof CAPABILITY_SECTIONS[number]['key'];
