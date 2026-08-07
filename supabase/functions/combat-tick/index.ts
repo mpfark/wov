@@ -2,7 +2,7 @@
 // combat-tick: server-authoritative combat simulation tick.
 //
 // Combat is server-authoritative.
-// Client input (target ids, queued ability, client_cp) is advisory only and
+// Client input (target ids, queued ability) is advisory only and
 // re-validated here. Never trust client-provided CP/HP for writes.
 //
 // DO NOT mutate reserved_buffs inside combat-tick.
