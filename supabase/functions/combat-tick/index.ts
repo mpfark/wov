@@ -543,7 +543,8 @@ Deno.serve(async (req) => {
           // point — only session bookkeeping — so bailing out is clean and the
           // next tick simply picks the elapsed time up again.
           console.error('[combat-tick] engagement roster load failed', engErr.message);
-          const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: cr.hp > 0 }));
+          // The creature snapshot is not loaded yet at this point; return the
+          // empty result and let the client keep its current state.
           return json({
             events: [],
             creature_states,
