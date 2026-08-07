@@ -1080,9 +1080,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (inv && character.current_node_id) {
       await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
       fetchInventory();
-      addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`));
+      addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`, {
+        player: { kind: 'player', id: character.id, name: character.name },
+        remoteMessage: `${character.name} dropped ${inv.item.name} on the ground.`,
+      }));
     }
-  }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLogEvent]);
+  }, [equipped, unequipped, character.current_node_id, character.id, character.name, dropItemToGround, fetchInventory, addLogEvent]);
 
   // ── De-duplicated prop blocks ──────────────────────────────────
   // Phase 4: per-character ability choices. Applying a loadout rewrites the live
