@@ -875,8 +875,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const first = groundLoot[0];
     const result = await pickUpItem(first.id);
     if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
-    else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
-  }, [isDead, groundLoot, pickUpItem, addLogEvent, fetchInventory]);
+    else {
+      addLogEvent(buildLootEvent(`You pick up ${first.item?.name ?? 'an item'}.`, {
+        player: { kind: 'player', id: character.id, name: character.name },
+        remoteMessage: `${character.name} picks up ${first.item?.name ?? 'an item'}.`,
+      }));
+      fetchInventory();
+    }
+  }, [isDead, groundLoot, pickUpItem, addLogEvent, fetchInventory, character.id, character.name]);
+
 
   /** Stage 9 — the player deliberately picking a target is a structured aggro event. */
   const emitEngage = useCallback((creature: { id: string; name: string }) => {
@@ -1073,9 +1080,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (inv && character.current_node_id) {
       await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
       fetchInventory();
-      addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`));
+      addLogEvent(buildSystemEvent(`You dropped ${inv.item.name} on the ground.`, {
+        player: { kind: 'player', id: character.id, name: character.name },
+        remoteMessage: `${character.name} dropped ${inv.item.name} on the ground.`,
+      }));
     }
-  }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLogEvent]);
+  }, [equipped, unequipped, character.current_node_id, character.id, character.name, dropItemToGround, fetchInventory, addLogEvent]);
 
   // ── De-duplicated prop blocks ──────────────────────────────────
   // Phase 4: per-character ability choices. Applying a loadout rewrites the live
@@ -1302,9 +1312,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               bossCasts={bossCasts}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
+                const picked = groundLoot.find(g => g.id === id);
+                const itemName = picked?.item?.name ?? 'an item';
                 const result = await pickUpItem(id);
                 if (result === false) addLogEvent(buildSystemEvent('That unique item is already claimed by another...'));
-                else { addLogEvent(buildLootEvent('You pick up an item.')); fetchInventory(); }
+                else {
+                  addLogEvent(buildLootEvent(`You pick up ${itemName}.`, {
+                    player: { kind: 'player', id: character.id, name: character.name },
+                    remoteMessage: `${character.name} picks up ${itemName}.`,
+                  }));
+                  fetchInventory();
+                }
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               creaturesLoading={creaturesLoading}
