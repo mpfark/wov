@@ -1,6 +1,6 @@
 # Chilled — reusable damage-amplification status
 
-Add **Chilled** as a reusable applied status that increases eligible incoming damage on a creature by 10% for the **next three combat ticks after application** (see §3a for the exact timing rule), no stacking, refresh on reapply, no periodic damage. Frost Bolt becomes the first source. No balance changes to Frost Bolt.
+Add **Chilled** as a reusable applied status that increases eligible incoming damage on a creature by 10% for **3 combat ticks (approximately 6 seconds at the current 2-second tick rate)** — the tick count is the authoritative, configurable value (§3a). No stacking, refresh on reapply, no periodic damage. Frost Bolt becomes the first source and stores no duration of its own. No balance changes to Frost Bolt.
 
 ## 1. Verified current damage flow (audited, not assumed)
 
@@ -83,21 +83,31 @@ Additive, backward-safe changes:
 - Periodicity has **one** authority: `classification`. `is_periodic` is either not stored at all (derived in the runtime from the typed classification) or, if stored for query efficiency, added as a **generated column** — `GENERATED ALWAYS AS (classification = 'dot') STORED` — so it can never diverge and cannot be written by admin or code.
 - Validation trigger: `dot` rows require `magnitude`, forbid `modifier`; `damage_amp` rows require `modifier` with `kind`, integer `value > 0` and a non-empty `eligible_sources` containing none of `reflect`/`self`/`environment`, and must have `tick_interval_ms IS NULL` and no periodic magnitude. Bleed/Poison/Ignite rows are untouched and cannot drift into amplification.
 - `ALTER TABLE public.active_effects ALTER COLUMN next_tick_at DROP NOT NULL` (audited: currently `NOT NULL`) and add nullable `started_at bigint`. Non-periodic effects store `next_tick_at = NULL`; no artificial timestamps.
-- Seed Chilled: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `duration = { base_ms: 7000, role: null }` (see §3a), `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = NULL`.
+- Seed Chilled: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `duration = { duration_ticks: 3, role: null }` (see §3a), `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = NULL`.
 
 **Authoritative unit:** whole percent integer (`10`), stored once in `applied_statuses.modifier.value`. Runtime derives `1 + value/100` locally; no `0.10`/`1.10` field anywhere and no per-ability copy.
 
 **`default_damage_type`:** omitted (left `NULL`) for Chilled. It exists to type periodic tick damage; Chilled deals none, so setting `frost` there would imply damage that never happens. Thematic school is already carried by Frost Bolt's own `damage_type = frost` and by the status label — no new field is introduced for flavour.
 
-## 3a. Timing rule (corrected)
+## 3a. Timing rule (corrected — tick-count duration)
 
-The previous "6s / 3 ticks" wording was inconsistent. With `TICK_RATE = 2000` and the existing active-window test `started_at <= tickTime < expires_at` (identical to the DoT expiry test `expires_at <= tickTime` -> expired), an effect applied at t=0 with a 6000 ms duration is active at 2000 and 4000 but expired at 6000 — two amplified ticks, not three.
+The earlier "6s / 3 ticks" wording was inconsistent: with `TICK_RATE = 2000` and the existing active-window test `started_at <= tickTime < expires_at`, a 6000 ms duration applied at t=0 is active at 2000 and 4000 but expired at 6000 — two amplified ticks, not three.
 
-Intended result, stated explicitly: **Chilled amplifies the next three combat ticks after application.** Implementation: store the duration as `intended_ticks * TICK_RATE + TICK_RATE / 2` = `3 * 2000 + 1000` = **7000 ms**. Applied at t=0 -> active at 2000, 4000, 6000; expired at 7000+. The half-tick margin absorbs heartbeat jitter without ever granting a fourth tick, because the fourth tick lands at 8000 > 7000.
+**Authoritative duration for non-periodic statuses is a combat-tick count.** The existing `duration` jsonb gains a `duration_ticks` variant alongside the current `base_ms` form; DoT statuses keep `base_ms` untouched. Chilled stores `duration_ticks: 3` and no milliseconds anywhere.
 
-Existing DoT expiry semantics are unchanged: no comparison operator, no `expires_at` handling and no cadence rule is modified for Ignite, Poison or Bleed. Only Chilled's stored duration value encodes the tick intent.
+Runtime derives the expiry boundary from the tick count and the live cadence at application time:
 
-Player-facing text stays "the next three combat ticks"; the admin editor shows the duration in both ms and resulting amplified ticks so the relationship is visible rather than implied.
+```text
+expires_at = started_at + (duration_ticks * TICK_RATE) + TICK_RATE / 2
+```
+
+The half-tick margin exists only so heartbeat jitter cannot silently drop a promised tick; it can never grant an extra one, because tick N+1 lands a full tick beyond the boundary. If `TICK_RATE` ever changes, the promise "next three ticks" still holds — nothing needs re-tuning.
+
+Setting `duration_ticks = 4` in the reusable-status editor therefore makes Chilled affect the next four combat ticks, with no code change.
+
+Existing DoT expiry semantics are unchanged: no comparison operator, no `expires_at` handling and no cadence rule is modified for Ignite, Poison or Bleed.
+
+**Wording used everywhere (admin, tooltips, tests, docs):** "3 combat ticks (approximately 6 seconds at the current 2-second tick rate)". No text or assertion states that Chilled lasts exactly six seconds, and no raw millisecond figure is presented as the duration. Frost Bolt stores no independent duration.
 
 ## 4. Lifecycle reuse (revised — periodic vs non-periodic)
 
@@ -157,8 +167,8 @@ Integration: set `abilities.applied_status = 'chilled'` and allow the `spell_bol
 
 `AbilityConfigManager.tsx` currently reads `applied_statuses` read-only. Changes:
 
-- New applied-status editor pane with fields conditional on classification: `dot` shows periodic damage, tick interval, damage type, stacks; `damage_amp` shows damage-taken percent, eligible source categories (multi-select, excluding the never-amplified set), duration, stack and refresh behaviour. DoT magnitude/tick-damage/stack-noun inputs are hidden for `damage_amp`.
-- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, a read-only inherited Chilled summary (+10% damage taken, 6s, no stacking, refresh, no periodic damage), and a link to edit the reusable status. No per-ability copy of the 10%.
+- New applied-status editor pane with fields conditional on classification: `dot` shows periodic damage, tick interval, damage type, stacks; `damage_amp` shows damage-taken percent, eligible source categories (multi-select, excluding the never-amplified set), duration as a **whole combat-tick count** with a derived read-out ("3 combat ticks — approximately 6 seconds at the current 2-second tick rate"), stack and refresh behaviour. DoT magnitude/tick-damage/stack-noun inputs are hidden for `damage_amp`. The tick input accepts positive integers only, so every admin change converts predictably to a whole number of affected ticks.
+- Frost Bolt's configured-use view shows: Applied Status = Chilled, Applied on = Successful hit, Applied Status target = Enemy, a read-only inherited Chilled summary (+10% damage taken, 3 combat ticks / approximately 6 seconds, no stacking, refresh, no periodic damage), and a link to edit the reusable status. Frost Bolt stores neither the 10% nor any duration of its own.
 
 ## 10. Player-facing presentation (revised — concrete emit sites)
 
@@ -178,7 +188,7 @@ Plus a neutral Chilled chip on the creature row reusing the existing debuff chip
 - Same-key/multi-key aggregation follows §7, recomputed per `tt`.
 - Chilled itself is never ticked in bulk mode (non-periodic branch: expiry only).
 
-Given Chilled's ~7s life, this typically amplifies only the first few replayed ticks — correctness, not throughput, is the point. Because refreshes preserve `started_at` and only push `expires_at` out, a replayed window that spans a refresh is amplified continuously across it with no gap and no double counting.
+Given Chilled's three-tick life, this typically amplifies only the first few replayed ticks — correctness, not throughput, is the point. Because refreshes preserve `started_at` and only push `expires_at` out, a replayed window that spans a refresh is amplified continuously across it with no gap and no double counting.
 
 ## 12. Files touched
 
@@ -203,10 +213,10 @@ Chilled correctness:
 - eligibility read from the status definition: narrowing `eligible_sources` to `['weapon']` amplifies only weapon damage, with no code change.
 - **zero/non-positive damage stays zero** (0 -> 0, negative -> unchanged).
 - no periodic damage of its own; no change to tick rate or attack cadence.
-- does not stack; reapply refreshes duration; expires after 6s.
-- **exact tick count, single application**: one Chilled application amplifies exactly **three** subsequent ticks (t+2000, t+4000, t+6000) and not the fourth (t+8000).
-- **exact tick count, refreshed application**: a refresh at t+4000 preserves `started_at`, moves `expires_at` to t+11000, and yields amplified ticks at 2000, 4000, 6000, 8000, 10000 — five in total, no gap, no fourth-tick-after-refresh overshoot.
-- does not stack; reapply refreshes duration; expires after the configured window.
+- **exact tick count, single application**: `duration_ticks = 3` amplifies exactly **three** subsequent ticks and not a fourth. No assertion on a six-second wall-clock lifetime.
+- **configurable tick count**: `duration_ticks = 4` amplifies exactly four subsequent ticks, with no code change.
+- **exact tick count, refreshed application**: a refresh mid-window preserves `started_at`, re-derives `expires_at` from the tick count, and amplifies the promised number of ticks after the refresh with no gap and no overshoot.
+- does not stack; reapply refreshes duration; expires after the configured tick count.
 - **two party members apply Chilled**: two rows coexist under the uniqueness key, aggregate to +10% (not +20%), each refreshes independently.
 - distinct amp keys add after per-key strongest selection.
 - **catch-up boundaries**: replayed ticks before `started_at` are unamplified, ticks inside the window are amplified, ticks at/after `expires_at` are unamplified — asserted on a multi-tick bulk replay.
@@ -227,6 +237,6 @@ Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If
 3. `active_effects.next_tick_at` becomes nullable and `started_at` is added, for correct non-periodic representation and catch-up windows.
 4. Same status key: strongest active instance wins; distinct keys add.
 5. Chilled stores no `default_damage_type`.
-6. Chilled's duration is stored as 7000 ms so it amplifies exactly the next three combat ticks, with existing DoT expiry semantics untouched.
+6. Chilled's authoritative duration is `duration_ticks = 3` (approximately 6 seconds at the current 2-second tick rate); the expiry boundary is derived at runtime and existing DoT `base_ms` durations are untouched.
 7. `started_at` marks the current uninterrupted instance and is preserved across refreshes.
 8. Periodicity is owned solely by `classification`; `is_periodic`, if stored, is a generated column.
