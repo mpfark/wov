@@ -142,7 +142,12 @@ export function useGroundLoot(
     handle.channelRef.current?.send({
       type: 'broadcast',
       event: 'loot_picked_up',
-      payload: { ground_loot_id: groundLootId, picker_id: characterId },
+      payload: {
+        ground_loot_id: groundLootId,
+        picker_id: characterId,
+        picker_name: optionsRef.current.characterName ?? null,
+        item_name: item.item?.name ?? 'an item',
+      },
     });
     logBroadcast('out', `node`, 'loot_picked_up');
 
@@ -159,7 +164,7 @@ export function useGroundLoot(
     return true;
   }, [characterId, groundLoot, fetchGroundLoot, handle]);
 
-  const dropItemToGround = useCallback(async (inventoryItemId: string, _itemId: string, _currentNodeId: string) => {
+  const dropItemToGround = useCallback(async (inventoryItemId: string, _itemId: string, _currentNodeId: string, itemName?: string) => {
     if (!characterId) return;
     suppressRefetchUntilRef.current = Date.now() + 3000;
     // Atomic drop via server-side RPC (verifies ownership, soulbound check, uses character's current node)
@@ -170,11 +175,16 @@ export function useGroundLoot(
     handle.channelRef.current?.send({
       type: 'broadcast',
       event: 'loot_dropped',
-      payload: { dropper_id: characterId },
+      payload: {
+        dropper_id: characterId,
+        dropper_name: optionsRef.current.characterName ?? null,
+        item_name: itemName ?? 'an item',
+      },
     });
     logBroadcast('out', `node`, 'loot_dropped');
     fetchGroundLoot();
   }, [characterId, fetchGroundLoot, handle]);
+
 
   return { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot };
 }
