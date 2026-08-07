@@ -762,30 +762,103 @@ export default function AbilityConfigManager() {
               </Card>
 
               {statusOptions.length > 0 && (
-                <Card className="bg-card/80" data-testid="applied-status-card">
+                <Card className="bg-card/80" data-testid="status-application-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-display">Applied status</CardTitle>
+                    <CardTitle className="text-sm font-display">Status application</CardTitle>
                     <p className="text-[10px] text-muted-foreground">
-                      The reusable status this ability applies. The status owns its damage,
-                      duration and stacking rules and binds its scaling roles to the
-                      attributes chosen above.
+                      The ONE way this ability applies a reusable status. The status owns its
+                      damage, duration and stacking rules and binds its scaling roles to the
+                      attributes chosen above; this ability owns only which status, when it
+                      triggers, and how often.
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Select
-                      value={draft.applied_status ?? 'none'}
-                      onValueChange={v => setDraft({ ...draft, applied_status: v === 'none' ? null : v })}
-                    >
-                      <SelectTrigger className="h-8 text-xs max-w-xs" aria-label="Applied status"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none" className="text-xs">None</SelectItem>
-                        {statusOptions.filter(st => !!st.key).map(st => (
-                          <SelectItem key={st.key} value={st.key} className="text-xs">
-                            {st.label ?? st.key}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Status</Label>
+                        <Select
+                          value={draft.applied_status ?? 'none'}
+                          onValueChange={v => setDraft({
+                            ...draft,
+                            applied_status: v === 'none' ? null : v,
+                            // Switching a status on gives the application a sane
+                            // default trigger so it can never be half-wired.
+                            status_trigger: v === 'none'
+                              ? null
+                              : (draft.status_trigger ?? 'ability_hit'),
+                            status_application_enabled: v === 'none'
+                              ? false
+                              : draft.status_application_enabled,
+                          })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Applied status"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-xs">None</SelectItem>
+                            {statusOptions.filter(st => !!st.key).map(st => (
+                              <SelectItem key={st.key} value={st.key} className="text-xs">
+                                {st.label ?? st.key}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Trigger</Label>
+                        <Select
+                          value={draft.status_trigger ?? 'ability_hit'}
+                          disabled={!draft.applied_status}
+                          onValueChange={v => setDraft({ ...draft, status_trigger: v as StatusTrigger })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Status trigger"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {STATUS_TRIGGERS.map(t => (
+                              <SelectItem key={t} value={t} className="text-xs">
+                                {STATUS_TRIGGER_LABELS[t]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Chance %</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8 text-xs"
+                          aria-label="Status chance percent"
+                          placeholder="Ability scaling"
+                          disabled={!draft.applied_status}
+                          value={draft.status_chance_pct ?? ''}
+                          onChange={e => setDraft({
+                            ...draft,
+                            status_chance_pct: e.target.value === ''
+                              ? null
+                              : Math.max(0, Math.min(100, Number(e.target.value))),
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-[11px]">
+                      <Switch
+                        checked={draft.status_application_enabled}
+                        disabled={!draft.applied_status}
+                        onCheckedChange={c => setDraft({ ...draft, status_application_enabled: !!c })}
+                        aria-label="Status application enabled"
+                      />
+                      Application enabled
+                    </label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Off means the application does not exist at all. A chance of 0 means it
+                      exists and stays wired, but never succeeds. Leave chance empty to use
+                      this ability's own stat-scaled chance. Triggers only fire on a
+                      successful qualifying event — a miss, an invalid target or a cancelled
+                      attack never applies a status.
+                    </p>
+
                     {activeStatus && activeStatus.classification === 'damage_amp' && (
                       <p className="text-[10px] text-muted-foreground" data-testid="amp-status-summary">
                         Increases eligible incoming damage by{' '}
@@ -808,40 +881,30 @@ export default function AbilityConfigManager() {
                     )}
                     {activeStatus && activeStatus.classification !== 'damage_amp' && (
                       <p className="text-[10px] text-muted-foreground">
-                        Magnitude role{' '}
-                        <span className="font-mono">{activeStatus.magnitude?.role ?? 'none'}</span>
-                        {' '}→{' '}
-                        <span className="font-mono uppercase">{composed?.effect_config?.dot_stat as string ?? '—'}</span>
-                        {' · '}duration role{' '}
-                        <span className="font-mono">{activeStatus.duration?.role ?? 'none'}</span>
-                        {' '}→{' '}
-                        <span className="font-mono uppercase">{composed?.effect_config?.dot_duration_stat as string ?? '—'}</span>
+                        {typeof activeStatus.magnitude?.flat === 'number' ? (
+                          <>
+                            Flat{' '}
+                            <span className="font-mono">{activeStatus.magnitude.flat}</span>
+                            {' '}damage per tick — no attribute scaling.
+                          </>
+                        ) : (
+                          <>
+                            Magnitude role{' '}
+                            <span className="font-mono">{activeStatus.magnitude?.role ?? 'none'}</span>
+                            {' '}→{' '}
+                            <span className="font-mono uppercase">{composed?.effect_config?.dot_stat as string ?? '—'}</span>
+                            {' · '}duration role{' '}
+                            <span className="font-mono">{activeStatus.duration?.role ?? 'none'}</span>
+                            {' '}→{' '}
+                            <span className="font-mono uppercase">{composed?.effect_config?.dot_duration_stat as string ?? '—'}</span>
+                          </>
+                        )}
                       </p>
                     )}
-
                   </CardContent>
                 </Card>
               )}
 
-              {caps.includes('on_hit_effect') && (
-                <Card className="bg-card/80" data-testid="on-hit-effect-card">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-display">Optional on-hit effect</CardTitle>
-                    <p className="text-[10px] text-muted-foreground">
-                      A rider rolled only after this ability lands. Classes may replace it
-                      in Class Config. This is not a stance — persistent self-stances such as
-                      Envenom or Orbs of Fire are authored on their own base ability.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <OnHitEffectEditor
-                      allowed={(draftBase?.on_hit_allowed ?? []) as OnHitEffectKey[]}
-                      value={draftOnHit}
-                      onChange={next => setDraft({ ...draft, on_hit_effect: next })}
-                    />
-                  </CardContent>
-                </Card>
-              )}
 
               <Card className="bg-card/80">
                 <CardHeader className="pb-2">
