@@ -535,12 +535,27 @@ Deno.serve(async (req) => {
           .select('creature_id, character_id, last_action_at')
           .in('character_id', memberIdList);
         if (engErr) {
+          // Phase 3 safety gate: the roster is an INPUT to authoritative
+          // resolution (targeting, retaliation, engagement set). Simulating
+          // with a partial roster would write HP, effects and rewards derived
+          // from the wrong combatant set, so we resolve nothing this
+          // invocation. No authoritative effect has been written yet at this
+          // point — only session bookkeeping — so bailing out is clean and the
+          // next tick simply picks the elapsed time up again.
           console.error('[combat-tick] engagement roster load failed', engErr.message);
-        } else {
-          for (const row of engRows || []) {
-            const at = Date.parse((row as any).last_action_at ?? '') || 0;
-            recordEngagement((row as any).character_id, (row as any).creature_id, at);
-          }
+          // The creature snapshot is not loaded yet at this point; return the
+          // empty result and let the client keep its current state.
+          return json({
+            events: [],
+            creature_states: [],
+            member_states: [],
+            ticks_processed: 0,
+            roster_unavailable: true,
+          });
+        }
+        for (const row of engRows || []) {
+          const at = Date.parse((row as any).last_action_at ?? '') || 0;
+          recordEngagement((row as any).character_id, (row as any).creature_id, at);
         }
       }
       // Creatures on the durable roster are engaged for this node's simulation.
@@ -3835,24 +3850,110 @@ Deno.serve(async (req) => {
       console.error('[combat-tick] engagement bookkeeping failed', e);
     }
 
-    // ── Durable action bookkeeping (Phase 1) ─────────────────────
-    // The client mirrors every dispatched server ability into
-    // `combat_actions` so an intent survives a dropped request. The tick that
-    // actually executed the intent retires the row here; the shared-encounter
-    // resolver will later read these rows as the sole source of intent.
+    // ── Shared encounter result batch (Phase 3) ──────────────────
+    // The resolver publishes ONE authoritative per-tick batch for the node
+    // encounter. Every participant (any party, or none) can replay a missed
+    // response from `encounter_tick_batches` instead of guessing.
+    //
+    // The batch is published through `commit_encounter_tick`, which is
+    // token-gated: only the resolver holding the current claim may advance the
+    // encounter's tick cursor and insert the batch. The same call retires the
+    // durable `combat_actions` rows this tick consumed, so intent retirement
+    // and result publication are one atomic step.
+    //
+    // When the shared-tick switch is off (or another resolver owns the tick),
+    // the claim is refused and we fall back to the legacy direct retirement.
+    const consumedActionIds = pendingAbilities
+      .map((a: any) => a?.action_id)
+      .filter((id: any): id is string => typeof id === 'string' && id.length > 0);
+
+    let publishedTick: number | null = null;
+    let publishedBatchId: string | null = null;
+
     try {
-      const consumedActionIds = pendingAbilities
-        .map((a: any) => a?.action_id)
-        .filter((id: any): id is string => typeof id === 'string' && id.length > 0);
-      if (consumedActionIds.length > 0) {
-        await db
-          .from('combat_actions')
-          .update({ status: 'consumed' })
-          .in('id', consumedActionIds)
-          .eq('status', 'pending');
+      const { data: encRow } = await db
+        .from('encounters')
+        .select('id')
+        .eq('node_id', combatNodeId)
+        .eq('status', 'active')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const encounterId = (encRow as any)?.id as string | undefined;
+
+      if (encounterId) {
+        const { data: claimRaw, error: claimErr } = await db.rpc('claim_encounter_tick', {
+          _encounter_id: encounterId,
+          _rate_ms: TICK_RATE,
+          _lease_ms: 15000,
+          _caller: 'combat-tick',
+          _supported_modes: ['live'],
+        });
+        if (claimErr) {
+          console.warn('[combat-tick] tick claim failed', claimErr.message);
+        } else {
+          const claim = claimRaw as any;
+          if (claim?.claimed) {
+            const batchId = crypto.randomUUID();
+            const { data: commitRaw, error: commitErr } = await db.rpc('commit_encounter_tick', {
+              _encounter_id: encounterId,
+              _tick: claim.tick,
+              _claim_token: claim.claim_token,
+              _batch_id: batchId,
+              _rate_ms: TICK_RATE,
+              _payload: {
+                consumed_action_ids: consumedActionIds,
+                rejected_actions: [],
+                batch: {
+                  events,
+                  creature_states,
+                  member_states: memberStates,
+                  cleared_dots: clearedDots,
+                  consumed_buffs: consumedBuffsList,
+                  consumed_ability_stacks: consumedAbilityStacks,
+                  session_ended: sessionEnded,
+                  ticks_processed: ticks,
+                  mode: claim.mode,
+                  resolved_at: Date.now(),
+                },
+              },
+            });
+            if (commitErr) {
+              console.warn('[combat-tick] tick commit failed', commitErr.message);
+            } else if ((commitRaw as any)?.committed) {
+              publishedTick = claim.tick;
+              publishedBatchId = batchId;
+            } else {
+              console.log(JSON.stringify({
+                fn: 'combat-tick',
+                tick_commit_refused: (commitRaw as any)?.reason ?? 'unknown',
+                encounter_id: encounterId,
+              }));
+            }
+          }
+        }
       }
     } catch (e) {
-      console.error('[combat-tick] durable action retire failed', e);
+      console.error('[combat-tick] shared batch publish failed', e);
+    }
+
+    // ── Durable action bookkeeping (Phase 1 fallback) ─────────────
+    // `commit_encounter_tick` retires consumed intents atomically. Only when
+    // the batch was NOT published do we retire the rows directly, so an intent
+    // can never be left pending forever.
+    if (!publishedBatchId) {
+      try {
+        if (consumedActionIds.length > 0) {
+          await db
+            .from('combat_actions')
+            .update({ status: 'consumed' })
+            .in('id', consumedActionIds)
+            .eq('status', 'pending');
+        }
+      } catch (e) {
+        console.error('[combat-tick] durable action retire failed', e);
+      }
     }
 
 
@@ -3864,6 +3965,10 @@ Deno.serve(async (req) => {
       session_ended: sessionEnded,
       ticks_processed: ticks,
       buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,
+      // Shared batch identity (Phase 3): lets a client that missed this
+      // response recover the identical result from `encounter_tick_batches`.
+      encounter_tick: publishedTick,
+      encounter_batch_id: publishedBatchId,
     });
 
   } catch (err) {
