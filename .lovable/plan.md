@@ -1,6 +1,6 @@
 # Chilled — reusable damage-amplification status
 
-Add **Chilled** as a reusable applied status that increases eligible incoming damage on a creature by 10% for the **next three combat ticks after application** (see §3a for the exact timing rule), no stacking, refresh on reapply, no periodic damage. Frost Bolt becomes the first source. No balance changes to Frost Bolt.
+Add **Chilled** as a reusable applied status that increases eligible incoming damage on a creature by 10% for **3 combat ticks (approximately 6 seconds at the current 2-second tick rate)** — the tick count is the authoritative, configurable value (§3a). No stacking, refresh on reapply, no periodic damage. Frost Bolt becomes the first source and stores no duration of its own. No balance changes to Frost Bolt.
 
 ## 1. Verified current damage flow (audited, not assumed)
 
