@@ -167,7 +167,9 @@ export default function AbilityConfigManager() {
           id, base_ability_id, ability_key, label, description, tooltip,
           mechanic_key, status, damage_type, ability_type, admin_notes,
           combat_text, class_scale, primary_attribute, secondary_attribute,
-          applied_status, on_hit_effect
+          applied_status, status_trigger, status_chance_pct,
+          status_application_enabled
+
         `)
         .order('label'),
       supabase
