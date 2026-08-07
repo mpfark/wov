@@ -204,16 +204,21 @@ Chilled correctness:
 - **zero/non-positive damage stays zero** (0 -> 0, negative -> unchanged).
 - no periodic damage of its own; no change to tick rate or attack cadence.
 - does not stack; reapply refreshes duration; expires after 6s.
+- **exact tick count, single application**: one Chilled application amplifies exactly **three** subsequent ticks (t+2000, t+4000, t+6000) and not the fourth (t+8000).
+- **exact tick count, refreshed application**: a refresh at t+4000 preserves `started_at`, moves `expires_at` to t+11000, and yields amplified ticks at 2000, 4000, 6000, 8000, 10000 — five in total, no gap, no fourth-tick-after-refresh overshoot.
+- does not stack; reapply refreshes duration; expires after the configured window.
 - **two party members apply Chilled**: two rows coexist under the uniqueness key, aggregate to +10% (not +20%), each refreshes independently.
 - distinct amp keys add after per-key strongest selection.
 - **catch-up boundaries**: replayed ticks before `started_at` are unamplified, ticks inside the window are amplified, ticks at/after `expires_at` are unamplified — asserted on a multi-tick bulk replay.
+- **catch-up across a refresh**: a bulk replay spanning an application, a mid-window refresh and the final expiry amplifies the correct ticks both before and after the refresh, with `started_at` unchanged throughout.
 - **expiry event emission**: the non-periodic resolver branch emits the expiry event and expired id in both live and bulk mode.
 - `next_tick_at` stays `NULL` for Chilled rows and no code path performs cadence arithmetic on them.
+- periodicity cannot diverge: `is_periodic` (if stored) is generated from `classification` and rejects direct writes.
 - admin shows mechanic-appropriate fields only; events pass the no-emoji guard; `writeCreatureState` remains the sole HP writer.
 
 ## 14. Balance notes (not implemented here)
 
-Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If it proves too strong, options are lowering Chilled to 8%, shortening it to 4s, or trimming Frost Bolt's `class_scale` — each a separate, separately approved change.
+Frost Bolt gains party-wide value while keeping 12 CP and its current damage. If it proves too strong, options are lowering Chilled to 8%, shortening it to two amplified ticks, or trimming Frost Bolt's `class_scale` — each a separate, separately approved change.
 
 ## 15. Assumptions needing approval
 
