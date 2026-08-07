@@ -57,8 +57,8 @@ Source-provided inputs stay where they already are: the configured use's `primar
 Typed columns on `abilities` (matches the project's existing "typed columns for authored config" pattern; one application per configured use is sufficient — no live ability needs two):
 
 - `applied_status` — kept, becomes the application's status reference (FK-style text to `applied_statuses.key`).
-- `status_trigger text` — enum-checked: `ability_hit`, `weapon_hit`, `stance_pulse`, `activation`.
-- `status_chance_pct integer` (1..100, default 100) — one authoritative unit; percent integers.
+- `status_trigger text` — enum-checked: `ability_hit`, `weapon_hit`, `successful_pulse_hit`, `activation`. Every trigger name denotes a **successful qualifying event** (see 4).
+- `status_chance_pct integer` (**0..100**, default 100) — one authoritative unit; percent integers. `0` is valid and means the application never fires (an explicitly disabled application that keeps its authored configuration).
 - `status_target text` — `enemy` only for now, derived from the base's target when inherent, stored for clarity.
 - `status_application_enabled boolean default true`.
 - Drop after cutover: `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, `effect_config.on_hit_*` keys, `on_hit_effect` capability.
