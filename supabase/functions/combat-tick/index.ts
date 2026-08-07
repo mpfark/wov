@@ -1249,7 +1249,7 @@ Deno.serve(async (req) => {
 
       // Any ability landing on a creature engages it for the rest of the session
       // (so T0 openers transition out-of-combat → in-combat correctly).
-      sessionEngaged.add(target.id);
+      engageCreature(member.id, target.id, Date.now());
 
       // ── Ability to-hit helper ─────────────────────────────────────
       // All damaging abilities (except Barrage which rolls per-arrow) call this
