@@ -354,7 +354,28 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [recruiterOpen, setRecruiterOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
-  const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
+  /**
+   * Loot lines from other characters on this node. Party mates already get the
+   * line through the party log, so they are skipped here to avoid duplicates.
+   */
+  const partyMateIdsRef = useRef<Set<string>>(new Set());
+  partyMateIdsRef.current = new Set(
+    partyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id),
+  );
+  const handleRemoteLootLog = useCallback((info: { actorId: string; actorName: string; itemName: string; kind: 'pickup' | 'drop' }) => {
+    if (partyMateIdsRef.current.has(info.actorId)) return;
+    const text = info.kind === 'pickup'
+      ? `${info.actorName} picks up ${info.itemName}.`
+      : `${info.actorName} dropped ${info.itemName} on the ground.`;
+    bus.emit('log:local', { event: buildLootEvent(text, { player: { kind: 'player', id: info.actorId, name: info.actorName } }) });
+  }, [bus]);
+  const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(
+    nodeChannel,
+    character.current_node_id,
+    character.id,
+    { characterName: character.name, onRemoteLootLog: handleRemoteLootLog },
+  );
+
 
   // ── Locked connections — temporary unlock state ──
   const [unlockedConnections, setUnlockedConnections] = useState<Map<string, number>>(new Map());
