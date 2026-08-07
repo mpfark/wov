@@ -12,6 +12,7 @@ const PAIRS: Array<[string, string]> = [
   ['src/shared/config/mechanic-templates.ts', 'supabase/functions/_shared/config/mechanic-templates.ts'],
   ['src/shared/combat/ability-magnitude.ts', 'supabase/functions/_shared/combat/ability-magnitude.ts'],
   ['src/shared/config/effective-ability.ts', 'supabase/functions/_shared/config/effective-ability.ts'],
+  ['src/shared/combat/tick-rng.ts', 'supabase/functions/_shared/combat/tick-rng.ts'],
 
 ];
 
