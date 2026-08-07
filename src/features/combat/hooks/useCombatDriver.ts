@@ -90,8 +90,6 @@ export interface UseCombatDriverParams {
   onIgniteProc?: (creatureId: string) => void;
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
-  /** Resolver for stacks to consume on execute_attack/ignite_consume. Returns current stack count for the given creature. */
-  getCreatureStacks?: (creatureId: string, stackType: 'poison' | 'ignite') => number;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
   /** Callback with merged creature-centric debuffs for shared party display */
@@ -686,19 +684,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
           const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
 
-          // Resolve stacks for finishers (Eviscerate / Conflagrate).
-          let consumeStacks = 0;
-          if (targetId && p.getCreatureStacks) {
-            if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {
-              // Stack type comes from configuration; the legacy mechanic keys
-              // only supply the fallback for archived rows.
-              const configured = ability.effectConfig?.stack_type;
-              const stackType = configured === 'ignite' || configured === 'poison'
-                ? configured
-                : (ability.type === 'ignite_consume' ? 'ignite' : 'poison');
-              consumeStacks = p.getCreatureStacks(targetId, stackType);
-            }
-          }
+          // Finisher stack counts are resolved server-side from
+          // `active_effects` (Phase 5 authority): the client no longer reports
+          // a stack count on the wire at all.
+
 
           // Canonical wire identity: the configured `ability_key` for this bar
           // slot. `ability_type` stays only as the mechanic dispatch hint.
@@ -732,9 +721,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             ability_key: abilityKey,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: consumeStacks,
             cp_cost: cpCost,
-            client_cp_before: p.character.cp ?? 0,
+
             client_expected_cp_after: expectedCpAfter,
           };
 
@@ -793,7 +781,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
               pending_abilities: pendingAbilitiesForServer,
-              client_cp: p.character.cp ?? 0,
             }
           : {
               party_id: p.party!.id,
