@@ -659,7 +659,10 @@ Material Pouch
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {!isBroken && !inCombat && inv.item.slot === 'main_hand' && inv.item.hands === 1 && (
+                          {/* Treat a missing `hands` value as one-handed — many unique
+                              weapons never had the column set, and they were losing the
+                              off-hand equip action entirely. */}
+                          {!isBroken && !inCombat && inv.item.slot === 'main_hand' && (inv.item.hands ?? 1) === 1 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
