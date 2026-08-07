@@ -481,7 +481,7 @@ Deno.serve(async (req) => {
       // Not enough time has passed for a tick — parallelize the two idle-path reads
       const [creaturesIdleRes, effectsIdleRes] = await Promise.all([
         db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true),
-        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id),
+        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, started_at, tick_rate_ms').eq('node_id', session.node_id),
       ]);
       const creature_states = (creaturesIdleRes.data || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
@@ -3703,7 +3703,7 @@ Deno.serve(async (req) => {
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
-      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
+      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, started_at: e.started_at ?? null, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
       buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,
