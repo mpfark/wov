@@ -872,6 +872,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
             stopCombat();
+          } else if ((result as any).roster_unavailable) {
+            // The resolver refused to simulate because the engagement roster
+            // could not be loaded. Nothing authoritative changed — hold state
+            // and let the next tick pick the elapsed time up.
+            setPendingCpCost(0);
           } else {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
