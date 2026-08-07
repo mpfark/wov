@@ -166,12 +166,14 @@ New/extended Vitest suites (`src/test/combat/status-application.test.ts`, extend
 - Frost Bolt applies Chilled at 100% on a landed hit; its own hit is not amplified; Chilled behaviour, damage and CP cost unchanged.
 - Bleed / Poison / Ignite resolve from one reusable definition on every path (ability hit, on-hit stance, orb pulse, DoT ability, catch-up).
 - Editing a reusable status changes new applications from all sources.
-- Chance lives on the relationship: 0% never applies, 100% always applies on the qualifying trigger, intermediate values roll only at the trigger, a miss never applies.
+- Chance lives on the relationship: 0% is valid and never applies, 100% always applies on the qualifying successful event, intermediate values roll only at that event.
+- Successful-event semantics: a missed attack, a dead/invalid target and a cancelled cast apply nothing and consume no chance sample; an Orbs of Fire pulse that misses applies no Ignite while a landed orb hit does.
 - Unsupported base/status combinations fail validation and cannot be saved; every selectable admin option has a runtime path.
 - No double application from one landed hit; intentional stacking and refresh follow the status definition (cadence preserved).
 - Non-damaging status never ticks; 0 calculated damage stays 0; bleed/poison/ignite keep their explicit minimum of 1.
+- Catch-up parity: catch-up and live paths produce identical rows for the same tick; re-running catch-up over an already-processed range is idempotent and cannot reroll a proc (seeded sampler + idempotent write).
 - Party determinism, catch-up tick-accurate application/expiry, kill credit and source attribution, structured apply/refresh/stack/expiry events, no emoji.
-- Parity: combat numbers unchanged for abilities with no status application.
+- Parity: combat numbers unchanged for abilities with no status application; Frost Bolt keeps its `spell_bolt` base.
 
 ## 10. Balance observations (not implemented)
 
