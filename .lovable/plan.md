@@ -171,11 +171,16 @@ New/extended Vitest suites (`src/test/combat/status-application.test.ts`, extend
 - Unsupported base/status combinations fail validation and cannot be saved; every selectable admin option has a runtime path.
 - No double application from one landed hit; intentional stacking and refresh follow the status definition (cadence preserved).
 - Non-damaging status never ticks; 0 calculated damage stays 0; bleed/poison/ignite keep their explicit minimum of 1.
-- Catch-up parity: catch-up and live paths produce identical rows for the same tick; re-running catch-up over an already-processed range is idempotent and cannot reroll a proc (seeded sampler + idempotent write).
+- Catch-up parity, stated correctly (the two samplers are not expected to agree by themselves): (a) given the **same supplied 0..1 sample** and tick time, the live and catch-up paths produce identical rows and events; (b) the **seeded sample is stable** — the same historical event tuple yields the same value across processes and runs; (c) the **same catch-up tick cannot be processed twice** — advancing the cursor under the reconcile lock rejects a second pass over that tick index, verified without relying on `started_at`.
+- `started_at` invariance: refresh and stack application never rewrite `started_at`; it remains the start of the uninterrupted instance and is not used as an identity.
+- Fireball parity: 25% chance, 3 damage/tick, 6 s, max 3 stacks, no attribute scaling — identical numbers before and after migration, now sourced from the Scorched definition.
+- Cutover safety: no live ability row has `on_hit_effect` set without an `applied_status` after Migration A (the compatibility read is unreachable).
+- `enabled = false` registers no trigger and draws no sample; `chance_pct = 0` is validated, wired and simply never succeeds.
+- `status_target` is derived from the base ability and cannot contradict it.
 - Party determinism, catch-up tick-accurate application/expiry, kill credit and source attribution, structured apply/refresh/stack/expiry events, no emoji.
 - Parity: combat numbers unchanged for abilities with no status application; Frost Bolt keeps its `spell_bolt` base.
 
 ## 10. Balance observations (not implemented)
 
-- Fireball's ignite is materially weaker than every other ignite source (see 8).
+- Fireball's burn (Scorched) is materially weaker than every other fire source; moving it to shared Ignite is a deliberate future balance pass, quantified in 8.
 - `spell_attack`'s `on_hit_allowed` currently offers bleed/poison on spells, which is thematically odd; the derived compatibility model narrows this naturally.
