@@ -2374,8 +2374,22 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const affinity = weaponAffinity(c.class, wTag);
 
-        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        // Phase 2: auto-attacks follow the durable engagement roster — the
+        // most recently engaged living creature this character is fighting.
+        // The legacy "first living creature" scan stays as the fallback for
+        // sessions that predate roster writes.
+        let target: any = null;
+        const engagedForMember = engagedByCharacter.get(m.id);
+        if (engagedForMember && engagedForMember.size > 0) {
+          const ordered = [...engagedForMember.entries()].sort((a, b) => b[1] - a[1]);
+          for (const [crId] of ordered) {
+            const cr = creatures.find(c2 => c2.id === crId);
+            if (cr && cHp[cr.id] > 0 && !cKilled.has(cr.id)) { target = cr; break; }
+          }
+        }
+        if (!target) target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id)) ?? null;
         if (!target) break;
+        engageCreature(m.id, target.id, Date.now());
 
         let creatureAc = target.ac;
         if (mb.sunder_target === target.id && mb.sunder_reduction) {
