@@ -129,14 +129,36 @@ DoT fields never render for `damage_amp` statuses and amplification fields never
 
 ## 8. Migration (staged, no dual authority)
 
-1. **Migration A** — add the new columns + checks; backfill: every ability with `applied_status` gets its derived trigger, target `enemy`, chance 100; Fireball is backfilled to `applied_status = ignite`, trigger `ability_hit`, `status_chance_pct = 25`; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists.
+1. **Migration A** — add the new columns + checks; backfill: every ability with `applied_status` gets its derived trigger, target `enemy`, chance 100; add `magnitude.min_per_tick = 1` to bleed/poison/ignite; extend the four `capabilities` lists. **Fireball's status backfill is held out of Migration A** until the balance decision below is answered, so the structural pass can land without changing any live combat number.
 2. **Step 2** — regenerate Supabase types; land the shared application module, both mirrors, `compose-ability`, `effective-ability` validation, seeds (`ability-seed.ts` `on_hit_allowed` removed), and switch all four runtime call sites in one change so legacy and new paths never both execute.
 3. **Step 3** — admin UI replacement.
 4. **Migration B** (after verification) — drop `abilities.on_hit_effect`, `base_abilities.on_hit_allowed`, the SQL on-hit validation trigger, the `on_hit_effect` capability, and delete `src/shared/combat/on-hit-effects.ts` + its Deno mirror and `ability-taxonomy` entry.
 
+`spell_bolt` is **preserved as-is for this pass.** Frost Bolt keeps its existing `base_ability_id -> spell_bolt` relationship; any later consolidation of `spell_bolt` into `spell_attack` is explicitly out of scope. `spell_bolt` only gains the `applied_status` capability so the capability list matches the runtime path Frost Bolt already uses.
+
 IDs, base relationships, class assignments, defaults/alternatives and player loadouts are untouched throughout (only new columns added, legacy columns dropped last). Migration A is reversible until Migration B.
 
-**Decision required:** Fireball's legacy ignite (25%, 3 dmg/tick, 6 s, 3 stacks) is weaker and shorter than reusable `ignite` (WIS-scaled magnitude, 30-45 s, 5 stacks). Recommendation: keep chance at 25% and adopt the reusable ignite definition (a small buff), because per-source duration/damage overrides are explicitly out of scope. The alternative is a second `ignite_light` status row preserving the old numbers exactly. Fireball has no `secondary_attribute` today, so adopting reusable ignite also requires setting one (recommend `wis` -> `int` reuse: set `secondary_attribute = int`) — also needs approval.
+### Fireball: explicit balance decision required (not a small buff)
+
+Fireball is the one ability whose numbers change, and the change is **substantial** — not cosmetic. Live values: legacy on-hit ignite = 25% chance, 3 damage/tick, 6000 ms, max 3 stacks. Reusable `ignite` = fire, magnitude `secondary * 0.7 * 0.67` (0.469/point), duration `30000 + 1000/point` capped at 45000 ms, max 5 stacks, no explicit tick interval (inherits the 2000 ms combat cadence).
+
+Before/after for one landed 25% proc, at representative Wizard stats (2 s ticks):
+
+| Character | Legacy per application | Reusable ignite per application | Factor |
+|---|---|---|---|
+| INT 14 (early) | 3 dmg x 3 ticks = **9** | 6 dmg x 22 ticks (44 s) = **132** | ~15x |
+| INT 20 (mid) | 3 dmg x 3 ticks = **9** | 9 dmg x 22 ticks (45 s cap) = **198** | ~22x |
+| INT 28 (late) | 3 dmg x 3 ticks = **9** | 13 dmg x 22 ticks (45 s cap) = **286** | ~32x |
+
+Fully stacked ceiling: legacy 3 stacks x 3 dmg = 9 dmg/tick for 6 s (**27**); reusable 5 stacks x 13 dmg = 65 dmg/tick for 45 s (**~1430** at INT 28). Because the duration (45 s) far exceeds a normal Fireball cooldown, repeated casts realistically hold Fireball near the stack ceiling in sustained fights, so this is closer to a new damage pillar for the Wizard than a tuning nudge. Setting `secondary_attribute = int` (Fireball has none today) is what unlocks the scaled magnitude and duration, so it is part of the same decision.
+
+Options, ranked:
+
+- **A (recommended, zero balance change): add an `ignite_light` reusable status** — 3 damage/tick equivalent, 6000 ms, max 3 stacks, no attribute scaling. Fireball backfills to `applied_status = ignite_light`, `status_chance_pct = 25`, no `secondary_attribute` change. Consolidation completes with live damage byte-identical, and any Fireball buff becomes a separate, deliberate balance pass.
+- **B (adopt shared ignite as-is)** — Fireball gets `applied_status = ignite`, `secondary_attribute = int`, chance 25%. Accepts the 15x-32x per-proc increase above.
+- **C (adopt shared ignite, retuned)** — as B, but lower Fireball's chance and/or `class_scale` so measured sustained fire DoT output lands near today's; requires a tuning target from you.
+
+**Nothing is applied to Fireball until you pick A, B or C.**
 
 ## 9. Tests
 
