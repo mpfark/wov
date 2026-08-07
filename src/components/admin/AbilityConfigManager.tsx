@@ -360,7 +360,10 @@ export default function AbilityConfigManager() {
       primary_attribute: draft.primary_attribute,
       secondary_attribute: draftBase?.supports_secondary_scaling ? draft.secondary_attribute : null,
       applied_status: draft.applied_status,
-      on_hit_effect: (draft.on_hit_effect ?? null) as any,
+      status_trigger: draft.applied_status ? draft.status_trigger : null,
+      status_chance_pct: draft.applied_status ? draft.status_chance_pct : null,
+      status_application_enabled: !!draft.applied_status && draft.status_application_enabled,
+
       admin_notes: draft.admin_notes,
       status: draft.status,
     }).eq('id', draft.id);
