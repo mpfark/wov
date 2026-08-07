@@ -40,6 +40,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Switch } from '@/components/ui/switch';
 import GlobalModifiersPanel from './ability/GlobalModifiersPanel';
 import BaseAbilityCreateDialog from './ability/BaseAbilityCreateDialog';
 import ClassAbilityCreateDialog from './ability/ClassAbilityCreateDialog';
