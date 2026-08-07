@@ -379,36 +379,13 @@ export default function BaseAbilityEditor({ row, usageCount, onSaved }: Props) {
         </CardContent>
       </Card>
 
-      <Card className="bg-card/80">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-display">Optional On-Hit Effect permissions</CardTitle>
-          <p className="text-[10px] text-muted-foreground">
-            A rider belonging to a single damaging ability, rolled only after that ability
-            lands a hit. This is NOT the persistent On-Hit Stance (Envenom) or Orb Stance
-            (Orbs of Fire) — those are their own base abilities with a status trigger.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {ON_HIT_EFFECT_KEYS.map(key => (
-            <label key={key} className="flex items-start gap-2 text-[11px]">
-              <Checkbox
-                checked={(draft.on_hit_allowed ?? []).includes(key)}
-                onCheckedChange={c => toggleOnHit(key as OnHitEffectKey, !!c)}
-              />
-              <span>
-                {ON_HIT_EFFECTS[key].label}
-                <span className="text-muted-foreground"> — {ON_HIT_EFFECTS[key].description}</span>
-              </span>
-            </label>
-          ))}
-          {!caps.includes('on_hit_effect') && (draft.on_hit_allowed ?? []).length > 0 && (
-            <p className="text-[10px] text-destructive">
-              Tick the "Optional On-Hit Effect" section above, otherwise the editor stays hidden
-              on class abilities.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/*
+        The old "Optional On-Hit Effect permissions" editor is gone: statuses are
+        no longer allow-listed per base ability. An authored ability picks a
+        reusable status and a trigger in its Status Application section, which is
+        now the only place a status can be hung off an ability.
+      */}
+
 
       <div className="flex justify-end">
         <Button size="sm" onClick={save} disabled={saving}>
