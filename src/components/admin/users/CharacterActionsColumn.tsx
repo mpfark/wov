@@ -12,6 +12,7 @@ import { AdminFormSection, AdminEmptyState } from '../common';
 import ItemPicker from '../ItemPicker';
 import NodePicker from '../NodePicker';
 import CharacterSummaryCard from './CharacterSummaryCard';
+import { GEM_CATALOG, PRIMARY_GEM_KEYS } from '@/shared/formulas/gems';
 import type { AdminCharacter, AdminUser, AdminNode } from './constants';
 
 interface Props {
