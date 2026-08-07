@@ -40,6 +40,10 @@ import {
 } from "../_shared/combat/status-application.ts";
 import { getStatModifier } from "../_shared/formulas/stats.ts";
 import { isPeriodicStatus } from "../_shared/combat/creature-damage-modifiers.ts";
+import {
+  EFFECTS_ONLY_MODES,
+  interpretEffectsOnlyClaim,
+} from "../_shared/combat/tick-claim.ts";
 
 /**
  * Live combat's tick cadence. Non-periodic statuses store their duration as a
@@ -309,6 +313,7 @@ Deno.serve(async (req) => {
         fn: 'combat-catchup', node_id, effects_count: 0, effects_resolved: false,
         creatures_alive: creatures.length, duration_ms: Date.now() - t0,
       }));
+      await commitHeldClaim({ effects_processed: 0, creature_states: [], kill_rewards: [] });
       return json({ caught_up: false, effects_processed: 0, creatures, partial: false });
     }
 
@@ -322,6 +327,7 @@ Deno.serve(async (req) => {
         fn: 'combat-catchup', node_id, effects_count: effects.length, effects_resolved: true,
         creatures_alive: 0, duration_ms: Date.now() - t0,
       }));
+      await commitHeldClaim({ effects_processed: effects.length, creature_states: [], kill_rewards: [] });
       return json({ caught_up: true, effects_processed: effects.length, partial: false });
     }
 
@@ -791,6 +797,16 @@ Deno.serve(async (req) => {
       duration_ms: Date.now() - t0,
       ...(reason ? { wake_up_source: reason } : {}),
     }));
+
+    await commitHeldClaim({
+      effects_processed: effects.length,
+      creature_states: finalCreatures.map(cr => ({ id: cr.id, hp: cr.hp, max_hp: cr.max_hp })),
+      killed_creature_ids: Array.from(cKilled),
+      kill_rewards: killRewards,
+      loot_events: lootEvents,
+      ticks_resolved: result.advancedEffects.length,
+      partial: isPartial,
+    });
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures, partial: isPartial, kill_rewards: killRewards, loot_events: lootEvents });
   } catch (err) {
