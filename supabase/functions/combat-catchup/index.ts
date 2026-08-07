@@ -280,25 +280,23 @@ Deno.serve(async (req) => {
     });
 
     if (brokenRows.length > 0) {
-      const abilityKeys = [...new Set(brokenRows.map(e => e.source_ability_key).filter(Boolean))];
       const sourceIds = [...new Set(brokenRows.map(e => e.source_id).filter(Boolean))];
-      const [{ data: abilityRows }, { data: sourceChars }] = await Promise.all([
-        abilityKeys.length > 0
-          ? db.from('abilities').select('ability_key, effect_config').in('ability_key', abilityKeys)
-          : Promise.resolve({ data: [] as any[] }),
-        sourceIds.length > 0
-          ? db.from('characters').select('id, str, dex, con, int, wis, cha').in('id', sourceIds)
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
+      const { data: sourceChars } = sourceIds.length > 0
+        ? await db.from('characters')
+            .select('id, class, level, str, dex, con, int, wis, cha')
+            .in('id', sourceIds)
+        : { data: [] as any[] };
       for (const c of (sourceChars || [])) statusChars[(c as any).id] = c as any;
-      const cfgByKey = new Map<string, Record<string, unknown>>(
-        (abilityRows || []).map((a: any) => [a.ability_key, a.effect_config || {}]),
-      );
 
       let repaired = 0;
       for (const row of brokenRows) {
-        const character = statusChars[row.source_id];
-        const spec = readStatusApplication(cfgByKey.get(row.source_ability_key ?? '') ?? null);
+        const character = statusChars[row.source_id] as any;
+        // Composed ability config — the SAME registry entry the live tick reads,
+        // so the repair can never see different numbers than combat-tick would.
+        const entry = character?.class && row.source_ability_key
+          ? getServerAbilityCalcs(String(character.class), String(row.source_ability_key))
+          : null;
+        const spec = readStatusApplication(entry?.effectConfig ?? null);
         const at = Number(row.started_at) || now;
         const applied = spec && character
           ? statusRuntime.applyStatusFromSource({
@@ -306,10 +304,11 @@ Deno.serve(async (req) => {
               character,
               eb: {},
               spec,
-              abilityKey: row.source_ability_key,
+              abilityKey: String(row.source_ability_key),
               targetId: row.target_id,
               at,
-              // Identity of the ORIGINAL application — stable across replays.
+              // Identity of the ORIGINAL application — stable across replays,
+              // so a repeated catch-up can never reroll this decision.
               sample: statusSample([
                 row.source_ability_key ?? spec.statusKey,
                 row.source_id, row.target_id, at,
@@ -321,17 +320,21 @@ Deno.serve(async (req) => {
           // Keep what the player already has, normalised onto live timing rules.
           const def = appliedStatusDefs[row.effect_type];
           const periodic = def ? isPeriodicStatus(def) : (row.next_tick_at ?? null) !== null;
+          const tickRateMs = Number(row.tick_rate_ms) > 0 ? Number(row.tick_rate_ms) : TICK_RATE;
           statusRuntime.writeStatusRow({
             sourceId: row.source_id, targetId: row.target_id,
-            abilityKey: row.source_ability_key ?? row.effect_type,
+            abilityKey: String(row.source_ability_key ?? row.effect_type),
             effectType: row.effect_type, at, isPeriodic: periodic,
             durationMs: Math.max(0, Number(row.expires_at) - at),
-            durationTicks: def?.duration_ticks ?? 1,
+            durationTicks: Math.max(
+              1, Math.round(Math.max(0, Number(row.expires_at) - at) / TICK_RATE) || 1,
+            ),
             damagePerTick: Math.max(1, Number(row.damage_per_tick) || 1),
             maxStacks: Math.max(1, Number(row.stacks) || 1),
-            tickRateMs: Number(row.tick_rate_ms) > 0 ? Number(row.tick_rate_ms) : TICK_RATE,
+            tickRateMs,
           });
         }
+
         repaired++;
         if (row.id) {
           await db.from('active_effects').update({
