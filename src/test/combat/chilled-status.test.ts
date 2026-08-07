@@ -113,8 +113,9 @@ describe('resolveEffectTicks — bulk (offscreen) mode', () => {
       amp: { effects, defs: statusDefs },
       statusDefs,
     });
-    // Ticks at 10k,12k,14k,16k,18k = 5 ticks of 10; the 12k tick sits inside
-    // the one-tick Chilled window (10k tick is the application instant).
-    expect(cHp['cr1']).toBe(200 - (10 + 11 + 10 + 10 + 10));
+    // Ticks land at 10k,12k,14k,16k,18k (5 ticks of 10 base damage). The
+    // Chilled window is [10k, 13k) — a one-tick duration plus the half-tick
+    // jitter margin — so exactly the 10k and 12k ticks are amplified.
+    expect(cHp['cr1']).toBe(200 - (11 + 11 + 10 + 10 + 10));
   });
 });

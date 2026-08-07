@@ -51,7 +51,8 @@ describe('resolveEffectTicks — single-tick mode', () => {
     expect(result.advancedEffects).toHaveLength(1);
     expect(result.advancedEffects[0].next_tick_at).toBe(12000);
     expect(result.events).toHaveLength(1);
-    expect(result.events[0].message).toContain('2 stacks');
+    // Wording follows the authoritative edge copy: `poison (×2)`.
+    expect(result.events[0].message).toContain('(×2)');
   });
 
   it('bleed uses flat damage_per_tick (ignores stacks)', () => {
