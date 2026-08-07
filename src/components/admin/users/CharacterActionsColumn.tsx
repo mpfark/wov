@@ -61,9 +61,11 @@ export default function CharacterActionsColumn({
   grantRespecAmount, setGrantRespecAmount,
   grantSalvageAmount, setGrantSalvageAmount,
   grantGoldAmount, setGrantGoldAmount,
+  grantGemKey, setGrantGemKey, grantGemAmount, setGrantGemAmount,
   removeItemId, setRemoveItemId,
-  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold,
+  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold, onGrantGem,
   onRevive, onResetStats, onRemoveItem,
+
 }: Props) {
   const nodeName = selectedChar?.current_node_id
     ? allNodes.find(n => n.id === selectedChar.current_node_id)?.name
