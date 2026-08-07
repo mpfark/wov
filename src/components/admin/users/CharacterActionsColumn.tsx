@@ -179,6 +179,31 @@ Grant Salvage
                   <Coins className="w-3 h-3" /> Grant Gold
                 </Button>
               </div>
+
+              <div className="flex gap-1">
+                <Input type="number" min={1} max={1000} value={grantGemAmount}
+                  onChange={e => setGrantGemAmount(parseInt(e.target.value) || 0)}
+                  className="h-7 text-[10px] w-20" placeholder="Qty" />
+                <Select value={grantGemKey} onValueChange={setGrantGemKey}>
+                  <SelectTrigger className="h-7 flex-1 text-[10px]">
+                    <SelectValue placeholder="Gem..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    {PRIMARY_GEM_KEYS.map(k => (
+                      <SelectItem key={k} value={k} className="text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full" style={{ background: GEM_CATALOG[k].color }} />
+                          {GEM_CATALOG[k].name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                  disabled={grantGemAmount <= 0 || !grantGemKey} onClick={() => onGrantGem(selectedChar.id)}>
+                  Grant Gem
+                </Button>
+              </div>
             </div>
           </AdminFormSection>
 
