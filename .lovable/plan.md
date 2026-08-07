@@ -83,21 +83,31 @@ Additive, backward-safe changes:
 - Periodicity has **one** authority: `classification`. `is_periodic` is either not stored at all (derived in the runtime from the typed classification) or, if stored for query efficiency, added as a **generated column** — `GENERATED ALWAYS AS (classification = 'dot') STORED` — so it can never diverge and cannot be written by admin or code.
 - Validation trigger: `dot` rows require `magnitude`, forbid `modifier`; `damage_amp` rows require `modifier` with `kind`, integer `value > 0` and a non-empty `eligible_sources` containing none of `reflect`/`self`/`environment`, and must have `tick_interval_ms IS NULL` and no periodic magnitude. Bleed/Poison/Ignite rows are untouched and cannot drift into amplification.
 - `ALTER TABLE public.active_effects ALTER COLUMN next_tick_at DROP NOT NULL` (audited: currently `NOT NULL`) and add nullable `started_at bigint`. Non-periodic effects store `next_tick_at = NULL`; no artificial timestamps.
-- Seed Chilled: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `duration = { base_ms: 7000, role: null }` (see §3a), `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = NULL`.
+- Seed Chilled: `key='chilled'`, `label='Chilled'`, `classification='damage_amp'`, `effect_type='chilled'`, `duration = { duration_ticks: 3, role: null }` (see §3a), `stacks = { max_stacks_calc: { base: 1, terms: [], unit: 'count' } }`, `tick_interval_ms = NULL`.
 
 **Authoritative unit:** whole percent integer (`10`), stored once in `applied_statuses.modifier.value`. Runtime derives `1 + value/100` locally; no `0.10`/`1.10` field anywhere and no per-ability copy.
 
 **`default_damage_type`:** omitted (left `NULL`) for Chilled. It exists to type periodic tick damage; Chilled deals none, so setting `frost` there would imply damage that never happens. Thematic school is already carried by Frost Bolt's own `damage_type = frost` and by the status label — no new field is introduced for flavour.
 
-## 3a. Timing rule (corrected)
+## 3a. Timing rule (corrected — tick-count duration)
 
-The previous "6s / 3 ticks" wording was inconsistent. With `TICK_RATE = 2000` and the existing active-window test `started_at <= tickTime < expires_at` (identical to the DoT expiry test `expires_at <= tickTime` -> expired), an effect applied at t=0 with a 6000 ms duration is active at 2000 and 4000 but expired at 6000 — two amplified ticks, not three.
+The earlier "6s / 3 ticks" wording was inconsistent: with `TICK_RATE = 2000` and the existing active-window test `started_at <= tickTime < expires_at`, a 6000 ms duration applied at t=0 is active at 2000 and 4000 but expired at 6000 — two amplified ticks, not three.
 
-Intended result, stated explicitly: **Chilled amplifies the next three combat ticks after application.** Implementation: store the duration as `intended_ticks * TICK_RATE + TICK_RATE / 2` = `3 * 2000 + 1000` = **7000 ms**. Applied at t=0 -> active at 2000, 4000, 6000; expired at 7000+. The half-tick margin absorbs heartbeat jitter without ever granting a fourth tick, because the fourth tick lands at 8000 > 7000.
+**Authoritative duration for non-periodic statuses is a combat-tick count.** The existing `duration` jsonb gains a `duration_ticks` variant alongside the current `base_ms` form; DoT statuses keep `base_ms` untouched. Chilled stores `duration_ticks: 3` and no milliseconds anywhere.
 
-Existing DoT expiry semantics are unchanged: no comparison operator, no `expires_at` handling and no cadence rule is modified for Ignite, Poison or Bleed. Only Chilled's stored duration value encodes the tick intent.
+Runtime derives the expiry boundary from the tick count and the live cadence at application time:
 
-Player-facing text stays "the next three combat ticks"; the admin editor shows the duration in both ms and resulting amplified ticks so the relationship is visible rather than implied.
+```text
+expires_at = started_at + (duration_ticks * TICK_RATE) + TICK_RATE / 2
+```
+
+The half-tick margin exists only so heartbeat jitter cannot silently drop a promised tick; it can never grant an extra one, because tick N+1 lands a full tick beyond the boundary. If `TICK_RATE` ever changes, the promise "next three ticks" still holds — nothing needs re-tuning.
+
+Setting `duration_ticks = 4` in the reusable-status editor therefore makes Chilled affect the next four combat ticks, with no code change.
+
+Existing DoT expiry semantics are unchanged: no comparison operator, no `expires_at` handling and no cadence rule is modified for Ignite, Poison or Bleed.
+
+**Wording used everywhere (admin, tooltips, tests, docs):** "3 combat ticks (approximately 6 seconds at the current 2-second tick rate)". No text or assertion states that Chilled lasts exactly six seconds, and no raw millisecond figure is presented as the duration. Frost Bolt stores no independent duration.
 
 ## 4. Lifecycle reuse (revised — periodic vs non-periodic)
 
