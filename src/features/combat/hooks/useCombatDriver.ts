@@ -559,7 +559,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
     if (remainingEngaged.length === 0) {
       if (killedThisTick.size === 0) {
-        // No-op tick before any engagement was established — nothing to do.
+        // Nothing engaged. If the server released stale engagements (off-screen
+        // death) or reported the session ended, leave combat instead of
+        // ticking against a corpse.
+        if (
+          inCombatRef.current &&
+          ((result.staleEngagedIds && result.staleEngagedIds.length > 0) || result.sessionEnded)
+        ) {
+          stopCombat();
+        }
         return;
       }
       // A creature died and nothing is left engaged — try to roll into another
