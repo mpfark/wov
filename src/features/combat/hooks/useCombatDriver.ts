@@ -524,6 +524,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       for (const entry of result.bossDeathCries) ext.current.onBossDeathCry(entry);
     }
 
+    // Release engagements the server says are no longer alive at the node.
+    // Covers off-screen deaths (DoT / Consecrate resolved by combat-catchup):
+    // those creatures never appear in killedCreatureIds, so without this the
+    // client stayed "in combat" against a corpse and ticked forever.
+    if (result.staleEngagedIds && result.staleEngagedIds.length > 0) {
+      const stale = new Set(result.staleEngagedIds);
+      const kept = engagedCreatureIdsRef.current.filter(id => !stale.has(id));
+      if (kept.length !== engagedCreatureIdsRef.current.length) {
+        engagedCreatureIdsRef.current = kept;
+        setEngagedCreatureIds(kept);
+        setActiveCombatCreatureId(prev => (prev && stale.has(prev) ? (kept[0] ?? null) : prev));
+      }
+    }
+
     if (result.sessionEnded) {
       const stillEngaged =
         (result.aliveEngagedIds?.length ?? 0) > 0 ||
@@ -538,7 +552,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     // Engagement lifecycle: the server only tells us authoritatively about
     // creatures that changed HP this tick (creature_states is filtered).
     // "Missing from creature_states" therefore means "unchanged", NOT "gone".
-    // The only authoritative "no longer engaged" signal is killedCreatureIds.
+    // Authoritative "no longer engaged" signals are killedCreatureIds and the
+    // stale-engagement release above.
     const killedThisTick = new Set(result.killedCreatureIds);
     const remainingEngaged = engagedCreatureIdsRef.current.filter(id => !killedThisTick.has(id));
 
