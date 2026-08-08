@@ -115,7 +115,7 @@ export interface UseGameLoopParams {
   /** Optional local-only updater. When provided, regen ticks update local
    *  state every tick but only flush to the DB every Nth tick (or on cap-
    *  reach / tab-hide). Cuts the #2/#5/#7/#10 DB hotspots ~70%. */
-  updateCharacterLocal?: (updates: Partial<Character>) => void;
+  updateCharacterLocal?: (updates: Partial<Character>, hold?: boolean) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
@@ -276,7 +276,11 @@ export function useGameLoop(params: UseGameLoopParams) {
           pendingRegenFlushRef.current = null;
           updateCharRegenRef.current(updates, caps);
         } else {
-          updateCharLocalRef.current(updates);
+          // `hold: true` — these values are not persisted yet, so keep them
+          // protected from realtime echoes (e.g. socket reconnect after a tab
+          // switch) until the next flush actually writes them.
+          updateCharLocalRef.current(updates, true);
+
           // Track latest pending values so tab-hide / cleanup can flush them.
           pendingRegenFlushRef.current = { ...(pendingRegenFlushRef.current ?? {}), ...updates };
         }

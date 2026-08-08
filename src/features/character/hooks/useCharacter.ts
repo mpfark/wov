@@ -100,6 +100,15 @@ export function useCharacter(user: User | null) {
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
 
+  // Fields that are optimistic locally and NOT yet persisted. Unlike
+  // `pendingWritesRef` these are held indefinitely — until a real DB write for
+  // that field happens. Without this, a realtime echo arriving after the 3 s
+  // pending window (very common when a backgrounded tab reconnects its
+  // realtime socket) reverts local regen to the last persisted values, which
+  // is the visible "HP/MP drop on window switch, then regen back" symptom.
+  const heldFieldsRef = useRef<Map<string, Set<string>>>(new Map());
+
+
   const fetchCharactersRef = useRef(async () => {});
   fetchCharactersRef.current = async () => {
     if (!user) return;
@@ -114,11 +123,18 @@ export function useCharacter(user: User | null) {
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
       // write could hide the post-login authoritative HP/CP/MP for several seconds.)
       const fetchedIds = new Set((data as Character[]).map(c => c.id));
-      for (const id of fetchedIds) pendingWritesRef.current.delete(id);
+      for (const id of fetchedIds) {
+        pendingWritesRef.current.delete(id);
+        heldFieldsRef.current.delete(id);
+      }
       // Drop entries for characters that no longer belong to this user.
       for (const id of Array.from(pendingWritesRef.current.keys())) {
         if (!fetchedIds.has(id)) pendingWritesRef.current.delete(id);
       }
+      for (const id of Array.from(heldFieldsRef.current.keys())) {
+        if (!fetchedIds.has(id)) heldFieldsRef.current.delete(id);
+      }
+
       setCharacters(data as Character[]);
     }
     setLoading(false);
@@ -139,6 +155,8 @@ export function useCharacter(user: User | null) {
       // Reassign instead of .clear() to be robust against HMR-preserved refs
       // that may have been initialized as a non-Map in a prior code version.
       pendingWritesRef.current = new Map();
+      heldFieldsRef.current = new Map();
+
       setLoading(false);
       return;
     }
@@ -170,16 +188,22 @@ export function useCharacter(user: User | null) {
         } else {
           const incoming = payload.new as Character;
           const pendingFields = pendingWritesRef.current.get(incoming.id);
+          const heldFields = heldFieldsRef.current.get(incoming.id);
           setCharacters(prev => prev.map(c => {
             if (c.id !== incoming.id) return c;
-            if (!pendingFields || pendingFields.size === 0) return incoming;
-            // Merge: use local optimistic value for pending fields, server value for rest
+            const keep = new Set<string>([
+              ...(pendingFields ? Array.from(pendingFields) : []),
+              ...(heldFields ? Array.from(heldFields) : []),
+            ]);
+            if (keep.size === 0) return incoming;
+            // Merge: use local optimistic value for pending/held fields, server value for rest
             const merged = { ...incoming };
-            for (const field of pendingFields) {
+            for (const field of keep) {
               (merged as any)[field] = (c as any)[field];
             }
             return merged;
           }));
+
         }
       })
       .subscribe();
@@ -260,6 +284,13 @@ export function useCharacter(user: User | null) {
     fields.forEach(f => pending.add(f));
     pendingWritesRef.current.set(charId, pending);
 
+    // This write persists these fields, so they are no longer "unpersisted".
+    const held = heldFieldsRef.current.get(charId);
+    if (held) {
+      fields.forEach(f => held.delete(f));
+      if (held.size === 0) heldFieldsRef.current.delete(charId);
+    }
+
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
     // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
@@ -289,8 +320,11 @@ export function useCharacter(user: User | null) {
   };
 
   /** Update character state locally only — no DB write.
-   *  Used by combat tick processing where the server already persisted the values. */
-  const updateCharacterLocal = useCallback((updates: Partial<Character>) => {
+   *  Used by combat tick processing where the server already persisted the values.
+   *  Pass `hold: true` when the value is optimistic and NOT yet persisted (e.g.
+   *  throttled regen): the field is then protected from realtime echoes until a
+   *  real DB write for it happens, instead of only for 3 s. */
+  const updateCharacterLocal = useCallback((updates: Partial<Character>, hold = false) => {
     if (!selectedCharacterId) return;
     const charId = selectedCharacterId;
     const fields = Object.keys(updates);
@@ -299,6 +333,12 @@ export function useCharacter(user: User | null) {
     const pending = pendingWritesRef.current.get(charId) || new Set<string>();
     fields.forEach(f => pending.add(f));
     pendingWritesRef.current.set(charId, pending);
+
+    if (hold) {
+      const heldSet = heldFieldsRef.current.get(charId) || new Set<string>();
+      fields.forEach(f => heldSet.add(f));
+      heldFieldsRef.current.set(charId, heldSet);
+    }
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
@@ -311,6 +351,7 @@ export function useCharacter(user: User | null) {
       }
     }, 3000);
   }, [selectedCharacterId]);
+
 
   /** Force-clear fields locally AND drop their pending-write masks so the next
    *  realtime echo from the server (which is authoritative) is accepted instead
@@ -326,6 +367,12 @@ export function useCharacter(user: User | null) {
       fields.forEach(f => current.delete(f));
       if (current.size === 0) pendingWritesRef.current.delete(charId);
     }
+    const heldSet = heldFieldsRef.current.get(charId);
+    if (heldSet) {
+      fields.forEach(f => heldSet.delete(f));
+      if (heldSet.size === 0) heldFieldsRef.current.delete(charId);
+    }
+
   }, [selectedCharacterId]);
 
 
