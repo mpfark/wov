@@ -115,7 +115,7 @@ export interface UseGameLoopParams {
   /** Optional local-only updater. When provided, regen ticks update local
    *  state every tick but only flush to the DB every Nth tick (or on cap-
    *  reach / tab-hide). Cuts the #2/#5/#7/#10 DB hotspots ~70%. */
-  updateCharacterLocal?: (updates: Partial<Character>) => void;
+  updateCharacterLocal?: (updates: Partial<Character>, hold?: boolean) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
