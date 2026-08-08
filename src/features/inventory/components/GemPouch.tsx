@@ -1,6 +1,7 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS } from '@/shared/formulas/gems';
 import { GemIcon } from '@/components/icons/GemIcon';
+import { Gem } from 'lucide-react';
 
 interface GemPouchProps {
   owned: Record<string, number>;
@@ -39,7 +40,8 @@ export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
     <TooltipProvider delayDuration={150}>
       <div className="gap-row">
         <div className="t-label flex items-center gap-1">
-Gems
+          <Gem className="w-3 h-3 shrink-0" aria-hidden />
+          Gems
         </div>
         {empty ? (
           <p className="text-[10px] text-muted-foreground italic">No gems yet — slay foes to find them.</p>

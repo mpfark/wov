@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { MapPin, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ServicePanelShell } from '@/components/ui/ServicePanelShell';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
@@ -100,7 +101,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
       {waymark && onReturnToWaymark && (
         <div className="flex items-center justify-between p-2 rounded border-2 border-primary/60 bg-primary/10 hover:bg-primary/20 transition-colors">
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm text-primary truncate"> Return to Waymark</p>
+            <p className="font-display text-sm text-primary truncate flex items-center gap-1"><MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />Return to Waymark</p>
             <p className="text-[10px] text-primary/80 truncate">
               {waymark.node.name}
               {waymark.region && <span> — {waymark.region.name}</span>}
@@ -113,14 +114,15 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
             onClick={() => onReturnToWaymark(waymarkCpCost)}
             className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAffordWaymark ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
           >
-{waymarkCpCost} CP
+            <Zap className="w-3 h-3 mr-1 shrink-0" aria-hidden />
+            {waymarkCpCost} CP
           </Button>
         </div>
       )}
 
       {partyDestinations.length > 0 && (
         <>
-          <p className="text-[10px] text-muted-foreground font-display pt-1"> Party Members</p>
+          <p className="text-[10px] text-muted-foreground font-display pt-1 flex items-center gap-1"><Users className="w-3 h-3 shrink-0" aria-hidden />Party Members</p>
           {partyDestinations.map(d => {
             const canAfford = playerCp >= d.cpCost;
             return (
@@ -140,7 +142,8 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
                   onClick={() => onTeleport(d.node.id, d.cpCost)}
                   className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
                 >
-{d.cpCost} CP
+                  <Zap className="w-3 h-3 mr-1 shrink-0" aria-hidden />
+                  {d.cpCost} CP
                 </Button>
               </div>
             );
@@ -168,7 +171,8 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
               onClick={() => onTeleport(d.node.id, d.cpCost)}
               className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
             >
-{d.cpCost} CP
+              <Zap className="w-3 h-3 mr-1 shrink-0" aria-hidden />
+              {d.cpCost} CP
             </Button>
           </div>
         );
