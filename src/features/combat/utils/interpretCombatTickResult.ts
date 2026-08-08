@@ -49,6 +49,14 @@ export interface CombatTickResponse {
   /** @deprecated Use active_effects instead */
   active_dots?: Record<string, any>;
   session_ended?: boolean;
+  /**
+   * Authoritative list of creature ids still alive at the combat node this
+   * tick. Present whenever the server actually resolved (or short-circuited)
+   * a tick. Used to release stale client engagements for creatures that died
+   * off-screen (e.g. a DoT/Consecrate kill resolved by combat-catchup), which
+   * otherwise kept the client stuck "in combat" forever.
+   */
+  alive_creature_ids?: string[];
   ticks_processed?: number;
   buff_sync?: Record<string, { absorb_remaining: number }>;
 }
