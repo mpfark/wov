@@ -105,6 +105,12 @@ export interface TickInterpretation {
   sessionEnded: boolean;
   /** IDs of alive creatures that are still engaged */
   aliveEngagedIds: string[];
+  /**
+   * Engaged ids the server says are NO LONGER alive at the node (creature
+   * absent from `alive_creature_ids`). Null when the server did not report an
+   * authoritative alive list. Used to release stale engagements.
+   */
+  staleEngagedIds: string[] | null;
   /** Whether there were multiple ticks processed (for logging) */
   ticksProcessed: number | undefined;
   /** Remaining absorb shield HP from server (null if no absorb active) */
