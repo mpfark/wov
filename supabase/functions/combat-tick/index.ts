@@ -2800,6 +2800,8 @@ Deno.serve(async (req) => {
       // Default cast settings, used when a boss has no boss_cast config.
       const DEFAULT_BOSS_CAST_COOLDOWN_MS = 20000;
       const DEFAULT_BOSS_CAST_MS = 4000;
+      /** How late a cast may resolve before it is treated as un-witnessed. */
+      const CAST_RESOLVE_GRACE_MS = 2 * TICK_RATE;
       const DEFAULT_BOSS_CAST_START_CHANCE = 0.30;
 
       // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
@@ -2835,6 +2837,30 @@ Deno.serve(async (req) => {
       for (const cst of activeByCreature.values()) {
         const expiresMs = new Date(cst.expires_at).getTime();
         if (expiresMs > now) continue;
+
+        // Staleness fizzle: if the cast expired well before this invocation, no
+        // participant was ticking the encounter while it completed — the boss
+        // was left channelling to an empty node. Landing it now would punish a
+        // player who fled and only just walked back in. Mark it resolved with
+        // no damage and no movement lock, and start the cooldown.
+        if (now - expiresMs > CAST_RESOLVE_GRACE_MS) {
+          const { error: fizzleErr } = await db.rpc('encounter_boss_fizzle_cast', {
+            _cast_event_id: cst.id,
+          });
+          if (fizzleErr) {
+            console.error('[boss-cast] fizzle failed', cst.id, fizzleErr.message);
+            continue;
+          }
+          activeByCreature.delete(cst.creature_id);
+          lastCastAtByCreature.set(cst.creature_id, now);
+          console.info(JSON.stringify({
+            fn: 'combat-tick',
+            boss_cast_fizzled: cst.id,
+            creature_id: cst.creature_id,
+            stale_ms: now - expiresMs,
+          }));
+          continue;
+        }
 
         const { data: hits, error: resolveErr } = await db.rpc(
           'encounter_boss_resolve_cast',

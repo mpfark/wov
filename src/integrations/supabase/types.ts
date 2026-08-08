@@ -3172,6 +3172,10 @@ export type Database = {
           old_hp: number
         }[]
       }
+      encounter_boss_fizzle_cast: {
+        Args: { _cast_event_id: string }
+        Returns: boolean
+      }
       encounter_boss_resolve_cast: {
         Args: { _cast_event_id: string }
         Returns: {
