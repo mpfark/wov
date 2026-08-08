@@ -81,7 +81,7 @@ import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, bu
 interface Props {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  updateCharacterLocal?: (updates: Partial<Character>) => void;
+  updateCharacterLocal?: (updates: Partial<Character>, hold?: boolean) => void;
   clearCharacterFields?: (updates: Partial<Character>) => void;
 
   onSignOut: () => void;
