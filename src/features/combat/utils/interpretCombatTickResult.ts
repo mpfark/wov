@@ -344,6 +344,7 @@ export function interpretCombatTickResult(
     hasLootDrop,
     sessionEnded,
     aliveEngagedIds,
+    staleEngagedIds,
     ticksProcessed: data.ticks_processed,
     absorbRemaining,
     bossDeathCries,
