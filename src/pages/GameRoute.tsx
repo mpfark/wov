@@ -26,12 +26,18 @@ export default function GameRoute() {
     if (!character?.id) return;
     if (syncStartedForRef.current === character.id) return;
     syncStartedForRef.current = character.id;
+    // Stances are only wiped on the FIRST entry of a browser session. A remount
+    // of this route (or a tab reload) must not drop the player's active stances.
+    const entryKey = `wov:entrySynced:${character.id}`;
+    const firstEntryThisSession = sessionStorage.getItem(entryKey) !== '1';
     (async () => {
       try {
-        // Wipe any leftover stance reservations from a previous session, then
-        // recompute gear-adjusted resources. Stances never persist offline.
-        await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
+        if (firstEntryThisSession) {
+          // Wipe leftover stance reservations from a previous session.
+          await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
+        }
         await supabase.rpc('sync_character_resources' as any, { p_character_id: character.id });
+        sessionStorage.setItem(entryKey, '1');
         refetchCharacters();
       } catch (e) {
         console.error('Failed to sync character resources on entry:', e);
@@ -40,6 +46,7 @@ export default function GameRoute() {
       }
     })();
   }, [character?.id, refetchCharacters]);
+
 
   const isSyncedForCurrent = !!character?.id && syncedCharId === character.id;
 
