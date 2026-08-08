@@ -276,7 +276,11 @@ export function useGameLoop(params: UseGameLoopParams) {
           pendingRegenFlushRef.current = null;
           updateCharRegenRef.current(updates, caps);
         } else {
-          updateCharLocalRef.current(updates);
+          // `hold: true` — these values are not persisted yet, so keep them
+          // protected from realtime echoes (e.g. socket reconnect after a tab
+          // switch) until the next flush actually writes them.
+          updateCharLocalRef.current(updates, true);
+
           // Track latest pending values so tab-hide / cleanup can flush them.
           pendingRegenFlushRef.current = { ...(pendingRegenFlushRef.current ?? {}), ...updates };
         }
