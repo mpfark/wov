@@ -49,6 +49,14 @@ export interface CombatTickResponse {
   /** @deprecated Use active_effects instead */
   active_dots?: Record<string, any>;
   session_ended?: boolean;
+  /**
+   * Authoritative list of creature ids still alive at the combat node this
+   * tick. Present whenever the server actually resolved (or short-circuited)
+   * a tick. Used to release stale client engagements for creatures that died
+   * off-screen (e.g. a DoT/Consecrate kill resolved by combat-catchup), which
+   * otherwise kept the client stuck "in combat" forever.
+   */
+  alive_creature_ids?: string[];
   ticks_processed?: number;
   buff_sync?: Record<string, { absorb_remaining: number }>;
 }
@@ -97,6 +105,12 @@ export interface TickInterpretation {
   sessionEnded: boolean;
   /** IDs of alive creatures that are still engaged */
   aliveEngagedIds: string[];
+  /**
+   * Engaged ids the server says are NO LONGER alive at the node (creature
+   * absent from `alive_creature_ids`). Null when the server did not report an
+   * authoritative alive list. Used to release stale engagements.
+   */
+  staleEngagedIds: string[] | null;
   /** Whether there were multiple ticks processed (for logging) */
   ticksProcessed: number | undefined;
   /** Remaining absorb shield HP from server (null if no absorb active) */
@@ -285,6 +299,11 @@ export function interpretCombatTickResult(
     .filter(cs => cs.alive && currentEngagedIds.includes(cs.id))
     .map(cs => cs.id);
 
+  // ── Stale engagements (creature died off-screen / no longer at node) ──
+  const staleEngagedIds = Array.isArray(data.alive_creature_ids)
+    ? currentEngagedIds.filter(id => !data.alive_creature_ids!.includes(id))
+    : null;
+
   // ── Derived creature-centric debuff aggregation (display-only) ──
   let creatureDebuffs: Record<string, CreatureDebuffEntry> | null = null;
   if (data.active_effects) {
@@ -325,6 +344,7 @@ export function interpretCombatTickResult(
     hasLootDrop,
     sessionEnded,
     aliveEngagedIds,
+    staleEngagedIds,
     ticksProcessed: data.ticks_processed,
     absorbRemaining,
     bossDeathCries,

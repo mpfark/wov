@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
         // Solo character is dead — clean up any lingering session so the client
         // stops polling and doesn't re-apply stale HP=0 after respawn.
         await db.from('combat_sessions').delete().eq('character_id', character_id);
-        return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+        return json({ events: [], creature_states: [], member_states: [], alive_creature_ids: [], session_ended: true, ticks_processed: 0 });
       }
       members = [{ id: character_id, c: char }];
       sessionKey = { character_id };
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
         await db.from('combat_sessions').delete().eq('id', existingSession.id);
         console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_members_at_node', session_id: existingSession.id }));
       }
-      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+      return json({ events: [], creature_states: [], member_states: [], alive_creature_ids: [], session_ended: true, ticks_processed: 0 });
     }
 
     let sessionJustCreated = false;
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
       // No session and nothing to start — return idle state
       const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
       const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
+      return json({ events: [], creature_states, member_states: [], alive_creature_ids: creature_states.map(cs => cs.id), ticks_processed: 0 });
     }
 
     // ── Seed the authoritative buff bag (Phase 5) ────────────────
@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
         db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, started_at, tick_rate_ms').eq('node_id', session.node_id),
       ]);
       const creature_states = (creaturesIdleRes.data || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
+      return json({ events: [], creature_states, member_states: [], alive_creature_ids: creature_states.map(cs => cs.id), ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
     // ── XP-grace pool: members who just left this node still get rewards ──
@@ -717,7 +717,7 @@ Deno.serve(async (req) => {
     if (creatures.length === 0) {
       await db.from('combat_sessions').delete().eq('id', session.id);
       const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
+      return json({ events: [], creature_states, member_states: [], alive_creature_ids: allCreatures.map(cr => cr.id), session_ended: true, ticks_processed: 0 });
     }
 
     // ── XP boost ─────────────────────────────────────────────────
@@ -3592,6 +3592,14 @@ Deno.serve(async (req) => {
     // Only include creatures whose HP actually changed this tick, or that we
     // killed. Echoing the snapshot HP for unchanged creatures caused the client
     // to override its (fresher) realtime HP with our older tick-start value.
+    // Authoritative alive roster at the combat node. The client uses this to
+    // release engagements against creatures that died off-screen (e.g. a DoT
+    // or Consecrate kill resolved by combat-catchup) and never showed up in
+    // this tick's kill list.
+    const alive_creature_ids = allCreatures
+      .filter(cr => !cKilled.has(cr.id) && (authoritativeCreatureHp?.[cr.id] ?? cHp[cr.id] ?? cr.hp) > 0)
+      .map(cr => cr.id);
+
     const creature_states = creatures
       .filter(cr => cHp[cr.id] !== cr.hp || cKilled.has(cr.id))
       .map(cr => ({
@@ -3833,6 +3841,7 @@ Deno.serve(async (req) => {
                 batch: {
                   events,
                   creature_states,
+                  alive_creature_ids,
                   member_states: memberStates,
                   cleared_dots: clearedDots,
                   consumed_buffs: consumedBuffsList,
@@ -3884,6 +3893,7 @@ Deno.serve(async (req) => {
 
     return json({
       events, creature_states, member_states: memberStates,
+      alive_creature_ids,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
       active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, started_at: e.started_at ?? null, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
