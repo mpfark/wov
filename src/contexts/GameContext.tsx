@@ -22,7 +22,7 @@ interface GameContextValue {
   deleteCharacter: (id: string) => Promise<void>;
   createCharacter: (data: any) => Promise<any>;
   updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
-  updateCharacterLocal: (updates: Partial<Character>) => void;
+  updateCharacterLocal: (updates: Partial<Character>, hold?: boolean) => void;
   clearCharacterFields: (updates: Partial<Character>) => void;
   selectCharacterAfterCreate: (id: string) => void;
 
