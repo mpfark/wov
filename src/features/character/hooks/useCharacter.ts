@@ -100,6 +100,15 @@ export function useCharacter(user: User | null) {
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
 
+  // Fields that are optimistic locally and NOT yet persisted. Unlike
+  // `pendingWritesRef` these are held indefinitely — until a real DB write for
+  // that field happens. Without this, a realtime echo arriving after the 3 s
+  // pending window (very common when a backgrounded tab reconnects its
+  // realtime socket) reverts local regen to the last persisted values, which
+  // is the visible "HP/MP drop on window switch, then regen back" symptom.
+  const heldFieldsRef = useRef<Map<string, Set<string>>>(new Map());
+
+
   const fetchCharactersRef = useRef(async () => {});
   fetchCharactersRef.current = async () => {
     if (!user) return;
