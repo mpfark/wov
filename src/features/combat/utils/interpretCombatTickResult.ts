@@ -299,6 +299,11 @@ export function interpretCombatTickResult(
     .filter(cs => cs.alive && currentEngagedIds.includes(cs.id))
     .map(cs => cs.id);
 
+  // ── Stale engagements (creature died off-screen / no longer at node) ──
+  const staleEngagedIds = Array.isArray(data.alive_creature_ids)
+    ? currentEngagedIds.filter(id => !data.alive_creature_ids!.includes(id))
+    : null;
+
   // ── Derived creature-centric debuff aggregation (display-only) ──
   let creatureDebuffs: Record<string, CreatureDebuffEntry> | null = null;
   if (data.active_effects) {
