@@ -3176,6 +3176,41 @@ Deno.serve(async (req) => {
     // ── Deterministic last_tick_at update ────────────────────────
     const newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
 
+    /**
+     * ── DB-authoritative kill reconciliation ────────────────────────────────
+     * Creature HP is persisted as a *delta* through `encounter_apply_damage`,
+     * which clamps against the row's live HP. If another writer (a second
+     * session on the node, offscreen DoT catch-up, a proc) lowered HP after we
+     * snapshotted the creature, our delta can drive the row to 0 — the DB marks
+     * the creature dead — while this tick's in-memory HP is still above 0. When
+     * that happened nobody ever ran the kill resolver, so the killing blow paid
+     * out no XP, Renown, salvage or loot (the "killed the boss, got nothing"
+     * bug, typically from a small trailing tick such as Consecrate's burn).
+     *
+     * The creature write therefore happens BEFORE rewards are prepared, and any
+     * creature the DB reports at 0 HP that we did not kill locally is run
+     * through the normal `handleCreatureKill` path so rewards, loot and log
+     * lines flow exactly as for a locally-resolved kill.
+     */
+    const authoritativeCreatureHp = await writeCreatureState(db, creatures, cHp, cKilled, {
+      sourceCharacterId: session.character_id,
+      sourceKind: 'autoattack',
+    });
+    for (const cr of creatures) {
+      if (authoritativeCreatureHp[cr.id] !== 0) continue;
+      if (cKilled.has(cr.id)) continue;
+      cHp[cr.id] = 0;
+      const fallbackKiller = members[0] ?? killRecipients[0];
+      handleCreatureKill(
+        cr,
+        fallbackKiller?.c?.name || 'DoT',
+        (fallbackKiller?.c?.cha || 10),
+        fallbackKiller?.id,
+      );
+    }
+
+
+
 
     // ── Report consumed one-shot buffs ──────────────────────────
     const consumedBuffsList: any[] = [];
@@ -3517,17 +3552,15 @@ Deno.serve(async (req) => {
       const newCount = (ch?.contracts_completed || 0) + 1;
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
-    const [authoritativeCreatureHp] = await Promise.all([
-      writeCreatureState(db, creatures, cHp, cKilled, {
-        sourceCharacterId: session.character_id,
-        sourceKind: 'autoattack',
-      }),
+    // Creature HP/kills were already persisted above (kill reconciliation).
+    await Promise.all([
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
       ...degradePromises,
       ...contractPromises,
     ]);
+
 
 
     // ── PHASE B: Order-dependent writes (sequential) ────────────
