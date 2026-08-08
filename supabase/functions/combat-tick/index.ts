@@ -3552,17 +3552,15 @@ Deno.serve(async (req) => {
       const newCount = (ch?.contracts_completed || 0) + 1;
       return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
     });
-    const [authoritativeCreatureHp] = await Promise.all([
-      writeCreatureState(db, creatures, cHp, cKilled, {
-        sourceCharacterId: session.character_id,
-        sourceKind: 'autoattack',
-      }),
+    // Creature HP/kills were already persisted above (kill reconciliation).
+    await Promise.all([
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
       ...materialAddPromises,
       ...degradePromises,
       ...contractPromises,
     ]);
+
 
 
     // ── PHASE B: Order-dependent writes (sequential) ────────────
