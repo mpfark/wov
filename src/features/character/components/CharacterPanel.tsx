@@ -10,7 +10,7 @@ import { getClassCritRange } from '@/shared/formulas/classes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Trash2, Heart, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpDown, Heart, Package, Pin, PinOff, Shield, Trash2 } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
@@ -438,7 +438,8 @@ export default function CharacterPanel({
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 gap-group rounded surface-row p-2">
                 <div className="t-label flex items-center gap-1">
-Material Pouch
+                  <Package className="w-3 h-3 shrink-0" aria-hidden />
+                  Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
                 <GemPouch owned={ownedGems} showEmpty={false} />

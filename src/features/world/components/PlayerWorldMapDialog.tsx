@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
+import { Locate, Zap, ZoomIn, ZoomOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { primeVisitedNodes } from '@/features/world/utils/visitedNodesCache';
 import { GameNode, Region, Area } from '@/features/world';
@@ -720,7 +720,8 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                     }`}
                   >
-{cpCost} CP
+                    <Zap className="w-3 h-3 inline-block mr-1 -mt-0.5" aria-hidden />
+                    {cpCost} CP
                   </button>
                 </div>
               </div>
