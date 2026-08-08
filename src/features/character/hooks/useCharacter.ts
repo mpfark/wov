@@ -284,6 +284,13 @@ export function useCharacter(user: User | null) {
     fields.forEach(f => pending.add(f));
     pendingWritesRef.current.set(charId, pending);
 
+    // This write persists these fields, so they are no longer "unpersisted".
+    const held = heldFieldsRef.current.get(charId);
+    if (held) {
+      fields.forEach(f => held.delete(f));
+      if (held.size === 0) heldFieldsRef.current.delete(charId);
+    }
+
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
     // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
@@ -313,8 +320,11 @@ export function useCharacter(user: User | null) {
   };
 
   /** Update character state locally only — no DB write.
-   *  Used by combat tick processing where the server already persisted the values. */
-  const updateCharacterLocal = useCallback((updates: Partial<Character>) => {
+   *  Used by combat tick processing where the server already persisted the values.
+   *  Pass `hold: true` when the value is optimistic and NOT yet persisted (e.g.
+   *  throttled regen): the field is then protected from realtime echoes until a
+   *  real DB write for it happens, instead of only for 3 s. */
+  const updateCharacterLocal = useCallback((updates: Partial<Character>, hold = false) => {
     if (!selectedCharacterId) return;
     const charId = selectedCharacterId;
     const fields = Object.keys(updates);
@@ -323,6 +333,12 @@ export function useCharacter(user: User | null) {
     const pending = pendingWritesRef.current.get(charId) || new Set<string>();
     fields.forEach(f => pending.add(f));
     pendingWritesRef.current.set(charId, pending);
+
+    if (hold) {
+      const heldSet = heldFieldsRef.current.get(charId) || new Set<string>();
+      fields.forEach(f => heldSet.add(f));
+      heldFieldsRef.current.set(charId, heldSet);
+    }
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
@@ -335,6 +351,7 @@ export function useCharacter(user: User | null) {
       }
     }, 3000);
   }, [selectedCharacterId]);
+
 
   /** Force-clear fields locally AND drop their pending-write masks so the next
    *  realtime echo from the server (which is authoritative) is accepted instead
