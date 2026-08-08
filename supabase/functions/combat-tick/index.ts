@@ -2800,6 +2800,8 @@ Deno.serve(async (req) => {
       // Default cast settings, used when a boss has no boss_cast config.
       const DEFAULT_BOSS_CAST_COOLDOWN_MS = 20000;
       const DEFAULT_BOSS_CAST_MS = 4000;
+      /** How late a cast may resolve before it is treated as un-witnessed. */
+      const CAST_RESOLVE_GRACE_MS = 2 * TICK_RATE;
       const DEFAULT_BOSS_CAST_START_CHANCE = 0.30;
 
       // Fetch node-scoped casts: active OR recently resolved (for cooldown check).
