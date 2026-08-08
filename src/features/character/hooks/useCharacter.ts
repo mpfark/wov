@@ -188,16 +188,22 @@ export function useCharacter(user: User | null) {
         } else {
           const incoming = payload.new as Character;
           const pendingFields = pendingWritesRef.current.get(incoming.id);
+          const heldFields = heldFieldsRef.current.get(incoming.id);
           setCharacters(prev => prev.map(c => {
             if (c.id !== incoming.id) return c;
-            if (!pendingFields || pendingFields.size === 0) return incoming;
-            // Merge: use local optimistic value for pending fields, server value for rest
+            const keep = new Set<string>([
+              ...(pendingFields ? Array.from(pendingFields) : []),
+              ...(heldFields ? Array.from(heldFields) : []),
+            ]);
+            if (keep.size === 0) return incoming;
+            // Merge: use local optimistic value for pending/held fields, server value for rest
             const merged = { ...incoming };
-            for (const field of pendingFields) {
+            for (const field of keep) {
               (merged as any)[field] = (c as any)[field];
             }
             return merged;
           }));
+
         }
       })
       .subscribe();
