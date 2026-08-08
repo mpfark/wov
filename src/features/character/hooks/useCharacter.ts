@@ -367,6 +367,12 @@ export function useCharacter(user: User | null) {
       fields.forEach(f => current.delete(f));
       if (current.size === 0) pendingWritesRef.current.delete(charId);
     }
+    const heldSet = heldFieldsRef.current.get(charId);
+    if (heldSet) {
+      fields.forEach(f => heldSet.delete(f));
+      if (heldSet.size === 0) heldFieldsRef.current.delete(charId);
+    }
+
   }, [selectedCharacterId]);
 
 
