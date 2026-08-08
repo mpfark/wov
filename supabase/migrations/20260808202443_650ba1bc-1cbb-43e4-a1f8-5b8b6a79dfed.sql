@@ -1,0 +1,1 @@
+UPDATE public.xp_boost SET multiplier = 1, expires_at = NULL, activated_by = NULL WHERE multiplier IS NOT NULL;
