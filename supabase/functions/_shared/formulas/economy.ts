@@ -42,7 +42,8 @@ export function getBagWeight(bagItems: { item: { item_type: string } }[]): numbe
 export function getMoveCost(bagWeight: number, str: number): number {
   const capacity = getCarryCapacity(str);
   const itemsOver = Math.max(0, bagWeight - capacity);
-  return 10 + itemsOver * 5;
+  // Movement cost halved: base 5 MP, +3 MP per weight unit over capacity.
+  return 5 + itemsOver * 3;
 }
 
 // ── Teleport CP cost (shared between teleport & summon) ─────────
