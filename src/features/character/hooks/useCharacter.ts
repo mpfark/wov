@@ -155,6 +155,8 @@ export function useCharacter(user: User | null) {
       // Reassign instead of .clear() to be robust against HMR-preserved refs
       // that may have been initialized as a non-Map in a prior code version.
       pendingWritesRef.current = new Map();
+      heldFieldsRef.current = new Map();
+
       setLoading(false);
       return;
     }
