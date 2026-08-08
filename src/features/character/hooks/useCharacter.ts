@@ -123,11 +123,18 @@ export function useCharacter(user: User | null) {
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
       // write could hide the post-login authoritative HP/CP/MP for several seconds.)
       const fetchedIds = new Set((data as Character[]).map(c => c.id));
-      for (const id of fetchedIds) pendingWritesRef.current.delete(id);
+      for (const id of fetchedIds) {
+        pendingWritesRef.current.delete(id);
+        heldFieldsRef.current.delete(id);
+      }
       // Drop entries for characters that no longer belong to this user.
       for (const id of Array.from(pendingWritesRef.current.keys())) {
         if (!fetchedIds.has(id)) pendingWritesRef.current.delete(id);
       }
+      for (const id of Array.from(heldFieldsRef.current.keys())) {
+        if (!fetchedIds.has(id)) heldFieldsRef.current.delete(id);
+      }
+
       setCharacters(data as Character[]);
     }
     setLoading(false);
