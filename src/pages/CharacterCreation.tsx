@@ -8,7 +8,9 @@ import { Dices, Loader2 } from 'lucide-react';
 import {
   RACE_LABELS, RACE_DESCRIPTIONS, STAT_LABELS, RACE_STATS,
   calculateStats, calculateAC, getMaxCp, getMaxHp,
+  getSelectableRaceKeys,
 } from '@/lib/game-data';
+import { useRaceRegistry } from '@/hooks/useRaceRegistry';
 
 interface Props {
   onCreateCharacter: (data: any) => Promise<any>;
@@ -20,6 +22,8 @@ interface Props {
 const STARTING_CLASS = 'classless';
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
+  // Re-render once the configurable race rows land so admin-added races appear.
+  useRaceRegistry();
   const [name, setName] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [familyStatus, setFamilyStatus] = useState<{
@@ -240,7 +244,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
           <div className="space-y-2">
             <h2 className="font-display text-lg text-primary text-glow">Race</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {Object.entries(RACE_LABELS).map(([key, label]) => (
+              {getSelectableRaceKeys().map(key => (
                 <button
                   key={key}
                   type="button"
@@ -252,7 +256,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                     race === key ? 'border-primary bg-primary/10' : 'border-border bg-card'
                   }`}
                 >
-                  <div className="font-display text-sm text-foreground">{label}</div>
+                  <div className="font-display text-sm text-foreground">{RACE_LABELS[key]}</div>
                   <div className="text-xs text-muted-foreground mt-1 leading-snug">{RACE_DESCRIPTIONS[key]}</div>
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {Object.entries(RACE_STATS[key] || {}).filter(([, v]) => v !== 0).map(([stat, val]) => (

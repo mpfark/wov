@@ -804,7 +804,7 @@ export type Database = {
           portrait_generated_at: string | null
           portrait_metadata: Json
           portrait_url: string
-          race: Database["public"]["Enums"]["character_race"]
+          race: string
           reserved_buffs: Json
           respec_points: number
           rp_total_earned: number
@@ -859,7 +859,7 @@ export type Database = {
           portrait_generated_at?: string | null
           portrait_metadata?: Json
           portrait_url?: string
-          race: Database["public"]["Enums"]["character_race"]
+          race: string
           reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
@@ -914,7 +914,7 @@ export type Database = {
           portrait_generated_at?: string | null
           portrait_metadata?: Json
           portrait_url?: string
-          race?: Database["public"]["Enums"]["character_race"]
+          race?: string
           reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
@@ -952,6 +952,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "families"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "characters_race_fkey"
+            columns: ["race"]
+            isOneToOne: false
+            referencedRelation: "races"
+            referencedColumns: ["race_key"]
           },
         ]
       }
@@ -2624,6 +2631,63 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      races: {
+        Row: {
+          admin_notes: string | null
+          cha: number
+          con: number
+          created_at: string
+          description: string
+          dex: number
+          int: number
+          is_selectable: boolean
+          label: string
+          portrait_notes: string
+          race_key: string
+          sort_order: number
+          status: string
+          str: number
+          updated_at: string
+          wis: number
+        }
+        Insert: {
+          admin_notes?: string | null
+          cha?: number
+          con?: number
+          created_at?: string
+          description?: string
+          dex?: number
+          int?: number
+          is_selectable?: boolean
+          label: string
+          portrait_notes?: string
+          race_key: string
+          sort_order?: number
+          status?: string
+          str?: number
+          updated_at?: string
+          wis?: number
+        }
+        Update: {
+          admin_notes?: string | null
+          cha?: number
+          con?: number
+          created_at?: string
+          description?: string
+          dex?: number
+          int?: number
+          is_selectable?: boolean
+          label?: string
+          portrait_notes?: string
+          race_key?: string
+          sort_order?: number
+          status?: string
+          str?: number
+          updated_at?: string
+          wis?: number
         }
         Relationships: []
       }

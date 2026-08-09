@@ -9,7 +9,7 @@ import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/users/UserManager';
-import RaceClassManager from '@/components/admin/RaceClassManager';
+import RaceManager from '@/components/admin/RaceManager';
 import AbilityConfigManager from '@/components/admin/AbilityConfigManager';
 import ClassConfigManager from '@/components/admin/ClassConfigManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
@@ -406,8 +406,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
       }
 
 
-      case 'races-classes':
-        return <RaceClassManager />;
+      case 'races':
+        return <RaceManager />;
       case 'abilities':
         return <AbilityConfigManager />;
       case 'class-config':

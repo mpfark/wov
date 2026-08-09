@@ -12,7 +12,7 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const RACE_LABELS: Record<string, string> = {
   human: "Human", elf: "Elf", dwarf: "Dwarf", halfling: "Halfling",
-  orc: "Orc", tiefling: "Tiefling", gnome: "Gnome", "half-elf": "Half-Elf",
+  edain: "Edain", half_elf: "Half-Elf",
 };
 const CLASS_LABELS: Record<string, string> = {
   warrior: "Warrior", wizard: "Wizard", ranger: "Ranger", assassin: "Assassin",
@@ -129,7 +129,15 @@ serve(async (req) => {
       ? equipped.map((g) => `${g.name} (${g.slot.replace("_", " ")})`).join(", ")
       : "simple traveler's clothing";
 
-    const race = RACE_LABELS[character.race] ?? character.race;
+    // Races are admin-configurable, so the label and any art-direction notes
+    // come from the `races` table; the map above is a fallback only.
+    const { data: raceRow } = await supabase
+      .from("races")
+      .select("label, portrait_notes")
+      .eq("race_key", character.race)
+      .maybeSingle();
+    const race = raceRow?.label ?? RACE_LABELS[character.race] ?? character.race;
+    const raceNotes = (raceRow?.portrait_notes ?? "").trim();
     const klass = CLASS_LABELS[character.class] ?? character.class;
     const gender = (character as any).gender ?? "male";
     const desc = description.trim() || "no specific notes";
@@ -137,6 +145,7 @@ serve(async (req) => {
     const prompt = [
       `A single hero-shot full-body portrait of a ${gender} ${race} ${klass} named "${character.name}".`,
       `Appearance: ${desc}.`,
+      ...(raceNotes ? [`Race traits: ${raceNotes}.`] : []),
       `Build: ${HEIGHT_LABEL[height]}, ${BODY_LABEL[body_type]}.`,
       `Equipped gear: ${gearLine}.`,
       `Style: ${STYLE}.`,

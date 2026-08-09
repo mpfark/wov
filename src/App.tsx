@@ -10,6 +10,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAbilityRegistry } from '@/hooks/useAbilityRegistry';
 import { useClassRegistry } from "@/hooks/useClassRegistry";
+import { useRaceRegistry } from "@/hooks/useRaceRegistry";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,8 @@ const LoadingFallback = () => (
 const App = () => {
   // Load configurable class rows into the shared class registry.
   useClassRegistry();
+  // Load configurable race rows into the shared race registry.
+  useRaceRegistry();
   // Load configurable ability rows into the shared ability registry.
   useAbilityRegistry();
   return (
