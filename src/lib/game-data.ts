@@ -11,6 +11,8 @@
  *   import { getMaxHp } from '@/shared/formulas/resources';
  */
 
+import { RACE_STATS } from '@/shared/formulas/races';
+
 // ── Barrel re-export of canonical formulas ──────────────────────
 export * from '@/shared/formulas/stats';
 export * from '@/shared/formulas/races';
