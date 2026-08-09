@@ -22,17 +22,9 @@ export * from '@/shared/formulas/items';
 export * from '@/shared/formulas/creatures';
 export * from '@/shared/formulas/economy';
 
-// ── Static data: races / classes ────────────────────────────────
-
-/** D&D-style stat modifiers by race */
-export const RACE_STATS: Record<string, Record<string, number>> = {
-  human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-  elf:      { str: -1, dex: 2, con: -1, int: 2, wis: 3, cha: 0 },
-  dwarf:    { str: 2, dex: -1, con: 4, int: 0, wis: 1, cha: -2 },
-  halfling: { str: -2, dex: 3, con: 1, int: 0, wis: 1, cha: 2 },
-  edain:    { str: 1, dex: 0, con: 3, int: 1, wis: 1, cha: 1 },
-  half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 2, cha: 3 },
-};
+// ── Static data: classes ────────────────────────────────────────
+// Race labels / descriptions / stat modifiers are owned by
+// `@/shared/formulas/races` (DB-configurable) and re-exported above.
 
 /** Base stats by class */
 export const CLASS_STATS: Record<string, Record<string, number>> = {
@@ -46,19 +38,6 @@ export const CLASS_STATS: Record<string, Record<string, number>> = {
   classless: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
 };
 
-export const RACE_LABELS: Record<string, string> = {
-  human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling',
-  edain: 'Edain', half_elf: 'Half-Elf',
-};
-
-export const RACE_DESCRIPTIONS: Record<string, string> = {
-  human: 'Versatile and balanced — a small bonus to every stat makes Men adaptable to any class.',
-  elf: 'Keen-eyed and wise. High DEX sharpens accuracy, AC and crit range; high WIS deepens the CP pool and resists incoming crits.',
-  dwarf: 'Stout and unshakeable. Towering CON gives the largest HP pool in the world, and STR fuels heavy weapons and shield blocks.',
-  halfling: 'Quick, lucky and likeable. Top-tier DEX for hits and dodging blows, with CHA boosting gold and vendor prices.',
-  edain: 'Long-lived nobles of the Old Kingdom. Strong CON for survivability with balanced bonuses across the board.',
-  half_elf: 'Diplomats and wanderers. WIS fortifies your CP pool and crit defence while CHA earns better gold and trade rates.',
-};
 
 export const CLASS_DESCRIPTIONS: Record<string, string> = {
   warrior: 'Heaviest HP and AC in the realm. STR & DEX gains every 3 levels drive autoattack damage, accuracy and shield blocks — the most forgiving path to level 42.',
