@@ -10,6 +10,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAbilityRegistry } from '@/hooks/useAbilityRegistry';
 import { useClassRegistry } from "@/hooks/useClassRegistry";
+import { useRaceRegistry } from "@/hooks/useRaceRegistry";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
