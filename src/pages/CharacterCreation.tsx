@@ -22,6 +22,8 @@ interface Props {
 const STARTING_CLASS = 'classless';
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
+  // Re-render once the configurable race rows land so admin-added races appear.
+  useRaceRegistry();
   const [name, setName] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [familyStatus, setFamilyStatus] = useState<{
