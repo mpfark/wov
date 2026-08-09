@@ -32,6 +32,8 @@ const LoadingFallback = () => (
 const App = () => {
   // Load configurable class rows into the shared class registry.
   useClassRegistry();
+  // Load configurable race rows into the shared race registry.
+  useRaceRegistry();
   // Load configurable ability rows into the shared ability registry.
   useAbilityRegistry();
   return (
