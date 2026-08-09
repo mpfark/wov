@@ -13,6 +13,7 @@
 
 // ── Barrel re-export of canonical formulas ──────────────────────
 export * from '@/shared/formulas/stats';
+export * from '@/shared/formulas/races';
 export * from '@/shared/formulas/classes';
 export * from '@/shared/formulas/resources';
 export * from '@/shared/formulas/combat';
