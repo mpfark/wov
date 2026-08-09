@@ -6,11 +6,7 @@ import { Users } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { OnlinePlayer } from '@/hooks/useGlobalPresence';
 import { formatCharacterName } from '@/lib/character-name';
-import { getCharacterTitle } from '@/lib/game-data';
-
-const RACE_LABELS: Record<string, string> = {
-  human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling', edain: 'Edain', half_elf: 'Half-Elf',
-};
+import { getCharacterTitle, RACE_LABELS } from '@/lib/game-data';
 const CLASS_LABELS: Record<string, string> = {
   warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger', assassin: 'Assassin', healer: 'Healer', bard: 'Bard',
 };
