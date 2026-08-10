@@ -11,6 +11,7 @@ import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/users/UserManager';
 import RaceManager from '@/components/admin/RaceManager';
 import AbilityConfigManager from '@/components/admin/AbilityConfigManager';
+import StatusManager from '@/components/admin/StatusManager';
 import ClassConfigManager from '@/components/admin/ClassConfigManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
