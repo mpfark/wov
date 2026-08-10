@@ -28,6 +28,7 @@ import {
   BookText,
   Store,
   Wrench,
+  Flame,
 } from 'lucide-react';
 
 
