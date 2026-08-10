@@ -88,10 +88,10 @@ export default function ClassAbilityCreateDialog({ open, onOpenChange, base, onC
       // Seed the base-owned numbers so the draft is publishable as authored.
       // The publish guard requires whatever the mechanic requires; the base is
       // the canonical source of those calcs, and the class may retune them.
-      amount_calc: base.amount_calc ?? null,
-      duration_calc: base.duration_calc ?? null,
+      amount_calc: (base.amount_calc ?? null) as unknown as never,
+      duration_calc: (base.duration_calc ?? null) as unknown as never,
       interval_ms: base.interval_ms ?? null,
-      mechanic_calcs: base.mechanic_calcs ?? {},
+      mechanic_calcs: (base.mechanic_calcs ?? {}) as unknown as never,
       effect_config: {},
       combat_text: {},
       status: 'draft',
