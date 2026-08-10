@@ -28,6 +28,7 @@ import {
   BookText,
   Store,
   Wrench,
+  Flame,
 } from 'lucide-react';
 
 
@@ -66,6 +67,7 @@ const NAV_GROUPS = [
       { key: 'races', label: 'Races', icon: Dna },
       { key: 'class-config', label: 'Class Config', icon: Dna },
       { key: 'abilities', label: 'Abilities', icon: Zap },
+      { key: 'statuses', label: 'Statuses', icon: Flame },
       { key: 'xp-boost', label: 'XP Boost', icon: Zap },
     ],
   },
