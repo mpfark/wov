@@ -410,6 +410,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <RaceManager />;
       case 'abilities':
         return <AbilityConfigManager />;
+      case 'statuses':
+        return <StatusManager />;
       case 'class-config':
         return <ClassConfigManager />;
       case 'xp-boost':
