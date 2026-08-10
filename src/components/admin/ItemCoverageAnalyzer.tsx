@@ -51,6 +51,9 @@ const LEVEL_BANDS: LevelBand[] = [
   { key: 'b7', label: '31-35', min: 31, max: 35, importance: 2 },
   { key: 'b8', label: '36-40', min: 36, max: 40, importance: 2.2 },
   { key: 'b9', label: '41-42', min: 41, max: 42, importance: 2.5 },
+  { key: 'b10', label: '43-47', min: 43, max: 47, importance: 2.6 },
+  { key: 'b11', label: '48-51', min: 48, max: 51, importance: 2.7 },
+  { key: 'b12', label: '52-55', min: 52, max: 55, importance: 2.8 },
 ];
 
 function bandFor(level: number | null): LevelBand | null {
