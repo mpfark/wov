@@ -15,6 +15,8 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { GuideButton } from '@/features/guide/components/GuideButton';
+
 
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import WimpControl from '@/features/world/components/WimpControl';
@@ -86,6 +88,11 @@ interface Props {
   onOpenJewelcrafter?: () => void;
   onOpenStonebinder?: () => void;
   onOpenTeleport?: () => void;
+  /** Opens the Wayfarer's Guide (informational only). */
+  onOpenGuide?: () => void;
+  /** Attention dot on the Guide button until Getting Started is read. */
+  guideNeedsAttention?: boolean;
+
   onOpenTrainer?: () => void;
   onOpenMarketplace?: () => void;
   onMapTeleport?: (nodeId: string, cpCost: number) => void;
@@ -122,7 +129,7 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
-  onSearch, onOpenVendor, onOpenBlacksmith, onOpenJewelcrafter, onOpenStonebinder, onOpenTeleport, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
+  onSearch, onOpenVendor, onOpenBlacksmith, onOpenJewelcrafter, onOpenStonebinder, onOpenTeleport, onOpenGuide, guideNeedsAttention, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
   unlockedConnections, onMapTeleport,
   onlinePlayers: summonOnlinePlayers, addLogEvent: summonAddLogEvent, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
@@ -223,7 +230,12 @@ export default function MapPanel({
       <div>
         <TooltipProvider delayDuration={200}>
           <div className="flex items-center gap-1 mb-1.5">
+            {/* Wayfarer's Guide */}
+            {onOpenGuide && (
+              <GuideButton onClick={onOpenGuide} needsAttention={!!guideNeedsAttention} />
+            )}
             {/* Keyboard shortcuts popover */}
+
             {keyboardBindings && (
               <Popover>
                 <Tooltip>

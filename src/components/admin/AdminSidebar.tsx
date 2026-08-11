@@ -85,6 +85,8 @@ const NAV_GROUPS = [
     items: [
       { key: 'rulebook', label: 'Rulebook', icon: BookOpen },
       { key: 'manual', label: 'Manual', icon: BookText },
+      { key: 'guide', label: "Wayfarer's Guide", icon: BookOpen },
+
     ],
   },
 ];

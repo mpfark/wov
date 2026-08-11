@@ -600,6 +600,39 @@ export type Database = {
           },
         ]
       }
+      character_guide_reads: {
+        Row: {
+          character_id: string
+          entry_id: string
+          read_at: string
+        }
+        Insert: {
+          character_id: string
+          entry_id: string
+          read_at?: string
+        }
+        Update: {
+          character_id?: string
+          entry_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_guide_reads_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_guide_reads_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "guide_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_inventory: {
         Row: {
           applied_gems: Json
@@ -1934,6 +1967,86 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_published: boolean
+          key: string
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          key: string
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          key?: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      guide_entries: {
+        Row: {
+          body: string
+          category_id: string
+          created_at: string
+          id: string
+          is_published: boolean
+          slug: string
+          sort_order: number
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          category_id: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          slug: string
+          sort_order?: number
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          slug?: string
+          sort_order?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "guide_categories"
             referencedColumns: ["id"]
           },
         ]

@@ -20,6 +20,7 @@ import ToolsPanel from '@/components/admin/ToolsPanel';
 
 
 import GameManual from '@/components/admin/GameManual';
+import GuideManager from '@/components/admin/GuideManager';
 
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
@@ -433,6 +434,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <WorldBuilderRulebook />;
       case 'manual':
         return <GameManual />;
+      case 'guide':
+        return <GuideManager />;
       default:
         return <AdminDashboard onNavigate={setActiveTab} />;
     }

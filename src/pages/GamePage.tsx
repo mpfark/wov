@@ -75,6 +75,9 @@ import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
 import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
+import { useGuide } from '@/features/guide/hooks/useGuide';
+import { GuideReader } from '@/features/guide/components/GuideReader';
+
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
 
@@ -107,6 +110,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [isMobile, setIsMobile] = useState(false);
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
+
+  // Wayfarer's Guide — informational reader; never mutates game state.
+  const [guideOpen, setGuideOpen] = useState(false);
+  const guide = useGuide(character?.id);
+  const openGuide = useCallback(() => {
+    // Mobile: close the map sheet first so overlays never nest.
+    setMapPanelOpen(false);
+    setGuideOpen(true);
+  }, []);
+
   const [isWideScreen, setIsWideScreen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(() => {
     const stored = localStorage.getItem('chatPanelOpen');
@@ -1242,6 +1255,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onOpenAdmin,
     onSwitchCharacter,
     onSignOut,
+    onOpenGuide: openGuide,
+    guideNeedsAttention: guide.needsAttention,
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
@@ -1249,7 +1264,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLogEvent, setTeleportOpen,
     creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
-    getNode, getRegion, currentRegion,
+    getNode, getRegion, currentRegion, openGuide, guide.needsAttention,
+
     xpMultiplier, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
   ]);
 
@@ -1712,6 +1728,26 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           body="Open this panel to see and customize movement (QWE/ASD/ZXC), attack, abilities, and more."
         />
       )}
+
+      {/* The Wayfarer's Guide — reader overlay */}
+      <GuideReader
+        open={guideOpen}
+        onOpenChange={setGuideOpen}
+        characterId={character?.id}
+        isMobile={isMobile}
+      />
+
+      {/* First-time hint pointing at the Guide button — dismissed per character */}
+      {character && guide.needsAttention && !guideOpen && (
+        <OnboardingCoachmark
+          targetId="guide-button"
+          scopeId={character.id}
+          title="The Wayfarer's Guide"
+          body="New here? Open the Guide and read Your First Steps. It explains where to go and what to do first."
+          delayMs={2000}
+        />
+      )}
     </div>
+
   );
 }
