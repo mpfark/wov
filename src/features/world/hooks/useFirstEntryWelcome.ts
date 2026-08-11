@@ -27,8 +27,11 @@ const FIRST_LINES = [
   "Clang... clang... clang...",
   "Ah, of course.",
   "You were on your way to see the blacksmith.",
+  "Tucked in with the salvage is a battered little book: The Wayfarer's Guide. Its cover insists, in worn gilt letters, DON'T WANDER UNPREPARED.",
+  "Open the Guide from the map toolbar and read Your First Steps before you go anywhere ambitious.",
   "What happens next is up to you.",
 ];
+
 
 const STAGGER_MS = 900;
 const key = (cid: string) => `entry.first-welcome.${cid}.v1`;

@@ -17,20 +17,32 @@ interface Props {
   delayMs?: number;
   /** Optional: only show once this is true (e.g. character loaded). */
   enabled?: boolean;
+  /**
+   * Optional dismissal scope (e.g. a character id). When set, the hint is
+   * dismissed per scope instead of globally per browser.
+   */
+  scopeId?: string;
 }
 
-const storageKey = (id: string) => `onboarding.${id}.dismissed.v1`;
+const storageKey = (id: string, scopeId?: string) =>
+  `onboarding.${id}${scopeId ? `.${scopeId}` : ''}.dismissed.v1`;
 
-export function OnboardingCoachmark({ targetId, title, body, delayMs = 1200, enabled = true }: Props) {
+export function OnboardingCoachmark({ targetId, title, body, delayMs = 1200, enabled = true, scopeId }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem(storageKey(targetId)) === '1'; } catch { return true; }
+    try { return localStorage.getItem(storageKey(targetId, scopeId)) === '1'; } catch { return true; }
   });
+
+  // Re-evaluate dismissal when the scope changes (e.g. switching character).
+  useEffect(() => {
+    try { setDismissed(localStorage.getItem(storageKey(targetId, scopeId)) === '1'); } catch { setDismissed(true); }
+  }, [targetId, scopeId]);
 
   const dismiss = useCallback(() => {
     setDismissed(true);
-    try { localStorage.setItem(storageKey(targetId), '1'); } catch { /* ignore */ }
-  }, [targetId]);
+    try { localStorage.setItem(storageKey(targetId, scopeId), '1'); } catch { /* ignore */ }
+  }, [targetId, scopeId]);
+
 
   // Locate the target element (poll briefly, then watch on resize/scroll).
   useEffect(() => {
