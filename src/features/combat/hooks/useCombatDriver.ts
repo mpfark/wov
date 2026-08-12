@@ -256,6 +256,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const driver = solo || p.isLeader;
       if (driver) {
         if (inCombatRef.current) {
+          tickCauseRef.current = 'visibility';
           try { doTickRef.current(); } catch { /* noop */ }
         }
         return;
@@ -751,7 +752,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const wake = setInterval(() => {
       if (!inCombatRef.current) return;
       const since = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-      if (since > FOLLOWER_WAKE_STALE_MS) doTickRef.current();
+      if (since > FOLLOWER_WAKE_STALE_MS) {
+        tickCauseRef.current = 'wakeup';
+        doTickRef.current();
+      }
     }, 2000);
     return () => { clearInterval(interval); clearInterval(wake); };
   }, [params.party, params.isLeader]);
