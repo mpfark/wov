@@ -952,20 +952,27 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
         }
 
+        // B6: once the server reports `shared`, `combat_actions` is the sole
+        // intent source and the payload is discarded server-side. Stop sending
+        // it so there is exactly one authority. Locally collected casts still
+        // drive the wake condition above (they were already submitted durably).
+        const intentForServer =
+          tickOwnerRef.current === 'shared' ? [] : pendingAbilitiesForServer;
+
         const body = solo
           ? {
               character_id: p.character.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
-              pending_abilities: pendingAbilitiesForServer,
+              pending_abilities: intentForServer,
             }
           : {
               party_id: p.party!.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
-              pending_abilities: pendingAbilitiesForServer,
+              pending_abilities: intentForServer,
             };
 
         // Request-scoped stale response guard
