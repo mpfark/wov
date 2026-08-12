@@ -259,6 +259,19 @@ production.
   `REPLICA IDENTITY FULL`, and the table added to the `supabase_realtime` publication. The
   `(encounter_id, tick_number)` uniqueness the design asked for already existed as the primary
   key. No client subscribes yet, so behaviour is unchanged.
-- **B2 — next.** `commit_encounter_tick` already carries a `_payload jsonb` argument used only
-  for consumed action ids; the remaining work is moving creature/character/status/engagement/
-  reward writes into that one transaction.
+- **B2 — done (2026-08-12).** Every tail write of a tick (character patches, resource deltas,
+  materials, contracts, bonds, effect lifecycle, engagements, session advance/close, intent
+  retirement, result batch, encounter cursor) now lands inside one token-gated
+  `commit_encounter_tick` transaction, anchored to the real commit time (drift removed). A
+  refused claim/commit replays the identical writes via `applyTickStateFallback`.
+- **B4 — done (2026-08-13).** `combat-tick` now carries **both** intent paths and branches once
+  at entry on `resolveTickOwner` (`_shared/combat/tick-owner.ts`, reading
+  `public.combat_tick_owner()` with a `COMBAT_TICK_OWNER` env override, `legacy` on any failure).
+  In `legacy` the request payload is the intent source, unchanged. In `shared` the payload is
+  discarded and `loadDurableIntents` reads `combat_actions` (`status = 'pending'`, this node,
+  these participants, one slot per character ordered `client_seq, created_at`, respecting
+  `eligible_after_ms`). The response echoes `tick_owner` so B5/B6 clients can react. Latch is
+  still `legacy` in `combat_config`, so live behaviour is unchanged. `combat-catchup` has no
+  intent path and was redeployed unchanged alongside it.
+- **B5 — next.** Client subscription to `encounter_tick_batches` with ordered, idempotent
+  application and gap recovery.
