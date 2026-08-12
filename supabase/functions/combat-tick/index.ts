@@ -3307,9 +3307,7 @@ Deno.serve(async (req) => {
           // Soulbound materials that hint at the Soulforge in Kharak-Dum
           // and are consumed when the player forges their Crown / Soulforged item.
           if (newLevel === 40) {
-            materialAddPromises.push(
-              db.rpc('add_material', { _character_id: m.id, _key: 'soulmarked_ember', _delta: 1 })
-            );
+            tickState.materials.push({ character_id: m.id, key: 'soulmarked_ember', delta: 1 });
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
