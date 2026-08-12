@@ -1297,6 +1297,27 @@ export type Database = {
           },
         ]
       }
+      combat_config: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       combat_sessions: {
         Row: {
           character_id: string | null
@@ -1822,6 +1843,7 @@ export type Database = {
           tick_at: number
           tick_mode: string | null
           tick_number: number
+          tick_owner: string
           tick_state: string
           updated_at: string
           version: number
@@ -1847,6 +1869,7 @@ export type Database = {
           tick_at?: number
           tick_mode?: string | null
           tick_number?: number
+          tick_owner?: string
           tick_state?: string
           updated_at?: string
           version?: number
@@ -1872,6 +1895,7 @@ export type Database = {
           tick_at?: number
           tick_mode?: string | null
           tick_number?: number
+          tick_owner?: string
           tick_state?: string
           updated_at?: string
           version?: number
@@ -3241,6 +3265,7 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
+      combat_tick_owner: { Args: never; Returns: string }
       commit_encounter_tick: {
         Args: {
           _batch_id: string
