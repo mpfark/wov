@@ -3987,6 +3987,14 @@ Deno.serve(async (req) => {
       // response recover the identical result from `encounter_tick_batches`.
       encounter_tick: publishedTick,
       encounter_batch_id: publishedBatchId,
+      // Timing breakdown so the client can separate server resolution cost
+      // from network delivery and client-side presentation delay.
+      trace: {
+        tick_due_at: session.last_tick_at + TICK_RATE,
+        resolution_started_at: _requestT0,
+        committed_at: Date.now(),
+        server_resolve_ms: Date.now() - _requestT0,
+      },
     });
 
   } catch (err) {
