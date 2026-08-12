@@ -148,6 +148,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const tickSeqRef = useRef(0);
   // Monotonic per-session sequence for durable combat action submissions.
   const durableSeqRef = useRef(0);
+  /**
+   * Why the next tick request is being fired — instrumentation only.
+   * Consumed (and reset to 'cadence') by doTick.
+   */
+  const tickCauseRef = useRef<TickCause>('cadence');
+  /**
+   * Batch ids already applied locally. A driver can receive the same
+   * authoritative batch twice (own response + party broadcast); replaying it
+   * duplicates log lines and re-applies creature HP.
+   */
+  const appliedBatchIdsRef = useRef<Set<string>>(new Set());
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
