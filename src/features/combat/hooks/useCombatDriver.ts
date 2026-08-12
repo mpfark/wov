@@ -32,6 +32,10 @@ import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events
 import { useCombatLifecycle } from './useCombatLifecycle';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
 import { createLogEvent, mapServerEventType } from '@/features/combat/events/log-event';
+import {
+  traceAbilityPress, traceTickStart, traceTickResponse, traceTickApplied, traceBroadcastTick,
+  type TickCause,
+} from '@/features/combat/trace/combat-trace';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set([
