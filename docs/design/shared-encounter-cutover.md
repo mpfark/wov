@@ -273,5 +273,14 @@ production.
   `eligible_after_ms`). The response echoes `tick_owner` so B5/B6 clients can react. Latch is
   still `legacy` in `combat_config`, so live behaviour is unchanged. `combat-catchup` has no
   intent path and was redeployed unchanged alongside it.
-- **B5 — next.** Client subscription to `encounter_tick_batches` with ordered, idempotent
-  application and gap recovery.
+- **B5 — done (2026-08-13).** The client now follows the shared batch stream. `combat-tick`
+  echoes `encounter_id`; `useEncounterBatches` subscribes to `encounter_tick_batches` inserts for
+  that encounter and feeds them through `EncounterBatchSequencer`
+  (`src/features/combat/utils/encounter-batch.ts`), which applies batches strictly in
+  `tick_number` order, suppresses duplicates by `batch_id`/applied tick, buffers out-of-order
+  arrivals and reports gaps — recovered by fetching the missing tick range straight from the
+  table. HTTP responses and the party broadcast stay live as fast-path hints and are registered
+  via `markApplied`, so a tick delivered twice is applied once. Covered by
+  `src/test/combat/encounter-batch.test.ts`.
+- **B6 — next.** Client stops sending `pending_abilities` once the response reports
+  `tick_owner: 'shared'`.

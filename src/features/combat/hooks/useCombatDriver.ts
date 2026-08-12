@@ -28,6 +28,7 @@ import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 
 import { useCombatAggroEffects } from './useCombatAggroEffects';
+import { useEncounterBatches } from './useEncounterBatches';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
@@ -159,6 +160,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * duplicates log lines and re-applies creature HP.
    */
   const appliedBatchIdsRef = useRef<Set<string>>(new Set());
+  /**
+   * B5: the shared encounter whose `encounter_tick_batches` stream we follow.
+   * Learned from the tick response; the batch stream is the authoritative
+   * delivery path while the HTTP response / party broadcast stay fast hints.
+   */
+  const [encounterId, setEncounterId] = useState<string | null>(null);
+  const encounterIdRef = useRef<string | null>(null);
+  /** Set once useEncounterBatches is mounted (below); no-op before that. */
+  const markBatchAppliedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
@@ -221,6 +231,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
     appliedBatchIdsRef.current = new Set();
+    // B5: leaving combat ends our interest in this encounter's batch stream.
+    encounterIdRef.current = null;
+    setEncounterId(null);
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
     if (fizzling) {
@@ -382,6 +395,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number },
   ) => {
+    // B5: adopt the encounter this result belongs to so the shared batch
+    // stream can be subscribed to (and gap-recovered) for it.
+    const incomingEncounterId = data.encounter_id ?? null;
+    if (incomingEncounterId && incomingEncounterId !== encounterIdRef.current) {
+      encounterIdRef.current = incomingEncounterId;
+      setEncounterId(incomingEncounterId);
+    }
     // Duplicate-batch guard: the same authoritative batch can reach us twice
     // (our own response plus the leader broadcast, or a recovery replay).
     // Applying it twice duplicates log lines and re-applies HP.
@@ -400,6 +420,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
       }
     }
+    // Tell the batch sequencer this tick already landed on the fast path, so
+    // the realtime copy of the same tick is skipped rather than replayed.
+    markBatchAppliedRef.current(data.encounter_tick ?? null, batchId ?? null);
+
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
     //   1. Non-leader party member receiving a broadcast tick result.
@@ -679,6 +703,25 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       setEngagedCreatureIds(remainingEngaged);
     }
   }, [stopCombat, recentlyKilledRef]);
+
+  // ── B5: shared batch stream ────────────────────────────────────
+  // Every participant applies the same authoritative batches in tick order,
+  // exactly once. Missing ticks are fetched from `encounter_tick_batches`
+  // instead of being guessed at with a timer.
+  const { markApplied: markBatchApplied } = useEncounterBatches({
+    encounterId,
+    onBatch: (result, meta) => {
+      traceBroadcastTick(
+        lastTickRef.current ? Date.now() - lastTickRef.current : 0,
+        result.ticks_processed,
+        result.encounter_batch_id ?? null,
+      );
+      console.log('[combat] applying shared batch', { tick: meta.tickNumber, source: meta.source });
+      processTickResult(result);
+    },
+  });
+  useEffect(() => { markBatchAppliedRef.current = markBatchApplied; }, [markBatchApplied]);
+
 
   // ── Broadcast channel (party only) ─────────────────────────────
 
