@@ -3521,73 +3521,47 @@ Deno.serve(async (req) => {
     const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
 
-    // ── PHASE A: Independent writes (parallel) ──────────────────
-    const contractPromises = contractCompletions.map(cid => {
+    // Effect bookkeeping rides the commit: deletes (expired rows, dead targets,
+    // lapsed item buffs) run before the survivor upsert inside one transaction.
+    tickState.effects_delete_ids = expiredIds;
+    tickState.effects_delete_targets = [...killedCreatureIds];
+    tickState.item_buff_expire_before = now;
+    tickState.effects_upsert = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
+
+    // Assassin contract completions.
+    for (const cid of contractCompletions) {
       const ch = [...members, ...gracedExtras].find(mm => mm.id === cid)?.c;
-      const newCount = (ch?.contracts_completed || 0) + 1;
-      return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
-    });
-    // Creature HP/kills were already persisted above (kill reconciliation).
-    await Promise.all([
-      cleanupEffects(db, expiredIds, killedCreatureIds),
-      ...memberUpdatePromises,
-      ...materialAddPromises,
-      ...degradePromises,
-      ...contractPromises,
-    ]);
+      tickState.contracts.push({ character_id: cid, new_count: (ch?.contracts_completed || 0) + 1 });
+    }
 
-
-
-    // ── PHASE B: Order-dependent writes (sequential) ────────────
-    // Loot depends on killed creatures being persisted
-    const lootEvents = await processLootDrops(db, lootQueue);
-    events.push(...lootEvents);
-
-    // Apply gem drops via the unified materials helper (one add_material call
-    // per drop) into character_materials.
+    // Gem drops — collapsed to one material delta per (character, gem).
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {
         const k = `${gd.memberId}|${gd.gemKey}`;
         counts.set(k, (counts.get(k) || 0) + 1);
       }
-      const gemPromises: Promise<any>[] = [];
       for (const [k, n] of counts) {
         const [memberId, gemKey] = k.split('|');
-        gemPromises.push(
-          db.rpc('add_material', { _character_id: memberId, _key: gemKey, _delta: n })
-        );
+        tickState.materials.push({ character_id: memberId, key: gemKey, delta: n });
       }
-      await Promise.all(gemPromises);
     }
 
-    // Apply class-bond gains. The RPC reads the recipient's active class
-    // and is a no-op for classless characters. Failures are logged but
-    // never block the tick response.
-    if (bondGainQueue.length > 0) {
-      await Promise.all(bondGainQueue.map(bg =>
-        db.rpc('award_class_bond_for_kill', {
-          _character_id: bg.memberId,
-          _creature_level: bg.creatureLevel,
-          _is_boss: bg.isBoss,
-        }).then((r: any) => {
-          if (r?.error) console.error('award_class_bond_for_kill failed', r.error);
-        })
-      ));
+    // Class-bond gains (no-op for classless recipients, resolved server-side).
+    for (const bg of bondGainQueue) {
+      tickState.bond_kills.push({
+        character_id: bg.memberId,
+        creature_level: bg.creatureLevel,
+        is_boss: bg.isBoss,
+      });
     }
 
-    // Batch effect upsert after cleanup to avoid conflicts
-    if (liveEffects.length > 0) {
-      const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
-      await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
-    }
-
-    // Cleanup expired item_buff:* rows (own expiry path — combat-resolver
-    // skips them because target_id is a player, not a creature in cHp).
-    await db.from('active_effects')
-      .delete()
-      .like('effect_type', 'item_buff:%')
-      .lte('expires_at', now);
+    // ── Writes that stay outside the tick transaction ────────────
+    // Equipment durability touches inventory rows only, and loot must run
+    // after the creature kills already persisted during reconciliation.
+    await Promise.all(degradePromises);
+    const lootEvents = await processLootDrops(db, lootQueue);
+    events.push(...lootEvents);
 
 
     // ── Check if session should end ─────────────────────────────
