@@ -238,3 +238,27 @@ Cadence length, balance, formulas, XP/loot rates, boss cast semantics, catch-up 
 party follow, and log pacing. Stage C removals (payload abilities, leader-only resolution,
 `combat_sessions` ownership, dual delivery, instrumentation) happen only after 4 and 5 pass in
 production.
+
+---
+
+## 6. Cutover progress log
+
+- **B0 — done (2026-08-12).** Default abilities are stored explicitly and
+  `submit_combat_action` accepts any ability in the effective loadout (equipped row, class
+  default, or class key alias). No more 400 `ability not in loadout`; `combat_actions` now
+  receives rows.
+- **B1 — done (2026-08-12).** Ownership latch reintroduced:
+  `encounters.tick_owner text not null default 'legacy'` with a
+  `check (tick_owner in ('legacy','shared'))`, a `public.combat_config(key, value)` settings
+  table seeded with `tick_owner = 'legacy'` (read: authenticated, write: overlord), and
+  `public.combat_tick_owner()` returning the configured value with a `'legacy'` fallback.
+  No resolver reads it yet, so behaviour is unchanged.
+- **B3 — done (2026-08-12).** `encounter_tick_batches` is now reachable and streamable:
+  `GRANT SELECT` to `authenticated` (its participant read policy was previously unreachable
+  because the table had no grants at all), `GRANT ALL` to `service_role`,
+  `REPLICA IDENTITY FULL`, and the table added to the `supabase_realtime` publication. The
+  `(encounter_id, tick_number)` uniqueness the design asked for already existed as the primary
+  key. No client subscribes yet, so behaviour is unchanged.
+- **B2 — next.** `commit_encounter_tick` already carries a `_payload jsonb` argument used only
+  for consumed action ids; the remaining work is moving creature/character/status/engagement/
+  reward writes into that one transaction.
