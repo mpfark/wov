@@ -1029,9 +1029,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     } finally {
       tickBusyRef.current = false;
+      // Coalesce overlapping wake-ups. Previously ANY wake-up that arrived
+      // while a tick was in flight queued an immediate follow-up request, so a
+      // slow response produced a burst of back-to-back HTTP calls that all
+      // resolved (or got discarded as stale) at once. Only fire the follow-up
+      // when it can actually do work: a queued ability to dispatch, or enough
+      // elapsed time that the server has a new tick to resolve.
       if (tickPendingRef.current) {
         tickPendingRef.current = false;
-        setTimeout(() => doTickRef.current(), 0);
+        const sinceApplied = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
+        const hasWork = !!pendingAbilityRef.current || sinceApplied >= 1500;
+        if (hasWork) {
+          tickCauseRef.current = pendingAbilityRef.current ? 'ability' : 'followup';
+          setTimeout(() => doTickRef.current(), 0);
+        }
       }
     }
   }, [processTickResult, stopCombat]);
