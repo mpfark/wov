@@ -700,6 +700,25 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
   }, [stopCombat, recentlyKilledRef]);
 
+  // ── B5: shared batch stream ────────────────────────────────────
+  // Every participant applies the same authoritative batches in tick order,
+  // exactly once. Missing ticks are fetched from `encounter_tick_batches`
+  // instead of being guessed at with a timer.
+  const { markApplied: markBatchApplied } = useEncounterBatches({
+    encounterId,
+    onBatch: (result, meta) => {
+      traceBroadcastTick(
+        lastTickRef.current ? Date.now() - lastTickRef.current : 0,
+        result.ticks_processed,
+        result.encounter_batch_id ?? null,
+      );
+      console.log('[combat] applying shared batch', { tick: meta.tickNumber, source: meta.source });
+      processTickResult(result);
+    },
+  });
+  useEffect(() => { markBatchAppliedRef.current = markBatchApplied; }, [markBatchApplied]);
+
+
   // ── Broadcast channel (party only) ─────────────────────────────
 
   useEffect(() => {
