@@ -59,6 +59,20 @@ export interface CombatTickResponse {
   alive_creature_ids?: string[];
   ticks_processed?: number;
   buff_sync?: Record<string, { absorb_remaining: number }>;
+  /**
+   * Shared-encounter identity of the authoritative batch this response
+   * published. Used purely for client-side duplicate suppression (own response
+   * + party broadcast can both carry the same batch) and instrumentation.
+   */
+  encounter_tick?: number | null;
+  encounter_batch_id?: string | null;
+  /** Server-side timing breakdown (development instrumentation only). */
+  trace?: {
+    tick_due_at?: number;
+    resolution_started_at?: number;
+    committed_at?: number;
+    server_resolve_ms?: number;
+  };
 }
 
 /** Aggregated creature-centric debuff view for shared party display */
