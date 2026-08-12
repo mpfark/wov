@@ -30,9 +30,9 @@ import {
   resolveEffectTicks,
   processLootDrops,
   writeCreatureState,
-  cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
+import { createTickState, applyTickStateFallback } from "../_shared/combat/tick-commit.ts";
 import { renderFlavor } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
@@ -3222,8 +3222,9 @@ Deno.serve(async (req) => {
 
     // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
-    const memberUpdatePromises: PromiseLike<any>[] = [];
-    const materialAddPromises: PromiseLike<any>[] = [];
+    // B2: every tail write is accumulated here and applied inside the single
+    // `commit_encounter_tick` transaction (see _shared/combat/tick-commit.ts).
+    const tickState = createTickState();
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
@@ -3306,9 +3307,7 @@ Deno.serve(async (req) => {
           // Soulbound materials that hint at the Soulforge in Kharak-Dum
           // and are consumed when the player forges their Crown / Soulforged item.
           if (newLevel === 40) {
-            materialAddPromises.push(
-              db.rpc('add_material', { _character_id: m.id, _key: 'soulmarked_ember', _delta: 1 })
-            );
+            tickState.materials.push({ character_id: m.id, key: 'soulmarked_ember', delta: 1 });
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
@@ -3316,9 +3315,7 @@ Deno.serve(async (req) => {
             });
           }
           if (newLevel === 42) {
-            materialAddPromises.push(
-              db.rpc('add_material', { _character_id: m.id, _key: 'corebound_fragment', _delta: 1 })
-            );
+            tickState.materials.push({ character_id: m.id, key: 'corebound_fragment', delta: 1 });
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
@@ -3356,9 +3353,7 @@ Deno.serve(async (req) => {
       // and let realtime drive the client. memberStates no longer carries a
       // projected salvage total.
       if (mSalvage[m.id] > 0) {
-        materialAddPromises.push(
-          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
-        );
+        tickState.materials.push({ character_id: m.id, key: 'salvage', delta: mSalvage[m.id] });
       }
 
       // ── Persist Force Shield ward HP across combats ───────────────
@@ -3379,44 +3374,26 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Split writes: HP/CP go through encounter delta RPCs so concurrent
+      // ── Split writes: HP/CP go through encounter delta helpers so concurrent
       // writers (party ticks, DoT catch-up, heals) can't lose updates.
-      // XP/level/stance/max_* stay on the direct PATCH. Absolute HP writes
-      // from a level-up ride the PATCH so they stay atomic with new max_*.
+      // XP/level/stance/max_* stay on the direct patch. Absolute HP writes
+      // from a level-up ride the patch so they stay atomic with new max_*.
       const leveledUp = updates.level !== undefined;
-      const resourceRpcs: Promise<any>[] = [];
+      let hpDelta = 0;
+      let cpDelta = 0;
       if (!leveledUp) {
         if (updates.hp !== undefined) {
-          const hpDelta = (updates.hp as number) - c.hp;
-          if (hpDelta < 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_damage', {
-              _character_id: m.id, _amount: -hpDelta,
-              _source_kind: 'combat-tick', _source_creature_id: null,
-            }));
-          } else if (hpDelta > 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_heal', {
-              _character_id: m.id, _amount: hpDelta, _source_kind: 'combat-tick',
-            }));
-          }
+          hpDelta = (updates.hp as number) - c.hp;
           delete updates.hp;
         }
         if (updates.cp !== undefined) {
-          const cpDelta = (updates.cp as number) - (c.cp ?? 0);
-          if (cpDelta !== 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_resource', {
-              _character_id: m.id, _resource: 'cp', _delta: cpDelta,
-              _source_kind: 'combat-tick',
-            }));
-          }
+          cpDelta = (updates.cp as number) - (c.cp ?? 0);
           delete updates.cp;
         }
       }
 
-      if (Object.keys(updates).length > 0) {
-        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
-      }
-      if (resourceRpcs.length > 0) {
-        memberUpdatePromises.push(Promise.all(resourceRpcs));
+      if (Object.keys(updates).length > 0 || hpDelta !== 0 || cpDelta !== 0) {
+        tickState.characters.push({ id: m.id, patch: { ...updates }, hp_delta: hpDelta, cp_delta: cpDelta });
       }
 
       memberStates.push({
@@ -3495,12 +3472,10 @@ Deno.serve(async (req) => {
         updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
       if ((mSalvage[m.id] || 0) > 0) {
-        materialAddPromises.push(
-          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
-        );
+        tickState.materials.push({ character_id: m.id, key: 'salvage', delta: mSalvage[m.id] });
       }
       if (Object.keys(updates).length > 0) {
-        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
+        tickState.characters.push({ id: m.id, patch: { ...updates } });
       }
       memberStates.push({
         character_id: m.id,
@@ -3546,73 +3521,47 @@ Deno.serve(async (req) => {
     const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
 
-    // ── PHASE A: Independent writes (parallel) ──────────────────
-    const contractPromises = contractCompletions.map(cid => {
+    // Effect bookkeeping rides the commit: deletes (expired rows, dead targets,
+    // lapsed item buffs) run before the survivor upsert inside one transaction.
+    tickState.effects_delete_ids = expiredIds;
+    tickState.effects_delete_targets = [...killedCreatureIds];
+    tickState.item_buff_expire_before = now;
+    tickState.effects_upsert = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
+
+    // Assassin contract completions.
+    for (const cid of contractCompletions) {
       const ch = [...members, ...gracedExtras].find(mm => mm.id === cid)?.c;
-      const newCount = (ch?.contracts_completed || 0) + 1;
-      return db.rpc('apply_contract_complete', { _character_id: cid, _new_count: newCount });
-    });
-    // Creature HP/kills were already persisted above (kill reconciliation).
-    await Promise.all([
-      cleanupEffects(db, expiredIds, killedCreatureIds),
-      ...memberUpdatePromises,
-      ...materialAddPromises,
-      ...degradePromises,
-      ...contractPromises,
-    ]);
+      tickState.contracts.push({ character_id: cid, new_count: (ch?.contracts_completed || 0) + 1 });
+    }
 
-
-
-    // ── PHASE B: Order-dependent writes (sequential) ────────────
-    // Loot depends on killed creatures being persisted
-    const lootEvents = await processLootDrops(db, lootQueue);
-    events.push(...lootEvents);
-
-    // Apply gem drops via the unified materials helper (one add_material call
-    // per drop) into character_materials.
+    // Gem drops — collapsed to one material delta per (character, gem).
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {
         const k = `${gd.memberId}|${gd.gemKey}`;
         counts.set(k, (counts.get(k) || 0) + 1);
       }
-      const gemPromises: Promise<any>[] = [];
       for (const [k, n] of counts) {
         const [memberId, gemKey] = k.split('|');
-        gemPromises.push(
-          db.rpc('add_material', { _character_id: memberId, _key: gemKey, _delta: n })
-        );
+        tickState.materials.push({ character_id: memberId, key: gemKey, delta: n });
       }
-      await Promise.all(gemPromises);
     }
 
-    // Apply class-bond gains. The RPC reads the recipient's active class
-    // and is a no-op for classless characters. Failures are logged but
-    // never block the tick response.
-    if (bondGainQueue.length > 0) {
-      await Promise.all(bondGainQueue.map(bg =>
-        db.rpc('award_class_bond_for_kill', {
-          _character_id: bg.memberId,
-          _creature_level: bg.creatureLevel,
-          _is_boss: bg.isBoss,
-        }).then((r: any) => {
-          if (r?.error) console.error('award_class_bond_for_kill failed', r.error);
-        })
-      ));
+    // Class-bond gains (no-op for classless recipients, resolved server-side).
+    for (const bg of bondGainQueue) {
+      tickState.bond_kills.push({
+        character_id: bg.memberId,
+        creature_level: bg.creatureLevel,
+        is_boss: bg.isBoss,
+      });
     }
 
-    // Batch effect upsert after cleanup to avoid conflicts
-    if (liveEffects.length > 0) {
-      const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
-      await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
-    }
-
-    // Cleanup expired item_buff:* rows (own expiry path — combat-resolver
-    // skips them because target_id is a player, not a creature in cHp).
-    await db.from('active_effects')
-      .delete()
-      .like('effect_type', 'item_buff:%')
-      .lte('expires_at', now);
+    // ── Writes that stay outside the tick transaction ────────────
+    // Equipment durability touches inventory rows only, and loot must run
+    // after the creature kills already persisted during reconciliation.
+    await Promise.all(degradePromises);
+    const lootEvents = await processLootDrops(db, lootQueue);
+    events.push(...lootEvents);
 
 
     // ── Check if session should end ─────────────────────────────
@@ -3622,7 +3571,7 @@ Deno.serve(async (req) => {
     const sessionEnded = !anyAlive;
 
     if (sessionEnded) {
-      await db.from('combat_sessions').delete().eq('id', session.id);
+      tickState.session = { id: session.id, ended: true };
       console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
       // Refresh the recent-member presence map so the grace window covers
@@ -3632,13 +3581,15 @@ Deno.serve(async (req) => {
       for (const k of Object.keys(newRecent)) {
         if (now - (newRecent[k]?.last_at_node_ms || 0) > 30000) delete newRecent[k];
       }
-      await db.from('combat_sessions').update({
+      tickState.session = {
+        id: session.id,
+        ended: false,
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
         member_buffs: buffs,
         node_id: combatNodeId,
         recent_member_ids: newRecent,
-      }).eq('id', session.id);
+      };
     }
 
 
@@ -3841,50 +3792,31 @@ Deno.serve(async (req) => {
     // ── Durable engagement bookkeeping (Phase 2) ─────────────────
     // Persist the roster this tick discovered so a dropped request can never
     // lose "who is fighting what", and purge engagements for creatures we
-    // killed so nothing keeps swinging at a corpse.
-    try {
-      const writes = [...engagementWrites.values()].filter(
-        w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
-      );
-      await Promise.all([
-        ...writes.map(w =>
-          db.rpc('join_encounter_engagement', {
-            _character_id: w.character_id,
-            _creature_id: w.creature_id,
-          }).then(({ error }: any) => {
-            if (error) console.warn('[combat-tick] engagement join failed', error.message);
-          }),
-        ),
-        ...[...purgedEngagementCreatures].map(creatureId =>
-          db.rpc('purge_creature_engagements', { _creature_id: creatureId })
-            .then(({ error }: any) => {
-              if (error) console.warn('[combat-tick] engagement purge failed', error.message);
-            }),
-        ),
-      ]);
-    } catch (e) {
-      console.error('[combat-tick] engagement bookkeeping failed', e);
-    }
+    // killed so nothing keeps swinging at a corpse. Applied in the commit.
+    tickState.engagements_join = [...engagementWrites.values()].filter(
+      w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
+    );
+    tickState.engagements_purge_creature_ids = [...purgedEngagementCreatures];
 
-    // ── Shared encounter result batch (Phase 3) ──────────────────
-    // The resolver publishes ONE authoritative per-tick batch for the node
-    // encounter. Every participant (any party, or none) can replay a missed
-    // response from `encounter_tick_batches` instead of guessing.
+    // ── Single-transaction commit (B2) ───────────────────────────
+    // One token-gated call applies EVERY remaining write of this tick —
+    // character patches and resource deltas, materials/gems, contracts, class
+    // bonds, effect cleanup and upsert, engagement bookkeeping, the combat
+    // session advance/close — together with intent retirement, the shared
+    // result batch and the encounter cursor. Either the whole tick lands or
+    // none of it does, and the cadence is re-anchored to the commit time,
+    // which is what removed the accumulated tick drift.
     //
-    // The batch is published through `commit_encounter_tick`, which is
-    // token-gated: only the resolver holding the current claim may advance the
-    // encounter's tick cursor and insert the batch. The same call retires the
-    // durable `combat_actions` rows this tick consumed, so intent retirement
-    // and result publication are one atomic step.
-    //
-    // When the shared-tick switch is off (or another resolver owns the tick),
-    // the claim is refused and we fall back to the legacy direct retirement.
+    // If the claim or commit is refused (no encounter, stale claim, already
+    // committed) the identical writes are replayed the legacy per-statement
+    // way so a refused tick never silently drops its results.
     const consumedActionIds = pendingAbilities
       .map((a: any) => a?.action_id)
       .filter((id: any): id is string => typeof id === 'string' && id.length > 0);
 
     let publishedTick: number | null = null;
     let publishedBatchId: string | null = null;
+    let commitRefusedReason: string | null = null;
 
     try {
       const { data: encRow } = await db
@@ -3898,7 +3830,9 @@ Deno.serve(async (req) => {
 
       const encounterId = (encRow as any)?.id as string | undefined;
 
-      if (encounterId) {
+      if (!encounterId) {
+        commitRefusedReason = 'no_encounter';
+      } else {
         const { data: claimRaw, error: claimErr } = await db.rpc('claim_encounter_tick', {
           _encounter_id: encounterId,
           _rate_ms: TICK_RATE,
@@ -3908,9 +3842,12 @@ Deno.serve(async (req) => {
         });
         if (claimErr) {
           console.warn('[combat-tick] tick claim failed', claimErr.message);
+          commitRefusedReason = 'claim_error';
         } else {
           const claim = claimRaw as any;
-          if (claim?.claimed) {
+          if (!claim?.claimed) {
+            commitRefusedReason = claim?.reason ?? 'claim_refused';
+          } else {
             const batchId = crypto.randomUUID();
             const { data: commitRaw, error: commitErr } = await db.rpc('commit_encounter_tick', {
               _encounter_id: encounterId,
@@ -3921,6 +3858,7 @@ Deno.serve(async (req) => {
               _payload: {
                 consumed_action_ids: consumedActionIds,
                 rejected_actions: [],
+                state: tickState,
                 batch: {
                   events,
                   creature_states,
@@ -3938,13 +3876,15 @@ Deno.serve(async (req) => {
             });
             if (commitErr) {
               console.warn('[combat-tick] tick commit failed', commitErr.message);
+              commitRefusedReason = 'commit_error';
             } else if ((commitRaw as any)?.committed) {
               publishedTick = claim.tick;
               publishedBatchId = batchId;
             } else {
+              commitRefusedReason = (commitRaw as any)?.reason ?? 'unknown';
               console.log(JSON.stringify({
                 fn: 'combat-tick',
-                tick_commit_refused: (commitRaw as any)?.reason ?? 'unknown',
+                tick_commit_refused: commitRefusedReason,
                 encounter_id: encounterId,
               }));
             }
@@ -3952,14 +3892,20 @@ Deno.serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error('[combat-tick] shared batch publish failed', e);
+      console.error('[combat-tick] tick commit threw', e);
+      commitRefusedReason = 'exception';
     }
 
-    // ── Durable action bookkeeping (Phase 1 fallback) ─────────────
-    // `commit_encounter_tick` retires consumed intents atomically. Only when
-    // the batch was NOT published do we retire the rows directly, so an intent
-    // can never be left pending forever.
+    // ── Refused-commit fallback ───────────────────────────────────
     if (!publishedBatchId) {
+      console.log(JSON.stringify({
+        fn: 'combat-tick', tick_state_fallback: commitRefusedReason ?? 'unknown',
+      }));
+      try {
+        await applyTickStateFallback(db, tickState);
+      } catch (e) {
+        console.error('[combat-tick] tick state fallback failed', e);
+      }
       try {
         if (consumedActionIds.length > 0) {
           await db
