@@ -691,7 +691,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       .on('broadcast', { event: 'combat_tick_result' }, (payload) => {
         if (ext.current.isLeader) return;
         const data = payload.payload as CombatTickResponse;
-        if (data) processTickResult(data);
+        if (!data) return;
+        const gap = lastTickRef.current ? Date.now() - lastTickRef.current : 0;
+        traceBroadcastTick(gap, data.ticks_processed, data.encounter_batch_id ?? null);
+        processTickResult(data);
       })
       .on('broadcast', { event: 'engage_request' }, (payload) => {
         if (!ext.current.isLeader) return;
