@@ -402,6 +402,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number },
   ) => {
+    // B6: adopt the server-reported intent authority.
+    if (data.tick_owner === 'shared' || data.tick_owner === 'legacy') {
+      tickOwnerRef.current = data.tick_owner;
+    }
     // B5: adopt the encounter this result belongs to so the shared batch
     // stream can be subscribed to (and gap-recovered) for it.
     const incomingEncounterId = data.encounter_id ?? null;
