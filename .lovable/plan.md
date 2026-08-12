@@ -47,7 +47,20 @@ Ranked by confidence × player impact:
 
 ## Instrumentation (development-only)
 
-A single `combat-trace.ts` ring buffer (dev flag, no production logging) recording per action/tick: `action_id, encounter_id, tick_number, batch_id, claim_token, ticks_processed, server_tick_due_at, server_resolution_started_at, server_committed_at, delivery_method (http | encounter_realtime | party_broadcast | recovery | catchup | legacy), client_received_at, client_applied_at, browser_presented_at` (paint via `requestAnimationFrame` + `PerformanceObserver` long-task marks). Server echoes its three timestamps and the claim identifiers in the tick response. A dev overlay reports the split: pre-request delay, cadence wait, lock wait, server execution, delivery, client processing, paint — and classifies each visible clump as A/B/C/D.
+A single `combat-trace.ts` ring buffer (dev flag, no production logging) recording per action/tick: `action_id, encounter_id, tick_number, batch_id, claim_token, ticks_processed, server_tick_due_at, server_resolution_started_at, server_committed_at, delivery_method (http | encounter_realtime | party_broadcast | recovery | catchup | legacy), client_received_at, client_applied_at, browser_presented_at` (paint via `requestAnimationFrame` + `PerformanceObserver` long-task marks). The `combat-tick` response echoes its three server timestamps and the claim identifiers.
+
+This replaces the console-only `tickLatency` log with a **development-only breakdown panel** (`CombatTimingPanel`, mounted like `BroadcastDebugOverlay`, same dev flag) showing per action and rolling p50/p95:
+
+- button-to-submission
+- cadence wait
+- lock / ownership wait
+- server round trip (with server execution split out)
+- result delivery (by delivery method)
+- reconciliation
+- paint
+
+Each visible group is classified A (legitimate catch-up) / B (delayed delivery) / C (delayed rendering or duplicate application) / D (multiple resolution), and every `ticks_processed > 1` response is flagged. The existing `console.log` stays temporarily behind the same dev flag and is removed once the panel is trusted.
+
 
 ## Staged plan
 
