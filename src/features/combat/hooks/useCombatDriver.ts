@@ -28,6 +28,7 @@ import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 
 import { useCombatAggroEffects } from './useCombatAggroEffects';
+import { useEncounterBatches } from './useEncounterBatches';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
@@ -230,6 +231,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
     appliedBatchIdsRef.current = new Set();
+    // B5: leaving combat ends our interest in this encounter's batch stream.
+    encounterIdRef.current = null;
+    setEncounterId(null);
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
     if (fizzling) {
