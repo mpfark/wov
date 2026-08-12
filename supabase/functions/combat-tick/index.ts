@@ -251,6 +251,27 @@ Deno.serve(async (req) => {
       sessionKey = { character_id };
     }
 
+    // ── B4: durable intent (shared ownership only) ────────────────
+    // In `shared` mode `combat_actions` is the sole execution authority: one
+    // pending slot per participating character, read in a deterministic order.
+    // The request payload is never consulted, so a stale client that still
+    // sends `pending_abilities` cannot double-execute anything.
+    if (tickOwner === 'shared') {
+      pendingAbilities = await loadDurableIntents(db, {
+        nodeId: node_id,
+        characterIds: members.map(m => m.id),
+        nowMs: Date.now(),
+      });
+      if (pendingAbilities.length > 0) {
+        console.log(JSON.stringify({
+          fn: 'combat-tick', tick_owner: tickOwner,
+          durable_intents: pendingAbilities.length,
+        }));
+      }
+    }
+
+
+
 
     // ── Load or create combat session ────────────────────────────
     let session: any = null;
