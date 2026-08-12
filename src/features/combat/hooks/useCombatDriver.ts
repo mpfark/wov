@@ -371,7 +371,33 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
-  const processTickResult = useCallback((data: CombatTickResponse) => {
+  /**
+   * `meta` is instrumentation-only context from the transport that delivered
+   * this result (own HTTP response vs party broadcast). It never influences
+   * how the result is applied.
+   */
+  const processTickResult = useCallback((
+    data: CombatTickResponse,
+    meta?: { seq?: number; receivedAt?: number },
+  ) => {
+    // Duplicate-batch guard: the same authoritative batch can reach us twice
+    // (our own response plus the leader broadcast, or a recovery replay).
+    // Applying it twice duplicates log lines and re-applies HP.
+    const batchId = data.encounter_batch_id;
+    if (batchId) {
+      if (appliedBatchIdsRef.current.has(batchId)) {
+        if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+          traceTickResponse(meta.seq, { roundTripMs: 0, outcome: 'duplicate', batchId });
+        }
+        return;
+      }
+      appliedBatchIdsRef.current.add(batchId);
+      if (appliedBatchIdsRef.current.size > 200) {
+        appliedBatchIdsRef.current = new Set(
+          [...appliedBatchIdsRef.current].slice(-100),
+        );
+      }
+    }
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
     //   1. Non-leader party member receiving a broadcast tick result.
