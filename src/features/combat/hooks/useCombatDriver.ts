@@ -280,7 +280,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
 
 
-  // ── Queue ability for next tick ────────────────────────────────
+  // ── Queue ability for the next tick submission ─────────────────
+  // The action is eligible immediately: the previous build parked it for a
+  // fixed 2s (`readyAt: now + 2000`) which, on top of the 2s cadence, meant a
+  // pressed ability could wait up to 4s before it was even submitted. The tick
+  // cadence itself stays the pacing authority — we simply re-phase it so the
+  // dispatch happens now and the next cadence tick is a full interval later.
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
     const p = ext.current;
@@ -288,13 +293,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const ability = allAbilities[index];
     const cpCost = ability?.cpCost ?? 0;
     const label = ability?.label ?? 'ability';
-    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label };
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now(), cpCost, label };
     setPendingAbility({ index, targetId });
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;
-    if (!intervalRef.current) {
-      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-    }
+    traceAbilityPress(label);
+    tickCauseRef.current = 'ability';
+    if (intervalRef.current) clearWorkerInterval(intervalRef.current);
+    intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+    doTickRef.current();
   }, []);
 
   // ── Aggro effects ──────────────────────────────────────────────
