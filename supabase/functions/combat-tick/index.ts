@@ -3222,8 +3222,9 @@ Deno.serve(async (req) => {
 
     // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
-    const memberUpdatePromises: PromiseLike<any>[] = [];
-    const materialAddPromises: PromiseLike<any>[] = [];
+    // B2: every tail write is accumulated here and applied inside the single
+    // `commit_encounter_tick` transaction (see _shared/combat/tick-commit.ts).
+    const tickState = createTickState();
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
