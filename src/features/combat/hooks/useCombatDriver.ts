@@ -893,11 +893,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
 
           if (p.party && !p.isLeader) {
-            channelRef.current?.send({
-              type: 'broadcast',
-              event: 'member_pending_ability',
-              payload: { ability: abilityPayload },
-            });
+            // B6: in shared mode the durable `combat_actions` row above is the
+            // only intent the resolver reads, so relaying the cast to the
+            // leader would be redundant (and never executed).
+            if (tickOwnerRef.current !== 'shared') {
+              channelRef.current?.send({
+                type: 'broadcast',
+                event: 'member_pending_ability',
+                payload: { ability: abilityPayload },
+              });
+            }
             // Follower: convert reservation into a real local CP debit so the
             // bar doesn't snap back up before the leader's broadcast confirms.
             optimisticCpRef.current = expectedCpAfter;
