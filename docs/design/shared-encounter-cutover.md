@@ -297,3 +297,21 @@ production.
   discarded server-side and no longer sent by the client.
   Rollback: set `combat_config.value = 'legacy'` for `key = 'tick_owner'`; it takes effect on the
   next tick with no deploy.
+- **Stage C (partial) — done (2026-08-13).** With `shared` validated in production (durable
+  intents consumed every tick, batches ordered, no `ability not in loadout` rejections), the
+  legacy intent path was deleted rather than left dormant:
+  - `combat-tick` no longer reads `pending_abilities` from the request body and no longer
+    branches on an ownership latch — `loadDurableIntents` is the only intent source and the
+    response no longer echoes `tick_owner`.
+  - `_shared/combat/tick-owner.ts` keeps only the durable intent reader; `resolveTickOwner`
+    and the `COMBAT_TICK_OWNER` override are gone.
+  - The client stops sending `pending_abilities` entirely, stops relaying
+    `member_pending_ability` over the party broadcast (send and receive), and keeps only a local
+    cast counter as a tick wake signal.
+  - Fixed alongside it: `encounter_apply_character_damage` cleared death effects via a
+    non-existent `active_effects.character_id` column (now `target_id`), which was warning on
+    every fallback death write.
+  Rollback is a code revert; `encounters.tick_owner` and `combat_config.tick_owner` remain in the
+  database, unread. Still deliberately untouched: the `combat_sessions.last_tick_at` cadence
+  reservation, leader-centric aggro/broadcast transport, and the admin timing panel — each is
+  load-bearing or still useful for measurement.

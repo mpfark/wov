@@ -167,13 +167,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    */
   const [encounterId, setEncounterId] = useState<string | null>(null);
   const encounterIdRef = useRef<string | null>(null);
-  /**
-   * B6: the server-reported intent authority. While `legacy`, the request
-   * payload carries the casts. Once the server reports `shared`, durable
-   * `combat_actions` rows are the only intent source and we stop sending
-   * `pending_abilities` (and stop relaying member casts over broadcast).
-   */
-  const tickOwnerRef = useRef<'legacy' | 'shared'>('legacy');
   /** Set once useEncounterBatches is mounted (below); no-op before that. */
   const markBatchAppliedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
 
@@ -194,7 +187,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
-  const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
   // Tracks the target of the most recent dispatched opener ability so we can
   // engage only that creature (not other aggressive bystanders the server
@@ -236,7 +228,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
-    memberAbilitiesRef.current = [];
     appliedBatchIdsRef.current = new Set();
     // B5: leaving combat ends our interest in this encounter's batch stream.
     encounterIdRef.current = null;
@@ -402,10 +393,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number },
   ) => {
-    // B6: adopt the server-reported intent authority.
-    if (data.tick_owner === 'shared' || data.tick_owner === 'legacy') {
-      tickOwnerRef.current = data.tick_owner;
-    }
     // B5: adopt the encounter this result belongs to so the shared batch
     // stream can be subscribed to (and gap-recovered) for it.
     const incomingEncounterId = data.encounter_id ?? null;
@@ -776,11 +763,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
         if (character_id && buffs) memberBuffsRef.current[character_id] = buffs;
       })
-      .on('broadcast', { event: 'member_pending_ability' }, (payload) => {
-        if (!ext.current.isLeader) return;
-        const { ability } = payload.payload as { ability: any };
-        if (ability) memberAbilitiesRef.current.push(ability);
-      })
       .subscribe();
 
     return () => {
@@ -828,7 +810,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
       // Process pending ability
       const pending = pendingAbilityRef.current;
-      let pendingAbilitiesForServer: any[] = [];
+      /** Local cast markers — wake signal only; intent lives in `combat_actions`. */
+      let localCastCount = 0;
 
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
@@ -880,36 +863,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               if (error) console.warn('[combat] durable action submit failed', error.message);
             });
 
-          const abilityPayload = {
-            character_id: p.character.id,
-            action_id: actionId,
-            ability_key: abilityKey,
-            ability_type: ability.type,
-            target_creature_id: targetId,
-            cp_cost: cpCost,
-
-            client_expected_cp_after: expectedCpAfter,
-          };
-
-
           if (p.party && !p.isLeader) {
-            // B6: in shared mode the durable `combat_actions` row above is the
-            // only intent the resolver reads, so relaying the cast to the
-            // leader would be redundant (and never executed).
-            if (tickOwnerRef.current !== 'shared') {
-              channelRef.current?.send({
-                type: 'broadcast',
-                event: 'member_pending_ability',
-                payload: { ability: abilityPayload },
-              });
-            }
+            // Stage C: the durable `combat_actions` row above is the only
+            // intent the resolver reads — nothing is relayed to the leader.
             // Follower: convert reservation into a real local CP debit so the
             // bar doesn't snap back up before the leader's broadcast confirms.
             optimisticCpRef.current = expectedCpAfter;
             ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
             setPendingCpCost(0);
           } else {
-            pendingAbilitiesForServer.push(abilityPayload);
+            localCastCount += 1;
             // Solo / leader: commit the debit locally NOW. The reservation
             // shading goes away, but the filled CP amount stays at the same
             // visual position (raw - reserved == new raw, reserved 0). When
@@ -941,38 +904,27 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         !solo && !p.isLeader && inCombatRef.current && sinceLastTick > FOLLOWER_WAKE_STALE_MS;
       const driver = solo || p.isLeader || followerWake;
 
-      if (driver && !solo) {
-        pendingAbilitiesForServer = [...pendingAbilitiesForServer, ...memberAbilitiesRef.current];
-        memberAbilitiesRef.current = [];
-      }
-
-      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || pendingAbilitiesForServer.length > 0)) {
+      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
         }
 
-        // B6: once the server reports `shared`, `combat_actions` is the sole
-        // intent source and the payload is discarded server-side. Stop sending
-        // it so there is exactly one authority. Locally collected casts still
-        // drive the wake condition above (they were already submitted durably).
-        const intentForServer =
-          tickOwnerRef.current === 'shared' ? [] : pendingAbilitiesForServer;
-
+        // Stage C: `combat_actions` is the sole intent source; the request
+        // carries no abilities. Locally collected casts still drive the wake
+        // condition above (they were already submitted durably).
         const body = solo
           ? {
               character_id: p.character.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
-              pending_abilities: intentForServer,
             }
           : {
               party_id: p.party!.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
-              pending_abilities: intentForServer,
             };
 
         // Request-scoped stale response guard
@@ -981,7 +933,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
         const cause = tickCauseRef.current;
         tickCauseRef.current = 'cadence';
-        traceTickStart(seq, cause, tickGap, pendingAbilitiesForServer.length > 0);
+        traceTickStart(seq, cause, tickGap, localCastCount > 0);
 
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)

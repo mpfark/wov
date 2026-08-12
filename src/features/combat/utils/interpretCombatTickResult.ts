@@ -68,8 +68,6 @@ export interface CombatTickResponse {
   encounter_batch_id?: string | null;
   /** B5: encounter whose `encounter_tick_batches` stream carries this result. */
   encounter_id?: string | null;
-  /** B4: which intent source the server treated as authoritative. */
-  tick_owner?: 'legacy' | 'shared';
   /** Server-side timing breakdown (development instrumentation only). */
   trace?: {
     tick_due_at?: number;
