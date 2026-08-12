@@ -908,7 +908,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
-        console.log(`[combat] tick #${seq} start (gap: ${tickGap}ms, engaged: ${engagedCreatureIdsRef.current.length})`);
+        const cause = tickCauseRef.current;
+        tickCauseRef.current = 'cadence';
+        traceTickStart(seq, cause, tickGap, pendingAbilitiesForServer.length > 0);
+
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)
         let data: any = null;
