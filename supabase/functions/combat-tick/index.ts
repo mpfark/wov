@@ -3792,30 +3792,11 @@ Deno.serve(async (req) => {
     // ── Durable engagement bookkeeping (Phase 2) ─────────────────
     // Persist the roster this tick discovered so a dropped request can never
     // lose "who is fighting what", and purge engagements for creatures we
-    // killed so nothing keeps swinging at a corpse.
-    try {
-      const writes = [...engagementWrites.values()].filter(
-        w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
-      );
-      await Promise.all([
-        ...writes.map(w =>
-          db.rpc('join_encounter_engagement', {
-            _character_id: w.character_id,
-            _creature_id: w.creature_id,
-          }).then(({ error }: any) => {
-            if (error) console.warn('[combat-tick] engagement join failed', error.message);
-          }),
-        ),
-        ...[...purgedEngagementCreatures].map(creatureId =>
-          db.rpc('purge_creature_engagements', { _creature_id: creatureId })
-            .then(({ error }: any) => {
-              if (error) console.warn('[combat-tick] engagement purge failed', error.message);
-            }),
-        ),
-      ]);
-    } catch (e) {
-      console.error('[combat-tick] engagement bookkeeping failed', e);
-    }
+    // killed so nothing keeps swinging at a corpse. Applied in the commit.
+    tickState.engagements_join = [...engagementWrites.values()].filter(
+      w => !purgedEngagementCreatures.has(w.creature_id) && !cKilled.has(w.creature_id),
+    );
+    tickState.engagements_purge_creature_ids = [...purgedEngagementCreatures];
 
     // ── Shared encounter result batch (Phase 3) ──────────────────
     // The resolver publishes ONE authoritative per-tick batch for the node
