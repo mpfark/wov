@@ -220,6 +220,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
+    appliedBatchIdsRef.current = new Set();
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
     if (fizzling) {
