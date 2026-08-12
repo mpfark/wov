@@ -3315,9 +3315,7 @@ Deno.serve(async (req) => {
             });
           }
           if (newLevel === 42) {
-            materialAddPromises.push(
-              db.rpc('add_material', { _character_id: m.id, _key: 'corebound_fragment', _delta: 1 })
-            );
+            tickState.materials.push({ character_id: m.id, key: 'corebound_fragment', delta: 1 });
             events.push({
               type: 'milestone_ember',
               character_id: m.id,
