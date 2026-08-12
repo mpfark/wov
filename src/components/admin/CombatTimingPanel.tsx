@@ -6,7 +6,7 @@
  * apply, and paint. Each row is labelled so a clump of events can be read as
  * legitimate catch-up (ticks > 1) rather than assumed to be lag.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { Timer, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 import {
