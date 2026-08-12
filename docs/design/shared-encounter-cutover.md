@@ -282,5 +282,10 @@ production.
   table. HTTP responses and the party broadcast stay live as fast-path hints and are registered
   via `markApplied`, so a tick delivered twice is applied once. Covered by
   `src/test/combat/encounter-batch.test.ts`.
-- **B6 — next.** Client stops sending `pending_abilities` once the response reports
-  `tick_owner: 'shared'`.
+- **B6 — done (2026-08-13).** The client now latches the server-reported `tick_owner` from every
+  applied tick result. While `legacy` nothing changes. Once a response reports `shared`, the tick
+  request sends `pending_abilities: []` (the durable `combat_actions` row submitted at cast time is
+  the only intent), and followers stop relaying `member_pending_ability` over the party broadcast
+  since the leader's payload is no longer read. Locally collected casts still drive the wake
+  condition, so a cast on an idle node still triggers a tick.
+- **B7 — next.** Flip `combat_config.tick_owner` to `shared` for one test region, then globally.
