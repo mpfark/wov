@@ -187,7 +187,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
-  const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
   // Tracks the target of the most recent dispatched opener ability so we can
   // engage only that creature (not other aggressive bystanders the server
@@ -229,7 +228,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
-    memberAbilitiesRef.current = [];
     appliedBatchIdsRef.current = new Set();
     // B5: leaving combat ends our interest in this encounter's batch stream.
     encounterIdRef.current = null;
@@ -812,7 +810,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
       // Process pending ability
       const pending = pendingAbilityRef.current;
-      let pendingAbilitiesForServer: any[] = [];
+      /** Local cast markers — wake signal only; intent lives in `combat_actions`. */
+      let localCastCount = 0;
 
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
@@ -864,18 +863,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               if (error) console.warn('[combat] durable action submit failed', error.message);
             });
 
-          const abilityPayload = {
-            character_id: p.character.id,
-            action_id: actionId,
-            ability_key: abilityKey,
-            ability_type: ability.type,
-            target_creature_id: targetId,
-            cp_cost: cpCost,
-
-            client_expected_cp_after: expectedCpAfter,
-          };
-
-
           if (p.party && !p.isLeader) {
             // Stage C: the durable `combat_actions` row above is the only
             // intent the resolver reads — nothing is relayed to the leader.
@@ -885,7 +872,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
             setPendingCpCost(0);
           } else {
-            pendingAbilitiesForServer.push(abilityPayload);
+            localCastCount += 1;
             // Solo / leader: commit the debit locally NOW. The reservation
             // shading goes away, but the filled CP amount stays at the same
             // visual position (raw - reserved == new raw, reserved 0). When
@@ -917,7 +904,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         !solo && !p.isLeader && inCombatRef.current && sinceLastTick > FOLLOWER_WAKE_STALE_MS;
       const driver = solo || p.isLeader || followerWake;
 
-      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || pendingAbilitiesForServer.length > 0)) {
+      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
@@ -946,7 +933,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
         const cause = tickCauseRef.current;
         tickCauseRef.current = 'cadence';
-        traceTickStart(seq, cause, tickGap, pendingAbilitiesForServer.length > 0);
+        traceTickStart(seq, cause, tickGap, localCastCount > 0);
 
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)

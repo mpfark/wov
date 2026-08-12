@@ -1,41 +1,10 @@
 /**
- * tick-owner.ts — B4: the ownership latch read by the resolvers.
+ * tick-owner.ts — durable intent reader.
  *
- * `combat_tick_owner()` (Postgres, backed by `combat_config`) decides which
- * execution path a tick takes:
- *
- * - `legacy` — the client's request payload (`pending_abilities`) is the
- *   intent source, exactly as before this change.
- * - `shared` — durable `combat_actions` rows are the ONLY intent source; the
- *   request payload is ignored entirely.
- *
- * Both paths ship in the deployed function. The env var `COMBAT_TICK_OWNER`
- * overrides the config row (useful for a single-function canary); anything
- * unrecognised falls back to `legacy`, so a failed read can never flip
- * behaviour.
+ * `combat_actions` rows are the sole execution authority for a tick (Stage C:
+ * the legacy request-payload path and its ownership latch are gone). This
+ * module owns the deterministic read of "what each character is casting".
  */
-
-export type TickOwner = 'legacy' | 'shared';
-
-function coerceOwner(value: unknown): TickOwner | null {
-  return value === 'shared' || value === 'legacy' ? value : null;
-}
-
-export async function resolveTickOwner(db: any): Promise<TickOwner> {
-  const envOwner = coerceOwner(Deno.env.get('COMBAT_TICK_OWNER'));
-  if (envOwner) return envOwner;
-  try {
-    const { data, error } = await db.rpc('combat_tick_owner');
-    if (error) {
-      console.warn('[tick-owner] combat_tick_owner() failed', error.message);
-      return 'legacy';
-    }
-    return coerceOwner(data) ?? 'legacy';
-  } catch (e) {
-    console.warn('[tick-owner] combat_tick_owner() threw', (e as Error).message);
-    return 'legacy';
-  }
-}
 
 /** The shape the resolver consumes for a queued cast. */
 export interface DurableIntent {
