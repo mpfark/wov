@@ -3472,12 +3472,10 @@ Deno.serve(async (req) => {
         updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
       if ((mSalvage[m.id] || 0) > 0) {
-        materialAddPromises.push(
-          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
-        );
+        tickState.materials.push({ character_id: m.id, key: 'salvage', delta: mSalvage[m.id] });
       }
       if (Object.keys(updates).length > 0) {
-        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
+        tickState.characters.push({ id: m.id, patch: { ...updates } });
       }
       memberStates.push({
         character_id: m.id,
