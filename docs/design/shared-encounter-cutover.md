@@ -288,4 +288,12 @@ production.
   the only intent), and followers stop relaying `member_pending_ability` over the party broadcast
   since the leader's payload is no longer read. Locally collected casts still drive the wake
   condition, so a cast on an idle node still triggers a tick.
-- **B7 — next.** Flip `combat_config.tick_owner` to `shared` for one test region, then globally.
+- **B7 — done (2026-08-13).** Latch flipped: `combat_config.tick_owner = 'shared'` and all 113
+  existing `encounters` rows set to `tick_owner = 'shared'`. Pre-flip verification:
+  `character_can_use_ability` returns true for every default assignment of every class at level
+  (a deliberately unequipped non-default, `frostbolt`, correctly returns false), so B0 holds and
+  durable submission is the working intent path; no `pending` `combat_actions` older than 60 s
+  existed to cancel. Durable actions are now the sole execution authority — the request payload is
+  discarded server-side and no longer sent by the client.
+  Rollback: set `combat_config.value = 'legacy'` for `key = 'tick_owner'`; it takes effect on the
+  next tick with no deploy.
