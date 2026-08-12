@@ -981,24 +981,28 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             }
           }
         } else if (error) {
+          traceResponse('error');
           console.error('Combat tick error:', error);
           // Don't strand the reservation overlay if the tick failed.
           setPendingCpCost(0);
         } else {
           const result = data as CombatTickResponse;
-          console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
+            traceResponse('empty');
             stopCombat();
           } else if ((result as any).tick_reserved_elsewhere) {
             // Another participant reserved this tick — it resolved nothing.
             // The winner's result arrives via broadcast / realtime.
+            traceResponse('reserved');
             setPendingCpCost(0);
           } else if ((result as any).roster_unavailable) {
             // The resolver refused to simulate because the engagement roster
             // could not be loaded. Nothing authoritative changed — hold state
             // and let the next tick pick the elapsed time up.
+            traceResponse('reserved');
             setPendingCpCost(0);
           } else {
+            traceResponse('applied');
             if (!solo && p.isLeader) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
@@ -1006,7 +1010,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // at dispatch time, so we just process the tick result. CP
             // reconciliation in processTickResult will skip the CP repaint
             // when the server agrees with our optimistic value.
-            processTickResult(result);
+            processTickResult(result, { seq, receivedAt });
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
