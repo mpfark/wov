@@ -167,6 +167,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    */
   const [encounterId, setEncounterId] = useState<string | null>(null);
   const encounterIdRef = useRef<string | null>(null);
+  /**
+   * B6: the server-reported intent authority. While `legacy`, the request
+   * payload carries the casts. Once the server reports `shared`, durable
+   * `combat_actions` rows are the only intent source and we stop sending
+   * `pending_abilities` (and stop relaying member casts over broadcast).
+   */
+  const tickOwnerRef = useRef<'legacy' | 'shared'>('legacy');
   /** Set once useEncounterBatches is mounted (below); no-op before that. */
   const markBatchAppliedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
 
