@@ -3843,6 +3843,9 @@ Deno.serve(async (req) => {
     let publishedTick: number | null = null;
     let publishedBatchId: string | null = null;
     let commitRefusedReason: string | null = null;
+    // B5: the client subscribes to `encounter_tick_batches` for this id, so it
+    // must be echoed even when the commit was refused.
+    let publishedEncounterId: string | null = null;
 
     try {
       const { data: encRow } = await db
@@ -3855,6 +3858,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const encounterId = (encRow as any)?.id as string | undefined;
+      publishedEncounterId = encounterId ?? null;
 
       if (!encounterId) {
         commitRefusedReason = 'no_encounter';
