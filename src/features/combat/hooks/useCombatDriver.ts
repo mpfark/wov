@@ -391,6 +391,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number },
   ) => {
+    // B5: adopt the encounter this result belongs to so the shared batch
+    // stream can be subscribed to (and gap-recovered) for it.
+    const incomingEncounterId = data.encounter_id ?? null;
+    if (incomingEncounterId && incomingEncounterId !== encounterIdRef.current) {
+      encounterIdRef.current = incomingEncounterId;
+      setEncounterId(incomingEncounterId);
+    }
     // Duplicate-batch guard: the same authoritative batch can reach us twice
     // (our own response plus the leader broadcast, or a recovery replay).
     // Applying it twice duplicates log lines and re-applies HP.
@@ -409,6 +416,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
       }
     }
+    // Tell the batch sequencer this tick already landed on the fast path, so
+    // the realtime copy of the same tick is skipped rather than replayed.
+    markBatchAppliedRef.current(data.encounter_tick ?? null, batchId ?? null);
+
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
     //   1. Non-leader party member receiving a broadcast tick result.
