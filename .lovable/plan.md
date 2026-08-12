@@ -47,26 +47,42 @@ Ranked by confidence × player impact:
 
 ## Instrumentation (development-only)
 
-A single `combat-trace.ts` ring buffer (dev flag, no production logging) recording per action/tick: `action_id, encounter_id, tick_number, batch_id, claim_token, ticks_processed, server_tick_due_at, server_resolution_started_at, server_committed_at, delivery_method (http | encounter_realtime | party_broadcast | recovery | catchup | legacy), client_received_at, client_applied_at, browser_presented_at` (paint via `requestAnimationFrame` + `PerformanceObserver` long-task marks). Server echoes its three timestamps and the claim identifiers in the tick response. A dev overlay reports the split: pre-request delay, cadence wait, lock wait, server execution, delivery, client processing, paint — and classifies each visible clump as A/B/C/D.
+A single `combat-trace.ts` ring buffer (dev flag, no production logging) recording per action/tick: `action_id, encounter_id, tick_number, batch_id, claim_token, ticks_processed, server_tick_due_at, server_resolution_started_at, server_committed_at, delivery_method (http | encounter_realtime | party_broadcast | recovery | catchup | legacy), client_received_at, client_applied_at, browser_presented_at` (paint via `requestAnimationFrame` + `PerformanceObserver` long-task marks). The `combat-tick` response echoes its three server timestamps and the claim identifiers.
+
+This replaces the console-only `tickLatency` log with a **development-only breakdown panel** (`CombatTimingPanel`, mounted like `BroadcastDebugOverlay`, same dev flag) showing per action and rolling p50/p95:
+
+- button-to-submission
+- cadence wait
+- lock / ownership wait
+- server round trip (with server execution split out)
+- result delivery (by delivery method)
+- reconciliation
+- paint
+
+Each visible group is classified A (legitimate catch-up) / B (delayed delivery) / C (delayed rendering or duplicate application) / D (multiple resolution), and every `ticks_processed > 1` response is flagged. The existing `console.log` stays temporarily behind the same dev flag and is removed once the panel is trusted.
+
 
 ## Staged plan
 
-### Stage A — measurement + safe responsiveness (no backend authority change)
-- `src/features/combat/trace/combat-trace.ts` (new) + dev overlay; timestamp echo added to the `combat-tick` response only.
-- Remove the accidental second cadence: replace the `+2000` `readyAt` with "eligible on the next authoritative tick" and re-phase/immediately wake the interval on queue (`useCombatDriver.ts:276,280,706`). Server still gates execution, so nothing resolves early.
-- Coalesce stale wake-ups: check the latest known authoritative tick before the `finally` follow-up (`:944-946`).
-- Split the follower timers: expected-result deadline (6s) → gap detection → bounded recovery attempt → 4s retry grace → participation check → disengage only then; move disengage/wake to the worker timer (`useCombatLifecycle.ts:88-96`).
-- Batch `processTickResult` into one interpret → one log append → one creature merge → one character/effect/engagement reconcile; fold the 250ms re-aggro into the same transaction; add dedupe by `encounter_id + tick_number + batch_id` for both HTTP and broadcast paths; bounded in-memory log window (archive already persists history).
-- Stage-A hardening of Finding 10: derive `alive_creature_ids` from a committed post-write read, emit it only on authoritative snapshots, and never infer an empty roster from `roster_unavailable` / `tick_reserved_elsewhere`.
-- Tests: `src/test/combat/` — stale-engagement lifecycle (single- and multi-creature), ability queued just before/after an interval boundary, `ticks_processed > 1` presentation, duplicate HTTP + broadcast delivery, slow-response no-burst.
+Approved: **Stage A is implemented now. Stage B is design only** — a written transactional/cutover/rollback design for separate review, with no code, migration or deployment.
 
-### Stage B — shared encounter authority (single atomic cutover)
-Forward migrations only. Reintroduce an explicit ownership latch (`encounters.tick_owner` + a flag function, since both were dropped), then in one release: claim before simulation → encounter-wide roster (all parties + solo) → durable `combat_actions` as the *only* execution source → deterministic `tick-rng.ts` everywhere authoritative → atomic commit → one shared batch → `encounter_tick_batches` added to `supabase_realtime` with RLS-scoped subscription + ordered gap recovery on the client. Order: migrations → Edge Functions → frontend; rollback = flip the latch back to `legacy`. Legacy stays authoritative until the latch flips; no hybrid subset.
+### Stage A — measurement + safe responsiveness (implement now; no backend authority change)
+- `src/features/combat/trace/combat-trace.ts` (new) + `CombatTimingPanel` dev panel; timestamp/claim echo added to the `combat-tick` response only (no authority change).
+- Remove the accidental second cadence: replace the `+2000` `readyAt` with "eligible on the next authoritative tick" and re-phase/immediately wake the interval on queue (`useCombatDriver.ts:276,280,706`). The server still gates execution, so nothing resolves early or twice.
+- Coalesce stale wake-ups: check the latest known authoritative tick before the `finally` follow-up (`:944-946`); never allow overlapping requests.
+- Split the follower timers: expected-result deadline (6s) → gap detection → bounded recovery attempt → 4s retry grace → authoritative participation check → disengage only then; move the disengage/wake timers onto the unthrottled worker timer (`useCombatLifecycle.ts:88-96`).
+- Batch `processTickResult` into one interpret → one log append → one creature merge → one character/effect/engagement reconcile; fold the deferred 250ms re-aggro pass into that transaction; dedupe by `encounter_id + tick_number + batch_id` on both HTTP and broadcast paths; bounded in-memory log window (the on-device archive already keeps history).
+- **Catch-up marking without pacing**: when `ticks_processed > 1`, the log gets a clear caught-up marker/separator per authoritative tick. Authoritative HP and combat state still apply immediately, in full, with no artificial delay. No log pacing is introduced in this stage — it is reconsidered only after the panel shows the real distribution.
+- Stage-A hardening of Finding 10: derive `alive_creature_ids` from a committed post-write read, emit it only on responses carrying an authoritative snapshot, and never infer an empty roster from `roster_unavailable` / `tick_reserved_elsewhere`.
+- Tests (`src/test/combat/`): stale-engagement lifecycle (single- and multi-creature), ability queued just before/after an interval boundary, `ticks_processed > 1` presentation and marking, duplicate HTTP + broadcast delivery ignored, slow response produces no request burst, background-tab restore replays no stale request.
+- Before/after measurement: p95 button-to-visible-result and pause-then-burst frequency, taken from the panel.
+
+### Stage B — shared encounter authority (design document only, this pass)
+Deliverable: `docs/design/shared-encounter-cutover.md` covering claim-before-simulation, the encounter-wide solo+multi-party roster, durable `combat_actions` as the exclusive execution authority, deterministic `tick-rng.ts` resolution, the atomic commit boundary, shared ordered result batches with realtime publication and ordered gap recovery, idempotent client consumption, the reintroduced ownership latch (both `encounters.tick_owner` and the flag function were dropped by migration `20260807143727`), exact migration and Edge Function deployment order, backfill, partial-deployment recovery, and rollback by flipping the latch to `legacy`. No hybrid subset; no implementation until you approve that document.
 
 ### Stage C — cleanup after verified cutover
 Remove request-carried abilities, party-leader-only resolution, `combat_sessions` tick ownership, dual delivery, and temporary instrumentation — each only once its replacement is proven.
 
-## Decisions I need from you
-1. Stage A only for now, or authorise Stage B design work in parallel?
-2. Optional bounded log pacing (~120ms per caught-up tick, state applied immediately, catch-up visibly marked) — yes or no?
-3. Keep the console `tickLatency` log, or replace it with a proper dev-only breakdown panel?
+## Risk and rollback
+Stage A touches no migrations and no authority: every change is client-side plus an additive, ignorable response field, so rollback is a frontend revert. Balance, cadence, formulas, catch-up semantics, rewards, boss casts and party follow are untouched.
+
