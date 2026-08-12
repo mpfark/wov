@@ -33,6 +33,7 @@ import {
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
 import { createTickState, applyTickStateFallback } from "../_shared/combat/tick-commit.ts";
+import { resolveTickOwner, loadDurableIntents } from "../_shared/combat/tick-owner.ts";
 import { renderFlavor } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
@@ -3958,6 +3959,10 @@ Deno.serve(async (req) => {
       // response recover the identical result from `encounter_tick_batches`.
       encounter_tick: publishedTick,
       encounter_batch_id: publishedBatchId,
+      // B4: tells the client which intent source the server used this tick.
+      // `shared` means durable actions were authoritative and the client may
+      // stop sending `pending_abilities` (B6).
+      tick_owner: tickOwner,
       // Timing breakdown so the client can separate server resolution cost
       // from network delivery and client-side presentation delay.
       trace: {
