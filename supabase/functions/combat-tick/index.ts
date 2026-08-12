@@ -3571,7 +3571,7 @@ Deno.serve(async (req) => {
     const sessionEnded = !anyAlive;
 
     if (sessionEnded) {
-      await db.from('combat_sessions').delete().eq('id', session.id);
+      tickState.session = { id: session.id, ended: true };
       console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
       // Refresh the recent-member presence map so the grace window covers
@@ -3581,13 +3581,15 @@ Deno.serve(async (req) => {
       for (const k of Object.keys(newRecent)) {
         if (now - (newRecent[k]?.last_at_node_ms || 0) > 30000) delete newRecent[k];
       }
-      await db.from('combat_sessions').update({
+      tickState.session = {
+        id: session.id,
+        ended: false,
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
         member_buffs: buffs,
         node_id: combatNodeId,
         recent_member_ids: newRecent,
-      }).eq('id', session.id);
+      };
     }
 
 
