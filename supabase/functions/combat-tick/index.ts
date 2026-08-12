@@ -3374,44 +3374,26 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Split writes: HP/CP go through encounter delta RPCs so concurrent
+      // ── Split writes: HP/CP go through encounter delta helpers so concurrent
       // writers (party ticks, DoT catch-up, heals) can't lose updates.
-      // XP/level/stance/max_* stay on the direct PATCH. Absolute HP writes
-      // from a level-up ride the PATCH so they stay atomic with new max_*.
+      // XP/level/stance/max_* stay on the direct patch. Absolute HP writes
+      // from a level-up ride the patch so they stay atomic with new max_*.
       const leveledUp = updates.level !== undefined;
-      const resourceRpcs: Promise<any>[] = [];
+      let hpDelta = 0;
+      let cpDelta = 0;
       if (!leveledUp) {
         if (updates.hp !== undefined) {
-          const hpDelta = (updates.hp as number) - c.hp;
-          if (hpDelta < 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_damage', {
-              _character_id: m.id, _amount: -hpDelta,
-              _source_kind: 'combat-tick', _source_creature_id: null,
-            }));
-          } else if (hpDelta > 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_heal', {
-              _character_id: m.id, _amount: hpDelta, _source_kind: 'combat-tick',
-            }));
-          }
+          hpDelta = (updates.hp as number) - c.hp;
           delete updates.hp;
         }
         if (updates.cp !== undefined) {
-          const cpDelta = (updates.cp as number) - (c.cp ?? 0);
-          if (cpDelta !== 0) {
-            resourceRpcs.push(db.rpc('encounter_apply_character_resource', {
-              _character_id: m.id, _resource: 'cp', _delta: cpDelta,
-              _source_kind: 'combat-tick',
-            }));
-          }
+          cpDelta = (updates.cp as number) - (c.cp ?? 0);
           delete updates.cp;
         }
       }
 
-      if (Object.keys(updates).length > 0) {
-        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
-      }
-      if (resourceRpcs.length > 0) {
-        memberUpdatePromises.push(Promise.all(resourceRpcs));
+      if (Object.keys(updates).length > 0 || hpDelta !== 0 || cpDelta !== 0) {
+        tickState.characters.push({ id: m.id, patch: { ...updates }, hp_delta: hpDelta, cp_delta: cpDelta });
       }
 
       memberStates.push({
