@@ -180,7 +180,11 @@ Deno.serve(async (req) => {
     /** Authoritative per-tick buff bag. Seeded from the persisted session below. */
     const buffs: Record<string, any> = {};
     const engagedIds: string[] = engaged_creature_ids || [];
-    const pendingAbilities: any[] = rawPendingAbilities || [];
+    // B4: intent source depends on the ownership latch. `legacy` keeps reading
+    // the request payload; `shared` replaces it with durable `combat_actions`
+    // rows (filled in once `members` is known, below).
+    const tickOwner = await resolveTickOwner(db);
+    let pendingAbilities: any[] = tickOwner === 'shared' ? [] : (rawPendingAbilities || []);
 
 
     // Server-authoritative time
