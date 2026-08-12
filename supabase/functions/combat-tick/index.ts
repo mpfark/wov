@@ -3353,9 +3353,7 @@ Deno.serve(async (req) => {
       // and let realtime drive the client. memberStates no longer carries a
       // projected salvage total.
       if (mSalvage[m.id] > 0) {
-        materialAddPromises.push(
-          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
-        );
+        tickState.materials.push({ character_id: m.id, key: 'salvage', delta: mSalvage[m.id] });
       }
 
       // ── Persist Force Shield ward HP across combats ───────────────
