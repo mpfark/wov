@@ -3798,25 +3798,25 @@ Deno.serve(async (req) => {
     );
     tickState.engagements_purge_creature_ids = [...purgedEngagementCreatures];
 
-    // ── Shared encounter result batch (Phase 3) ──────────────────
-    // The resolver publishes ONE authoritative per-tick batch for the node
-    // encounter. Every participant (any party, or none) can replay a missed
-    // response from `encounter_tick_batches` instead of guessing.
+    // ── Single-transaction commit (B2) ───────────────────────────
+    // One token-gated call applies EVERY remaining write of this tick —
+    // character patches and resource deltas, materials/gems, contracts, class
+    // bonds, effect cleanup and upsert, engagement bookkeeping, the combat
+    // session advance/close — together with intent retirement, the shared
+    // result batch and the encounter cursor. Either the whole tick lands or
+    // none of it does, and the cadence is re-anchored to the commit time,
+    // which is what removed the accumulated tick drift.
     //
-    // The batch is published through `commit_encounter_tick`, which is
-    // token-gated: only the resolver holding the current claim may advance the
-    // encounter's tick cursor and insert the batch. The same call retires the
-    // durable `combat_actions` rows this tick consumed, so intent retirement
-    // and result publication are one atomic step.
-    //
-    // When the shared-tick switch is off (or another resolver owns the tick),
-    // the claim is refused and we fall back to the legacy direct retirement.
+    // If the claim or commit is refused (no encounter, stale claim, already
+    // committed) the identical writes are replayed the legacy per-statement
+    // way so a refused tick never silently drops its results.
     const consumedActionIds = pendingAbilities
       .map((a: any) => a?.action_id)
       .filter((id: any): id is string => typeof id === 'string' && id.length > 0);
 
     let publishedTick: number | null = null;
     let publishedBatchId: string | null = null;
+    let commitRefusedReason: string | null = null;
 
     try {
       const { data: encRow } = await db
@@ -3830,7 +3830,9 @@ Deno.serve(async (req) => {
 
       const encounterId = (encRow as any)?.id as string | undefined;
 
-      if (encounterId) {
+      if (!encounterId) {
+        commitRefusedReason = 'no_encounter';
+      } else {
         const { data: claimRaw, error: claimErr } = await db.rpc('claim_encounter_tick', {
           _encounter_id: encounterId,
           _rate_ms: TICK_RATE,
@@ -3840,9 +3842,12 @@ Deno.serve(async (req) => {
         });
         if (claimErr) {
           console.warn('[combat-tick] tick claim failed', claimErr.message);
+          commitRefusedReason = 'claim_error';
         } else {
           const claim = claimRaw as any;
-          if (claim?.claimed) {
+          if (!claim?.claimed) {
+            commitRefusedReason = claim?.reason ?? 'claim_refused';
+          } else {
             const batchId = crypto.randomUUID();
             const { data: commitRaw, error: commitErr } = await db.rpc('commit_encounter_tick', {
               _encounter_id: encounterId,
@@ -3853,6 +3858,7 @@ Deno.serve(async (req) => {
               _payload: {
                 consumed_action_ids: consumedActionIds,
                 rejected_actions: [],
+                state: tickState,
                 batch: {
                   events,
                   creature_states,
@@ -3870,13 +3876,15 @@ Deno.serve(async (req) => {
             });
             if (commitErr) {
               console.warn('[combat-tick] tick commit failed', commitErr.message);
+              commitRefusedReason = 'commit_error';
             } else if ((commitRaw as any)?.committed) {
               publishedTick = claim.tick;
               publishedBatchId = batchId;
             } else {
+              commitRefusedReason = (commitRaw as any)?.reason ?? 'unknown';
               console.log(JSON.stringify({
                 fn: 'combat-tick',
-                tick_commit_refused: (commitRaw as any)?.reason ?? 'unknown',
+                tick_commit_refused: commitRefusedReason,
                 encounter_id: encounterId,
               }));
             }
@@ -3884,14 +3892,20 @@ Deno.serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error('[combat-tick] shared batch publish failed', e);
+      console.error('[combat-tick] tick commit threw', e);
+      commitRefusedReason = 'exception';
     }
 
-    // ── Durable action bookkeeping (Phase 1 fallback) ─────────────
-    // `commit_encounter_tick` retires consumed intents atomically. Only when
-    // the batch was NOT published do we retire the rows directly, so an intent
-    // can never be left pending forever.
+    // ── Refused-commit fallback ───────────────────────────────────
     if (!publishedBatchId) {
+      console.log(JSON.stringify({
+        fn: 'combat-tick', tick_state_fallback: commitRefusedReason ?? 'unknown',
+      }));
+      try {
+        await applyTickStateFallback(db, tickState);
+      } catch (e) {
+        console.error('[combat-tick] tick state fallback failed', e);
+      }
       try {
         if (consumedActionIds.length > 0) {
           await db
