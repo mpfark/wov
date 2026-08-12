@@ -933,8 +933,21 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         }
 
         const tickLatency = Date.now() - tickT0;
+        const receivedAt = Date.now();
+        const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
+          const res = data as CombatTickResponse | null;
+          traceTickResponse(seq, {
+            roundTripMs: tickLatency,
+            ticksProcessed: res?.ticks_processed,
+            encounterTick: res?.encounter_tick ?? null,
+            batchId: res?.encounter_batch_id ?? null,
+            serverResolveMs: res?.trace?.server_resolve_ms,
+            outcome,
+          });
+        };
 
         if (seq !== tickSeqRef.current) {
+          traceResponse('stale');
           console.log(`[combat] stale tick response ignored`, { seq, current: tickSeqRef.current, latency: tickLatency });
           // Still emit kill notifications from stale responses (e.g. last tick before node change)
           const staleResult = data as CombatTickResponse | null;
