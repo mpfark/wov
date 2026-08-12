@@ -33,7 +33,7 @@ import {
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
 import { createTickState, applyTickStateFallback } from "../_shared/combat/tick-commit.ts";
-import { resolveTickOwner, loadDurableIntents } from "../_shared/combat/tick-owner.ts";
+import { loadDurableIntents } from "../_shared/combat/tick-owner.ts";
 import { renderFlavor } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 
     const {
       party_id, character_id, node_id, member_buffs,
-      engaged_creature_ids, pending_abilities: rawPendingAbilities,
+      engaged_creature_ids,
       // New: client can request session creation
       action,
     } = await req.json();
@@ -181,11 +181,9 @@ Deno.serve(async (req) => {
     /** Authoritative per-tick buff bag. Seeded from the persisted session below. */
     const buffs: Record<string, any> = {};
     const engagedIds: string[] = engaged_creature_ids || [];
-    // B4: intent source depends on the ownership latch. `legacy` keeps reading
-    // the request payload; `shared` replaces it with durable `combat_actions`
-    // rows (filled in once `members` is known, below).
-    const tickOwner = await resolveTickOwner(db);
-    let pendingAbilities: any[] = tickOwner === 'shared' ? [] : (rawPendingAbilities || []);
+    // Stage C: durable `combat_actions` rows are the ONLY intent source. The
+    // request payload no longer carries abilities and is never consulted.
+    let pendingAbilities: any[] = [];
 
 
     // Server-authoritative time
@@ -252,23 +250,19 @@ Deno.serve(async (req) => {
       sessionKey = { character_id };
     }
 
-    // ── B4: durable intent (shared ownership only) ────────────────
-    // In `shared` mode `combat_actions` is the sole execution authority: one
-    // pending slot per participating character, read in a deterministic order.
-    // The request payload is never consulted, so a stale client that still
-    // sends `pending_abilities` cannot double-execute anything.
-    if (tickOwner === 'shared') {
-      pendingAbilities = await loadDurableIntents(db, {
-        nodeId: node_id,
-        characterIds: members.map(m => m.id),
-        nowMs: Date.now(),
-      });
-      if (pendingAbilities.length > 0) {
-        console.log(JSON.stringify({
-          fn: 'combat-tick', tick_owner: tickOwner,
-          durable_intents: pendingAbilities.length,
-        }));
-      }
+    // ── Durable intent (sole execution authority) ─────────────────
+    // One pending `combat_actions` slot per participating character, read in a
+    // deterministic order. A stale client that still sends `pending_abilities`
+    // cannot double-execute anything: the payload is ignored entirely.
+    pendingAbilities = await loadDurableIntents(db, {
+      nodeId: node_id,
+      characterIds: members.map(m => m.id),
+      nowMs: Date.now(),
+    });
+    if (pendingAbilities.length > 0) {
+      console.log(JSON.stringify({
+        fn: 'combat-tick', durable_intents: pendingAbilities.length,
+      }));
     }
 
 
@@ -3965,10 +3959,6 @@ Deno.serve(async (req) => {
       encounter_batch_id: publishedBatchId,
       // B5: the encounter whose batch stream carries this result.
       encounter_id: publishedEncounterId,
-      // B4: tells the client which intent source the server used this tick.
-      // `shared` means durable actions were authoritative and the client may
-      // stop sending `pending_abilities` (B6).
-      tick_owner: tickOwner,
       // Timing breakdown so the client can separate server resolution cost
       // from network delivery and client-side presentation delay.
       trace: {
