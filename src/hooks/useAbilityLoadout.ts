@@ -69,11 +69,10 @@ export function useAbilityLoadout(
 
   const select = useCallback(async (roleId: string, abilityId: string) => {
     if (!characterId || !classKey) return;
-    const role = getLoadoutRoles(classKey).find(r => r.roleId === roleId);
-    const isDefault = role?.options.find(o => o.abilityId === abilityId)?.isDefault ?? false;
 
-    const next = { ...selections };
-    if (isDefault) delete next[roleId]; else next[roleId] = abilityId;
+    // Defaults are materialized too: every slot keeps an explicit row so
+    // submit_combat_action can verify the ability against the loadout.
+    const next = { ...selections, [roleId]: abilityId };
 
     // Optimistic: the bar updates immediately, the write follows.
     setSelections(next);
@@ -84,13 +83,9 @@ export function useAbilityLoadout(
     // Server-authoritative: the RPC re-checks ownership, alive, out-of-combat,
     // stance state, class assignment and unlock level. Direct table writes are
     // revoked, so this is the only mutation path.
-    const { error: err } = isDefault
-      ? await supabase.rpc('clear_ability_loadout', {
-          _character_id: characterId, _role_id: roleId,
-        })
-      : await supabase.rpc('set_ability_loadout', {
-          _character_id: characterId, _role_id: roleId, _ability_id: abilityId,
-        });
+    const { error: err } = await supabase.rpc('set_ability_loadout', {
+      _character_id: characterId, _role_id: roleId, _ability_id: abilityId,
+    });
     setSaving(false);
     if (err) {
       setError(err.message);
@@ -98,6 +93,7 @@ export function useAbilityLoadout(
       applyAbilityLoadout(classKey, selections);
     }
   }, [characterId, classKey, selections]);
+
 
   return { roles, allRoles, selections, loading, saving, error, select };
 }

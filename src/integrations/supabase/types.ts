@@ -3216,6 +3216,10 @@ export type Database = {
         Args: { _character_id: string; _display: string }
         Returns: Json
       }
+      character_can_use_ability: {
+        Args: { _ability_key: string; _character_id: string }
+        Returns: boolean
+      }
       check_family_name: { Args: { _display: string }; Returns: Json }
       claim_encounter_tick: {
         Args: {
