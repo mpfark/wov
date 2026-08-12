@@ -462,7 +462,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       engagedCreatureIdsRef.current,
     );
 
-    if (result.ticksProcessed && result.ticksProcessed > 1) {
+    const caughtUp = (result.ticksProcessed ?? 0) > 1;
+    if (caughtUp) {
       console.warn(`[combat] Processed ${result.ticksProcessed} ticks in one response (gap: ${gap}ms)`);
     }
     lastTickRef.current = now;
@@ -477,18 +478,34 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       ext.current.onCreaturesKilled(result.killedCreatureIds);
     }
 
-    // Apply creature HP overrides
-    for (const [id, hp] of Object.entries(result.creatureHpUpdates)) {
+    // Apply creature HP overrides — one state commit for the whole tick so a
+    // multi-creature response doesn't schedule a render per creature.
+    const hpEntries = Object.entries(result.creatureHpUpdates);
+    if (hpEntries.length > 0) {
       setCreatureHpOverrides(prev => {
-        const next = { ...prev, [id]: hp };
+        const next = { ...prev };
+        for (const [id, hp] of hpEntries) next[id] = hp;
         creatureHpOverridesRef.current = next;
         return next;
       });
     }
 
-    // Log messages
+    // Log messages. When the server folded several rounds into one response the
+    // clump is legitimate catch-up, not lag — mark it so the log reads honestly.
+    // No artificial pacing is applied.
+    if (caughtUp && result.formattedLogMessages.length > 0) {
+      ext.current.addLocalLogEvent(createLogEvent({
+        type: 'system',
+        effectType: 'tick_separator',
+        message: `Catching up — ${result.ticksProcessed} rounds resolved at once.`,
+      }));
+    }
     for (const line of result.formattedLogMessages) {
       ext.current.addLocalLogEvent(typeof line === 'string' ? legacyStringToEvent(line) : line);
+    }
+
+    if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+      traceTickApplied(meta.seq, meta.receivedAt);
     }
 
     // Salvage / gem drops land in character_materials (no realtime on that
