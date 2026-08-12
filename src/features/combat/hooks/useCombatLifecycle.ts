@@ -84,11 +84,15 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
   }, [isDead, stopCombat, setPoisonBuff, setIgniteBuff, clearReservedBuffsLocal]);
 
 
-  // Non-leader timeout
+  // Non-leader timeout.
+  // The follower wake-up in useCombatDriver fires at 6s of tick silence and
+  // needs a round-trip to land, so tearing combat down at exactly 6s raced its
+  // own recovery attempt and dropped the follower out of a live fight. Give the
+  // recovery one full wake cycle plus a round-trip before giving up.
   useEffect(() => {
     if (!inCombat || isLeader || !party) return;
     const check = setInterval(() => {
-      if (Date.now() - lastTickRef.current > 6000) {
+      if (Date.now() - lastTickRef.current > 12000) {
         stopCombat();
       }
     }, 2000);

@@ -62,6 +62,7 @@ import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
+import CombatTimingPanel from '@/components/admin/CombatTimingPanel';
 import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
@@ -1716,6 +1717,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
       {/* Broadcast Debug Overlay — admin only */}
       {isAdmin && <BroadcastDebugOverlay />}
+
+      {/* Combat timing breakdown — development instrumentation only */}
+      {isAdmin && <CombatTimingPanel />}
 
       {/* Movement Pad — tablet only */}
       {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}

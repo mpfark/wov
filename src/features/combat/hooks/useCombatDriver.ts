@@ -32,6 +32,10 @@ import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events
 import { useCombatLifecycle } from './useCombatLifecycle';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
 import { createLogEvent, mapServerEventType } from '@/features/combat/events/log-event';
+import {
+  traceAbilityPress, traceTickStart, traceTickResponse, traceTickApplied, traceBroadcastTick,
+  type TickCause,
+} from '@/features/combat/trace/combat-trace';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set([
@@ -144,6 +148,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const tickSeqRef = useRef(0);
   // Monotonic per-session sequence for durable combat action submissions.
   const durableSeqRef = useRef(0);
+  /**
+   * Why the next tick request is being fired — instrumentation only.
+   * Consumed (and reset to 'cadence') by doTick.
+   */
+  const tickCauseRef = useRef<TickCause>('cadence');
+  /**
+   * Batch ids already applied locally. A driver can receive the same
+   * authoritative batch twice (own response + party broadcast); replaying it
+   * duplicates log lines and re-applies creature HP.
+   */
+  const appliedBatchIdsRef = useRef<Set<string>>(new Set());
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
@@ -205,6 +220,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
+    appliedBatchIdsRef.current = new Set();
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
     if (fizzling) {
@@ -241,6 +257,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const driver = solo || p.isLeader;
       if (driver) {
         if (inCombatRef.current) {
+          tickCauseRef.current = 'visibility';
           try { doTickRef.current(); } catch { /* noop */ }
         }
         return;
@@ -265,7 +282,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
 
 
-  // ── Queue ability for next tick ────────────────────────────────
+  // ── Queue ability for the next tick submission ─────────────────
+  // The action is eligible immediately: the previous build parked it for a
+  // fixed 2s (`readyAt: now + 2000`) which, on top of the 2s cadence, meant a
+  // pressed ability could wait up to 4s before it was even submitted. The tick
+  // cadence itself stays the pacing authority — we simply re-phase it so the
+  // dispatch happens now and the next cadence tick is a full interval later.
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
     const p = ext.current;
@@ -273,13 +295,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const ability = allAbilities[index];
     const cpCost = ability?.cpCost ?? 0;
     const label = ability?.label ?? 'ability';
-    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label };
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now(), cpCost, label };
     setPendingAbility({ index, targetId });
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;
-    if (!intervalRef.current) {
-      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-    }
+    traceAbilityPress(label);
+    tickCauseRef.current = 'ability';
+    if (intervalRef.current) clearWorkerInterval(intervalRef.current);
+    intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+    doTickRef.current();
   }, []);
 
   // ── Aggro effects ──────────────────────────────────────────────
@@ -349,7 +373,33 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
-  const processTickResult = useCallback((data: CombatTickResponse) => {
+  /**
+   * `meta` is instrumentation-only context from the transport that delivered
+   * this result (own HTTP response vs party broadcast). It never influences
+   * how the result is applied.
+   */
+  const processTickResult = useCallback((
+    data: CombatTickResponse,
+    meta?: { seq?: number; receivedAt?: number },
+  ) => {
+    // Duplicate-batch guard: the same authoritative batch can reach us twice
+    // (our own response plus the leader broadcast, or a recovery replay).
+    // Applying it twice duplicates log lines and re-applies HP.
+    const batchId = data.encounter_batch_id;
+    if (batchId) {
+      if (appliedBatchIdsRef.current.has(batchId)) {
+        if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+          traceTickResponse(meta.seq, { roundTripMs: 0, outcome: 'duplicate', batchId });
+        }
+        return;
+      }
+      appliedBatchIdsRef.current.add(batchId);
+      if (appliedBatchIdsRef.current.size > 200) {
+        appliedBatchIdsRef.current = new Set(
+          [...appliedBatchIdsRef.current].slice(-100),
+        );
+      }
+    }
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
     //   1. Non-leader party member receiving a broadcast tick result.
@@ -414,7 +464,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       engagedCreatureIdsRef.current,
     );
 
-    if (result.ticksProcessed && result.ticksProcessed > 1) {
+    const caughtUp = (result.ticksProcessed ?? 0) > 1;
+    if (caughtUp) {
       console.warn(`[combat] Processed ${result.ticksProcessed} ticks in one response (gap: ${gap}ms)`);
     }
     lastTickRef.current = now;
@@ -429,18 +480,34 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       ext.current.onCreaturesKilled(result.killedCreatureIds);
     }
 
-    // Apply creature HP overrides
-    for (const [id, hp] of Object.entries(result.creatureHpUpdates)) {
+    // Apply creature HP overrides — one state commit for the whole tick so a
+    // multi-creature response doesn't schedule a render per creature.
+    const hpEntries = Object.entries(result.creatureHpUpdates);
+    if (hpEntries.length > 0) {
       setCreatureHpOverrides(prev => {
-        const next = { ...prev, [id]: hp };
+        const next = { ...prev };
+        for (const [id, hp] of hpEntries) next[id] = hp;
         creatureHpOverridesRef.current = next;
         return next;
       });
     }
 
-    // Log messages
+    // Log messages. When the server folded several rounds into one response the
+    // clump is legitimate catch-up, not lag — mark it so the log reads honestly.
+    // No artificial pacing is applied.
+    if (caughtUp && result.formattedLogMessages.length > 0) {
+      ext.current.addLocalLogEvent(createLogEvent({
+        type: 'system',
+        effectType: 'tick_separator',
+        message: `Catching up — ${result.ticksProcessed} rounds resolved at once.`,
+      }));
+    }
     for (const line of result.formattedLogMessages) {
       ext.current.addLocalLogEvent(typeof line === 'string' ? legacyStringToEvent(line) : line);
+    }
+
+    if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+      traceTickApplied(meta.seq, meta.receivedAt);
     }
 
     // Salvage / gem drops land in character_materials (no realtime on that
@@ -626,7 +693,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       .on('broadcast', { event: 'combat_tick_result' }, (payload) => {
         if (ext.current.isLeader) return;
         const data = payload.payload as CombatTickResponse;
-        if (data) processTickResult(data);
+        if (!data) return;
+        const gap = lastTickRef.current ? Date.now() - lastTickRef.current : 0;
+        traceBroadcastTick(gap, data.ticks_processed, data.encounter_batch_id ?? null);
+        processTickResult(data);
       })
       .on('broadcast', { event: 'engage_request' }, (payload) => {
         if (!ext.current.isLeader) return;
@@ -683,7 +753,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const wake = setInterval(() => {
       if (!inCombatRef.current) return;
       const since = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-      if (since > FOLLOWER_WAKE_STALE_MS) doTickRef.current();
+      if (since > FOLLOWER_WAKE_STALE_MS) {
+        tickCauseRef.current = 'wakeup';
+        doTickRef.current();
+      }
     }, 2000);
     return () => { clearInterval(interval); clearInterval(wake); };
   }, [params.party, params.isLeader]);
@@ -840,7 +913,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
-        console.log(`[combat] tick #${seq} start (gap: ${tickGap}ms, engaged: ${engagedCreatureIdsRef.current.length})`);
+        const cause = tickCauseRef.current;
+        tickCauseRef.current = 'cadence';
+        traceTickStart(seq, cause, tickGap, pendingAbilitiesForServer.length > 0);
+
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)
         let data: any = null;
@@ -862,8 +938,21 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         }
 
         const tickLatency = Date.now() - tickT0;
+        const receivedAt = Date.now();
+        const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
+          const res = data as CombatTickResponse | null;
+          traceTickResponse(seq, {
+            roundTripMs: tickLatency,
+            ticksProcessed: res?.ticks_processed,
+            encounterTick: res?.encounter_tick ?? null,
+            batchId: res?.encounter_batch_id ?? null,
+            serverResolveMs: res?.trace?.server_resolve_ms,
+            outcome,
+          });
+        };
 
         if (seq !== tickSeqRef.current) {
+          traceResponse('stale');
           console.log(`[combat] stale tick response ignored`, { seq, current: tickSeqRef.current, latency: tickLatency });
           // Still emit kill notifications from stale responses (e.g. last tick before node change)
           const staleResult = data as CombatTickResponse | null;
@@ -897,24 +986,28 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             }
           }
         } else if (error) {
+          traceResponse('error');
           console.error('Combat tick error:', error);
           // Don't strand the reservation overlay if the tick failed.
           setPendingCpCost(0);
         } else {
           const result = data as CombatTickResponse;
-          console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
+            traceResponse('empty');
             stopCombat();
           } else if ((result as any).tick_reserved_elsewhere) {
             // Another participant reserved this tick — it resolved nothing.
             // The winner's result arrives via broadcast / realtime.
+            traceResponse('reserved');
             setPendingCpCost(0);
           } else if ((result as any).roster_unavailable) {
             // The resolver refused to simulate because the engagement roster
             // could not be loaded. Nothing authoritative changed — hold state
             // and let the next tick pick the elapsed time up.
+            traceResponse('reserved');
             setPendingCpCost(0);
           } else {
+            traceResponse('applied');
             if (!solo && p.isLeader) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
@@ -922,7 +1015,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // at dispatch time, so we just process the tick result. CP
             // reconciliation in processTickResult will skip the CP repaint
             // when the server agrees with our optimistic value.
-            processTickResult(result);
+            processTickResult(result, { seq, receivedAt });
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
@@ -941,9 +1034,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     } finally {
       tickBusyRef.current = false;
+      // Coalesce overlapping wake-ups. Previously ANY wake-up that arrived
+      // while a tick was in flight queued an immediate follow-up request, so a
+      // slow response produced a burst of back-to-back HTTP calls that all
+      // resolved (or got discarded as stale) at once. Only fire the follow-up
+      // when it can actually do work: a queued ability to dispatch, or enough
+      // elapsed time that the server has a new tick to resolve.
       if (tickPendingRef.current) {
         tickPendingRef.current = false;
-        setTimeout(() => doTickRef.current(), 0);
+        const sinceApplied = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
+        const hasWork = !!pendingAbilityRef.current || sinceApplied >= 1500;
+        if (hasWork) {
+          tickCauseRef.current = pendingAbilityRef.current ? 'ability' : 'followup';
+          setTimeout(() => doTickRef.current(), 0);
+        }
       }
     }
   }, [processTickResult, stopCombat]);

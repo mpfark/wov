@@ -3655,9 +3655,33 @@ Deno.serve(async (req) => {
     // release engagements against creatures that died off-screen (e.g. a DoT
     // or Consecrate kill resolved by combat-catchup) and never showed up in
     // this tick's kill list.
-    const alive_creature_ids = allCreatures
+    //
+    // Read AFTER this tick's creature writes have committed: the previous
+    // hybrid view mixed the tick-start snapshot with in-memory HP, so a
+    // creature another writer killed between our snapshot and now could still
+    // be reported alive, keeping clients engaged with a corpse. The snapshot
+    // view stays as the fallback if the confirming read fails.
+    let alive_creature_ids = allCreatures
       .filter(cr => !cKilled.has(cr.id) && (authoritativeCreatureHp?.[cr.id] ?? cHp[cr.id] ?? cr.hp) > 0)
       .map(cr => cr.id);
+
+    try {
+      const { data: committedRoster, error: rosterErr } = await db
+        .from('creatures')
+        .select('id, hp, is_alive')
+        .eq('node_id', combatNodeId)
+        .eq('is_alive', true);
+      if (rosterErr) {
+        console.warn('[combat-tick] committed roster read failed', rosterErr.message);
+      } else if (committedRoster) {
+        alive_creature_ids = committedRoster
+          .filter((cr: any) => !cKilled.has(cr.id) && (cr.hp ?? 0) > 0)
+          .map((cr: any) => cr.id as string);
+      }
+    } catch (e) {
+      console.warn('[combat-tick] committed roster read threw', e);
+    }
+
 
     const creature_states = creatures
       .filter(cr => cHp[cr.id] !== cr.hp || cKilled.has(cr.id))
@@ -3963,6 +3987,14 @@ Deno.serve(async (req) => {
       // response recover the identical result from `encounter_tick_batches`.
       encounter_tick: publishedTick,
       encounter_batch_id: publishedBatchId,
+      // Timing breakdown so the client can separate server resolution cost
+      // from network delivery and client-side presentation delay.
+      trace: {
+        tick_due_at: session.last_tick_at + TICK_RATE,
+        resolution_started_at: _requestT0,
+        committed_at: Date.now(),
+        server_resolve_ms: Date.now() - _requestT0,
+      },
     });
 
   } catch (err) {
