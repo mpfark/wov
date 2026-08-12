@@ -30,9 +30,9 @@ import {
   resolveEffectTicks,
   processLootDrops,
   writeCreatureState,
-  cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
+import { createTickState, applyTickStateFallback } from "../_shared/combat/tick-commit.ts";
 import { renderFlavor } from "../_shared/proc-log-format.ts";
 import { normalizeDamageType } from "../_shared/combat/damage-types.ts";
 import { buildCastHitEvent } from "../_shared/combat/cast-events.ts";
