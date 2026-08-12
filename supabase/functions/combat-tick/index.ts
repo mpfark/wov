@@ -3963,6 +3963,8 @@ Deno.serve(async (req) => {
       // response recover the identical result from `encounter_tick_batches`.
       encounter_tick: publishedTick,
       encounter_batch_id: publishedBatchId,
+      // B5: the encounter whose batch stream carries this result.
+      encounter_id: publishedEncounterId,
       // B4: tells the client which intent source the server used this tick.
       // `shared` means durable actions were authoritative and the client may
       // stop sending `pending_abilities` (B6).
