@@ -210,7 +210,35 @@ export interface DecodedSnapshot {
 
 // ── section decoders ───────────────────────────────────────────────
 
+/** Every top-level section `public.encounter_snapshot_v2` (v3) returns. */
+const SNAPSHOT_ROOT_KEYS = [
+  'loaded',
+  'snapshotVersion',
+  'encounterId',
+  'nodeId',
+  'tickNumber',
+  'encounterVersion',
+  'loadedAtMs',
+  'tickRateMs',
+  'lootFallbackChance',
+  'claim',
+  'cursor',
+  'storedPower',
+  'participants',
+  'creatures',
+  'engagements',
+  'actions',
+  'effects',
+  'statusDefs',
+  'casts',
+  'lootConfig',
+  'lootTables',
+  'scope',
+  'stateDigest',
+] as const;
+
 const PARTICIPANT_KEYS = [
+
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
   'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
