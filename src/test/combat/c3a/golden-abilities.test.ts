@@ -22,10 +22,15 @@ function digest(out: ProposedTick) {
   return {
     characters: out.characters.map((c) => ({
       id: c.characterId,
-      hp: c.hp ?? null,
-      cp: c.cp ?? null,
+      hp: `${c.hpBefore}->${c.hpAfter}`,
+      cp: `${c.cpBefore}->${c.cpAfter}`,
+      died: c.died,
     })),
-    creatures: out.creatures.map((c) => ({ id: c.creatureId, hp: c.hp ?? null })),
+    creatures: out.creatures.map((c) => ({
+      id: c.creatureId,
+      hp: `${c.hpBefore}->${c.hpAfter}`,
+      killed: c.killed,
+    })),
     effectUpserts: out.effectUpserts.map((e) => ({
       target: `${e.targetKind}:${e.targetId}`,
       type: e.effectType,
@@ -33,7 +38,7 @@ function digest(out: ProposedTick) {
       amountPerTick: e.amountPerTick,
       mechanic: e.mechanic ?? null,
     })),
-    effectDeletes: out.effectDeletes.length,
+    effectDeletes: out.effectDeleteIds.length,
     events: out.events.map((e) => e.type),
     rngDraws: out.rngDraws,
   };
@@ -64,16 +69,12 @@ describe('C3a golden abilities', () => {
         expect(family).toBeTruthy();
 
         // No mutation may be negative or non-finite.
-        for (const c of out.creatures) {
-          if (c.hp != null) expect(c.hp).toBeGreaterThanOrEqual(0);
-        }
-        for (const c of out.characters) {
-          if (c.hp != null) expect(c.hp).toBeGreaterThanOrEqual(0);
-        }
+        for (const c of out.creatures) expect(c.hpAfter).toBeGreaterThanOrEqual(0);
+        for (const c of out.characters) expect(c.hpAfter).toBeGreaterThanOrEqual(0);
 
         if (family === 'damage') {
           const touched =
-            out.creatures.some((c) => c.hp != null) ||
+            out.creatures.some((c) => c.hpAfter !== c.hpBefore) ||
             out.events.some((e) => e.type.includes('miss'));
           expect(touched).toBe(true);
         }
@@ -96,7 +97,7 @@ describe('C3a golden abilities', () => {
     expect(row).toBeTruthy();
     const out = resolveTickPure(abilityEncounter(row!));
     const caster = out.characters.find((c) => c.characterId === 'char-caster');
-    if (caster?.hp != null) expect(caster.hp).toBeGreaterThanOrEqual(20);
+    if (caster) expect(caster.hpAfter).toBeGreaterThanOrEqual(20);
   });
 
   it('multi_attack never exceeds its configured arrow count', () => {
@@ -110,7 +111,7 @@ describe('C3a golden abilities', () => {
   it('stack_consume clears the stacks it spends', () => {
     for (const row of rows.filter((r) => r.mechanic === 'stack_consume')) {
       const out = resolveTickPure(abilityEncounter(row));
-      expect(out.effectDeletes.length + out.effectUpserts.length).toBeGreaterThan(0);
+      expect(out.effectDeleteIds.length + out.effectUpserts.length).toBeGreaterThan(0);
     }
   });
 });
