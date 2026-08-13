@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
       case 'character': {
         const { data, error } = await admin
           .from('characters')
-          .select('level, xp, hp, max_hp, cp, max_cp, mp, max_mp, str, dex, con, int, wis, cha, unspent_stat_points, respec_points, gold, renown')
+          .select('level, xp, hp, max_hp, cp, max_cp, mp, max_mp, str, dex, con, int, wis, cha, unspent_stat_points, respec_points, gold, rp_total_earned')
           .eq('id', body.characterId)
           .single();
         if (error) throw new Error(error.message);
