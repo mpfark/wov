@@ -145,8 +145,8 @@ describe('pure resolver — golden rules', () => {
     const out = resolveTickPure(
       snapshot({
         participants: [p],
-        creatures: [creature({ hp: 1 })],
-        ticksToSimulate: 1,
+        creatures: [creature({ hp: 1, ac: 0 })],
+        ticksToSimulate: 6,
       }),
     );
     expect(out.kills).toHaveLength(1);
@@ -166,7 +166,8 @@ describe('pure resolver — golden rules', () => {
   it('boss kills pay renown and a x4 salvage multiplier', () => {
     const out = resolveTickPure(
       snapshot({
-        creatures: [creature({ hp: 1, rarity: 'boss', level: 30 })],
+        creatures: [creature({ hp: 1, ac: 0, rarity: 'boss', level: 30 })],
+        ticksToSimulate: 6,
       }),
     );
     expect(out.rewards[0].renown).toBe(15); // floor(30 * 0.5)
@@ -176,7 +177,10 @@ describe('pure resolver — golden rules', () => {
 
   it('rare kills pay a small renown floor', () => {
     const out = resolveTickPure(
-      snapshot({ creatures: [creature({ hp: 1, rarity: 'rare', level: 4 })] }),
+      snapshot({
+        creatures: [creature({ hp: 1, ac: 0, rarity: 'rare', level: 4 })],
+        ticksToSimulate: 6,
+      }),
     );
     expect(out.rewards[0].renown).toBe(1);
   });
@@ -184,7 +188,8 @@ describe('pure resolver — golden rules', () => {
   it('item_pool mode proposes a pool draw with the creature drop chance', () => {
     const out = resolveTickPure(
       snapshot({
-        creatures: [creature({ hp: 1, lootMode: 'item_pool', dropChance: 0.3 })],
+        creatures: [creature({ hp: 1, ac: 0, lootMode: 'item_pool', dropChance: 0.3 })],
+        ticksToSimulate: 6,
       }),
     );
     expect(out.loot).toEqual([
@@ -203,7 +208,10 @@ describe('pure resolver — golden rules', () => {
 
   it('salvage_only mode proposes no item loot', () => {
     const out = resolveTickPure(
-      snapshot({ creatures: [creature({ hp: 1, lootMode: 'salvage_only' })] }),
+      snapshot({
+        creatures: [creature({ hp: 1, ac: 0, lootMode: 'salvage_only' })],
+        ticksToSimulate: 6,
+      }),
     );
     expect(out.loot).toHaveLength(0);
     expect(out.materials).toHaveLength(1);
@@ -211,7 +219,10 @@ describe('pure resolver — golden rules', () => {
 
   it('a loot-table id defers the roll to the committer with the legacy 0.5 default', () => {
     const out = resolveTickPure(
-      snapshot({ creatures: [creature({ hp: 1, lootTableId: 'lt-9', dropChance: null })] }),
+      snapshot({
+        creatures: [creature({ hp: 1, ac: 0, lootTableId: 'lt-9', dropChance: null })],
+        ticksToSimulate: 6,
+      }),
     );
     expect(out.loot[0]).toMatchObject({ mode: 'legacy', lootTableId: 'lt-9', dropChance: 0.5 });
   });
@@ -219,7 +230,7 @@ describe('pure resolver — golden rules', () => {
   it('humanoid gold uses the best CHA in the party', () => {
     const low = participant({ id: 'a', attrs: { ...participant().attrs, cha: 8 } });
     const high = participant({ id: 'b', attrs: { ...participant().attrs, cha: 30 }, isTank: false });
-    const c = creature({ hp: 1, isHumanoid: true, salvageMaterialKey: null });
+    const c = creature({ hp: 1, ac: 0, isHumanoid: true, salvageMaterialKey: null });
     const eng = [
       { creatureId: c.id, characterId: 'a', lastActionAtMs: 1 },
       { creatureId: c.id, characterId: 'b', lastActionAtMs: 1 },
@@ -236,7 +247,7 @@ describe('pure resolver — golden rules', () => {
   it('party kills split gold and apply the party XP bonus', () => {
     const a = participant({ id: 'a' });
     const b = participant({ id: 'b', isTank: false });
-    const c = creature({ hp: 1 });
+    const c = creature({ hp: 1, ac: 0 });
     const out = resolveTickPure(
       snapshot({
         participants: [a, b],
@@ -314,7 +325,11 @@ describe('pure resolver — golden rules', () => {
       },
     });
     const out = resolveTickPure(
-      snapshot({ creatures: [boss], ticksToSimulate: 1 }),
+      snapshot({
+        creatures: [boss],
+        engagements: [{ creatureId: 'boss', characterId: 'char-1', lastActionAtMs: 1 }],
+        ticksToSimulate: 1,
+      }),
     );
     expect(out.storedPower).toEqual([{ creatureId: 'boss', delta: 1, cap: 5 }]);
     expect(out.casts[0].damage).toBe(15); // 10 + stored 5
@@ -451,7 +466,9 @@ describe('pure resolver — golden rules', () => {
   });
 
   it('a fight with every creature dead proposes ending the session', () => {
-    const out = resolveTickPure(snapshot({ creatures: [creature({ hp: 1 })] }));
+    const out = resolveTickPure(
+      snapshot({ creatures: [creature({ hp: 1, ac: 0 })], ticksToSimulate: 6 }),
+    );
     expect(out.session.ended).toBe(true);
   });
 
