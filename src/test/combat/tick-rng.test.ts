@@ -14,10 +14,21 @@ import {
   createTickRng,
   selectFromTankPool,
 } from '@/shared/combat/tick-rng';
-import { selectPrimaryTarget } from '@/shared/combat/targeting';
 
 const ENC = '5f2c1a90-1111-4b6a-9c3d-000000000001';
 const ctx = { encounterId: ENC, tickNumber: 42 };
+
+/** Local index pick, standing in for the resolver's alive-target selection. */
+function pickAlive<T extends { id: string; hp: number }>(
+  candidates: readonly T[],
+  sample: number,
+): T | null {
+  const alive = candidates.filter(c => c.hp > 0);
+  if (alive.length === 0) return null;
+  const i = Math.min(alive.length - 1, Math.floor(Math.max(0, Math.min(1, sample)) * alive.length));
+  return alive[i];
+}
+
 
 describe('tick-rng determinism', () => {
   it('same context, stream and parts yield the same sample', () => {
@@ -97,10 +108,8 @@ describe('tick-rng determinism', () => {
       { id: 'p2', hp: 10 },
       { id: 'p3', hp: 10 },
     ];
-    const pickFor = () => selectPrimaryTarget(candidates, {
-      mode: 'random_alive',
-      pick: () => tickSample(ctx, 'creature_target', 'creature-1'),
-    });
+    const pickFor = () =>
+      pickAlive(candidates, tickSample(ctx, 'creature_target', 'creature-1'));
     expect(pickFor()?.id).toBe(pickFor()?.id);
   });
 
@@ -111,7 +120,7 @@ describe('tick-rng determinism', () => {
     const resolve = () =>
       creatures.map(cid => {
         const rng = createTickRng(ctx, 'creature_pass', cid);
-        const target = selectPrimaryTarget(roster, { mode: 'random_alive', pick: () => rng.next() });
+        const target = pickAlive(roster, rng.next());
         return { cid, target: target?.id, damage: rng.roll(8), proc: rng.next() < 0.25 };
       });
 

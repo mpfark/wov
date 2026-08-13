@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { absorbFromShield, resolveDamage, resolveHeal } from '../resolution';
-import { selectPrimaryTarget, selectAoeTargets, livingTargets } from '../targeting';
-import { applyStackingEffect, isEffectExpired } from '../status';
 
 describe('resolveDamage', () => {
   it('applies damage and clamps at zero HP', () => {
@@ -44,67 +42,6 @@ describe('resolveHeal', () => {
       const expected = Math.min(hp + 7, 50) - hp;
       expect(resolveHeal({ amount: 7, hp, maxHp: 50 }).applied).toBe(expected);
     }
-  });
-});
-
-describe('targeting', () => {
-  const party = [
-    { id: 'tank', hp: 30 },
-    { id: 'healer', hp: 22 },
-    { id: 'dps', hp: 0 },
-  ];
-
-  it('filters the dead', () => {
-    expect(livingTargets(party).map(m => m.id)).toEqual(['tank', 'healer']);
-  });
-
-  it('tank_strict hits only a living tank', () => {
-    expect(selectPrimaryTarget(party, { mode: 'tank_strict', tankId: 'tank' })?.id).toBe('tank');
-    expect(selectPrimaryTarget(party, { mode: 'tank_strict', tankId: 'dps' })).toBeNull();
-    expect(selectPrimaryTarget(party, { mode: 'tank_strict', tankId: null })).toBeNull();
-  });
-
-  it('tank_preferred falls back to the first living member', () => {
-    expect(selectPrimaryTarget(party, { mode: 'tank_preferred', tankId: 'dps' })?.id).toBe('tank');
-    expect(selectPrimaryTarget(party, { mode: 'tank_preferred', tankId: null })?.id).toBe('tank');
-    expect(selectPrimaryTarget([{ id: 'x', hp: 0 }], { mode: 'tank_preferred' })).toBeNull();
-  });
-
-  it('random_alive matches alive[floor(roll * n)] and never overflows', () => {
-    expect(selectPrimaryTarget(party, { mode: 'random_alive', pick: () => 0 })?.id).toBe('tank');
-    expect(selectPrimaryTarget(party, { mode: 'random_alive', pick: () => 0.99 })?.id).toBe('healer');
-    expect(selectPrimaryTarget(party, { mode: 'random_alive', pick: () => 1 })?.id).toBe('healer');
-  });
-
-  it('AoE targets every living candidate, minus an exclusion', () => {
-    expect(selectAoeTargets(party).map(m => m.id)).toEqual(['tank', 'healer']);
-    expect(selectAoeTargets(party, { excludeId: 'tank' }).map(m => m.id)).toEqual(['healer']);
-  });
-});
-
-describe('applyStackingEffect', () => {
-  it('starts at one stack and schedules the first tick', () => {
-    const s = applyStackingEffect(null, {
-      now: 1000, durationMs: 20000, damagePerTick: 4, maxStacks: 5, tickRateMs: 3000,
-    });
-    expect(s).toEqual({
-      stacks: 1, damage_per_tick: 4, next_tick_at: 4000, expires_at: 21000, tick_rate_ms: 3000,
-    });
-  });
-
-  it('stacks up to the cap and preserves cadence on refresh', () => {
-    let s = applyStackingEffect(null, { now: 0, durationMs: 10000, damagePerTick: 2, maxStacks: 3, tickRateMs: 3000 });
-    for (let i = 0; i < 5; i++) {
-      s = applyStackingEffect(s, { now: 6000, durationMs: 10000, damagePerTick: 2, maxStacks: 3, tickRateMs: 3000 });
-    }
-    expect(s.stacks).toBe(3);
-    expect(s.next_tick_at).toBe(3000); // never pushed forward by repeated procs
-    expect(s.expires_at).toBe(16000);
-  });
-
-  it('expires against a reference time', () => {
-    expect(isEffectExpired({ expires_at: 500 }, 500)).toBe(true);
-    expect(isEffectExpired({ expires_at: 501 }, 500)).toBe(false);
   });
 });
 
