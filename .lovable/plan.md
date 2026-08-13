@@ -1,104 +1,102 @@
-# Post–Stage C shared-encounter audit and staged correction plan
+# Combat engine clean replacement (C0–C5)
 
-Verified against repository HEAD, deployed database objects (`pg_get_functiondef`), live rows and configuration. The progress log was not used as evidence. Edge Function logs are empty (retention expired; world asleep ~6h), so all frequency claims are marked unverifiable.
+Replaces the earlier R0–R5 migration plan. Audit findings stand: `combat_sessions.last_tick_at` is the real pre-simulation mutex, the shared claim happens last (`combat-tick/index.ts` L3860) after creature HP (L3215), durability (L3510-3536), loot, Stored Power (L2772/L3094), boss casts and broadcasts (L3182), the commit covers tail writes only, `applyTickStateFallback` (L3924) can apply an unowned simulation, and no resolver imports `tick-rng.ts`.
 
-## Actual current tick flow (`supabase/functions/combat-tick/index.ts`, 3979 lines)
+## What happens to R0–R5
+
+- **Discarded:** R0 as written (removing the fallback does not undo pre-claim writes, and returning simulated events with `encounter_tick: null` would still show uncommitted results), R1/R2 as incremental in-place surgery on the 3979-line resolver, R5's phased legacy retirement.
+- **Retained as content, not as staging:** the deterministic-RNG work (now inside C1), the full transactional boundary (C2), the delivery/recovery hardening (C4), the documentation correction (C5).
+- **Changed:** rollback is a maintenance switch, not a `tick_owner` latch; the cutover is one coordinated version instead of a dual-writer window.
+
+## Containment decision
+
+Chosen: **maintenance mode now, reconstruction immediately.** Reason: pre-claim mutations cannot be made safe without reordering the resolver, which is exactly the work C1/C2 do; keeping combat open in the interim keeps a known duplicate-reward and torn-state risk alive for no testing benefit. Combat is paused, testers see a maintenance message, and the replacement is built and tested against paused production.
+
+## Post-replacement architecture
 
 ```text
-read durable combat_actions (L184-298)      -> intent
-stale-session repair, session create (L299-336)
-elapsed/ticks from session.last_tick_at (L450-452)
-SESSION CAS reservation (L461-477)          <- the real mutex today
-roster: session + party + engagements (L390-531)
-parallel reads: equipment, creatures, effects, boosts (L532-542)
-simulation, Math.random rolls (L600-3200)
-stored power RPCs (L2772, L3078, L3094)
-boss cast create/resolve (L2816-3130)
-node broadcasts (L3182-3190)
-session last_tick_at recompute (L3196-3214)
-writeCreatureState: creature HP + death (L3215)
-equipment durability + unequip (L3510-3536)
-loot / kill rewards prep (L944-1051, L3580+)
-king/prince world broadcasts (L3693-3736)
-encounter lookup (L3845-3854)
-claim_encounter_tick (L3860)                <- claim happens HERE, last
-commit_encounter_tick (L3876)               <- tail writes + batch + cursor
-applyTickStateFallback on ANY refusal (L3924-3944)
+submit intent  -> validate ownership + effective loadout -> one durable pending combat_action -> ack (no resolution)
+wake signal    -> claim_encounter_tick (FIRST call; refusal => idle response, no events, no writes)
+load           -> encounter-wide roster: participants, engagements, creatures, parties/followers,
+                  pending actions, active effects, applied statuses, boss casts, stored power
+simulate       -> pure function, zero DB access, seeded RNG, returns a proposed tick
+commit         -> commit_encounter_tick(token): ALL authoritative state + ordered batch + cursor
+publish        -> realtime/HTTP/recovery deliver the committed batch only
 ```
 
-`combat-catchup` is the opposite: it claims first (L218), interprets (L234), then writes (L481) and commits.
+The encounter owns resolution. `combat_sessions` becomes presence/UI bookkeeping only and never gates a tick. Every active creature acts exactly once per encounter tick regardless of party count. `combat-catchup` keeps the same claim/commit contract in `effects_only` mode (it already claims first) and shares the same pure resolver and commit RPC, so live and offscreen resolution can never both own one tick.
 
-### Answers to the direct questions
+## Legacy/hybrid paths to remove
 
-- `claim_encounter_tick` does **not** succeed before authoritative mutation. Simulation, creature HP, death, durability, loot, stored power, boss casts and broadcasts all precede it.
-- `combat_sessions.last_tick_at` CAS is the operative mutex. Two sessions on the same node each pass their own CAS, so two simulations can resolve the same creature in one wall-clock window; the creature acts once **per surviving session**, not once per shared tick.
-- The shared encounter tick is currently a **post-resolution publication cursor**, not an owner. A refused claim mutates nothing only because everything already mutated.
+- `combat-tick/index.ts`: session CAS reservation (L461-477), `session.last_tick_at` cadence math (L450-452), `writeCreatureState` call site (L3215), durability writes (L3510-3536), pre-claim loot/Stored Power/boss-cast writes, pre-commit broadcasts (L3182-3190), the entire refused-commit fallback block (L3924-3944), the trailing encounter lookup (L3845).
+- `_shared/combat/tick-commit.ts`: delete `applyTickStateFallback`.
+- `_shared/combat/tick-owner.ts`: keep durable-intent reading, drop anything session-scoped.
+- Database: `combat_tick_owner()`, `encounters.tick_owner`, `combat_config.tick_owner` (repurposed as the maintenance switch).
+- Client: any path in `useCombatDriver.ts` that applies HTTP/broadcast events not carrying a committed `encounter_tick`.
 
-## Mutation boundary table (one ordinary/ability/kill/boss/multi-creature tick)
+## Gameplay to preserve unchanged
 
-| Mutation | Boundary |
-| --- | --- |
-| `combat_sessions.last_tick_at` CAS | Before (pre-simulation) |
-| Creature HP / `is_alive` (`writeCreatureState`) | Before |
-| Equipment durability, unequip on break | Before |
-| Loot rows, unique drop processing | Before |
-| Stored Power add/set_cap | Before |
-| `encounter_cast_events` boss casts | Before |
-| Node/world broadcasts | Before (best-effort, non-authoritative) |
-| Character patches (xp, gold, level, RP), hp/cp/mp deltas | Inside commit |
-| Materials, contracts, class bond | Inside commit |
-| `active_effects` delete/upsert | Inside commit |
-| Engagement join/purge, session advance/close | Inside commit |
-| `combat_actions` retirement, result batch, encounter cursor | Inside commit |
+2s cadence, all formulas and probabilities, auto-attacks, ability slots and superseding, durable actions, offscreen DoT/catch-up semantics, boss telegraphs and Stored Power, party movement/follow/tank selection, targeting and threat, death and reward rules, multi-creature encounters, XP penalty and party bonus curves, loot/unique exclusivity, no-emoji rule. All class/ability/base-ability/on-hit configuration, creature and world authoring, and item/loot tables are read as-is.
 
-Consequences confirmed: a crash after `writeCreatureState` leaves creature HP and durability/loot changed with no rewards and no batch; a refused commit still leaves creature/durability/loot changes; a committed batch can therefore describe state that was not committed with it. "Atomic tick" today means the tail only.
+## Table classification and reset permission
 
-## Verdicts
+| Table | Type | Cutover action |
+| --- | --- | --- |
+| profiles, characters, character_inventory, character_materials, character_class_bonds, character_ability_loadout, character_visited_nodes, character_npc_gifts, user_roles, families, parties, party_members, marketplace_listings | permanent player state | never touched |
+| classes, abilities, base_abilities, class_ability_*, races, items, loot_tables, loot_table_entries, creatures, nodes, areas, regions, npcs, guide_*, combat_config (keys other than the switch), loot_pool_config, weapon_progression_config | authored configuration | never touched |
+| combat_sessions (2), encounters runtime columns + rows (117), encounter_tick_batches (261), encounter_engagements (0), encounter_participants (1), encounter_creatures (9), encounter_cast_events (130), active_effects (0), applied_statuses (5) | regenerable runtime combat state | cleared at cutover |
+| combat_actions pending/cancelled rows (24 total, 0 pending now) | regenerable runtime intent | pending cleared; consumed rows may be truncated |
+| combat_audit_log (9465), party_combat_log (141), encounter_contributions (118), world_slumber_log, ai_credit_drain_log | historical/audit | retained |
+| node_ground_loot (0) | unclear — dropped items are player-visible | **needs your approval**; default is retain |
+| creatures.hp / is_alive | authored content with runtime field | HP reset to max, `is_alive` true (same as existing wake heal) |
 
-1. **Shared claim after simulation — Confirmed.** L3860 vs L461-477/L3215.
-2. **Atomic commit covers only tail writes — Confirmed.** Table above.
-3. **Refused-commit fallback violates exclusivity — Confirmed (structural).** L3924 runs `applyTickStateFallback` for every reason including `already_committed` and `stale_claim`, then force-retires durable actions (L3933-3943). Sequence A commits tick N, B refused, B replays its own character patches, hp/cp/mp deltas, xp/gold, materials, bonds, contracts, effects and session advance — duplicate rewards and resource deltas are possible. Frequency: **unable to verify** (no logs). Severity: high.
-4. **Deterministic resolution incomplete — Confirmed.** `_shared/combat/tick-rng.ts` is imported by no resolver (only tests). Raw `Math.random()` in authoritative decisions: L1820 status sample, L1836 on-hit effect, L1890 anti-crit, L1901 dodge, L1927 block, L2200 status, L2436 proc, L2610 proc/effect chance, L3006 boss cast chance, L3527 durability slot pick. A reclaimed tick cannot replay identically.
-5. **Roster still session-oriented — Confirmed.** Roster derives from `combat_sessions` + invoking character's party + engagements (L390-531); `encounter_participants` / `encounter_creatures` are not the resolution roster. `encounter_participants` currently holds 1 row against 113 encounters.
-6. **Stage C removed rollback early — Confirmed (documentation overstatement).** `combat_tick_owner()` still exists and `combat_config.tick_owner = 'shared'`, but no code reads either; `encounters.tick_owner` still defaults to `legacy` (4 live rows are `legacy`) and is unread. Flipping config changes nothing. The legacy path was removed before pre-simulation ownership, full atomicity and deterministic retry existed.
-7. **Batches are delivery, not resolution authority — Partially confirmed.** Sequencer ordering/dedup is sound. Real defects: RLS on `encounter_tick_batches` requires an `encounter_participants` row (near-empty today, so recovery and follower delivery can silently fail); first-batch re-anchor (`encounter-batch.ts` L106-108) can skip recoverable ticks; `MAX_BUFFER` overflow drops rows with no reconciliation (L126-131); a gap-recovery request suppressed by `recoveringRef` (`useEncounterBatches.ts` L50-51) is never retried; 60s retention (`commit_encounter_tick`) is short for backgrounded mobile clients.
-8. **Cadence/drift claim — Partially confirmed.** Live simulation is gated by `session.last_tick_at` on a fixed 2s grid (L450-477); the encounter cursor is anchored to commit time. The two cadences can disagree, the session CAS can permit a simulation the encounter claim later refuses, and only the encounter cursor gained the anti-drift fix, which also makes the encounter-side interval 2s + server execution time.
+Exact clearing at cutover: `DELETE FROM combat_sessions`; `DELETE FROM combat_actions WHERE status IN ('pending','cancelled')`; `DELETE FROM encounter_tick_batches`; `DELETE FROM encounter_engagements`; `DELETE FROM encounter_cast_events`; `DELETE FROM active_effects`; `DELETE FROM applied_statuses`; `UPDATE encounters SET status='ended'` (or delete ended rows) plus reset of `tick_state/resolving_tick/claim_token/lease_until/attempt`.
 
-Additional issues found: the encounter lookup picks the newest active encounter at the node regardless of the creatures simulated; `claim_encounter_tick` derives `live` mode from session freshness, so the writer model is inferred from the very session authority we intend to retire; the fallback's blanket `combat_actions` retirement can consume intent whose effects were never committed.
+## Stages
 
-## Risk ranking
+**C0 — maintenance mode and classification.** Add `combat_config` key `combat_mode` (`open` | `maintenance`). `combat-tick` and `combat-catchup` read it as the first statement and return a typed `{ maintenance: true }` idle response with no events. Client shows a maintenance notice in the combat panel and stops the worker timer. Files: `supabase/functions/combat-tick/index.ts`, `combat-catchup/index.ts`, `src/features/combat/hooks/useCombatDriver.ts`, `src/features/combat/components/*` (notice), migration for the config row. This is also the permanent kill switch and the rollback mechanism.
 
-1. Fallback double-mutation after `already_committed`/`stale_claim` (high severity, unknown likelihood, duplicate rewards).
-2. Non-atomic creature/loot/durability writes (high severity, occurs on any crash or refusal).
-3. Post-simulation claim / dual-session creature resolution (high severity, needs two sessions at one node).
-4. Non-deterministic retry (medium; makes reclaim unsafe).
-5. No operational rollback control (medium).
-6. Delivery/RLS/recovery gaps (medium-low).
+**C1 — pure deterministic resolver + encounter roster.** New `supabase/functions/_shared/combat/engine/` modules: `roster.ts` (encounter-wide load), `simulate.ts` (pure `(snapshot, intents, rng, config) => ProposedTick`), `rng.ts` wiring the existing `tick-rng.ts` seeded by `encounter_id + tick_number + stream@v1 + entity ids + roll index`. Existing rule modules (`resolution.ts`, `status-application.ts`, `on-hit-effects.ts`, `proc-runtime.ts`, `creature-damage-modifiers.ts`, `ability-magnitude.ts`, `kill-resolver.ts`, `reward-calculator.ts`, shared formulas) are reused verbatim; only their call harness is new. Deterministic replay test proves byte-identical output for a reclaimed tick.
 
-## Staged recovery plan (not implemented)
+**C2 — complete atomic commit.** Extend `commit_encounter_tick` to apply, inside the token-gated transaction: creature HP/death, character HP/CP/MP and column patches, XP/gold/Renown/bond, materials/gems/salvage, contracts, effects and applied statuses, engagements, equipment durability and unequip, loot and unique drops, boss-cast rows, Stored Power, action consumption/rejection, cursor and the ordered batch. Realtime/broadcast publication becomes post-commit and idempotent, derived from the committed batch keyed by `(encounter_id, tick_number)`.
 
-**R0 — containment (recommended before further live combat).** Make refusal non-mutating: in `combat-tick` delete the `applyTickStateFallback` call and the fallback action retirement (L3924-3944), keep the refusal log with the reason, and return the unchanged HTTP payload with `encounter_tick: null` so clients await the committed batch. Add a `combat_config` kill switch read at request entry (`tick_paused`) that returns an idle response without simulating, pinned per encounter for its lifetime. No migration required beyond a config row read; rollback is deleting the read.
+**C3 — resolver rewrite.** `combat-tick/index.ts` becomes claim → load → simulate → commit → publish, with the legacy paths above deleted. `combat-catchup` uses the same engine in `effects_only` mode. Fail closed: any load, simulate or commit error releases the claim and returns an error with no partial writes.
 
-**R1 — pre-simulation ownership.** Move the encounter lookup and `claim_encounter_tick` to immediately after intent load, before any read used for resolution; refuse ⇒ return idle, mutate nothing. Replace the `combat_sessions` CAS with the claim. Build the roster from `encounter_participants` + `encounter_engagements` + `encounter_creatures` and resolve every engaged creature once. Change `claim_encounter_tick` mode derivation to engagement freshness rather than session freshness, and coordinate catch-up through the same claim (it already does).
+**C4 — delivery client.** Client applies only committed batches in tick order; HTTP/broadcast are accepted only when they carry `encounter_tick` and pass the sequencer. Fix the first-batch re-anchor, retry suppressed gap recoveries, reconcile on buffer overflow, guarantee an `encounter_participants` row (plus a grace window after leaving) so batch RLS permits recovery, and raise batch retention to ~180s.
 
-**R2 — one transaction boundary.** Extend `commit_encounter_tick` to accept creature HP/death, durability and unequip, loot/ground-loot rows, stored power and boss-cast state, plus the existing tail. `writeCreatureState` becomes payload accumulation. Broadcasts become post-commit, idempotent, keyed by `(encounter_id, tick_number)`.
+**C5 — cutover, validation, cleanup.** Coordinated deployment, smoke tests, reopen, then delete obsolete objects (`combat_tick_owner`, `encounters.tick_owner`) and rewrite `docs/design/shared-encounter-cutover.md` to describe real behaviour. Timing panel stays until parity is signed off.
 
-**R3 — deterministic retry.** Wire `tick-rng.ts` into both resolvers seeded by `encounter_id + tick_number + stream + actor/target id + roll index`, replacing every `Math.random()` listed above while preserving draw order and probabilities. Requires your approval where stabilising iteration order could shift outcomes.
+## Coordinated deployment sequence
 
-**R4 — delivery hardening.** Guarantee an `encounter_participants` row for every participant (and a grace window after leaving) so RLS permits recovery; retry suppressed gap recoveries; reconcile on buffer overflow instead of dropping; raise batch retention to ~180s.
+1. Set `combat_mode = maintenance`; testers see the notice.
+2. Let in-flight invocations finish or leases expire (~15s).
+3. Snapshot permanent state: row counts and checksums for characters (xp, level, gold, renown), inventory (durability, equipped_slot), materials, bonds, loadouts.
+4. Apply forward migration (commit RPC extension, claim adjustments, config keys, retention, participant grace).
+5. Deploy `combat-tick` and `combat-catchup`.
+6. Publish frontend.
+7. Clear approved runtime rows.
+8. Run automated tests plus controlled smoke tests.
+9. Ask testers to reload; set `combat_mode = open`.
 
-**R5 — cleanup and docs.** Remove session-based authority, redefine `tick_owner` objects as the kill switch, rewrite `docs/design/shared-encounter-cutover.md` to describe real behaviour, keep the timing panel until before/after validation.
+Expected downtime: minutes for the cutover itself; combat stays closed for the whole build if you prefer, which is the recommendation. Only one writer exists at any moment because resolution is disabled while code changes land.
 
-Each stage deploys alone: R0 and R1 are Edge-Function-only and old clients stay compatible (they already consume batches); R2 needs the migration first, then the function; R3/R4 are independent. Every stage's rollback is a function revert, since no stage changes stored shapes destructively.
+## Failure and recovery
+
+Any anomaly ⇒ set `combat_mode = maintenance` (takes effect on the next request, before any simulation), leave all permanent state intact, fix and redeploy, clear only invalid runtime rows, reopen. Request-carried ability authority is never restored. Because commits are token-gated and atomic, a rollback of function code cannot leave half a tick behind.
 
 ## Tests
 
-Automated: claim refusal mutates nothing; stale token; `already_committed`; lease expiry and reclaim byte-identical replay; crash injected before/during/after commit; same tick resolved twice; creature HP + death + rewards + batch atomicity; durability/loot idempotency; deterministic RNG parity vectors; sequencer re-anchor, buffer overflow, suppressed recovery retry.
+Automated (vitest, pure modules): claim refusal produces no mutation and no events; stale token; `already_committed`; lease expiry then reclaim yields byte-identical output; simulate is pure (DB client stub asserts zero calls); RNG stream stability and distribution vectors; roster completeness for solo, two parties, mixed solo+party, multi-creature; kill/reward/loot/durability exactly-once; sequencer re-anchor, overflow reconcile, suppressed-recovery retry; maintenance response shape.
 
-Controlled manual: one player one creature; one player multi-creature; one party; two parties sharing a creature; solo plus party sharing a creature; party joining an active encounter; live overlapping catch-up; offscreen DoT death; Consecrate; boss telegraph and Stored Power; duplicate HTTP/realtime/broadcast; missing realtime; mobile background >60s; world sleep/wake; deploy during an active encounter; kill switch during an active encounter.
+Controlled manual: one player/one creature; one player/multi-creature; one party; two parties on one creature; solo plus party on one creature; party joining an active encounter; live overlapping catch-up; offscreen DoT death; Consecrate; boss telegraph and Stored Power; duplicate and missing realtime delivery; mobile background >60s; world sleep/wake; maintenance toggle mid-fight.
 
-## Needs your decision
+## Parity measurement
 
-- Approve R0 before further live combat testing (this is the one correctness fix I would not defer).
-- Approve R3's possible micro-changes in roll ordering when RNG becomes deterministic.
-- Confirm the kill switch is acceptable as the rollback mechanism instead of restoring any legacy path.
+Before reopening: run 200+ simulated ticks through the new pure resolver with fixed seeds and compare aggregate distributions (hit rate, mean damage per attack by class, crit rate, dodge/block rate, DoT throughput, XP per kill, loot drop rate, durability loss per tick) against the same aggregates computed from `combat_audit_log` and `party_combat_log` history. Acceptance: aggregate means within a few percent, and no rule-level differences.
+
+## Needs your approval
+
+- `node_ground_loot`: retain (default) or clear at cutover.
+- Truncating `consumed` `combat_actions` rows and old `encounter_tick_batches` history.
+- Accepting that exact random outcomes differ from the legacy nondeterministic implementation while distributions and rules are preserved.
+- Whether combat stays closed for the full build (recommended) or reopens between stages.
