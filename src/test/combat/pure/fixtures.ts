@@ -144,6 +144,7 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
       hp: int(10, 200),
       maxHp: 200,
       cp: int(0, 100),
+      maxCp: 100,
       attrs: {
         str: int(6, 30),
         dex: int(6, 30),
