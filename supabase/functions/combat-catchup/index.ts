@@ -93,10 +93,23 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
-    await loadClassRegistry(db);
-    // Applied-status definitions own periodicity and amplification; the
-    // offscreen path must read the same authority as the live tick.
-    await loadAbilityCalcs(db);
+
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // Read before anything else. When combat is closed this request degrades
+    // to a pure read: no registry load, no claim, no lease, no effect
+    // advance, no kill, loot, XP or durability write. The refusal itself is
+    // returned further down, after the caller's node authorization, so the
+    // read-only creature snapshot stays access-controlled.
+    const combatMode = await readCombatMode(db);
+    const combatClosed = combatMode !== 'open';
+
+    if (!combatClosed) {
+      await loadClassRegistry(db);
+      // Applied-status definitions own periodicity and amplification; the
+      // offscreen path must read the same authority as the live tick.
+      await loadAbilityCalcs(db);
+    }
+
 
     // ── Authentication ────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
