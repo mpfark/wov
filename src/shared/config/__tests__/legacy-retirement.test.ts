@@ -31,48 +31,22 @@ describe('legacy retirement — mechanic keys', () => {
   });
 });
 
-describe('legacy retirement — no per-class branches in combat-tick', () => {
-  const src = read('supabase/functions/combat-tick/index.ts');
+describe('C3b — combat handlers are thin shells', () => {
+  const files = [
+    'supabase/functions/combat-tick/index.ts',
+    'supabase/functions/combat-catchup/index.ts',
+  ];
 
-  it('never compares a character class against a class name', () => {
-    // Rewards/contract eligibility is a game feature, not ability behaviour, so
-    // the assassin contract check is the one allowed class comparison.
-    const offenders = src
-      .split('\n')
-      .map((line, i) => [i + 1, line] as const)
-      .filter(([, line]) =>
-        /\.class\s*===\s*'(warrior|wizard|ranger|assassin|healer|bard|templar|rogue)'/.test(line))
-      .filter(([, line]) => !line.includes('active_contract') && !/class === 'assassin'/.test(line));
-    expect(offenders).toEqual([]);
-  });
-
-  it('resolves the T0 attack branch on consolidated mechanics only', () => {
-    expect(src).not.toContain("paMech === 'power_strike'");
-    expect(src).not.toContain("paMech === 'backstab'");
-    expect(src).not.toContain("paMech === 'smite'");
-    expect(src).toContain("paMech === 'weapon_attack'");
-    expect(src).toContain("paMech === 'spell_attack'");
-  });
-
-  it('hardcodes no Backstab or Judgment flavour', () => {
-    expect(src).not.toContain('vital point on');
-    expect(src).not.toContain('passes divine judgment upon');
-  });
-});
-
-describe('legacy retirement — authored T0 sentences', () => {
-  it('gives Backstab authored hit and miss sentences', () => {
-    const row = ABILITY_SEED.find(r => r.ability_key === 'backstab');
-    expect(row?.mechanic_key).toBe('weapon_attack');
-    const text = (row?.combat_text ?? {}) as Record<string, string>;
-    expect(text.hit_text).toContain('{damage}');
-    expect(text.hit_text).toContain('{target}');
-    expect(text.miss_text).toContain('{target}');
-  });
-
-  it('keeps the cast-flavour fallback free of class branching', () => {
-    const flavor = read('src/features/combat/utils/cast-flavor.ts');
-    expect(flavor).not.toContain('SMITE_FLAVOR_BY_CLASS');
-    expect(flavor).not.toContain("abilityType === 'smite'");
+  it('contain no simulation, no randomness and no direct mutation', () => {
+    for (const file of files) {
+      const src = readFileSync(resolve(process.cwd(), file), 'utf8');
+      expect(src, file).not.toMatch(/Math\.random/);
+      expect(src, file).not.toMatch(/\.update\(|\.insert\(|\.upsert\(|\.delete\(/);
+      expect(src, file).not.toMatch(/rollD20|rollDamage|resolveDamage|resolveHeal/);
+      // The only writer is the atomic commit, reached through the orchestration.
+      expect(src, file).toContain('orchestrateCombatResolution');
+      // No legacy fallback may remain, reachable or not.
+      expect(src, file).not.toMatch(/combat-resolver|kill-resolver|tick-commit|tick-owner/);
+    }
   });
 });

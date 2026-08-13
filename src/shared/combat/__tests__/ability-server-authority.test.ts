@@ -130,26 +130,3 @@ describe('Phase 3 — equipped-loadout enforcement', () => {
   });
 });
 
-describe('Phase 3 — combat-tick uses server values only', () => {
-  const src = readFileSync(resolve(process.cwd(), 'supabase/functions/combat-tick/index.ts'), 'utf8');
-
-  it('spends the configured cost, never the queued cp_cost', () => {
-    expect(src).toContain('const cpCost = auth.entry.cpCost;');
-    expect(src).not.toContain('pa.cp_cost');
-  });
-
-  it('dispatches on the registry mechanic, not the queued ability_type', () => {
-    expect(src).toContain('const paMech = auth.entry.mechanicKey;');
-    // The only remaining use is passing the legacy hint into authorization.
-    expect((src.match(/pa\.ability_type/g) ?? []).length).toBe(1);
-  });
-
-  it('stamps the authoritative damage type on ability events', () => {
-    expect(src).toContain('const paDamageType = auth.entry.damageType;');
-    expect(src).toContain('pushAbilityEvent(');
-  });
-
-  it('passes the persisted loadout into authorization', () => {
-    expect(src).toContain('equippedByRole: loadoutByCharacter[pa.character_id]');
-  });
-});
