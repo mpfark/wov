@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveTickPure } from '@/shared/combat/pure';
 import type { ProposedTick } from '@/shared/combat/pure/types';
+import type { EncounterSnapshot } from '@/shared/combat/pure/types';
 import { randomSnapshot } from './fixtures';
 
 const RUNS = 4000;
@@ -39,21 +40,26 @@ interface Coverage {
   catchupTicks: number;
 }
 
-function assertInvariants(out: ProposedTick, seed: number) {
+function assertInvariants(out: ProposedTick, snap: EncounterSnapshot, seed: number) {
   const where = `seed ${seed}`;
+  const maxHp = new Map(snap.participants.map((p) => [p.id, p.maxHp]));
+  const maxCp = new Map(snap.participants.map((p) => [p.id, p.maxCp]));
+  const creatureMaxHp = new Map(snap.creatures.map((c) => [c.id, c.maxHp]));
 
   // HP and resources stay inside their snapshot bounds.
   for (const c of out.characters) {
     expect(c.hpAfter, `${where} hp floor`).toBeGreaterThanOrEqual(0);
-    expect(c.hpAfter, `${where} hp cap`).toBeLessThanOrEqual(c.maxHp);
+    expect(c.hpAfter, `${where} hp cap`).toBeLessThanOrEqual(maxHp.get(c.characterId)!);
     expect(c.cpAfter, `${where} cp floor`).toBeGreaterThanOrEqual(0);
-    expect(c.cpAfter, `${where} cp cap`).toBeLessThanOrEqual(c.maxCp);
+    expect(c.cpAfter, `${where} cp cap`).toBeLessThanOrEqual(maxCp.get(c.characterId)!);
     expect(c.absorbShieldAfter, `${where} ward floor`).toBeGreaterThanOrEqual(0);
     expect(Number.isInteger(c.hpAfter), `${where} hp integral`).toBe(true);
   }
   for (const c of out.creatures) {
     expect(c.hpAfter, `${where} creature hp floor`).toBeGreaterThanOrEqual(0);
-    expect(c.hpAfter, `${where} creature hp cap`).toBeLessThanOrEqual(c.maxHp);
+    expect(c.hpAfter, `${where} creature hp cap`).toBeLessThanOrEqual(
+      creatureMaxHp.get(c.creatureId)!,
+    );
     expect(Number.isInteger(c.hpAfter), `${where} creature hp integral`).toBe(true);
     if (c.killed) expect(c.hpAfter, `${where} killed at 0 hp`).toBe(0);
     if (c.hpAfter === 0 && c.hpBefore > 0) {
@@ -98,7 +104,7 @@ function assertInvariants(out: ProposedTick, seed: number) {
     expect(b.amount, `${where} bond capped`).toBeLessThanOrEqual(25);
   }
   for (const g of out.gems) {
-    expect(g.quantity, `${where} gem quantity`).toBe(1);
+    expect(g.gemKey.length, `${where} gem has a key`).toBeGreaterThan(0);
     expect(recipients.has(g.characterId), `${where} gem to a killer`).toBe(true);
   }
   // Loot is only ever proposed for a creature that actually died.
@@ -229,7 +235,7 @@ describe('pure resolver — seeded parity sweep', () => {
       const a = resolveTickPure(snap);
       const b = resolveTickPure(snap);
       expect(JSON.stringify(b), `seed ${seed} parity`).toBe(JSON.stringify(a));
-      assertInvariants(a, seed);
+      assertInvariants(a, snap, seed);
       record(cov, a);
     }
   });
