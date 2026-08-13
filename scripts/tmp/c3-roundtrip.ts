@@ -19,7 +19,7 @@ import { decodeTickBatch, projectBatchFromProposal } from '@/shared/combat/c3/de
 import { resolveTickPure } from '@/shared/combat/pure';
 import { buildCommitRequest } from '@/shared/combat/c2/payload';
 import { SNAPSHOT_VERSION, PROPOSED_TICK_VERSION } from '@/shared/combat/c2/contract';
-import { getXpForLevel } from '@/lib/progression';
+import { getXpForLevel } from '@/shared/formulas/xp';
 
 const URL_BASE = `${process.env.SUPABASE_URL ?? 'https://gpclaklkaolyzfnooajt.supabase.co'}/functions/v1/c3-roundtrip`;
 const ANON = process.env.ANON_KEY!;
