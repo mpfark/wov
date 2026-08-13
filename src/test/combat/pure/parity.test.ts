@@ -163,6 +163,8 @@ function record(cov: Coverage, out: ProposedTick) {
   cov.gems += out.gems.length;
   cov.bonds += out.bonds.length;
   cov.rejected += out.rejectedActions.length;
+  // Death is carried on the character mutation, not as its own event.
+  cov.deaths += out.characters.filter((c) => c.died).length;
   cov.storedPower += out.storedPower.length;
   if (out.mode === 'catchup') cov.catchupTicks += out.ticksProcessed;
   for (const c of out.casts) {
@@ -181,14 +183,11 @@ function record(cov: Coverage, out: ProposedTick) {
       case 'proc_damage':
         cov.procDamage++;
         break;
-      case 'proc_weaken':
+      case 'proc_debuff':
         cov.procWeaken++;
         break;
       case 'dot_tick':
         cov.dotTicks++;
-        break;
-      case 'character_death':
-        cov.deaths++;
         break;
       case 'dodge':
         cov.dodges++;
