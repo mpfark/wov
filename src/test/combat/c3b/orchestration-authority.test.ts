@@ -98,6 +98,8 @@ interface FakeOptions {
 
 function fakeDb(opts: FakeOptions = {}) {
   const calls: Call[] = [];
+  // The mode the fake database granted, mirrored into the snapshot below.
+  let grantedMode = 'live';
   const db = {
     from(table: string) {
       const chain: any = {
@@ -120,6 +122,9 @@ function fakeDb(opts: FakeOptions = {}) {
         case 'encounter_for_node':
           return { data: ENC, error: null };
         case 'claim_encounter_tick':
+          grantedMode = String(
+            (opts.claim ?? {}).mode ?? (args._supported_modes as string[])[0],
+          );
           return {
             data: opts.claim ?? {
               claimed: true, tick: 7, claim_token: 'tok', resolver_id: 'res',
@@ -130,7 +135,7 @@ function fakeDb(opts: FakeOptions = {}) {
         case 'encounter_snapshot_v2': {
           // The snapshot always carries the mode the claim granted: the decoder
           // refuses any disagreement, exactly as in production.
-          const claimMode = String((opts.claim ?? {}).mode ?? 'live');
+          const claimMode = grantedMode;
           const root = opts.snapshot ?? snapshotRoot({ claimMode });
           if (opts.snapshot && (opts.snapshot as any).claim) {
             (opts.snapshot as any).claim.mode = claimMode;
