@@ -261,18 +261,17 @@ function decodeBuffs(participant: Json, path: string): ParticipantBuffSnapshot {
           'buff key is not in BUFF_KEY_REGISTRY; register it before it can affect combat',
         );
       }
-      if (typeof buffs[target] === 'boolean') {
-        (buffs as Record<string, unknown>)[target] = Boolean(value);
+      const bag = buffs as unknown as Record<string, number | boolean>;
+      if (typeof bag[target] === 'boolean') {
+        bag[target] = Boolean(value);
       } else {
         const n = typeof value === 'string' ? Number(value) : value;
         if (typeof n !== 'number' || !Number.isFinite(n)) {
           throw decodeError(`${path}.${source}.${key}`, `expected numeric buff value, received ${describe(value)}`);
         }
-        (buffs as Record<string, number>)[target] = Math.max(
-          (buffs as Record<string, number>)[target],
-          n,
-        );
+        bag[target] = Math.max(Number(bag[target] ?? 0), n);
       }
+
     }
   }
   return buffs;
