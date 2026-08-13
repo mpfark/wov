@@ -109,6 +109,8 @@ import { effectiveItemStats } from "../_shared/formulas/items.ts";
 import { pickBossFlavor, resolveProcs, resolveBuffProcs } from "../_shared/combat/proc-runtime.ts";
 import { surgeMult, offenseBuffKey } from "../_shared/combat/offense-buff.ts";
 import { corsHeaders, json, verifyUserIdFromJwt } from "../_shared/http.ts";
+// C0: combat resolution is gated by `combat_config.combat_mode`. Fail closed.
+import { readCombatMode, maintenanceResponse } from "../_shared/combat/maintenance.ts";
 
 const TICK_RATE = 2000;
 const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
@@ -126,6 +128,23 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
+
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // The very first thing the request does. Nothing below this line may run
+    // while combat is closed: no registry load, no auth-scoped lookup, no
+    // intent read, no roster load, no tick claim, no lease, no roll, no
+    // write. An unreadable or missing switch also closes combat.
+    {
+      const combatMode = await readCombatMode(db);
+      if (combatMode !== 'open') {
+        console.log(JSON.stringify({
+          fn: 'combat-tick', gated: 'maintenance',
+          duration_ms: Date.now() - _requestT0,
+        }));
+        return json(maintenanceResponse());
+      }
+    }
+
     await loadClassRegistry(db);
     await loadAbilityCalcs(db);
 
@@ -145,6 +164,9 @@ Deno.serve(async (req) => {
 
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
+
+
+
 
     // ── Phase 5: authoritative buff state ────────────────────────
     // The client's buff bag is advisory presentation state. Everything the

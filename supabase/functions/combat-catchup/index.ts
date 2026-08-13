@@ -44,6 +44,8 @@ import {
   EFFECTS_ONLY_MODES,
   interpretEffectsOnlyClaim,
 } from "../_shared/combat/tick-claim.ts";
+// C0: offscreen resolution is gated by the same switch as live combat.
+import { readCombatMode, COMBAT_MAINTENANCE_MESSAGE } from "../_shared/combat/maintenance.ts";
 
 /**
  * Live combat's tick cadence. Non-periodic statuses store their duration as a
@@ -91,10 +93,23 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
-    await loadClassRegistry(db);
-    // Applied-status definitions own periodicity and amplification; the
-    // offscreen path must read the same authority as the live tick.
-    await loadAbilityCalcs(db);
+
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // Read before anything else. When combat is closed this request degrades
+    // to a pure read: no registry load, no claim, no lease, no effect
+    // advance, no kill, loot, XP or durability write. The refusal itself is
+    // returned further down, after the caller's node authorization, so the
+    // read-only creature snapshot stays access-controlled.
+    const combatMode = await readCombatMode(db);
+    const combatClosed = combatMode !== 'open';
+
+    if (!combatClosed) {
+      await loadClassRegistry(db);
+      // Applied-status definitions own periodicity and amplification; the
+      // offscreen path must read the same authority as the live tick.
+      await loadAbilityCalcs(db);
+    }
+
 
     // ── Authentication ────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
@@ -178,6 +193,34 @@ Deno.serve(async (req) => {
       ]);
       return json({ effects: effects || [], creatures: creatures || [] });
     }
+
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // Offscreen reconciliation is a tick of the same shared encounter, so it
+    // is gated by the same switch. While combat is closed no claim is taken,
+    // no lease is captured, no effect is advanced and no kill, loot, XP or
+    // durability write happens. Read-only creature state is still returned so
+    // the world screen renders; the snapshot_only branch above is likewise
+    // pure read.
+    if (combatClosed) {
+      const { data: creatures } = await db
+        .from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', gated: 'maintenance', node_id,
+        creatures_alive: (creatures || []).length,
+        duration_ms: Date.now() - t0,
+      }));
+      return json({
+        maintenance: true,
+        combat_mode: 'maintenance',
+        message: COMBAT_MAINTENANCE_MESSAGE,
+        caught_up: false,
+        effects_processed: 0,
+        creatures: creatures || [],
+        partial: false,
+      });
+    }
+
+
 
     // Best-effort throttle: skip effect reprocessing if recently reconciled.
     // Always return fresh creature data (never stale cache).

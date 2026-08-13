@@ -16,6 +16,13 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+
+import {
+  isMaintenanceResponse,
+  maintenanceMessage,
+  COMBAT_MAINTENANCE_MESSAGE,
+} from '@/shared/combat/maintenance';
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
@@ -139,6 +146,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [lastTickTime, setLastTickTime] = useState<number | null>(null);
+  // C0: latched once the server reports combat is closed for maintenance.
+  const [combatMaintenance, setCombatMaintenance] = useState(false);
+  const maintenanceRef = useRef(false);
+  const maintenanceNoticedRef = useRef(false);
+
+
   
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -322,6 +335,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const startCombatCore = useCallback((creatureId: string) => {
     const p = ext.current;
     if (p.isDead || p.character.hp <= 0) return;
+    // C0: combat is closed for maintenance — refuse to engage at all once the
+    // server has told us so. No engagement row, no broadcast, no timer.
+    if (maintenanceRef.current) {
+      toast.info(COMBAT_MAINTENANCE_MESSAGE);
+      return;
+    }
+
 
     // Durable engagement roster: every character records its own
     // character↔creature engagement, independent of party role. The shared
@@ -1013,7 +1033,25 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           if (!result) {
             traceResponse('empty');
             stopCombat();
+          } else if (isMaintenanceResponse(result)) {
+            // C0: the resolver refused to simulate — combat is closed. Nothing
+            // authoritative changed. Latch it, stop the timer and tell the
+            // player once.
+            traceResponse('reserved');
+            maintenanceRef.current = true;
+            setCombatMaintenance(true);
+            setPendingCpCost(0);
+            if (!maintenanceNoticedRef.current) {
+              maintenanceNoticedRef.current = true;
+              const msg = maintenanceMessage(result);
+              toast.info(msg);
+              ext.current.addLocalLogEvent(
+                createLogEvent({ type: 'system', message: msg })
+              );
+            }
+            stopCombat();
           } else if ((result as any).tick_reserved_elsewhere) {
+
             // Another participant reserved this tick — it resolved nothing.
             // The winner's result arrives via broadcast / realtime.
             traceResponse('reserved');
@@ -1104,6 +1142,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     engagedCreatureIds,
     creatureHpOverrides,
     lastTickTime,
+    /** C0: true once the server reported combat is closed for maintenance. */
+    combatMaintenance,
     updateCreatureHp,
     startCombat: startCombatCore,
     stopCombat,
