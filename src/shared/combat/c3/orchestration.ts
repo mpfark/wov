@@ -286,14 +286,28 @@ export async function orchestrateCombatResolution(
       throw new C3Error('snapshot_refused', String(root?.reason ?? 'not_loaded'));
     }
 
-    // 5. Aux + strict decode. The resolver mode comes from the claim only.
+    // 5a. The isolate's ability catalog must match the configuration version
+    // the snapshot pinned, otherwise magnitudes would come from unpinned config.
+    const pinnedVersion = snapshotAbilityConfigVersion(root);
+    let catalog = deps.catalog;
+    if (catalog.configVersion !== pinnedVersion && deps.refreshCatalog) {
+      catalog = await deps.refreshCatalog();
+    }
+    if (catalog.configVersion !== pinnedVersion) {
+      throw new C3Error(
+        'config_conflict',
+        `ability catalog ${catalog.configVersion} != snapshot ${pinnedVersion}`,
+      );
+    }
+
+    // 5b. Aux + strict decode. The resolver mode comes from the claim only.
     const mode = claim.dbMode === 'live' ? 'live' : 'catchup';
-    const { aux, configFailures } = await loadSnapshotAux(db, {
+    const { aux, configFailures } = loadSnapshotAux({
       snapshotRoot: root,
       mode,
       nowMs: deps.nowMs,
       ticksToSimulate: ticksToSimulate(req.role, root, deps.nowMs),
-      catalog: deps.catalog,
+      catalog,
     });
     const decoded = decodeEncounterSnapshot(root, aux);
     if (configFailures.length > 0) {
