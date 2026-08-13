@@ -1142,6 +1142,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     engagedCreatureIds,
     creatureHpOverrides,
     lastTickTime,
+    /** C0: true once the server reported combat is closed for maintenance. */
+    combatMaintenance,
     updateCreatureHp,
     startCombat: startCombatCore,
     stopCombat,
