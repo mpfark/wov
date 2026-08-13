@@ -146,6 +146,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [lastTickTime, setLastTickTime] = useState<number | null>(null);
+  // C0: latched once the server reports combat is closed for maintenance.
+  const [combatMaintenance, setCombatMaintenance] = useState(false);
+  const maintenanceRef = useRef(false);
+  const maintenanceNoticedRef = useRef(false);
+
+
   
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
