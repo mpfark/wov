@@ -54,6 +54,12 @@ export interface OrchestrationDeps {
   /** Authoritative time, injected once and used everywhere downstream. */
   readonly nowMs: number;
   readonly catalog: AbilityCatalog;
+  /**
+   * Rebuild the ability catalog from live configuration. Called at most once,
+   * only when the catalog's `configVersion` disagrees with the snapshot's; a
+   * still-mismatched catalog fails the tick closed (`config_conflict`).
+   */
+  readonly refreshCatalog?: () => Promise<AbilityCatalog>;
   readonly newBatchId: () => string;
   readonly caller: string;
   readonly leaseMs?: number;
