@@ -1033,7 +1033,25 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           if (!result) {
             traceResponse('empty');
             stopCombat();
+          } else if (isMaintenanceResponse(result)) {
+            // C0: the resolver refused to simulate — combat is closed. Nothing
+            // authoritative changed. Latch it, stop the timer and tell the
+            // player once.
+            traceResponse('reserved');
+            maintenanceRef.current = true;
+            setCombatMaintenance(true);
+            setPendingCpCost(0);
+            if (!maintenanceNoticedRef.current) {
+              maintenanceNoticedRef.current = true;
+              const msg = maintenanceMessage(result);
+              toast.info(msg);
+              ext.current.addLocalLogEvent(
+                createLogEvent({ type: 'system', message: msg })
+              );
+            }
+            stopCombat();
           } else if ((result as any).tick_reserved_elsewhere) {
+
             // Another participant reserved this tick — it resolved nothing.
             // The winner's result arrives via broadcast / realtime.
             traceResponse('reserved');
