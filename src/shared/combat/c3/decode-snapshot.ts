@@ -139,19 +139,17 @@ function attrs(value: unknown, path: string): Attributes {
 
 // ── auxiliary input (values the SQL snapshot does not carry) ────────
 
-/** Ability magnitude/mechanic resolution, done by the loader from admin config. */
-export interface ResolvedAbilityConfig {
-  readonly mechanic: ActionSnapshot['mechanic'];
-  readonly damageType: string | null;
-  readonly cpCost: number;
-  readonly amount: number;
-  readonly durationMs: number;
-  readonly intervalMs: number;
-  readonly statusKey: string | null;
-  readonly statusChancePct: number;
-  readonly maxStacks: number;
-  readonly weaponBased: boolean;
-}
+/**
+ * Ability magnitude/mechanic resolution, done by the loader from admin config.
+ *
+ * The shape is owned by `./ability-resolve`, the ONE module that turns a
+ * configured ability row into numbers, and re-exported here because the decoder
+ * is the only consumer that copies it onto `ActionSnapshot`.
+ */
+import type { ResolvedAbilityConfig } from './ability-resolve';
+export type { ResolvedAbilityConfig };
+
+
 
 /**
  * Ability configuration is resolved **per caster**, not per ability key.
@@ -653,7 +651,12 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       statusChancePct: cfg.statusChancePct,
       maxStacks: cfg.maxStacks,
       weaponBased: cfg.weaponBased,
+      // Per-caster mechanic parameters, resolved from configuration. Absent for
+      // mechanics whose behaviour needs none — never a partial default.
+      ...(cfg.params ? { params: cfg.params } : {}),
       sequence: reqNum(a, 'clientSeq', path),
+
+
     });
     actionIds.push(id);
   });
