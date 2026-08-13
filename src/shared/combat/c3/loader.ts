@@ -33,17 +33,16 @@ import { abilityConfigKey, type SnapshotAux } from './decode-snapshot';
 import { C3Error } from './errors';
 import type { Attributes, ProcSnapshot, ResolutionMode, ResolverConfig } from '../pure/types';
 
-/** Minimal supabase-js surface the loader uses. */
-export interface LoaderDb {
-  from: (table: string) => any;
-}
-
 /**
  * Configured-ability lookup. Implemented in the Edge Function by
  * `_shared/load-ability-calcs.ts` (`getServerAbilityCalcs`), and by a fixture
  * map in tests. Keeping it injected means the loader performs no registry IO.
+ *
+ * `configVersion` is `public.ability_config_version()` as read when the catalog
+ * was built. It is compared against the value the snapshot pinned.
  */
 export interface AbilityCatalog {
+  readonly configVersion: string;
   lookup(classKey: string, abilityKey: string): AbilityConfigEntry | null;
 }
 
