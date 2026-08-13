@@ -781,7 +781,7 @@ function assertScopeMatches(
   scope: SnapshotEnvelope['scope'],
   decoded: {
     participantIds: string[]; creatureIds: string[]; actionIds: string[];
-    effectIds: string[]; inventoryIds: string[];
+    effectIds: string[]; inventoryIds: string[]; partyIds: string[];
   },
 ): void {
   const compare = (name: keyof typeof decoded, actual: readonly string[]) => {
