@@ -839,6 +839,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     if (invId) durability.push({ characterId: p.id, inventoryId: invId });
   }
 
+  // A creature that died this tick has its effects purged on commit, so an
+  // upsert applied earlier in the same tick would be immediately erased. Drop
+  // those proposals here so the committer never sees a contradictory pair.
+  const liveEffectUpserts = effectUpserts.filter(
+    (e) => !(e.targetKind === 'creature' && purgeCreatureIds.has(e.targetId)),
+  );
+
   // ── assemble ProposedTick (every array in a stable order) ────────
   const characterMutations: CharacterMutation[] = participants.map((p) => ({
     characterId: p.id,
@@ -875,7 +882,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     characters: sortBy(characterMutations, (r) => r.characterId),
     creatures: sortBy(creatureMutations, (r) => r.creatureId),
     effectUpserts: sortBy(
-      effectUpserts,
+      liveEffectUpserts,
       (r) => `${r.targetKind}:${r.targetId}`,
       (r) => r.effectType,
     ),
