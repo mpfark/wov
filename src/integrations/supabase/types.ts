@@ -1406,6 +1406,7 @@ export type Database = {
           rarity: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds: number
           rewards_awarded_at: string | null
+          spawn_seq: number
           stats: Json
         }
         Insert: {
@@ -1434,6 +1435,7 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
           rewards_awarded_at?: string | null
+          spawn_seq?: number
           stats?: Json
         }
         Update: {
@@ -1462,6 +1464,7 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
           rewards_awarded_at?: string | null
+          spawn_seq?: number
           stats?: Json
         }
         Relationships: [
@@ -1704,6 +1707,48 @@ export type Database = {
           },
         ]
       }
+      encounter_death_loot: {
+        Row: {
+          created_at: string
+          creature_id: string
+          death_id: string
+          drop_chance: number
+          encounter_id: string
+          item_id: string | null
+          loot_table_id: string | null
+          mode: string
+          resolved: boolean
+          spawn_seq: number
+          tick_number: number
+        }
+        Insert: {
+          created_at?: string
+          creature_id: string
+          death_id: string
+          drop_chance: number
+          encounter_id: string
+          item_id?: string | null
+          loot_table_id?: string | null
+          mode: string
+          resolved?: boolean
+          spawn_seq: number
+          tick_number: number
+        }
+        Update: {
+          created_at?: string
+          creature_id?: string
+          death_id?: string
+          drop_chance?: number
+          encounter_id?: string
+          item_id?: string | null
+          loot_table_id?: string | null
+          mode?: string
+          resolved?: boolean
+          spawn_seq?: number
+          tick_number?: number
+        }
+        Relationships: []
+      }
       encounter_engagements: {
         Row: {
           character_id: string
@@ -1752,6 +1797,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      encounter_kill_awards: {
+        Row: {
+          award_kind: string
+          character_id: string
+          created_at: string
+          creature_id: string
+          death_id: string
+          encounter_id: string
+          spawn_seq: number
+          tick_number: number
+        }
+        Insert: {
+          award_kind: string
+          character_id: string
+          created_at?: string
+          creature_id: string
+          death_id: string
+          encounter_id: string
+          spawn_seq: number
+          tick_number: number
+        }
+        Update: {
+          award_kind?: string
+          character_id?: string
+          created_at?: string
+          creature_id?: string
+          death_id?: string
+          encounter_id?: string
+          spawn_seq?: number
+          tick_number?: number
+        }
+        Relationships: []
       }
       encounter_participants: {
         Row: {
@@ -3277,6 +3355,20 @@ export type Database = {
         }
         Returns: Json
       }
+      commit_encounter_tick_v2: {
+        Args: {
+          _batch_id: string
+          _claim_token: string
+          _encounter_id: string
+          _encounter_version: number
+          _proposed: Json
+          _snapshot_digest: Json
+          _snapshot_scope: Json
+          _snapshot_version: number
+          _tick: number
+        }
+        Returns: Json
+      }
       consume_maps_for_node: {
         Args: { _character_id: string; _node_id: string }
         Returns: number
@@ -3410,6 +3502,15 @@ export type Database = {
           started_at: string
         }[]
       }
+      encounter_death_id: {
+        Args: {
+          _creature_id: string
+          _encounter_id: string
+          _spawn_seq: number
+          _tick: number
+        }
+        Returns: string
+      }
       encounter_detach_creature: {
         Args: { _creature_id: string; _encounter_id: string }
         Returns: undefined
@@ -3436,6 +3537,14 @@ export type Database = {
         }[]
       }
       encounter_snapshot: { Args: { _node_id: string }; Returns: Json }
+      encounter_snapshot_v2: {
+        Args: { _claim_token: string; _encounter_id: string; _tick: number }
+        Returns: Json
+      }
+      encounter_state_digest: {
+        Args: { _encounter_id: string; _scope: Json }
+        Returns: Json
+      }
       encounter_stored_power_add: {
         Args: {
           _delta: number
@@ -3602,6 +3711,10 @@ export type Database = {
       }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
+      prune_encounter_tick_batches: {
+        Args: { _limit?: number; _older_than_seconds?: number }
+        Returns: number
+      }
       purge_creature_engagements: {
         Args: { _creature_id: string }
         Returns: undefined
@@ -3616,6 +3729,15 @@ export type Database = {
       }
       record_world_state: { Args: never; Returns: undefined }
       regen_creature_hp: { Args: never; Returns: undefined }
+      release_encounter_tick: {
+        Args: {
+          _claim_token: string
+          _encounter_id: string
+          _reason?: string
+          _tick: number
+        }
+        Returns: Json
+      }
       request_family_membership: { Args: { _display: string }; Returns: Json }
       resolve_family_request: {
         Args: { _approve: boolean; _request_id: string }
