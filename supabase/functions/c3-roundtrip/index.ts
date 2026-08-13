@@ -134,7 +134,7 @@ async function teardown(ids: Record<string, string>) {
   await del('encounter_participants', 'encounter_id', ids.encounterId);
   await del('encounter_tick_batches', 'encounter_id', ids.encounterId);
   await del('combat_actions', 'character_id', ids.characterId);
-  await del('active_effects', 'target_id', ids.characterId);
+  await del('active_effects', 'node_id', ids.nodeId);
   await del('encounter_kill_awards', 'encounter_id', ids.encounterId);
   await del('encounter_contributions', 'encounter_id', ids.encounterId);
   await del('encounter_cast_events', 'encounter_id', ids.encounterId);
@@ -201,6 +201,15 @@ Deno.serve(async (req) => {
         return json({ ok: true, seeded: { nowMs, tickAt, offsetMs: body.offsetMs ?? 0 } });
       }
       /** Fixture-only: seed one damage-over-time effect with an explicit due time. */
+      /** Fixture-only: force the lease to look expired so claim takes the reclaim path. */
+      case 'expire_lease': {
+        const { error } = await admin
+          .from('encounters')
+          .update({ lease_until: Date.now() - 1 })
+          .eq('id', body.encounterId);
+        if (error) throw new Error(`expire_lease: ${error.message}`);
+        return json({ ok: true });
+      }
       case 'seed_effect': {
         const { data, error } = await admin
           .from('active_effects')
