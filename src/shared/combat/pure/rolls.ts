@@ -231,7 +231,7 @@ export function scaleCreatureDamage(
   if (quality === 'glancing' || (quality === 'weak' && margin < -2)) {
     dmg = Math.min(dmg, GLANCING_WEAK_CAP);
   }
-  return Math.max(dmg, quality === 'miss' ? 0 : 1);
+  return Math.max(dmg, 1);
 }
 
 /** Dodge check for an evasion stance, seeded. */
