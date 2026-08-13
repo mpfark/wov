@@ -129,7 +129,9 @@ function assertInvariants(out: ProposedTick, snap: EncounterSnapshot, seed: numb
   for (const e of out.effectUpserts) {
     expect(purged.has(e.targetId), `${where} no upsert onto a purged target`).toBe(false);
     expect(e.stacks, `${where} stacks positive`).toBeGreaterThan(0);
-    expect(e.expiresAtMs, `${where} effect expiry in the future`).toBeGreaterThan(out.resolvedAtMs - 1);
+    // An effect applied on an early simulated tick may already have lapsed by
+    // the final tick; it must still expire after the snapshot instant.
+    expect(e.expiresAtMs, `${where} effect expiry after snapshot`).toBeGreaterThan(snap.nowMs);
   }
 
   // Stored Power never exceeds the creature cap.
