@@ -1,0 +1,43 @@
+/**
+ * Golden-test manifest: every `class:class_ability_key` that has at least one
+ * golden test in `src/test/combat/c3a/`. The coverage machine-check fails when
+ * an active ability is missing from this list.
+ */
+export const GOLDEN_ABILITY_IDS: readonly string[] = [
+  'assassin:backstab',
+  'assassin:cloak_of_shadows',
+  'assassin:envenom',
+  'assassin:eviscerate',
+  'assassin:shadowstep',
+  'bard:crescendo',
+  'bard:cutting_words',
+  'bard:dissonance',
+  'bard:grand_finale',
+  'bard:inspire',
+  'healer:divine_aegis',
+  'healer:heal',
+  'healer:purifying_light',
+  'healer:smite',
+  'healer:transfer_health',
+  'ranger:aimed_shot',
+  'ranger:barrage',
+  'ranger:disengage',
+  'ranger:eagle_eye',
+  'ranger:natures_snare',
+  'templar:consecrate',
+  'templar:divine_challenge',
+  'templar:holy_shield',
+  'templar:judgment',
+  'templar:shield_wall',
+  'warrior:battle_cry',
+  'warrior:power_strike',
+  'warrior:rend',
+  'warrior:second_wind',
+  'warrior:sunder_armor',
+  'wizard:arcane_surge',
+  'wizard:conflagrate',
+  'wizard:fireball',
+  'wizard:force_shield',
+  'wizard:frostbolt',
+  'wizard:orbs_of_fire',
+];

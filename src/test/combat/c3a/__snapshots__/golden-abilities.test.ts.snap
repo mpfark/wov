@@ -1,0 +1,1442 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`C3a golden abilities > assassin:backstab > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->347",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 13,
+}
+`;
+
+exports[`C3a golden abilities > assassin:cloak_of_shadows > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->70",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "evasion_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "cloak_of_shadows",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "dodge",
+  ],
+  "rngDraws": 8,
+}
+`;
+
+exports[`C3a golden abilities > assassin:envenom > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "stack_apply",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "envenom",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > assassin:eviscerate > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->331",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 1,
+  "effectUpserts": [],
+  "events": [
+    "ability_crit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 12,
+}
+`;
+
+exports[`C3a golden abilities > assassin:shadowstep > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->367",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "stealth_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "shadowstep",
+    },
+  ],
+  "events": [
+    "buff",
+    "buff_consumed",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > bard:crescendo > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 20,
+      "mechanic": "party_regen",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "crescendo",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > bard:cutting_words > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->363",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 12,
+}
+`;
+
+exports[`C3a golden abilities > bard:dissonance > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "creature:crt-1",
+      "type": "dissonance",
+    },
+  ],
+  "events": [
+    "debuff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > bard:grand_finale > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_miss",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 11,
+}
+`;
+
+exports[`C3a golden abilities > bard:inspire > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 3,
+      "mechanic": "regen_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "inspire",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > healer:divine_aegis > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-ally",
+      "type": "divine_aegis",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > healer:heal > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->89",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "heal",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > healer:purifying_light > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 20,
+      "mechanic": "party_regen",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "purifying_light",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > healer:smite > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_miss",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 11,
+}
+`;
+
+exports[`C3a golden abilities > healer:transfer_health > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->60",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->49",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "hp_transfer",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > ranger:aimed_shot > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_miss",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 11,
+}
+`;
+
+exports[`C3a golden abilities > ranger:barrage > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_miss",
+    "ability_miss",
+    "ability_miss",
+    "volley",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 14,
+}
+`;
+
+exports[`C3a golden abilities > ranger:disengage > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->70",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->369",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "evasion_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "disengage",
+    },
+    {
+      "amountPerTick": 0,
+      "mechanic": "evasion_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "disengage_next_hit",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "dodge",
+  ],
+  "rngDraws": 8,
+}
+`;
+
+exports[`C3a golden abilities > ranger:eagle_eye > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "eagle_eye",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > ranger:natures_snare > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "creature:crt-1",
+      "type": "natures_snare",
+    },
+  ],
+  "events": [
+    "debuff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > templar:consecrate > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 20,
+      "mechanic": "aura_pulse",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "consecrate",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > templar:divine_challenge > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "divine_challenge",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > templar:holy_shield > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->376",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "reactive_holy",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "holy_shield",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+    "holy_shield_return",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > templar:judgment > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->363",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 12,
+}
+`;
+
+exports[`C3a golden abilities > templar:shield_wall > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->70",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "block_buff",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "shield_wall",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "block",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > warrior:battle_cry > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "battle_cry",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > warrior:power_strike > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->350",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 13,
+}
+`;
+
+exports[`C3a golden abilities > warrior:rend > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 20,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "creature:crt-1",
+      "type": "bleed",
+    },
+  ],
+  "events": [
+    "debuff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > warrior:second_wind > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->89",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "heal",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > warrior:sunder_armor > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->383",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "creature:crt-1",
+      "type": "sunder_armor",
+    },
+  ],
+  "events": [
+    "debuff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > wizard:arcane_surge > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "arcane_surge",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > wizard:conflagrate > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 1,
+  "effectUpserts": [],
+  "events": [
+    "ability_miss",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 11,
+}
+`;
+
+exports[`C3a golden abilities > wizard:fireball > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->364",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 12,
+}
+`;
+
+exports[`C3a golden abilities > wizard:force_shield > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": null,
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "force_shield",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;
+
+exports[`C3a golden abilities > wizard:frostbolt > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->364",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [],
+  "events": [
+    "ability_hit",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 12,
+}
+`;
+
+exports[`C3a golden abilities > wizard:orbs_of_fire > matches its stored golden digest 1`] = `
+{
+  "characters": [
+    {
+      "cp": "60->60",
+      "died": false,
+      "hp": "40->40",
+      "id": "char-ally",
+    },
+    {
+      "cp": "90->80",
+      "died": false,
+      "hp": "70->69",
+      "id": "char-caster",
+    },
+  ],
+  "creatures": [
+    {
+      "hp": "400->384",
+      "id": "crt-1",
+      "killed": false,
+    },
+  ],
+  "effectDeletes": 0,
+  "effectUpserts": [
+    {
+      "amountPerTick": 0,
+      "mechanic": "stack_apply",
+      "stacks": 1,
+      "target": "character:char-caster",
+      "type": "ignite",
+    },
+  ],
+  "events": [
+    "buff",
+    "autoattack_hit",
+    "autoattack_hit",
+    "creature_hit",
+  ],
+  "rngDraws": 10,
+}
+`;

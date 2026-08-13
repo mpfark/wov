@@ -129,7 +129,13 @@ export interface SeededBlock {
   readonly chance: number;
 }
 
-/** Shield block, seeded. Shield Wall bonuses are applied exactly as in legacy. */
+/**
+ * Shield block, seeded. Shield Wall (`block_buff`) is a CP-reserved stance, so
+ * its bonuses are re-derived by the loader every tick from
+ * `characters.reserved_buffs` and arrive as resolved numbers. When the loader
+ * supplies no configured bonus we fall back to the legacy WIS/CON formulas, so
+ * an unconfigured stance keeps its shipped strength.
+ */
 export function seededBlock(input: {
   rng: TickRandom;
   defender: ParticipantSnapshot;
@@ -139,13 +145,22 @@ export function seededBlock(input: {
   const { rng, defender, creatureId, key } = input;
   if (!defender.hasShield) return { blocked: false, amount: 0, chance: 0 };
   const attrs = defender.attrs;
+  const b = defender.buffs;
   let chance = getShieldBlockChance(attrs.dex);
   let amount = getShieldBlockAmount(attrs.str);
-  if (defender.buffs.blockBuff) {
-    chance += getShieldWallChanceBonus(attrs.wis);
-    amount += getShieldWallAmountBonus(attrs.con);
+  let cap = 0.95;
+  if (b.blockBuff) {
+    chance +=
+      typeof b.blockChanceBonus === 'number'
+        ? b.blockChanceBonus
+        : getShieldWallChanceBonus(attrs.wis);
+    amount +=
+      typeof b.blockAmountBonus === 'number'
+        ? b.blockAmountBonus
+        : getShieldWallAmountBonus(attrs.con);
+    if (typeof b.blockChanceCap === 'number' && b.blockChanceCap > 0) cap = b.blockChanceCap;
   }
-  chance = Math.min(0.95, chance);
+  chance = Math.min(cap, chance);
   const blocked = rng.sample('block', defender.id, creatureId, ...key) < chance;
   return { blocked, amount: blocked ? Math.round(amount) : 0, chance };
 }
