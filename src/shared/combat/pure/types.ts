@@ -85,6 +85,19 @@ export interface ParticipantSnapshot {
   /** Stable tiebreaker for ordering; never a wall clock read inside sim. */
   readonly joinedAtMs: number;
   readonly isUncappedXp: boolean;
+  /** Current MP, from the snapshotted character row. */
+  readonly mp: number;
+  readonly maxMp: number;
+  /** Progression inputs. Level-up side effects are derived from these only. */
+  readonly xp: number;
+  readonly unspentStatPoints: number;
+  readonly respecPoints: number;
+  /**
+   * Aggregated equipment/gem bonuses (`str`..`cha`, `hp`), summed by the
+   * decoder from the snapshotted equipment rows. Needed because max HP/CP/MP
+   * recalculation on level-up is a function of *effective* attributes.
+   */
+  readonly equipmentBonuses: Readonly<Record<string, number>>;
 }
 
 export interface CreatureLootEntrySnapshot {
@@ -141,7 +154,14 @@ export interface EffectSnapshot {
   readonly amountPerTick: number;
   readonly expiresAtMs: number;
   readonly intervalMs: number;
-  readonly lastTickAtMs: number;
+  /**
+   * Absolute epoch ms at which this effect is next due to tick — the exact
+   * semantics of `active_effects.next_tick_at`, which is the column it is
+   * decoded from and committed back to. It is NOT "when it last ticked", and
+   * it has nothing to do with the encounter cursor or with
+   * `combat_sessions.last_tick_at`.
+   */
+  readonly nextTickAtMs: number;
   readonly damageType: string | null;
   /** Character that applied it — reward attribution for DoT kills. */
   readonly sourceCharacterId: string | null;
@@ -263,7 +283,8 @@ export interface EffectUpsert {
   readonly amountPerTick: number;
   readonly expiresAtMs: number;
   readonly intervalMs: number;
-  readonly lastTickAtMs: number;
+  /** Next due time, written verbatim to `active_effects.next_tick_at`. */
+  readonly nextTickAtMs: number;
   readonly damageType: string | null;
   readonly sourceCharacterId: string | null;
 }
@@ -283,6 +304,30 @@ export interface RewardProposal {
   readonly xp: number;
   readonly gold: number;
   readonly renown: number;
+}
+
+/**
+ * One level-up (or level-42 XP cap) side effect, fully derived from the
+ * snapshotted character plus the configured formulas. The commit function
+ * applies exactly these named fields — there is no arbitrary column patch.
+ */
+export interface ProgressionMutation {
+  readonly characterId: string;
+  readonly levelBefore: number;
+  readonly levelAfter: number;
+  /** Absolute XP remainder after subtracting the level requirement. */
+  readonly xpAfter: number;
+  readonly maxHpAfter: number;
+  readonly maxCpAfter: number;
+  readonly maxMpAfter: number;
+  /** Resources refilled by the level-up, bounded by the new maxima. */
+  readonly hpAfter: number;
+  readonly cpAfter: number;
+  readonly mpAfter: number;
+  /** Class level bonuses (every third level). Deltas, never absolutes. */
+  readonly attributeDeltas: Readonly<Record<string, number>>;
+  readonly unspentStatPointsDelta: number;
+  readonly respecPointsDelta: number;
 }
 
 export interface LootProposal {
@@ -339,7 +384,13 @@ export interface StoredPowerMutation {
 
 export interface SessionProposal {
   readonly ended: boolean;
-  readonly lastTickAtMs: number;
+  /**
+   * Diagnostic only: the next due time this tick implies
+   * (`nowMs + ticksProcessed * tickRateMs`). Cadence lives exclusively on the
+   * encounter cursor, and this value is deliberately NOT written to
+   * `combat_sessions.last_tick_at` — the commit function ignores it.
+   */
+  readonly nextDueAtMs: number;
 }
 
 export interface PresentationEvent {
@@ -377,6 +428,7 @@ export interface ProposedTick {
   readonly durability: readonly DurabilityProposal[];
   readonly kills: readonly KillProposal[];
   readonly rewards: readonly RewardProposal[];
+  readonly progression: readonly ProgressionMutation[];
   readonly loot: readonly LootProposal[];
   readonly materials: readonly MaterialProposal[];
   readonly gems: readonly GemProposal[];

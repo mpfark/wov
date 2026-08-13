@@ -21,7 +21,9 @@
 
 import { getStatModifier } from '../../formulas/stats';
 import { DEFAULT_WEAPON_PROGRESSION } from '../../formulas/combat';
-import { getCreatureXp, getXpPenalty } from '../../formulas/xp';
+import { getCreatureXp, getXpForLevel, getXpPenalty } from '../../formulas/xp';
+import { getClassLevelBonuses } from '../../formulas/classes';
+import { getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '../../formulas/resources';
 import { getChaGoldMultiplier } from '../../formulas/economy';
 import { bondGainForKill } from '../../formulas/bond';
 import { PRIMARY_GEM_KEYS } from '../../formulas/gems';
@@ -62,8 +64,10 @@ import type {
   KillProposal,
   LootProposal,
   MaterialProposal,
+  Attributes,
   ParticipantSnapshot,
   PresentationEvent,
+  ProgressionMutation,
   ProposedTick,
   RejectedAction,
   RewardProposal,
@@ -133,6 +137,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
   const effectUpserts: EffectUpsert[] = [];
   const effectDeleteIds = new Set<string>();
+  /**
+   * Advanced `next_tick_at` per snapshotted effect id. Written back as an
+   * upsert so a periodic effect's schedule survives the commit instead of
+   * re-firing on every tick.
+   */
+  const effectNextDue = new Map<string, number>();
   const effectDeleteTargetIds = new Set<string>();
   const casts: CastMutation[] = [];
   const storedPowerMut = new Map<string, StoredPowerMutation>();
@@ -404,8 +414,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       }
       if (!e.isPeriodic || !(e.amountPerTick > 0)) continue;
       const interval = e.intervalMs > 0 ? e.intervalMs : tickRate;
-      const dueAt = e.lastTickAtMs + interval;
+      // `nextTickAtMs` is the absolute due time carried by
+      // `active_effects.next_tick_at`. No derivation, no inference from the
+      // encounter cursor: due means due.
+      const dueAt = effectNextDue.get(e.id) ?? e.nextTickAtMs;
       if (dueAt > nowMs) continue;
+      // Advance the schedule from the *due* time, not from `nowMs`, so a
+      // delayed invocation or a multi-tick catch-up run cannot drift the
+      // cadence of a periodic effect.
+      effectNextDue.set(e.id, dueAt + interval);
       const perTick = Math.max(1, Math.floor(e.amountPerTick * Math.max(1, e.stacks)));
       if (e.targetKind === 'creature') {
         const creature = byCreature.get(e.targetId);
@@ -486,7 +503,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             amountPerTick: 0,
             expiresAtMs: nowMs + Math.max(tickRate, a.durationMs),
             intervalMs: 0,
-            lastTickAtMs: nowMs,
+            nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
             damageType: null,
             sourceCharacterId: caster.id,
           });
@@ -523,7 +540,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             amountPerTick: 0,
             expiresAtMs: nowMs + Math.max(tickRate, a.durationMs),
             intervalMs: 0,
-            lastTickAtMs: nowMs,
+            nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
             damageType: a.damageType,
             sourceCharacterId: caster.id,
           });
@@ -558,7 +575,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             amountPerTick: perTick,
             expiresAtMs: nowMs + Math.max(tickRate, a.durationMs),
             intervalMs: a.intervalMs > 0 ? a.intervalMs : tickRate,
-            lastTickAtMs: nowMs,
+            nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
             damageType: a.damageType,
             sourceCharacterId: caster.id,
           });
@@ -667,7 +684,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
               amountPerTick: 0,
               expiresAtMs: nowMs + tickRate * 5,
               intervalMs: 0,
-              lastTickAtMs: nowMs,
+              // Non-periodic: due time sits past its own expiry so it can
+              // never be treated as a pending tick.
+              nextTickAtMs: nowMs + tickRate * 5,
               damageType: null,
               sourceCharacterId: p.id,
             });
@@ -839,6 +858,100 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     if (invId) durability.push({ characterId: p.id, inventoryId: invId });
   }
 
+  // ── periodic effect schedules: persist the advanced next due time ──
+  // Derived only from the effect's own snapshotted due time and interval.
+  for (const e of effects) {
+    const advanced = effectNextDue.get(e.id);
+    if (advanced === undefined || effectDeleteIds.has(e.id)) continue;
+    effectUpserts.push({
+      targetKind: e.targetKind,
+      targetId: e.targetId,
+      effectType: e.effectType,
+      stacks: e.stacks,
+      amountPerTick: e.amountPerTick,
+      expiresAtMs: e.expiresAtMs,
+      intervalMs: e.intervalMs,
+      nextTickAtMs: advanced,
+      damageType: e.damageType,
+      sourceCharacterId: e.sourceCharacterId,
+    });
+  }
+
+  // ── progression: one level-up per tick, derived from the snapshot ──
+  // Only the configured formulas are used; no character column is patched
+  // outside the named fields of ProgressionMutation.
+  const progressionMut: ProgressionMutation[] = [];
+  const xpByCharacter = new Map<string, number>();
+  for (const r of rewards) {
+    xpByCharacter.set(r.characterId, (xpByCharacter.get(r.characterId) ?? 0) + r.xp);
+  }
+  for (const p of participants) {
+    const gained = xpByCharacter.get(p.id) ?? 0;
+    if (gained <= 0) continue;
+    const eb = p.equipmentBonuses;
+    const needed = getXpForLevel(p.level);
+    let level = p.level;
+    let xp = p.xp + gained;
+    let attributeDeltas: Record<string, number> = {};
+    let unspentStatPointsDelta = 0;
+    let respecPointsDelta = 0;
+
+    if (xp >= needed && p.level < 42) {
+      level = p.level + 1;
+      xp -= needed;
+      unspentStatPointsDelta = 1;
+      if (level % 3 === 0) attributeDeltas = { ...getClassLevelBonuses(p.classKey) };
+      if (level === 10 || level === 20 || level === 30 || level === 40) respecPointsDelta = 1;
+    }
+    if (level >= 42) xp = 0;
+
+    const levelled = level !== p.level;
+    if (!levelled && xp === p.xp + gained && !(level >= 42)) continue;
+
+    const attrWith = (key: keyof Attributes) =>
+      p.attrs[key] + (attributeDeltas[key] ?? 0);
+    const maxHp = levelled
+      ? getEffectiveMaxHp(p.classKey, attrWith('con'), level, eb as Record<string, number>)
+      : p.maxHp;
+    const maxCp = levelled
+      ? getEffectiveMaxCp(level, attrWith('wis'), eb as Record<string, number>)
+      : p.maxCp;
+    const maxMp = levelled
+      ? getEffectiveMaxMp(level, attrWith('dex'), eb as Record<string, number>)
+      : p.maxMp;
+
+    progressionMut.push({
+      characterId: p.id,
+      levelBefore: p.level,
+      levelAfter: level,
+      xpAfter: xp,
+      maxHpAfter: maxHp,
+      maxCpAfter: maxCp,
+      maxMpAfter: maxMp,
+      // A level-up refills HP (legacy rule); CP/MP keep their live values,
+      // clamped to the recalculated maxima.
+      hpAfter: levelled ? maxHp : Math.min(w.hp.get(p.id) ?? p.hp, maxHp),
+      cpAfter: Math.min(w.cp.get(p.id) ?? p.cp, maxCp),
+      mpAfter: Math.min(p.mp, maxMp),
+      attributeDeltas,
+      unspentStatPointsDelta,
+      respecPointsDelta,
+    });
+    if (levelled) {
+      emit('level_up', `Level Up! ${p.name} is now level ${level}!`, { characterId: p.id });
+      emit('stat_point', `${p.name} gained 1 stat point to allocate.`, { characterId: p.id });
+      if (Object.keys(attributeDeltas).length > 0) {
+        const names = Object.entries(attributeDeltas)
+          .map(([k, v]) => `+${v} ${k.toUpperCase()}`)
+          .join(', ');
+        emit('level_bonus', `Class bonus: ${names}.`, { characterId: p.id });
+      }
+      if (respecPointsDelta > 0) {
+        emit('respec', `${p.name} earned a respec point.`, { characterId: p.id });
+      }
+    }
+  }
+
   // A creature that died this tick has its effects purged on commit, so an
   // upsert applied earlier in the same tick would be immediately erased. Drop
   // those proposals here so the committer never sees a contradictory pair.
@@ -895,6 +1008,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     durability: sortBy(durability, (r) => r.characterId, (r) => r.inventoryId),
     kills: sortBy(kills, (r) => r.creatureId),
     rewards: sortBy(rewards, (r) => r.characterId, (r) => r.creatureId),
+    progression: sortBy(progressionMut, (r) => r.characterId),
     loot: sortBy(loot, (r) => r.creatureId, (r) => r.itemId ?? r.mode),
     materials: sortBy(materials, (r) => r.characterId, (r) => r.materialKey),
     gems: sortBy(gems, (r) => r.characterId, (r) => r.gemKey),
@@ -903,7 +1017,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     rejectedActions: sortBy(rejectedActions, (r) => r.actionId),
     session: {
       ended: allEnded,
-      lastTickAtMs: snapshot.nowMs + ticks * tickRate,
+      nextDueAtMs: snapshot.nowMs + ticks * tickRate,
     },
     events,
   };
