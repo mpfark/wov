@@ -21,37 +21,69 @@ const CREATURE = '00000000-0000-4000-8000-0000000000f1';
 
 interface Call { fn: string; args: Record<string, unknown> }
 
+const NOW = 1_000_000;
+const DIGEST_KEYS = [
+  'participants', 'characters', 'creatures', 'engagements', 'actions',
+  'effects', 'equipment', 'casts', 'storedPower', 'configVersion',
+] as const;
+
+const ATTRS = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+
+/**
+ * A contract-valid `encounter_snapshot_v2` payload (v3): every section the
+ * decoder requires, nothing it forbids. A hand-trimmed root would fail
+ * strictness rather than exercise the pipeline, which is the point of the
+ * contract.
+ */
 function snapshotRoot(overrides: Record<string, unknown> = {}) {
+  const claimMode = (overrides.claimMode as string) ?? 'live';
+  delete overrides.claimMode;
   return {
     loaded: true,
     snapshotVersion: 3,
     encounterId: ENC,
-    encounterVersion: 4,
     nodeId: NODE,
     tickNumber: 7,
+    encounterVersion: 4,
+    loadedAtMs: NOW,
     tickRateMs: 2000,
-    nowMs: 1_000_000,
-    cursor: { tickAtMs: 1_000_000 - 2000 },
-    scope: { participantIds: [CHAR], creatureIds: [CREATURE], partyIds: [], nodeIds: [NODE] },
-    stateDigest: { d: 'x' },
+    lootFallbackChance: 10,
+    claim: { token: 'tok', tick: 7, attempt: 1, leaseUntilMs: NOW + 8000, mode: claimMode },
+    cursor: { tickNumber: 6, tickAtMs: NOW - 2000, tickState: 'idle', resolvingTick: null },
+    storedPower: { current: 0, cap: 0, capSource: 'inactive', castingCreatureId: null, sourceId: null },
     participants: [{
-      id: CHAR, partyId: null, classKey: 'warrior', level: 5,
-      hp: 20, maxHp: 20, cp: 100, maxCp: 100, mp: 10, maxMp: 10,
-      attrs: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+      id: CHAR, name: 'Tester', level: 5, classKey: 'warrior',
+      hp: 20, maxHp: 20, cp: 100, maxCp: 100, mp: 10, maxMp: 10, ac: 12,
+      attrs: { ...ATTRS }, stanceState: {}, reservedBuffs: {}, partyId: null,
+      joinedAtMs: NOW - 60_000, rowVersion: 1, equipment: [],
+      xp: 100, unspentStatPoints: 0, respecPoints: 0, bhp: 0,
     }],
     creatures: [{
-      id: CREATURE, spawnSeq: 1, name: 'Grub', level: 2, hp: 10, maxHp: 10, ac: 10,
-      isAlive: true, rarity: 'regular',
+      id: CREATURE, name: 'Grub', level: 2, rarity: 'regular',
+      hp: 10, maxHp: 10, ac: 10, isAlive: true, spawnSeq: 1, isHumanoid: false,
+      attrs: { ...ATTRS }, lootMode: 'salvage_only', lootTableId: null, lootTable: [],
+      bossCast: null, configuredStoredPowerCap: 0,
+      effectiveDropChance: 10, dropChanceSource: 'creature', rowVersion: 1,
     }],
+    engagements: [],
     actions: [],
     effects: [],
-    engagements: [],
+    statusDefs: [],
+    casts: [],
+    lootConfig: {},
+    lootTables: [],
     config: {
       abilityConfigVersion: 'v-test',
       xpBoostMultiplier: 1,
+      gemDropChance: 0.1,
       weaponProgression: { tier1_level: 1, tier2_level: 11, tier3_level: 21 },
       tanks: [],
     },
+    scope: {
+      participantIds: [CHAR], creatureIds: [CREATURE],
+      actionIds: [], effectIds: [], inventoryIds: [], partyIds: [],
+    },
+    stateDigest: Object.fromEntries(DIGEST_KEYS.map(k => [k, `hash-${k}`])),
     ...overrides,
   };
 }
@@ -95,8 +127,16 @@ function fakeDb(opts: FakeOptions = {}) {
             },
             error: null,
           };
-        case 'encounter_snapshot_v2':
-          return { data: opts.snapshot ?? snapshotRoot(), error: null };
+        case 'encounter_snapshot_v2': {
+          // The snapshot always carries the mode the claim granted: the decoder
+          // refuses any disagreement, exactly as in production.
+          const claimMode = String((opts.claim ?? {}).mode ?? 'live');
+          const root = opts.snapshot ?? snapshotRoot({ claimMode });
+          if (opts.snapshot && (opts.snapshot as any).claim) {
+            (opts.snapshot as any).claim.mode = claimMode;
+          }
+          return { data: root, error: null };
+        }
         case 'commit_encounter_tick_v2':
           return { data: opts.commit ?? { committed: true }, error: opts.commitError ?? null };
         case 'release_encounter_tick':
@@ -108,6 +148,7 @@ function fakeDb(opts: FakeOptions = {}) {
   };
   return { db, calls };
 }
+
 
 const deps = (db: any, extra: Record<string, unknown> = {}) => ({
   db,
