@@ -315,7 +315,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         mode: 'item_pool',
         lootTableId: null,
         itemId: null,
-        dropChance: creature.dropChance ?? -1,
+        dropChance: creature.dropChance,
       });
     } else if (creature.lootMode === 'salvage_only') {
       // no item loot by design

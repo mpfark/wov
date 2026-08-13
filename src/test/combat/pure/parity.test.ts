@@ -110,8 +110,10 @@ function assertInvariants(out: ProposedTick, snap: EncounterSnapshot, seed: numb
   // Loot is only ever proposed for a creature that actually died.
   for (const l of out.loot) {
     expect(killIds.includes(l.creatureId), `${where} loot follows a kill`).toBe(true);
-    expect(l.dropChance, `${where} drop chance range`).toBeGreaterThanOrEqual(0);
-    expect(l.dropChance, `${where} drop chance range`).toBeLessThanOrEqual(1);
+    if (l.dropChance !== null) {
+      expect(l.dropChance, `${where} drop chance range`).toBeGreaterThanOrEqual(0);
+      expect(l.dropChance, `${where} drop chance range`).toBeLessThanOrEqual(1);
+    }
   }
 
   // Durability: at most one proposal per character, on a real equipped row.

@@ -293,7 +293,8 @@ export interface LootProposal {
   readonly mode: 'legacy' | 'item_pool';
   readonly lootTableId: string | null;
   readonly itemId: string | null;
-  readonly dropChance: number;
+  /** `null` means "the committer applies the pool default for this mode". */
+  readonly dropChance: number | null;
 }
 
 export interface MaterialProposal {
