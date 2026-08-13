@@ -767,6 +767,11 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     actionIds,
     effectIds,
     inventoryIds: Object.keys(durabilityByInventoryId),
+    // Party composition is configuration: the scope must name every party the
+    // tank selection depended on, or the commit digest would not cover it.
+    partyIds: [
+      ...new Set(participants.map((p) => p.partyId).filter((id): id is string => Boolean(id))),
+    ],
   });
 
   return { snapshot, envelope, mpByCharacterId, progressionByCharacterId };
