@@ -16,6 +16,13 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+
+import {
+  isMaintenanceResponse,
+  maintenanceMessage,
+  COMBAT_MAINTENANCE_MESSAGE,
+} from '@/shared/combat/maintenance';
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
