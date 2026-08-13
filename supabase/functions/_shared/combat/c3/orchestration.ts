@@ -23,14 +23,14 @@
  * authority — it competes for the same single claim.
  */
 
-import { resolveTickPure } from '../pure/resolver';
-import type { ProposedTick } from '../pure/types';
-import { buildCommitRequest } from '../c2/payload';
-import type { SessionPresenceProposal } from '../c2/contract';
-import { decodeEncounterSnapshot } from './decode-snapshot';
-import { loadSnapshotAux, type AbilityCatalog, type LoaderDb } from './loader';
-import { C3Error, type C3Failure } from './errors';
-import { parseCombatMode, COMBAT_MODE_KEY, COMBAT_MAINTENANCE_MESSAGE } from '../maintenance';
+import { resolveTickPure } from '../pure/resolver.ts';
+import type { ProposedTick } from '../pure/types.ts';
+import { buildCommitRequest } from '../c2/payload.ts';
+import type { SessionPresenceProposal } from '../c2/contract.ts';
+import { decodeEncounterSnapshot } from './decode-snapshot.ts';
+import { loadSnapshotAux, type AbilityCatalog, type LoaderDb } from './loader.ts';
+import { C3Error, type C3Failure } from './errors.ts';
+import { parseCombatMode, COMBAT_MODE_KEY, COMBAT_MAINTENANCE_MESSAGE } from '../maintenance.ts';
 
 /** Minimal supabase-js surface the pipeline uses. */
 export interface OrchestrationDb extends LoaderDb {
