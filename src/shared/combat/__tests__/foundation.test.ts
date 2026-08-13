@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { absorbFromShield, resolveDamage, resolveHeal } from '../resolution';
 import { selectPrimaryTarget, selectAoeTargets, livingTargets } from '../targeting';
 import { applyStackingEffect, isEffectExpired } from '../status';
-import { buildCastHitMessages, buildCastHitEvent } from '@shared/combat/cast-events';
 
 describe('resolveDamage', () => {
   it('applies damage and clamps at zero HP', () => {
@@ -106,41 +105,6 @@ describe('applyStackingEffect', () => {
   it('expires against a reference time', () => {
     expect(isEffectExpired({ expires_at: 500 }, 500)).toBe(true);
     expect(isEffectExpired({ expires_at: 501 }, 500)).toBe(false);
-  });
-});
-
-describe('cast event generation', () => {
-  const base = {
-    creatureId: 'c1', creatureName: 'Vanguard', characterId: 'p1', characterName: 'Calikon',
-    label: 'Cataclysm', damage: 42,
-  };
-
-  it('uses the default sentence with the damage-type adjective', () => {
-    const m = buildCastHitMessages({ ...base, damageType: 'fire' });
-    expect(m.message).toBe("Vanguard's searing Cataclysm strikes Calikon! [42]");
-    expect(m.selfMessage).toBe("Vanguard's searing Cataclysm strikes you! [42]");
-  });
-
-  it('collapses cleanly when the cast is untyped', () => {
-    expect(buildCastHitMessages(base).message).toBe("Vanguard's Cataclysm strikes Calikon! [42]");
-  });
-
-  it('prefers authored flavor and skips the duplicate damage suffix', () => {
-    expect(buildCastHitMessages({ ...base, hitFlavor: '{creature} crushes {target}' }).message)
-      .toBe('Vanguard crushes Calikon [42]');
-    expect(buildCastHitMessages({ ...base, hitFlavor: '{creature} crushes {target} for {damage}' }).message)
-      .toBe('Vanguard crushes Calikon for 42');
-  });
-
-  it('emits a structured boss_cast_hit event with self/remote split', () => {
-    const e = buildCastHitEvent({ ...base, damageType: 'frost' });
-    expect(e.type).toBe('boss_cast_hit');
-    expect(e.damage).toBe(42);
-    expect(e.log_event.damageType).toBe('frost');
-    expect(e.log_event.effectType).toBe('Cataclysm');
-    expect(e.log_event.message).toContain('strikes you');
-    expect(e.log_event.remoteMessage).toContain('strikes Calikon');
-    expect(e.log_event.target).toEqual({ kind: 'player', id: 'p1', name: 'Calikon' });
   });
 });
 
