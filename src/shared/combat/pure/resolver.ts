@@ -27,7 +27,7 @@ import { bondGainForKill } from '../../formulas/bond';
 import { PRIMARY_GEM_KEYS } from '../../formulas/gems';
 import { resolveDamage, resolveHeal, absorbFromShield } from '../resolution';
 import { getPartyXpBonus } from './party-xp';
-import { createTickRandom, type TickRandom } from './rng';
+import { createTickRandom } from './rng';
 import {
   orderActions,
   orderCreatures,

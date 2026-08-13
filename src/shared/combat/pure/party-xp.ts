@@ -1,14 +1,19 @@
 /**
  * pure/party-xp.ts — party-size XP bonus, pure.
  *
- * Mirrors the legacy curve in `supabase/functions/_shared/reward-calculator.ts`
- * (`mem://game/combat-system/party-xp-bonus`): 1.00 / 1.15 / 1.25 / 1.40.
+ * Byte-equivalent to the legacy table in
+ * `supabase/functions/_shared/reward-calculator.ts`: 1.00 / 1.15 / 1.30 / 1.40,
+ * clamped at four members (`mem://game/combat-system/party-xp-bonus`).
  */
 
-export const PARTY_XP_BONUS: readonly number[] = [1.0, 1.0, 1.15, 1.25, 1.4];
+export const PARTY_XP_BONUS: Record<number, number> = {
+  1: 1.0,
+  2: 1.15,
+  3: 1.3,
+  4: 1.4,
+};
 
-export function getPartyXpBonus(partySize: number): number {
-  const n = Number.isFinite(partySize) ? Math.floor(partySize) : 1;
-  if (n <= 1) return PARTY_XP_BONUS[1];
-  return PARTY_XP_BONUS[Math.min(n, PARTY_XP_BONUS.length - 1)];
+export function getPartyXpBonus(memberCount: number): number {
+  const n = Number.isFinite(memberCount) ? Math.max(1, Math.floor(memberCount)) : 1;
+  return PARTY_XP_BONUS[Math.min(n, 4)] ?? 1.0;
 }
