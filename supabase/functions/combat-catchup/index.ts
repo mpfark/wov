@@ -181,6 +181,37 @@ Deno.serve(async (req) => {
       return json({ effects: effects || [], creatures: creatures || [] });
     }
 
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // Offscreen reconciliation is a tick of the same shared encounter, so it
+    // is gated by the same switch. While combat is closed no claim is taken,
+    // no lease is captured, no effect is advanced and no kill, loot, XP or
+    // durability write happens. Read-only creature state is still returned so
+    // the world screen renders; the snapshot_only branch above is likewise
+    // pure read.
+    {
+      const combatMode = await readCombatMode(db);
+      if (combatMode !== 'open') {
+        const { data: creatures } = await db
+          .from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
+        console.log(JSON.stringify({
+          fn: 'combat-catchup', gated: 'maintenance', node_id,
+          creatures_alive: (creatures || []).length,
+          duration_ms: Date.now() - t0,
+        }));
+        return json({
+          maintenance: true,
+          combat_mode: 'maintenance',
+          message: COMBAT_MAINTENANCE_MESSAGE,
+          caught_up: false,
+          effects_processed: 0,
+          creatures: creatures || [],
+          partial: false,
+        });
+      }
+    }
+
+
+
     // Best-effort throttle: skip effect reprocessing if recently reconciled.
     // Always return fresh creature data (never stale cache).
     // Skip throttle when force=true (node-entry).
