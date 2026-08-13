@@ -29,6 +29,7 @@ import { bondGainForKill } from '../../formulas/bond.ts';
 import { PRIMARY_GEM_KEYS } from '../../formulas/gems.ts';
 import { resolveDamage, resolveHeal, absorbFromShield } from '../resolution.ts';
 import { getPartyXpBonus } from './party-xp.ts';
+import type { ResolverMechanic } from './mechanics.ts';
 import { createTickRandom } from './rng.ts';
 import {
   orderActions,
@@ -401,18 +402,291 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     return res.applied;
   };
 
+  const restoreCp = (target: ParticipantSnapshot, amount: number): number => {
+    const before = w.cp.get(target.id) ?? 0;
+    const after = Math.min(target.maxCp, before + Math.max(0, Math.floor(amount)));
+    w.cp.set(target.id, after);
+    return after - before;
+  };
+
+  // ── C3a: per-caster persistent friendly state ───────────────────
+  //
+  // Every mechanic below keeps its own contract. They share this working
+  // scaffolding only for bookkeeping (stack counts, once-per-tick guards,
+  // intra-tick buff visibility) — never for gameplay semantics.
+
+  /**
+   * Same-node allies of a caster. The snapshot is node-scoped, so every
+   * participant in it already stands on the encounter's node. `partyOnly`
+   * narrows to the caster's party (the caster always included). Dead allies are
+   * excluded: legacy `heal_party_member` refuses to revive the fallen.
+   */
+  const alliesOf = (casterId: string, partyOnly: boolean): ParticipantSnapshot[] => {
+    const caster = byParticipant.get(casterId);
+    if (!caster) return [];
+    return participants.filter((p) => {
+      if (!isAliveP(p.id)) return false;
+      if (p.id === caster.id) return true;
+      if (!partyOnly) return true;
+      return !!caster.partyId && p.partyId === caster.partyId;
+    });
+  };
+
+  /** One-shot buff consumption (`stealth`, `disengage`). */
+  const consumedBuffs: { characterId: string; buff: string }[] = [];
+  const spentBuffs = new Set<string>();
+  const buffSpent = (characterId: string, buff: string) =>
+    spentBuffs.has(`${characterId}:${buff}`);
+  const spendBuff = (characterId: string, buff: string) => {
+    spentBuffs.add(`${characterId}:${buff}`);
+    consumedBuffs.push({ characterId, buff });
+  };
+
+  /**
+   * Buff state acquired *this* tick (a stance activated by an action in the
+   * same tick is visible to later phases of that tick, exactly as the legacy
+   * server rebuilt `member_buffs` before resolving hits).
+   */
+  interface BuffOverride {
+    stealthMult?: number;
+    nextHitBonusMult?: number;
+    dodgeChance?: number;
+    blockBuff?: boolean;
+    blockChanceBonus?: number;
+    blockAmountBonus?: number;
+    blockChanceCap?: number;
+    reactiveHolyDamage?: number;
+    reactiveHolyDamageType?: string | null;
+  }
+  const buffOverride = new Map<string, BuffOverride>();
+  const overrideOf = (id: string): BuffOverride => {
+    let o = buffOverride.get(id);
+    if (!o) {
+      o = {};
+      buffOverride.set(id, o);
+    }
+    return o;
+  };
+  /** Participant view with this tick's acquired state merged in. */
+  const withBuffs = (p: ParticipantSnapshot): ParticipantSnapshot => {
+    const o = buffOverride.get(p.id);
+    if (!o) return p;
+    return { ...p, buffs: { ...p.buffs, ...o, blockBuff: o.blockBuff ?? p.buffs.blockBuff } };
+  };
+  const stealthMultOf = (p: ParticipantSnapshot): number => {
+    if (buffSpent(p.id, 'stealth')) return 1;
+    const o = buffOverride.get(p.id);
+    const mult = o?.stealthMult ?? (p.buffs.stealth ? (p.buffs.stealthMult ?? 2) : 0);
+    return mult > 1 ? mult : p.buffs.stealth ? 2 : 1;
+  };
+  const hasStealth = (p: ParticipantSnapshot): boolean =>
+    !buffSpent(p.id, 'stealth') && (p.buffs.stealth || !!buffOverride.get(p.id)?.stealthMult);
+  const nextHitMultOf = (p: ParticipantSnapshot): number => {
+    if (buffSpent(p.id, 'disengage')) return 0;
+    const m = buffOverride.get(p.id)?.nextHitBonusMult ?? p.buffs.nextHitBonusMult ?? 0;
+    return m > 0 ? m : 0;
+  };
+  const reactiveHolyOf = (p: ParticipantSnapshot) => {
+    const o = buffOverride.get(p.id);
+    const dmg = o?.reactiveHolyDamage ?? p.buffs.reactiveHolyDamage ?? 0;
+    if (!(dmg > 0)) return null;
+    return {
+      damage: Math.max(1, Math.floor(dmg)),
+      damageType: o?.reactiveHolyDamageType ?? p.buffs.reactiveHolyDamageType ?? 'holy',
+    };
+  };
+  /** Holy Shield retaliates at most once per (defender, attacker) per tick. */
+  const holyShieldSeen = new Set<string>();
+
+  // ── stack accounting (`stack_apply` / `stack_consume`) ───────────
+  // Stacks belong to a (source, target, effect_type) triple: two players'
+  // Envenom stacks never merge, exactly as in the legacy tick.
+  const stackWorking = new Map<string, number>();
+  const stackTriple = (effectType: string, sourceId: string, targetId: string) =>
+    `${effectType}|${sourceId}|${targetId}`;
+  const snapshotStackRow = (effectType: string, sourceId: string, targetId: string) =>
+    effects.find(
+      (e) =>
+        e.effectType === effectType &&
+        e.targetId === targetId &&
+        e.sourceCharacterId === sourceId &&
+        e.expiresAtMs > snapshot.nowMs,
+    ) ?? null;
+  const stacksOf = (effectType: string, sourceId: string, targetId: string): number => {
+    const k = stackTriple(effectType, sourceId, targetId);
+    const working = stackWorking.get(k);
+    if (working !== undefined) return working;
+    return snapshotStackRow(effectType, sourceId, targetId)?.stacks ?? 0;
+  };
+
+  /**
+   * `stack_apply` — Envenom (weapon-hit trigger) and Orbs of Fire (pulse
+   * trigger). A proc refreshes the full duration and adds exactly one stack,
+   * capped by the ability's configured `max_stacks`. Ownership is per
+   * source/target pair.
+   */
+  const runStackAppliers = (
+    attacker: ParticipantSnapshot,
+    creature: CreatureSnapshot,
+    trigger: 'weapon_hit' | 'successful_pulse_hit',
+    nowMs: number,
+    t: number,
+  ): void => {
+    const appliers = attacker.buffs.stackAppliers;
+    if (!appliers || appliers.length === 0) return;
+    for (const ap of sortBy(appliers, (x) => x.abilityKey)) {
+      if (ap.trigger !== trigger) continue;
+      if (!isAliveC(creature.id)) return;
+      const chance = Math.max(0, Math.min(1, ap.chance));
+      if (
+        chance < 1 &&
+        rng.sample('stack_apply_chance', ap.abilityKey, attacker.id, creature.id, t) >= chance
+      ) {
+        continue;
+      }
+      if (ap.pulseDamage > 0) {
+        const sparked = damageCreature(
+          creature,
+          Math.max(1, Math.floor(ap.pulseDamage)),
+          attacker.id,
+          'stance',
+          nowMs,
+        );
+        if (sparked > 0) {
+          emit('stance_pulse', `${ap.abilityKey} sears ${creature.name} for ${sparked}.`, {
+            characterId: attacker.id,
+            creatureId: creature.id,
+            amount: sparked,
+            damageType: ap.damageType,
+          });
+        }
+        if (!isAliveC(creature.id)) return;
+      }
+      const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
+      const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
+      stackWorking.set(stackTriple(ap.effectType, attacker.id, creature.id), next);
+      const interval = ap.intervalMs > 0 ? ap.intervalMs : tickRate;
+      effectUpserts.push({
+        targetKind: 'creature',
+        targetId: creature.id,
+        effectType: ap.effectType,
+        stacks: next,
+        amountPerTick: Math.max(1, Math.floor(ap.dotPerTick)),
+        expiresAtMs: nowMs + Math.max(tickRate, ap.durationMs),
+        intervalMs: interval,
+        nextTickAtMs: nowMs + interval,
+        damageType: ap.damageType,
+        sourceCharacterId: attacker.id,
+        mechanic: 'stack_apply',
+        abilityKey: ap.abilityKey,
+        maxStacks: cap,
+      });
+      emit(
+        'stack_applied',
+        `${attacker.name}'s ${ap.abilityKey} afflicts ${creature.name} [${next}/${cap}].`,
+        {
+          characterId: attacker.id,
+          creatureId: creature.id,
+          amount: next,
+          damageType: ap.damageType,
+        },
+      );
+    }
+  };
+
+  /**
+   * Pulse of a persistent friendly state row (`aura_pulse`, `party_regen`,
+   * `regen_buff`). These live in the effect table so live and catch-up
+   * resolution treat them identically — the legacy client-loop versions simply
+   * stopped when a tab closed.
+   */
+  const pulsePersistentState = (
+    e: (typeof effects)[number],
+    nowMs: number,
+    t: number,
+  ): void => {
+    const ownerId = e.sourceCharacterId;
+    if (!ownerId) return;
+    const owner = byParticipant.get(ownerId);
+    if (!owner || !isAliveP(owner.id)) return;
+    const label = e.abilityKey ?? e.effectType;
+    const hpPerPulse = Math.max(0, Math.floor(e.amountPerTick));
+    const cpPerPulse = Math.max(0, Math.floor(e.cpPerTick ?? 0));
+
+    if (e.mechanic === 'party_regen' || e.mechanic === 'regen_buff') {
+      let healed = 0;
+      let restored = 0;
+      let touched = 0;
+      for (const ally of alliesOf(owner.id, true)) {
+        if (hpPerPulse > 0) healed += healCharacter(ally, hpPerPulse);
+        if (cpPerPulse > 0) restored += restoreCp(ally, cpPerPulse);
+        touched++;
+      }
+      if (touched > 0 && (healed > 0 || restored > 0)) {
+        emit('regen_pulse', `${label} restores ${healed} HP to ${touched} ally(s).`, {
+          characterId: owner.id,
+          amount: healed,
+        });
+        if (restored > 0) {
+          emit('regen_pulse_cp', `${label} restores ${restored} CP.`, {
+            characterId: owner.id,
+            amount: restored,
+          });
+        }
+      }
+      return;
+    }
+
+    if (e.mechanic === 'aura_pulse') {
+      if (e.healsAllies && hpPerPulse > 0) {
+        let healed = 0;
+        for (const ally of alliesOf(owner.id, true)) healed += healCharacter(ally, hpPerPulse);
+        if (healed > 0) {
+          emit('aura_heal', `${label} mends ${healed} HP among the faithful.`, {
+            characterId: owner.id,
+            amount: healed,
+          });
+        }
+      }
+      if (e.damagesEnemies && hpPerPulse > 0) {
+        for (const c of creatures) {
+          if (!isAliveC(c.id)) continue;
+          const roll = rng.sample('aura_pulse_damage', e.id, c.id, t);
+          void roll; // magnitude is configured, the stream keeps the draw addressed
+          const applied = damageCreature(c, hpPerPulse, owner.id, 'stance', nowMs);
+          if (applied > 0) {
+            emit('aura_damage', `${label} burns ${c.name} for ${applied}.`, {
+              characterId: owner.id,
+              creatureId: c.id,
+              amount: applied,
+              damageType: e.damageType,
+            });
+          }
+        }
+      }
+    }
+  };
+
+
+
   // ── tick loop ───────────────────────────────────────────────────
 
   for (let t = 0; t < ticks; t++) {
     const nowMs = snapshot.nowMs + t * tickRate;
 
-    // 1. Periodic effects (DoTs / HoTs), stable order.
+    // 1. Periodic rows, stable order: DoTs/HoTs and the persistent friendly
+    //    states (`aura_pulse`, `party_regen`, `regen_buff`), which pulse on
+    //    their own configured cadence rather than on every tick.
     for (const e of effects) {
       if (e.expiresAtMs <= nowMs) {
         effectDeleteIds.add(e.id);
         continue;
       }
-      if (!e.isPeriodic || !(e.amountPerTick > 0)) continue;
+      const stateMech =
+        e.mechanic === 'aura_pulse' || e.mechanic === 'party_regen' || e.mechanic === 'regen_buff'
+          ? e.mechanic
+          : null;
+      if (!stateMech && (!e.isPeriodic || !(e.amountPerTick > 0))) continue;
       const interval = e.intervalMs > 0 ? e.intervalMs : tickRate;
       // `nextTickAtMs` is the absolute due time carried by
       // `active_effects.next_tick_at`. No derivation, no inference from the
@@ -423,6 +697,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // delayed invocation or a multi-tick catch-up run cannot drift the
       // cadence of a periodic effect.
       effectNextDue.set(e.id, dueAt + interval);
+      if (stateMech) {
+        pulsePersistentState(e, nowMs, t);
+        continue;
+      }
       const perTick = Math.max(1, Math.floor(e.amountPerTick * Math.max(1, e.stacks)));
       if (e.targetKind === 'creature') {
         const creature = byCreature.get(e.targetId);
@@ -513,6 +791,287 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           continue;
         }
 
+        const pr = a.params ?? {};
+        const payCp = () => w.cp.set(caster.id, (w.cp.get(caster.id) ?? 0) - a.cpCost);
+        const stateExpiry = nowMs + Math.max(tickRate, a.durationMs);
+        const stateInterval = a.intervalMs > 0 ? a.intervalMs : tickRate;
+
+        // ── stealth_buff (Shadowstep) ──────────────────────────────
+        // Ambush multiplier, consumed by the next landed hit. Legacy floor of
+        // x2 applies when the configuration resolves no multiplier.
+        if (a.mechanic === 'stealth_buff') {
+          const mult = Math.max(1, pr.ambushMult ?? a.amount ?? 2) || 2;
+          payCp();
+          consumedActionIds.push(a.id);
+          overrideOf(caster.id).stealthMult = mult;
+          spentBuffs.delete(`${caster.id}:stealth`);
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: 0,
+            expiresAtMs: stateExpiry,
+            intervalMs: 0,
+            nextTickAtMs: stateExpiry,
+            damageType: null,
+            sourceCharacterId: caster.id,
+            mechanic: 'stealth_buff',
+            abilityKey: a.abilityKey,
+            magnitude: mult,
+          });
+          emit('buff', `${caster.name} melts into shadow (ambush x${mult.toFixed(2)}).`, {
+            characterId: caster.id,
+          });
+          continue;
+        }
+
+        // ── block_buff (Shield Wall) ───────────────────────────────
+        // Additive block chance and amount on incoming creature hits, capped.
+        if (a.mechanic === 'block_buff') {
+          payCp();
+          consumedActionIds.push(a.id);
+          const o = overrideOf(caster.id);
+          o.blockBuff = true;
+          if (typeof pr.blockChance === 'number') o.blockChanceBonus = pr.blockChance;
+          if (typeof pr.blockAmount === 'number') o.blockAmountBonus = pr.blockAmount;
+          o.blockChanceCap = pr.blockChanceCap ?? 0.95;
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: 0,
+            expiresAtMs: stateExpiry,
+            intervalMs: 0,
+            nextTickAtMs: stateExpiry,
+            damageType: null,
+            sourceCharacterId: caster.id,
+            mechanic: 'block_buff',
+            abilityKey: a.abilityKey,
+            magnitude: pr.blockChance ?? 0,
+          });
+          emit('buff', `${caster.name} braces behind their shield.`, {
+            characterId: caster.id,
+          });
+          continue;
+        }
+
+        // ── evasion_buff (Cloak of Shadows / Disengage) ────────────
+        // Dodge chance for its window; Disengage additionally arms a one-shot
+        // outgoing multiplier consumed by the caster's next landed hit.
+        if (a.mechanic === 'evasion_buff') {
+          payCp();
+          consumedActionIds.push(a.id);
+          const dodge = Math.max(0, Math.min(1, pr.dodgeChance ?? a.amount));
+          const o = overrideOf(caster.id);
+          o.dodgeChance = dodge;
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: 0,
+            expiresAtMs: stateExpiry,
+            intervalMs: 0,
+            nextTickAtMs: stateExpiry,
+            damageType: null,
+            sourceCharacterId: caster.id,
+            mechanic: 'evasion_buff',
+            abilityKey: a.abilityKey,
+            magnitude: dodge,
+          });
+          const bonusMult = pr.nextHitBonusMult ?? (pr.dodgeChance != null ? a.amount : 0);
+          const windowMs = pr.nextHitWindowMs ?? 0;
+          if (pr.evasionSource === 'disengage' && windowMs > 0 && bonusMult > 0) {
+            o.nextHitBonusMult = bonusMult;
+            spentBuffs.delete(`${caster.id}:disengage`);
+            effectUpserts.push({
+              targetKind: 'character',
+              targetId: caster.id,
+              effectType: `${a.abilityKey}_next_hit`,
+              stacks: 1,
+              amountPerTick: 0,
+              expiresAtMs: nowMs + windowMs,
+              intervalMs: 0,
+              nextTickAtMs: nowMs + windowMs,
+              damageType: null,
+              sourceCharacterId: caster.id,
+              mechanic: 'evasion_buff',
+              abilityKey: a.abilityKey,
+              magnitude: bonusMult,
+            });
+          }
+          emit(
+            'buff',
+            `${caster.name} slips aside (${Math.round(dodge * 100)}% evasion).`,
+            { characterId: caster.id },
+          );
+          continue;
+        }
+
+        // ── reactive_holy (Holy Shield) ────────────────────────────
+        // Retaliation on qualifying incoming hits, once per attacker per tick.
+        if (a.mechanic === 'reactive_holy') {
+          payCp();
+          consumedActionIds.push(a.id);
+          const dmg = Math.max(1, Math.floor(pr.retaliationDamage ?? a.amount));
+          const o = overrideOf(caster.id);
+          o.reactiveHolyDamage = dmg;
+          o.reactiveHolyDamageType = a.damageType ?? 'holy';
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: 0,
+            expiresAtMs: stateExpiry,
+            intervalMs: 0,
+            nextTickAtMs: stateExpiry,
+            damageType: a.damageType,
+            sourceCharacterId: caster.id,
+            mechanic: 'reactive_holy',
+            abilityKey: a.abilityKey,
+            magnitude: dmg,
+          });
+          emit('buff', `${caster.name} raises a retaliating ward [${dmg}].`, {
+            characterId: caster.id,
+          });
+          continue;
+        }
+
+        // ── party_regen / regen_buff / aura_pulse ──────────────────
+        // Persistent pulses. Stored as effect rows so live and catch-up
+        // resolution advance them identically instead of relying on a client
+        // interval that dies with the tab.
+        if (
+          a.mechanic === 'party_regen' ||
+          a.mechanic === 'regen_buff' ||
+          a.mechanic === 'aura_pulse'
+        ) {
+          payCp();
+          consumedActionIds.push(a.id);
+          const hpPerTick = Math.max(
+            0,
+            Math.floor(a.mechanic === 'regen_buff' ? (pr.hpPerTick ?? a.amount) : a.amount),
+          );
+          const cpPerTick =
+            a.mechanic === 'regen_buff' ? Math.max(0, Math.floor(pr.cpPerTick ?? 0)) : 0;
+          // `best_of` (the legacy default for Inspire) never weakens a live
+          // pulse on recast, but always extends its window.
+          let mergedHp = hpPerTick;
+          let mergedCp = cpPerTick;
+          if (a.mechanic === 'regen_buff' && (pr.refreshPolicy ?? 'best_of') === 'best_of') {
+            const live = effects.find(
+              (e) =>
+                e.mechanic === 'regen_buff' &&
+                e.targetId === caster.id &&
+                e.sourceCharacterId === caster.id &&
+                e.expiresAtMs > nowMs,
+            );
+            if (live) {
+              mergedHp = Math.max(mergedHp, Math.floor(live.amountPerTick));
+              mergedCp = Math.max(mergedCp, Math.floor(live.cpPerTick ?? 0));
+            }
+          }
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: mergedHp,
+            expiresAtMs: stateExpiry,
+            intervalMs: stateInterval,
+            // First pulse lands one interval after the cast, never on the
+            // cast tick itself.
+            nextTickAtMs: nowMs + stateInterval,
+            damageType: a.damageType,
+            sourceCharacterId: caster.id,
+            mechanic: a.mechanic,
+            abilityKey: a.abilityKey,
+            cpPerTick: mergedCp,
+            healsAllies: pr.healsAllies ?? a.mechanic !== 'aura_pulse',
+            damagesEnemies: pr.damagesEnemies ?? a.mechanic === 'aura_pulse',
+          });
+          emit('buff', `${caster.name} sustains ${a.abilityKey}.`, {
+            characterId: caster.id,
+            amount: mergedHp,
+          });
+          continue;
+        }
+
+        // ── stack_apply (Envenom / Orbs of Fire) ───────────────────
+        // Registers the applier; the stacks themselves land on qualifying
+        // weapon hits or pulses, never on the activation itself.
+        if (a.mechanic === 'stack_apply') {
+          payCp();
+          consumedActionIds.push(a.id);
+          effectUpserts.push({
+            targetKind: 'character',
+            targetId: caster.id,
+            effectType: a.abilityKey,
+            stacks: 1,
+            amountPerTick: 0,
+            expiresAtMs: stateExpiry,
+            intervalMs: 0,
+            nextTickAtMs: stateExpiry,
+            damageType: a.damageType,
+            sourceCharacterId: caster.id,
+            mechanic: 'stack_apply',
+            abilityKey: a.abilityKey,
+            magnitude: Math.max(0, Math.min(1, pr.procChance ?? a.amount)),
+            maxStacks: Math.max(1, Math.floor(pr.stackEffectType ? a.maxStacks : a.maxStacks)),
+          });
+          emit('buff', `${caster.name} readies ${a.abilityKey}.`, {
+            characterId: caster.id,
+          });
+          continue;
+        }
+
+        // ── hp_transfer (Transfer Health) ──────────────────────────
+        // One atomic proposal: the caster's debit and the ally's heal are
+        // decided together, so the caster can never pay for a heal that does
+        // not land. The caster may never breach its own HP reserve.
+        if (a.mechanic === 'hp_transfer') {
+          const ally = a.allyId ? byParticipant.get(a.allyId) : null;
+          if (!ally || ally.id === caster.id) {
+            rejectedActions.push({ actionId: a.id, reason: 'no_target' });
+            continue;
+          }
+          if (!isAliveP(ally.id)) {
+            rejectedActions.push({ actionId: a.id, reason: 'target_dead' });
+            continue;
+          }
+          const minReserve = Math.max(1, Math.floor(pr.minReserveHp ?? 1));
+          const reserve = Math.max(minReserve, Math.floor(pr.reserveHp ?? minReserve));
+          const casterHp = w.hp.get(caster.id) ?? 0;
+          const affordable = casterHp - reserve;
+          if (affordable <= 0) {
+            rejectedActions.push({ actionId: a.id, reason: 'insufficient_hp' });
+            continue;
+          }
+          const wanted = Math.max(0, Math.floor(a.amount));
+          // Never debit more than the ally can actually receive.
+          const receivable = Math.max(0, ally.maxHp - (w.hp.get(ally.id) ?? 0));
+          const transfer = Math.min(wanted, affordable, receivable);
+          if (transfer <= 0) {
+            rejectedActions.push({ actionId: a.id, reason: 'insufficient_hp' });
+            continue;
+          }
+          payCp();
+          consumedActionIds.push(a.id);
+          w.hp.set(caster.id, casterHp - transfer);
+          const restored = healCharacter(ally, transfer);
+          emit(
+            'hp_transfer',
+            `${caster.name} channels ${restored} HP into ${ally.name}.`,
+            { characterId: ally.id, amount: restored },
+          );
+          continue;
+        }
+
+
+
         const creature = a.creatureId ? byCreature.get(a.creatureId) : null;
         if (!creature) {
           rejectedActions.push({ actionId: a.id, reason: 'no_target' });
@@ -530,6 +1089,183 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           characterId: caster.id,
           lastActionAtMs: nowMs,
         });
+
+        // ── multi_attack (Barrage) ─────────────────────────────────
+        // One volley, `minHits..maxHits` projectiles rolled once. Each
+        // projectile rolls its own to-hit and damage; a dead target is
+        // re-acquired, and the volley stops when nothing is left standing.
+        // Stealth / Disengage empower every projectile but are consumed once,
+        // after the volley — the legacy contract.
+        if (a.mechanic === 'multi_attack') {
+          const minHits = Math.max(1, Math.floor(pr.minHits ?? 1));
+          const maxHits = Math.max(minHits, Math.floor(pr.maxHits ?? minHits));
+          const span = maxHits - minHits + 1;
+          const shots =
+            minHits + Math.floor(rng.sample('multi_hit_count', a.id) * span);
+          const stealthMult = hasStealth(caster) ? stealthMultOf(caster) : 1;
+          const nextHit = nextHitMultOf(caster);
+          let current: CreatureSnapshot | null = creature;
+          let landed = 0;
+          let total = 0;
+          for (let i = 0; i < shots; i++) {
+            if (!current || !isAliveC(current.id)) {
+              current =
+                rng.pick(
+                  'multi_hit_target',
+                  creatures.filter((c) => isAliveC(c.id)),
+                  a.id,
+                  i,
+                ) ?? null;
+            }
+            if (!current) break;
+            const shot = seededAttackRoll({
+              rng,
+              attacker: caster,
+              creatureId: current.id,
+              creatureAC: current.ac,
+              progression,
+              key: [a.id, i],
+              rollStream: 'multi_hit_roll',
+              damageStream: 'multi_hit_damage',
+            });
+            if (!shot.hit) {
+              emit('ability_miss', `${caster.name}'s ${a.abilityKey} goes wide.`, {
+                characterId: caster.id,
+                creatureId: current.id,
+              });
+              continue;
+            }
+            let dmg = Math.max(1, Math.floor(a.amount)) + shot.baseDamage;
+            if (stealthMult > 1) dmg = Math.max(1, Math.floor(dmg * stealthMult));
+            if (nextHit > 0) dmg = Math.floor(dmg * (1 + nextHit));
+            const amp = ampPctFor(current.id, nowMs);
+            if (amp > 0) dmg = Math.floor(dmg * (ampBase + amp / 100));
+            const applied = damageCreature(current, dmg, caster.id, 'ability', nowMs);
+            total += applied;
+            landed++;
+            runStackAppliers(caster, current, 'weapon_hit', nowMs, t);
+            emit(
+              shot.isCrit ? 'ability_crit' : 'ability_hit',
+              `${caster.name}'s ${a.abilityKey} strikes ${current.name} for ${applied}.`,
+              {
+                characterId: caster.id,
+                creatureId: current.id,
+                amount: applied,
+                damageType: a.damageType,
+              },
+            );
+          }
+          if (landed > 0) {
+            if (stealthMult > 1) spendBuff(caster.id, 'stealth');
+            if (nextHit > 0) spendBuff(caster.id, 'disengage');
+          }
+          emit(
+            'volley',
+            `${caster.name}'s ${a.abilityKey}: ${landed}/${shots} strikes for ${total}.`,
+            { characterId: caster.id, amount: total },
+          );
+          continue;
+        }
+
+        // ── burst_damage (Grand Finale) ────────────────────────────
+        // A single nuke with its own to-hit roll and an independent crit roll
+        // whose edge is widened by configuration. Costs CP only.
+        if (a.mechanic === 'burst_damage') {
+          const shot = seededAttackRoll({
+            rng,
+            attacker: caster,
+            creatureId: creature.id,
+            creatureAC: creature.ac,
+            progression,
+            key: ['burst', a.id],
+            rollStream: 'burst_roll',
+            damageStream: 'burst_damage',
+          });
+          if (!shot.hit) {
+            emit('ability_miss', `${caster.name}'s ${a.abilityKey} dissipates.`, {
+              characterId: caster.id,
+              creatureId: creature.id,
+            });
+            continue;
+          }
+          const weaponPart = a.weaponBased
+            ? seededWeaponAbilityDamage({ rng, attacker: caster, progression, key })
+            : 0;
+          let dmg = Math.max(1, Math.floor(a.amount + weaponPart));
+          const critEdge = Math.max(0, Math.min(1, pr.critEdge ?? 0));
+          const isCrit =
+            critEdge > 0 && rng.sample('burst_crit', a.id, creature.id) < critEdge;
+          if (isCrit) dmg = Math.max(1, Math.floor(dmg * 1.5));
+          const amp = ampPctFor(creature.id, nowMs);
+          if (amp > 0) dmg = Math.floor(dmg * (ampBase + amp / 100));
+          const applied = damageCreature(creature, dmg, caster.id, 'ability', nowMs);
+          emit(
+            isCrit ? 'ability_crit' : 'ability_hit',
+            `${caster.name}'s ${a.abilityKey} erupts on ${creature.name} for ${applied}.`,
+            {
+              characterId: caster.id,
+              creatureId: creature.id,
+              amount: applied,
+              damageType: a.damageType,
+            },
+          );
+          continue;
+        }
+
+        // ── stack_consume (Eviscerate / Conflagrate) ───────────────
+        // Damage = amount * (1 + perStackMultiplier * stacks). The stacks are
+        // spent whether or not the finisher lands — the legacy contract.
+        if (a.mechanic === 'stack_consume') {
+          const effType = pr.stackEffectType ?? a.statusKey ?? a.abilityKey;
+          const stacks = stacksOf(effType, caster.id, creature.id);
+          const row = snapshotStackRow(effType, caster.id, creature.id);
+          if (row) effectDeleteIds.add(row.id);
+          stackWorking.set(stackTriple(effType, caster.id, creature.id), 0);
+
+          const shot = seededAttackRoll({
+            rng,
+            attacker: caster,
+            creatureId: creature.id,
+            creatureAC: creature.ac,
+            progression,
+            key: ['finisher', a.id],
+            rollStream: 'stack_consume_roll',
+            damageStream: 'stack_consume_damage',
+          });
+          if (!shot.hit) {
+            emit(
+              'ability_miss',
+              `${caster.name}'s ${a.abilityKey} misses — ${stacks} stack(s) wasted.`,
+              { characterId: caster.id, creatureId: creature.id, amount: stacks },
+            );
+            continue;
+          }
+          const weaponPart = a.weaponBased
+            ? seededWeaponAbilityDamage({ rng, attacker: caster, progression, key })
+            : 0;
+          const perStack = Math.max(0, pr.perStackMultiplier ?? 0);
+          let dmg = Math.max(
+            1,
+            Math.floor((a.amount + weaponPart) * (1 + perStack * stacks)),
+          );
+          if (shot.isCrit) dmg = Math.max(1, Math.floor(dmg * 1.5));
+          const amp = ampPctFor(creature.id, nowMs);
+          if (amp > 0) dmg = Math.floor(dmg * (ampBase + amp / 100));
+          const applied = damageCreature(creature, dmg, caster.id, 'ability', nowMs);
+          emit(
+            shot.isCrit ? 'ability_crit' : 'ability_hit',
+            `${caster.name}'s ${a.abilityKey} consumes ${stacks} stack(s) on ${creature.name} for ${applied}.`,
+            {
+              characterId: caster.id,
+              creatureId: creature.id,
+              amount: applied,
+              damageType: a.damageType,
+            },
+          );
+          continue;
+        }
+
+
 
         if (a.mechanic === 'control_debuff') {
           effectUpserts.push({
@@ -647,11 +1383,25 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         continue;
       }
       let dmg = attack.baseDamage;
-      if (p.buffs.stealth) dmg *= 2;
+      // Stealth is a pure damage multiplier on a landed hit (never a to-hit
+      // modifier) and is spent by that hit. Disengage's one-shot window
+      // multiplies last, same as legacy.
+      const stealthMult = hasStealth(p) ? stealthMultOf(p) : 1;
+      if (stealthMult > 1) dmg = Math.max(1, Math.floor(dmg * stealthMult));
       if (p.buffs.damageBuff) dmg = Math.floor(dmg * 1.5);
+      const nextHit = nextHitMultOf(p);
+      if (nextHit > 0) dmg = Math.floor(dmg * (1 + nextHit));
       const amp = ampPctFor(creature.id, nowMs);
       if (amp > 0) dmg = Math.floor(dmg * (1 + amp / 100));
       const applied = damageCreature(creature, Math.max(1, dmg), p.id, 'autoattack', nowMs);
+      if (stealthMult > 1) {
+        spendBuff(p.id, 'stealth');
+        emit('buff_consumed', `${p.name}'s ambush deals x${stealthMult.toFixed(2)} damage.`, {
+          characterId: p.id,
+          amount: applied,
+        });
+      }
+      if (nextHit > 0) spendBuff(p.id, 'disengage');
       w.hitters.add(p.id);
       engagementsJoin.push({
         creatureId: creature.id,
@@ -663,6 +1413,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         `${p.name} hits ${creature.name} for ${applied}.`,
         { characterId: p.id, creatureId: creature.id, amount: applied },
       );
+      // Weapon-hit stack appliers (Envenom) proc off this landed hit.
+      runStackAppliers(p, creature, 'weapon_hit', nowMs, t);
 
       // 3b. Procs — weighted pick then chance gate, both seeded.
       const owned = procs.filter((pr) => pr.characterId === p.id);
@@ -798,8 +1550,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         rng.pick('tank_pool', tankPool, c.id, t) ??
         rng.pick('creature_target', pool, c.id, t);
       if (!target) continue;
+      // Defensive state acquired earlier in this same tick is visible here.
+      const defender = withBuffs(target);
 
-      if (seededDodge({ rng, defender: target, creatureId: c.id, key: [t] })) {
+      if (seededDodge({ rng, defender, creatureId: c.id, key: [t] })) {
         emit('dodge', `${target.name} dodges ${c.name}.`, {
           characterId: target.id,
           creatureId: c.id,
@@ -810,7 +1564,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         rng,
         creatureId: c.id,
         creatureLevel: c.level,
-        defender: target,
+        defender,
         key: [t],
       });
       if (atk.quality === 'miss') {
@@ -831,7 +1585,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         key: [t],
       });
       let dmg = scaleCreatureDamage(raw, atk.quality, atk.isCrit, atk.margin);
-      const block = seededBlock({ rng, defender: target, creatureId: c.id, key: [t] });
+      const block = seededBlock({ rng, defender, creatureId: c.id, key: [t] });
       if (block.blocked) {
         dmg = Math.max(0, dmg - block.amount);
         emit('block', `${target.name} blocks ${block.amount} of ${c.name}'s blow.`, {
@@ -846,6 +1600,29 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         `${c.name} hits ${target.name} for ${applied}.`,
         { characterId: target.id, creatureId: c.id, amount: applied },
       );
+
+      // ── reactive_holy (Holy Shield) ──────────────────────────────
+      // Fires after a landed hit (even a partially blocked one), never on a
+      // miss or a dodge, at most once per (defender, attacker) per tick, and
+      // with no chance roll. Retaliation damage is never amplified by the
+      // defender's own incoming-damage modifiers, and a retaliation kill is
+      // credited to the defender.
+      const ward = reactiveHolyOf(target);
+      if (ward && isAliveC(c.id)) {
+        const guardKey = `${t}|${target.id}|${c.id}`;
+        if (!holyShieldSeen.has(guardKey)) {
+          holyShieldSeen.add(guardKey);
+          const returned = damageCreature(c, ward.damage, target.id, 'stance', nowMs);
+          if (returned > 0) {
+            emit('holy_shield_return', `${target.name}'s ward burns ${c.name} for ${returned}.`, {
+              characterId: target.id,
+              creatureId: c.id,
+              amount: returned,
+              damageType: ward.damageType,
+            });
+          }
+        }
+      }
     }
   }
 
@@ -1014,6 +1791,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     gems: sortBy(gems, (r) => r.characterId, (r) => r.gemKey),
     bonds: sortBy(bonds, (r) => r.characterId),
     consumedActionIds: sortIds(consumedActionIds),
+    consumedBuffs: sortBy(consumedBuffs, (c) => `${c.characterId}|${c.buff}`),
     rejectedActions: sortBy(rejectedActions, (r) => r.actionId),
     session: {
       ended: allEnded,
@@ -1036,3 +1814,31 @@ function dedupeEngagements(rows: EngagementSnapshot[]): EngagementSnapshot[] {
 
 /** Re-exported so callers do not import the impure formula module directly. */
 export { getStatModifier };
+
+/**
+ * The set of mechanics this resolver actually branches on. The C3a
+ * machine-check compares this against the live active configuration, so a
+ * mechanic may only be listed once its branch exists above.
+ */
+export const RESOLVED_MECHANICS: ReadonlySet<ResolverMechanic> = new Set<ResolverMechanic>([
+  'weapon_attack',
+  'spell_attack',
+  'multi_attack',
+  'burst_damage',
+  'stack_consume',
+  'heal',
+  'hp_transfer',
+  'party_regen',
+  'absorb_buff',
+  'mitigation_buff',
+  'offense_buff',
+  'stealth_buff',
+  'block_buff',
+  'evasion_buff',
+  'regen_buff',
+  'reactive_holy',
+  'aura_pulse',
+  'stack_apply',
+  'control_debuff',
+  'dot_debuff',
+]);

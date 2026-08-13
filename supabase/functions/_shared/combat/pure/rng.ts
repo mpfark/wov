@@ -41,7 +41,27 @@ export const RNG_STREAMS = [
   'gem_chance',
   'gem_pick',
   'durability_slot',
+  // C3a mechanic coverage
+  /** `multi_attack`: how many projectiles this volley fires. */
+  'multi_hit_count',
+  /** `multi_attack`: per-projectile to-hit and damage rolls. */
+  'multi_hit_roll',
+  'multi_hit_damage',
+  /** `multi_attack`: target re-acquisition when the prior target dies. */
+  'multi_hit_target',
+  /** `burst_damage`: independent hit roll, crit roll and damage roll. */
+  'burst_roll',
+  'burst_crit',
+  'burst_damage',
+  /** `stack_consume`: finisher hit roll and damage roll. */
+  'stack_consume_roll',
+  'stack_consume_damage',
+  /** `stack_apply`: per-qualifying-event proc chance. */
+  'stack_apply_chance',
+  /** `aura_pulse`: per-pulse ally/enemy magnitude variance. */
+  'aura_pulse_damage',
 ] as const;
+
 
 export type RngStream = (typeof RNG_STREAMS)[number];
 

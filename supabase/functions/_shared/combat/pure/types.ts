@@ -19,6 +19,10 @@
  * the simulation stays pure.
  */
 
+import type { ResolverMechanic } from './mechanics.ts';
+
+export type { ResolverMechanic };
+
 export type ResolutionMode = 'live' | 'catchup';
 
 export type AttrKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -46,6 +50,31 @@ export interface WeaponSnapshot {
   readonly equippedInventoryIds: readonly string[];
 }
 
+/**
+ * One `stack_apply` source carried by a participant (Envenom / Orbs of Fire).
+ * Reserved stances are re-derived by the loader every tick from
+ * `characters.reserved_buffs`, exactly as the legacy tick did, so the applier
+ * list is authoritative input and never client-supplied magnitude.
+ */
+export interface StackApplierSnapshot {
+  readonly abilityKey: string;
+  /** `active_effects.effect_type` this applier writes: 'poison' | 'ignite' | … */
+  readonly effectType: string;
+  /** Qualifying event. Legacy: Envenom = weapon_hit, Ignite/Orbs = pulse. */
+  readonly trigger: 'weapon_hit' | 'successful_pulse_hit';
+  /** Proc chance 0..1 — the ability's `amount_calc`. */
+  readonly chance: number;
+  /** Per-tick DoT magnitude written on (re)application. */
+  readonly dotPerTick: number;
+  readonly durationMs: number;
+  readonly intervalMs: number;
+  /** Ceiling from the `max_stacks` mechanic calc. */
+  readonly maxStacks: number;
+  readonly damageType: string | null;
+  /** Pulse appliers deal their own spark damage before the stack lands. */
+  readonly pulseDamage: number;
+}
+
 export interface ParticipantBuffSnapshot {
   readonly stealth: boolean;
   readonly damageBuff: boolean;
@@ -62,7 +91,27 @@ export interface ParticipantBuffSnapshot {
   /** Shield Wall stance active. */
   readonly blockBuff: boolean;
   readonly rooted: boolean;
+  /**
+   * Ambush multiplier of an active `stealth_buff`. Legacy safety floor is 2
+   * when a legacy boolean bag arrives without a resolved multiplier.
+   */
+  readonly stealthMult?: number;
+  /** One-shot outgoing multiplier from Disengage's next-hit window. */
+  readonly nextHitBonusMult?: number;
+  /** Shield Wall: bonus block chance / amount and the chance ceiling. */
+  readonly blockChanceBonus?: number;
+  readonly blockAmountBonus?: number;
+  readonly blockChanceCap?: number;
+  /**
+   * Holy Shield retaliation damage per qualifying incoming hit. `null`/absent
+   * means the reactive stance is not active.
+   */
+  readonly reactiveHolyDamage?: number | null;
+  readonly reactiveHolyDamageType?: string | null;
+  /** Active `stack_apply` sources, ordered by ability key. */
+  readonly stackAppliers?: readonly StackApplierSnapshot[];
 }
+
 
 export interface ParticipantSnapshot {
   readonly id: string;
@@ -168,6 +217,79 @@ export interface EffectSnapshot {
   readonly isPeriodic: boolean;
   /** Damage amplification percent this effect grants against its target. */
   readonly ampPct: number;
+  /**
+   * Mechanic that owns this row, when the effect is a persistent friendly
+   * state the resolver must keep pulsing (`aura_pulse`, `party_regen`,
+   * `regen_buff`). Absent/`null` for plain DoTs and stack rows, which are
+   * driven purely by `isPeriodic` + `amountPerTick`.
+   */
+  readonly mechanic?: ResolverMechanic | null;
+  /** Ability that created the row. Drives authored pulse text. */
+  readonly abilityKey?: string | null;
+  /** CP restored per pulse (`regen_buff`). */
+  readonly cpPerTick?: number;
+  /** `aura_pulse` / `party_regen`: pulse heals same-node allies. */
+  readonly healsAllies?: boolean;
+  /** `aura_pulse`: pulse burns same-node hostile creatures. */
+  readonly damagesEnemies?: boolean;
+  /** Ceiling for stack rows, carried so refreshes cannot exceed config. */
+  readonly maxStacks?: number;
+  /**
+   * Scalar payload of a non-damaging state row: the ambush multiplier of a
+   * `stealth_buff`, the dodge chance of an `evasion_buff`, the retaliation
+   * damage of `reactive_holy`, and so on. Kept separate from `amountPerTick`
+   * so a state row can never be mistaken for a damage-over-time row.
+   */
+  readonly magnitude?: number;
+}
+
+/**
+ * Loader-resolved, per-caster mechanic parameters. Every field is already
+ * scaled for the acting character's level and attributes — the simulation never
+ * recomputes a formula and never reads a class name. Fields are optional
+ * because each mechanic consumes only its own subset; a missing field means the
+ * mechanic falls back to its documented legacy default.
+ */
+export interface ActionParamsSnapshot {
+  /** `multi_attack`: inclusive arrow-count range rolled once per cast. */
+  readonly minHits?: number;
+  readonly maxHits?: number;
+  /** `stack_consume`: damage = amount * (1 + perStackMultiplier * stacks). */
+  readonly perStackMultiplier?: number;
+  /** `stack_consume` / `stack_apply`: `active_effects.effect_type` consumed. */
+  readonly stackEffectType?: string;
+  /** `stack_apply`: proc chance 0..1 and the event that can proc it. */
+  readonly procChance?: number;
+  readonly stackTrigger?: 'weapon_hit' | 'successful_pulse_hit';
+  /** `stack_apply`: per-tick DoT magnitude written on (re)application. */
+  readonly dotPerTick?: number;
+  /** `stack_apply` pulse spark damage applied before the stack lands. */
+  readonly pulseDamage?: number;
+  /** `burst_damage`: crit-threshold widening (lower is easier). */
+  readonly critEdge?: number;
+  /** `hp_transfer`: HP the caster may never be reduced below. */
+  readonly reserveHp?: number;
+  readonly minReserveHp?: number;
+  /** `reactive_holy`: retaliation damage per qualifying incoming hit. */
+  readonly retaliationDamage?: number;
+  /** `block_buff`: additive block chance / amount and the chance ceiling. */
+  readonly blockChance?: number;
+  readonly blockAmount?: number;
+  readonly blockChanceCap?: number;
+  /** `evasion_buff`: dodge chance, and Disengage's next-hit window. */
+  readonly dodgeChance?: number;
+  readonly nextHitWindowMs?: number;
+  readonly nextHitBonusMult?: number;
+  readonly evasionSource?: 'cloak' | 'disengage';
+  /** `stealth_buff`: ambush damage multiplier. */
+  readonly ambushMult?: number;
+  /** `regen_buff`: per-pulse resources and recast merge rule. */
+  readonly hpPerTick?: number;
+  readonly cpPerTick?: number;
+  readonly refreshPolicy?: 'best_of' | 'replace';
+  /** `aura_pulse` / `party_regen`: which sides the pulse touches. */
+  readonly healsAllies?: boolean;
+  readonly damagesEnemies?: boolean;
 }
 
 export interface ActionSnapshot {
@@ -176,15 +298,7 @@ export interface ActionSnapshot {
   readonly creatureId: string | null;
   readonly allyId: string | null;
   readonly abilityKey: string;
-  readonly mechanic:
-    | 'weapon_attack'
-    | 'spell_attack'
-    | 'heal'
-    | 'dot_debuff'
-    | 'absorb_buff'
-    | 'mitigation_buff'
-    | 'offense_buff'
-    | 'control_debuff';
+  readonly mechanic: ResolverMechanic;
   readonly damageType: string | null;
   readonly cpCost: number;
   /** Magnitude resolved by the loader from admin config. */
@@ -198,7 +312,10 @@ export interface ActionSnapshot {
   readonly weaponBased: boolean;
   /** Stable queue position (`combat_actions.created_at` rank). */
   readonly sequence: number;
+  /** Per-caster resolved mechanic parameters. */
+  readonly params?: ActionParamsSnapshot;
 }
+
 
 export interface EngagementSnapshot {
   readonly creatureId: string;
@@ -287,6 +404,19 @@ export interface EffectUpsert {
   readonly nextTickAtMs: number;
   readonly damageType: string | null;
   readonly sourceCharacterId: string | null;
+  /**
+   * Persistent-friendly-state metadata, mirrored from `EffectSnapshot`. These
+   * are how `aura_pulse`, `party_regen` and `regen_buff` survive between ticks
+   * and behave identically in live and catch-up resolution.
+   */
+  readonly mechanic?: ResolverMechanic | null;
+  readonly abilityKey?: string | null;
+  readonly cpPerTick?: number;
+  readonly healsAllies?: boolean;
+  readonly damagesEnemies?: boolean;
+  readonly maxStacks?: number;
+  /** Scalar payload of a non-damaging state row. See `EffectSnapshot`. */
+  readonly magnitude?: number;
 }
 
 export interface KillProposal {
@@ -405,7 +535,18 @@ export interface PresentationEvent {
 
 export interface RejectedAction {
   readonly actionId: string;
-  readonly reason: 'no_target' | 'target_dead' | 'caster_dead' | 'insufficient_cp';
+  readonly reason:
+    | 'no_target'
+    | 'target_dead'
+    | 'caster_dead'
+    | 'insufficient_cp'
+    /** `hp_transfer`: the caster cannot pay without breaching its HP reserve. */
+    | 'insufficient_hp';
+}
+
+export interface ConsumedBuffProposal {
+  readonly characterId: string;
+  readonly buff: string;
 }
 
 export interface ProposedTick {
@@ -434,6 +575,11 @@ export interface ProposedTick {
   readonly gems: readonly GemProposal[];
   readonly bonds: readonly BondProposal[];
   readonly consumedActionIds: readonly string[];
+  /**
+   * One-shot buffs spent this tick (`stealth`, `disengage`). The committer
+   * clears them so a consumed ambush cannot empower a second hit.
+   */
+  readonly consumedBuffs: readonly ConsumedBuffProposal[];
   readonly rejectedActions: readonly RejectedAction[];
   readonly session: SessionProposal;
   readonly events: readonly PresentationEvent[];
