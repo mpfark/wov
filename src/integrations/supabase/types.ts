@@ -3305,6 +3305,29 @@ export type Database = {
             }
             Returns: boolean
           }
+      c2_harness_run: { Args: never; Returns: Json }
+      c2h_diff: { Args: { _a: Json; _b: Json }; Returns: Json }
+      c2h_rec: {
+        Args: {
+          _actual: string
+          _after?: Json
+          _before?: Json
+          _expected: string
+          _id: string
+          _note?: string
+          _tests: Json
+        }
+        Returns: Json
+      }
+      c2h_state: {
+        Args: {
+          _chars: string[]
+          _creats: string[]
+          _enc: string
+          _node: string
+        }
+        Returns: Json
+      }
       cancel_combat_action: {
         Args: { _id: string; _reason?: string }
         Returns: undefined
