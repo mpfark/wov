@@ -128,6 +128,23 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
+
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // The very first thing the request does. Nothing below this line may run
+    // while combat is closed: no registry load, no auth-scoped lookup, no
+    // intent read, no roster load, no tick claim, no lease, no roll, no
+    // write. An unreadable or missing switch also closes combat.
+    {
+      const combatMode = await readCombatMode(db);
+      if (combatMode !== 'open') {
+        console.log(JSON.stringify({
+          fn: 'combat-tick', gated: 'maintenance',
+          duration_ms: Date.now() - _requestT0,
+        }));
+        return json(maintenanceResponse());
+      }
+    }
+
     await loadClassRegistry(db);
     await loadAbilityCalcs(db);
 
@@ -148,22 +165,6 @@ Deno.serve(async (req) => {
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
 
-    // ── C0: maintenance gate (fail closed) ───────────────────────
-    // First authority read of the request. Nothing below this line may run
-    // while combat is closed: no intent read, no roster load, no tick claim,
-    // no lease, no roll, no write. An unreadable or missing switch also
-    // closes combat.
-    {
-      const combatMode = await readCombatMode(db);
-      if (combatMode !== 'open') {
-        console.log(JSON.stringify({
-          fn: 'combat-tick', gated: 'maintenance', node_id,
-          party_id: party_id ?? null, character_id: character_id ?? null,
-          duration_ms: Date.now() - _requestT0,
-        }));
-        return json(maintenanceResponse());
-      }
-    }
 
 
 
