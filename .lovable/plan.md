@@ -5,7 +5,7 @@
 ## Corrections folded in
 
 **1. Kill identity.** No `(encounter_id, creature_id, character_id)` key. A stable death occurrence id is derived in SQL:
-`encounter_death_id(encounter_id, creature_id, spawn_seq, tick)` = deterministic md5-uuid. `creatures.spawn_seq` is a new column incremented by a trigger every time `is_alive` flips false→true, so a respawned creature's next death is a different occurrence and earns rewards again, while a replayed commit of the same tick is a no-op. Ledgers: `encounter_kill_awards (death_id, character_id, award_kind)` and `encounter_death_loot (death_id)`.
+`encounter_death_id(encounter_id, creature_id, spawn_seq, tick)` = deterministic md5-uuid. `creatures.spawn_seq` is a new column incremented by a trigger **only when `OLD.is_alive = false AND NEW.is_alive = true`**, so a respawned creature's next death is a different occurrence and earns rewards again, while a replayed commit of the same tick is a no-op. Ledgers: `encounter_kill_awards (death_id, character_id, award_kind)` and `encounter_death_loot (death_id)`.
 
 **2. Batch fence.** Order inside the advisory lock: (a) check `encounters.tick_number >= tick` and an existing batch row for `(encounter_id, tick)` **before any mutation** and return `already_committed` / `duplicate_batch` with zero writes; (b) after all mutations, `INSERT INTO encounter_tick_batches` with **no** `ON CONFLICT` — the existing primary key `(encounter_id, tick_number)` raises `23505`, which aborts the transaction and discards every mutation. `committed=false` is only ever returned from the pre-write refusal block; anything discovered after the first write raises.
 
@@ -37,7 +37,7 @@ Newly created unrelated rows never invalidate a tick unless they change the auth
 
 **7. Bounds are rejected, not normalized.** Illegal proposed HP/CP/MP/durability/level/reward values fail validation before the first write and refuse the whole tick. SQL never clamps; the only flooring left is inside the pure resolver's gameplay formulas.
 
-**8. Safe claim release.** `release_encounter_tick(encounter_id, tick, claim_token, reason)` clears `tick_state/resolving_tick/claim_token/resolver_id/lease_until` only when encounter, tick and token all still match, mutates no combat state, and refuses (`stale_claim`) for a stale resolver. Lease expiry remains as the backstop.
+**8. Safe claim release.** `release_encounter_tick(encounter_id, tick, claim_token, reason)` clears `tick_state/resolving_tick/claim_token/resolver_id/lease_until` only when encounter, tick and token all still match, mutates no combat state, and refuses (`stale_claim`) for a stale resolver. Lease expiry remains as the backstop. `reason` is diagnostic only — returned in the result, written to no table — so it cannot influence deterministic combat state.
 
 **9. Death persistence uses verified columns.** `characters.last_death_at` and `characters.last_death_log` exist and are used; no invented columns.
 
