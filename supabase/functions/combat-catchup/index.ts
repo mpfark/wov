@@ -44,6 +44,8 @@ import {
   EFFECTS_ONLY_MODES,
   interpretEffectsOnlyClaim,
 } from "../_shared/combat/tick-claim.ts";
+// C0: offscreen resolution is gated by the same switch as live combat.
+import { readCombatMode, COMBAT_MAINTENANCE_MESSAGE } from "../_shared/combat/maintenance.ts";
 
 /**
  * Live combat's tick cadence. Non-periodic statuses store their duration as a
