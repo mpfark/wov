@@ -201,26 +201,23 @@ Deno.serve(async (req) => {
     // durability write happens. Read-only creature state is still returned so
     // the world screen renders; the snapshot_only branch above is likewise
     // pure read.
-    {
-      const combatMode = await readCombatMode(db);
-      if (combatMode !== 'open') {
-        const { data: creatures } = await db
-          .from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
-        console.log(JSON.stringify({
-          fn: 'combat-catchup', gated: 'maintenance', node_id,
-          creatures_alive: (creatures || []).length,
-          duration_ms: Date.now() - t0,
-        }));
-        return json({
-          maintenance: true,
-          combat_mode: 'maintenance',
-          message: COMBAT_MAINTENANCE_MESSAGE,
-          caught_up: false,
-          effects_processed: 0,
-          creatures: creatures || [],
-          partial: false,
-        });
-      }
+    if (combatClosed) {
+      const { data: creatures } = await db
+        .from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', gated: 'maintenance', node_id,
+        creatures_alive: (creatures || []).length,
+        duration_ms: Date.now() - t0,
+      }));
+      return json({
+        maintenance: true,
+        combat_mode: 'maintenance',
+        message: COMBAT_MAINTENANCE_MESSAGE,
+        caught_up: false,
+        effects_processed: 0,
+        creatures: creatures || [],
+        partial: false,
+      });
     }
 
 
