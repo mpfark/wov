@@ -210,7 +210,35 @@ export interface DecodedSnapshot {
 
 // ── section decoders ───────────────────────────────────────────────
 
+/** Every top-level section `public.encounter_snapshot_v2` (v3) returns. */
+const SNAPSHOT_ROOT_KEYS = [
+  'loaded',
+  'snapshotVersion',
+  'encounterId',
+  'nodeId',
+  'tickNumber',
+  'encounterVersion',
+  'loadedAtMs',
+  'tickRateMs',
+  'lootFallbackChance',
+  'claim',
+  'cursor',
+  'storedPower',
+  'participants',
+  'creatures',
+  'engagements',
+  'actions',
+  'effects',
+  'statusDefs',
+  'casts',
+  'lootConfig',
+  'lootTables',
+  'scope',
+  'stateDigest',
+] as const;
+
 const PARTICIPANT_KEYS = [
+
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
   'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
@@ -361,9 +389,13 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   if (root.loaded !== true) {
     throw decodeError('$.loaded', `snapshot not loaded (reason=${String(root.reason ?? 'unknown')})`);
   }
+  // Root strictness: an added or renamed top-level section of
+  // `encounter_snapshot_v2` must fail loudly here, never be dropped silently.
+  assertKnownKeys(root, SNAPSHOT_ROOT_KEYS, '$');
   if (reqNum(root, 'snapshotVersion', '$') !== SNAPSHOT_VERSION) {
     throw decodeError('$.snapshotVersion', `expected ${SNAPSHOT_VERSION}`);
   }
+
 
   const encounterId = reqStr(root, 'encounterId', '$');
   const nodeId = reqStr(root, 'nodeId', '$');
