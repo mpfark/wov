@@ -163,6 +163,23 @@ async function teardown(ids: Record<string, string>) {
     if (error) throw new Error(`leak check ${table}: ${error.message}`);
     leaks[table] = count ?? 0;
   }
+  // Independent id-scoped leak checks for rows that carry no fixture name.
+  for (const [table, col, val] of [
+    ['active_effects', 'node_id', ids.nodeId],
+    ['encounter_tick_batches', 'encounter_id', ids.encounterId],
+    ['encounter_kill_awards', 'encounter_id', ids.encounterId],
+    ['encounter_death_loot', 'encounter_id', ids.encounterId],
+    ['encounter_contributions', 'encounter_id', ids.encounterId],
+    ['characters', 'id', ids.characterId],
+    ['combat_sessions', 'node_id', ids.nodeId],
+  ] as const) {
+    const { count, error } = await admin
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .eq(col, val);
+    if (error) throw new Error(`leak check ${table}: ${error.message}`);
+    leaks[table] = count ?? 0;
+  }
   return { leaks };
 }
 
