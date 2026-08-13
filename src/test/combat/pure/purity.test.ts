@@ -162,8 +162,7 @@ describe('pure resolver — runtime purity', () => {
     Date.now = originals.now;
     globalThis.fetch = originals.fetch;
     if (originals.uuid && globalThis.crypto) {
-      // @ts-expect-error restoring the original binding
-      globalThis.crypto.randomUUID = originals.uuid;
+      (globalThis.crypto as { randomUUID: unknown }).randomUUID = originals.uuid;
     }
   });
 
@@ -175,8 +174,7 @@ describe('pure resolver — runtime purity', () => {
     Date.now = trap('Date.now') as unknown as typeof Date.now;
     globalThis.fetch = trap('fetch') as unknown as typeof fetch;
     if (globalThis.crypto) {
-      // @ts-expect-error installing a trap
-      globalThis.crypto.randomUUID = trap('crypto.randomUUID');
+      (globalThis.crypto as { randomUUID: unknown }).randomUUID = trap('crypto.randomUUID');
     }
 
     // A database/client interface: every property access throws.
