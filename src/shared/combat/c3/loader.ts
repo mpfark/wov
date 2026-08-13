@@ -1,21 +1,25 @@
 /**
  * c3/loader.ts — builds the `SnapshotAux` the snapshot decoder needs.
  *
- * `encounter_snapshot_v2` returns encounter *state*. Four things are not state
- * and therefore never appear in it: the authoritative mode/time (owned by the
- * claim and the orchestration), configured ability magnitudes, weapon procs,
- * and encounter-wide configuration. This module is the ONE place those are
- * assembled.
+ * The loader performs NO database reads. Everything it needs is either
+ * authoritative context supplied by the orchestration (mode, time, ticks) or
+ * carried by `encounter_snapshot_v2` itself — including the configuration block
+ * (`config`), which is covered by the same `stateDigest.configVersion` the
+ * commit re-checks. Nothing outside that contract may influence ability
+ * magnitude, procs, XP, progression, tank selection or salvage.
  *
  * Rules:
- *  1. Every value is read once, before simulation, and frozen into the aux
- *     object. The resolver never reads anything live.
+ *  1. Every value is read once, from the pinned snapshot, and frozen into the
+ *     aux object. The resolver never reads anything live.
  *  2. Randomness is never produced here. Ability calcs evaluate in
  *     deterministic `average` mode (see `ability-resolve.ts`); every roll that
  *     must be random happens inside the pure resolver via seeded RNG.
  *  3. Configuration is the only source of numbers. A pending action whose
  *     ability is unknown to the catalog is reported as an actionable failure,
  *     never resolved to zero.
+ *  4. The injected ability catalog carries the configuration version it was
+ *     built from; the orchestration refuses the tick when it disagrees with the
+ *     snapshot (`config_conflict`).
  */
 
 import { getStatModifier } from '../../formulas/stats';
