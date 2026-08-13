@@ -16,7 +16,24 @@ authored `creatures.drop_chance` / entry chance → `n` pool config (`drop_chanc
 
 **5. Batch retention 180s, cleanup off the critical path.** The commit performs no pruning. `prune_encounter_tick_batches(_older_than_seconds default 180, _limit default 500)` is bounded, skips any encounter whose cursor still sits inside the retention window, and is called from a background/maintenance path.
 
-**6. Snapshot consistency.** `encounter_snapshot_v2` builds its whole result in a *single* SQL statement (CTEs), so every section — participants, characters/resources, creatures, engagements, pending actions, effects/statuses, equipment/durability, casts, Stored Power, loot config — comes from one MVCC snapshot. It also returns `state_digest`: per-domain md5 hashes from `encounter_state_digest()`. The commit recomputes the digest under the advisory lock and refuses with `state_conflict` on any difference. Nothing relies on `encounters.version` plus HP-before alone.
+**6. Snapshot consistency — scoped, per-domain digests.** `encounter_snapshot_v2` builds its whole result in a *single* SQL statement (CTEs), so every section comes from one MVCC view. It returns a `scope` (the exact row ids it included: participant ids, creature ids, action ids, effect ids, engagement pairs, equipped inventory ids, cast ids) and a `stateDigest` computed by `encounter_state_digest(encounter_id, scope)` — every domain hash is **parameterised by those ids**, never by "all current encounter state". The commit recomputes the digest from the same scope under the advisory lock and refuses `state_conflict` on any difference.
+
+Per-domain rules:
+
+| Domain | Validated (conflict) | Ignored (next tick) |
+| --- | --- | --- |
+| Pending actions | scoped action ids: identity, `status`, `client_seq`, ability key, targets, `eligible_after_ms`; a snapshotted action changed, cancelled, consumed or deleted → `state_conflict` | any action submitted after `loadedAtMs` — it stays `pending` and resolves next tick; the current pending set is never required to equal the snapshot set |
+| Participants | scoped character ids still present with the same `joined_at`; removal → conflict | a newly joined participant — eligible next tick |
+| Characters | hp/max_hp, cp/max_cp, mp/max_mp, level, xp, gold, bhp, renown, node for scoped ids | anything about non-scoped characters |
+| Creatures | hp, `is_alive`, `spawn_seq`, loot mode/table/drop chance for scoped ids | a creature attached after load — engaged next tick |
+| Engagements | existence of each scoped `(creature, character)` pair; removal or party-at-join change → conflict (`last_action_at` churn is deliberately excluded) | new engagements — next tick |
+| Effects / statuses | scoped effect ids: stacks, amount, `expires_at`, `next_tick_at` | effects created after load — next tick |
+| Equipment | scoped equipped inventory ids: slot, item, `current_durability` | unequipped/new inventory rows |
+| Casts | scoped cast ids: `started_at`, `resolved_at`, payload | a cast row created after load |
+| Stored Power | `encounters.stored_power`, `stored_power_cap`, `stored_power_source_id` expected values | — |
+| Configuration | one explicit `configVersion` hash (pool config `n`, `applied_statuses`, `combat_config`, scoped loot tables, weapon progression, xp boost). **Chosen rule: a configuration change during resolution invalidates the tick** (`state_conflict`) so a tick is never half-resolved under two rule sets; the new configuration takes effect from the next tick | — |
+
+Newly created unrelated rows never invalidate a tick unless they change the authoritative roster or the state this tick actually resolved.
 
 **7. Bounds are rejected, not normalized.** Illegal proposed HP/CP/MP/durability/level/reward values fail validation before the first write and refuse the whole tick. SQL never clamps; the only flooring left is inside the pure resolver's gameplay formulas.
 
