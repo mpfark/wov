@@ -361,9 +361,13 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   if (root.loaded !== true) {
     throw decodeError('$.loaded', `snapshot not loaded (reason=${String(root.reason ?? 'unknown')})`);
   }
+  // Root strictness: an added or renamed top-level section of
+  // `encounter_snapshot_v2` must fail loudly here, never be dropped silently.
+  assertKnownKeys(root, SNAPSHOT_ROOT_KEYS, '$');
   if (reqNum(root, 'snapshotVersion', '$') !== SNAPSHOT_VERSION) {
     throw decodeError('$.snapshotVersion', `expected ${SNAPSHOT_VERSION}`);
   }
+
 
   const encounterId = reqStr(root, 'encounterId', '$');
   const nodeId = reqStr(root, 'nodeId', '$');
