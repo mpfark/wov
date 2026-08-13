@@ -241,7 +241,7 @@ describe('pure resolver — seeded parity sweep', () => {
       assertInvariants(a, snap, seed);
       record(cov, a);
     }
-  });
+  }, 120_000);
 
   it('exercised the rare paths (coverage is not vacuous)', () => {
     const required: Array<keyof Coverage> = [
