@@ -322,6 +322,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const startCombatCore = useCallback((creatureId: string) => {
     const p = ext.current;
     if (p.isDead || p.character.hp <= 0) return;
+    // C0: combat is closed for maintenance — refuse to engage at all once the
+    // server has told us so. No engagement row, no broadcast, no timer.
+    if (maintenanceRef.current) {
+      toast.info(COMBAT_MAINTENANCE_MESSAGE);
+      return;
+    }
+
 
     // Durable engagement roster: every character records its own
     // character↔creature engagement, independent of party role. The shared
