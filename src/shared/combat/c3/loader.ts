@@ -168,61 +168,67 @@ function procsFromSnapshot(participants: readonly any[]): ProcSnapshot[] {
   return procs;
 }
 
-/** Global XP boost, expired boosts ignored. Any read problem means "no boost". */
-async function loadXpBoost(db: LoaderDb, nowMs: number): Promise<number> {
-  try {
-    const { data } = await db
-      .from('xp_boost')
-      .select('multiplier, expires_at')
-      .limit(1)
-      .maybeSingle();
-    if (!data) return 1;
-    const expires = data.expires_at ? Date.parse(data.expires_at) : 0;
-    if (!expires || expires <= nowMs) return 1;
-    const mult = num(data.multiplier, 1);
-    return mult > 0 ? mult : 1;
-  } catch {
-    return 1;
+/**
+ * The pinned configuration block. Missing or malformed configuration is a
+ * contract defect, not something to guess around: the snapshot function always
+ * emits it, so absence means the deployed SQL and this code disagree.
+ */
+function configBlock(root: Record<string, unknown>): Record<string, unknown> {
+  const raw = root.config;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new C3Error('decode_failed', '$.config: snapshot carries no configuration block', {
+      retryable: false,
+    });
   }
+  return raw as Record<string, unknown>;
 }
 
-async function loadWeaponProgression(db: LoaderDb): Promise<ResolverConfig['weaponProgression']> {
-  try {
-    const { data } = await db
-      .from('weapon_progression_config')
-      .select('tier1_level, tier2_level, tier3_level')
-      .eq('id', 1)
-      .maybeSingle();
-    if (!data) return DEFAULT_WEAPON_PROGRESSION;
-    return {
-      tier1_level: num(data.tier1_level, DEFAULT_WEAPON_PROGRESSION.tier1_level),
-      tier2_level: num(data.tier2_level, DEFAULT_WEAPON_PROGRESSION.tier2_level),
-      tier3_level: num(data.tier3_level, DEFAULT_WEAPON_PROGRESSION.tier3_level),
-    };
-  } catch {
-    return DEFAULT_WEAPON_PROGRESSION;
+function pinnedXpBoost(config: Record<string, unknown>): number {
+  const mult = num(config.xpBoostMultiplier, NaN);
+  if (!Number.isFinite(mult) || mult <= 0) {
+    throw new C3Error('decode_failed', '$.config.xpBoostMultiplier: not a positive number', {
+      retryable: false,
+    });
   }
+  return mult;
 }
 
-/** `parties.tank_id`, falling back to the leader, for every party present. */
-async function loadTanks(
-  db: LoaderDb,
-  partyIds: readonly string[],
-): Promise<Map<string, string>> {
+function pinnedWeaponProgression(
+  config: Record<string, unknown>,
+): ResolverConfig['weaponProgression'] {
+  const raw = config.weaponProgression;
+  if (!raw || typeof raw !== 'object') {
+    throw new C3Error('decode_failed', '$.config.weaponProgression: missing', { retryable: false });
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    tier1_level: num(row.tier1_level, DEFAULT_WEAPON_PROGRESSION.tier1_level),
+    tier2_level: num(row.tier2_level, DEFAULT_WEAPON_PROGRESSION.tier2_level),
+    tier3_level: num(row.tier3_level, DEFAULT_WEAPON_PROGRESSION.tier3_level),
+  };
+}
+
+/** `parties.tank_id` (else leader), as pinned by the snapshot's config block. */
+function pinnedTanks(config: Record<string, unknown>): Map<string, string> {
   const tanks = new Map<string, string>();
-  if (partyIds.length === 0) return tanks;
-  const { data, error } = await db
-    .from('parties')
-    .select('id, tank_id, leader_id')
-    .in('id', partyIds as string[]);
-  if (error) {
-    throw new C3Error('internal', `party tank load failed: ${error.message}`);
-  }
-  for (const row of asArray(data)) {
-    const tank = row?.tank_id ?? row?.leader_id;
-    if (row?.id && tank) tanks.set(String(row.id), String(tank));
+  for (const row of asArray(config.tanks)) {
+    const partyId = row?.partyId;
+    const tank = row?.tankCharacterId;
+    if (typeof partyId === 'string' && typeof tank === 'string') tanks.set(partyId, tank);
   }
   return tanks;
+}
+
+/** The ability-configuration version this snapshot resolved against. */
+export function snapshotAbilityConfigVersion(snapshotRoot: unknown): string {
+  const config = configBlock((snapshotRoot ?? {}) as Record<string, unknown>);
+  const version = config.abilityConfigVersion;
+  if (typeof version !== 'string' || version.length === 0) {
+    throw new C3Error('decode_failed', '$.config.abilityConfigVersion: missing', {
+      retryable: false,
+    });
+  }
+  return version;
 }
 
 /**
