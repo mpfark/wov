@@ -3343,18 +3343,6 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
-      combat_tick_owner: { Args: never; Returns: string }
-      commit_encounter_tick: {
-        Args: {
-          _batch_id: string
-          _claim_token: string
-          _encounter_id: string
-          _payload?: Json
-          _rate_ms: number
-          _tick: number
-        }
-        Returns: Json
-      }
       commit_encounter_tick_v2: {
         Args: {
           _batch_id: string
@@ -3526,6 +3514,11 @@ export type Database = {
         Args: { _creature_id: string }
         Returns: string
       }
+      encounter_for_node: { Args: { _node_id: string }; Returns: string }
+      encounter_intake: {
+        Args: { _character_id: string; _creature_ids?: string[] }
+        Returns: Json
+      }
       encounter_lock_key: { Args: { _encounter_id: string }; Returns: number }
       encounter_reconcile: {
         Args: { _node_id: string }
@@ -3536,7 +3529,6 @@ export type Database = {
           status_after: string
         }[]
       }
-      encounter_snapshot: { Args: { _node_id: string }; Returns: Json }
       encounter_snapshot_v2: {
         Args: { _claim_token: string; _encounter_id: string; _tick: number }
         Returns: Json
@@ -3734,6 +3726,16 @@ export type Database = {
           _claim_token: string
           _encounter_id: string
           _reason?: string
+          _tick: number
+        }
+        Returns: Json
+      }
+      renew_encounter_tick_lease: {
+        Args: {
+          _claim_token: string
+          _encounter_id: string
+          _extend_ms: number
+          _resolver_id: string
           _tick: number
         }
         Returns: Json
