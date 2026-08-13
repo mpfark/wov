@@ -148,6 +148,25 @@ Deno.serve(async (req) => {
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
 
+    // ── C0: maintenance gate (fail closed) ───────────────────────
+    // First authority read of the request. Nothing below this line may run
+    // while combat is closed: no intent read, no roster load, no tick claim,
+    // no lease, no roll, no write. An unreadable or missing switch also
+    // closes combat.
+    {
+      const combatMode = await readCombatMode(db);
+      if (combatMode !== 'open') {
+        console.log(JSON.stringify({
+          fn: 'combat-tick', gated: 'maintenance', node_id,
+          party_id: party_id ?? null, character_id: character_id ?? null,
+          duration_ms: Date.now() - _requestT0,
+        }));
+        return json(maintenanceResponse());
+      }
+    }
+
+
+
     // ── Phase 5: authoritative buff state ────────────────────────
     // The client's buff bag is advisory presentation state. Everything the
     // server can derive itself (stances from `reserved_buffs`, ward pools from
