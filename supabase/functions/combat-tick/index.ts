@@ -109,6 +109,8 @@ import { effectiveItemStats } from "../_shared/formulas/items.ts";
 import { pickBossFlavor, resolveProcs, resolveBuffProcs } from "../_shared/combat/proc-runtime.ts";
 import { surgeMult, offenseBuffKey } from "../_shared/combat/offense-buff.ts";
 import { corsHeaders, json, verifyUserIdFromJwt } from "../_shared/http.ts";
+// C0: combat resolution is gated by `combat_config.combat_mode`. Fail closed.
+import { readCombatMode, maintenanceResponse } from "../_shared/combat/maintenance.ts";
 
 const TICK_RATE = 2000;
 const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
