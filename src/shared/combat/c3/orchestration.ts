@@ -28,12 +28,13 @@ import type { ProposedTick } from '../pure/types';
 import { buildCommitRequest } from '../c2/payload';
 import type { SessionPresenceProposal } from '../c2/contract';
 import { decodeEncounterSnapshot } from './decode-snapshot';
-import { loadSnapshotAux, type AbilityCatalog, type LoaderDb } from './loader';
+import { loadSnapshotAux, snapshotAbilityConfigVersion, type AbilityCatalog } from './loader';
 import { C3Error, type C3Failure } from './errors';
 import { parseCombatMode, COMBAT_MODE_KEY, COMBAT_MAINTENANCE_MESSAGE } from '../maintenance';
 
 /** Minimal supabase-js surface the pipeline uses. */
-export interface OrchestrationDb extends LoaderDb {
+export interface OrchestrationDb {
+  from: (table: string) => any;
   rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: any; error: any }>;
 }
 
