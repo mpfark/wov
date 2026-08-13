@@ -693,10 +693,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         }
       }
 
-      // 3c. On-hit status application (weapon / stance driven).
-      if (isAliveC(creature.id) && p.buffs.damageBuff === false) {
-        // status application is config-driven; nothing to apply without a spec
-      }
+
     }
 
     // 4. Boss casts + Stored Power.
