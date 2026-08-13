@@ -50,7 +50,9 @@ function reachableFiles(): string[] {
 
 /** Strip comments so documentation mentioning Math.random does not trip the scan. */
 function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/^\s*\/\/.*$/gm, '');
 }
 
 describe('pure resolver — static purity', () => {
@@ -60,10 +62,9 @@ describe('pure resolver — static purity', () => {
     const rel = files.map((f) => f.slice(ROOT.length + 1)).sort();
     expect(rel).toMatchInlineSnapshot(`
       [
-        "src/shared/combat/creature-damage-modifiers.ts",
-        "src/shared/combat/ordering.ts",
         "src/shared/combat/pure/ordering.ts",
         "src/shared/combat/pure/party-xp.ts",
+        "src/shared/combat/pure/resolver.ts",
         "src/shared/combat/pure/rng.ts",
         "src/shared/combat/pure/rolls.ts",
         "src/shared/combat/pure/types.ts",
@@ -93,7 +94,7 @@ describe('pure resolver — static purity', () => {
     // Legacy roll helpers live in the same formula modules as the pure math the
     // resolver reuses. Those helpers are never imported by pure/ (asserted
     // below), so record them explicitly instead of pretending they are absent.
-    expect(offenders).toEqual([
+    expect(offenders.sort()).toEqual([
       'src/shared/formulas/combat.ts:218',
       'src/shared/formulas/stats.ts:17',
       'src/shared/formulas/stats.ts:22',
