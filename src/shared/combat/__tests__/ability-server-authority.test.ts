@@ -8,8 +8,6 @@
  *   - a technique may only be cast from the bar slot the character equipped.
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 interface Entry {
   abilityKey: string; mechanicKey: string; classKey: string; roleSlot: number;

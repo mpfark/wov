@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { ABILITY_SEED } from '../ability-seed';
 import { MECHANIC_TEMPLATES } from '../mechanic-templates';
 
-const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
 
 /**
  * Final legacy retirement sweep. The consolidated pipeline must not contain a

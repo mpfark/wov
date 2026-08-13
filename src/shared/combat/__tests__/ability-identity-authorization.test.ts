@@ -14,8 +14,6 @@
  *  - admin mechanic parameters survive the registry swap per ability key.
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 interface Entry {
   abilityKey: string; mechanicKey: string; classKey: string; roleSlot: number;
