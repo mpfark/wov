@@ -287,28 +287,19 @@ function salvageKeys(creatures: readonly any[]): Map<string, string | null> {
 }
 
 /**
- * Build the aux bundle. Performs exactly three database reads, all of them
- * configuration, all of them before simulation.
+ * Build the aux bundle. Performs ZERO database reads: every configuration value
+ * comes from the pinned snapshot, so the commit digest covers all of it.
  */
-export async function loadSnapshotAux(db: LoaderDb, input: LoadAuxInput): Promise<LoadedAux> {
+export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
   const root = (input.snapshotRoot ?? {}) as Record<string, unknown>;
   const participants = asArray(root.participants);
   const actions = asArray(root.actions);
   const creatures = asArray(root.creatures);
 
-  const partyIds = Array.from(
-    new Set(
-      participants
-        .map((p) => (typeof p?.partyId === 'string' ? p.partyId : null))
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ).sort();
-
-  const [xpBoostMultiplier, weaponProgression, tankByPartyId] = await Promise.all([
-    loadXpBoost(db, input.nowMs),
-    loadWeaponProgression(db),
-    loadTanks(db, partyIds),
-  ]);
+  const config = configBlock(root);
+  const xpBoostMultiplier = pinnedXpBoost(config);
+  const weaponProgression = pinnedWeaponProgression(config);
+  const tankByPartyId = pinnedTanks(config);
 
   const configFailures: string[] = [];
   const abilityConfig = resolveAbilityConfigs(
