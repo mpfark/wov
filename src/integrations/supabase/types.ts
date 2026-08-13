@@ -3306,6 +3306,7 @@ export type Database = {
             Returns: boolean
           }
       c2_harness_run: { Args: never; Returns: Json }
+      c2_harness_run_c: { Args: never; Returns: Json }
       c2h_diff: { Args: { _a: Json; _b: Json }; Returns: Json }
       c2h_rec: {
         Args: {
