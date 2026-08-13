@@ -68,6 +68,11 @@ export interface SnapshotScope {
   /** `"<creatureId>><characterId>"`, matching the SQL digest encoding. */
   readonly engagementPairs: readonly string[];
   readonly lootTableIds: readonly string[];
+  /**
+   * Parties whose composition (tank / leader) the snapshot pinned. Part of the
+   * configuration hash, so a tank swap before commit is a `state_conflict`.
+   */
+  readonly partyIds: readonly string[];
   readonly loadedAtMs: number;
 }
 

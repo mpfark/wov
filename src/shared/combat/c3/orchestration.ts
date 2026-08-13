@@ -28,12 +28,13 @@ import type { ProposedTick } from '../pure/types';
 import { buildCommitRequest } from '../c2/payload';
 import type { SessionPresenceProposal } from '../c2/contract';
 import { decodeEncounterSnapshot } from './decode-snapshot';
-import { loadSnapshotAux, type AbilityCatalog, type LoaderDb } from './loader';
+import { loadSnapshotAux, snapshotAbilityConfigVersion, type AbilityCatalog } from './loader';
 import { C3Error, type C3Failure } from './errors';
 import { parseCombatMode, COMBAT_MODE_KEY, COMBAT_MAINTENANCE_MESSAGE } from '../maintenance';
 
 /** Minimal supabase-js surface the pipeline uses. */
-export interface OrchestrationDb extends LoaderDb {
+export interface OrchestrationDb {
+  from: (table: string) => any;
   rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: any; error: any }>;
 }
 
@@ -53,6 +54,12 @@ export interface OrchestrationDeps {
   /** Authoritative time, injected once and used everywhere downstream. */
   readonly nowMs: number;
   readonly catalog: AbilityCatalog;
+  /**
+   * Rebuild the ability catalog from live configuration. Called at most once,
+   * only when the catalog's `configVersion` disagrees with the snapshot's; a
+   * still-mismatched catalog fails the tick closed (`config_conflict`).
+   */
+  readonly refreshCatalog?: () => Promise<AbilityCatalog>;
   readonly newBatchId: () => string;
   readonly caller: string;
   readonly leaseMs?: number;
@@ -279,14 +286,28 @@ export async function orchestrateCombatResolution(
       throw new C3Error('snapshot_refused', String(root?.reason ?? 'not_loaded'));
     }
 
-    // 5. Aux + strict decode. The resolver mode comes from the claim only.
+    // 5a. The isolate's ability catalog must match the configuration version
+    // the snapshot pinned, otherwise magnitudes would come from unpinned config.
+    const pinnedVersion = snapshotAbilityConfigVersion(root);
+    let catalog = deps.catalog;
+    if (catalog.configVersion !== pinnedVersion && deps.refreshCatalog) {
+      catalog = await deps.refreshCatalog();
+    }
+    if (catalog.configVersion !== pinnedVersion) {
+      throw new C3Error(
+        'config_conflict',
+        `ability catalog ${catalog.configVersion} != snapshot ${pinnedVersion}`,
+      );
+    }
+
+    // 5b. Aux + strict decode. The resolver mode comes from the claim only.
     const mode = claim.dbMode === 'live' ? 'live' : 'catchup';
-    const { aux, configFailures } = await loadSnapshotAux(db, {
+    const { aux, configFailures } = loadSnapshotAux({
       snapshotRoot: root,
       mode,
       nowMs: deps.nowMs,
       ticksToSimulate: ticksToSimulate(req.role, root, deps.nowMs),
-      catalog: deps.catalog,
+      catalog,
     });
     const decoded = decodeEncounterSnapshot(root, aux);
     if (configFailures.length > 0) {

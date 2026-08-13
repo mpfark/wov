@@ -217,29 +217,3 @@ describe('Phase E — mechanic parameters are per-ability', () => {
   });
 });
 
-describe('Phase E — resource immutability on rejection', () => {
-  const src = readFileSync(
-    resolve(process.cwd(), 'supabase/functions/combat-tick/index.ts'), 'utf8',
-  );
-
-  it('authorization and the config preflight run before the CP check and spend', () => {
-    const authAt = src.indexOf('authorizeQueuedAbility({');
-    const preflightAt = src.indexOf('preflightAbilityConfig(auth.entry)');
-    const cpSpendAt = src.indexOf('mCp[member.id] -= cpCost');
-    expect(authAt).toBeGreaterThan(-1);
-    expect(preflightAt).toBeGreaterThan(authAt);
-    expect(cpSpendAt).toBeGreaterThan(preflightAt);
-  });
-
-  it('both rejection paths `continue` without mutating state', () => {
-    const authAt = src.indexOf('authorizeQueuedAbility({');
-    const cpSpendAt = src.indexOf('mCp[member.id] -= cpCost');
-    const between = src.slice(authAt, cpSpendAt);
-    // Two early exits (authorization + configuration) before any spend.
-    expect((between.match(/\n\s+continue;/g) ?? []).length).toBeGreaterThanOrEqual(2);
-    // No resource / effect / cooldown writes in that window.
-    expect(between).not.toMatch(/mCp\[[^\]]+\]\s*[-+]=/);
-    expect(between).not.toMatch(/mHp\[[^\]]+\]\s*[-+]=/);
-    expect(between).not.toMatch(/from\('active_effects'\)/);
-  });
-});

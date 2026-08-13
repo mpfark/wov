@@ -3210,6 +3210,7 @@ export type Database = {
     }
     Functions: {
       _family_name_is_reserved: { Args: { _key: string }; Returns: boolean }
+      ability_config_version: { Args: never; Returns: string }
       ability_damage_type_keys: { Args: never; Returns: string[] }
       ability_damaging_mechanics: { Args: never; Returns: string[] }
       ability_mechanic_params: { Args: never; Returns: Json }

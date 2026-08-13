@@ -1,21 +1,25 @@
 /**
  * c3/loader.ts — builds the `SnapshotAux` the snapshot decoder needs.
  *
- * `encounter_snapshot_v2` returns encounter *state*. Four things are not state
- * and therefore never appear in it: the authoritative mode/time (owned by the
- * claim and the orchestration), configured ability magnitudes, weapon procs,
- * and encounter-wide configuration. This module is the ONE place those are
- * assembled.
+ * The loader performs NO database reads. Everything it needs is either
+ * authoritative context supplied by the orchestration (mode, time, ticks) or
+ * carried by `encounter_snapshot_v2` itself — including the configuration block
+ * (`config`), which is covered by the same `stateDigest.configVersion` the
+ * commit re-checks. Nothing outside that contract may influence ability
+ * magnitude, procs, XP, progression, tank selection or salvage.
  *
  * Rules:
- *  1. Every value is read once, before simulation, and frozen into the aux
- *     object. The resolver never reads anything live.
+ *  1. Every value is read once, from the pinned snapshot, and frozen into the
+ *     aux object. The resolver never reads anything live.
  *  2. Randomness is never produced here. Ability calcs evaluate in
  *     deterministic `average` mode (see `ability-resolve.ts`); every roll that
  *     must be random happens inside the pure resolver via seeded RNG.
  *  3. Configuration is the only source of numbers. A pending action whose
  *     ability is unknown to the catalog is reported as an actionable failure,
  *     never resolved to zero.
+ *  4. The injected ability catalog carries the configuration version it was
+ *     built from; the orchestration refuses the tick when it disagrees with the
+ *     snapshot (`config_conflict`).
  */
 
 import { getStatModifier } from '../../formulas/stats';
@@ -29,17 +33,16 @@ import { abilityConfigKey, type SnapshotAux } from './decode-snapshot';
 import { C3Error } from './errors';
 import type { Attributes, ProcSnapshot, ResolutionMode, ResolverConfig } from '../pure/types';
 
-/** Minimal supabase-js surface the loader uses. */
-export interface LoaderDb {
-  from: (table: string) => any;
-}
-
 /**
  * Configured-ability lookup. Implemented in the Edge Function by
  * `_shared/load-ability-calcs.ts` (`getServerAbilityCalcs`), and by a fixture
  * map in tests. Keeping it injected means the loader performs no registry IO.
+ *
+ * `configVersion` is `public.ability_config_version()` as read when the catalog
+ * was built. It is compared against the value the snapshot pinned.
  */
 export interface AbilityCatalog {
+  readonly configVersion: string;
   lookup(classKey: string, abilityKey: string): AbilityConfigEntry | null;
 }
 
@@ -165,61 +168,67 @@ function procsFromSnapshot(participants: readonly any[]): ProcSnapshot[] {
   return procs;
 }
 
-/** Global XP boost, expired boosts ignored. Any read problem means "no boost". */
-async function loadXpBoost(db: LoaderDb, nowMs: number): Promise<number> {
-  try {
-    const { data } = await db
-      .from('xp_boost')
-      .select('multiplier, expires_at')
-      .limit(1)
-      .maybeSingle();
-    if (!data) return 1;
-    const expires = data.expires_at ? Date.parse(data.expires_at) : 0;
-    if (!expires || expires <= nowMs) return 1;
-    const mult = num(data.multiplier, 1);
-    return mult > 0 ? mult : 1;
-  } catch {
-    return 1;
+/**
+ * The pinned configuration block. Missing or malformed configuration is a
+ * contract defect, not something to guess around: the snapshot function always
+ * emits it, so absence means the deployed SQL and this code disagree.
+ */
+function configBlock(root: Record<string, unknown>): Record<string, unknown> {
+  const raw = root.config;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new C3Error('decode_failed', '$.config: snapshot carries no configuration block', {
+      retryable: false,
+    });
   }
+  return raw as Record<string, unknown>;
 }
 
-async function loadWeaponProgression(db: LoaderDb): Promise<ResolverConfig['weaponProgression']> {
-  try {
-    const { data } = await db
-      .from('weapon_progression_config')
-      .select('tier1_level, tier2_level, tier3_level')
-      .eq('id', 1)
-      .maybeSingle();
-    if (!data) return DEFAULT_WEAPON_PROGRESSION;
-    return {
-      tier1_level: num(data.tier1_level, DEFAULT_WEAPON_PROGRESSION.tier1_level),
-      tier2_level: num(data.tier2_level, DEFAULT_WEAPON_PROGRESSION.tier2_level),
-      tier3_level: num(data.tier3_level, DEFAULT_WEAPON_PROGRESSION.tier3_level),
-    };
-  } catch {
-    return DEFAULT_WEAPON_PROGRESSION;
+function pinnedXpBoost(config: Record<string, unknown>): number {
+  const mult = num(config.xpBoostMultiplier, NaN);
+  if (!Number.isFinite(mult) || mult <= 0) {
+    throw new C3Error('decode_failed', '$.config.xpBoostMultiplier: not a positive number', {
+      retryable: false,
+    });
   }
+  return mult;
 }
 
-/** `parties.tank_id`, falling back to the leader, for every party present. */
-async function loadTanks(
-  db: LoaderDb,
-  partyIds: readonly string[],
-): Promise<Map<string, string>> {
+function pinnedWeaponProgression(
+  config: Record<string, unknown>,
+): ResolverConfig['weaponProgression'] {
+  const raw = config.weaponProgression;
+  if (!raw || typeof raw !== 'object') {
+    throw new C3Error('decode_failed', '$.config.weaponProgression: missing', { retryable: false });
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    tier1_level: num(row.tier1_level, DEFAULT_WEAPON_PROGRESSION.tier1_level),
+    tier2_level: num(row.tier2_level, DEFAULT_WEAPON_PROGRESSION.tier2_level),
+    tier3_level: num(row.tier3_level, DEFAULT_WEAPON_PROGRESSION.tier3_level),
+  };
+}
+
+/** `parties.tank_id` (else leader), as pinned by the snapshot's config block. */
+function pinnedTanks(config: Record<string, unknown>): Map<string, string> {
   const tanks = new Map<string, string>();
-  if (partyIds.length === 0) return tanks;
-  const { data, error } = await db
-    .from('parties')
-    .select('id, tank_id, leader_id')
-    .in('id', partyIds as string[]);
-  if (error) {
-    throw new C3Error('internal', `party tank load failed: ${error.message}`);
-  }
-  for (const row of asArray(data)) {
-    const tank = row?.tank_id ?? row?.leader_id;
-    if (row?.id && tank) tanks.set(String(row.id), String(tank));
+  for (const row of asArray(config.tanks)) {
+    const partyId = row?.partyId;
+    const tank = row?.tankCharacterId;
+    if (typeof partyId === 'string' && typeof tank === 'string') tanks.set(partyId, tank);
   }
   return tanks;
+}
+
+/** The ability-configuration version this snapshot resolved against. */
+export function snapshotAbilityConfigVersion(snapshotRoot: unknown): string {
+  const config = configBlock((snapshotRoot ?? {}) as Record<string, unknown>);
+  const version = config.abilityConfigVersion;
+  if (typeof version !== 'string' || version.length === 0) {
+    throw new C3Error('decode_failed', '$.config.abilityConfigVersion: missing', {
+      retryable: false,
+    });
+  }
+  return version;
 }
 
 /**
@@ -278,28 +287,19 @@ function salvageKeys(creatures: readonly any[]): Map<string, string | null> {
 }
 
 /**
- * Build the aux bundle. Performs exactly three database reads, all of them
- * configuration, all of them before simulation.
+ * Build the aux bundle. Performs ZERO database reads: every configuration value
+ * comes from the pinned snapshot, so the commit digest covers all of it.
  */
-export async function loadSnapshotAux(db: LoaderDb, input: LoadAuxInput): Promise<LoadedAux> {
+export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
   const root = (input.snapshotRoot ?? {}) as Record<string, unknown>;
   const participants = asArray(root.participants);
   const actions = asArray(root.actions);
   const creatures = asArray(root.creatures);
 
-  const partyIds = Array.from(
-    new Set(
-      participants
-        .map((p) => (typeof p?.partyId === 'string' ? p.partyId : null))
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ).sort();
-
-  const [xpBoostMultiplier, weaponProgression, tankByPartyId] = await Promise.all([
-    loadXpBoost(db, input.nowMs),
-    loadWeaponProgression(db),
-    loadTanks(db, partyIds),
-  ]);
+  const config = configBlock(root);
+  const xpBoostMultiplier = pinnedXpBoost(config);
+  const weaponProgression = pinnedWeaponProgression(config);
+  const tankByPartyId = pinnedTanks(config);
 
   const configFailures: string[] = [];
   const abilityConfig = resolveAbilityConfigs(
