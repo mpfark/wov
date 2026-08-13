@@ -54,7 +54,7 @@ try {
   ({ ids } = await call({ action: 'setup', options: { level: 11, xp: 0 } }));
 
   const { claim } = await call({ action: 'claim', encounterId: ids!.encounterId });
-  check('claim granted', !!claim?.granted, claim);
+  check('claim granted', claim?.claimed === true, claim);
 
   const { snapshot: raw } = await call({
     action: 'snapshot',

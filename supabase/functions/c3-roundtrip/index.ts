@@ -96,6 +96,7 @@ async function setup(opts: { level?: number; xp?: number } = {}) {
     node_id: node.id,
     encounter_key: tag,
     status: 'active',
+    tick_mode: 'shared',
   });
   await ins('encounter_participants', {
     encounter_id: encounter.id,
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
           _rate_ms: body.rateMs ?? 2000,
           _lease_ms: body.leaseMs ?? 15000,
           _caller: 'c3-roundtrip',
-          _supported_modes: ['shared'],
+          _supported_modes: ['shared', 'effects_only'],
         });
         return json({ ok: true, claim });
       }
