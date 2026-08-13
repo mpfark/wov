@@ -213,7 +213,7 @@ export interface DecodedSnapshot {
 const PARTICIPANT_KEYS = [
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
-  'xp', 'unspentStatPoints', 'bhp',
+  'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
 ] as const;
 
 const EQUIPMENT_KEYS = [
@@ -229,7 +229,7 @@ const CREATURE_KEYS = [
 
 const EFFECT_KEYS = [
   'id', 'targetId', 'sourceId', 'effectType', 'stacks', 'amountPerTick', 'expiresAtMs',
-  'intervalMs', 'lastTickAtMs', 'sourceAbilityKey', 'rowVersion',
+  'intervalMs', 'nextTickAtMs', 'sourceAbilityKey', 'rowVersion',
 ] as const;
 
 const ACTION_KEYS = [
@@ -275,6 +275,37 @@ function decodeBuffs(participant: Json, path: string): ParticipantBuffSnapshot {
     }
   }
   return buffs;
+}
+
+/**
+ * Aggregate equipment + gem bonuses from the snapshotted equipment rows.
+ * Level-up recalculation needs *effective* attributes, and this is the only
+ * place they are derived — always from snapshot data, never from a live read.
+ */
+const BONUS_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'hp', 'cp', 'mp', 'ac'] as const;
+
+function sumEquipmentBonuses(equipment: readonly Json[], path: string): Record<string, number> {
+  const total: Record<string, number> = {};
+  equipment.forEach((eq, i) => {
+    for (const source of ['stats', 'appliedGems'] as const) {
+      const raw = eq[source];
+      if (raw === undefined || raw === null) continue;
+      const rows = Array.isArray(raw) ? raw : [raw];
+      rows.forEach((row, j) => {
+        const o = obj(row, `${path}[${i}].${source}[${j}]`);
+        for (const key of BONUS_KEYS) {
+          const v = o[key];
+          if (v === undefined || v === null) continue;
+          const n = typeof v === 'string' ? Number(v) : v;
+          if (typeof n !== 'number' || !Number.isFinite(n)) {
+            throw decodeError(`${path}[${i}].${source}.${key}`, `expected numeric bonus, received ${describe(v)}`);
+          }
+          total[key] = (total[key] ?? 0) + n;
+        }
+      });
+    }
+  });
+  return total;
 }
 
 function decodeWeapon(equipment: readonly Json[], path: string): WeaponSnapshot {
@@ -407,6 +438,12 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       isTank: partyId ? aux.tankByPartyId.get(partyId) === id : true,
       joinedAtMs: reqNum(p, 'joinedAtMs', path),
       isUncappedXp: uncapped.has(id),
+      mp: reqNum(p, 'mp', path),
+      maxMp: reqNum(p, 'maxMp', path),
+      xp: reqNum(p, 'xp', path),
+      unspentStatPoints: reqNum(p, 'unspentStatPoints', path),
+      respecPoints: reqNum(p, 'respecPoints', path),
+      equipmentBonuses: sumEquipmentBonuses(equipment, `${path}.equipment`),
     });
 
     mpByCharacterId[id] = reqNum(p, 'mp', path);
@@ -512,10 +549,10 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     const effectType = reqStr(e, 'effectType', path);
     const def = statusByKey.get(effectType);
     const intervalMs = reqNum(e, 'intervalMs', path);
-    // Contract correction: the SQL snapshot exposes `active_effects.next_tick_at`
-    // under the key `lastTickAtMs`. C1 means "when it last ticked", so the
-    // decoder converts rather than mislabelling the value.
-    const nextTickAtMs = reqNum(e, 'lastTickAtMs', path);
+    // `nextTickAtMs` is `active_effects.next_tick_at` verbatim: the absolute
+    // epoch-ms due time of this effect's next periodic tick. No derivation,
+    // no relation to the encounter cursor or to combat_sessions.last_tick_at.
+    const nextTickAtMs = reqNum(e, 'nextTickAtMs', path);
     effects.push({
       id,
       targetKind: creatureIds.has(targetId) ? 'creature' : 'character',
@@ -525,7 +562,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       amountPerTick: reqNum(e, 'amountPerTick', path),
       expiresAtMs: reqNum(e, 'expiresAtMs', path),
       intervalMs,
-      lastTickAtMs: nextTickAtMs - intervalMs,
+      nextTickAtMs,
       damageType: null,
       sourceCharacterId: optStr(e, 'sourceId', path),
       isPeriodic: def?.isPeriodic ?? false,

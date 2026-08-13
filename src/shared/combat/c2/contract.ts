@@ -25,8 +25,14 @@ import type { ProposedTick, ResolutionMode } from '../pure/types';
 /** Explicit legacy fallback. Documented, golden-tested, deliberately not 0. */
 export const LOOT_FALLBACK_CHANCE = 0.5;
 
-export const SNAPSHOT_VERSION = 2 as const;
-export const PROPOSED_TICK_VERSION = 2 as const;
+/**
+ * Contract v3 (C3 checkpoint 1):
+ *  - snapshot carries xp / unspentStatPoints / respecPoints / bhp
+ *  - effect timing is named `nextTickAtMs` (active_effects.next_tick_at)
+ *  - level-ups travel in their own `progression` block
+ */
+export const SNAPSHOT_VERSION = 3 as const;
+export const PROPOSED_TICK_VERSION = 3 as const;
 
 // ── envelope ───────────────────────────────────────────────────────
 
@@ -150,6 +156,8 @@ export interface ProposedTickV2 {
   readonly core: ProposedTick;
   readonly deaths: readonly CharacterDeathProposal[];
   readonly session: SessionPresenceProposal;
+  /** Derived level-up side effects. Empty on every non-level-up tick. */
+  readonly progression: ProposedTick['progression'];
 }
 
 // ── precedence resolvers (loader side) ─────────────────────────────

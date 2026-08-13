@@ -15,7 +15,7 @@ describe('pure resolver — golden rules', () => {
     const out = resolveTickPure(snapshot({ ticksToSimulate: 3 }));
     expect(out.ticksProcessed).toBe(3);
     expect(out.resolvedAtMs).toBe(1_700_000_000_000 + 3 * 2000);
-    expect(out.session.lastTickAtMs).toBe(out.resolvedAtMs);
+    expect(out.session.nextDueAtMs).toBe(out.resolvedAtMs);
   });
 
   it('a dead participant neither swings nor is targeted', () => {
@@ -97,7 +97,7 @@ describe('pure resolver — golden rules', () => {
             amountPerTick: 5,
             expiresAtMs: 1_700_000_100_000,
             intervalMs: 2000,
-            lastTickAtMs: 1_699_999_998_000,
+            nextTickAtMs: 1_699_999_998_000,
             damageType: 'physical',
             sourceCharacterId: p.id,
             isPeriodic: true,
@@ -127,7 +127,7 @@ describe('pure resolver — golden rules', () => {
             amountPerTick: 99,
             expiresAtMs: 1_699_999_000_000,
             intervalMs: 2000,
-            lastTickAtMs: 1_699_998_000_000,
+            nextTickAtMs: 1_699_998_000_000,
             damageType: 'physical',
             sourceCharacterId: 'char-1',
             isPeriodic: true,

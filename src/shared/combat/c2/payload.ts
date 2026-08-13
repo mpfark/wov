@@ -172,7 +172,7 @@ export function buildCommitPayload(
       amountPerTick: e.amountPerTick,
       expiresAtMs: e.expiresAtMs,
       intervalMs: e.intervalMs,
-      lastTickAtMs: e.lastTickAtMs,
+      nextTickAtMs: e.nextTickAtMs,
       sourceAbilityKey: e.effectType,
     })),
     effectDeleteIds: [...proposed.effectDeleteIds],
@@ -218,6 +218,8 @@ export function buildCommitPayload(
         cap,
       };
     }),
+
+    progression: proposed.progression.map((p) => ({ ...p })),
 
     contributions: proposed.characters.map((c) => ({
       characterId: c.characterId,

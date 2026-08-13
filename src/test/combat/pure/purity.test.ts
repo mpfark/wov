@@ -75,6 +75,7 @@ describe('pure resolver — static purity', () => {
         "src/shared/formulas/combat.ts",
         "src/shared/formulas/economy.ts",
         "src/shared/formulas/gems.ts",
+        "src/shared/formulas/resources.ts",
         "src/shared/formulas/stats.ts",
         "src/shared/formulas/xp.ts",
       ]
