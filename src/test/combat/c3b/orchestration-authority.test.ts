@@ -308,7 +308,10 @@ describe('C3b — catch-up backlog is bounded and cursor-driven', () => {
     // 10 minutes of arrears at a 2s cadence must clamp to the 30-tick ceiling.
     const stale = fakeDb({
       claim: { claimed: true, tick: 7, claim_token: 'tok', resolver_id: 'r', mode: 'effects_only' },
-      snapshot: snapshotRoot({ cursor: { tickAtMs: 1_000_000 - 600_000 } }),
+      snapshot: snapshotRoot({
+        claimMode: 'effects_only',
+        cursor: { tickNumber: 6, tickAtMs: NOW - 600_000, tickState: 'idle', resolvingTick: null },
+      }),
     });
     const rc = await orchestrateCombatResolution({ role: 'catchup', nodeId: NODE }, deps(stale.db) as any);
     expect(rc.ok).toBe(true);
