@@ -247,6 +247,7 @@ const SNAPSHOT_ROOT_KEYS = [
   'casts',
   'lootConfig',
   'lootTables',
+  'config',
   'scope',
   'stateDigest',
 ] as const;
