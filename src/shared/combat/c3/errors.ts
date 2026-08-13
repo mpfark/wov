@@ -25,6 +25,12 @@ export type C3ErrorKind =
   | 'commit_refused'
   /** Ownership was lost between snapshot and commit. Proposal discarded. */
   | 'lease_lost'
+  /**
+   * The ability catalog in this isolate is not the configuration the snapshot
+   * pinned. Fail closed: resolving with unpinned configuration would produce a
+   * result the commit digest cannot vouch for.
+   */
+  | 'config_conflict'
   /** Transport/unexpected failure. */
   | 'internal';
 
