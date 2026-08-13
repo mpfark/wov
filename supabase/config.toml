@@ -15,8 +15,6 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.blacksmith-forge]
     verify_jwt = false
-  [functions.c3-roundtrip]
-    verify_jwt = false
   [functions.combat-tick]
     verify_jwt = false
   [functions.combat-catchup]
