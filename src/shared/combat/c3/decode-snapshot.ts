@@ -797,4 +797,5 @@ function assertScopeMatches(
   compare('actionIds', decoded.actionIds);
   compare('effectIds', decoded.effectIds);
   compare('inventoryIds', decoded.inventoryIds);
+  compare('partyIds', decoded.partyIds);
 }
