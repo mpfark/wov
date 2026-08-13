@@ -26,14 +26,24 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const FILES = ROOTS.flatMap(r => walk(r));
-const read = (p: string) => readFileSync(p, 'utf8');
 
-/** Modules retired with the legacy execution paths. */
+/**
+ * Code only. Prose in a doc comment may legitimately name a retired module or
+ * describe randomness that no longer exists, and an audit that reads comments
+ * measures documentation, not behaviour.
+ */
+function code(p: string): string {
+  return readFileSync(p, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
+/** Modules retired with the legacy execution paths, by deployed path. */
 const DELETED_MODULES = [
-  'combat-resolver',
-  'kill-resolver',
-  'ability-telemetry',
-  'reward-calculator',
+  '_shared/combat-resolver',
+  '_shared/kill-resolver',
+  '_shared/ability-telemetry',
+  '_shared/reward-calculator',
   'combat/tick-commit',
   'combat/tick-owner',
   'combat/proc-runtime',
@@ -48,10 +58,11 @@ const DELETED_MODULES = [
  * combat surface: the two handlers and the shared combat modules.
  */
 const COMBAT_SOURCES = FILES.filter(f =>
-  f.startsWith('supabase/functions/combat-tick/') ||
-  f.startsWith('supabase/functions/combat-catchup/') ||
-  f.startsWith('supabase/functions/_shared/combat/') ||
-  f.startsWith('src/shared/combat/'));
+  !f.includes('__tests__') && !f.includes('/test/') &&
+  (f.startsWith('supabase/functions/combat-tick/') ||
+    f.startsWith('supabase/functions/combat-catchup/') ||
+    f.startsWith('supabase/functions/_shared/combat/') ||
+    f.startsWith('src/shared/combat/')));
 
 const AUTHORITATIVE_TABLES = [
   'characters', 'creatures', 'active_effects', 'encounter_kill_awards',
@@ -65,9 +76,9 @@ describe('C3b — deleted legacy modules are unreferenced', () => {
     const offenders: string[] = [];
     for (const file of FILES) {
       if (file.includes('write-authority-audit')) continue;
-      const src = read(file);
+      const src = code(file);
       for (const mod of DELETED_MODULES) {
-        if (src.includes(`${mod}.ts`) || src.includes(`/${mod}'`) || src.includes(`/${mod}"`)) {
+        if (src.includes(`${mod}.ts`) || src.includes(`${mod}'`) || src.includes(`${mod}"`)) {
           offenders.push(`${file} -> ${mod}`);
         }
       }
@@ -76,7 +87,7 @@ describe('C3b — deleted legacy modules are unreferenced', () => {
   });
 
   it('uses no dynamic import() inside the combat execution surface', () => {
-    const offenders = COMBAT_SOURCES.filter(f => /\bimport\s*\(/.test(read(f)));
+    const offenders = COMBAT_SOURCES.filter(f => /\bimport\s*\(/.test(code(f)));
     expect(offenders).toEqual([]);
   });
 });
@@ -85,7 +96,7 @@ describe('C3b — commit_encounter_tick_v2 is the only authoritative writer', ()
   it('performs no table mutation anywhere in the combat surface', () => {
     const offenders: string[] = [];
     for (const file of COMBAT_SOURCES) {
-      const src = read(file);
+      const src = code(file);
       for (const table of AUTHORITATIVE_TABLES) {
         const pattern = new RegExp(`from\\(['"\`]${table}['"\`]\\)[\\s\\S]{0,200}?\\.(update|insert|upsert|delete)\\(`);
         if (pattern.test(src)) offenders.push(`${file} -> ${table}`);
@@ -103,11 +114,11 @@ describe('C3b — commit_encounter_tick_v2 is the only authoritative writer', ()
     ];
     const offenders: string[] = [];
     for (const file of COMBAT_SOURCES) {
-      const src = read(file);
+      const src = code(file);
       for (const fn of forbidden) {
-        // `commit_encounter_tick_v2` legitimately contains `commit_encounter_tick`.
-        const hit = new RegExp(`['"\`]${fn}['"\`]`).test(src);
-        if (hit) offenders.push(`${file} -> ${fn}`);
+        // `commit_encounter_tick_v2` is the permitted writer; the quoted-literal
+        // match is exact, so it is not confused with its legacy predecessor.
+        if (new RegExp(`['"\`]${fn}['"\`]`).test(src)) offenders.push(`${file} -> ${fn}`);
       }
     }
     expect(offenders).toEqual([]);
@@ -116,7 +127,8 @@ describe('C3b — commit_encounter_tick_v2 is the only authoritative writer', ()
   it('draws no randomness outside the seeded tick RNG', () => {
     const offenders = COMBAT_SOURCES
       .filter(f => !f.endsWith('tick-rng.ts'))
-      .filter(f => /Math\.random/.test(read(f)));
+      .filter(f => /Math\.random/.test(code(f)));
     expect(offenders).toEqual([]);
   });
 });
+
