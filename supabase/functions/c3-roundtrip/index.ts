@@ -175,7 +175,97 @@ Deno.serve(async (req) => {
         const ids = await setup(body.options ?? {});
         return json({ ok: true, ids });
       }
+      /**
+       * Fixture-only due-time seeding.
+       *
+       * `claim_encounter_tick` grants a tick when
+       *   now_ms - encounters.tick_at >= _rate_ms
+       * so a fixture is authoritatively due once tick_at is at least tickRateMs
+       * in the past. This writes tick_at = now_ms - offsetMs on the isolated
+       * fixture row only. The claim function itself is untouched: no mock, no
+       * bypass, no relaxed comparison.
+       *
+       * offsetMs values used by the harness (tickRateMs = 2000):
+       *   3000  -> comfortably due (1.5x rate)
+       *   2000  -> exactly due     (boundary, inclusive side)
+       *      0  -> not due at all  (negative case)
+       */
+      case 'seed_due': {
+        const nowMs = Date.now();
+        const tickAt = nowMs - (body.offsetMs ?? 0);
+        const { error } = await admin
+          .from('encounters')
+          .update({ tick_at: tickAt, tick_state: 'idle', resolving_tick: null, claim_token: null, lease_until: null, attempt: 0 })
+          .eq('id', body.encounterId);
+        if (error) throw new Error(`seed_due: ${error.message}`);
+        return json({ ok: true, seeded: { nowMs, tickAt, offsetMs: body.offsetMs ?? 0 } });
+      }
+      /** Fixture-only: seed one damage-over-time effect with an explicit due time. */
+      case 'seed_effect': {
+        const { data, error } = await admin
+          .from('active_effects')
+          .insert({
+            node_id: body.nodeId,
+            target_id: body.targetId,
+            source_id: body.sourceId,
+            effect_type: body.effectType ?? 'bleed',
+            stacks: body.stacks ?? 1,
+            damage_per_tick: body.amountPerTick ?? 3,
+            next_tick_at: body.nextTickAtMs,
+            expires_at: body.expiresAtMs,
+            tick_rate_ms: body.intervalMs ?? 2000,
+          })
+          .select()
+          .single();
+        if (error) throw new Error(`seed_effect: ${error.message}`);
+        return json({ ok: true, effect: data });
+      }
+      case 'effects': {
+        const { data, error } = await admin
+          .from('active_effects')
+          .select('id, target_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at, tick_rate_ms')
+          .eq('target_id', body.targetId)
+          .order('id');
+        if (error) throw new Error(`effects: ${error.message}`);
+        return json({ ok: true, effects: data });
+      }
+      case 'encounter': {
+        const { data, error } = await admin
+          .from('encounters')
+          .select('tick_number, tick_at, tick_state, resolving_tick, claim_token, lease_until, attempt, version, stored_power, stored_power_cap, tick_mode')
+          .eq('id', body.encounterId)
+          .single();
+        if (error) throw new Error(`encounter: ${error.message}`);
+        return json({ ok: true, encounter: data });
+      }
+      case 'batches': {
+        const { data, error } = await admin
+          .from('encounter_tick_batches')
+          .select('tick_number, batch_id, payload')
+          .eq('encounter_id', body.encounterId)
+          .order('tick_number');
+        if (error) throw new Error(`batches: ${error.message}`);
+        return json({ ok: true, batches: data });
+      }
+      case 'ledgers': {
+        const [awards, loot, contrib] = await Promise.all([
+          admin.from('encounter_kill_awards').select('death_id, character_id, award_kind, tick_number').eq('encounter_id', body.encounterId),
+          admin.from('encounter_death_loot').select('death_id, creature_id, mode, item_id, drop_chance, resolved, tick_number').eq('encounter_id', body.encounterId),
+          admin.from('encounter_contributions').select('character_id, damage_dealt, healing_done').eq('encounter_id', body.encounterId),
+        ]);
+        for (const r of [awards, loot, contrib]) if (r.error) throw new Error(`ledgers: ${r.error.message}`);
+        return json({ ok: true, awards: awards.data, loot: loot.data, contributions: contrib.data });
+      }
+      case 'durability': {
+        const { data, error } = await admin
+          .from('character_inventory')
+          .select('id, item_id, equipped_slot, current_durability')
+          .eq('character_id', body.characterId);
+        if (error) throw new Error(`durability: ${error.message}`);
+        return json({ ok: true, inventory: data });
+      }
       case 'claim': {
+
         const claim = await rpc('claim_encounter_tick', {
           _encounter_id: body.encounterId,
           _rate_ms: body.rateMs ?? 2000,
