@@ -247,6 +247,7 @@ const SNAPSHOT_ROOT_KEYS = [
   'casts',
   'lootConfig',
   'lootTables',
+  'config',
   'scope',
   'stateDigest',
 ] as const;
@@ -766,6 +767,11 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     actionIds,
     effectIds,
     inventoryIds: Object.keys(durabilityByInventoryId),
+    // Party composition is configuration: the scope must name every party the
+    // tank selection depended on, or the commit digest would not cover it.
+    partyIds: [
+      ...new Set(participants.map((p) => p.partyId).filter((id): id is string => Boolean(id))),
+    ],
   });
 
   return { snapshot, envelope, mpByCharacterId, progressionByCharacterId };
@@ -775,7 +781,7 @@ function assertScopeMatches(
   scope: SnapshotEnvelope['scope'],
   decoded: {
     participantIds: string[]; creatureIds: string[]; actionIds: string[];
-    effectIds: string[]; inventoryIds: string[];
+    effectIds: string[]; inventoryIds: string[]; partyIds: string[];
   },
 ): void {
   const compare = (name: keyof typeof decoded, actual: readonly string[]) => {
@@ -791,4 +797,5 @@ function assertScopeMatches(
   compare('actionIds', decoded.actionIds);
   compare('effectIds', decoded.effectIds);
   compare('inventoryIds', decoded.inventoryIds);
+  compare('partyIds', decoded.partyIds);
 }
