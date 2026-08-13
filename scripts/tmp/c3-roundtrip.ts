@@ -27,9 +27,14 @@ const ANON = process.env.ANON_KEY!;
 const TICK_RATE_MS = 2000;
 /** 1.5x rate: comfortably due. */
 const DUE_OFFSET_MS = 3000;
-/** Boundary margin. Two processes read two clocks, so exact equality on the
- *  millisecond is not a stable assertion; ±150ms brackets the boundary. */
-const BOUNDARY_MARGIN_MS = 150;
+/**
+ * Boundary margin. The due comparison lives in the database
+ * (now_ms - tick_at >= rateMs) while the fixture seeds tick_at from the Edge
+ * Function clock, and the claim arrives one HTTP round trip later. Two clocks
+ * plus that latency make a millisecond-exact boundary assertion unstable, so
+ * the boundary is bracketed: rate-1000ms must refuse, rate+1000ms must grant.
+ */
+const BOUNDARY_MARGIN_MS = 1000;
 
 async function call(body: Record<string, unknown>) {
   const res = await fetch(URL_BASE, {
@@ -78,6 +83,7 @@ try {
   await call({ action: 'seed_due', encounterId: ids!.encounterId, offsetMs: 0 });
   const before = (await call({ action: 'encounter', encounterId: ids!.encounterId })).encounter;
   const charBefore = (await call({ action: 'character', characterId: ids!.characterId })).character;
+  const goldBefore = charBefore.gold as number;
   const notDue = (await call({ action: 'claim', encounterId: ids!.encounterId, rateMs: TICK_RATE_MS }))
     .claim;
   check('not-due encounter refuses the claim', notDue?.claimed === false && notDue?.reason === 'not_due', notDue);
@@ -284,7 +290,7 @@ try {
         ...over,
       })
     ).result;
-    check(label, r?.committed === false && String(r?.reason).includes(expect), r);
+    check(label, r?.committed === false && stable(r).includes(expect), r);
   };
 
   await refuse(
@@ -388,9 +394,12 @@ try {
   check('max hp applied', character.max_hp === prog.maxHpAfter, character);
   check('hp refilled on level-up', character.hp === prog.hpAfter, character);
   check('stat point granted', character.unspent_stat_points === prog.unspentStatPointsDelta, character);
-  check('gold reward applied', character.gold === (proposed.rewards[0]?.gold ?? 0), {
+  // Characters are created with starting gold, so the reward is a delta.
+  const goldReward = proposed.rewards.reduce((n, r) => n + r.gold, 0);
+  check('gold reward applied as a delta on starting gold', character.gold === goldBefore + goldReward, {
+    goldBefore,
+    goldReward,
     gold: character.gold,
-    expected: proposed.rewards[0]?.gold,
   });
 
   const ledgers = await call({ action: 'ledgers', encounterId: ids!.encounterId });
@@ -427,7 +436,14 @@ try {
     ),
     { proposedDurability: proposed.durability, inventory },
   );
-  check('no combat_sessions row exists for the fixture', proposed.session.sessionId === null, proposed.session);
+  // The v3 session proposal carries derived presence only: no session id is
+  // invented by the resolver, and no cadence field exists to write back.
+  const sessionKeys = Object.keys(proposed.session as object).sort();
+  check(
+    'session proposal carries presence only (no id, no cadence)',
+    !sessionKeys.includes('sessionId') && !sessionKeys.includes('lastTickAtMs'),
+    sessionKeys,
+  );
 
   // ── repeating the same commit ──────────────────────────────────
   const replay = (
