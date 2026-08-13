@@ -20,7 +20,7 @@
  * the C3 orchestration module, which owns all IO.
  */
 
-import { decodeError } from './errors';
+import { decodeError } from './errors.ts';
 import {
   SNAPSHOT_VERSION,
   type SnapshotEnvelope,
@@ -28,7 +28,7 @@ import {
   type ResolvedStoredPower,
   type StoredPowerCapSource,
   type DropChanceSource,
-} from '../c2/contract';
+} from '../c2/contract.ts';
 import type {
   ActionSnapshot,
   Attributes,
@@ -43,7 +43,7 @@ import type {
   ResolutionMode,
   ResolverConfig,
   WeaponSnapshot,
-} from '../pure/types';
+} from '../pure/types.ts';
 
 // ── strict primitive readers ───────────────────────────────────────
 
