@@ -169,14 +169,38 @@ function record(a: Agg, snap: EncounterSnapshot, out: ProposedTick) {
   a.effectUpserts += out.effectUpserts.length;
   a.stackUpserts += out.effectUpserts.filter((e) => e.stacks > 1).length;
 
+  // ── Telegraph lifecycle ──────────────────────────────────────────────
+  // A telegraph must open with zero damage, close exactly once, and only
+  // strike characters still standing on the node when it lands.
+  const closed = new Set<string>();
   for (const c of out.casts) {
-    if (c.phase === 'start') a.castStarts++;
-    else if (c.phase === 'fizzle') a.castFizzles++;
-    else a.castResolves++;
+    if (c.phase === 'start') {
+      a.castStarts++;
+      const landed = c.targets.reduce((s, t) => s + t.applied, 0);
+      if (landed > 0) a.castStartDamage += landed;
+    } else {
+      const key = c.castEventId ?? `${c.creatureId}:${c.resolvesAtMs}`;
+      if (closed.has(key)) a.castDoubleResolutions++;
+      closed.add(key);
+      if (c.phase === 'fizzle') a.castFizzles++;
+      else {
+        a.castResolves++;
+        if (c.targets.length === 0) a.castFleeAvoidances++;
+        if (c.lockMs > 0) a.castLockApplications++;
+      }
+      a.storedPowerConsumed += c.storedPowerConsumed;
+    }
     if (c.damage > 0) a.castDamage.push(c.damage);
+  }
+  // Carry: a cast that was in flight on entry and neither resolved nor fizzled.
+  for (const active of snap.activeCasts) {
+    if (!out.casts.some((c) => c.creatureId === active.creatureId && c.phase !== 'start')) {
+      a.castCarries++;
+    }
   }
   for (const sp of out.storedPower) {
     a.storedPowerDeltas.push(sp.delta);
+    if (sp.delta > 0) a.storedPowerBanked += sp.delta;
     if (Math.abs(sp.delta) > Math.max(1, sp.cap)) a.storedPowerOverCap++;
   }
 
