@@ -159,17 +159,32 @@ export interface CreatureLootEntrySnapshot {
 
 export interface BossCastSnapshot {
   readonly abilityKey: string;
+  readonly castKey: string;
   readonly label: string;
   readonly castTicks: number;
   readonly cooldownTicks: number;
   readonly damage: number;
+  /** Flat damage everyone other than the primary target takes. */
+  readonly damageAoe: number;
   readonly damageType: string | null;
   readonly targetMode: 'tank_strict' | 'tank_preferred' | 'random_alive';
   readonly channeling: boolean;
   readonly storedPowerCap: number;
+  /** Fraction of the released pool the primary target takes. */
+  readonly primaryShare: number;
+  /** Fraction of the released pool every other eligible target takes. */
+  readonly aoeShare: number;
+  readonly consumeMode: 'all' | 'percent' | 'fixed' | 'preserve' | 'reset' | 'ignore';
+  readonly consumePct: number;
+  readonly consumeFixed: number;
+  /** Autoattacks are suppressed while channeling and banked instead. */
+  readonly pauseAutoattacks: boolean;
+  /** Movement lock applied to everyone the resolved cast reaches. */
+  readonly lockMs: number;
   readonly castingText: string | null;
   readonly castedText: string | null;
 }
+
 
 /** How a resolving cast treats the Stored Power pool it accumulated. */
 export type StoredPowerConsumeMode =
