@@ -166,13 +166,23 @@ Deno.serve(async (req) => {
         remaining[0].n === 0 && r5.ok && snap5?.tick !== undefined,
         { pruned_old_batches: 7 - Number(remaining[0].n), retained_from_tick: snap5?.retained_from_tick });
 
-      // 10. Grant pruning is bounded and only removes expired rows.
+      // 10. Grant pruning is bounded, lagged by 60s, and only removes stale rows.
       await asServer();
       await tx`select public.prune_encounter_access_grants(2000)`;
-      const expired = await tx<{ n: number }[]>`
+      const justExpired = await tx<{ n: number }[]>`
         select count(*)::int as n from public.encounter_access_grants
-        where encounter_id = ${encId} and expires_at <= now()`;
-      push('expired_grants_pruned', expired[0].n === 0, expired[0].n);
+        where encounter_id = ${encId} and character_id = ${left.id}`;
+      // A grant that expired one second ago is intentionally kept (60s lag), so
+      // an in-flight recovery is never cut off mid-request.
+      push('recently_expired_grant_kept_by_prune_lag', justExpired[0].n === 1, justExpired[0].n);
+
+      await tx`update public.encounter_access_grants set expires_at = now() - interval '5 minutes'
+               where encounter_id = ${encId} and character_id = ${left.id}`;
+      await tx`select public.prune_encounter_access_grants(2000)`;
+      const stale = await tx<{ n: number }[]>`
+        select count(*)::int as n from public.encounter_access_grants
+        where encounter_id = ${encId}`;
+      push('stale_grants_pruned', stale[0].n === 0, stale[0].n);
 
       // Always roll back: the fixtures never touch live data.
       throw new RollbackSignal();
