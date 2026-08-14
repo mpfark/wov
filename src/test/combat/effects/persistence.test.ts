@@ -339,6 +339,7 @@ describe('effect persistence — evasion_buff', () => {
     expect(seeded.rowsAfterLive.some((r) => r.id === seeded.rowId)).toBe(false);
     expect(seeded.third.effectDeleteIds).not.toContain(seeded.rowId);
   });
+});
 
 describe('effect persistence — stealth_buff', () => {
   it('assassin:shadowstep spends its ambush inside the cast tick and writes no charge', () => {
