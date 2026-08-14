@@ -3566,6 +3566,10 @@ export type Database = {
           status_after: string
         }[]
       }
+      encounter_resync_snapshot: {
+        Args: { _character_id: string; _encounter_id: string }
+        Returns: Json
+      }
       encounter_snapshot_v2: {
         Args: { _claim_token: string; _encounter_id: string; _tick: number }
         Returns: Json

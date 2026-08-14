@@ -36,6 +36,12 @@ import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 
 import { useCombatAggroEffects } from './useCombatAggroEffects';
 import { useEncounterBatches } from './useEncounterBatches';
+import {
+  PendingActionTracker,
+  describeRejection,
+  type ActionOutcome,
+} from '../utils/pending-actions';
+import type { ResyncSnapshot } from '../utils/resync';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
 import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
@@ -163,6 +169,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // Monotonic per-session sequence for durable combat action submissions.
   const durableSeqRef = useRef(0);
   /**
+   * C4 durable acknowledgement: submitted → pending → consumed/rejected by a
+   * committed tick. Only committed batches retire an entry, so a lost HTTP
+   * response can never lose an action, and duplicate delivery can never
+   * acknowledge one twice.
+   */
+  const actionsRef = useRef(new PendingActionTracker());
+  const [pendingActionCount, setPendingActionCount] = useState(0);
+  const [lastActionRejection, setLastActionRejection] = useState<
+    { actionId: string; label: string; reason: string; tick: number } | null
+  >(null);
+  /**
    * Why the next tick request is being fired — instrumentation only.
    * Consumed (and reset to 'cadence') by doTick.
    */
@@ -186,6 +203,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
+  /** Highest committed tick this client has applied (action submission anchor). */
+  const lastAppliedTickRef = useRef(0);
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
@@ -243,6 +262,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     appliedBatchIdsRef.current = new Set();
+    actionsRef.current.reset();
+    setPendingActionCount(0);
+    setLastActionRejection(null);
+    lastAppliedTickRef.current = 0;
     // B5: leaving combat ends our interest in this encounter's batch stream.
     encounterIdRef.current = null;
     setEncounterId(null);
@@ -413,6 +436,28 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    *     is then discarded, so no client can ever display state that is not in a
    *     committed batch.
    */
+  /**
+   * Present committed action outcomes. Concise and reusing existing patterns:
+   * a rejection is one combat-log system line plus the existing toast channel;
+   * consumed and superseded actions only clear pending state (the tick's own
+   * events already narrate what happened).
+   */
+  const applyActionOutcomes = useCallback((outcomes: ActionOutcome[]) => {
+    for (const o of outcomes) {
+      if (o.kind === 'rejected') {
+        const reason = describeRejection(o.reason ?? 'rejected');
+        setLastActionRejection({ actionId: o.actionId, label: o.label, reason, tick: o.tick });
+        ext.current.addLocalLogEvent(
+          createLogEvent({ type: 'system', message: `${o.label} failed — ${reason}.` }),
+        );
+      }
+      // 'consumed': the batch's own events narrate the hit.
+      // 'superseded': a newer action replaced it and the server never executed
+      // it — silent, but distinct from an executed action in the ledger.
+    }
+    if (outcomes.length > 0) setPendingActionCount(actionsRef.current.pendingCount);
+  }, []);
+
   const processTickResult = useCallback((
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number; source?: 'batch' | 'ack' },
@@ -451,6 +496,24 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
       }
     }
+
+    // ── C4: durable action acknowledgement ──────────────────────────────
+    // Reconciled in the SAME committed-batch application as the combat state, so
+    // an executed ability and the state it produced can never disagree.
+    if (typeof data.encounter_tick === 'number') {
+      lastAppliedTickRef.current = Math.max(lastAppliedTickRef.current, data.encounter_tick);
+    }
+    if (batchId && (data.consumed_action_ids?.length || data.rejected_actions?.length)) {
+      const outcomes = actionsRef.current.applyCommitted({
+        batchId,
+        tick: data.encounter_tick ?? lastAppliedTickRef.current,
+        consumedActionIds: data.consumed_action_ids ?? [],
+        rejectedActions: data.rejected_actions ?? [],
+      });
+      applyActionOutcomes(outcomes);
+    }
+
+
 
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
@@ -732,12 +795,73 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
   }, [stopCombat, recentlyKilledRef]);
 
+  /**
+   * C4: authoritative resynchronisation after an unrecoverable batch gap.
+   *
+   * Replaces local combat state from the snapshot (character resources/rewards,
+   * creature HP, engagement, combat-stop state), closes any pending action whose
+   * acknowledging batch is gone, and tells the player exactly once that some log
+   * history is unavailable. No combat events are invented or replayed — the
+   * missing narration is simply marked as unavailable.
+   */
+  const applyResync = useCallback((snapshot: ResyncSnapshot, range: { fromTick: number; toTick: number }) => {
+    const p = ext.current;
+
+    if (snapshot.character && p.updateCharacterLocal) {
+      const c = snapshot.character;
+      p.updateCharacterLocal({
+        hp: c.hp, max_hp: c.max_hp, cp: c.cp, max_cp: c.max_cp, mp: c.mp, max_mp: c.max_mp,
+        xp: c.xp, gold: c.gold, level: c.level,
+        ...(c.bhp !== undefined ? { bhp: c.bhp } : {}),
+        ...(c.rp_total_earned !== undefined ? { rp_total_earned: c.rp_total_earned } : {}),
+        ...(c.unspent_stat_points !== undefined ? { unspent_stat_points: c.unspent_stat_points } : {}),
+        ...(c.respec_points !== undefined ? { respec_points: c.respec_points } : {}),
+      } as Partial<Character>);
+      optimisticCpRef.current = null;
+    }
+    // Materials/loot awarded by pruned batches are re-read from the server
+    // rather than reconstructed from deltas.
+    notifyMaterialsChanged(p.character.id);
+    p.fetchGroundLoot();
+
+    // Creature HP is replaced wholesale — never merged with stale overrides.
+    const overrides: Record<string, number> = {};
+    for (const cr of snapshot.creatures) overrides[cr.id] = cr.hp;
+    creatureHpOverridesRef.current = overrides;
+    setCreatureHpOverrides(overrides);
+
+    // Engagement / combat-stop state comes from the snapshot's engagement rows.
+    const aliveEngaged = snapshot.engagedCreatureIds.filter(id =>
+      snapshot.creatures.some(cr => cr.id === id && cr.alive),
+    );
+    engagedCreatureIdsRef.current = aliveEngaged;
+    setEngagedCreatureIds(aliveEngaged);
+
+    // Pending actions whose acknowledging batches were pruned are closed as
+    // superseded (never reported as executed).
+    applyActionOutcomes(actionsRef.current.reanchor(snapshot.tick));
+
+    p.addLocalLogEvent(createLogEvent({
+      type: 'system',
+      message: `Combat history for ticks ${range.fromTick}-${range.toTick} is no longer available; state resynchronised from the server.`,
+    }));
+
+    if (snapshot.ended || aliveEngaged.length === 0 || (snapshot.character?.hp ?? 0) <= 0) {
+      stopCombat();
+    } else if (!inCombatRef.current) {
+      inCombatRef.current = true;
+      setInCombat(true);
+      setActiveCombatCreatureId(aliveEngaged[0]);
+    }
+  }, [applyActionOutcomes, stopCombat]);
+
   // ── C4: committed batch stream (the only delivery path that renders) ──
   // Every participant applies the same committed batches in tick order, exactly
   // once. Holes are fetched from `encounter_tick_batches` by the recovery
   // machine inside the hook.
   const { noteCommitted } = useEncounterBatches({
     encounterId,
+    characterId: params.character.id,
     baselines: () => ({
       [ext.current.character.id]: {
         xp: ext.current.character.xp,
@@ -757,6 +881,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       console.log('[combat] applying committed batch', { tick: meta.tickNumber, source: meta.source });
       processTickResult(result, { source: 'batch' });
     },
+    onResync: (snapshot, range) => applyResync(snapshot, range),
   });
   useEffect(() => { noteCommittedRef.current = noteCommitted; }, [noteCommitted]);
 
@@ -890,6 +1015,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               : `${p.character.id}-${Date.now()}`;
           durableSeqRef.current += 1;
           const clientSeq = durableSeqRef.current;
+          // Register locally BEFORE the network call: the pending state must
+          // survive a lost response.
+          actionsRef.current.submit({
+            actionId,
+            abilityKey,
+            label: pending.label,
+            clientSeq,
+            submittedAtTick: lastAppliedTickRef.current,
+          });
+          setPendingActionCount(actionsRef.current.pendingCount);
           void supabase
             .rpc('submit_combat_action', {
               _id: actionId,
@@ -1171,5 +1306,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     pendingAbility,
     pendingCpCost,
     queueAbility,
+    /** C4: actions submitted but not yet acknowledged by a committed tick. */
+    pendingActionCount,
+    /** C4: most recent authoritative rejection (concise presentation only). */
+    lastActionRejection,
   };
 }

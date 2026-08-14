@@ -35,7 +35,15 @@ export interface SequencerOutcome {
   ready: EncounterBatchRow[];
   /** Inclusive tick range that must be fetched before the cursor can advance. */
   missing: { fromTick: number; toTick: number } | null;
+  /**
+   * Set when the hole in front of the cursor can no longer converge on its own
+   * (the buffer is full of newer ticks, or recovery proved the range is gone).
+   * The cursor is NOT moved: only an authoritative state resynchronisation may
+   * re-anchor past an unresolved committed tick.
+   */
+  unrecoverable: { fromTick: number; toTick: number } | null;
 }
+
 
 /** Baseline absolutes used to turn committed reward deltas into client state. */
 export interface BatchBaseline {
@@ -175,18 +183,38 @@ export function batchToTickResponse(
     session_ended: session.ended === true,
     buff_sync: buffSync,
     ticks_processed: batch.ticksProcessed,
+    // C4 durable acknowledgement: the committed action outcomes travel with the
+    // same batch application as the combat state they belong to.
+    consumed_action_ids: [...batch.consumedActionIds],
+    rejected_actions: batch.rejectedActions
+      .map((r) => {
+        const o = (r ?? {}) as Record<string, unknown>;
+        const id = str(o.actionId);
+        return id ? { actionId: id, reason: str(o.reason) ?? 'rejected' } : null;
+      })
+      .filter((r): r is { actionId: string; reason: string } => r !== null),
     encounter_tick: batch.tick,
     encounter_batch_id: batch.batchId,
     encounter_id: row.encounter_id,
   } satisfies CombatTickResponse;
 }
 
-/** Max buffered out-of-order rows before the oldest are discarded. */
-const MAX_BUFFER = 64;
+/**
+ * Recovery/buffer bounds are aligned with server retention.
+ *
+ * `encounter_tick_batches` is pruned at 180s of age; at the 2s combat cadence
+ * that is ~90 ticks. A 64-tick window (~128s) could therefore declare a range
+ * unrecoverable while the server was still guaranteed to hold it, so both the
+ * buffer and one recovery pass now cover 256 ticks (~512s) — the full retention
+ * period with a wide margin for slower cadences and catch-up ticks.
+ */
+const RETENTION_TICKS = 90;
+/** Max buffered out-of-order rows before the gap is declared unrecoverable. */
+const MAX_BUFFER = RETENTION_TICKS * 2 + 76; // 256
 /** Max remembered batch ids for duplicate suppression. */
-const MAX_SEEN = 400;
+const MAX_SEEN = 600;
 /** Never ask recovery for a wider window than this in one pass. */
-const MAX_RECOVERY_WIDTH = 64;
+const MAX_RECOVERY_WIDTH = MAX_BUFFER;
 
 export class EncounterBatchSequencer {
   private lastAppliedTick = 0;
@@ -194,6 +222,8 @@ export class EncounterBatchSequencer {
   private anchored = false;
   private seen = new Set<string>();
   private buffer = new Map<number, EncounterBatchRow>();
+  /** Latched once the hole in front of the cursor cannot converge on its own. */
+  private stalledRange: { fromTick: number; toTick: number } | null = null;
 
   /** Reset for a new encounter (or when combat stops). */
   reset(): void {
@@ -202,6 +232,7 @@ export class EncounterBatchSequencer {
     this.anchored = false;
     this.seen = new Set();
     this.buffer.clear();
+    this.stalledRange = null;
   }
 
   get nextExpectedTick(): number {
@@ -216,8 +247,44 @@ export class EncounterBatchSequencer {
     return this.highestKnownCommittedTick;
   }
 
+  /** Non-null while an unresolved committed range blocks the cursor. */
+  get unrecoverableRange(): { fromTick: number; toTick: number } | null {
+    return this.stalledRange;
+  }
+
   hasSeen(batchId: string): boolean {
     return this.seen.has(batchId);
+  }
+
+  /**
+   * Declare the hole in front of the cursor unrecoverable (recovery proved the
+   * range is pruned or no longer readable). The cursor is deliberately left
+   * where it is: only `reanchorTo`, after authoritative state reconciliation,
+   * may move past an unresolved committed tick.
+   */
+  markUnrecoverable(): { fromTick: number; toTick: number } | null {
+    const range = this.missingRange();
+    if (range) this.stalledRange = range;
+    return this.stalledRange;
+  }
+
+  /**
+   * Re-anchor the render cursor onto an authoritative position. Valid ONLY once
+   * the caller has replaced local combat state from an authoritative snapshot;
+   * this call merely aligns the sequencer with that state.
+   */
+  reanchorTo(tick: number): void {
+    this.anchored = true;
+    this.lastAppliedTick = tick;
+    if (tick > this.highestKnownCommittedTick) this.highestKnownCommittedTick = tick;
+    for (const key of [...this.buffer.keys()]) {
+      if (key <= tick) {
+        const row = this.buffer.get(key)!;
+        this.remember(row.batch_id);
+        this.buffer.delete(key);
+      }
+    }
+    this.stalledRange = null;
   }
 
   /**
@@ -227,7 +294,7 @@ export class EncounterBatchSequencer {
    */
   noteCommitted(tickNumber: number | null | undefined, batchId?: string | null): SequencerOutcome {
     if (typeof tickNumber !== 'number' || !Number.isFinite(tickNumber)) {
-      return { ready: [], missing: this.missingRange() };
+      return this.outcome([]);
     }
     if (tickNumber > this.highestKnownCommittedTick) this.highestKnownCommittedTick = tickNumber;
     // The first thing we ever learn about an encounter anchors the cursor, so a
@@ -236,10 +303,8 @@ export class EncounterBatchSequencer {
       this.anchored = true;
       this.lastAppliedTick = tickNumber - 1;
     }
-    if (batchId && this.seen.has(batchId)) {
-      // Already applied from the stream; nothing outstanding for this tick.
-    }
-    return { ready: [], missing: this.missingRange() };
+    void batchId;
+    return this.outcome([]);
   }
 
   /**
@@ -277,13 +342,14 @@ export class EncounterBatchSequencer {
     }
 
     if (this.buffer.size > MAX_BUFFER) {
-      // Recovery is not converging. Re-anchor onto the oldest buffered tick so
-      // the fight keeps rendering rather than stalling forever behind a hole.
-      const oldest = Math.min(...this.buffer.keys());
-      this.lastAppliedTick = oldest - 1;
+      // Recovery has not converged across a full retention window. Do NOT skip
+      // the hole — surface it so the client resynchronises authoritatively.
+      this.markUnrecoverable();
+    } else if (ready.length > 0) {
+      this.stalledRange = null;
     }
 
-    return { ready, missing: this.missingRange() };
+    return this.outcome(ready);
   }
 
   /**
@@ -301,6 +367,10 @@ export class EncounterBatchSequencer {
     return { fromTick: from, toTick: Math.min(upper, from + MAX_RECOVERY_WIDTH - 1) };
   }
 
+  private outcome(ready: EncounterBatchRow[]): SequencerOutcome {
+    return { ready, missing: this.missingRange(), unrecoverable: this.stalledRange };
+  }
+
   private remember(batchId: string): void {
     this.seen.add(batchId);
     if (this.seen.size > MAX_SEEN) {
@@ -308,3 +378,4 @@ export class EncounterBatchSequencer {
     }
   }
 }
+
