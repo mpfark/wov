@@ -792,6 +792,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
+    onBossCasts: bossCastFeed.applyCommitted,
     onBossDeathCry: ({ text }) => {
       // World emote — atmospheric narration, broadcast verbatim with no boss-name framing.
       sendGlobal({
