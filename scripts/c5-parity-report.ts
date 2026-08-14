@@ -114,6 +114,8 @@ function newAgg(): Agg {
     creatureMisses: 0, abilityAttempts: 0, abilityHits: 0, stackApplications: 0, hits: 0,
     misses: 0, crits: 0, dodges: 0, blocks: 0, procTriggers: 0, effectUpserts: 0, stackUpserts: 0,
     auraPulses: 0, multiAttackHits: [], retaliations: 0, castStarts: 0, castResolves: 0,
+    castCarries: 0, castStartDamage: 0, castDoubleResolutions: 0, castFleeAvoidances: 0,
+    castLockApplications: 0, storedPowerBanked: 0, storedPowerConsumed: 0,
     castFizzles: 0, storedPowerDeltas: [], storedPowerOverCap: 0, xp: [], gold: [], renown: [],
     salvage: [], gems: 0, lootProposals: 0, lootLegacy: 0, lootItemPool: 0, durability: 0,
     charDeaths: 0, creatureDeaths: 0, kills: 0, partySplitKills: 0, soloKills: 0,
