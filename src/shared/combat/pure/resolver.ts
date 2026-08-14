@@ -52,8 +52,10 @@ import {
   seededWeaponAbilityDamage,
 } from './rolls';
 import type {
+  ActiveCastSnapshot,
   BondProposal,
   CastMutation,
+  CastTargetProposal,
   CharacterMutation,
   CreatureMutation,
   CreatureSnapshot,
