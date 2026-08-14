@@ -138,7 +138,7 @@ export function useOffscreenDotWakeup({
           // First try a full catchup (not snapshot-only) to resolve any remaining effects
           // and capture kill_rewards from DOT kills that happened during the delay
           const { data: catchupData, error: catchupErr } = await invokeWithRetry<any>('combat-catchup', {
-            body: { node_id: departedNodeId, force: true, reason: 'departure_delayed_check' },
+            body: { node_id: departedNodeId, character_id: characterId, force: true, reason: 'departure_delayed_check' },
           });
 
           if (catchupErr) {
@@ -180,7 +180,7 @@ export function useOffscreenDotWakeup({
 
           // Now check if there are still remaining effects that need prediction tracking
           const { data: snapData, error: snapErr } = await invokeWithRetry<any>('combat-catchup', {
-            body: { node_id: departedNodeId, snapshot_only: true },
+            body: { node_id: departedNodeId, character_id: characterId, snapshot_only: true },
           });
 
           if (snapErr || !snapData) {
@@ -309,7 +309,7 @@ function scheduleWakeup(
 
     try {
       const { data, error } = await invokeWithRetry<any>('combat-catchup', {
-        body: { node_id: snapshot.nodeId, force: true, reason: 'predicted_lethal_effect' },
+        body: { node_id: snapshot.nodeId, character_id: characterId, force: true, reason: 'predicted_lethal_effect' },
       });
 
       if (error) {

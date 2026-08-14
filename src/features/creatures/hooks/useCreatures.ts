@@ -138,6 +138,7 @@ export function useCreatures(
   currentNode?: GameNode | null,
   onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void,
   softDeadIds?: Set<string>,
+  characterId?: string | null,
 ) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [creaturesLoading, setCreaturesLoading] = useState(false);
@@ -192,7 +193,7 @@ export function useCreatures(
 
       // ── Phase 2: Authoritative reconcile ───────────────────────
       const t0 = performance.now();
-      const result = await reconcileNode(myNodeId, { force: true });
+      const result = await reconcileNode(myNodeId, { characterId: characterId ?? '', force: true });
       if (isStale()) {
         // Node changed while we waited — discard.
         return;
@@ -351,7 +352,7 @@ export function useCreatures(
         // Reconcile nodes with active effects (selective wake-up)
         for (const nid of nodesWithEffects) {
           // Use the client throttle — won't spam
-          reconcileNode(nid).then(result => {
+          reconcileNode(nid, { characterId: characterId ?? '' }).then(result => {
             if (result.creatures.length > 0) {
               prefetchCache.set(nid, { data: result.creatures, ts: Date.now() });
             }
