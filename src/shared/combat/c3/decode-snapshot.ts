@@ -213,6 +213,12 @@ export interface SnapshotAux {
   readonly salvageMaterialKeyByCreatureId: ReadonlyMap<string, string | null>;
   /** Remaining boss cast cooldown in ticks, tracked by the orchestration. */
   readonly castCooldownTicksByCreatureId: ReadonlyMap<string, number>;
+  /**
+   * Stance keys switched on per character (`characters.reserved_buffs`). A key
+   * whose ability the catalog does not configure is dropped here, so an
+   * unconfigured stance can never fail a whole tick closed.
+   */
+  readonly stanceKeysByCharacterId?: ReadonlyMap<string, readonly string[]>;
 }
 
 export interface DecodedSnapshot {
@@ -689,8 +695,28 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       return eq;
     });
     const partyId = optStr(p, 'partyId', path);
-    // Shape-checked, then discarded: stances reserve CP, they do not buff.
+    // Shape-checked for reserved CP; the semantic side of a stance is resolved
+    // from configuration below and materialised by the resolver.
     decodeReservation(p, path);
+    const stances: StanceSnapshot[] = [];
+    for (const stanceKey of aux.stanceKeysByCharacterId?.get(id) ?? []) {
+      const cfg = aux.abilityConfig.get(abilityConfigKey(id, stanceKey));
+      if (!cfg) continue;
+      stances.push({
+        stanceKey,
+        abilityKey: stanceKey,
+        mechanic: cfg.mechanic,
+        damageType: cfg.damageType,
+        amount: cfg.amount,
+        durationMs: cfg.durationMs,
+        intervalMs: cfg.intervalMs,
+        statusKey: cfg.statusKey,
+        statusChancePct: cfg.statusChancePct,
+        maxStacks: cfg.maxStacks,
+        weaponBased: cfg.weaponBased,
+        ...(cfg.params ? { params: cfg.params } : {}),
+      });
+    }
     const hasShield = equipment.some((e) => optStr(e, 'slot', path) === 'off_hand');
 
     participants.push({
@@ -723,6 +749,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       xp: reqNum(p, 'xp', path),
       unspentStatPoints: reqNum(p, 'unspentStatPoints', path),
       respecPoints: reqNum(p, 'respecPoints', path),
+      stances,
       equipmentBonuses: sumEquipmentBonuses(equipment, `${path}.equipment`),
     });
 
