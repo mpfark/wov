@@ -43,29 +43,35 @@ Deno.serve(async (req) => {
       return fail('invalid_request', 'body is not valid JSON', 400);
     }
 
-    const nodeId = typeof body?.node_id === 'string' && UUID_RE.test(body.node_id)
+    // Scope is server-derived. The caller may name a node, but it is only
+    // honoured when `public.catchup_scope_check` places it inside the scope of
+    // a character the caller actually owns (own node, a directly connected
+    // node, or a node where the character still sources an active effect).
+    // Neither a role nor a mode is ever accepted from the request body.
+    const requestedNode = typeof body?.node_id === 'string' && UUID_RE.test(body.node_id)
       ? body.node_id
       : null;
     const characterId = typeof body?.character_id === 'string' && UUID_RE.test(body.character_id)
       ? body.character_id
       : null;
-    if (!nodeId && !characterId) {
-      return fail('invalid_request', 'node_id or character_id is required', 400);
+    if (!characterId) {
+      return fail('invalid_request', 'character_id is required', 400);
     }
 
-    // Ownership: the caller must own the character they sweep for. A node-only
-    // sweep is allowed for any authenticated user — it mutates nothing beyond
-    // the authoritative effect replay the node already owes.
-    if (characterId) {
-      const { data: owned, error: ownErr } = await db
-        .from('characters')
-        .select('id')
-        .eq('id', characterId)
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (ownErr) return fail('internal', 'ownership check failed', 200);
-      if (!owned) return fail('unauthorized', 'character does not belong to caller', 401);
+    const { data: scope, error: scopeErr } = await db.rpc('catchup_scope_check', {
+      _user_id: userId,
+      _character_id: characterId,
+      _node_id: requestedNode,
+    });
+    if (scopeErr) return fail('internal', 'scope check failed', 200);
+    const verdict = typeof scope === 'string' ? scope : 'out_of_scope';
+    if (verdict === 'not_owned') {
+      return fail('unauthorized', 'character does not belong to caller', 401);
     }
+    if (!verdict.startsWith('ok:')) {
+      return fail('forbidden', verdict, 403);
+    }
+    const nodeId = verdict.slice(3);
 
     const result = await orchestrateCombatResolution(
       { role: 'catchup', nodeId, characterId },
