@@ -129,6 +129,20 @@ export interface ParticipantSnapshot {
   readonly weapon: WeaponSnapshot;
   readonly buffs: ParticipantBuffSnapshot;
   readonly partyId: string | null;
+  /**
+   * Physical presence on the encounter's node *right now*.
+   *
+   * The snapshot carries **complete participation** (attribution, durable
+   * effect sources, contribution and reward rights), which is deliberately a
+   * superset of the target roster. Only participants with `presentAtNode`
+   * may be attacked, healed, buffed, regenerated or struck by a telegraphed
+   * cast, and only they may act. Absent participants keep every attribution
+   * right (their DoTs keep ticking, they still receive kill rewards).
+   *
+   * Never derived from delivery/RLS grace. Absent field = present (older
+   * fixtures and back-compat).
+   */
+  readonly presentAtNode?: boolean;
   /** Designated tank of its party (`parties.tank_id`, else leader). */
   readonly isTank: boolean;
   /** Stable tiebreaker for ordering; never a wall clock read inside sim. */
@@ -627,7 +641,9 @@ export interface RejectedAction {
     | 'caster_dead'
     | 'insufficient_cp'
     /** `hp_transfer`: the caster cannot pay without breaching its HP reserve. */
-    | 'insufficient_hp';
+    | 'insufficient_hp'
+    /** The caster (or its target) left the encounter's node. */
+    | 'not_present';
 }
 
 export interface ConsumedBuffProposal {

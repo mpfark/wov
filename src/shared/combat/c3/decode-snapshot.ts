@@ -257,6 +257,7 @@ const PARTICIPANT_KEYS = [
 
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
+  'presentAtNode',
   'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
 ] as const;
 
@@ -557,6 +558,11 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       partyId,
       isTank: partyId ? aux.tankByPartyId.get(partyId) === id : true,
       joinedAtMs: reqNum(p, 'joinedAtMs', path),
+      // Complete participation arrives; presence is the target filter. A
+      // snapshot without the flag predates it and is treated as present.
+      presentAtNode: p.presentAtNode === undefined || p.presentAtNode === null
+        ? true
+        : p.presentAtNode === true,
       isUncappedXp: uncapped.has(id),
       mp: reqNum(p, 'mp', path),
       maxMp: reqNum(p, 'maxMp', path),
