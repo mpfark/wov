@@ -12,11 +12,13 @@
  * may turn a `ProposedTick` into database writes. Nothing in production calls
  * this module yet.
  *
- * Live vs catch-up: `snapshot.mode` is carried through the input and output so
- * the committer and the log can tell them apart, and it is the *only* thing
- * that differs — both modes run the identical simulation over the identical
- * ordering with the identical seeds, and neither mode carries its own
- * ownership semantics. Ownership belongs to the encounter claim alone.
+ * Live vs catch-up: `snapshot.mode` is a real semantic switch, not a label.
+ * `live` runs the full simulation. `effects_only` may only advance already
+ * persisted state — periodic effect ticks, expiry, deaths/rewards and closure
+ * of an already-started boss cast. It never swings a player or creature
+ * autoattack, never consumes a pending action, never starts a new cast, never
+ * banks Stored Power from a simulated autoattack and never degrades durability.
+ * Ordering, seeds and the claim-based ownership model are identical in both.
  */
 
 import { getStatModifier } from '../../formulas/stats.ts';
@@ -740,6 +742,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
   // ── tick loop ───────────────────────────────────────────────────
 
+  // Mode semantics. `effects_only` is a hard capability restriction, checked at
+  // every active-combat site below rather than assumed by the caller.
+  const effectsOnly = snapshot.mode === 'catchup';
+
   for (let t = 0; t < ticks; t++) {
     const nowMs = snapshot.nowMs + t * tickRate;
 
@@ -804,7 +810,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
     // 2. Durable ability intents — resolved once, on the first simulated tick.
-    if (t === 0) {
+    // Effects-only never consumes a pending intent: the action stays pending
+    // for the next live tick, and is neither executed nor rejected here.
+    if (t === 0 && !effectsOnly) {
       for (const a of actions) {
         const caster = byParticipant.get(a.characterId);
         if (!caster) continue;
@@ -1533,7 +1541,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
     // 3. Autoattacks — participants in stable order, each on their target.
-    for (const p of participants) {
+    //    Live only: an offscreen sweep may never swing a weapon.
+    if (!effectsOnly) for (const p of participants) {
       if (!isAliveP(p.id) || !isPresent(p.id)) continue;
       const creature = targetOf(p.id);
       if (!creature) continue;
@@ -1689,9 +1698,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         continue;
       }
 
-      // Still channeling: bank the paused autoattack as Stored Power.
+      // Still channeling: bank the paused autoattack as Stored Power. Banking
+      // is derived from a creature autoattack, so effects-only carries the
+      // channel forward without banking anything.
       if (nowMs < cast.resolvesAtMs) {
         if (cast.pauseAutoattacks) pausedByCast.add(creatureId);
+        if (effectsOnly) continue;
         const cap = cast.storedPowerCap;
         const primary = cast.targetCharacterId
           ? byParticipant.get(cast.targetCharacterId)
@@ -1809,7 +1821,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       });
     }
 
-    for (const c of creatures) {
+    // New telegraphs are live-only: catch-up may close an already-started cast
+    // but must never begin one.
+    if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id) || !c.bossCast) continue;
       if (w.activeCasts.has(c.id)) continue;
       const cast = c.bossCast;
@@ -1893,7 +1907,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
 
     // 5. Creature counterattacks — stable creature order, seeded targeting.
-    for (const c of creatures) {
+    //    Live only.
+    if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id)) continue;
       // A channeling boss banks its autoattack instead of swinging it.
       if (pausedByCast.has(c.id)) continue;
@@ -1981,7 +1996,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   }
 
   // ── durability: one slot per participant that landed a hit ───────
-  for (const p of participants) {
+  //    Live only: effects-only lands no weapon hits and degrades nothing.
+  if (!effectsOnly) for (const p of participants) {
     if (!w.hitters.has(p.id)) continue;
     const slots = [...p.weapon.equippedInventoryIds].sort();
     if (slots.length === 0) continue;

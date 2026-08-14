@@ -3408,6 +3408,10 @@ export type Database = {
         Args: { p_character_id: string; p_listing_id: string }
         Returns: boolean
       }
+      catchup_scope_check: {
+        Args: { _character_id: string; _node_id: string; _user_id: string }
+        Returns: string
+      }
       change_family_at_heraldry: {
         Args: { _character_id: string; _display: string }
         Returns: Json

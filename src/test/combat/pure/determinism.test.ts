@@ -61,13 +61,25 @@ describe('pure resolver — determinism', () => {
     expect(j(a.events)).not.toBe(j(b.events));
   });
 
-  it('resolves live and catch-up identically for the same tick', () => {
+  it('keeps effect progression identical between live and catch-up, and only that', () => {
+    // Mode is a capability restriction, not a seed change: the persisted-state
+    // progression an effects-only sweep is allowed to perform must match the
+    // live tick exactly, while active combat exists only in live mode.
     const base = randomSnapshot(9001);
-    const live = resolveTickPure({ ...base, mode: 'live' });
-    const catchup = resolveTickPure({ ...base, mode: 'catchup' });
-    expect(j({ ...live, mode: null })).toBe(j({ ...catchup, mode: null }));
+    const live = resolveTickPure({ ...base, mode: 'live', actions: [] });
+    const catchup = resolveTickPure({ ...base, mode: 'catchup', actions: [] });
     expect(live.mode).toBe('live');
     expect(catchup.mode).toBe('catchup');
+    expect(j(catchup.effectDeleteIds)).toBe(j(live.effectDeleteIds));
+    expect(catchup.casts.some((c) => c.phase === 'start')).toBe(false);
+    expect(catchup.durability).toEqual([]);
+    expect(live.events.some((e) => e.type.startsWith('autoattack'))).toBe(true);
+    expect(catchup.events.some((e) => e.type.startsWith('autoattack'))).toBe(false);
+  });
+
+  it('is deterministic for repeated catch-up resolution of the same snapshot', () => {
+    const base = { ...randomSnapshot(4711), mode: 'catchup' as const };
+    expect(j(resolveTickPure(base))).toBe(j(resolveTickPure(base)));
   });
 
   it('is insensitive to input array order (ordering is imposed, not inherited)', () => {

@@ -88,9 +88,13 @@ export interface ReconcileResult {
 
 export async function reconcileNode(
   nodeId: string,
-  opts: { force?: boolean; _retryCount?: number; reason?: string } = {}
+  opts: { characterId: string; force?: boolean; _retryCount?: number; reason?: string }
 ): Promise<ReconcileResult> {
-  const { force = false, _retryCount = 0, reason } = opts;
+  const { characterId, force = false, _retryCount = 0, reason } = opts;
+
+  // The server derives the sweep scope from the owning character, so a sweep
+  // without a character identity is not a request we can make at all.
+  if (!characterId) return { creatures: [] };
 
   // Client-side throttle (skip for force calls like node-entry, or partial retries)
   if (!force && _retryCount === 0) {
@@ -104,7 +108,7 @@ export async function reconcileNode(
   lastReconcileMap.set(nodeId, Date.now());
 
   const { data, error } = await invokeWithRetry<any>('combat-catchup', {
-    body: { node_id: nodeId, force, ...(reason ? { reason } : {}) },
+    body: { node_id: nodeId, character_id: characterId, force, ...(reason ? { reason } : {}) },
   });
 
   if (error) {
@@ -115,7 +119,7 @@ export async function reconcileNode(
   // Handle partial resolution: retry until complete (max 3 retries)
   if (data?.partial && _retryCount < 3) {
     console.warn(`[reconcileNode] partial resolution for ${nodeId}, retrying (${_retryCount + 1}/3)`);
-    return reconcileNode(nodeId, { force: true, _retryCount: _retryCount + 1 });
+    return reconcileNode(nodeId, { characterId, force: true, _retryCount: _retryCount + 1 });
   }
 
   if (data?.partial) {
@@ -134,6 +138,7 @@ export function useCreatures(
   currentNode?: GameNode | null,
   onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void,
   softDeadIds?: Set<string>,
+  characterId?: string | null,
 ) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [creaturesLoading, setCreaturesLoading] = useState(false);
@@ -188,7 +193,7 @@ export function useCreatures(
 
       // ── Phase 2: Authoritative reconcile ───────────────────────
       const t0 = performance.now();
-      const result = await reconcileNode(myNodeId, { force: true });
+      const result = await reconcileNode(myNodeId, { characterId: characterId ?? '', force: true });
       if (isStale()) {
         // Node changed while we waited — discard.
         return;
@@ -347,7 +352,7 @@ export function useCreatures(
         // Reconcile nodes with active effects (selective wake-up)
         for (const nid of nodesWithEffects) {
           // Use the client throttle — won't spam
-          reconcileNode(nid).then(result => {
+          reconcileNode(nid, { characterId: characterId ?? '' }).then(result => {
             if (result.creatures.length > 0) {
               prefetchCache.set(nid, { data: result.creatures, ts: Date.now() });
             }
