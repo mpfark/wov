@@ -32,6 +32,7 @@ import {
 import type {
   ActionSnapshot,
   Attributes,
+  ActiveCastSnapshot,
   BossCastSnapshot,
   CreatureSnapshot,
   EffectSnapshot,
