@@ -173,13 +173,25 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const isAliveC = (id: string): boolean =>
     !w.cKilled.has(id) && (w.cHp.get(id) ?? 0) > 0;
 
+  /**
+   * Stance rows are reservation-backed persistent state: they carry a
+   * no-expiry sentinel and the resolver has no authority to expire them. Only
+   * the CP reservation (drop, replace, logout, death) removes a stance, via the
+   * database trigger on `characters.reserved_buffs`.
+   */
+  const isStance = (e: { lifetime?: 'timed' | 'stance' }): boolean => e.lifetime === 'stance';
+
+  /** True while an effect row is still in force at `at`. */
+  const effectLive = (e: { lifetime?: 'timed' | 'stance'; expiresAtMs: number }, at: number) =>
+    isStance(e) || e.expiresAtMs > at;
+
   /** Amp percent currently applied to a creature by damage-amp statuses. */
   const ampPctFor = (creatureId: string, nowMs: number): number => {
     let pct = 0;
     for (const e of effects) {
       if (e.targetKind !== 'creature' || e.targetId !== creatureId) continue;
       if (!(e.ampPct > 0)) continue;
-      if (e.expiresAtMs <= nowMs) continue;
+      if (!effectLive(e, nowMs)) continue;
       pct += e.ampPct;
     }
     return pct;
@@ -753,7 +765,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     //    states (`aura_pulse`, `party_regen`, `regen_buff`), which pulse on
     //    their own configured cadence rather than on every tick.
     for (const e of effects) {
-      if (e.expiresAtMs <= nowMs) {
+      if (!effectLive(e, nowMs)) {
         effectDeleteIds.add(e.id);
         continue;
       }
@@ -2011,6 +2023,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     const advanced = effectNextDue.get(e.id);
     if (advanced === undefined || effectDeleteIds.has(e.id)) continue;
     effectUpserts.push({
+      lifetime: e.lifetime,
       targetKind: e.targetKind,
       targetId: e.targetId,
       effectType: e.effectType,
@@ -2039,12 +2052,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     if (e.mechanic !== 'absorb_buff' || effectDeleteIds.has(e.id)) continue;
     const left = Math.max(0, Math.floor(w.shield.get(e.targetId) ?? 0));
     if (left === Math.floor(e.remaining ?? e.magnitude ?? 0) && left > 0) continue;
-    if (left <= 0) {
+    if (left <= 0 && !isStance(e)) {
       // Fully consumed: the row is removed exactly once.
       effectDeleteIds.add(e.id);
       continue;
     }
     effectUpserts.push({
+      // A stance-backed shield survives an emptied pool: the reservation, not
+      // the pool, owns the row's existence.
+      lifetime: e.lifetime,
       targetKind: 'character',
       targetId: e.targetId,
       effectType: e.effectType,

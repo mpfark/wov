@@ -268,6 +268,16 @@ export interface CreatureSnapshot {
 
 export interface EffectSnapshot {
   readonly id: string;
+  /**
+   * Row lifetime class (`active_effects.lifetime`).
+   * - `timed`: expires at `expiresAtMs` like every ordinary status.
+   * - `stance`: a CP-reservation-backed persistent state. It carries a
+   *   no-expiry sentinel and is NEVER expired by the resolver; the only
+   *   authority that removes it is the reservation itself (drop, replace,
+   *   logout, death), enforced by the database trigger on
+   *   `characters.reserved_buffs`.
+   */
+  readonly lifetime?: 'timed' | 'stance';
   readonly targetKind: 'character' | 'creature';
   readonly targetId: string;
   readonly effectType: string;
@@ -482,6 +492,8 @@ export interface CreatureMutation {
 }
 
 export interface EffectUpsert {
+  /** See `EffectSnapshot.lifetime`. Omitted means `timed`. */
+  readonly lifetime?: 'timed' | 'stance';
   readonly targetKind: 'character' | 'creature';
   readonly targetId: string;
   readonly effectType: string;
