@@ -102,8 +102,9 @@ Deno.serve(async (req) => {
               20, 400, 400, 300, 300, 300, 300, 18, ${nodeId}, 16, 14, 16, 12, 14, 12)
       returning id`;
     [{ id: creatureId }] = await sql<{ id: string }[]>`
-      insert into public.creatures (name, description, node_id, level, hp, max_hp, ac, is_aggressive, is_alive)
-      values (${'Harness Effigy'}, ${'persistence fixture'}, ${nodeId}, 20, 4000, 4000, 12, false, true)
+      insert into public.creatures (name, description, node_id, level, hp, max_hp, ac, is_aggressive, is_alive, stats)
+      values (${'Harness Effigy'}, ${'persistence fixture'}, ${nodeId}, 20, 4000, 4000, 12, false, true,
+              ${sql.json({ str: 12, dex: 10, con: 12, int: 8, wis: 8, cha: 8 })})
       returning id`;
 
     await admin.rpc('encounter_ensure_for_character', { _character_id: charId });
