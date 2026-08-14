@@ -11,7 +11,9 @@
  * *rejected* by the commit function rather than quietly normalised here.
  */
 
+import { EFFECT_PARAMS_VERSION } from '../pure/effect-contract';
 import type { ProposedTick } from '../pure/types';
+
 import {
   PROPOSED_TICK_VERSION,
   type SnapshotEnvelope,
@@ -164,6 +166,11 @@ export function buildCommitPayload(
         envelope.lootFallbackChance,
     })),
 
+    // The FULL semantic row travels to the committer. Dropping any of these
+    // fields would rewrite a persisted effect without its identity, which the
+    // deployed `validate_active_effect` trigger refuses outright (immutable
+    // field may not change) and which would silently erase absorb pools and
+    // one-shot charges.
     effectUpserts: proposed.effectUpserts.map((e) => ({
       targetId: e.targetId,
       sourceId: e.sourceCharacterId ?? e.targetId,
@@ -173,8 +180,15 @@ export function buildCommitPayload(
       expiresAtMs: e.expiresAtMs,
       intervalMs: e.intervalMs,
       nextTickAtMs: e.nextTickAtMs,
-      sourceAbilityKey: e.effectType,
+      sourceAbilityKey: e.abilityKey ?? e.effectType,
+      damageType: e.damageType ?? null,
+      mechanic: e.mechanic ?? null,
+      magnitude: e.magnitude ?? null,
+      remaining: e.remaining ?? null,
+      params: e.params ?? {},
+      paramsVersion: e.paramsVersion ?? EFFECT_PARAMS_VERSION,
     })),
+
     effectDeleteIds: [...proposed.effectDeleteIds],
     effectDeleteTargetIds: [...proposed.effectDeleteTargetIds],
 

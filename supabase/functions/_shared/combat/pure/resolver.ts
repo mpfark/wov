@@ -2160,6 +2160,32 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     (e) => !(e.targetKind === 'creature' && purgeCreatureIds.has(e.targetId)),
   );
 
+  // One tick may touch the same effect twice (a stack lands and its writeback
+  // rescheduled cadence, an absorb pool is refreshed and then spent). The
+  // committer upserts on (source_id, target_id, effect_type), and Postgres
+  // refuses a statement that hits the same conflict row twice, so the last
+  // proposal for an identity wins here and the commit sees exactly one row.
+  const mergedEffectUpserts: EffectUpsert[] = [];
+  const upsertIndexByIdentity = new Map<string, number>();
+  for (const up of liveEffectUpserts) {
+    const key = `${up.sourceCharacterId ?? 'null'}|${up.targetId}|${up.effectType}`;
+    const at = upsertIndexByIdentity.get(key);
+    if (at === undefined) {
+      upsertIndexByIdentity.set(key, mergedEffectUpserts.length);
+      mergedEffectUpserts.push(up);
+      continue;
+    }
+    // Identity fields are equal by construction; later mutable values win, and
+    // a field the later proposal leaves unset keeps the earlier value so no
+    // semantic column is blanked.
+    const prev = mergedEffectUpserts[at];
+    mergedEffectUpserts[at] = {
+      ...prev,
+      ...Object.fromEntries(Object.entries(up).filter(([, v]) => v !== undefined)),
+    } as EffectUpsert;
+  }
+
+
   // ── assemble ProposedTick (every array in a stable order) ────────
   const characterMutations: CharacterMutation[] = participants.map((p) => ({
     characterId: p.id,
@@ -2196,7 +2222,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     characters: sortBy(characterMutations, (r) => r.characterId),
     creatures: sortBy(creatureMutations, (r) => r.creatureId),
     effectUpserts: sortBy(
-      liveEffectUpserts,
+      mergedEffectUpserts,
       (r) => `${r.targetKind}:${r.targetId}`,
       (r) => r.effectType,
     ),

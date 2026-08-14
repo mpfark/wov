@@ -365,7 +365,12 @@ export function decodeEffectsSection(
       expiresAtMs: reqNum(e, 'expiresAtMs', path),
       intervalMs,
       nextTickAtMs,
-      damageType,
+      // `params.damageType` is the contract-carried truth. The `damage_type`
+      // column is a legacy mirror that the committer does not rewrite, so a row
+      // re-persisted by a later tick keeps its typing only through params.
+      damageType:
+        damageType ?? (typeof params?.damageType === 'string' ? params.damageType : undefined),
+
       sourceCharacterId,
       isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
       ampPct: def?.ampPct ?? 0,
