@@ -308,7 +308,9 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     } satisfies BatchCreature;
   });
 
-  const casts = arr(o.casts, `${p}.casts`).map((raw, i) => {
+  // Telegraph fields were added in envelope v3; a batch committed without any
+  // boss activity may omit them entirely, which decodes as "no casts".
+  const casts = arr(o.casts ?? [], `${p}.casts`).map((raw, i) => {
     const kp = `${p}.casts[${i}]`;
     const k = obj(raw, kp);
     assertKnownKeys(k, CAST_KEYS, kp);
