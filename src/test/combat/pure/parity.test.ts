@@ -143,12 +143,18 @@ function assertInvariants(out: ProposedTick, snap: EncounterSnapshot, seed: numb
     );
   }
 
-  // Casts always name their creature and carry non-negative damage.
+  // Casts always name their creature and carry non-negative damage. A fizzle
+  // keeps the target it froze at telegraph time but must never land damage.
   for (const c of out.casts) {
     expect(c.damage, `${where} cast damage non-negative`).toBeGreaterThanOrEqual(0);
-    if (c.phase === 'fizzle') expect(c.targetCharacterId, `${where} fizzle has no target`).toBeNull();
-    else expect(c.targetCharacterId, `${where} live cast has a target`).not.toBeNull();
+    if (c.phase === 'fizzle') {
+      expect(c.targets, `${where} fizzle hits nobody`).toEqual([]);
+      expect(c.storedPowerConsumed, `${where} fizzle releases nothing`).toBe(0);
+    } else {
+      expect(c.targetCharacterId, `${where} live cast has a target`).not.toBeNull();
+    }
   }
+
 
   // Presentation events never carry negative amounts.
   for (const e of out.events) {
