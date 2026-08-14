@@ -431,6 +431,31 @@ export function projectBatchFromProposal(
     consumedActionIds: [...(proposed.consumedActionIds ?? [])],
     effectUpserts: (proposed.effectUpserts ?? []) as unknown as Json[],
     effectDeleteTargetIds: [...(proposed.effectDeleteTargetIds ?? [])],
+    // The committer owns the row id of a `start`, so a caller comparing against
+    // a real committed batch supplies the ids it observed; everything else in
+    // the transition is projected straight from the pure result.
+    casts: (proposed.casts ?? []).map((c, i) => ({
+      creatureId: c.creatureId,
+      abilityKey: c.abilityKey,
+      castKey: c.castKey,
+      phase: c.phase,
+      resolvesAtMs: c.resolvesAtMs,
+      castEventId: castEventIds?.[i] ?? c.castEventId ?? null,
+      label: c.config?.label ?? c.castKey ?? c.abilityKey,
+      castMs: c.config ? Math.max(0, c.config.resolvesAtMs - c.config.startedAtMs) : 0,
+      storedPowerCap: c.config?.storedPowerCap ?? 0,
+      targets: c.targets.map((t) => ({
+        characterId: t.characterId,
+        damage: t.damage,
+        applied: t.applied,
+        isPrimary: t.isPrimary,
+      })) as unknown as Json[],
+    })),
+    storedPower: (proposed.storedPower ?? []).map((s) => ({
+      creatureId: s.creatureId,
+      currentAfter: storedPowerAfter?.[s.creatureId] ?? Math.max(0, s.delta),
+      cap: s.cap,
+    })),
     session: (proposed.session ?? { ended: false, nextDueAtMs: 0 }) as unknown as Json,
   };
 }
