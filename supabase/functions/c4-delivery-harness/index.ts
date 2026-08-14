@@ -47,7 +47,9 @@ Deno.serve(async (req) => {
   try {
     await sql.begin(async (tx) => {
       const users = await tx<{ id: string; user_id: string }[]>`
-        select distinct on (user_id) id, user_id from public.characters order by user_id, created_at limit 3`;
+        select distinct on (user_id) id, user_id from public.characters c
+        where not exists (select 1 from public.encounter_participants p where p.character_id = c.id)
+        order by user_id, created_at limit 3`;
       if (users.length < 3) throw new Error('need three distinct users for isolation');
       const [owner, left, other] = users;
       const [{ id: nodeId }] = await tx<{ id: string }[]>`select id from public.nodes limit 1`;
