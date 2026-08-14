@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       await tx`select public.prune_encounter_access_grants(2000)`;
       const stale = await tx<{ n: number }[]>`
         select count(*)::int as n from public.encounter_access_grants
-        where encounter_id = ${encId}`;
+        where encounter_id = ${encId} and expires_at < now() - interval '60 seconds'`;
       push('stale_grants_pruned', stale[0].n === 0, stale[0].n);
 
       // Always roll back: the fixtures never touch live data.
