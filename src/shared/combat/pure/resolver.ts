@@ -1821,7 +1821,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       });
     }
 
-    for (const c of creatures) {
+    // New telegraphs are live-only: catch-up may close an already-started cast
+    // but must never begin one.
+    if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id) || !c.bossCast) continue;
       if (w.activeCasts.has(c.id)) continue;
       const cast = c.bossCast;
