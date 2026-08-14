@@ -169,6 +169,33 @@ export function assertUpsertAccepted(up: EffectUpsert, creatureIds: ReadonlySet<
   );
 }
 
+/**
+ * The `active_effects` rows a snapshot's own effect section implies, so a chain
+ * that starts from seeded state (pre-existing stacks) has real rows to delete.
+ */
+export function rowsFromSnapshot(snap: EncounterSnapshot): EffectRow[] {
+  return snap.effects.map((e) => ({
+    id: e.id,
+    node_id: snap.nodeId,
+    target_id: e.targetId,
+    source_id: e.sourceCharacterId ?? null,
+    effect_type: e.effectType,
+    stacks: e.stacks,
+    damage_per_tick: Math.trunc(e.amountPerTick),
+    next_tick_at: e.nextTickAtMs,
+    expires_at: e.expiresAtMs,
+    tick_rate_ms: e.intervalMs || snap.tickRateMs,
+    source_ability_key: e.abilityKey ?? null,
+    damage_type: e.damageType ?? null,
+    mechanic: e.mechanic ?? null,
+    magnitude: e.magnitude ?? null,
+    remaining: e.remaining ?? null,
+    params: (e.params as Record<string, number | boolean | string>) ?? {},
+    params_version: e.paramsVersion ?? EFFECT_PARAMS_VERSION,
+    created_at_ms: snap.nowMs - 1,
+  }));
+}
+
 /** Mirror of the `encounter_snapshot_v2` effect projection. */
 export function projectSnapshotEffects(rows: readonly EffectRow[]): unknown[] {
   return rows.map((r) => ({

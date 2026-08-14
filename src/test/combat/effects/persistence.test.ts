@@ -28,6 +28,7 @@ import {
   decodeRows,
   nextSnapshot,
   rowFor,
+  rowsFromSnapshot,
   type CommitResult,
   type EffectRow,
 } from './roundtrip';
@@ -84,8 +85,9 @@ function chain(id: string, opts: { statusDefs?: StatusDef[] } = {}): Chain {
     : base;
   const creatureIds = new Set(snap.creatures.map((c) => c.id));
 
+  const seeded = rowsFromSnapshot(snap);
   const out = resolveTickPure(snap);
-  const commit = commitEffects([], out, { nodeId: snap.nodeId, creatureIds, nowMs: snap.nowMs });
+  const commit = commitEffects(seeded, out, { nodeId: snap.nodeId, creatureIds, nowMs: snap.nowMs });
   const effects = decodeRows(commit.rows, { creatureIds, statusDefs: snap.config.statusDefs });
 
   const next = nextSnapshot(snap, effects);
