@@ -771,6 +771,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // useMovementActions is created before useWimp exists.
   const wimpNotifyRef = useRef<(() => void) | null>(null);
 
+  // Telegraph feed. Created before the driver so committed cast transitions can
+  // be handed straight to it as each batch is applied.
+  const bossCastFeed = useBossCasts(character.current_node_id);
+  const bossCasts = bossCastFeed.casts;
+
   const combat = useCombatDriver({
     character, creatures,
     party: usePartyCombatMode ? party : null,
