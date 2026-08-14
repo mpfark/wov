@@ -149,6 +149,14 @@ export interface DecodedBatch {
   readonly consumedActionIds: readonly string[];
   readonly effectUpserts: readonly Json[];
   readonly effectDeleteTargetIds: readonly string[];
+  /**
+   * Telegraph lifecycle committed by this tick. The client's telegraph UI is
+   * driven exclusively by these transitions, so a start it never saw cannot
+   * leave a ghost bar and a resolve it never saw cannot leave one running.
+   */
+  readonly casts: readonly BatchCast[];
+  /** Stored Power after this tick, per channelling creature. */
+  readonly storedPower: readonly BatchStoredPower[];
   readonly session: Json;
 }
 
@@ -170,8 +178,25 @@ const BATCH_KEYS = [
   'consumedActionIds',
   'effectUpserts',
   'effectDeleteTargetIds',
+  'casts',
+  'storedPower',
   'session',
 ] as const;
+
+const CAST_KEYS = [
+  'creatureId',
+  'abilityKey',
+  'castKey',
+  'phase',
+  'resolvesAtMs',
+  'castEventId',
+  'label',
+  'castMs',
+  'storedPowerCap',
+  'targets',
+] as const;
+
+const STORED_POWER_KEYS = ['creatureId', 'currentAfter', 'cap'] as const;
 
 const EVENT_KEYS = [
   'seq',
