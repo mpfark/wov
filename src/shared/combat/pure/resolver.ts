@@ -1541,7 +1541,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
     // 3. Autoattacks — participants in stable order, each on their target.
-    for (const p of participants) {
+    //    Live only: an offscreen sweep may never swing a weapon.
+    if (!effectsOnly) for (const p of participants) {
       if (!isAliveP(p.id) || !isPresent(p.id)) continue;
       const creature = targetOf(p.id);
       if (!creature) continue;
