@@ -55,6 +55,7 @@ import {
   seededWeaponAbilityDamage,
 } from './rolls';
 import type {
+  ActionSnapshot,
   ActiveCastSnapshot,
   BondProposal,
   CastMutation,
@@ -2330,9 +2331,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     materials: sortBy(materials, (r) => r.characterId, (r) => r.materialKey),
     gems: sortBy(gems, (r) => r.characterId, (r) => r.gemKey),
     bonds: sortBy(bonds, (r) => r.characterId),
-    consumedActionIds: sortIds(consumedActionIds),
+    // Synthetic stance intents are internal: they are neither acknowledged nor
+    // rejected as client actions, because no client ever queued them.
+    consumedActionIds: sortIds(consumedActionIds.filter((id) => !stanceActionIds.has(id))),
     consumedBuffs: sortBy(consumedBuffs, (c) => `${c.characterId}|${c.buff}`),
-    rejectedActions: sortBy(rejectedActions, (r) => r.actionId),
+    rejectedActions: sortBy(
+      rejectedActions.filter((r) => !stanceActionIds.has(r.actionId)),
+      (r) => r.actionId,
+    ),
     session: {
       ended: allEnded,
       nextDueAtMs: snapshot.nowMs + ticks * tickRate,
