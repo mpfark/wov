@@ -12,11 +12,13 @@
  * may turn a `ProposedTick` into database writes. Nothing in production calls
  * this module yet.
  *
- * Live vs catch-up: `snapshot.mode` is carried through the input and output so
- * the committer and the log can tell them apart, and it is the *only* thing
- * that differs — both modes run the identical simulation over the identical
- * ordering with the identical seeds, and neither mode carries its own
- * ownership semantics. Ownership belongs to the encounter claim alone.
+ * Live vs catch-up: `snapshot.mode` is a real semantic switch, not a label.
+ * `live` runs the full simulation. `effects_only` may only advance already
+ * persisted state — periodic effect ticks, expiry, deaths/rewards and closure
+ * of an already-started boss cast. It never swings a player or creature
+ * autoattack, never consumes a pending action, never starts a new cast, never
+ * banks Stored Power from a simulated autoattack and never degrades durability.
+ * Ordering, seeds and the claim-based ownership model are identical in both.
  */
 
 import { getStatModifier } from '../../formulas/stats';
