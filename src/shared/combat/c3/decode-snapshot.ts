@@ -280,6 +280,8 @@ const EFFECT_KEYS = [
   'intervalMs', 'nextTickAtMs', 'sourceAbilityKey', 'rowVersion',
   // Semantic effect contract (see pure/effect-contract.ts).
   'mechanic', 'magnitude', 'remaining', 'params', 'paramsVersion', 'damageType',
+  // Lifetime class: 'timed' (default) or 'stance' (reservation-backed).
+  'lifetime',
 ] as const;
 
 /** Status classification the effect decoder consults for periodicity/amp. */
@@ -357,6 +359,7 @@ export function decodeEffectsSection(
     }
     effects.push({
       id,
+      lifetime: optStr(e, 'lifetime', path) === 'stance' ? 'stance' : 'timed',
       targetKind,
       targetId,
       effectType,

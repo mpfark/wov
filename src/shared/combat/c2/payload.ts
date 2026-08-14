@@ -172,6 +172,7 @@ export function buildCommitPayload(
     // field may not change) and which would silently erase absorb pools and
     // one-shot charges.
     effectUpserts: proposed.effectUpserts.map((e) => ({
+      lifetime: e.lifetime ?? 'timed',
       targetId: e.targetId,
       sourceId: e.sourceCharacterId ?? e.targetId,
       effectType: e.effectType,
