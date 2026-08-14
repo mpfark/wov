@@ -810,7 +810,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
     // 2. Durable ability intents — resolved once, on the first simulated tick.
-    if (t === 0) {
+    // Effects-only never consumes a pending intent: the action stays pending
+    // for the next live tick, and is neither executed nor rejected here.
+    if (t === 0 && !effectsOnly) {
       for (const a of actions) {
         const caster = byParticipant.get(a.characterId);
         if (!caster) continue;
