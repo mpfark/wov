@@ -3342,8 +3342,6 @@ export type Database = {
             }
             Returns: boolean
           }
-      c4_delivery_harness_run: { Args: never; Returns: Json }
-      c4_harness_caller_allowed: { Args: never; Returns: boolean }
       cancel_combat_action: {
         Args: { _id: string; _reason?: string }
         Returns: undefined
