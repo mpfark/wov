@@ -208,14 +208,23 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
         rarity === 'boss' && g() < 0.8
           ? {
               abilityKey: 'doom_beam',
+              castKey: 'doom_beam',
               label: 'Doom Beam',
               castTicks: int(1, 3),
               cooldownTicks: int(2, 5),
               damage: int(10, 60),
+              damageAoe: int(0, 20),
               damageType: 'fire',
               targetMode: pick(['tank_strict', 'tank_preferred', 'random_alive'] as const),
               channeling: g() < 0.5,
               storedPowerCap: 5,
+              primaryShare: 1,
+              aoeShare: Number(g().toFixed(2)),
+              consumeMode: pick(['all', 'percent', 'fixed', 'preserve', 'reset', 'ignore'] as const),
+              consumePct: int(10, 100),
+              consumeFixed: int(0, 5),
+              pauseAutoattacks: g() < 0.7,
+              lockMs: pick([0, 1500, 3000]),
               castingText: 'The beast gathers ruin.',
               castedText: 'The beam lands.',
             }
