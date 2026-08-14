@@ -95,3 +95,35 @@ describe('C2 commit payload effect serialisation', () => {
     }
   });
 });
+
+/**
+ * A stance row's lifetime is owned by the CP reservation, so the serialised row
+ * must carry `lifetime: 'stance'` and the `active_effects` no-expiry sentinel
+ * instead of whatever clock-derived expiry the resolver happened to compute.
+ */
+describe('C2 commit payload — stance rows', () => {
+  const stanceProposed = new Proxy(
+    {
+      effectUpserts: [{ ...upsert, lifetime: 'stance' as const }],
+      rngDraws: 0,
+    } as Record<string, unknown>,
+    { get: (t, k) => (k in t ? t[k as string] : []) },
+  ) as unknown as ProposedTick;
+
+  it('carries the stance lifetime and the no-expiry sentinel', () => {
+    const payload = buildCommitPayload(envelope, stanceProposed, {
+      sessionId: null, ended: false, engagedCreatureIds: [],
+    }) as unknown as { effectUpserts: Record<string, unknown>[] };
+    expect(payload.effectUpserts[0]).toMatchObject({
+      lifetime: 'stance',
+      expiresAtMs: 9007199254740991,
+    });
+  });
+
+  it('leaves a timed row expiry untouched', () => {
+    const payload = buildCommitPayload(envelope, emptyProposed, {
+      sessionId: null, ended: false, engagedCreatureIds: [],
+    }) as unknown as { effectUpserts: Record<string, unknown>[] };
+    expect(payload.effectUpserts[0]).toMatchObject({ lifetime: 'timed', expiresAtMs: 60_000 });
+  });
+});

@@ -134,6 +134,7 @@ export type Database = {
           effect_type: string
           expires_at: number
           id: string
+          lifetime: string
           magnitude: number | null
           mechanic: string | null
           next_tick_at: number | null
@@ -155,6 +156,7 @@ export type Database = {
           effect_type: string
           expires_at: number
           id?: string
+          lifetime?: string
           magnitude?: number | null
           mechanic?: string | null
           next_tick_at?: number | null
@@ -176,6 +178,7 @@ export type Database = {
           effect_type?: string
           expires_at?: number
           id?: string
+          lifetime?: string
           magnitude?: number | null
           mechanic?: string | null
           next_tick_at?: number | null

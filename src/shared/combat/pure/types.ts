@@ -160,6 +160,8 @@ export interface ParticipantSnapshot {
    * decoder from the snapshotted equipment rows. Needed because max HP/CP/MP
    * recalculation on level-up is a function of *effective* attributes.
    */
+  /** Reservation-backed stances, resolved by the loader. See `StanceSnapshot`. */
+  readonly stances?: readonly StanceSnapshot[];
   readonly equipmentBonuses: Readonly<Record<string, number>>;
 }
 
@@ -268,6 +270,16 @@ export interface CreatureSnapshot {
 
 export interface EffectSnapshot {
   readonly id: string;
+  /**
+   * Row lifetime class (`active_effects.lifetime`).
+   * - `timed`: expires at `expiresAtMs` like every ordinary status.
+   * - `stance`: a CP-reservation-backed persistent state. It carries a
+   *   no-expiry sentinel and is NEVER expired by the resolver; the only
+   *   authority that removes it is the reservation itself (drop, replace,
+   *   logout, death), enforced by the database trigger on
+   *   `characters.reserved_buffs`.
+   */
+  readonly lifetime?: 'timed' | 'stance';
   readonly targetKind: 'character' | 'creature';
   readonly targetId: string;
   readonly effectType: string;
@@ -404,6 +416,30 @@ export interface ActionSnapshot {
 }
 
 
+/**
+ * A stance the character currently has switched on, with its configuration
+ * already resolved by the loader from `characters.reserved_buffs`.
+ *
+ * The reservation is the ONE authority for a stance's existence; this snapshot
+ * only carries the numbers needed to (re)materialise the stance's semantic
+ * `active_effects` row when it is missing, so a stance keeps working across
+ * ticks, restarts and re-entries without ever being re-cast by the client.
+ */
+export interface StanceSnapshot {
+  readonly stanceKey: string;
+  readonly abilityKey: string;
+  readonly mechanic: ResolverMechanic;
+  readonly damageType: string | null;
+  readonly amount: number;
+  readonly durationMs: number;
+  readonly intervalMs: number;
+  readonly statusKey: string | null;
+  readonly statusChancePct: number;
+  readonly maxStacks: number;
+  readonly weaponBased: boolean;
+  readonly params?: ActionParamsSnapshot;
+}
+
 export interface EngagementSnapshot {
   readonly creatureId: string;
   readonly characterId: string;
@@ -482,6 +518,8 @@ export interface CreatureMutation {
 }
 
 export interface EffectUpsert {
+  /** See `EffectSnapshot.lifetime`. Omitted means `timed`. */
+  readonly lifetime?: 'timed' | 'stance';
   readonly targetKind: 'character' | 'creature';
   readonly targetId: string;
   readonly effectType: string;

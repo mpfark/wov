@@ -55,6 +55,7 @@ import {
   seededWeaponAbilityDamage,
 } from './rolls.ts';
 import type {
+  ActionSnapshot,
   ActiveCastSnapshot,
   BondProposal,
   CastMutation,
@@ -106,6 +107,55 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const participants = orderParticipants(snapshot.participants);
   const creatures = orderCreatures(snapshot.creatures);
   const actions = orderActions(snapshot.actions);
+
+  /**
+   * Stance materialisation.
+   *
+   * A stance lives in `characters.reserved_buffs` (the reservation is its only
+   * authority) but its *semantic* row lives in `active_effects`. When the row
+   * is missing — first tick after activation, or after any restart — the
+   * resolver re-materialises it by running the stance's own configuration
+   * through the ordinary application path as a zero-cost intent. It is never a
+   * re-cast: no CP is charged, nothing is queued by the client, and the row it
+   * writes carries `lifetime: 'stance'` so nothing can expire it.
+   */
+  const stanceRowKey = (characterId: string, abilityKey: string) => `${characterId}|${abilityKey}`;
+  const stanceByRow = new Map<string, { characterId: string; abilityKey: string }>();
+  const stanceActions: ActionSnapshot[] = [];
+  for (const p of snapshot.participants) {
+    for (const st of p.stances ?? []) {
+      stanceByRow.set(stanceRowKey(p.id, st.abilityKey), { characterId: p.id, abilityKey: st.abilityKey });
+      const materialised = snapshot.effects.some(
+        (e) =>
+          e.targetKind === 'character' &&
+          e.targetId === p.id &&
+          e.lifetime === 'stance' &&
+          (e.abilityKey ?? null) === st.abilityKey,
+      );
+      if (materialised) continue;
+      stanceActions.push({
+        id: `stance:${p.id}:${st.stanceKey}`,
+        characterId: p.id,
+        creatureId: null,
+        allyId: null,
+        abilityKey: st.abilityKey,
+        mechanic: st.mechanic,
+        damageType: st.damageType,
+        // The reservation already paid for this stance.
+        cpCost: 0,
+        amount: st.amount,
+        durationMs: st.durationMs,
+        intervalMs: st.intervalMs,
+        statusKey: st.statusKey,
+        statusChancePct: st.statusChancePct,
+        maxStacks: st.maxStacks,
+        weaponBased: st.weaponBased,
+        sequence: -1,
+        ...(st.params ? { params: st.params } : {}),
+      });
+    }
+  }
+  const stanceActionIds = new Set(stanceActions.map((a) => a.id));
   const effects = orderEffects(snapshot.effects);
   const engagements = orderEngagements(snapshot.engagements);
   const procs = orderProcs(snapshot.procs);
@@ -173,13 +223,25 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const isAliveC = (id: string): boolean =>
     !w.cKilled.has(id) && (w.cHp.get(id) ?? 0) > 0;
 
+  /**
+   * Stance rows are reservation-backed persistent state: they carry a
+   * no-expiry sentinel and the resolver has no authority to expire them. Only
+   * the CP reservation (drop, replace, logout, death) removes a stance, via the
+   * database trigger on `characters.reserved_buffs`.
+   */
+  const isStance = (e: { lifetime?: 'timed' | 'stance' }): boolean => e.lifetime === 'stance';
+
+  /** True while an effect row is still in force at `at`. */
+  const effectLive = (e: { lifetime?: 'timed' | 'stance'; expiresAtMs: number }, at: number) =>
+    isStance(e) || e.expiresAtMs > at;
+
   /** Amp percent currently applied to a creature by damage-amp statuses. */
   const ampPctFor = (creatureId: string, nowMs: number): number => {
     let pct = 0;
     for (const e of effects) {
       if (e.targetKind !== 'creature' || e.targetId !== creatureId) continue;
       if (!(e.ampPct > 0)) continue;
-      if (e.expiresAtMs <= nowMs) continue;
+      if (!effectLive(e, nowMs)) continue;
       pct += e.ampPct;
     }
     return pct;
@@ -753,7 +815,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     //    states (`aura_pulse`, `party_regen`, `regen_buff`), which pulse on
     //    their own configured cadence rather than on every tick.
     for (const e of effects) {
-      if (e.expiresAtMs <= nowMs) {
+      if (!effectLive(e, nowMs)) {
         effectDeleteIds.add(e.id);
         continue;
       }
@@ -813,7 +875,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     // Effects-only never consumes a pending intent: the action stays pending
     // for the next live tick, and is neither executed nor rejected here.
     if (t === 0 && !effectsOnly) {
-      for (const a of actions) {
+      for (const a of [...stanceActions, ...actions]) {
         const caster = byParticipant.get(a.characterId);
         if (!caster) continue;
         if (!isAliveP(caster.id)) {
@@ -2011,6 +2073,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     const advanced = effectNextDue.get(e.id);
     if (advanced === undefined || effectDeleteIds.has(e.id)) continue;
     effectUpserts.push({
+      lifetime: e.lifetime,
       targetKind: e.targetKind,
       targetId: e.targetId,
       effectType: e.effectType,
@@ -2039,12 +2102,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     if (e.mechanic !== 'absorb_buff' || effectDeleteIds.has(e.id)) continue;
     const left = Math.max(0, Math.floor(w.shield.get(e.targetId) ?? 0));
     if (left === Math.floor(e.remaining ?? e.magnitude ?? 0) && left > 0) continue;
-    if (left <= 0) {
+    if (left <= 0 && !isStance(e)) {
       // Fully consumed: the row is removed exactly once.
       effectDeleteIds.add(e.id);
       continue;
     }
     effectUpserts.push({
+      // A stance-backed shield survives an emptied pool: the reservation, not
+      // the pool, owns the row's existence.
+      lifetime: e.lifetime,
       targetKind: 'character',
       targetId: e.targetId,
       effectType: e.effectType,
@@ -2181,9 +2247,18 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   // committer upserts on (source_id, target_id, effect_type), and Postgres
   // refuses a statement that hits the same conflict row twice, so the last
   // proposal for an identity wins here and the commit sees exactly one row.
+  // Rows written for a switched-on stance are reservation-backed persistent
+  // state, never a timed buff. Marking them here — once, by identity — keeps
+  // every mechanic branch above free of stance special-casing.
+  const stanceMarked: EffectUpsert[] = liveEffectUpserts.map((up) =>
+    up.targetKind === 'character' && stanceByRow.has(stanceRowKey(up.targetId, up.abilityKey ?? ''))
+      ? { ...up, lifetime: 'stance' as const }
+      : up,
+  );
+
   const mergedEffectUpserts: EffectUpsert[] = [];
   const upsertIndexByIdentity = new Map<string, number>();
-  for (const up of liveEffectUpserts) {
+  for (const up of stanceMarked) {
     const key = `${up.sourceCharacterId ?? 'null'}|${up.targetId}|${up.effectType}`;
     const at = upsertIndexByIdentity.get(key);
     if (at === undefined) {
@@ -2256,9 +2331,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     materials: sortBy(materials, (r) => r.characterId, (r) => r.materialKey),
     gems: sortBy(gems, (r) => r.characterId, (r) => r.gemKey),
     bonds: sortBy(bonds, (r) => r.characterId),
-    consumedActionIds: sortIds(consumedActionIds),
+    // Synthetic stance intents are internal: they are neither acknowledged nor
+    // rejected as client actions, because no client ever queued them.
+    consumedActionIds: sortIds(consumedActionIds.filter((id) => !stanceActionIds.has(id))),
     consumedBuffs: sortBy(consumedBuffs, (c) => `${c.characterId}|${c.buff}`),
-    rejectedActions: sortBy(rejectedActions, (r) => r.actionId),
+    rejectedActions: sortBy(
+      rejectedActions.filter((r) => !stanceActionIds.has(r.actionId)),
+      (r) => r.actionId,
+    ),
     session: {
       ended: allEnded,
       nextDueAtMs: snapshot.nowMs + ticks * tickRate,

@@ -48,7 +48,9 @@ import type {
   ProcSnapshot,
   ResolutionMode,
   ResolverConfig,
+  StanceSnapshot,
   WeaponSnapshot,
+
 } from '../pure/types.ts';
 
 // ── strict primitive readers ───────────────────────────────────────
@@ -213,6 +215,12 @@ export interface SnapshotAux {
   readonly salvageMaterialKeyByCreatureId: ReadonlyMap<string, string | null>;
   /** Remaining boss cast cooldown in ticks, tracked by the orchestration. */
   readonly castCooldownTicksByCreatureId: ReadonlyMap<string, number>;
+  /**
+   * Stance keys switched on per character (`characters.reserved_buffs`). A key
+   * whose ability the catalog does not configure is dropped here, so an
+   * unconfigured stance can never fail a whole tick closed.
+   */
+  readonly stanceKeysByCharacterId?: ReadonlyMap<string, readonly string[]>;
 }
 
 export interface DecodedSnapshot {
@@ -280,6 +288,8 @@ const EFFECT_KEYS = [
   'intervalMs', 'nextTickAtMs', 'sourceAbilityKey', 'rowVersion',
   // Semantic effect contract (see pure/effect-contract.ts).
   'mechanic', 'magnitude', 'remaining', 'params', 'paramsVersion', 'damageType',
+  // Lifetime class: 'timed' (default) or 'stance' (reservation-backed).
+  'lifetime',
 ] as const;
 
 /** Status classification the effect decoder consults for periodicity/amp. */
@@ -357,6 +367,7 @@ export function decodeEffectsSection(
     }
     effects.push({
       id,
+      lifetime: optStr(e, 'lifetime', path) === 'stance' ? 'stance' : 'timed',
       targetKind,
       targetId,
       effectType,
@@ -686,8 +697,28 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       return eq;
     });
     const partyId = optStr(p, 'partyId', path);
-    // Shape-checked, then discarded: stances reserve CP, they do not buff.
+    // Shape-checked for reserved CP; the semantic side of a stance is resolved
+    // from configuration below and materialised by the resolver.
     decodeReservation(p, path);
+    const stances: StanceSnapshot[] = [];
+    for (const stanceKey of aux.stanceKeysByCharacterId?.get(id) ?? []) {
+      const cfg = aux.abilityConfig.get(abilityConfigKey(id, stanceKey));
+      if (!cfg) continue;
+      stances.push({
+        stanceKey,
+        abilityKey: stanceKey,
+        mechanic: cfg.mechanic,
+        damageType: cfg.damageType,
+        amount: cfg.amount,
+        durationMs: cfg.durationMs,
+        intervalMs: cfg.intervalMs,
+        statusKey: cfg.statusKey,
+        statusChancePct: cfg.statusChancePct,
+        maxStacks: cfg.maxStacks,
+        weaponBased: cfg.weaponBased,
+        ...(cfg.params ? { params: cfg.params } : {}),
+      });
+    }
     const hasShield = equipment.some((e) => optStr(e, 'slot', path) === 'off_hand');
 
     participants.push({
@@ -720,6 +751,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       xp: reqNum(p, 'xp', path),
       unspentStatPoints: reqNum(p, 'unspentStatPoints', path),
       respecPoints: reqNum(p, 'respecPoints', path),
+      stances,
       equipmentBonuses: sumEquipmentBonuses(equipment, `${path}.equipment`),
     });
 
@@ -737,7 +769,16 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   const spawnSeqByCreatureId: Record<string, number> = {};
   const dropChanceByCreatureId: Record<string, ResolvedDropChance> = {};
 
+  // Stored Power is banked on the encounter row, but it is *owned* by the
+  // creature that is channelling. The resolver debits the bank from the
+  // creature's own pool, so the accumulator must be seeded onto that creature
+  // here — otherwise every consume mode debits an empty pool.
+  const spSeed = obj(root.storedPower, '$.storedPower');
+  const spSeedCurrent = reqNum(spSeed, 'current', '$.storedPower');
+  const spSeedCreatureId = optStr(spSeed, 'castingCreatureId', '$.storedPower');
+
   arr(root.creatures, '$.creatures').forEach((entry, i) => {
+
     const path = `$.creatures[${i}]`;
     const c = obj(entry, path);
     assertKnownKeys(c, CREATURE_KEYS, path);
@@ -781,7 +822,9 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       lootTable,
       salvageMaterialKey: aux.salvageMaterialKeyByCreatureId.get(id) ?? null,
       bossCast,
-      storedPower: 0, // per-creature accumulation is encounter-scoped; see envelope.storedPower
+      // Encounter-scoped accumulator, attributed to its owning channeller.
+      storedPower: spSeedCreatureId && id === spSeedCreatureId ? spSeedCurrent : 0,
+
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
     });

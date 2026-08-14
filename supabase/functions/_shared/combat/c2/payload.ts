@@ -12,6 +12,9 @@
  */
 
 import { EFFECT_PARAMS_VERSION } from '../pure/effect-contract.ts';
+
+/** `active_effects` no-expiry sentinel for stance rows (DB contract). */
+const STANCE_NO_EXPIRY_MS = 9007199254740991;
 import type { ProposedTick } from '../pure/types.ts';
 
 import {
@@ -172,12 +175,15 @@ export function buildCommitPayload(
     // field may not change) and which would silently erase absorb pools and
     // one-shot charges.
     effectUpserts: proposed.effectUpserts.map((e) => ({
+      lifetime: e.lifetime ?? 'timed',
+      // Stance rows carry the no-expiry sentinel the database contract
+      // requires: their lifetime is owned by the CP reservation, not by a clock.
+      expiresAtMs: e.lifetime === 'stance' ? STANCE_NO_EXPIRY_MS : e.expiresAtMs,
       targetId: e.targetId,
       sourceId: e.sourceCharacterId ?? e.targetId,
       effectType: e.effectType,
       stacks: e.stacks,
       amountPerTick: e.amountPerTick,
-      expiresAtMs: e.expiresAtMs,
       intervalMs: e.intervalMs,
       nextTickAtMs: e.nextTickAtMs,
       sourceAbilityKey: e.abilityKey ?? e.effectType,
