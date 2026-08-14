@@ -406,25 +406,37 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
   /**
-   * `meta` is instrumentation-only context from the transport that delivered
-   * this result (own HTTP response vs party broadcast). It never influences
-   * how the result is applied.
+   * `meta.source` says which transport delivered this result:
+   *   - `'batch'`  — a committed `encounter_tick_batches` row. Only these render.
+   *   - anything else — an acknowledgement (own HTTP response, party broadcast).
+   *     It contributes the encounter identity and the committed tick number, and
+   *     is then discarded, so no client can ever display state that is not in a
+   *     committed batch.
    */
   const processTickResult = useCallback((
     data: CombatTickResponse,
-    meta?: { seq?: number; receivedAt?: number },
+    meta?: { seq?: number; receivedAt?: number; source?: 'batch' | 'ack' },
   ) => {
-    // B5: adopt the encounter this result belongs to so the shared batch
-    // stream can be subscribed to (and gap-recovered) for it.
+    // Adopt the encounter this result belongs to so the shared batch stream can
+    // be subscribed to (and recovered) for it.
     const incomingEncounterId = data.encounter_id ?? null;
     if (incomingEncounterId && incomingEncounterId !== encounterIdRef.current) {
       encounterIdRef.current = incomingEncounterId;
       setEncounterId(incomingEncounterId);
     }
-    // Duplicate-batch guard: the same authoritative batch can reach us twice
-    // (our own response plus the leader broadcast, or a recovery replay).
-    // Applying it twice duplicates log lines and re-applies HP.
     const batchId = data.encounter_batch_id;
+
+    // Acknowledgement path: bound recovery, render nothing.
+    if (meta?.source !== 'batch' && (batchId || typeof data.encounter_tick === 'number')) {
+      noteCommittedRef.current(data.encounter_tick ?? null, batchId ?? null);
+      if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+        traceTickResponse(meta.seq, { roundTripMs: 0, outcome: 'reserved', batchId: batchId ?? null });
+      }
+      return;
+    }
+
+    // Duplicate-batch guard: a batch can still reach us twice (realtime plus a
+    // recovery replay). Applying it twice duplicates log lines and HP writes.
     if (batchId) {
       if (appliedBatchIdsRef.current.has(batchId)) {
         if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
@@ -439,9 +451,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
       }
     }
-    // Tell the batch sequencer this tick already landed on the fast path, so
-    // the realtime copy of the same tick is skipped rather than replayed.
-    markBatchAppliedRef.current(data.encounter_tick ?? null, batchId ?? null);
 
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
