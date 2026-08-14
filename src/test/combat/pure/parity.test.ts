@@ -67,6 +67,17 @@ function assertInvariants(out: ProposedTick, snap: EncounterSnapshot, seed: numb
     }
   }
 
+  // The committer upserts effects on (source_id, target_id, effect_type), and
+  // Postgres refuses a statement that hits the same conflict row twice. A tick
+  // may therefore never propose two upserts with the same identity.
+  const effectIdentities = out.effectUpserts.map(
+    (e) => `${e.sourceCharacterId ?? 'null'}|${e.targetId}|${e.effectType}`,
+  );
+  expect(new Set(effectIdentities).size, `${where} unique effect upsert identities`).toBe(
+    effectIdentities.length,
+  );
+
+
   // A kill is fully described: recipients, rewards, purges, one row only.
   const killIds = out.kills.map((k) => k.creatureId);
   expect(new Set(killIds).size, `${where} unique kills`).toBe(killIds.length);
