@@ -737,7 +737,16 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   const spawnSeqByCreatureId: Record<string, number> = {};
   const dropChanceByCreatureId: Record<string, ResolvedDropChance> = {};
 
+  // Stored Power is banked on the encounter row, but it is *owned* by the
+  // creature that is channelling. The resolver debits the bank from the
+  // creature's own pool, so the accumulator must be seeded onto that creature
+  // here — otherwise every consume mode debits an empty pool.
+  const spSeed = obj(root.storedPower, '$.storedPower');
+  const spSeedCurrent = reqNum(spSeed, 'current', '$.storedPower');
+  const spSeedCreatureId = optStr(spSeed, 'castingCreatureId', '$.storedPower');
+
   arr(root.creatures, '$.creatures').forEach((entry, i) => {
+
     const path = `$.creatures[${i}]`;
     const c = obj(entry, path);
     assertKnownKeys(c, CREATURE_KEYS, path);
@@ -781,7 +790,9 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       lootTable,
       salvageMaterialKey: aux.salvageMaterialKeyByCreatureId.get(id) ?? null,
       bossCast,
-      storedPower: 0, // per-creature accumulation is encounter-scoped; see envelope.storedPower
+      // Encounter-scoped accumulator, attributed to its owning channeller.
+      storedPower: spSeedCreatureId && id === spSeedCreatureId ? spSeedCurrent : 0,
+
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
     });
