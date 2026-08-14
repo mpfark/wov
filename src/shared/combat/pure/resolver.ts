@@ -119,6 +119,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     cLastSource: new Map(),
     storedPower: new Map(creatures.map((c) => [c.id, c.storedPower])),
     castCooldown: new Map(creatures.map((c) => [c.id, c.castCooldownTicks])),
+    activeCasts: new Map(snapshot.activeCasts.map((c) => [c.creatureId, c])),
     hitters: new Set<string>(),
   };
 
