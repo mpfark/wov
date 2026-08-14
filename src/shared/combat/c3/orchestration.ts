@@ -118,6 +118,35 @@ async function readCombatMode(db: OrchestrationDb): Promise<'open' | 'maintenanc
 }
 
 /**
+ * C5 phase 4 controlled soak (TEMPORARY).
+ *
+ * While combat is globally closed, an explicitly allowlisted character standing
+ * on the single allowlisted test node may still resolve — through this exact
+ * pipeline, with no alternate resolver and no relaxed rule. Authority lives in
+ * `public.combat_soak_access_check`, which additionally requires the
+ * `combat_soak` switch to be `on` and the allowlist row to be unexpired.
+ *
+ * Fails closed on any error. Remove together with the allowlist table after the
+ * soak.
+ */
+async function soakAccessAllowed(
+  db: OrchestrationDb,
+  req: OrchestrationRequest,
+): Promise<boolean> {
+  try {
+    const { data, error } = await db.rpc('combat_soak_access_check', {
+      _character_id: req.characterId ?? null,
+      _node_id: req.nodeId ?? null,
+    });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
  * Resolve the single encounter this request belongs to.
  *
  * Live callers go through `encounter_intake`, which is also what enforces one
@@ -255,8 +284,9 @@ export async function orchestrateCombatResolution(
 ): Promise<OrchestrationResult> {
   const { db } = deps;
 
-  // 1. Maintenance gate — before any encounter work.
-  if ((await readCombatMode(db)) !== 'open') {
+  // 1. Maintenance gate — before any encounter work. The only exception is the
+  // temporary C5 soak allowlist, which is decided by the database.
+  if ((await readCombatMode(db)) !== 'open' && !(await soakAccessAllowed(db, req))) {
     return {
       ok: false,
       kind: 'maintenance',
@@ -264,6 +294,7 @@ export async function orchestrateCombatResolution(
       retryable: true,
     };
   }
+
 
   let encounterId: string;
   let claim: Claim;
