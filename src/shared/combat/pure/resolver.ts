@@ -1698,9 +1698,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         continue;
       }
 
-      // Still channeling: bank the paused autoattack as Stored Power.
+      // Still channeling: bank the paused autoattack as Stored Power. Banking
+      // is derived from a creature autoattack, so effects-only carries the
+      // channel forward without banking anything.
       if (nowMs < cast.resolvesAtMs) {
         if (cast.pauseAutoattacks) pausedByCast.add(creatureId);
+        if (effectsOnly) continue;
         const cap = cast.storedPowerCap;
         const primary = cast.targetCharacterId
           ? byParticipant.get(cast.targetCharacterId)
