@@ -1907,7 +1907,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
 
     // 5. Creature counterattacks — stable creature order, seeded targeting.
-    for (const c of creatures) {
+    //    Live only.
+    if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id)) continue;
       // A channeling boss banks its autoattack instead of swinging it.
       if (pausedByCast.has(c.id)) continue;
