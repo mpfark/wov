@@ -284,8 +284,9 @@ export async function orchestrateCombatResolution(
 ): Promise<OrchestrationResult> {
   const { db } = deps;
 
-  // 1. Maintenance gate — before any encounter work.
-  if ((await readCombatMode(db)) !== 'open') {
+  // 1. Maintenance gate — before any encounter work. The only exception is the
+  // temporary C5 soak allowlist, which is decided by the database.
+  if ((await readCombatMode(db)) !== 'open' && !(await soakAccessAllowed(db, req))) {
     return {
       ok: false,
       kind: 'maintenance',
@@ -293,6 +294,7 @@ export async function orchestrateCombatResolution(
       retryable: true,
     };
   }
+
 
   let encounterId: string;
   let claim: Claim;
