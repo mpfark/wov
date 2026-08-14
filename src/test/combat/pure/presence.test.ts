@@ -29,7 +29,7 @@ const dotFromGone = {
   id: 'eff-dot', targetKind: 'creature' as const, targetId: dying.id,
   effectType: 'bleed', stacks: 2, amountPerTick: 5, expiresAtMs: NOW + 60_000,
   intervalMs: TICK, nextTickAtMs: NOW, damageType: 'physical',
-  sourceCharacterId: gone.id, isPeriodic: true,
+  sourceCharacterId: gone.id, isPeriodic: true, ampPct: 0,
 };
 
 function catchupWithDot(over: Partial<EncounterSnapshot> = {}): EncounterSnapshot {
