@@ -174,14 +174,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    */
   const appliedBatchIdsRef = useRef<Set<string>>(new Set());
   /**
-   * B5: the shared encounter whose `encounter_tick_batches` stream we follow.
-   * Learned from the tick response; the batch stream is the authoritative
-   * delivery path while the HTTP response / party broadcast stay fast hints.
+   * C4: the shared encounter whose `encounter_tick_batches` stream we follow.
+   * Learned from the tick response. The committed batch stream is the ONLY
+   * delivery path that may render; the HTTP response and the party broadcast
+   * are acknowledgements that merely bound recovery.
    */
   const [encounterId, setEncounterId] = useState<string | null>(null);
   const encounterIdRef = useRef<string | null>(null);
   /** Set once useEncounterBatches is mounted (below); no-op before that. */
-  const markBatchAppliedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
+  const noteCommittedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
