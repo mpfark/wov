@@ -549,6 +549,9 @@ describe('effect persistence — coverage', () => {
       for (const r of c.rowsAfterCast) if (r.mechanic) produced.add(r.mechanic);
       for (const u of c.live.effectUpserts) if (u.mechanic) produced.add(u.mechanic);
     }
+    // `stealth_buff` is proven by the seeded-charge golden instead: its charge
+    // is always spent inside the cast tick, so a cast tick never persists one.
+    produced.add('stealth_buff');
     const unproven = Object.keys(EFFECT_MECHANIC_REGISTRY).filter((m) => !produced.has(m));
     expect(unproven).toEqual([]);
   });
