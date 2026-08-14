@@ -128,6 +128,7 @@ export function snapshot(over: Partial<EncounterSnapshot> = {}): EncounterSnapsh
     effects: [],
     actions: [],
     engagements: [{ creatureId: c.id, characterId: p.id, lastActionAtMs: 1_699_999_000_000 }],
+    activeCasts: [],
     procs: [],
     config: CONFIG,
     ...over,
@@ -207,14 +208,23 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
         rarity === 'boss' && g() < 0.8
           ? {
               abilityKey: 'doom_beam',
+              castKey: 'doom_beam',
               label: 'Doom Beam',
               castTicks: int(1, 3),
               cooldownTicks: int(2, 5),
               damage: int(10, 60),
+              damageAoe: int(0, 20),
               damageType: 'fire',
               targetMode: pick(['tank_strict', 'tank_preferred', 'random_alive'] as const),
               channeling: g() < 0.5,
               storedPowerCap: 5,
+              primaryShare: 1,
+              aoeShare: Number(g().toFixed(2)),
+              consumeMode: pick(['all', 'percent', 'fixed', 'preserve', 'reset', 'ignore'] as const),
+              consumePct: int(10, 100),
+              consumeFixed: int(0, 5),
+              pauseAutoattacks: g() < 0.7,
+              lockMs: pick([0, 1500, 3000]),
               castingText: 'The beast gathers ruin.',
               castedText: 'The beam lands.',
             }
@@ -319,6 +329,37 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
     }
   }
 
+  // Some encounters start mid-telegraph, so the randomized suites exercise the
+  // channel and release halves of a cast, not just the start.
+  const activeCasts = creatures
+    .filter((c) => c.bossCast && g() < 0.4)
+    .map((c) => {
+      const cast = c.bossCast!;
+      const due = g() < 0.5;
+      return {
+        castEventId: `cast-${c.id}`,
+        creatureId: c.id,
+        abilityKey: cast.abilityKey,
+        castKey: cast.castKey,
+        label: cast.label,
+        startedAtMs: 1_699_999_990_000,
+        resolvesAtMs: due ? 1_699_999_999_000 : 1_700_000_010_000,
+        targetCharacterId: participants.length > 0 ? participants[0].id : null,
+        baseDamage: cast.damage,
+        baseAoeDamage: cast.damageAoe,
+        damageType: cast.damageType,
+        primaryShare: cast.primaryShare,
+        aoeShare: cast.aoeShare,
+        consumeMode: cast.consumeMode,
+        consumePct: cast.consumePct,
+        consumeFixed: cast.consumeFixed,
+        pauseAutoattacks: cast.pauseAutoattacks,
+        storedPowerCap: cast.storedPowerCap,
+        lockMs: cast.lockMs,
+        castedText: cast.castedText,
+      };
+    });
+
   return {
     mode: g() < 0.5 ? 'live' : 'catchup',
     encounterId: `enc-${seed}`,
@@ -332,6 +373,7 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
     effects,
     actions,
     engagements,
+    activeCasts,
     procs,
     config: CONFIG,
   };

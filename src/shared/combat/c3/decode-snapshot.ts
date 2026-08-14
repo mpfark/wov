@@ -32,6 +32,7 @@ import {
 import type {
   ActionSnapshot,
   Attributes,
+  ActiveCastSnapshot,
   BossCastSnapshot,
   CreatureSnapshot,
   EffectSnapshot,
@@ -378,12 +379,15 @@ function decodeBossCast(value: unknown, path: string): BossCastSnapshot | null {
   const abilityKey = optStr(o, 'ability_key', path) ?? optStr(o, 'abilityKey', path);
   if (!abilityKey) return null;
   const storedPower = o.stored_power ? obj(o.stored_power, `${path}.stored_power`) : null;
+  const consume = storedPower ?? o;
   return {
     abilityKey,
+    castKey: optStr(o, 'cast_key', path) ?? optStr(o, 'castKey', path) ?? abilityKey,
     label: optStr(o, 'label', path) ?? abilityKey,
     castTicks: optNum(o, 'cast_ticks', path) ?? 1,
     cooldownTicks: optNum(o, 'cooldown_ticks', path) ?? 0,
     damage: optNum(o, 'damage', path) ?? 0,
+    damageAoe: optNum(o, 'damage_aoe', path) ?? 0,
     damageType: optStr(o, 'damage_type', path),
     targetMode: oneOf(
       optStr(o, 'target_mode', path) ?? 'tank_preferred',
@@ -392,10 +396,79 @@ function decodeBossCast(value: unknown, path: string): BossCastSnapshot | null {
     ),
     channeling: Boolean(o.channeling),
     storedPowerCap: storedPower ? (optNum(storedPower, 'cap', `${path}.stored_power`) ?? 0) : 0,
+    primaryShare: storedPower
+      ? (optNum(storedPower, 'primary_share', `${path}.stored_power`) ?? 1)
+      : 1,
+    aoeShare: storedPower ? (optNum(storedPower, 'aoe_share', `${path}.stored_power`) ?? 0) : 0,
+    consumeMode: oneOf(
+      optStr(consume, 'consume_mode', path) ?? 'all',
+      ['all', 'percent', 'fixed', 'preserve', 'reset', 'ignore'] as const,
+      `${path}.consume_mode`,
+    ),
+    consumePct: optNum(consume, 'consume_pct', path) ?? 100,
+    consumeFixed: optNum(consume, 'consume_fixed', path) ?? 0,
+    pauseAutoattacks: o.pause_autoattacks === undefined
+      ? Boolean(o.channeling)
+      : Boolean(o.pause_autoattacks),
+    lockMs: optNum(o, 'lock_ms', path) ?? 0,
     castingText: optStr(o, 'casting_text', path),
     castedText: optStr(o, 'casted_text', path),
   };
 }
+
+/**
+ * An in-flight telegraph. The frozen contract lives under `payload.config`
+ * (written by the C2 payload builder). Rows created before that contract
+ * existed fall back to the authored creature defaults so a legacy channel
+ * still lands instead of hanging forever.
+ */
+function decodeActiveCast(value: unknown, path: string): ActiveCastSnapshot | null {
+  const o = obj(value, path);
+  const castEventId = reqStr(o, 'id', path);
+  const creatureId = reqStr(o, 'creatureId', path);
+  const startedAtMs = optNum(o, 'startedAtMs', path) ?? 0;
+  const resolvesAtMs = optNum(o, 'expiresAtMs', path) ?? startedAtMs;
+  const payload = o.payload ? obj(o.payload, `${path}.payload`) : {};
+  const cfg = payload.config ? obj(payload.config, `${path}.payload.config`) : null;
+  const abilityKey = optStr(o, 'abilityKey', path) ?? optStr(o, 'castKey', path);
+  if (!abilityKey) return null;
+  const storedPower = payload.stored_power
+    ? obj(payload.stored_power, `${path}.payload.stored_power`)
+    : null;
+  return {
+    castEventId,
+    creatureId,
+    abilityKey,
+    castKey: optStr(o, 'castKey', path) ?? abilityKey,
+    label: (cfg ? optStr(cfg, 'label', path) : null) ?? optStr(payload, 'label', path) ?? abilityKey,
+    startedAtMs,
+    resolvesAtMs,
+    targetCharacterId:
+      (cfg ? optStr(cfg, 'targetCharacterId', path) : null) ??
+      optStr(payload, 'targetCharacterId', path),
+    baseDamage: (cfg ? optNum(cfg, 'baseDamage', path) : null) ?? optNum(payload, 'damage', path) ?? 0,
+    baseAoeDamage:
+      (cfg ? optNum(cfg, 'baseAoeDamage', path) : null) ?? optNum(payload, 'aoe_amount', path) ?? 0,
+    damageType:
+      (cfg ? optStr(cfg, 'damageType', path) : null) ?? optStr(payload, 'damage_type', path),
+    primaryShare: (cfg ? optNum(cfg, 'primaryShare', path) : null) ?? 1,
+    aoeShare: (cfg ? optNum(cfg, 'aoeShare', path) : null) ?? 0,
+    consumeMode: oneOf(
+      (cfg ? optStr(cfg, 'consumeMode', path) : null) ?? 'all',
+      ['all', 'percent', 'fixed', 'preserve', 'reset', 'ignore'] as const,
+      `${path}.consumeMode`,
+    ),
+    consumePct: (cfg ? optNum(cfg, 'consumePct', path) : null) ?? 100,
+    consumeFixed: (cfg ? optNum(cfg, 'consumeFixed', path) : null) ?? 0,
+    pauseAutoattacks: cfg ? Boolean(cfg.pauseAutoattacks) : true,
+    storedPowerCap:
+      (cfg ? optNum(cfg, 'storedPowerCap', path) : null) ??
+      (storedPower ? (optNum(storedPower, 'cap', path) ?? 0) : 0),
+    lockMs: (cfg ? optNum(cfg, 'lockMs', path) : null) ?? optNum(payload, 'lock_ms', path) ?? 0,
+    castedText: (cfg ? optStr(cfg, 'castedText', path) : null) ?? optStr(payload, 'text', path),
+  };
+}
+
 
 // ── entry point ────────────────────────────────────────────────────
 
@@ -732,6 +805,9 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     effects,
     actions,
     engagements,
+    activeCasts: arr(root.casts, '$.casts')
+      .map((c, i) => decodeActiveCast(c, `$.casts[${i}]`))
+      .filter((c): c is ActiveCastSnapshot => c !== null),
     procs: aux.procs,
     config: {
       xpBoostMultiplier: aux.xpBoostMultiplier,

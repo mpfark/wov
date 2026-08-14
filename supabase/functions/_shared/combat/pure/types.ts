@@ -159,17 +159,75 @@ export interface CreatureLootEntrySnapshot {
 
 export interface BossCastSnapshot {
   readonly abilityKey: string;
+  readonly castKey: string;
   readonly label: string;
   readonly castTicks: number;
   readonly cooldownTicks: number;
   readonly damage: number;
+  /** Flat damage everyone other than the primary target takes. */
+  readonly damageAoe: number;
   readonly damageType: string | null;
   readonly targetMode: 'tank_strict' | 'tank_preferred' | 'random_alive';
   readonly channeling: boolean;
   readonly storedPowerCap: number;
+  /** Fraction of the released pool the primary target takes. */
+  readonly primaryShare: number;
+  /** Fraction of the released pool every other eligible target takes. */
+  readonly aoeShare: number;
+  readonly consumeMode: 'all' | 'percent' | 'fixed' | 'preserve' | 'reset' | 'ignore';
+  readonly consumePct: number;
+  readonly consumeFixed: number;
+  /** Autoattacks are suppressed while channeling and banked instead. */
+  readonly pauseAutoattacks: boolean;
+  /** Movement lock applied to everyone the resolved cast reaches. */
+  readonly lockMs: number;
   readonly castingText: string | null;
   readonly castedText: string | null;
 }
+
+
+/** How a resolving cast treats the Stored Power pool it accumulated. */
+export type StoredPowerConsumeMode =
+  | 'all'
+  | 'percent'
+  | 'fixed'
+  | 'preserve'
+  | 'reset'
+  | 'ignore';
+
+/**
+ * A telegraphed boss cast that was started on an earlier tick and is still
+ * in flight. This is the missing persistence that made casts start, channel
+ * and then never land: the resolver reads the authored contract back from the
+ * cast row rather than from the creature, so a mid-channel configuration edit
+ * cannot retune a cast that is already telegraphed.
+ */
+export interface ActiveCastSnapshot {
+  readonly castEventId: string;
+  readonly creatureId: string;
+  readonly abilityKey: string;
+  readonly castKey: string;
+  readonly label: string;
+  readonly startedAtMs: number;
+  readonly resolvesAtMs: number;
+  /** Primary target chosen when the channel began. */
+  readonly targetCharacterId: string | null;
+  /** Authored flat damage, before Stored Power is added. */
+  readonly baseDamage: number;
+  readonly baseAoeDamage: number;
+  readonly damageType: string | null;
+  readonly primaryShare: number;
+  readonly aoeShare: number;
+  readonly consumeMode: StoredPowerConsumeMode;
+  readonly consumePct: number;
+  readonly consumeFixed: number;
+  /** While channeling, the caster banks its paused autoattack instead. */
+  readonly pauseAutoattacks: boolean;
+  readonly storedPowerCap: number;
+  readonly lockMs: number;
+  readonly castedText: string | null;
+}
+
 
 export interface CreatureSnapshot {
   readonly id: string;
@@ -367,6 +425,8 @@ export interface EncounterSnapshot {
   readonly actions: readonly ActionSnapshot[];
   readonly engagements: readonly EngagementSnapshot[];
   readonly procs: readonly ProcSnapshot[];
+  /** Telegraphed casts started on an earlier tick and still in flight. */
+  readonly activeCasts: readonly ActiveCastSnapshot[];
   readonly config: ResolverConfig;
 }
 
@@ -495,16 +555,42 @@ export interface DurabilityProposal {
   readonly inventoryId: string;
 }
 
+/** One damaged target of a resolved cast. */
+export interface CastTargetProposal {
+  readonly characterId: string;
+  readonly damage: number;
+  readonly applied: number;
+  readonly isPrimary: boolean;
+}
+
 export interface CastMutation {
   readonly creatureId: string;
   readonly abilityKey: string;
+  readonly castKey: string;
   readonly phase: 'start' | 'resolve' | 'fizzle';
+  /**
+   * The cast row this mutation closes. `null` on `start`, where the committer
+   * creates the row; always set on `resolve`/`fizzle`, so a duplicate or
+   * concurrent cast row can never be closed by the wrong mutation.
+   */
+  readonly castEventId: string | null;
   readonly resolvesAtMs: number;
   readonly targetCharacterId: string | null;
+  /** Primary damage: authored flat plus the primary share of the pool. */
   readonly damage: number;
+  /** Damage every other eligible target took. */
+  readonly aoeDamage: number;
   readonly damageType: string | null;
   readonly text: string | null;
+  /** Stored Power actually released by this resolution. */
+  readonly storedPowerConsumed: number;
+  /** Movement lock the resolution imposes on the targets it reached. */
+  readonly lockMs: number;
+  readonly targets: readonly CastTargetProposal[];
+  /** Frozen authored contract, persisted on `start` and read back on resolve. */
+  readonly config: ActiveCastSnapshot | null;
 }
+
 
 export interface StoredPowerMutation {
   readonly creatureId: string;
