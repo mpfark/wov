@@ -74,6 +74,13 @@ interface Agg {
   multiAttackHits: number[];
   retaliations: number;
   castStarts: number;
+  castCarries: number;
+  castStartDamage: number;
+  castDoubleResolutions: number;
+  castFleeAvoidances: number;
+  castLockApplications: number;
+  storedPowerBanked: number;
+  storedPowerConsumed: number;
   castResolves: number;
   castFizzles: number;
   storedPowerDeltas: number[];
@@ -107,6 +114,8 @@ function newAgg(): Agg {
     creatureMisses: 0, abilityAttempts: 0, abilityHits: 0, stackApplications: 0, hits: 0,
     misses: 0, crits: 0, dodges: 0, blocks: 0, procTriggers: 0, effectUpserts: 0, stackUpserts: 0,
     auraPulses: 0, multiAttackHits: [], retaliations: 0, castStarts: 0, castResolves: 0,
+    castCarries: 0, castStartDamage: 0, castDoubleResolutions: 0, castFleeAvoidances: 0,
+    castLockApplications: 0, storedPowerBanked: 0, storedPowerConsumed: 0,
     castFizzles: 0, storedPowerDeltas: [], storedPowerOverCap: 0, xp: [], gold: [], renown: [],
     salvage: [], gems: 0, lootProposals: 0, lootLegacy: 0, lootItemPool: 0, durability: 0,
     charDeaths: 0, creatureDeaths: 0, kills: 0, partySplitKills: 0, soloKills: 0,
@@ -160,14 +169,38 @@ function record(a: Agg, snap: EncounterSnapshot, out: ProposedTick) {
   a.effectUpserts += out.effectUpserts.length;
   a.stackUpserts += out.effectUpserts.filter((e) => e.stacks > 1).length;
 
+  // ── Telegraph lifecycle ──────────────────────────────────────────────
+  // A telegraph must open with zero damage, close exactly once, and only
+  // strike characters still standing on the node when it lands.
+  const closed = new Set<string>();
   for (const c of out.casts) {
-    if (c.phase === 'start') a.castStarts++;
-    else if (c.phase === 'fizzle') a.castFizzles++;
-    else a.castResolves++;
+    if (c.phase === 'start') {
+      a.castStarts++;
+      const landed = c.targets.reduce((s, t) => s + t.applied, 0);
+      if (landed > 0) a.castStartDamage += landed;
+    } else {
+      const key = c.castEventId ?? `${c.creatureId}:${c.resolvesAtMs}`;
+      if (closed.has(key)) a.castDoubleResolutions++;
+      closed.add(key);
+      if (c.phase === 'fizzle') a.castFizzles++;
+      else {
+        a.castResolves++;
+        if (c.targets.length === 0) a.castFleeAvoidances++;
+        if (c.lockMs > 0) a.castLockApplications++;
+      }
+      a.storedPowerConsumed += c.storedPowerConsumed;
+    }
     if (c.damage > 0) a.castDamage.push(c.damage);
+  }
+  // Carry: a cast that was in flight on entry and neither resolved nor fizzled.
+  for (const active of snap.activeCasts) {
+    if (!out.casts.some((c) => c.creatureId === active.creatureId && c.phase !== 'start')) {
+      a.castCarries++;
+    }
   }
   for (const sp of out.storedPower) {
     a.storedPowerDeltas.push(sp.delta);
+    if (sp.delta > 0) a.storedPowerBanked += sp.delta;
     if (Math.abs(sp.delta) > Math.max(1, sp.cap)) a.storedPowerOverCap++;
   }
 
@@ -300,8 +333,23 @@ function summary(a: Agg) {
     auraPulses: a.auraPulses,
     multiAttackVolleyDamage: stats(a.multiAttackHits),
     retaliations: a.retaliations,
-    bossCasts: { starts: a.castStarts, resolves: a.castResolves, fizzles: a.castFizzles },
-    storedPower: { mutations: a.storedPowerDeltas.length, overCapViolations: a.storedPowerOverCap, delta: stats(a.storedPowerDeltas) },
+    bossCasts: {
+      starts: a.castStarts,
+      carries: a.castCarries,
+      resolves: a.castResolves,
+      fizzles: a.castFizzles,
+      fleeAvoidances: a.castFleeAvoidances,
+      lockApplications: a.castLockApplications,
+      damageDuringStart: a.castStartDamage,
+      doubleResolutions: a.castDoubleResolutions,
+    },
+    storedPower: {
+      mutations: a.storedPowerDeltas.length,
+      banked: a.storedPowerBanked,
+      consumed: a.storedPowerConsumed,
+      overCapViolations: a.storedPowerOverCap,
+      delta: stats(a.storedPowerDeltas),
+    },
     xp: stats(a.xp),
     gold: stats(a.gold),
     renown: stats(a.renown),

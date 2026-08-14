@@ -64,6 +64,23 @@ export interface CombatTickResponse {
   rejected_actions?: { actionId: string; reason: string }[];
   buff_sync?: Record<string, { absorb_remaining: number }>;
   /**
+   * C5: committed telegraph transitions for this tick. The boss-cast UI is fed
+   * exclusively from these, so a dropped realtime message cannot leave a ghost
+   * telegraph or hide a real one.
+   */
+  boss_casts?: {
+    cast_event_id: string | null;
+    creature_id: string;
+    cast_key: string;
+    phase: 'start' | 'resolve' | 'fizzle';
+    label: string;
+    resolves_at_ms: number;
+    cast_ms: number;
+    stored_power_cap: number;
+  }[];
+  /** C5: Stored Power after this tick, per channelling creature. */
+  boss_stored_power?: { creature_id: string; current: number; cap: number }[];
+  /**
    * Shared-encounter identity of the authoritative batch this response
    * published. Used purely for client-side duplicate suppression (own response
    * + party broadcast can both carry the same batch) and instrumentation.

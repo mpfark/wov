@@ -124,6 +124,8 @@ export interface UseCombatDriverParams {
   onAbsorbSync?: (remaining: number) => void;
   /** Callback when a boss creature dies with an admin-authored death cry */
   onBossDeathCry?: (entry: { creatureName: string; text: string }) => void;
+  /** Committed telegraph transitions (boss casts / Stored Power) for this tick. */
+  onBossCasts?: (result: CombatTickResponse) => void;
   /** Callback fired with creature IDs the server confirmed dead in this tick (for optimistic UI removal) */
   onCreaturesKilled?: (creatureIds: string[]) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
@@ -512,6 +514,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       });
       applyActionOutcomes(outcomes);
     }
+
+    // ── C5: telegraph delivery ──────────────────────────────────────────
+    // Boss-cast starts, resolves and fizzles ride the committed batch, so the
+    // telegraph opens and clears with the damage it belongs to.
+    if (data.boss_casts?.length || data.boss_stored_power?.length) {
+      ext.current.onBossCasts?.(data);
+    }
+
+
 
 
 

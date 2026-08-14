@@ -204,6 +204,12 @@ export function buildCommitPayload(
       castKey: c.castKey,
       phase: c.phase,
       resolvesAtMs: c.resolvesAtMs,
+      // Durable identity of the in-flight channel. Resolve/fizzle addresses the
+      // exact row the resolver read, so a second channel on the same creature
+      // can never be closed by the wrong mutation. Casts that start and land in
+      // the same commit carry the resolver placeholder and are matched by
+      // creature instead.
+      castEventId: c.castEventId ?? null,
       payload: {
         label: c.config?.label ?? c.castKey ?? c.abilityKey,
         cast_ms: c.config ? Math.max(0, c.config.resolvesAtMs - c.config.startedAtMs) : 0,

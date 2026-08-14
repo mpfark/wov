@@ -771,6 +771,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // useMovementActions is created before useWimp exists.
   const wimpNotifyRef = useRef<(() => void) | null>(null);
 
+  // Telegraph feed. Created before the driver so committed cast transitions can
+  // be handed straight to it as each batch is applied.
+  const bossCastFeed = useBossCasts(character.current_node_id);
+  const bossCasts = bossCastFeed.casts;
+
   const combat = useCombatDriver({
     character, creatures,
     party: usePartyCombatMode ? party : null,
@@ -787,6 +792,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
+    onBossCasts: bossCastFeed.applyCommitted,
     onBossDeathCry: ({ text }) => {
       // World emote — atmospheric narration, broadcast verbatim with no boss-name framing.
       sendGlobal({
@@ -836,7 +842,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
-  const bossCasts = useBossCasts(character.current_node_id);
+  
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
