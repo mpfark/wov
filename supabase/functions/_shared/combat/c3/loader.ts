@@ -242,6 +242,13 @@ function resolveAbilityConfigs(
   catalog: AbilityCatalog,
   failures: string[],
 ): Map<string, ResolvedAbilityConfig> {
+  // Reservation-backed stances resolve through the exact same path as a queued
+  // action: same catalog entry, same caster-scoped magnitudes. A stance key IS
+  // its ability key, so no second mapping table can drift from the first.
+  const stanceIntents = participants.flatMap((p: any) =>
+    stanceKeysOf(p).map((abilityKey) => ({ characterId: String(p?.id ?? ''), abilityKey })),
+  );
+  actions = [...actions, ...stanceIntents];
   const byId = new Map<string, any>();
   for (const p of participants) byId.set(String(p?.id ?? ''), p);
 
@@ -274,6 +281,23 @@ function resolveAbilityConfigs(
     resolved.set(key, config);
   }
   return resolved;
+}
+
+/**
+ * Stance keys switched on for a participant, read from the raw snapshot rows.
+ * The reservation is the single authority; this is a read, never a derivation.
+ */
+export function stanceKeysOf(participant: any): string[] {
+  const keys = new Set<string>();
+  for (const source of ['reservedBuffs', 'stanceState'] as const) {
+    const raw = participant?.[source];
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (value === null || value === undefined) continue;
+      keys.add(key);
+    }
+  }
+  return [...keys].sort();
 }
 
 /** Per-creature salvage key: non-humanoids yield generic salvage, humanoids none. */
@@ -325,6 +349,9 @@ export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
     uncappedXpCharacterIds: [],
     salvageMaterialKeyByCreatureId: salvageKeys(creatures),
     castCooldownTicksByCreatureId: input.castCooldownTicksByCreatureId ?? new Map(),
+    stanceKeysByCharacterId: new Map(
+      participants.map((p: any) => [String(p?.id ?? ''), stanceKeysOf(p)]),
+    ),
   };
 
   return { aux, configFailures };

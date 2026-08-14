@@ -160,6 +160,8 @@ export interface ParticipantSnapshot {
    * decoder from the snapshotted equipment rows. Needed because max HP/CP/MP
    * recalculation on level-up is a function of *effective* attributes.
    */
+  /** Reservation-backed stances, resolved by the loader. See `StanceSnapshot`. */
+  readonly stances?: readonly StanceSnapshot[];
   readonly equipmentBonuses: Readonly<Record<string, number>>;
 }
 
@@ -413,6 +415,30 @@ export interface ActionSnapshot {
   readonly params?: ActionParamsSnapshot;
 }
 
+
+/**
+ * A stance the character currently has switched on, with its configuration
+ * already resolved by the loader from `characters.reserved_buffs`.
+ *
+ * The reservation is the ONE authority for a stance's existence; this snapshot
+ * only carries the numbers needed to (re)materialise the stance's semantic
+ * `active_effects` row when it is missing, so a stance keeps working across
+ * ticks, restarts and re-entries without ever being re-cast by the client.
+ */
+export interface StanceSnapshot {
+  readonly stanceKey: string;
+  readonly abilityKey: string;
+  readonly mechanic: ResolverMechanic;
+  readonly damageType: string | null;
+  readonly amount: number;
+  readonly durationMs: number;
+  readonly intervalMs: number;
+  readonly statusKey: string | null;
+  readonly statusChancePct: number;
+  readonly maxStacks: number;
+  readonly weaponBased: boolean;
+  readonly params?: ActionParamsSnapshot;
+}
 
 export interface EngagementSnapshot {
   readonly creatureId: string;

@@ -349,6 +349,9 @@ export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
     uncappedXpCharacterIds: [],
     salvageMaterialKeyByCreatureId: salvageKeys(creatures),
     castCooldownTicksByCreatureId: input.castCooldownTicksByCreatureId ?? new Map(),
+    stanceKeysByCharacterId: new Map(
+      participants.map((p: any) => [String(p?.id ?? ''), stanceKeysOf(p)]),
+    ),
   };
 
   return { aux, configFailures };
