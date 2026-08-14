@@ -388,6 +388,10 @@ export function projectBatchFromProposal(
   proposed: ProposedTick,
   batchId: string,
   spawnSeqByCreatureId: Readonly<Record<string, number>>,
+  /** Cast-row ids observed in the committed batch, positional with `proposed.casts`. */
+  castEventIds?: readonly (string | null)[],
+  /** Absolute Stored Power the committer clamped to, per creature. */
+  storedPowerAfter?: Readonly<Record<string, number>>,
 ): DecodedBatch {
   const killByCreature = new Map(proposed.kills.map((k) => [k.creatureId, k]));
   return {
