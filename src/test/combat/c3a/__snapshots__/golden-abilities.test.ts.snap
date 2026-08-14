@@ -180,15 +180,7 @@ exports[`C3a golden abilities > assassin:shadowstep > matches its stored golden 
     },
   ],
   "effectDeletes": 0,
-  "effectUpserts": [
-    {
-      "amountPerTick": 0,
-      "mechanic": "stealth_buff",
-      "stacks": 1,
-      "target": "character:char-caster",
-      "type": "shadowstep",
-    },
-  ],
+  "effectUpserts": [],
   "events": [
     "buff",
     "buff_consumed",
@@ -694,13 +686,6 @@ exports[`C3a golden abilities > ranger:disengage > matches its stored golden dig
       "stacks": 1,
       "target": "character:char-caster",
       "type": "disengage",
-    },
-    {
-      "amountPerTick": 0,
-      "mechanic": "evasion_buff",
-      "stacks": 1,
-      "target": "character:char-caster",
-      "type": "disengage_next_hit",
     },
   ],
   "events": [
