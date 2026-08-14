@@ -182,7 +182,19 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     return pct;
   };
 
-  /** Characters engaged with a creature, in stable order. */
+  /**
+   * Target eligibility. The snapshot keeps every participant (so attribution,
+   * durable effects and reward rights survive a player walking away), but only
+   * characters physically standing on the encounter node may be hit, healed,
+   * regenerated or caught by a telegraphed cast — and only they may act.
+   */
+  const isPresent = (characterId: string): boolean =>
+    byParticipant.get(characterId)?.presentAtNode !== false;
+
+  /**
+   * Characters engaged with a creature, in stable order. Includes off-node
+   * participants: this roster drives kill attribution and reward recipients.
+   */
   const engagedWith = (creatureId: string): ParticipantSnapshot[] => {
     const out: ParticipantSnapshot[] = [];
     for (const e of engagements) {
@@ -465,7 +477,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     const caster = byParticipant.get(casterId);
     if (!caster) return [];
     return participants.filter((p) => {
-      if (!isAliveP(p.id)) return false;
+      if (!isAliveP(p.id) || !isPresent(p.id)) return false;
       if (p.id === caster.id) return true;
       if (!partyOnly) return true;
       return !!caster.partyId && p.partyId === caster.partyId;
@@ -783,6 +795,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           rejectedActions.push({ actionId: a.id, reason: 'caster_dead' });
           continue;
         }
+        // A caster who walked off the node cannot act on this encounter, but
+        // stays in the snapshot for attribution and rewards.
+        if (!isPresent(caster.id)) {
+          rejectedActions.push({ actionId: a.id, reason: 'not_present' });
+          continue;
+        }
         if ((w.cp.get(caster.id) ?? 0) < a.cpCost) {
           rejectedActions.push({ actionId: a.id, reason: 'insufficient_cp' });
           continue;
@@ -794,6 +812,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           const ally = a.allyId ? byParticipant.get(a.allyId) : caster;
           if (!ally) {
             rejectedActions.push({ actionId: a.id, reason: 'no_target' });
+            continue;
+          }
+          if (!isPresent(ally.id)) {
+            rejectedActions.push({ actionId: a.id, reason: 'not_present' });
             continue;
           }
           w.cp.set(caster.id, (w.cp.get(caster.id) ?? 0) - a.cpCost);
@@ -1076,6 +1098,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           const ally = a.allyId ? byParticipant.get(a.allyId) : null;
           if (!ally || ally.id === caster.id) {
             rejectedActions.push({ actionId: a.id, reason: 'no_target' });
+            continue;
+          }
+          if (!isPresent(ally.id)) {
+            rejectedActions.push({ actionId: a.id, reason: 'not_present' });
             continue;
           }
           if (!isAliveP(ally.id)) {
@@ -1404,7 +1430,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
     // 3. Autoattacks — participants in stable order, each on their target.
     for (const p of participants) {
-      if (!isAliveP(p.id)) continue;
+      if (!isAliveP(p.id) || !isPresent(p.id)) continue;
       const creature = targetOf(p.id);
       if (!creature) continue;
       const attack = seededAttackRoll({
@@ -1635,7 +1661,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // Leaving the node purges the participant row, so anyone who fled and
       // walked back in re-joined later and is not caught by this cast.
       const eligible = participants.filter(
-        (p) => isAliveP(p.id) && p.joinedAtMs <= cast.startedAtMs,
+        (p) => isAliveP(p.id) && isPresent(p.id) && p.joinedAtMs <= cast.startedAtMs,
       );
 
       const targets: CastTargetProposal[] = [];
@@ -1688,7 +1714,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         w.castCooldown.set(c.id, cooldown - 1);
         continue;
       }
-      const pool = engagedWith(c.id).filter((p) => isAliveP(p.id));
+      const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
       let target: ParticipantSnapshot | null = null;
       if (pool.length > 0) {
         const tankPool = orderTankPool(pool.filter((p) => p.isTank));
@@ -1767,7 +1793,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       if (!isAliveC(c.id)) continue;
       // A channeling boss banks its autoattack instead of swinging it.
       if (pausedByCast.has(c.id)) continue;
-      const pool = engagedWith(c.id).filter((p) => isAliveP(p.id));
+      const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
       if (pool.length === 0) continue;
       const tankPool = orderTankPool(pool.filter((p) => p.isTank));
       const target =
