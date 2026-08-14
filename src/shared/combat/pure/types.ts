@@ -171,6 +171,49 @@ export interface BossCastSnapshot {
   readonly castedText: string | null;
 }
 
+/** How a resolving cast treats the Stored Power pool it accumulated. */
+export type StoredPowerConsumeMode =
+  | 'all'
+  | 'percent'
+  | 'fixed'
+  | 'preserve'
+  | 'reset'
+  | 'ignore';
+
+/**
+ * A telegraphed boss cast that was started on an earlier tick and is still
+ * in flight. This is the missing persistence that made casts start, channel
+ * and then never land: the resolver reads the authored contract back from the
+ * cast row rather than from the creature, so a mid-channel configuration edit
+ * cannot retune a cast that is already telegraphed.
+ */
+export interface ActiveCastSnapshot {
+  readonly castEventId: string;
+  readonly creatureId: string;
+  readonly abilityKey: string;
+  readonly castKey: string;
+  readonly label: string;
+  readonly startedAtMs: number;
+  readonly resolvesAtMs: number;
+  /** Primary target chosen when the channel began. */
+  readonly targetCharacterId: string | null;
+  /** Authored flat damage, before Stored Power is added. */
+  readonly baseDamage: number;
+  readonly baseAoeDamage: number;
+  readonly damageType: string | null;
+  readonly primaryShare: number;
+  readonly aoeShare: number;
+  readonly consumeMode: StoredPowerConsumeMode;
+  readonly consumePct: number;
+  readonly consumeFixed: number;
+  /** While channeling, the caster banks its paused autoattack instead. */
+  readonly pauseAutoattacks: boolean;
+  readonly storedPowerCap: number;
+  readonly lockMs: number;
+  readonly castedText: string | null;
+}
+
+
 export interface CreatureSnapshot {
   readonly id: string;
   readonly name: string;
