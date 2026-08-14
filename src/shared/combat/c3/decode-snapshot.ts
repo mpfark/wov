@@ -282,6 +282,109 @@ const EFFECT_KEYS = [
   'mechanic', 'magnitude', 'remaining', 'params', 'paramsVersion', 'damageType',
 ] as const;
 
+/** Status classification the effect decoder consults for periodicity/amp. */
+export interface EffectStatusDef {
+  readonly key: string;
+  readonly isPeriodic: boolean;
+  readonly ampPct: number;
+  readonly maxStacks: number;
+}
+
+export interface EffectDecodeContext {
+  /** Ids present in `$.creatures` — the ONE way target kind is derived. */
+  readonly creatureIds: ReadonlySet<string>;
+  readonly statusByKey: ReadonlyMap<string, EffectStatusDef>;
+  /** JSON path prefix, so harnesses can report their own provenance. */
+  readonly path?: string;
+}
+
+/**
+ * Decode the `$.effects` section of a snapshot into `EffectSnapshot` rows.
+ *
+ * Extracted from `decodeEncounterSnapshot` so the persistence round-trip tests
+ * exercise the exact production decode path rather than a second, drifting
+ * implementation. Semantic rows are validated against the closed
+ * mechanic/parameter registry; unknown mechanics and parameters fail closed
+ * with the exact JSON path.
+ */
+export function decodeEffectsSection(
+  entries: readonly unknown[],
+  ctx: EffectDecodeContext,
+): { effects: EffectSnapshot[]; effectIds: string[] } {
+  const root = ctx.path ?? '$.effects';
+  const effects: EffectSnapshot[] = [];
+  const effectIds: string[] = [];
+  entries.forEach((entry, i) => {
+    const path = `${root}[${i}]`;
+    const e = obj(entry, path);
+    assertKnownKeys(e, EFFECT_KEYS, path);
+    const id = reqStr(e, 'id', path);
+    const targetId = reqStr(e, 'targetId', path);
+    const effectType = reqStr(e, 'effectType', path);
+    const def = ctx.statusByKey.get(effectType);
+    const intervalMs = reqNum(e, 'intervalMs', path);
+    // `nextTickAtMs` is `active_effects.next_tick_at` verbatim: the absolute
+    // epoch-ms due time of this effect's next periodic tick. No derivation,
+    // no relation to the encounter cursor or to combat_sessions.last_tick_at.
+    const nextTickAtMs = reqNum(e, 'nextTickAtMs', path);
+    const targetKind = ctx.creatureIds.has(targetId) ? 'creature' : 'character';
+    const mechanic = optStr(e, 'mechanic', path);
+    const sourceCharacterId = optStr(e, 'sourceId', path);
+    const magnitude = optNum(e, 'magnitude', path);
+    const remaining = optNum(e, 'remaining', path);
+    const damageType = optStr(e, 'damageType', path);
+    let params: Readonly<Record<string, number | boolean | string>> | undefined;
+    if (mechanic) {
+      try {
+        params = validateEffectRow(
+          {
+            mechanic,
+            targetKind,
+            sourceCharacterId,
+            magnitude,
+            remaining,
+            intervalMs,
+            paramsVersion: optNum(e, 'paramsVersion', path) ?? EFFECT_PARAMS_VERSION,
+            params: e.params ?? {},
+          },
+          path,
+        );
+      } catch (err) {
+        throw decodeError(path, err instanceof Error ? err.message : String(err));
+      }
+    } else if (e.params !== undefined && e.params !== null && Object.keys(obj(e.params, `${path}.params`)).length > 0) {
+      throw decodeError(`${path}.params`, 'params require a registered mechanic');
+    }
+    effects.push({
+      id,
+      targetKind,
+      targetId,
+      effectType,
+      stacks: reqNum(e, 'stacks', path),
+      amountPerTick: reqNum(e, 'amountPerTick', path),
+      expiresAtMs: reqNum(e, 'expiresAtMs', path),
+      intervalMs,
+      nextTickAtMs,
+      damageType,
+      sourceCharacterId,
+      isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
+      ampPct: def?.ampPct ?? 0,
+      mechanic: (mechanic as EffectSnapshot['mechanic']) ?? null,
+      abilityKey: optStr(e, 'sourceAbilityKey', path),
+      cpPerTick: typeof params?.cpPerTick === 'number' ? params.cpPerTick : 0,
+      healsAllies: params?.healsAllies === true,
+      damagesEnemies: params?.damagesEnemies === true,
+      maxStacks: typeof params?.maxStacks === 'number' ? params.maxStacks : def?.maxStacks,
+      magnitude: magnitude ?? undefined,
+      remaining,
+      params,
+      paramsVersion: EFFECT_PARAMS_VERSION,
+    });
+    effectIds.push(id);
+  });
+  return { effects, effectIds };
+}
+
 const ACTION_KEYS = [
   'id', 'characterId', 'creatureId', 'allyId', 'abilityKey', 'clientSeq',
   'eligibleAfterMs', 'rowVersion',
@@ -551,79 +654,11 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   const snapshotCreatureIds = new Set(
     arr(root.creatures, '$.creatures').map((c, i) => reqStr(obj(c, `$.creatures[${i}]`), 'id', `$.creatures[${i}]`)),
   );
-  const effects: EffectSnapshot[] = [];
-  const effectIds: string[] = [];
-  arr(root.effects, '$.effects').forEach((entry, i) => {
-    const path = `$.effects[${i}]`;
-    const e = obj(entry, path);
-    assertKnownKeys(e, EFFECT_KEYS, path);
-    const id = reqStr(e, 'id', path);
-    const targetId = reqStr(e, 'targetId', path);
-    const effectType = reqStr(e, 'effectType', path);
-    const def = statusByKey.get(effectType);
-    const intervalMs = reqNum(e, 'intervalMs', path);
-    // `nextTickAtMs` is `active_effects.next_tick_at` verbatim: the absolute
-    // epoch-ms due time of this effect's next periodic tick. No derivation,
-    // no relation to the encounter cursor or to combat_sessions.last_tick_at.
-    const nextTickAtMs = reqNum(e, 'nextTickAtMs', path);
-    const targetKind = snapshotCreatureIds.has(targetId) ? 'creature' : 'character';
-    const mechanic = optStr(e, 'mechanic', path);
-    const sourceCharacterId = optStr(e, 'sourceId', path);
-    const magnitude = optNum(e, 'magnitude', path);
-    const remaining = optNum(e, 'remaining', path);
-    const damageType = optStr(e, 'damageType', path);
-    // Semantic rows are validated against the closed mechanic/parameter
-    // registry. Unknown mechanics and parameters fail closed, with the exact
-    // JSON path. Legacy rows without a mechanic remain plain DoT/stack rows.
-    let params: Readonly<Record<string, number | boolean | string>> | undefined;
-    if (mechanic) {
-      try {
-        params = validateEffectRow(
-          {
-            mechanic,
-            targetKind,
-            sourceCharacterId,
-            magnitude,
-            remaining,
-            intervalMs,
-            paramsVersion: optNum(e, 'paramsVersion', path) ?? EFFECT_PARAMS_VERSION,
-            params: e.params ?? {},
-          },
-          path,
-        );
-      } catch (err) {
-        throw decodeError(path, err instanceof Error ? err.message : String(err));
-      }
-    } else if (e.params !== undefined && e.params !== null && Object.keys(obj(e.params, `${path}.params`)).length > 0) {
-      throw decodeError(`${path}.params`, 'params require a registered mechanic');
-    }
-    effects.push({
-      id,
-      targetKind,
-      targetId,
-      effectType,
-      stacks: reqNum(e, 'stacks', path),
-      amountPerTick: reqNum(e, 'amountPerTick', path),
-      expiresAtMs: reqNum(e, 'expiresAtMs', path),
-      intervalMs,
-      nextTickAtMs,
-      damageType,
-      sourceCharacterId,
-      isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
-      ampPct: def?.ampPct ?? 0,
-      mechanic: (mechanic as EffectSnapshot['mechanic']) ?? null,
-      abilityKey: optStr(e, 'sourceAbilityKey', path),
-      cpPerTick: typeof params?.cpPerTick === 'number' ? params.cpPerTick : 0,
-      healsAllies: params?.healsAllies === true,
-      damagesEnemies: params?.damagesEnemies === true,
-      maxStacks: typeof params?.maxStacks === 'number' ? params.maxStacks : def?.maxStacks,
-      magnitude: magnitude ?? undefined,
-      remaining,
-      params,
-      paramsVersion: EFFECT_PARAMS_VERSION,
-    });
-    effectIds.push(id);
-  });
+  const { effects, effectIds } = decodeEffectsSection(
+    arr(root.effects, '$.effects'),
+    { creatureIds: snapshotCreatureIds, statusByKey },
+  );
+
 
   // participants
 

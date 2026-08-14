@@ -141,9 +141,13 @@ export const EFFECT_MECHANIC_REGISTRY: Readonly<Record<string, EffectMechanicSpe
     stackPolicy: 'replace',
     mutable: ['expiresAtMs', 'magnitude'],
     params: {
-      blockAmount: { kind: 'number', min: 0, max: 1 },
+      // Flat block points added to the shield's rolled block amount, NOT a
+      // fraction: Shield Wall's configured bonus is single-digit HP, so a 0..1
+      // bound would refuse the real row on rehydration.
+      blockAmount: { kind: 'number', min: 0, max: 1000 },
       blockChanceCap: { kind: 'number', min: 0, max: 1 },
     },
+
   },
   evasion_buff: {
     family: 'defensive_state',

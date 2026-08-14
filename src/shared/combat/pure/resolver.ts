@@ -636,10 +636,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         nextTickAtMs: nowMs + interval,
         damageType: ap.damageType,
         sourceCharacterId: attacker.id,
-        mechanic: 'stack_apply',
+        // The LANDED stack is a hostile periodic row on the creature. The
+        // applier stance itself is the `stack_apply` row on the character —
+        // tagging this row `stack_apply` would claim a character-target
+        // mechanic for a creature row and be refused on rehydration.
+        mechanic: 'dot_debuff',
         abilityKey: ap.abilityKey,
         maxStacks: cap,
+        params: {
+          maxStacks: cap,
+          ...(ap.damageType ? { damageType: ap.damageType } : {}),
+        },
+        paramsVersion: EFFECT_PARAMS_VERSION,
       });
+
       emit(
         'stack_applied',
         `${attacker.name}'s ${ap.abilityKey} afflicts ${creature.name} [${next}/${cap}].`,
@@ -2037,6 +2047,36 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       paramsVersion: e.paramsVersion,
     });
   }
+
+  // ── one-shot charges: a spent charge is spent for good ─────────────
+  // `consumedBuffs` is the client's narration of the spend; the ROW is what the
+  // next tick rehydrates from. Without this stage a single-charge ambush or
+  // Disengage window would come back on every following tick.
+  for (const spent of consumedBuffs) {
+    for (const e of effects) {
+      if (e.targetKind !== 'character' || e.targetId !== spent.characterId) continue;
+      const isCharge =
+        (spent.buff === 'stealth' && e.mechanic === 'stealth_buff') ||
+        (spent.buff === 'disengage' &&
+          e.mechanic === 'evasion_buff' &&
+          e.params?.kind === 'next_hit');
+      if (!isCharge) continue;
+      effectDeleteIds.add(e.id);
+    }
+    // A charge granted and spent inside the same tick must not be written at all.
+    for (let i = effectUpserts.length - 1; i >= 0; i--) {
+      const u = effectUpserts[i];
+      if (u.targetKind !== 'character' || u.targetId !== spent.characterId) continue;
+      const isCharge =
+        (spent.buff === 'stealth' && u.mechanic === 'stealth_buff') ||
+        (spent.buff === 'disengage' &&
+          u.mechanic === 'evasion_buff' &&
+          (u.params as Record<string, unknown> | undefined)?.kind === 'next_hit');
+      if (isCharge) effectUpserts.splice(i, 1);
+    }
+  }
+
+
 
   // ── progression: one level-up per tick, derived from the snapshot ──
   // Only the configured formulas are used; no character column is patched
