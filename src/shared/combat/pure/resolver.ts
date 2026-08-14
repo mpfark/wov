@@ -742,6 +742,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
   // ── tick loop ───────────────────────────────────────────────────
 
+  // Mode semantics. `effects_only` is a hard capability restriction, checked at
+  // every active-combat site below rather than assumed by the caller.
+  const effectsOnly = snapshot.mode === 'effects_only';
+
   for (let t = 0; t < ticks; t++) {
     const nowMs = snapshot.nowMs + t * tickRate;
 
