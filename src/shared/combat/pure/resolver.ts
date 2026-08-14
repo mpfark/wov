@@ -86,6 +86,8 @@ interface Working {
   cLastSource: Map<string, { characterId: string | null; kind: CreatureMutation['lastSourceKind'] }>;
   storedPower: Map<string, number>;
   castCooldown: Map<string, number>;
+  /** In-flight telegraphed casts, keyed by caster. At most one per creature. */
+  activeCasts: Map<string, ActiveCastSnapshot>;
   hitters: Set<string>;
 }
 
