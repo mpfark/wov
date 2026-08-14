@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.release_stances_on_death() FROM PUBLIC, anon, authenticated;
