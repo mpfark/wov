@@ -332,7 +332,7 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     } satisfies BatchCast;
   });
 
-  const storedPower = arr(o.storedPower, `${p}.storedPower`).map((raw, i) => {
+  const storedPower = arr(o.storedPower ?? [], `${p}.storedPower`).map((raw, i) => {
     const sp = `${p}.storedPower[${i}]`;
     const s = obj(raw, sp);
     assertKnownKeys(s, STORED_POWER_KEYS, sp);
