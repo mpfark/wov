@@ -263,6 +263,30 @@ describe('pure resolver — golden rules', () => {
     expect(out.kills[0].recipientCharacterIds).toEqual(['a', 'b']);
   });
 
+  const bossCastConfig = (over: Record<string, unknown> = {}) => ({
+    abilityKey: 'doom',
+    castKey: 'doom',
+    label: 'Doom',
+    castTicks: 2,
+    cooldownTicks: 3,
+    damage: 40,
+    damageAoe: 0,
+    damageType: 'fire' as string | null,
+    targetMode: 'tank_strict' as 'tank_strict' | 'tank_preferred' | 'random_alive',
+    channeling: true,
+    storedPowerCap: 5,
+    primaryShare: 1,
+    aoeShare: 0,
+    consumeMode: 'all' as const,
+    consumePct: 100,
+    consumeFixed: 0,
+    pauseAutoattacks: true,
+    lockMs: 0,
+    castingText: null as string | null,
+    castedText: null as string | null,
+    ...over,
+  });
+
   it('tank_strict boss casts only ever target a tank', () => {
     const tank = participant({ id: 'tank', isTank: true });
     const dps = participant({ id: 'dps', isTank: false });
@@ -270,19 +294,7 @@ describe('pure resolver — golden rules', () => {
       id: 'boss',
       hp: 900,
       rarity: 'boss',
-      bossCast: {
-        abilityKey: 'doom',
-        label: 'Doom',
-        castTicks: 2,
-        cooldownTicks: 3,
-        damage: 40,
-        damageType: 'fire',
-        targetMode: 'tank_strict',
-        channeling: true,
-        storedPowerCap: 5,
-        castingText: 'Doom gathers.',
-        castedText: 'Doom lands.',
-      },
+      bossCast: bossCastConfig({ castingText: 'Doom gathers.', castedText: 'Doom lands.' }),
     });
     for (let tick = 1; tick <= 60; tick++) {
       const out = resolveTickPure(
@@ -303,61 +315,71 @@ describe('pure resolver — golden rules', () => {
     }
   });
 
-  it('channelled boss casts accrue Stored Power up to the cap and fold it into damage', () => {
+  it('a telegraphed cast lands on a later tick and folds Stored Power into its damage', () => {
     const boss = creature({
       id: 'boss',
       hp: 900,
       rarity: 'boss',
-      storedPower: 4,
+      storedPower: 5,
       storedPowerCap: 5,
-      bossCast: {
-        abilityKey: 'doom',
-        label: 'Doom',
-        castTicks: 1,
-        cooldownTicks: 1,
-        damage: 10,
-        damageType: 'fire',
-        targetMode: 'tank_preferred',
-        channeling: true,
-        storedPowerCap: 5,
-        castingText: null,
-        castedText: null,
-      },
+      bossCast: bossCastConfig(),
     });
     const out = resolveTickPure(
       snapshot({
         creatures: [boss],
         engagements: [{ creatureId: 'boss', characterId: 'char-1', lastActionAtMs: 1 }],
         ticksToSimulate: 1,
+        activeCasts: [
+          {
+            castEventId: 'cast-1',
+            creatureId: 'boss',
+            abilityKey: 'doom',
+            castKey: 'doom',
+            label: 'Doom',
+            startedAtMs: 1_699_999_990_000,
+            resolvesAtMs: 1_699_999_999_000, // already due
+            targetCharacterId: 'char-1',
+            baseDamage: 10,
+            baseAoeDamage: 0,
+            damageType: 'fire',
+            primaryShare: 1,
+            aoeShare: 0,
+            consumeMode: 'all',
+            consumePct: 100,
+            consumeFixed: 0,
+            pauseAutoattacks: true,
+            storedPowerCap: 5,
+            lockMs: 0,
+            castedText: null,
+          },
+        ],
       }),
     );
-    expect(out.storedPower).toEqual([{ creatureId: 'boss', delta: 1, cap: 5 }]);
-    expect(out.casts[0].damage).toBe(15); // 10 + stored 5
+    const resolved = out.casts.find((c) => c.phase === 'resolve');
+    expect(resolved?.damage).toBe(15); // 10 authored + 5 released
+    expect(resolved?.storedPowerConsumed).toBe(5);
+    expect(out.storedPower).toEqual([{ creatureId: 'boss', delta: -5, cap: 5 }]);
   });
 
-  it('a boss with nobody engaged fizzles instead of casting', () => {
+  it('a boss with nobody engaged never telegraphs a cast', () => {
     const boss = creature({
       id: 'boss',
       rarity: 'boss',
-      bossCast: {
-        abilityKey: 'doom',
-        label: 'Doom',
+      bossCast: bossCastConfig({
         castTicks: 1,
         cooldownTicks: 1,
         damage: 10,
         damageType: null,
-        targetMode: 'tank_strict',
         channeling: false,
         storedPowerCap: 0,
-        castingText: null,
-        castedText: null,
-      },
+      }),
     });
     const out = resolveTickPure(
       snapshot({ creatures: [boss], engagements: [], ticksToSimulate: 1 }),
     );
-    expect(out.casts.map((c) => c.phase)).toEqual(['fizzle']);
+    expect(out.casts).toEqual([]);
   });
+
 
   it('an ability with too little CP is rejected, never silently consumed', () => {
     const p = participant({ cp: 5 });
