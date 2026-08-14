@@ -116,6 +116,12 @@ Deno.serve(async (req) => {
     // minutes, so the maintenance gate stays closed for every real player.
     await sql`insert into public.combat_soak_access (character_id, node_id, expires_at, note)
               values (${charId}, ${nodeId}, now() + interval '10 minutes', 'c5-effect-harness')`;
+    // The global mode stays 'maintenance'; the soak switch only opens the path
+    // for allowlisted (character, node) pairs, and this harness's allowlist
+    // contains one throwaway character on one throwaway node. It is turned off
+    // again in the teardown below, unconditionally.
+    await sql`insert into public.combat_config (key, value) values ('combat_soak', 'on')
+              on conflict (key) do update set value = 'on'`;
 
     // Seed one row per persistent mechanic, exactly as a commit would have.
     const now = Date.now();
@@ -162,9 +168,11 @@ Deno.serve(async (req) => {
       { rows: seeded.length, mechanics: seeded.map((r) => r.mechanic) });
 
     const catalog = await buildAbilityCatalog(admin);
+    // A freshly created encounter is not due yet; the claim is cadence-gated, so
+    // wait for it rather than pretending a refused claim is a tick.
     const runTick = async (label: string) => {
       const before = await sql<Row[]>`select * from public.active_effects where node_id = ${nodeId} order by mechanic`;
-      const res = await orchestrateCombatResolution(
+      let res = await orchestrateCombatResolution(
         { role: 'live', characterId: charId!, creatureIds: [creatureId!] },
         {
           db: admin, nowMs: Date.now(), catalog,
@@ -172,6 +180,17 @@ Deno.serve(async (req) => {
           newBatchId: () => crypto.randomUUID(), caller: 'c5-effect-harness',
         },
       );
+      for (let i = 0; i < 12 && res.ok === false && (res as { reason?: string }).reason === 'not_due'; i++) {
+        await new Promise((r) => setTimeout(r, 600));
+        res = await orchestrateCombatResolution(
+          { role: 'live', characterId: charId!, creatureIds: [creatureId!] },
+          {
+            db: admin, nowMs: Date.now(), catalog,
+            refreshCatalog: () => buildAbilityCatalog(admin, true),
+            newBatchId: () => crypto.randomUUID(), caller: 'c5-effect-harness',
+          },
+        );
+      }
       const after = await sql<Row[]>`select * from public.active_effects where node_id = ${nodeId} order by mechanic`;
       const byId = new Map(after.map((r) => [String(r.id), r]));
       const drift: Record<string, string[]> = {};
@@ -313,6 +332,7 @@ Deno.serve(async (req) => {
   } finally {
     // Teardown always runs: no fixture, grant or effect row survives.
     try {
+      await sql`update public.combat_config set value = 'off' where key = 'combat_soak'`;
       if (charId) await sql`delete from public.combat_soak_access where character_id = ${charId}`;
       if (nodeId) {
         await sql`delete from public.active_effects where node_id = ${nodeId}`;
