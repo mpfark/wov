@@ -425,6 +425,8 @@ export interface EncounterSnapshot {
   readonly actions: readonly ActionSnapshot[];
   readonly engagements: readonly EngagementSnapshot[];
   readonly procs: readonly ProcSnapshot[];
+  /** Telegraphed casts started on an earlier tick and still in flight. */
+  readonly activeCasts: readonly ActiveCastSnapshot[];
   readonly config: ResolverConfig;
 }
 
