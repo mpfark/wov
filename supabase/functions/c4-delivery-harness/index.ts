@@ -79,10 +79,16 @@ Deno.serve(async (req) => {
           where encounter_id = ${encId} order by tick_number`;
         return rows.map(r => Number(r.tick_number));
       };
+      // Savepoint-scoped: a denied resync raises, which would otherwise poison
+      // the surrounding transaction and abort the remaining scenarios.
       const resync = async (charId: string) => {
         try {
-          const [{ encounter_resync_snapshot: snap }] = await tx<{ encounter_resync_snapshot: unknown }[]>`
-            select public.encounter_resync_snapshot(${encId}::uuid, ${charId}::uuid)`;
+          let snap: unknown;
+          await tx.savepoint(async (sp) => {
+            const [row] = await sp<{ encounter_resync_snapshot: unknown }[]>`
+              select public.encounter_resync_snapshot(${encId}::uuid, ${charId}::uuid)`;
+            snap = row.encounter_resync_snapshot;
+          });
           return { ok: true, snap } as const;
         } catch (e) {
           return { ok: false, error: (e as Error).message } as const;
