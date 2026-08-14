@@ -1571,6 +1571,42 @@ export type Database = {
         }
         Relationships: []
       }
+      encounter_access_grants: {
+        Row: {
+          character_id: string
+          encounter_id: string
+          expires_at: string
+          granted_at: string
+        }
+        Insert: {
+          character_id: string
+          encounter_id: string
+          expires_at?: string
+          granted_at?: string
+        }
+        Update: {
+          character_id?: string
+          encounter_id?: string
+          expires_at?: string
+          granted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_access_grants_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_access_grants_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encounter_cast_events: {
         Row: {
           ability_key: string | null
@@ -3704,6 +3740,10 @@ export type Database = {
       }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
+      prune_encounter_access_grants: {
+        Args: { _limit?: number }
+        Returns: number
+      }
       prune_encounter_tick_batches: {
         Args: { _limit?: number; _older_than_seconds?: number }
         Returns: number
