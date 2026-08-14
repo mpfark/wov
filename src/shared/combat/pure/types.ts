@@ -555,16 +555,42 @@ export interface DurabilityProposal {
   readonly inventoryId: string;
 }
 
+/** One damaged target of a resolved cast. */
+export interface CastTargetProposal {
+  readonly characterId: string;
+  readonly damage: number;
+  readonly applied: number;
+  readonly isPrimary: boolean;
+}
+
 export interface CastMutation {
   readonly creatureId: string;
   readonly abilityKey: string;
+  readonly castKey: string;
   readonly phase: 'start' | 'resolve' | 'fizzle';
+  /**
+   * The cast row this mutation closes. `null` on `start`, where the committer
+   * creates the row; always set on `resolve`/`fizzle`, so a duplicate or
+   * concurrent cast row can never be closed by the wrong mutation.
+   */
+  readonly castEventId: string | null;
   readonly resolvesAtMs: number;
   readonly targetCharacterId: string | null;
+  /** Primary damage: authored flat plus the primary share of the pool. */
   readonly damage: number;
+  /** Damage every other eligible target took. */
+  readonly aoeDamage: number;
   readonly damageType: string | null;
   readonly text: string | null;
+  /** Stored Power actually released by this resolution. */
+  readonly storedPowerConsumed: number;
+  /** Movement lock the resolution imposes on the targets it reached. */
+  readonly lockMs: number;
+  readonly targets: readonly CastTargetProposal[];
+  /** Frozen authored contract, persisted on `start` and read back on resolve. */
+  readonly config: ActiveCastSnapshot | null;
 }
+
 
 export interface StoredPowerMutation {
   readonly creatureId: string;
