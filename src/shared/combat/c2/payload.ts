@@ -194,18 +194,41 @@ export function buildCommitPayload(
       };
     }),
 
+    // The cast row is the durable half of a telegraph: `config` is the frozen
+    // authored contract the resolver reads back on the tick the cast lands, so
+    // an edit mid-channel cannot retune a live telegraph. The snake_case keys
+    // alongside it are what the client telegraph UI already reads.
     casts: proposed.casts.map((c) => ({
       creatureId: c.creatureId,
       abilityKey: c.abilityKey,
+      castKey: c.castKey,
       phase: c.phase,
       resolvesAtMs: c.resolvesAtMs,
       payload: {
+        label: c.config?.label ?? c.castKey ?? c.abilityKey,
+        cast_ms: c.config ? Math.max(0, c.config.resolvesAtMs - c.config.startedAtMs) : 0,
+        amount: c.damage,
+        aoe_amount: c.aoeDamage,
+        damage_type: c.damageType,
+        lock_ms: c.lockMs,
+        stored_power: {
+          cap: c.config?.storedPowerCap ?? 0,
+          consumed: c.storedPowerConsumed,
+        },
         targetCharacterId: c.targetCharacterId,
         damage: c.damage,
         damageType: c.damageType,
         text: c.text,
+        targets: c.targets.map((t) => ({
+          characterId: t.characterId,
+          damage: t.damage,
+          applied: t.applied,
+          isPrimary: t.isPrimary,
+        })),
+        config: c.config,
       },
     })),
+
 
     storedPower: proposed.storedPower.map((s) => {
       const resolved = envelope.storedPower.find((p) => p.creatureId === s.creatureId);
