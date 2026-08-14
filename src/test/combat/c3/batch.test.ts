@@ -18,6 +18,7 @@ function batchPayload(over: Record<string, unknown> = {}) {
     tick: 7,
     batch_id: '11111111-1111-4111-8111-111111111111',
     mode: 'live',
+    ticks_processed: 1,
     events: [
       {
         seq: 0,
@@ -52,6 +53,14 @@ function batchPayload(over: Record<string, unknown> = {}) {
     ],
     deaths: [],
     kills: [],
+    rewards: [],
+    progression: [],
+    consumedBuffs: [],
+    rejectedActions: [],
+    consumedActionIds: [],
+    effectUpserts: [],
+    effectDeleteTargetIds: [],
+    session: { ended: false, nextDueAtMs: 0 },
     ...over,
   };
 }
@@ -76,7 +85,7 @@ describe('c3 batch decoder', () => {
   });
 
   it('refuses a mismatched envelope version', () => {
-    expect(() => decodeTickBatch(batchPayload({ v: 3 }))).toThrow(/unsupported batch envelope version/);
+    expect(() => decodeTickBatch(batchPayload({ v: 4 }))).toThrow(/unsupported batch envelope version/);
     expect(() => decodeTickBatch(batchPayload({ v: 1 }))).toThrow(/unsupported batch envelope version/);
   });
 
@@ -90,6 +99,15 @@ describe('c3 batch decoder', () => {
     const proposed = {
       tickNumber: 7,
       mode: 'live',
+      ticksProcessed: 1,
+      rewards: [],
+      progression: [],
+      consumedBuffs: [],
+      rejectedActions: [],
+      consumedActionIds: [],
+      effectUpserts: [],
+      effectDeleteTargetIds: [],
+      session: { ended: false, nextDueAtMs: 0 },
       characters: [
         {
           characterId: '22222222-2222-4222-8222-222222222222',

@@ -174,14 +174,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    */
   const appliedBatchIdsRef = useRef<Set<string>>(new Set());
   /**
-   * B5: the shared encounter whose `encounter_tick_batches` stream we follow.
-   * Learned from the tick response; the batch stream is the authoritative
-   * delivery path while the HTTP response / party broadcast stay fast hints.
+   * C4: the shared encounter whose `encounter_tick_batches` stream we follow.
+   * Learned from the tick response. The committed batch stream is the ONLY
+   * delivery path that may render; the HTTP response and the party broadcast
+   * are acknowledgements that merely bound recovery.
    */
   const [encounterId, setEncounterId] = useState<string | null>(null);
   const encounterIdRef = useRef<string | null>(null);
   /** Set once useEncounterBatches is mounted (below); no-op before that. */
-  const markBatchAppliedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
+  const noteCommittedRef = useRef<(tick: number | null | undefined, batchId: string | null | undefined) => void>(() => {});
 
   // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
@@ -405,25 +406,37 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
   /**
-   * `meta` is instrumentation-only context from the transport that delivered
-   * this result (own HTTP response vs party broadcast). It never influences
-   * how the result is applied.
+   * `meta.source` says which transport delivered this result:
+   *   - `'batch'`  — a committed `encounter_tick_batches` row. Only these render.
+   *   - anything else — an acknowledgement (own HTTP response, party broadcast).
+   *     It contributes the encounter identity and the committed tick number, and
+   *     is then discarded, so no client can ever display state that is not in a
+   *     committed batch.
    */
   const processTickResult = useCallback((
     data: CombatTickResponse,
-    meta?: { seq?: number; receivedAt?: number },
+    meta?: { seq?: number; receivedAt?: number; source?: 'batch' | 'ack' },
   ) => {
-    // B5: adopt the encounter this result belongs to so the shared batch
-    // stream can be subscribed to (and gap-recovered) for it.
+    // Adopt the encounter this result belongs to so the shared batch stream can
+    // be subscribed to (and recovered) for it.
     const incomingEncounterId = data.encounter_id ?? null;
     if (incomingEncounterId && incomingEncounterId !== encounterIdRef.current) {
       encounterIdRef.current = incomingEncounterId;
       setEncounterId(incomingEncounterId);
     }
-    // Duplicate-batch guard: the same authoritative batch can reach us twice
-    // (our own response plus the leader broadcast, or a recovery replay).
-    // Applying it twice duplicates log lines and re-applies HP.
     const batchId = data.encounter_batch_id;
+
+    // Acknowledgement path: bound recovery, render nothing.
+    if (meta?.source !== 'batch' && (batchId || typeof data.encounter_tick === 'number')) {
+      noteCommittedRef.current(data.encounter_tick ?? null, batchId ?? null);
+      if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
+        traceTickResponse(meta.seq, { roundTripMs: 0, outcome: 'reserved', batchId: batchId ?? null });
+      }
+      return;
+    }
+
+    // Duplicate-batch guard: a batch can still reach us twice (realtime plus a
+    // recovery replay). Applying it twice duplicates log lines and HP writes.
     if (batchId) {
       if (appliedBatchIdsRef.current.has(batchId)) {
         if (meta?.seq !== undefined && meta.receivedAt !== undefined) {
@@ -438,9 +451,6 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         );
       }
     }
-    // Tell the batch sequencer this tick already landed on the fast path, so
-    // the realtime copy of the same tick is skipped rather than replayed.
-    markBatchAppliedRef.current(data.encounter_tick ?? null, batchId ?? null);
 
     // Enter combat state when a tick arrives while we're idle and the server
     // reports live creatures. This covers two cases:
@@ -722,23 +732,33 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
   }, [stopCombat, recentlyKilledRef]);
 
-  // ── B5: shared batch stream ────────────────────────────────────
-  // Every participant applies the same authoritative batches in tick order,
-  // exactly once. Missing ticks are fetched from `encounter_tick_batches`
-  // instead of being guessed at with a timer.
-  const { markApplied: markBatchApplied } = useEncounterBatches({
+  // ── C4: committed batch stream (the only delivery path that renders) ──
+  // Every participant applies the same committed batches in tick order, exactly
+  // once. Holes are fetched from `encounter_tick_batches` by the recovery
+  // machine inside the hook.
+  const { noteCommitted } = useEncounterBatches({
     encounterId,
+    baselines: () => ({
+      [ext.current.character.id]: {
+        xp: ext.current.character.xp,
+        gold: ext.current.character.gold,
+        level: ext.current.character.level,
+        maxHp: ext.current.character.max_hp,
+        renown: ext.current.character.bhp ?? 0,
+        renownTotalEarned: ext.current.character.rp_total_earned ?? 0,
+      },
+    }),
     onBatch: (result, meta) => {
       traceBroadcastTick(
         lastTickRef.current ? Date.now() - lastTickRef.current : 0,
         result.ticks_processed,
         result.encounter_batch_id ?? null,
       );
-      console.log('[combat] applying shared batch', { tick: meta.tickNumber, source: meta.source });
-      processTickResult(result);
+      console.log('[combat] applying committed batch', { tick: meta.tickNumber, source: meta.source });
+      processTickResult(result, { source: 'batch' });
     },
   });
-  useEffect(() => { markBatchAppliedRef.current = markBatchApplied; }, [markBatchApplied]);
+  useEffect(() => { noteCommittedRef.current = noteCommitted; }, [noteCommitted]);
 
 
   // ── Broadcast channel (party only) ─────────────────────────────
