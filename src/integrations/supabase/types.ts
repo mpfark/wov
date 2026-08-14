@@ -1379,6 +1379,48 @@ export type Database = {
           },
         ]
       }
+      combat_soak_access: {
+        Row: {
+          character_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          node_id: string
+          note: string | null
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          node_id: string
+          note?: string | null
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          node_id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat_soak_access_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_soak_access_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creatures: {
         Row: {
           ac: number
@@ -3379,6 +3421,10 @@ export type Database = {
       collect_marketplace_payouts: {
         Args: { p_character_id: string }
         Returns: Json
+      }
+      combat_soak_access_check: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: boolean
       }
       commit_encounter_tick_v2: {
         Args: {
