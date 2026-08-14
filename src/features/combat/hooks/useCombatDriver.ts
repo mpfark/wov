@@ -513,6 +513,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       applyActionOutcomes(outcomes);
     }
 
+    // ── C5: telegraph delivery ──────────────────────────────────────────
+    // Boss-cast starts, resolves and fizzles ride the committed batch, so the
+    // telegraph opens and clears with the damage it belongs to.
+    if (data.boss_casts?.length || data.boss_stored_power?.length) {
+      ext.current.onBossCasts?.(data);
+    }
+
+
+
 
 
     // Enter combat state when a tick arrives while we're idle and the server
