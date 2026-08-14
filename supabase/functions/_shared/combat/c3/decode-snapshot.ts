@@ -48,7 +48,9 @@ import type {
   ProcSnapshot,
   ResolutionMode,
   ResolverConfig,
+  StanceSnapshot,
   WeaponSnapshot,
+
 } from '../pure/types.ts';
 
 // ── strict primitive readers ───────────────────────────────────────
