@@ -134,8 +134,13 @@ export type Database = {
           effect_type: string
           expires_at: number
           id: string
+          magnitude: number | null
+          mechanic: string | null
           next_tick_at: number | null
           node_id: string
+          params: Json
+          params_version: number
+          remaining: number | null
           session_id: string | null
           source_ability_key: string | null
           source_id: string
@@ -150,8 +155,13 @@ export type Database = {
           effect_type: string
           expires_at: number
           id?: string
+          magnitude?: number | null
+          mechanic?: string | null
           next_tick_at?: number | null
           node_id: string
+          params?: Json
+          params_version?: number
+          remaining?: number | null
           session_id?: string | null
           source_ability_key?: string | null
           source_id: string
@@ -166,8 +176,13 @@ export type Database = {
           effect_type?: string
           expires_at?: number
           id?: string
+          magnitude?: number | null
+          mechanic?: string | null
           next_tick_at?: number | null
           node_id?: string
+          params?: Json
+          params_version?: number
+          remaining?: number | null
           session_id?: string | null
           source_ability_key?: string | null
           source_id?: string

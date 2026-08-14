@@ -22,6 +22,12 @@
 
 import { decodeError } from './errors';
 import {
+  EFFECT_MECHANIC_REGISTRY,
+  EFFECT_PARAMS_VERSION,
+  buildBuffSnapshotFromEffects,
+  validateEffectRow,
+} from '../pure/effect-contract';
+import {
   SNAPSHOT_VERSION,
   type SnapshotEnvelope,
   type ResolvedDropChance,
@@ -38,7 +44,6 @@ import type {
   EffectSnapshot,
   EncounterSnapshot,
   EngagementSnapshot,
-  ParticipantBuffSnapshot,
   ParticipantSnapshot,
   ProcSnapshot,
   ResolutionMode,
@@ -168,26 +173,24 @@ export function abilityConfigKey(characterId: string, abilityKey: string): strin
 
 
 /**
- * Buff-state key registry.
+ * Reservation bookkeeping contract.
  *
- * `characters.reserved_buffs` and `characters.stance_state` are free-form JSON
- * owned by the stance RPCs, so they are not a typed contract. C3 pins the
- * mapping here: a key outside this registry is a decode failure rather than a
- * silently ignored buff.
+ * `characters.reserved_buffs` and `characters.stance_state` record ONLY which
+ * stance a character has switched on and how much CP that stance reserves.
+ * They are deliberately NOT a combat buff bag: every semantic buff the resolver
+ * reads is rebuilt from `public.active_effects` rows (see
+ * `pure/effect-contract.ts`). The decoder therefore validates their shape and
+ * derives nothing but reserved CP from them.
  */
-export const BUFF_KEY_REGISTRY = {
-  stealth: 'stealth',
-  damage_buff: 'damageBuff',
-  ignite: 'damageBuff',
-  envenom: 'damageBuff',
-  mitigation_pct: 'mitigationPct',
-  mitigation_flat: 'mitigationFlat',
-  absorb_shield: 'absorbShield',
-  dodge_chance: 'dodgeChance',
-  crit_buff: 'critBuffBonus',
-  block_buff: 'blockBuff',
-  rooted: 'rooted',
-} as const satisfies Record<string, keyof ParticipantBuffSnapshot>;
+const RESERVATION_ENTRY_KEYS = ['tier', 'reserved', 'activated_at'] as const;
+
+export interface ReservationState {
+  /** Stance keys currently switched on. Ordering is stable (sorted). */
+  readonly activeStanceKeys: readonly string[];
+  /** Total CP reserved by those stances. Bookkeeping only. */
+  readonly reservedCp: number;
+}
+
 
 export interface SnapshotAux {
   /** Authoritative mode, from the claim. Never inferred by the resolver. */
@@ -275,6 +278,8 @@ const CREATURE_KEYS = [
 const EFFECT_KEYS = [
   'id', 'targetId', 'sourceId', 'effectType', 'stacks', 'amountPerTick', 'expiresAtMs',
   'intervalMs', 'nextTickAtMs', 'sourceAbilityKey', 'rowVersion',
+  // Semantic effect contract (see pure/effect-contract.ts).
+  'mechanic', 'magnitude', 'remaining', 'params', 'paramsVersion', 'damageType',
 ] as const;
 
 const ACTION_KEYS = [
@@ -284,43 +289,48 @@ const ACTION_KEYS = [
 
 const ENGAGEMENT_KEYS = ['creatureId', 'characterId', 'lastActionAtMs'] as const;
 
-function decodeBuffs(participant: Json, path: string): ParticipantBuffSnapshot {
-  const buffs: {
-    stealth: boolean; damageBuff: boolean; mitigationPct: number; mitigationFlat: number;
-    absorbShield: number; dodgeChance: number; critBuffBonus: number; blockBuff: boolean;
-    rooted: boolean;
-  } = {
-    stealth: false, damageBuff: false, mitigationPct: 0, mitigationFlat: 0,
-    absorbShield: 0, dodgeChance: 0, critBuffBonus: 0, blockBuff: false, rooted: false,
-  };
-
+/**
+ * Validate reservation bookkeeping and return it. NOTHING here reaches the
+ * resolver's buff bag — a stance key is not a combat buff. Malformed entries
+ * still fail closed so a stance RPC change cannot pass unnoticed.
+ */
+function decodeReservation(participant: Json, path: string): ReservationState {
+  const keys = new Set<string>();
+  let reservedCp = 0;
   for (const source of ['reservedBuffs', 'stanceState'] as const) {
     const raw = participant[source];
     if (raw === undefined || raw === null) continue;
     const state = obj(raw, `${path}.${source}`);
     for (const [key, value] of Object.entries(state)) {
-      const target = (BUFF_KEY_REGISTRY as Record<string, keyof ParticipantBuffSnapshot>)[key];
-      if (!target) {
-        throw decodeError(
-          `${path}.${source}.${key}`,
-          'buff key is not in BUFF_KEY_REGISTRY; register it before it can affect combat',
+      if (value === null || value === undefined) continue;
+      keys.add(key);
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        const entry = value as Json;
+        const unknown = Object.keys(entry).filter(
+          (k) => !(RESERVATION_ENTRY_KEYS as readonly string[]).includes(k),
         );
-      }
-      const bag = buffs as unknown as Record<string, number | boolean>;
-      if (typeof bag[target] === 'boolean') {
-        bag[target] = Boolean(value);
-      } else {
-        const n = typeof value === 'string' ? Number(value) : value;
-        if (typeof n !== 'number' || !Number.isFinite(n)) {
-          throw decodeError(`${path}.${source}.${key}`, `expected numeric buff value, received ${describe(value)}`);
+        if (unknown.length > 0) {
+          throw decodeError(
+            `${path}.${source}.${key}`,
+            `unknown reservation field(s): ${unknown.sort().join(', ')}`,
+          );
         }
-        bag[target] = Math.max(Number(bag[target] ?? 0), n);
+        reservedCp += Math.max(0, optNum(entry, 'reserved', `${path}.${source}.${key}`) ?? 0);
+        continue;
       }
-
+      if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
+        // Legacy flag-shaped activation marker. Activation only, never a value.
+        continue;
+      }
+      throw decodeError(
+        `${path}.${source}.${key}`,
+        `expected reservation bookkeeping object, received ${describe(value)}`,
+      );
     }
   }
-  return buffs;
+  return { activeStanceKeys: [...keys].sort(), reservedCp };
 }
+
 
 /**
  * Aggregate equipment + gem bonuses from the snapshotted equipment rows.
@@ -519,7 +529,104 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     resolvingTick: optNum(cursorRaw, 'resolvingTick', '$.cursor'),
   } as const;
 
+  // ── status definitions ───────────────────────────────────────────
+  const statusDefs = arr(root.statusDefs, '$.statusDefs').map((entry, i) => {
+    const path = `$.statusDefs[${i}]`;
+    const s = obj(entry, path);
+    const modifier = s.modifier ? obj(s.modifier, `${path}.modifier`) : {};
+    const stacks = s.stacks ? obj(s.stacks, `${path}.stacks`) : {};
+    return {
+      key: reqStr(s, 'key', path),
+      isPeriodic: s.is_periodic === true,
+      ampPct: optNum(modifier, 'amp_pct', `${path}.modifier`) ?? 0,
+      maxStacks: optNum(stacks, 'max', `${path}.stacks`) ?? 1,
+    };
+  });
+  const statusByKey = new Map(statusDefs.map((s) => [s.key, s]));
+
+  // ── effects ──────────────────────────────────────────────────────
+  // Decoded BEFORE participants: `active_effects` is the single authority for
+  // semantic combat state, so every participant's buff bag is rebuilt from
+  // these rows on every tick (see pure/effect-contract.ts).
+  const snapshotCreatureIds = new Set(
+    arr(root.creatures, '$.creatures').map((c, i) => reqStr(obj(c, `$.creatures[${i}]`), 'id', `$.creatures[${i}]`)),
+  );
+  const effects: EffectSnapshot[] = [];
+  const effectIds: string[] = [];
+  arr(root.effects, '$.effects').forEach((entry, i) => {
+    const path = `$.effects[${i}]`;
+    const e = obj(entry, path);
+    assertKnownKeys(e, EFFECT_KEYS, path);
+    const id = reqStr(e, 'id', path);
+    const targetId = reqStr(e, 'targetId', path);
+    const effectType = reqStr(e, 'effectType', path);
+    const def = statusByKey.get(effectType);
+    const intervalMs = reqNum(e, 'intervalMs', path);
+    // `nextTickAtMs` is `active_effects.next_tick_at` verbatim: the absolute
+    // epoch-ms due time of this effect's next periodic tick. No derivation,
+    // no relation to the encounter cursor or to combat_sessions.last_tick_at.
+    const nextTickAtMs = reqNum(e, 'nextTickAtMs', path);
+    const targetKind = snapshotCreatureIds.has(targetId) ? 'creature' : 'character';
+    const mechanic = optStr(e, 'mechanic', path);
+    const sourceCharacterId = optStr(e, 'sourceId', path);
+    const magnitude = optNum(e, 'magnitude', path);
+    const remaining = optNum(e, 'remaining', path);
+    const damageType = optStr(e, 'damageType', path);
+    // Semantic rows are validated against the closed mechanic/parameter
+    // registry. Unknown mechanics and parameters fail closed, with the exact
+    // JSON path. Legacy rows without a mechanic remain plain DoT/stack rows.
+    let params: Readonly<Record<string, number | boolean | string>> | undefined;
+    if (mechanic) {
+      try {
+        params = validateEffectRow(
+          {
+            mechanic,
+            targetKind,
+            sourceCharacterId,
+            magnitude,
+            remaining,
+            intervalMs,
+            paramsVersion: optNum(e, 'paramsVersion', path) ?? EFFECT_PARAMS_VERSION,
+            params: e.params ?? {},
+          },
+          path,
+        );
+      } catch (err) {
+        throw decodeError(path, err instanceof Error ? err.message : String(err));
+      }
+    } else if (e.params !== undefined && e.params !== null && Object.keys(obj(e.params, `${path}.params`)).length > 0) {
+      throw decodeError(`${path}.params`, 'params require a registered mechanic');
+    }
+    effects.push({
+      id,
+      targetKind,
+      targetId,
+      effectType,
+      stacks: reqNum(e, 'stacks', path),
+      amountPerTick: reqNum(e, 'amountPerTick', path),
+      expiresAtMs: reqNum(e, 'expiresAtMs', path),
+      intervalMs,
+      nextTickAtMs,
+      damageType,
+      sourceCharacterId,
+      isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
+      ampPct: def?.ampPct ?? 0,
+      mechanic: (mechanic as EffectSnapshot['mechanic']) ?? null,
+      abilityKey: optStr(e, 'sourceAbilityKey', path),
+      cpPerTick: typeof params?.cpPerTick === 'number' ? params.cpPerTick : 0,
+      healsAllies: params?.healsAllies === true,
+      damagesEnemies: params?.damagesEnemies === true,
+      maxStacks: typeof params?.maxStacks === 'number' ? params.maxStacks : def?.maxStacks,
+      magnitude: magnitude ?? undefined,
+      remaining,
+      params,
+      paramsVersion: EFFECT_PARAMS_VERSION,
+    });
+    effectIds.push(id);
+  });
+
   // participants
+
   const participants: ParticipantSnapshot[] = [];
   const durabilityByInventoryId: Record<string, number> = {};
   const mpByCharacterId: Record<string, number> = {};
@@ -539,6 +646,8 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       return eq;
     });
     const partyId = optStr(p, 'partyId', path);
+    // Shape-checked, then discarded: stances reserve CP, they do not buff.
+    decodeReservation(p, path);
     const hasShield = equipment.some((e) => optStr(e, 'slot', path) === 'off_hand');
 
     participants.push({
@@ -554,7 +663,9 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       ac: reqNum(p, 'ac', path),
       hasShield,
       weapon: decodeWeapon(equipment, `${path}.equipment`),
-      buffs: decodeBuffs(p, path),
+      // The ONE source of semantic buffs: persisted effect rows. Reservation
+      // bookkeeping is validated separately and contributes nothing numeric.
+      buffs: buildBuffSnapshotFromEffects(id, effects, aux.nowMs),
       partyId,
       isTank: partyId ? aux.tankByPartyId.get(partyId) === id : true,
       joinedAtMs: reqNum(p, 'joinedAtMs', path),
@@ -646,56 +757,10 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     };
   });
 
-  const creatureIds = new Set(creatures.map((c) => c.id));
 
-  // status definitions
-  const statusDefs = arr(root.statusDefs, '$.statusDefs').map((entry, i) => {
-    const path = `$.statusDefs[${i}]`;
-    const s = obj(entry, path);
-    const modifier = s.modifier ? obj(s.modifier, `${path}.modifier`) : {};
-    const stacks = s.stacks ? obj(s.stacks, `${path}.stacks`) : {};
-    return {
-      key: reqStr(s, 'key', path),
-      isPeriodic: s.is_periodic === true,
-      ampPct: optNum(modifier, 'amp_pct', `${path}.modifier`) ?? 0,
-      maxStacks: optNum(stacks, 'max', `${path}.stacks`) ?? 1,
-    };
-  });
-  const statusByKey = new Map(statusDefs.map((s) => [s.key, s]));
+  // status definitions and effects are decoded before participants, because a
+  // participant's semantic buff bag is rebuilt from its persisted effect rows.
 
-  // effects
-  const effects: EffectSnapshot[] = [];
-  const effectIds: string[] = [];
-  arr(root.effects, '$.effects').forEach((entry, i) => {
-    const path = `$.effects[${i}]`;
-    const e = obj(entry, path);
-    assertKnownKeys(e, EFFECT_KEYS, path);
-    const id = reqStr(e, 'id', path);
-    const targetId = reqStr(e, 'targetId', path);
-    const effectType = reqStr(e, 'effectType', path);
-    const def = statusByKey.get(effectType);
-    const intervalMs = reqNum(e, 'intervalMs', path);
-    // `nextTickAtMs` is `active_effects.next_tick_at` verbatim: the absolute
-    // epoch-ms due time of this effect's next periodic tick. No derivation,
-    // no relation to the encounter cursor or to combat_sessions.last_tick_at.
-    const nextTickAtMs = reqNum(e, 'nextTickAtMs', path);
-    effects.push({
-      id,
-      targetKind: creatureIds.has(targetId) ? 'creature' : 'character',
-      targetId,
-      effectType,
-      stacks: reqNum(e, 'stacks', path),
-      amountPerTick: reqNum(e, 'amountPerTick', path),
-      expiresAtMs: reqNum(e, 'expiresAtMs', path),
-      intervalMs,
-      nextTickAtMs,
-      damageType: null,
-      sourceCharacterId: optStr(e, 'sourceId', path),
-      isPeriodic: def?.isPeriodic ?? false,
-      ampPct: def?.ampPct ?? 0,
-    });
-    effectIds.push(id);
-  });
 
   // actions
   const actions: ActionSnapshot[] = [];

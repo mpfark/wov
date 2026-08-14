@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveTickPure } from '@/shared/combat/pure';
 import { PROPOSED_TICK_VERSION, SNAPSHOT_VERSION } from '@/shared/combat/c2/contract';
-import { BUFF_KEY_REGISTRY } from '@/shared/combat/c3/decode-snapshot';
+import { buildBuffSnapshotFromEffects } from '@/shared/combat/pure/effect-contract';
 import { getXpForLevel } from '@/shared/formulas/xp';
 import { getClassLevelBonuses } from '@/shared/formulas/classes';
 import { creature, participant, snapshot } from '../pure/fixtures';
@@ -190,32 +190,32 @@ describe('C3 contract — derived progression', () => {
   });
 });
 
-describe('C3 contract — buff key coverage', () => {
-  it('every combat-relevant buff key produced by configuration is registered', () => {
-    // Inventory of keys the game can write into `characters.reserved_buffs`
-    // and `characters.stance_state` through abilities, items, effects and
-    // stance configuration. Add here *and* to the registry when new keys ship.
-    const producedKeys = [
-      'stealth',
-      'damage_buff',
-      'ignite',
-      'envenom',
-      'mitigation_pct',
-      'mitigation_flat',
-      'absorb_shield',
-      'dodge_chance',
-      'crit_buff',
-      'block_buff',
-      'rooted',
-    ];
-    const unregistered = producedKeys.filter((k) => !(k in BUFF_KEY_REGISTRY));
-    expect(unregistered).toEqual([]);
+describe('C3 contract — semantic buffs come only from persisted effects', () => {
+  it('an absorb effect row rebuilds the shield pool from its remaining state', () => {
+    const buffs = buildBuffSnapshotFromEffects(
+      'char-1',
+      [{
+        id: 'eff-1', targetKind: 'character', targetId: 'char-1', effectType: 'absorb_shield',
+        mechanic: 'absorb_buff', magnitude: 60, remaining: 24, expiresAtMs: T0 + 30_000,
+        intervalMs: 0, nextTickAtMs: T0 + 30_000, stacks: 1, amountPerTick: 0,
+        sourceCharacterId: 'char-1', params: {}, paramsVersion: 1,
+      }] as any,
+      T0,
+    );
+    expect(buffs.absorbShield).toBe(24);
   });
 
-  it('every registry entry maps onto a real participant buff field', () => {
-    const fields = new Set(Object.keys(participant().buffs));
-    for (const target of Object.values(BUFF_KEY_REGISTRY)) {
-      expect(fields.has(target)).toBe(true);
-    }
+  it('an expired effect row contributes nothing', () => {
+    const buffs = buildBuffSnapshotFromEffects(
+      'char-1',
+      [{
+        id: 'eff-1', targetKind: 'character', targetId: 'char-1', effectType: 'absorb_shield',
+        mechanic: 'absorb_buff', magnitude: 60, remaining: 24, expiresAtMs: T0 - 1,
+        intervalMs: 0, nextTickAtMs: T0, stacks: 1, amountPerTick: 0,
+        sourceCharacterId: 'char-1', params: {}, paramsVersion: 1,
+      }] as any,
+      T0,
+    );
+    expect(buffs.absorbShield).toBe(0);
   });
 });

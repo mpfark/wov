@@ -28,6 +28,7 @@ import { getChaGoldMultiplier } from '../../formulas/economy';
 import { bondGainForKill } from '../../formulas/bond';
 import { PRIMARY_GEM_KEYS } from '../../formulas/gems';
 import { resolveDamage, resolveHeal, absorbFromShield } from '../resolution';
+import { EFFECT_PARAMS_VERSION } from './effect-contract';
 import { getPartyXpBonus } from './party-xp';
 import type { ResolverMechanic } from './mechanics';
 import { createTickRandom } from './rng';
@@ -509,6 +510,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     blockChanceCap?: number;
     reactiveHolyDamage?: number;
     reactiveHolyDamageType?: string | null;
+    absorbShield?: number;
+    mitigationPct?: number;
+    mitigationFlat?: number;
+    critBuffBonus?: number;
+    damageBuff?: boolean;
+    damageBuffMult?: number;
   }
   const buffOverride = new Map<string, BuffOverride>();
   const overrideOf = (id: string): BuffOverride => {
@@ -828,30 +835,71 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           continue;
         }
 
+        // ── absorb_buff / mitigation_buff / offense_buff ───────────
+        // Persistent friendly state. The row IS the buff: it carries the
+        // authored magnitude, the mechanic-scoped params, and — for absorb —
+        // the mutable unspent pool in `remaining`. The next tick rebuilds the
+        // buff bag from it (see pure/effect-contract.ts).
         if (
           a.mechanic === 'absorb_buff' ||
           a.mechanic === 'mitigation_buff' ||
           a.mechanic === 'offense_buff'
         ) {
+          const prm = a.params ?? {};
           w.cp.set(caster.id, (w.cp.get(caster.id) ?? 0) - a.cpCost);
           consumedActionIds.push(a.id);
+          const targetId = a.allyId ?? caster.id;
+          const magnitude = Math.max(0, a.amount);
+          const expiresAtMs = nowMs + Math.max(tickRate, a.durationMs);
+
+          // In-tick effect, identical to what rehydration will produce.
+          const o = overrideOf(targetId);
+          if (a.mechanic === 'absorb_buff') {
+            const pool = Math.floor(magnitude);
+            w.shield.set(targetId, Math.max(w.shield.get(targetId) ?? 0, pool));
+            o.absorbShield = w.shield.get(targetId) ?? pool;
+          } else if (a.mechanic === 'mitigation_buff') {
+            if ((prm.mode ?? 'percent') === 'flat') {
+              o.mitigationFlat = Math.max(o.mitigationFlat ?? 0, magnitude);
+            } else {
+              o.mitigationPct = Math.max(o.mitigationPct ?? 0, magnitude);
+            }
+          } else if ((prm.offenseMode ?? 'damage_mult') === 'crit_edge') {
+            o.critBuffBonus = Math.max(o.critBuffBonus ?? 0, magnitude);
+          } else {
+            o.damageBuff = true;
+            o.damageBuffMult = Math.max(o.damageBuffMult ?? 0, magnitude);
+          }
+
           effectUpserts.push({
             targetKind: 'character',
-            targetId: a.allyId ?? caster.id,
+            targetId,
             effectType: a.abilityKey,
             stacks: 1,
             amountPerTick: 0,
-            expiresAtMs: nowMs + Math.max(tickRate, a.durationMs),
+            expiresAtMs,
             intervalMs: 0,
-            nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
+            nextTickAtMs: expiresAtMs,
             damageType: null,
             sourceCharacterId: caster.id,
+            mechanic: a.mechanic,
+            abilityKey: a.abilityKey,
+            magnitude,
+            remaining: a.mechanic === 'absorb_buff' ? Math.floor(magnitude) : null,
+            params:
+              a.mechanic === 'mitigation_buff'
+                ? { mode: prm.mode === 'flat' ? 'flat' : 'percent', ...(prm.taunt === true ? { taunt: true } : {}) }
+                : a.mechanic === 'offense_buff'
+                  ? { offenseMode: prm.offenseMode === 'crit_edge' ? 'crit_edge' : 'damage_mult' }
+                  : {},
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} readies ${a.abilityKey}.`, {
             characterId: caster.id,
           });
           continue;
         }
+
 
         const pr = a.params ?? {};
         const payCp = () => w.cp.set(caster.id, (w.cp.get(caster.id) ?? 0) - a.cpCost);
@@ -881,6 +929,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             mechanic: 'stealth_buff',
             abilityKey: a.abilityKey,
             magnitude: mult,
+            // One-shot ambush: the charge is spent by the next landed hit.
+            remaining: 1,
+            params: {},
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} melts into shadow (ambush x${mult.toFixed(2)}).`, {
             characterId: caster.id,
@@ -911,7 +963,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             sourceCharacterId: caster.id,
             mechanic: 'block_buff',
             abilityKey: a.abilityKey,
-            magnitude: pr.blockChance ?? 0,
+            magnitude: Math.max(0, Math.min(1, pr.blockChance ?? 0)),
+            params: {
+              ...(typeof pr.blockAmount === 'number' ? { blockAmount: pr.blockAmount } : {}),
+              blockChanceCap: pr.blockChanceCap ?? 0.95,
+            },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} braces behind their shield.`, {
             characterId: caster.id,
@@ -942,6 +999,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             mechanic: 'evasion_buff',
             abilityKey: a.abilityKey,
             magnitude: dodge,
+            params: { kind: 'dodge', evasionSource: pr.evasionSource ?? 'cloak' },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           const bonusMult = pr.nextHitBonusMult ?? (pr.dodgeChance != null ? a.amount : 0);
           const windowMs = pr.nextHitWindowMs ?? 0;
@@ -962,6 +1021,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
               mechanic: 'evasion_buff',
               abilityKey: a.abilityKey,
               magnitude: bonusMult,
+              // One-shot window: consumed by the caster's next landed hit.
+              remaining: 1,
+              params: { kind: 'next_hit', evasionSource: 'disengage' },
+              paramsVersion: EFFECT_PARAMS_VERSION,
             });
           }
           emit(
@@ -995,6 +1058,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             mechanic: 'reactive_holy',
             abilityKey: a.abilityKey,
             magnitude: dmg,
+            params: { damageType: a.damageType ?? 'holy' },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} raises a retaliating ward [${dmg}].`, {
             characterId: caster.id,
@@ -1054,6 +1119,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             cpPerTick: mergedCp,
             healsAllies: pr.healsAllies ?? a.mechanic !== 'aura_pulse',
             damagesEnemies: pr.damagesEnemies ?? a.mechanic === 'aura_pulse',
+            params: {
+              cpPerTick: mergedCp,
+              healsAllies: pr.healsAllies ?? a.mechanic !== 'aura_pulse',
+              damagesEnemies: pr.damagesEnemies ?? a.mechanic === 'aura_pulse',
+            },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} sustains ${a.abilityKey}.`, {
             characterId: caster.id,
@@ -1082,7 +1153,18 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             mechanic: 'stack_apply',
             abilityKey: a.abilityKey,
             magnitude: Math.max(0, Math.min(1, pr.procChance ?? a.amount)),
-            maxStacks: Math.max(1, Math.floor(pr.stackEffectType ? a.maxStacks : a.maxStacks)),
+            maxStacks: Math.max(1, Math.floor(a.maxStacks)),
+            params: {
+              stackEffectType: pr.stackEffectType ?? a.abilityKey,
+              trigger: pr.stackTrigger ?? 'weapon_hit',
+              dotPerTick: Math.max(0, pr.dotPerTick ?? 0),
+              durationMs: Math.max(0, Math.floor(a.durationMs)),
+              intervalMs: Math.max(250, Math.floor(stateInterval)),
+              maxStacks: Math.max(1, Math.floor(a.maxStacks)),
+              ...(typeof pr.pulseDamage === 'number' ? { pulseDamage: pr.pulseDamage } : {}),
+              ...(a.damageType ? { damageType: a.damageType } : {}),
+            },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('buff', `${caster.name} readies ${a.abilityKey}.`, {
             characterId: caster.id,
@@ -1345,6 +1427,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
             damageType: a.damageType,
             sourceCharacterId: caster.id,
+            mechanic: 'control_debuff',
+            abilityKey: a.abilityKey,
+            params: {},
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('debuff', `${caster.name} applies ${a.abilityKey} to ${creature.name}.`, {
             characterId: caster.id,
@@ -1380,6 +1466,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             nextTickAtMs: nowMs + Math.max(0, a.intervalMs > 0 ? a.intervalMs : tickRate),
             damageType: a.damageType,
             sourceCharacterId: caster.id,
+            mechanic: 'dot_debuff',
+            abilityKey: a.abilityKey,
+            maxStacks: a.maxStacks,
+            params: {
+              maxStacks: Math.max(1, Math.floor(a.maxStacks)),
+              ...(a.damageType ? { damageType: a.damageType } : {}),
+            },
+            paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit(
             'debuff',
@@ -1901,6 +1995,46 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       nextTickAtMs: advanced,
       damageType: e.damageType,
       sourceCharacterId: e.sourceCharacterId,
+      // The semantic payload travels with every rewrite: `remaining` is the
+      // only field the committer is allowed to change, so re-sending the row
+      // without it would silently erase the pool/charge state.
+      mechanic: e.mechanic ?? null,
+      abilityKey: e.abilityKey,
+      magnitude: e.magnitude,
+      remaining: e.remaining ?? null,
+      params: e.params,
+      paramsVersion: e.paramsVersion,
+    });
+  }
+
+  // ── absorb pools: commit the unspent shield HP for the next tick ───
+  // The pool lives ONLY here. Reservation bookkeeping never stores it.
+  for (const e of effects) {
+    if (e.mechanic !== 'absorb_buff' || effectDeleteIds.has(e.id)) continue;
+    const left = Math.max(0, Math.floor(w.shield.get(e.targetId) ?? 0));
+    if (left === Math.floor(e.remaining ?? e.magnitude ?? 0) && left > 0) continue;
+    if (left <= 0) {
+      // Fully consumed: the row is removed exactly once.
+      effectDeleteIds.add(e.id);
+      continue;
+    }
+    effectUpserts.push({
+      targetKind: 'character',
+      targetId: e.targetId,
+      effectType: e.effectType,
+      stacks: e.stacks,
+      amountPerTick: 0,
+      expiresAtMs: e.expiresAtMs,
+      intervalMs: e.intervalMs,
+      nextTickAtMs: e.nextTickAtMs,
+      damageType: null,
+      sourceCharacterId: e.sourceCharacterId,
+      mechanic: 'absorb_buff',
+      abilityKey: e.abilityKey,
+      magnitude: e.magnitude,
+      remaining: left,
+      params: e.params,
+      paramsVersion: e.paramsVersion,
     });
   }
 
