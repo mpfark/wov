@@ -23,7 +23,7 @@
 import { decodeError } from './errors';
 import type { ProposedTick } from '../pure/types';
 
-export const BATCH_ENVELOPE_VERSION = 2 as const;
+export const BATCH_ENVELOPE_VERSION = 3 as const;
 
 type Json = Record<string, unknown>;
 
