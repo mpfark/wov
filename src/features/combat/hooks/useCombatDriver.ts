@@ -732,23 +732,33 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
   }, [stopCombat, recentlyKilledRef]);
 
-  // ── B5: shared batch stream ────────────────────────────────────
-  // Every participant applies the same authoritative batches in tick order,
-  // exactly once. Missing ticks are fetched from `encounter_tick_batches`
-  // instead of being guessed at with a timer.
-  const { markApplied: markBatchApplied } = useEncounterBatches({
+  // ── C4: committed batch stream (the only delivery path that renders) ──
+  // Every participant applies the same committed batches in tick order, exactly
+  // once. Holes are fetched from `encounter_tick_batches` by the recovery
+  // machine inside the hook.
+  const { noteCommitted } = useEncounterBatches({
     encounterId,
+    baselines: () => ({
+      [ext.current.character.id]: {
+        xp: ext.current.character.xp,
+        gold: ext.current.character.gold,
+        level: ext.current.character.level,
+        maxHp: ext.current.character.max_hp,
+        renown: ext.current.character.bhp ?? 0,
+        renownTotalEarned: ext.current.character.rp_total_earned ?? 0,
+      },
+    }),
     onBatch: (result, meta) => {
       traceBroadcastTick(
         lastTickRef.current ? Date.now() - lastTickRef.current : 0,
         result.ticks_processed,
         result.encounter_batch_id ?? null,
       );
-      console.log('[combat] applying shared batch', { tick: meta.tickNumber, source: meta.source });
-      processTickResult(result);
+      console.log('[combat] applying committed batch', { tick: meta.tickNumber, source: meta.source });
+      processTickResult(result, { source: 'batch' });
     },
   });
-  useEffect(() => { markBatchAppliedRef.current = markBatchApplied; }, [markBatchApplied]);
+  useEffect(() => { noteCommittedRef.current = noteCommitted; }, [noteCommitted]);
 
 
   // ── Broadcast channel (party only) ─────────────────────────────
