@@ -52,8 +52,10 @@ import {
   seededWeaponAbilityDamage,
 } from './rolls.ts';
 import type {
+  ActiveCastSnapshot,
   BondProposal,
   CastMutation,
+  CastTargetProposal,
   CharacterMutation,
   CreatureMutation,
   CreatureSnapshot,
@@ -84,6 +86,8 @@ interface Working {
   cLastSource: Map<string, { characterId: string | null; kind: CreatureMutation['lastSourceKind'] }>;
   storedPower: Map<string, number>;
   castCooldown: Map<string, number>;
+  /** In-flight telegraphed casts, keyed by caster. At most one per creature. */
+  activeCasts: Map<string, ActiveCastSnapshot>;
   hitters: Set<string>;
 }
 
@@ -115,6 +119,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     cLastSource: new Map(),
     storedPower: new Map(creatures.map((c) => [c.id, c.storedPower])),
     castCooldown: new Map(creatures.map((c) => [c.id, c.castCooldownTicks])),
+    activeCasts: new Map(snapshot.activeCasts.map((c) => [c.creatureId, c])),
     hitters: new Set<string>(),
   };
 
@@ -391,6 +396,41 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     void nowMs;
     return res.applied;
   };
+
+  /**
+   * The authored Stored Power contract: while a boss channels, its paused
+   * autoattack is banked as the *mitigated* damage that blow would have dealt
+   * to the primary target. Crits are disabled during the channel, and no
+   * dodge/block roll is taken, so a channel banks a steady expected value
+   * rather than a second stream of RNG. Absorb shields are deliberately not
+   * consumed here — nothing actually hit the target.
+   */
+  const expectedPausedAutoattack = (
+    creature: CreatureSnapshot,
+    target: ParticipantSnapshot,
+    tick: number,
+  ): number => {
+    const raw = seededCreatureDamage({
+      rng,
+      creatureId: creature.id,
+      creatureLevel: creature.level,
+      creatureRarity: creature.rarity,
+      creatureAttrs: creature.attrs,
+      targetId: target.id,
+      targetLevel: target.level,
+      key: [tick, 'channel'],
+    });
+    let dmg = scaleCreatureDamage(raw, 'normal', false, 0);
+    if (target.buffs.mitigationPct > 0) {
+      dmg = Math.floor(dmg * (1 - Math.min(0.9, target.buffs.mitigationPct)));
+    }
+    if (target.buffs.mitigationFlat > 0) {
+      dmg = Math.max(0, dmg - target.buffs.mitigationFlat);
+    }
+    if (target.buffs.rooted) dmg = Math.max(Math.floor(dmg * 0.7), 1);
+    return Math.max(0, dmg);
+  };
+
 
   const healCharacter = (target: ParticipantSnapshot, amount: number): number => {
     const res = resolveHeal({
@@ -1467,9 +1507,181 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
     }
 
-    // 4. Boss casts + Stored Power.
+    // 4. Boss casts — resolve in-flight channels first, then start new ones.
+    //
+    // A cast is a two-sided contract: it is telegraphed on one tick and lands
+    // on a later one. The authored contract is frozen when the channel begins
+    // and read back from the in-flight cast, never re-read from the creature,
+    // so a configuration edit mid-channel cannot retune a live telegraph.
+    const pausedByCast = new Set<string>();
+
+    for (const [creatureId, cast] of sortBy([...w.activeCasts.entries()], ([id]) => id)) {
+      const creature = byCreature.get(creatureId);
+      const gone = !creature || !isAliveC(creatureId);
+      const pool = w.storedPower.get(creatureId) ?? 0;
+      const basePool = creature?.storedPower ?? 0;
+
+      // Caster gone (killed during the channel, or detached from the
+      // encounter): the cast is cancelled. Killing the boss in time is the
+      // counterplay, so no damage lands. Stored Power follows the fizzle rule.
+      if (gone) {
+        const keep = cast.consumeMode === 'preserve' || cast.consumeMode === 'ignore';
+        const remaining = keep ? pool : 0;
+        w.storedPower.set(creatureId, remaining);
+        if (remaining !== basePool) {
+          storedPowerMut.set(creatureId, {
+            creatureId,
+            delta: remaining - basePool,
+            cap: cast.storedPowerCap,
+          });
+        }
+        w.activeCasts.delete(creatureId);
+        casts.push({
+          creatureId,
+          abilityKey: cast.abilityKey,
+          castKey: cast.castKey,
+          phase: 'fizzle',
+          castEventId: cast.castEventId,
+          resolvesAtMs: cast.resolvesAtMs,
+          targetCharacterId: cast.targetCharacterId,
+          damage: 0,
+          aoeDamage: 0,
+          damageType: cast.damageType,
+          text: null,
+          storedPowerConsumed: 0,
+          lockMs: 0,
+          targets: [],
+          config: cast,
+        });
+        emit('boss_cast_fizzle', `${cast.label} collapses unfinished.`, {
+          creatureId,
+        });
+        continue;
+      }
+
+      // Still channeling: bank the paused autoattack as Stored Power.
+      if (nowMs < cast.resolvesAtMs) {
+        if (cast.pauseAutoattacks) pausedByCast.add(creatureId);
+        const cap = cast.storedPowerCap;
+        const primary = cast.targetCharacterId
+          ? byParticipant.get(cast.targetCharacterId)
+          : undefined;
+        const banked = primary && isAliveP(primary.id)
+          ? expectedPausedAutoattack(creature, primary, t)
+          : 0;
+        if (banked > 0) {
+          const next = cap > 0 ? Math.min(cap, pool + banked) : pool + banked;
+          if (next !== pool) {
+            w.storedPower.set(creatureId, next);
+            storedPowerMut.set(creatureId, {
+              creatureId,
+              delta: next - basePool,
+              cap,
+            });
+            emit('boss_cast_channel', `${cast.label} gathers force [${next}].`, {
+              creatureId,
+              characterId: cast.targetCharacterId,
+              amount: next,
+            });
+          }
+        }
+        continue;
+      }
+
+      // Due: release. Stored Power is consumed before target selection, so a
+      // party that fled still drains the pool (legacy rule).
+      let used = 0;
+      let remaining = pool;
+      switch (cast.consumeMode) {
+        case 'all':
+          used = pool;
+          remaining = 0;
+          break;
+        case 'percent':
+          used = Math.max(0, Math.min(pool, Math.round((pool * cast.consumePct) / 100)));
+          remaining = pool - used;
+          break;
+        case 'fixed':
+          used = Math.min(pool, Math.max(0, cast.consumeFixed));
+          remaining = pool - used;
+          break;
+        case 'preserve':
+          used = pool;
+          remaining = pool;
+          break;
+        case 'reset':
+          used = 0;
+          remaining = 0;
+          break;
+        default:
+          used = 0;
+          remaining = pool;
+          break;
+      }
+      w.storedPower.set(creatureId, remaining);
+      if (remaining !== basePool) {
+        storedPowerMut.set(creatureId, {
+          creatureId,
+          delta: remaining - basePool,
+          cap: cast.storedPowerCap,
+        });
+      }
+      w.activeCasts.delete(creatureId);
+
+      const primaryDamage = Math.max(0, cast.baseDamage + Math.floor(used * cast.primaryShare));
+      const aoeDamage = Math.max(0, cast.baseAoeDamage + Math.floor(used * cast.aoeShare));
+
+      // Eligibility: alive, and already present when the channel began.
+      // Leaving the node purges the participant row, so anyone who fled and
+      // walked back in re-joined later and is not caught by this cast.
+      const eligible = participants.filter(
+        (p) => isAliveP(p.id) && p.joinedAtMs <= cast.startedAtMs,
+      );
+
+      const targets: CastTargetProposal[] = [];
+      for (const p of eligible) {
+        const isPrimary = p.id === cast.targetCharacterId;
+        const amount = isPrimary ? primaryDamage : aoeDamage;
+        if (amount <= 0) continue;
+        const applied = damageCharacter(p, amount, creatureId, nowMs);
+        targets.push({ characterId: p.id, damage: amount, applied, isPrimary });
+        emit(
+          'boss_cast_hit',
+          cast.castedText ?? `${cast.label} strikes ${p.name} for ${applied}.`,
+          {
+            characterId: p.id,
+            creatureId,
+            amount: applied,
+            damageType: cast.damageType,
+          },
+        );
+      }
+      if (targets.length === 0) {
+        emit('boss_cast_evaded', `${cast.label} lands on empty ground.`, { creatureId });
+      }
+
+      casts.push({
+        creatureId,
+        abilityKey: cast.abilityKey,
+        castKey: cast.castKey,
+        phase: 'resolve',
+        castEventId: cast.castEventId,
+        resolvesAtMs: cast.resolvesAtMs,
+        targetCharacterId: cast.targetCharacterId,
+        damage: primaryDamage,
+        aoeDamage,
+        damageType: cast.damageType,
+        text: cast.castedText,
+        storedPowerConsumed: used,
+        lockMs: targets.length > 0 ? cast.lockMs : 0,
+        targets,
+        config: cast,
+      });
+    }
+
     for (const c of creatures) {
       if (!isAliveC(c.id) || !c.bossCast) continue;
+      if (w.activeCasts.has(c.id)) continue;
       const cast = c.bossCast;
       const cooldown = w.castCooldown.get(c.id) ?? 0;
       if (cooldown > 0) {
@@ -1477,60 +1689,69 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         continue;
       }
       const pool = engagedWith(c.id).filter((p) => isAliveP(p.id));
-      if (pool.length === 0) {
-        casts.push({
-          creatureId: c.id,
-          abilityKey: cast.abilityKey,
-          phase: 'fizzle',
-          resolvesAtMs: nowMs,
-          targetCharacterId: null,
-          damage: 0,
-          damageType: cast.damageType,
-          text: cast.castedText,
-        });
-        continue;
-      }
-      const tankPool = orderTankPool(pool.filter((p) => p.isTank));
       let target: ParticipantSnapshot | null = null;
-      if (cast.targetMode === 'tank_strict' || cast.targetMode === 'tank_preferred') {
-        target = rng.pick('tank_pool', tankPool, c.id, t) ?? null;
-        if (!target && cast.targetMode === 'tank_preferred') {
+      if (pool.length > 0) {
+        const tankPool = orderTankPool(pool.filter((p) => p.isTank));
+        if (cast.targetMode === 'tank_strict' || cast.targetMode === 'tank_preferred') {
+          target = rng.pick('tank_pool', tankPool, c.id, t) ?? null;
+          if (!target && cast.targetMode === 'tank_preferred') {
+            target = rng.pick('creature_target', pool, c.id, t) ?? null;
+          }
+        } else {
           target = rng.pick('creature_target', pool, c.id, t) ?? null;
         }
-      } else {
-        target = rng.pick('creature_target', pool, c.id, t) ?? null;
       }
       if (!target) {
-        casts.push({
-          creatureId: c.id,
-          abilityKey: cast.abilityKey,
-          phase: 'fizzle',
-          resolvesAtMs: nowMs,
-          targetCharacterId: null,
-          damage: 0,
-          damageType: cast.damageType,
-          text: cast.castedText,
-        });
+        // Nothing to telegraph at. No cast row is created, so no orphan
+        // channel can be left behind for the next tick to resolve.
         continue;
       }
 
-      if (cast.channeling) {
-        const cap = cast.storedPowerCap || c.storedPowerCap;
-        const current = w.storedPower.get(c.id) ?? 0;
-        const next = Math.min(cap, current + 1);
-        w.storedPower.set(c.id, next);
-        storedPowerMut.set(c.id, { creatureId: c.id, delta: next - c.storedPower, cap });
-      }
+      const resolvesAtMs = nowMs + Math.max(1, cast.castTicks) * tickRate;
+      const frozen: ActiveCastSnapshot = {
+        // The committer creates the row and stamps the real id. Within this
+        // call the deterministic placeholder keeps multi-tick catch-up
+        // resolution addressable.
+        castEventId: `pending:${c.id}:${snapshot.tickNumber}:${t}`,
+        creatureId: c.id,
+        abilityKey: cast.abilityKey,
+        castKey: cast.castKey,
+        label: cast.label,
+        startedAtMs: nowMs,
+        resolvesAtMs,
+        targetCharacterId: target.id,
+        baseDamage: cast.damage,
+        baseAoeDamage: cast.damageAoe,
+        damageType: cast.damageType,
+        primaryShare: cast.primaryShare,
+        aoeShare: cast.aoeShare,
+        consumeMode: cast.consumeMode,
+        consumePct: cast.consumePct,
+        consumeFixed: cast.consumeFixed,
+        pauseAutoattacks: cast.channeling && cast.pauseAutoattacks,
+        storedPowerCap: cast.storedPowerCap || c.storedPowerCap,
+        lockMs: cast.lockMs,
+        castedText: cast.castedText,
+      };
+      w.activeCasts.set(c.id, frozen);
+      if (frozen.pauseAutoattacks) pausedByCast.add(c.id);
 
       casts.push({
         creatureId: c.id,
         abilityKey: cast.abilityKey,
+        castKey: cast.castKey,
         phase: 'start',
-        resolvesAtMs: nowMs + Math.max(1, cast.castTicks) * tickRate,
+        castEventId: null,
+        resolvesAtMs,
         targetCharacterId: target.id,
-        damage: cast.damage + (w.storedPower.get(c.id) ?? 0),
+        damage: cast.damage,
+        aoeDamage: cast.damageAoe,
         damageType: cast.damageType,
         text: cast.castingText,
+        storedPowerConsumed: 0,
+        lockMs: cast.lockMs,
+        targets: [],
+        config: frozen,
       });
       w.castCooldown.set(c.id, Math.max(1, cast.cooldownTicks));
       emit(
@@ -1540,9 +1761,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       );
     }
 
+
     // 5. Creature counterattacks — stable creature order, seeded targeting.
     for (const c of creatures) {
       if (!isAliveC(c.id)) continue;
+      // A channeling boss banks its autoattack instead of swinging it.
+      if (pausedByCast.has(c.id)) continue;
       const pool = engagedWith(c.id).filter((p) => isAliveP(p.id));
       if (pool.length === 0) continue;
       const tankPool = orderTankPool(pool.filter((p) => p.isTank));
