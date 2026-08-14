@@ -636,10 +636,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         nextTickAtMs: nowMs + interval,
         damageType: ap.damageType,
         sourceCharacterId: attacker.id,
-        mechanic: 'stack_apply',
+        // The LANDED stack is a hostile periodic row on the creature. The
+        // applier stance itself is the `stack_apply` row on the character —
+        // tagging this row `stack_apply` would claim a character-target
+        // mechanic for a creature row and be refused on rehydration.
+        mechanic: 'dot_debuff',
         abilityKey: ap.abilityKey,
         maxStacks: cap,
+        params: {
+          maxStacks: cap,
+          ...(ap.damageType ? { damageType: ap.damageType } : {}),
+        },
+        paramsVersion: EFFECT_PARAMS_VERSION,
       });
+
       emit(
         'stack_applied',
         `${attacker.name}'s ${ap.abilityKey} afflicts ${creature.name} [${next}/${cap}].`,
