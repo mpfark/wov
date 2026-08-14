@@ -128,6 +128,7 @@ export function snapshot(over: Partial<EncounterSnapshot> = {}): EncounterSnapsh
     effects: [],
     actions: [],
     engagements: [{ creatureId: c.id, characterId: p.id, lastActionAtMs: 1_699_999_000_000 }],
+    activeCasts: [],
     procs: [],
     config: CONFIG,
     ...over,
