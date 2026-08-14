@@ -123,6 +123,29 @@ export interface BatchCreature {
   readonly creatureName: string | null;
 }
 
+/** One committed telegraph transition: start, resolve or fizzle. */
+export interface BatchCast {
+  readonly creatureId: string;
+  readonly abilityKey: string;
+  readonly castKey: string;
+  readonly phase: 'start' | 'resolve' | 'fizzle';
+  readonly resolvesAtMs: number;
+  /** Durable cast-row id; null only for a cast that started and landed in one tick. */
+  readonly castEventId: string | null;
+  readonly label: string | null;
+  readonly castMs: number;
+  readonly storedPowerCap: number;
+  readonly targets: readonly Json[];
+}
+
+export interface BatchStoredPower {
+  readonly creatureId: string;
+  readonly currentAfter: number;
+  readonly cap: number;
+}
+
+
+
 export interface DecodedBatch {
   readonly envelopeVersion: number;
   readonly tick: number;
