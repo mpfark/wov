@@ -266,7 +266,10 @@ describe('C3b — only committed batches are displayed', () => {
       { role: 'live', characterId: CHAR, creatureIds: [CREATURE] }, deps(db) as any,
     );
     expect((r as any).kind).toBe('maintenance');
-    expect(calls.filter(c => c.fn !== 'from:combat_config')).toEqual([]);
+    // Only the gate itself may run: the mode read and the soak allowlist check.
+    expect(
+      calls.filter(c => c.fn !== 'from:combat_config' && c.fn !== 'combat_soak_access_check'),
+    ).toEqual([]);
   });
 });
 
