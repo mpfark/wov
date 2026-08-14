@@ -805,6 +805,9 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     effects,
     actions,
     engagements,
+    activeCasts: arr(root.casts, '$.casts')
+      .map((c, i) => decodeActiveCast(c, `$.casts[${i}]`))
+      .filter((c): c is ActiveCastSnapshot => c !== null),
     procs: aux.procs,
     config: {
       xpBoostMultiplier: aux.xpBoostMultiplier,
