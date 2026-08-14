@@ -313,7 +313,17 @@ export interface EffectSnapshot {
    * so a state row can never be mistaken for a damage-over-time row.
    */
   readonly magnitude?: number;
+  /**
+   * Mutable pool/charge state (`EFFECT_MECHANIC_REGISTRY[mechanic].remaining`):
+   * the unspent Force Shield / Divine Aegis absorb HP, or the remaining charges
+   * of a one-shot state. `null`/absent = the mechanic has no such state.
+   */
+  readonly remaining?: number | null;
+  /** Validated, mechanic-scoped parameters. Never a free-form JSON bag. */
+  readonly params?: Readonly<Record<string, number | boolean | string>>;
+  readonly paramsVersion?: number;
 }
+
 
 /**
  * Loader-resolved, per-caster mechanic parameters. Every field is already
@@ -359,6 +369,11 @@ export interface ActionParamsSnapshot {
   readonly hpPerTick?: number;
   readonly cpPerTick?: number;
   readonly refreshPolicy?: 'best_of' | 'replace';
+  /** `mitigation_buff`: percent vs flat reduction, and taunt behaviour. */
+  readonly mode?: 'percent' | 'flat';
+  readonly taunt?: boolean;
+  /** `offense_buff`: outgoing damage multiplier vs crit-range widening. */
+  readonly offenseMode?: 'damage_mult' | 'crit_edge';
   /** `aura_pulse` / `party_regen`: which sides the pulse touches. */
   readonly healsAllies?: boolean;
   readonly damagesEnemies?: boolean;
@@ -491,7 +506,13 @@ export interface EffectUpsert {
   readonly maxStacks?: number;
   /** Scalar payload of a non-damaging state row. See `EffectSnapshot`. */
   readonly magnitude?: number;
+  /** Mutable pool/charge state written back every tick. See `EffectSnapshot`. */
+  readonly remaining?: number | null;
+  /** Validated, mechanic-scoped parameters. See `EffectSnapshot`. */
+  readonly params?: Readonly<Record<string, number | boolean | string>>;
+  readonly paramsVersion?: number;
 }
+
 
 export interface KillProposal {
   readonly creatureId: string;

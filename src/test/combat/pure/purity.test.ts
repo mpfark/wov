@@ -62,6 +62,7 @@ describe('pure resolver — static purity', () => {
     const rel = files.map((f) => f.slice(ROOT.length + 1)).sort();
     expect(rel).toMatchInlineSnapshot(`
       [
+        "src/shared/combat/pure/effect-contract.ts",
         "src/shared/combat/pure/mechanics.ts",
         "src/shared/combat/pure/ordering.ts",
         "src/shared/combat/pure/party-xp.ts",
