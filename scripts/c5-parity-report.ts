@@ -74,6 +74,13 @@ interface Agg {
   multiAttackHits: number[];
   retaliations: number;
   castStarts: number;
+  castCarries: number;
+  castStartDamage: number;
+  castDoubleResolutions: number;
+  castFleeAvoidances: number;
+  castLockApplications: number;
+  storedPowerBanked: number;
+  storedPowerConsumed: number;
   castResolves: number;
   castFizzles: number;
   storedPowerDeltas: number[];
