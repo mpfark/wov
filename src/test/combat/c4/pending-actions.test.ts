@@ -56,7 +56,10 @@ describe('PendingActionTracker', () => {
     t.submit(action('a1', 1));
     t.submit({ ...action('a2', 2), label: 'Rend' });
     const out = t.applyCommitted(batch('b1', 4, ['a2']));
-    expect(out.map(o => [o.actionId, o.kind])).toEqual([['a2', 'consumed']]);
+    expect(Object.fromEntries(out.map(o => [o.actionId, o.kind]))).toEqual({
+      a2: 'consumed',
+      a1: 'superseded',
+    });
     // a1 was superseded by a2 and closed in the same committed application.
     expect(t.outcomeOf('a1')).toMatchObject({ kind: 'superseded' });
   });

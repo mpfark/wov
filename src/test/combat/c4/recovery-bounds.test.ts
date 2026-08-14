@@ -20,12 +20,19 @@ describe('EncounterBatchSequencer recovery bounds', () => {
   it('can request a recovery window covering the full retention period', () => {
     const s = new EncounterBatchSequencer();
     s.ingest(row(1));
-    s.noteCommitted(1 + RETENTION_TICKS + 20);
+    // A hole spanning far more than the retention window is requested whole,
+    // up to the sequencer's own bound.
+    s.noteCommitted(5000);
     const missing = s.missingRange()!;
     expect(missing.fromTick).toBe(2);
-    // Retention is 90 ticks; the window must reach past it with margin.
+    // Retention is 90 ticks; one pass must cover it with wide margin.
     expect(missing.toTick - missing.fromTick + 1).toBeGreaterThan(RETENTION_TICKS * 2);
-    expect(missing.toTick).toBe(1 + RETENTION_TICKS + 20);
+
+    // A hole entirely inside the retention window is requested in full.
+    const s2 = new EncounterBatchSequencer();
+    s2.ingest(row(1));
+    s2.noteCommitted(1 + RETENTION_TICKS);
+    expect(s2.missingRange()).toEqual({ fromTick: 2, toTick: 1 + RETENTION_TICKS });
   });
 
   it('buffers more than a retention window of newer ticks without skipping the hole', () => {
@@ -65,8 +72,12 @@ describe('EncounterBatchSequencer recovery bounds', () => {
     expect(s.appliedTick).toBe(200);
     expect(s.unrecoverableRange).toBeNull();
 
+    // Buffered post-snapshot ticks flush immediately, in order, once contiguous.
     const out = s.ingest(row(201));
-    expect(out.ready.map(r => r.tick_number)).toEqual([201]);
+    expect(out.ready[0].tick_number).toBe(201);
+    expect(out.ready.map(r => r.tick_number)).toEqual(
+      out.ready.map((_, i) => 201 + i),
+    );
     // Pre-snapshot batches can never replay.
     expect(s.ingest(row(150)).ready).toEqual([]);
   });

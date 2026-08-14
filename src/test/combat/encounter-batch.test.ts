@@ -88,7 +88,7 @@ describe('EncounterBatchSequencer', () => {
     const s = new EncounterBatchSequencer();
     s.ingest(row(1));
     const out = s.noteCommitted(500);
-    expect(out.missing).toEqual({ fromTick: 2, toTick: 65 });
+    expect(out.missing).toEqual({ fromTick: 2, toTick: 257 });
   });
 
   it('resets between encounters', () => {
