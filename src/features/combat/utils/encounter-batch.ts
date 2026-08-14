@@ -193,6 +193,24 @@ export function batchToTickResponse(
         return id ? { actionId: id, reason: str(o.reason) ?? 'rejected' } : null;
       })
       .filter((r): r is { actionId: string; reason: string } => r !== null),
+    // Telegraph delivery: the committed lifecycle transitions plus the Stored
+    // Power they were banked against. The client bar is created, grown and
+    // cleared only from these, so it can never disagree with the fight.
+    boss_casts: batch.casts.map((c) => ({
+      cast_event_id: c.castEventId,
+      creature_id: c.creatureId,
+      cast_key: c.castKey,
+      phase: c.phase,
+      label: c.label ?? c.castKey,
+      resolves_at_ms: c.resolvesAtMs,
+      cast_ms: c.castMs,
+      stored_power_cap: c.storedPowerCap,
+    })),
+    boss_stored_power: batch.storedPower.map((s) => ({
+      creature_id: s.creatureId,
+      current: s.currentAfter,
+      cap: s.cap,
+    })),
     encounter_tick: batch.tick,
     encounter_batch_id: batch.batchId,
     encounter_id: row.encounter_id,
