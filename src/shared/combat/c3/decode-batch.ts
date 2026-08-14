@@ -308,6 +308,40 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     } satisfies BatchCreature;
   });
 
+  const casts = arr(o.casts, `${p}.casts`).map((raw, i) => {
+    const kp = `${p}.casts[${i}]`;
+    const k = obj(raw, kp);
+    assertKnownKeys(k, CAST_KEYS, kp);
+    const phase = reqStr(k, 'phase', kp);
+    if (phase !== 'start' && phase !== 'resolve' && phase !== 'fizzle') {
+      throw decodeError(`${kp}.phase`, `expected start|resolve|fizzle, received ${describe(phase)}`);
+    }
+    return {
+      creatureId: reqStr(k, 'creatureId', kp),
+      abilityKey: reqStr(k, 'abilityKey', kp),
+      castKey: reqStr(k, 'castKey', kp),
+      phase,
+      resolvesAtMs: reqNum(k, 'resolvesAtMs', kp),
+      castEventId: optStr(k, 'castEventId', kp),
+      label: optStr(k, 'label', kp),
+      castMs: reqNum(k, 'castMs', kp),
+      storedPowerCap: reqNum(k, 'storedPowerCap', kp),
+      targets: arr(k.targets, `${kp}.targets`).map((t, ti) => obj(t, `${kp}.targets[${ti}]`)),
+    } satisfies BatchCast;
+  });
+
+  const storedPower = arr(o.storedPower, `${p}.storedPower`).map((raw, i) => {
+    const sp = `${p}.storedPower[${i}]`;
+    const s = obj(raw, sp);
+    assertKnownKeys(s, STORED_POWER_KEYS, sp);
+    return {
+      creatureId: reqStr(s, 'creatureId', sp),
+      currentAfter: reqNum(s, 'currentAfter', sp),
+      cap: reqNum(s, 'cap', sp),
+    } satisfies BatchStoredPower;
+  });
+
+
   const jsonArr = (value: unknown, key: string): Json[] =>
     arr(value, `${p}.${key}`).map((v, i) => obj(v, `${p}.${key}[${i}]`));
   const strArr = (value: unknown, key: string): string[] =>
