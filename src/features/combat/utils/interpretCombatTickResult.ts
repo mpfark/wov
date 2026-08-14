@@ -58,6 +58,10 @@ export interface CombatTickResponse {
    */
   alive_creature_ids?: string[];
   ticks_processed?: number;
+  /** C4: action ids the committed tick executed. */
+  consumed_action_ids?: string[];
+  /** C4: action ids the committed tick refused, with the authoritative reason. */
+  rejected_actions?: { actionId: string; reason: string }[];
   buff_sync?: Record<string, { absorb_remaining: number }>;
   /**
    * Shared-encounter identity of the authoritative batch this response
