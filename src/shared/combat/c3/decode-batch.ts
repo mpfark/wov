@@ -370,6 +370,8 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     consumedActionIds: strArr(o.consumedActionIds, 'consumedActionIds'),
     effectUpserts: jsonArr(o.effectUpserts, 'effectUpserts'),
     effectDeleteTargetIds: strArr(o.effectDeleteTargetIds, 'effectDeleteTargetIds'),
+    casts,
+    storedPower,
     session: obj(o.session, `${p}.session`),
   };
 }
