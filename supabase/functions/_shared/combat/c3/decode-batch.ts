@@ -123,6 +123,29 @@ export interface BatchCreature {
   readonly creatureName: string | null;
 }
 
+/** One committed telegraph transition: start, resolve or fizzle. */
+export interface BatchCast {
+  readonly creatureId: string;
+  readonly abilityKey: string;
+  readonly castKey: string;
+  readonly phase: 'start' | 'resolve' | 'fizzle';
+  readonly resolvesAtMs: number;
+  /** Durable cast-row id; null only for a cast that started and landed in one tick. */
+  readonly castEventId: string | null;
+  readonly label: string | null;
+  readonly castMs: number;
+  readonly storedPowerCap: number;
+  readonly targets: readonly Json[];
+}
+
+export interface BatchStoredPower {
+  readonly creatureId: string;
+  readonly currentAfter: number;
+  readonly cap: number;
+}
+
+
+
 export interface DecodedBatch {
   readonly envelopeVersion: number;
   readonly tick: number;
@@ -149,6 +172,14 @@ export interface DecodedBatch {
   readonly consumedActionIds: readonly string[];
   readonly effectUpserts: readonly Json[];
   readonly effectDeleteTargetIds: readonly string[];
+  /**
+   * Telegraph lifecycle committed by this tick. The client's telegraph UI is
+   * driven exclusively by these transitions, so a start it never saw cannot
+   * leave a ghost bar and a resolve it never saw cannot leave one running.
+   */
+  readonly casts: readonly BatchCast[];
+  /** Stored Power after this tick, per channelling creature. */
+  readonly storedPower: readonly BatchStoredPower[];
   readonly session: Json;
 }
 
@@ -170,8 +201,25 @@ const BATCH_KEYS = [
   'consumedActionIds',
   'effectUpserts',
   'effectDeleteTargetIds',
+  'casts',
+  'storedPower',
   'session',
 ] as const;
+
+const CAST_KEYS = [
+  'creatureId',
+  'abilityKey',
+  'castKey',
+  'phase',
+  'resolvesAtMs',
+  'castEventId',
+  'label',
+  'castMs',
+  'storedPowerCap',
+  'targets',
+] as const;
+
+const STORED_POWER_KEYS = ['creatureId', 'currentAfter', 'cap'] as const;
 
 const EVENT_KEYS = [
   'seq',
@@ -260,6 +308,40 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     } satisfies BatchCreature;
   });
 
+  const casts = arr(o.casts, `${p}.casts`).map((raw, i) => {
+    const kp = `${p}.casts[${i}]`;
+    const k = obj(raw, kp);
+    assertKnownKeys(k, CAST_KEYS, kp);
+    const phase = reqStr(k, 'phase', kp);
+    if (phase !== 'start' && phase !== 'resolve' && phase !== 'fizzle') {
+      throw decodeError(`${kp}.phase`, `expected start|resolve|fizzle, received ${describe(phase)}`);
+    }
+    return {
+      creatureId: reqStr(k, 'creatureId', kp),
+      abilityKey: reqStr(k, 'abilityKey', kp),
+      castKey: reqStr(k, 'castKey', kp),
+      phase,
+      resolvesAtMs: reqNum(k, 'resolvesAtMs', kp),
+      castEventId: optStr(k, 'castEventId', kp),
+      label: optStr(k, 'label', kp),
+      castMs: reqNum(k, 'castMs', kp),
+      storedPowerCap: reqNum(k, 'storedPowerCap', kp),
+      targets: arr(k.targets, `${kp}.targets`).map((t, ti) => obj(t, `${kp}.targets[${ti}]`)),
+    } satisfies BatchCast;
+  });
+
+  const storedPower = arr(o.storedPower, `${p}.storedPower`).map((raw, i) => {
+    const sp = `${p}.storedPower[${i}]`;
+    const s = obj(raw, sp);
+    assertKnownKeys(s, STORED_POWER_KEYS, sp);
+    return {
+      creatureId: reqStr(s, 'creatureId', sp),
+      currentAfter: reqNum(s, 'currentAfter', sp),
+      cap: reqNum(s, 'cap', sp),
+    } satisfies BatchStoredPower;
+  });
+
+
   const jsonArr = (value: unknown, key: string): Json[] =>
     arr(value, `${p}.${key}`).map((v, i) => obj(v, `${p}.${key}[${i}]`));
   const strArr = (value: unknown, key: string): string[] =>
@@ -288,6 +370,8 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
     consumedActionIds: strArr(o.consumedActionIds, 'consumedActionIds'),
     effectUpserts: jsonArr(o.effectUpserts, 'effectUpserts'),
     effectDeleteTargetIds: strArr(o.effectDeleteTargetIds, 'effectDeleteTargetIds'),
+    casts,
+    storedPower,
     session: obj(o.session, `${p}.session`),
   };
 }
@@ -304,6 +388,10 @@ export function projectBatchFromProposal(
   proposed: ProposedTick,
   batchId: string,
   spawnSeqByCreatureId: Readonly<Record<string, number>>,
+  /** Cast-row ids observed in the committed batch, positional with `proposed.casts`. */
+  castEventIds?: readonly (string | null)[],
+  /** Absolute Stored Power the committer clamped to, per creature. */
+  storedPowerAfter?: Readonly<Record<string, number>>,
 ): DecodedBatch {
   const killByCreature = new Map(proposed.kills.map((k) => [k.creatureId, k]));
   return {
@@ -347,6 +435,31 @@ export function projectBatchFromProposal(
     consumedActionIds: [...(proposed.consumedActionIds ?? [])],
     effectUpserts: (proposed.effectUpserts ?? []) as unknown as Json[],
     effectDeleteTargetIds: [...(proposed.effectDeleteTargetIds ?? [])],
+    // The committer owns the row id of a `start`, so a caller comparing against
+    // a real committed batch supplies the ids it observed; everything else in
+    // the transition is projected straight from the pure result.
+    casts: (proposed.casts ?? []).map((c, i) => ({
+      creatureId: c.creatureId,
+      abilityKey: c.abilityKey,
+      castKey: c.castKey,
+      phase: c.phase,
+      resolvesAtMs: c.resolvesAtMs,
+      castEventId: castEventIds?.[i] ?? c.castEventId ?? null,
+      label: c.config?.label ?? c.castKey ?? c.abilityKey,
+      castMs: c.config ? Math.max(0, c.config.resolvesAtMs - c.config.startedAtMs) : 0,
+      storedPowerCap: c.config?.storedPowerCap ?? 0,
+      targets: c.targets.map((t) => ({
+        characterId: t.characterId,
+        damage: t.damage,
+        applied: t.applied,
+        isPrimary: t.isPrimary,
+      })) as unknown as Json[],
+    })),
+    storedPower: (proposed.storedPower ?? []).map((s) => ({
+      creatureId: s.creatureId,
+      currentAfter: storedPowerAfter?.[s.creatureId] ?? Math.max(0, s.delta),
+      cap: s.cap,
+    })),
     session: (proposed.session ?? { ended: false, nextDueAtMs: 0 }) as unknown as Json,
   };
 }
