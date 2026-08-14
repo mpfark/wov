@@ -128,11 +128,28 @@ export interface DecodedBatch {
   readonly tick: number;
   readonly batchId: string;
   readonly mode: string;
+  readonly ticksProcessed: number;
   readonly events: readonly BatchEvent[];
   readonly characters: readonly BatchCharacter[];
   readonly creatures: readonly BatchCreature[];
   readonly deaths: readonly Json[];
   readonly kills: readonly Json[];
+  /**
+   * Delivery-only passthrough sections (v3). These are the committed proposal
+   * arrays verbatim — the client needs them to reconcile a tick it did not
+   * resolve (rewards, level-ups, spent buffs, refused actions, effect changes)
+   * without a second round trip. They are intentionally not re-typed here: the
+   * pure resolver owns their shape, and re-declaring it would create a second
+   * source of truth.
+   */
+  readonly rewards: readonly Json[];
+  readonly progression: readonly Json[];
+  readonly consumedBuffs: readonly Json[];
+  readonly rejectedActions: readonly Json[];
+  readonly consumedActionIds: readonly string[];
+  readonly effectUpserts: readonly Json[];
+  readonly effectDeleteTargetIds: readonly string[];
+  readonly session: Json;
 }
 
 const BATCH_KEYS = [
@@ -140,11 +157,20 @@ const BATCH_KEYS = [
   'tick',
   'batch_id',
   'mode',
+  'ticks_processed',
   'events',
   'characters',
   'creatures',
   'deaths',
   'kills',
+  'rewards',
+  'progression',
+  'consumedBuffs',
+  'rejectedActions',
+  'consumedActionIds',
+  'effectUpserts',
+  'effectDeleteTargetIds',
+  'session',
 ] as const;
 
 const EVENT_KEYS = [
