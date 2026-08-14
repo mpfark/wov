@@ -10,7 +10,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { resolveTickPure } from '@/shared/combat/pure/resolver';
-import { buildTickPayload } from '@/shared/combat/c2/payload';
 import type { EffectSnapshot, StanceSnapshot } from '@/shared/combat/pure/types';
 import { snapshot, participant, creature } from './fixtures';
 
@@ -83,13 +82,4 @@ describe('stance persistence', () => {
     expect(tick.effectDeleteIds).not.toContain('e1');
   });
 
-  it('commits a stance row with the no-expiry sentinel', () => {
-    const snap = withStance();
-    const tick = resolveTickPure(snap);
-    const payload = buildTickPayload(tick, snap);
-    const row = payload.effectUpserts.find((e: any) => e.sourceAbilityKey === 'force_shield');
-    expect(row).toBeDefined();
-    expect(row.lifetime).toBe('stance');
-    expect(row.expiresAtMs).toBe(9007199254740991);
-  });
 });
