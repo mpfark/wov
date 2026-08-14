@@ -111,6 +111,57 @@ function chain(id: string, opts: { statusDefs?: StatusDef[] } = {}): Chain {
   };
 }
 
+/**
+ * A single-charge row that already exists when the tick starts — the state a
+ * charge granted by an earlier tick leaves behind. Proves the rehydrate ->
+ * consume -> remove-once path without a same-tick cast.
+ */
+function seededCharge(
+  mechanic: 'stealth_buff' | 'evasion_buff',
+  row: { effectType: string; magnitude: number; params: Record<string, number | boolean | string> },
+) {
+  // A no-op cast (Heal on self) keeps the fixture shape without adding state.
+  const base = abilityEncounter(byId('warrior:rend'));
+  const snap = { ...base, actions: [] } as EncounterSnapshot;
+  const creatureIds = new Set(snap.creatures.map((c) => c.id));
+  const rowId = 'eff-charge';
+  const rows: EffectRow[] = [
+    {
+      id: rowId,
+      node_id: snap.nodeId,
+      target_id: 'char-caster',
+      source_id: 'char-caster',
+      effect_type: row.effectType,
+      stacks: 1,
+      damage_per_tick: 0,
+      next_tick_at: snap.nowMs + 60_000,
+      expires_at: snap.nowMs + 60_000,
+      tick_rate_ms: 0,
+      source_ability_key: row.effectType,
+      damage_type: null,
+      mechanic,
+      magnitude: row.magnitude,
+      remaining: 1,
+      params: row.params,
+      params_version: 1,
+      created_at_ms: snap.nowMs - 1,
+    },
+  ];
+  const effects = decodeRows(rows, { creatureIds, statusDefs: snap.config.statusDefs });
+  const next = nextSnapshot(snap, effects);
+  const live = resolveTickPure(next);
+  const bare = resolveTickPure(nextSnapshot(snap, []));
+  const committed = commitEffects(rows, live, {
+    nodeId: snap.nodeId,
+    creatureIds,
+    nowMs: next.nowMs,
+  });
+  const third = resolveTickPure(
+    nextSnapshot(next, decodeRows(committed.rows, { creatureIds, statusDefs: snap.config.statusDefs })),
+  );
+  return { rowId, live, bare, third, rowsAfterLive: committed.rows };
+}
+
 const hpOf = (t: ProposedTick, id: string) => t.characters.find((c) => c.characterId === id)!.hpAfter;
 const cpOf = (t: ProposedTick, id: string) => t.characters.find((c) => c.characterId === id)!.cpAfter;
 const creatureHp = (t: ProposedTick, id = 'crt-1') =>
@@ -264,36 +315,54 @@ describe('effect persistence — evasion_buff', () => {
     assertSurvived(c, 'evasion_buff');
   });
 
-  it('ranger:disengage persists both the dodge window and the one-shot charge', () => {
+  it('ranger:disengage persists the dodge window; a charge spent in the cast tick is not written', () => {
     const c = chain('ranger:disengage');
     const rows = c.rowsAfterCast.filter((r) => r.mechanic === 'evasion_buff');
-    expect(rows).toHaveLength(2);
-    const dodge = rows.find((r) => r.params.kind === 'dodge')!;
-    const charge = rows.find((r) => r.params.kind === 'next_hit')!;
+    // The caster's own autoattack in the cast tick spends the one-shot charge,
+    // so only the dodge window survives — a spent charge is never persisted.
+    expect(c.cast.out.consumedBuffs.map((b) => b.buff)).toContain('disengage');
+    expect(rows.map((r) => r.params.kind)).toEqual(['dodge']);
+    const dodge = rows[0];
     expect(dodge.magnitude).toBe(0.3);
-    expect(charge.remaining).toBe(1);
-    // Later tick changed twice over: the caster dodges and hits harder.
     expect(hpOf(c.live, 'char-caster')).toBeGreaterThan(hpOf(c.bare, 'char-caster'));
-    expect(creatureHp(c.live)).toBeLessThan(creatureHp(c.bare));
     assertOnlyMutableFieldsChanged(dodge, c.rowsAfterLive.find((r) => r.id === dodge.id)!);
   });
-});
+
+  it("a persisted Disengage charge boosts exactly one later hit and is then removed once", () => {
+    const seeded = seededCharge('evasion_buff', {
+      effectType: 'disengage_next_hit',
+      magnitude: 1.5,
+      params: { kind: 'next_hit', evasionSource: 'disengage' },
+    });
+    expect(creatureHp(seeded.live)).toBeLessThan(creatureHp(seeded.bare));
+    expect(seeded.live.effectDeleteIds).toEqual([seeded.rowId]);
+    expect(seeded.rowsAfterLive.some((r) => r.id === seeded.rowId)).toBe(false);
+    expect(seeded.third.effectDeleteIds).not.toContain(seeded.rowId);
+  });
 
 describe('effect persistence — stealth_buff', () => {
-  it('assassin:shadowstep spends its ambush charge on the next landed hit', () => {
+  it('assassin:shadowstep spends its ambush inside the cast tick and writes no charge', () => {
     const c = chain('assassin:shadowstep');
-    const cast = rowFor(c.rowsAfterCast, 'stealth_buff');
-    expect(cast.remaining).toBe(1);
-    expect(cast.magnitude).toBe(2.5);
-    expect(c.next.participants.find((p) => p.id === 'char-caster')!.buffs.stealth).toBe(true);
-    expect(creatureHp(c.live)).toBeLessThan(creatureHp(c.bare));
-    expect(types(c.live)).toContain('buff_consumed');
-    // The charge is spent exactly once: the following tick has no ambush left.
-    const creatureIds = new Set(c.snap.creatures.map((cr) => cr.id));
-    const third = resolveTickPure(
-      nextSnapshot(c.next, decodeRows(c.rowsAfterLive, { creatureIds, statusDefs: c.snap.config.statusDefs })),
-    );
-    expect(types(third)).not.toContain('buff_consumed');
+    expect(c.cast.out.consumedBuffs.map((b) => b.buff)).toContain('stealth');
+    expect(types(c.cast.out)).toContain('buff_consumed');
+    // Nothing to rehydrate: the charge is gone, so the next tick is ordinary.
+    expect(c.rowsAfterCast.some((r) => r.mechanic === 'stealth_buff')).toBe(false);
+    expect(types(c.live)).not.toContain('buff_consumed');
+  });
+
+  it('a persisted ambush charge multiplies exactly one later hit and is then removed once', () => {
+    const seeded = seededCharge('stealth_buff', {
+      effectType: 'shadowstep',
+      magnitude: 2.5,
+      params: {},
+    });
+    expect(creatureHp(seeded.live)).toBeLessThan(creatureHp(seeded.bare));
+    expect(types(seeded.live)).toContain('buff_consumed');
+    expect(seeded.live.effectDeleteIds).toEqual([seeded.rowId]);
+    expect(seeded.rowsAfterLive.some((r) => r.id === seeded.rowId)).toBe(false);
+    // The charge cannot come back: a third tick has no ambush and no delete.
+    expect(types(seeded.third)).not.toContain('buff_consumed');
+    expect(seeded.third.effectDeleteIds).not.toContain(seeded.rowId);
   });
 });
 
