@@ -397,6 +397,41 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     return res.applied;
   };
 
+  /**
+   * The authored Stored Power contract: while a boss channels, its paused
+   * autoattack is banked as the *mitigated* damage that blow would have dealt
+   * to the primary target. Crits are disabled during the channel, and no
+   * dodge/block roll is taken, so a channel banks a steady expected value
+   * rather than a second stream of RNG. Absorb shields are deliberately not
+   * consumed here — nothing actually hit the target.
+   */
+  const expectedPausedAutoattack = (
+    creature: CreatureSnapshot,
+    target: ParticipantSnapshot,
+    tick: number,
+  ): number => {
+    const raw = seededCreatureDamage({
+      rng,
+      creatureId: creature.id,
+      creatureLevel: creature.level,
+      creatureRarity: creature.rarity,
+      creatureAttrs: creature.attrs,
+      targetId: target.id,
+      targetLevel: target.level,
+      key: [tick, 'channel'],
+    });
+    let dmg = scaleCreatureDamage(raw, 'normal', false, 0);
+    if (target.buffs.mitigationPct > 0) {
+      dmg = Math.floor(dmg * (1 - Math.min(0.9, target.buffs.mitigationPct)));
+    }
+    if (target.buffs.mitigationFlat > 0) {
+      dmg = Math.max(0, dmg - target.buffs.mitigationFlat);
+    }
+    if (target.buffs.rooted) dmg = Math.max(Math.floor(dmg * 0.7), 1);
+    return Math.max(0, dmg);
+  };
+
+
   const healCharacter = (target: ParticipantSnapshot, amount: number): number => {
     const res = resolveHeal({
       amount,
