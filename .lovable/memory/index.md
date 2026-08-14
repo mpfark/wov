@@ -6,3 +6,4 @@
 - [Control Debuff Consolidation](mem://game/class-abilities/control-consolidation) — root_debuff + sunder_debuff share one control_debuff base; control_mode picks damage vs AC reduction
 - [Group I Consolidation](mem://game/class-abilities/group-i-consolidation) — hp_transfer/regen_buff/stealth_buff fully config-driven: reserve floors, refresh_policy, ambush knobs, authored text
 - [Legacy Retirement](mem://game/class-abilities/legacy-retirement) — no per-class ability branches left; retired mechanic keys removed; authored hit_text/miss_text sentences for T0 attacks
+- [Presence vs Participation](mem://tech/combat-architecture/presence-vs-participation) - Encounter snapshots keep all participants for attribution/rewards; presentAtNode is the only target roster
