@@ -124,6 +124,8 @@ export interface UseCombatDriverParams {
   onAbsorbSync?: (remaining: number) => void;
   /** Callback when a boss creature dies with an admin-authored death cry */
   onBossDeathCry?: (entry: { creatureName: string; text: string }) => void;
+  /** Committed telegraph transitions (boss casts / Stored Power) for this tick. */
+  onBossCasts?: (result: CombatTickResponse) => void;
   /** Callback fired with creature IDs the server confirmed dead in this tick (for optimistic UI removal) */
   onCreaturesKilled?: (creatureIds: string[]) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
