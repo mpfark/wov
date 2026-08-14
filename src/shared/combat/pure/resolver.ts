@@ -1996,7 +1996,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   }
 
   // ── durability: one slot per participant that landed a hit ───────
-  for (const p of participants) {
+  //    Live only: effects-only lands no weapon hits and degrades nothing.
+  if (!effectsOnly) for (const p of participants) {
     if (!w.hitters.has(p.id)) continue;
     const slots = [...p.weapon.equippedInventoryIds].sort();
     if (slots.length === 0) continue;
