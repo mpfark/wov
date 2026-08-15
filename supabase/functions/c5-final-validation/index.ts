@@ -973,7 +973,7 @@ Deno.serve(async (req) => {
       const live = await makeCreature({ name: 'Validation Sparring Dummy', hp: 9000 });
       await admin.rpc('encounter_intake', { _character_id: char, _creature_ids: [live] });
       const tLive = await tick('live', char, [live]);
-      notes.control_live_raw = live.raw;
+      notes.control_live_raw = tLive.raw;
       push('control_live_tick_actually_attacks',
         tLive.events.some((e) => ['autoattack_hit', 'autoattack_miss', 'autoattack_crit', 'ability_hit', 'ability_miss'].includes(e.type)),
         { events: tLive.events.map((e) => e.type).slice(0, 12) });
