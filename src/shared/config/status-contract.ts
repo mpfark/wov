@@ -31,6 +31,8 @@ export interface AppliedStatusRow {
   effect_type?: string | null;
   classification?: string | null;
   stack_noun?: string | null;
+  /** Periodic marker; a `dot` classification must set it. */
+  is_periodic?: boolean | null;
   tick_interval_ms?: number | null;
   magnitude?: Record<string, unknown> | null;
   duration?: Record<string, unknown> | null;
