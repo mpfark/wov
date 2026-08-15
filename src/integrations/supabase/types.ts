@@ -1439,44 +1439,6 @@ export type Database = {
           },
         ]
       }
-      combat_validation_grants: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          node_id: string
-          note: string | null
-          role: string
-          token_hash: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          node_id: string
-          note?: string | null
-          role: string
-          token_hash: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          node_id?: string
-          note?: string | null
-          role?: string
-          token_hash?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "combat_validation_grants_node_id_fkey"
-            columns: ["node_id"]
-            isOneToOne: false
-            referencedRelation: "nodes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       creatures: {
         Row: {
           ac: number
@@ -3484,10 +3446,6 @@ export type Database = {
       }
       combat_soak_access_check: {
         Args: { _character_id: string; _node_id: string }
-        Returns: boolean
-      }
-      combat_validation_grant_check: {
-        Args: { _node_id: string; _role: string; _token: string }
         Returns: boolean
       }
       commit_encounter_tick_v2: {
