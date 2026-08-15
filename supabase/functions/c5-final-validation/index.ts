@@ -617,133 +617,292 @@ Deno.serve(async (req) => {
         cap: `max(1, wis_mod + floor(level/2)) = ${cap}`,
         regen_per_tick: `1 + floor(int_mod/2) = ${regenPerTick}`,
         tick_ms: tickMs,
+        cursor: 'stance_state.force_shield_updated_at is the consumed-time cursor; ' +
+                'active_effects.remaining is the authoritative pool.',
       };
 
-      const pool = async () => {
+      // ── inspection helpers ────────────────────────────────────────────
+      type Obs = {
+        pool: number | null; magnitude: number | null;
+        mirror: number | null; cursor: string | null; cursor_elapsed_ms: number | null;
+        in_combat: boolean;
+      };
+      const observe = async (): Promise<Obs> => {
         const [r] = await sql<Row[]>`
-          select remaining, magnitude from public.active_effects
-          where target_id = ${wizard} and lifetime = 'stance' and effect_type = 'force_shield'`;
-        return r ? { remaining: Number(r.remaining), magnitude: Number(r.magnitude) } : null;
+          select ae.remaining::int          as pool,
+                 ae.magnitude::int          as magnitude,
+                 (c.stance_state->>'force_shield_hp')::int as mirror,
+                 c.stance_state->>'force_shield_updated_at' as cursor,
+                 case when pg_input_is_valid(coalesce(c.stance_state->>'force_shield_updated_at', ''), 'timestamptz')
+                      then round(extract(epoch from (now() - (c.stance_state->>'force_shield_updated_at')::timestamptz)) * 1000)::bigint
+                 end as cursor_elapsed_ms,
+                 exists (select 1 from public.combat_sessions s
+                          where s.node_id = c.current_node_id
+                            and s.character_id = c.id) as in_combat
+            from public.characters c
+            left join public.active_effects ae
+                   on ae.target_id = c.id and ae.lifetime = 'stance'
+                  and ae.effect_type = 'force_shield'
+           where c.id = ${wizard}`;
+        return {
+          pool: r?.pool === null || r?.pool === undefined ? null : Number(r.pool),
+          magnitude: r?.magnitude === null || r?.magnitude === undefined ? null : Number(r.magnitude),
+          mirror: r?.mirror === null || r?.mirror === undefined ? null : Number(r.mirror),
+          cursor: (r?.cursor ?? null) as string | null,
+          cursor_elapsed_ms: r?.cursor_elapsed_ms === null || r?.cursor_elapsed_ms === undefined
+            ? null : Number(r.cursor_elapsed_ms),
+          in_combat: Boolean(r?.in_combat),
+        };
       };
-      const mirror = async () => {
-        const [r] = await sql<Row[]>`select stance_state from public.characters where id = ${wizard}`;
-        const ss = (r?.stance_state ?? {}) as Record<string, unknown>;
-        return Number(ss.force_shield_hp ?? NaN);
-      };
-      const setPoolAndClock = async (remaining: number, elapsedMs: number) => {
+      /** Seed pool + cursor deterministically from the DB clock. */
+      const seed = async (remaining: number, elapsedMs: number | null) => {
         await sql`update public.active_effects set remaining = ${remaining}, magnitude = ${cap}
                   where target_id = ${wizard} and lifetime = 'stance' and effect_type = 'force_shield'`;
+        if (elapsedMs === null) {
+          await sql`update public.characters
+                    set stance_state = (coalesce(stance_state, '{}'::jsonb) - 'force_shield_updated_at')
+                        || jsonb_build_object('force_shield_hp', ${remaining}::int)
+                    where id = ${wizard}`;
+        } else {
+          await sql`update public.characters
+                    set stance_state = coalesce(stance_state, '{}'::jsonb)
+                        || jsonb_build_object('force_shield_hp', ${remaining}::int,
+                                              'force_shield_updated_at',
+                                              to_jsonb(now() - (${elapsedMs}::bigint * interval '1 millisecond')))
+                    where id = ${wizard}`;
+        }
+      };
+      const setCursorRaw = async (value: unknown) => {
         await sql`update public.characters
                   set stance_state = coalesce(stance_state, '{}'::jsonb)
-                      || jsonb_build_object('force_shield_hp', ${remaining}::int,
-                                            'force_shield_updated_at',
-                                            to_jsonb(now() - (${elapsedMs}::bigint * interval '1 millisecond')))
+                      || jsonb_build_object('force_shield_updated_at', ${JSON.stringify(value)}::jsonb)
                   where id = ${wizard}`;
       };
-      const clearSessions = () =>
-        sql`delete from public.combat_sessions where node_id = ${nodeId}`;
+      const enterCombat = async () => {
+        await sql`delete from public.combat_sessions where node_id = ${nodeId}`;
+        await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
+                  values (${wizard}, ${nodeId}, ${[dummy]}::uuid[], ${Date.now()}, 2000)`;
+      };
+      const leaveCombat = () => sql`delete from public.combat_sessions where node_id = ${nodeId}`;
+
+      /**
+       * Run one regeneration case and report the full inspectable breakdown.
+       * `expected` receives the observed before-state so cases can express the
+       * contract in terms of the eligible whole intervals actually seen.
+       */
+      const regenCase = async (
+        name: string,
+        setup: () => Promise<void>,
+        invoke: () => Promise<unknown>,
+        expected: (before: Obs, after: Obs, eligible: number) => boolean,
+        extra?: Record<string, unknown>,
+      ) => {
+        await setup();
+        const before = await observe();
+        await invoke();
+        const after = await observe();
+        const eligible = before.cursor_elapsed_ms === null || before.in_combat === undefined
+          ? 0 : Math.floor(Math.max(0, before.cursor_elapsed_ms) / tickMs);
+        const applied = (after.pool ?? 0) - (before.pool ?? 0);
+        push(name, expected(before, after, eligible), {
+          pool_before: before.pool, pool_after: after.pool,
+          cursor_before: before.cursor, cursor_after: after.cursor,
+          cursor_elapsed_before_ms: before.cursor_elapsed_ms,
+          cursor_elapsed_after_ms: after.cursor_elapsed_ms,
+          eligible_intervals: eligible,
+          regen_applied: applied,
+          regen_per_tick: regenPerTick,
+          combat_state: before.in_combat ? 'in_combat' : 'out_of_combat',
+          cap, magnitude: after.magnitude,
+          mirror_after: after.mirror,
+          ...(extra ?? {}),
+        });
+      };
 
       push('active_effects_remaining_is_the_authoritative_pool',
-        (await pool()) !== null, { pool: await pool() });
+        (await observe()).pool !== null, { observed: await observe() });
 
-      // In combat: no regeneration.
-      await clearSessions();
-      await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
-                values (${wizard}, ${nodeId}, ${[dummy]}::uuid[], ${Date.now()}, 2000)`;
-      await setPoolAndClock(4, 20_000);
-      const inCombat = await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const inCombatPool = await pool();
-      push('in_combat_ticks_do_not_regenerate_the_pool',
-        !inCombat.error && inCombatPool?.remaining === 4,
-        { remaining: inCombatPool?.remaining, expected: 4, mirror: await mirror() });
-      await clearSessions();
+      // 1. One whole interval.
+      await leaveCombat();
+      await regenCase('a_single_elapsed_interval_regenerates_exactly_once',
+        () => seed(4, 2_100),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a, e) => e >= 1 && a.pool === Math.min(cap, (b.pool ?? 0) + e * regenPerTick));
 
-      // Out of combat, partial pool: 4 + floor(20000/2000)*3 = 34 -> capped 14.
-      await setPoolAndClock(4, 6_000);
+      // 2. Several intervals: exactly that many are processed.
+      await regenCase('several_elapsed_intervals_process_exactly_that_number',
+        () => seed(0, 6_100),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a, e) => e >= 3 && a.pool === Math.min(cap, (b.pool ?? 0) + e * regenPerTick));
+
+      // 3. Fractional remainder: below one interval nothing regenerates and the
+      //    cursor stays on the previous consumed boundary.
+      await regenCase('less_than_one_interval_regenerates_nothing_and_keeps_the_cursor',
+        () => seed(4, 900),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a) => a.pool === b.pool && a.cursor === b.cursor);
+
+      // 4. The unconsumed sub-interval remainder survives a partial consume.
+      await regenCase('the_unconsumed_sub_interval_remainder_is_preserved',
+        () => seed(0, 5_000),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (_b, a, e) => e === 2 && (a.cursor_elapsed_ms ?? 0) >= 1_000 && (a.cursor_elapsed_ms ?? 0) < tickMs + 1_500);
+
+      // 5. Immediate repeated invocation adds nothing beyond real elapsed time.
+      await seed(2, 4_100);
+      const beforeDup = await observe();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const partial = await pool();
-      const expectPartial = Math.min(cap, 4 + Math.floor(6000 / tickMs) * regenPerTick); // 13
-      push('out_of_combat_regenerates_by_the_int_derived_amount',
-        partial?.remaining === expectPartial,
-        { remaining: partial?.remaining, expected: expectPartial, formula: `min(${cap}, 4 + 3*${regenPerTick})` });
-
-      // Zero pool replenishes while the stance stays active.
-      await setPoolAndClock(0, 4_000);
+      const afterFirst = await observe();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const zero = await pool();
-      const expectZero = Math.min(cap, 0 + 2 * regenPerTick); // 6
-      push('a_zero_pool_replenishes_while_the_stance_remains_active',
-        zero?.remaining === expectZero && (await stanceRows(wizard)).length === 1,
-        { remaining: zero?.remaining, expected: expectZero });
-
-      // Cap enforcement.
-      await setPoolAndClock(13, 60_000);
-      await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const capped = await pool();
-      push('the_wis_level_cap_is_enforced', capped?.remaining === cap,
-        { remaining: capped?.remaining, cap });
-
-      // A full pool does not exceed the cap.
-      await setPoolAndClock(cap, 60_000);
-      await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const full = await pool();
-      push('a_full_pool_never_exceeds_the_cap', full?.remaining === cap,
-        { remaining: full?.remaining, cap });
-
-      // Mirror equals the committed authoritative pool.
-      push('stance_state_is_only_a_mirror_of_the_authoritative_pool',
-        (await mirror()) === (await pool())?.remaining,
-        { mirror: await mirror(), authoritative: (await pool())?.remaining });
-
-      // Duplicate regeneration cannot apply twice: the clock has been consumed.
-      // The clock is inspected around both calls so a failure is diagnosable
-      // (consumed clock vs. real wall-clock elapsing between the two calls).
-      const clock = async () => {
-        const [r] = await sql<Row[]>`
-          select stance_state->>'force_shield_updated_at' as ts,
-                 extract(epoch from (now() - (stance_state->>'force_shield_updated_at')::timestamptz)) * 1000 as elapsed_ms
-          from public.characters where id = ${wizard}`;
-        return { ts: r?.ts as string, elapsed_ms: Math.round(Number(r?.elapsed_ms ?? 0)) };
-      };
-      await setPoolAndClock(4, 4_000);
-      const clockBefore = await clock();
-      await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const once = (await pool())?.remaining;
-      const clockAfterFirst = await clock();
-      await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const twice = (await pool())?.remaining;
-      const clockAfterSecond = await clock();
-      // The second call may legitimately add whole ticks that elapsed in real
-      // time between the two calls; what must never happen is the SAME elapsed
-      // window being counted twice.
-      const extraTicks = Math.floor(clockAfterFirst.elapsed_ms / tickMs);
-      push('duplicate_regeneration_cannot_apply_twice',
-        twice === Math.min(cap, (once ?? 0) + extraTicks * regenPerTick),
+      const afterSecond = await observe();
+      const replayable = Math.floor(Math.max(0, afterFirst.cursor_elapsed_ms ?? 0) / tickMs);
+      push('an_immediate_repeated_invocation_regenerates_nothing_extra',
+        afterSecond.pool === Math.min(cap, (afterFirst.pool ?? 0) + replayable * regenPerTick),
         {
-          after_first: once, after_second: twice, cap,
-          clock_before: clockBefore, clock_after_first: clockAfterFirst,
-          clock_after_second: clockAfterSecond,
-          replayable_ticks_between_calls: extraTicks,
+          pool_before: beforeDup.pool, pool_after_first: afterFirst.pool, pool_after_second: afterSecond.pool,
+          cursor_before: beforeDup.cursor, cursor_after_first: afterFirst.cursor, cursor_after_second: afterSecond.cursor,
+          eligible_intervals: Math.floor((beforeDup.cursor_elapsed_ms ?? 0) / tickMs),
+          replayable_intervals_between_calls: replayable,
+          regen_applied: (afterSecond.pool ?? 0) - (beforeDup.pool ?? 0),
+          combat_state: 'out_of_combat', cap,
         });
 
-      // A live tick under a claim does not regenerate the pool either.
-      await setPoolAndClock(2, 30_000);
-      await tick('live', wizard, [dummy]);
-      const afterTick = await pool();
-      push('an_authoritative_tick_applies_no_regeneration',
-        (afterTick?.remaining ?? -1) <= 2, { remaining: afterTick?.remaining });
+      // 6. Concurrent invocations: the same interval cannot be consumed twice.
+      await seed(0, 6_100);
+      const beforeConc = await observe();
+      await Promise.all([
+        userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        userRpc('apply_force_shield_regen', { _character_id: wizard }),
+      ]);
+      const afterConc = await observe();
+      const concEligible = Math.floor((beforeConc.cursor_elapsed_ms ?? 0) / tickMs);
+      push('concurrent_invocations_cannot_consume_the_same_interval_twice',
+        (afterConc.pool ?? 0) <= Math.min(cap, (beforeConc.pool ?? 0) + (concEligible + 2) * regenPerTick),
+        {
+          pool_before: beforeConc.pool, pool_after: afterConc.pool,
+          cursor_before: beforeConc.cursor, cursor_after: afterConc.cursor,
+          eligible_intervals: concEligible,
+          regen_applied: (afterConc.pool ?? 0) - (beforeConc.pool ?? 0),
+          concurrent_calls: 3, combat_state: 'out_of_combat', cap,
+        });
 
-      // Death removes the stance rather than regenerating it.
-      await setPoolAndClock(0, 60_000);
+      // 7. In combat: no regeneration, but the elapsed intervals are consumed so
+      //    combat time cannot be banked and cashed in after leaving combat.
+      await enterCombat();
+      await regenCase('in_combat_elapsed_time_is_consumed_without_regenerating',
+        () => seed(4, 20_000),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a) => a.pool === b.pool && (a.cursor_elapsed_ms ?? 0) < tickMs + 1_500);
+      await leaveCombat();
+      await regenCase('combat_time_cannot_be_banked_after_leaving_combat',
+        async () => { /* keep the cursor consumed by the in-combat call */ },
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a, e) => a.pool === Math.min(cap, (b.pool ?? 0) + e * regenPerTick) && e <= 1);
+
+      // 8. Full pool: elapsed intervals are consumed, nothing over-caps, and the
+      //    following damage cannot be instantly refilled from banked time.
+      await regenCase('a_full_pool_consumes_elapsed_time_without_over_capping',
+        () => seed(cap, 60_000),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (_b, a) => a.pool === cap && (a.cursor_elapsed_ms ?? 0) < tickMs + 1_500);
+      await regenCase('damage_after_a_full_pool_cannot_be_refilled_from_banked_time',
+        async () => {
+          await sql`update public.active_effects set remaining = 1
+                    where target_id = ${wizard} and lifetime = 'stance' and effect_type = 'force_shield'`;
+        },
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a, e) => e <= 1 && a.pool === Math.min(cap, (b.pool ?? 0) + e * regenPerTick));
+
+      // 9. Cap enforcement across a very long absence.
+      await regenCase('the_wis_level_cap_is_enforced_over_a_long_absence',
+        () => seed(1, 600_000),
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (_b, a) => a.pool === cap);
+
+      // 10. World sleep/wake follows the out-of-combat policy exactly once.
+      await regenCase('a_sleep_wake_gap_is_counted_once_under_the_out_of_combat_policy',
+        () => seed(0, 8_100),
+        async () => {
+          await userRpc('apply_force_shield_regen', { _character_id: wizard });
+          await userRpc('apply_force_shield_regen', { _character_id: wizard });
+        },
+        // The gap is counted once: two back-to-back calls may only add the
+        // whole intervals that elapsed, never the same window twice.
+        (b, a, e) => e >= 4 &&
+          (a.pool ?? -1) >= Math.min(cap, (b.pool ?? 0) + e * regenPerTick) &&
+          (a.pool ?? -1) <= Math.min(cap, (b.pool ?? 0) + (e + 1) * regenPerTick));
+
+      // 11. Malformed / future cursor fails safe: no regeneration, cursor resets.
+      await regenCase('a_future_cursor_fails_safe_without_regenerating',
+        async () => {
+          await seed(2, 0);
+          await sql`update public.characters
+                    set stance_state = coalesce(stance_state, '{}'::jsonb)
+                        || jsonb_build_object('force_shield_updated_at', to_jsonb(now() + interval '1 hour'))
+                    where id = ${wizard}`;
+        },
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a) => a.pool === b.pool && (a.cursor_elapsed_ms ?? -1) >= 0 && (a.cursor_elapsed_ms ?? 0) < tickMs);
+      await regenCase('a_malformed_cursor_fails_safe_without_regenerating',
+        async () => { await seed(2, 0); await setCursorRaw('not-a-timestamp'); },
+        () => userRpc('apply_force_shield_regen', { _character_id: wizard }),
+        (b, a) => a.pool === b.pool);
+
+      // 12. The mirror always equals the committed authoritative pool.
+      const mirrorObs = await observe();
+      push('stance_state_is_only_a_mirror_of_the_authoritative_pool',
+        mirrorObs.mirror === mirrorObs.pool, { observed: mirrorObs });
+
+      // 13. A live tick under a claim applies no regeneration.
+      await seed(2, 30_000);
+      const beforeTick = await observe();
+      await tick('live', wizard, [dummy]);
+      const afterTick = await observe();
+      push('an_authoritative_tick_applies_no_regeneration',
+        (afterTick.pool ?? -1) <= (beforeTick.pool ?? 0),
+        { pool_before: beforeTick.pool, pool_after: afterTick.pool, cap });
+
+      // 14. Stance removal, then reactivation: the old cursor cannot carry over.
+      await seed(1, 600_000);
+      await userRpc('drop_stance', { p_character_id: wizard, p_stance_key: 'force_shield' });
+      const dropped = await observe();
+      await userRpc('activate_stance', { p_character_id: wizard, p_stance_key: 'force_shield', p_tier: 1 });
+      const reactivated = await observe();
+      await userRpc('apply_force_shield_regen', { _character_id: wizard });
+      const afterReact = await observe();
+      push('a_dropped_stance_cursor_cannot_affect_a_later_activation',
+        dropped.pool === null &&
+        (reactivated.cursor_elapsed_ms === null || reactivated.cursor_elapsed_ms < 10_000) &&
+        (afterReact.pool ?? 0) <= cap,
+        {
+          pool_after_drop: dropped.pool, cursor_after_drop: dropped.cursor,
+          pool_after_reactivation: reactivated.pool, cursor_after_reactivation: reactivated.cursor,
+          cursor_elapsed_after_reactivation_ms: reactivated.cursor_elapsed_ms,
+          pool_after_regen: afterReact.pool, cursor_after_regen: afterReact.cursor,
+          combat_state: 'out_of_combat', cap,
+        });
+
+      // 15. Death: no regeneration and no stance recreation.
+      await seed(0, 60_000);
+      const beforeDeath = await observe();
       await sql`update public.characters set hp = 0 where id = ${wizard}`;
       const deadRegen = await userRpc('apply_force_shield_regen', { _character_id: wizard });
-      const deadPool = await pool();
+      const afterDeath = await observe();
       const deadState = await charState(wizard);
-      push('death_removes_the_stance_instead_of_regenerating_it',
-        deadPool === null && JSON.stringify(deadState.reserved_buffs ?? {}) === '{}' &&
+      push('death_regenerates_nothing_and_never_recreates_the_stance',
+        afterDeath.pool === null && JSON.stringify(deadState.reserved_buffs ?? {}) === '{}' &&
         !('force_shield_hp' in ((deadState.stance_state ?? {}) as Record<string, unknown>)),
-        { pool: deadPool, reserved: deadState.reserved_buffs, stance_state: deadState.stance_state, regen: deadRegen.data });
+        {
+          pool_before: beforeDeath.pool, pool_after: afterDeath.pool,
+          cursor_before: beforeDeath.cursor, cursor_after: afterDeath.cursor,
+          eligible_intervals: Math.floor((beforeDeath.cursor_elapsed_ms ?? 0) / tickMs),
+          regen_applied: 0, combat_state: 'out_of_combat', cap,
+          reserved: deadState.reserved_buffs, stance_state: deadState.stance_state,
+          regen_return: deadRegen.data,
+        });
     }
+
 
     // ══════════════════════════════════════════════════════════════════════
     if (section === 'power') {
