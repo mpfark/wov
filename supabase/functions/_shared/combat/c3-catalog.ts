@@ -10,6 +10,7 @@
 import {
   loadAbilityCalcs,
   getServerAbilityCalcs,
+  getStatusConfigProblems,
 } from '../load-ability-calcs.ts';
 import type { AbilityCatalog } from './c3/loader.ts';
 import type { AbilityConfigEntry } from './c3/ability-resolve.ts';
@@ -55,5 +56,9 @@ export async function buildAbilityCatalog(db: any, force = false): Promise<Abili
     configVersion,
     lookup: (classKey: string, abilityKey: string) =>
       toEntry(getServerAbilityCalcs(classKey, abilityKey)),
+    // Authored-status contract problems travel with the catalog: the C3 loader
+    // refuses the tick (`status_config_invalid`) rather than resolving a status
+    // to zero duration / zero magnitude.
+    statusProblems: getStatusConfigProblems(),
   };
 }
