@@ -996,7 +996,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
   // The scope must describe exactly what was decoded, or the commit would
   // validate a different row set than the one simulated.
-  assertScopeMatches(envelope.scope, {
+  assertScopeMatches(envelope.scope, aux.mode, {
     participantIds: participants.map((p) => p.id),
     creatureIds: creatures.map((c) => c.id),
     actionIds,
@@ -1014,6 +1014,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
 function assertScopeMatches(
   scope: SnapshotEnvelope['scope'],
+  mode: 'live' | 'catchup',
   decoded: {
     participantIds: string[]; creatureIds: string[]; actionIds: string[];
     effectIds: string[]; inventoryIds: string[]; partyIds: string[];
@@ -1029,7 +1030,15 @@ function assertScopeMatches(
   };
   compare('participantIds', decoded.participantIds);
   compare('creatureIds', decoded.creatureIds);
-  compare('actionIds', decoded.actionIds);
+  if (mode === 'live') {
+    compare('actionIds', decoded.actionIds);
+  } else if (decoded.actionIds.length > 0) {
+    // Effects-only resolution decodes no action by design. The scope still
+    // names the pending rows the snapshot read, so the commit digest keeps
+    // covering them (a newly queued action before commit is a state conflict);
+    // what must never happen is a decoded action in this mode.
+    throw decodeError('$.scope.actionIds', 'effects-only resolution decoded a queued action');
+  }
   compare('effectIds', decoded.effectIds);
   compare('inventoryIds', decoded.inventoryIds);
   compare('partyIds', decoded.partyIds);
