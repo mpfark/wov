@@ -41,7 +41,8 @@ interface TickOutcome {
   ok: boolean;
   tick?: number;
   mode?: string;
-  events: { type: string; payload?: Record<string, unknown> }[];
+  /** `PresentationEvent` rows: flat fields, no nested payload. */
+  events: Record<string, unknown>[];
   raw: unknown;
 }
 
@@ -625,7 +626,7 @@ Deno.serve(async (req) => {
       // In combat: no regeneration.
       await clearSessions();
       await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
-                values (${wizard}, ${nodeId}, array[${dummy}]::uuid[], ${Date.now()}, 2000)`;
+                values (${wizard}, ${nodeId}, array[${dummy}::uuid], ${Date.now()}, 2000)`;
       await setPoolAndClock(4, 20_000);
       const inCombat = await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const inCombatPool = await pool();
@@ -762,37 +763,37 @@ Deno.serve(async (req) => {
         });
         const t = await tick('live', primary, [boss]);
         const hits = t.events.filter((e) => e.type === 'boss_cast_hit');
-        const prim = hits.find((e) => e.payload?.characterId === primary);
-        const aoe = hits.find((e) => e.payload?.characterId === secondary);
+        const prim = hits.find((e) => e.characterId === primary);
+        const aoe = hits.find((e) => e.characterId === secondary);
         const left = await poolNow();
         const expectPrimary = 10 + Math.floor(m.expectUsed * 1);
         const expectAoe = 4 + Math.floor(m.expectUsed * 0.5);
         push(`stored_power_${m.name}_consumes_and_commits`,
           t.ok && left === m.expectLeft &&
-          Number(prim?.payload?.amount ?? -1) === expectPrimary,
+          Number(prim?.amount ?? -1) === expectPrimary,
           {
             pool_after: left, expected_left: m.expectLeft,
-            primary_damage: prim?.payload?.amount, expected_primary: expectPrimary,
-            aoe_damage: aoe?.payload?.amount, expected_aoe: expectAoe,
-            tick_ok: t.ok, tick_mode: t.mode, event_types: t.events.map((e) => e.type),
+            primary_damage: prim?.amount, expected_primary: expectPrimary,
+            aoe_damage: aoe?.amount, expected_aoe: expectAoe,
+            tick_ok: t.ok, tick_mode: t.mode, event_types: t.events.map((e) => String(e.type)),
             tick_raw: t.ok ? undefined : t.raw,
           });
         push(`stored_power_${m.name}_primary_and_aoe_shares`,
-          Number(prim?.payload?.amount ?? -1) === expectPrimary &&
-          (aoe === undefined || Number(aoe.payload?.amount) === expectAoe),
-          { primary: prim?.payload?.amount, aoe: aoe?.payload?.amount, expectPrimary, expectAoe });
+          Number(prim?.amount ?? -1) === expectPrimary &&
+          (aoe === undefined || Number(aoe.amount) === expectAoe),
+          { primary: prim?.amount, aoe: aoe?.amount, expectPrimary, expectAoe });
 
         // Inertness is about the SAME cast never resolving twice. A later tick
         // legitimately starts a new telegraph and may bank fresh power, so the
         // pool value is not the invariant — the resolution count is.
         const t2 = await tick('live', primary, [boss]);
         const rehits = t2.events.filter((e) => e.type === 'boss_cast_hit'
-          && (e.payload?.creatureId === boss)
-          && Number(e.payload?.amount ?? 0) >= expectPrimary);
+          && (e.creatureId === boss)
+          && Number(e.amount ?? 0) >= expectPrimary);
         push(`stored_power_${m.name}_duplicate_resolution_is_inert`,
           rehits.length === 0,
           { pool_after_second_tick: await poolNow(), rehits: rehits.length,
-            event_types: t2.events.map((e) => e.type) });
+            event_types: t2.events.map((e) => String(e.type)) });
       }
 
       // Cap: banking during a channel may never exceed the configured cap.
@@ -825,7 +826,7 @@ Deno.serve(async (req) => {
       const fleePool = await poolNow();
       push('stored_power_no_target_drains_without_damage',
         fleeHits === 0 && fleePool === 0,
-        { hits: fleeHits, pool: fleePool, events: tFlee.events.map((e) => e.type) });
+        { hits: fleeHits, pool: fleePool, events: tFlee.events.map((e) => String(e.type)) });
       await sql`update public.characters set current_node_id = ${nodeId} where id in (${primary}, ${secondary})`;
 
       // Fizzle: the caster dies before the cast is due.
@@ -840,7 +841,7 @@ Deno.serve(async (req) => {
         where encounter_id = ${encounterId} and resolved_at is null`;
       push('boss_death_before_resolution_fizzles_without_damage',
         tFizzle.events.filter((e) => e.type === 'boss_cast_hit').length === 0 && fizzlePool === 0,
-        { pool: fizzlePool, open_casts: openCasts, events: tFizzle.events.map((e) => e.type) });
+        { pool: fizzlePool, open_casts: openCasts, events: tFizzle.events.map((e) => String(e.type)) });
 
       // The next snapshot carries the committed balance.
       const { data: snap } = await admin.rpc('encounter_resync_snapshot', { _encounter_id: encounterId });
@@ -883,8 +884,8 @@ Deno.serve(async (req) => {
                 2000, 'rend', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'physical' })}, 1)`;
 
       await sql`insert into public.combat_actions
-        (encounter_id, character_id, node_id, ability_key, target_creature_id, client_seq, status, eligible_after_ms)
-        values (${encounterId}, ${char}, ${nodeId}, 'power_strike', ${victim}, 1, 'pending', ${now - 1000})`;
+        (id, encounter_id, character_id, node_id, ability_key, target_creature_id, client_seq, status, eligible_after_ms)
+        values (gen_random_uuid(), ${encounterId}, ${char}, ${nodeId}, 'power_strike', ${victim}, 1, 'pending', ${now - 1000})`;
 
       await sql`insert into public.encounter_cast_events
         (encounter_id, node_id, creature_id, cast_key, ability_key, started_at, expires_at, payload)
@@ -937,7 +938,7 @@ Deno.serve(async (req) => {
         { hp: creature?.hp, alive: creature?.is_alive, awards });
       push('effects_only_closes_a_due_cast_with_no_present_target',
         counters.cast_closures > 0 && counters.player_attacks === 0,
-        { closures: counters.cast_closures, events: t.events.map((e) => e.type) });
+        { closures: counters.cast_closures, events: t.events.map((e) => String(e.type)) });
 
       // Non-vacuity control: the same fixture in live mode does attack.
       await sql`update public.characters set current_node_id = ${nodeId} where id = ${char}`;
