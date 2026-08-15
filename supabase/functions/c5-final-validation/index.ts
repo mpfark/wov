@@ -827,7 +827,11 @@ Deno.serve(async (req) => {
           await userRpc('apply_force_shield_regen', { _character_id: wizard });
           await userRpc('apply_force_shield_regen', { _character_id: wizard });
         },
-        (b, a, e) => e >= 4 && a.pool === Math.min(cap, (b.pool ?? 0) + (e + 1) * regenPerTick));
+        // The gap is counted once: two back-to-back calls may only add the
+        // whole intervals that elapsed, never the same window twice.
+        (b, a, e) => e >= 4 &&
+          (a.pool ?? -1) >= Math.min(cap, (b.pool ?? 0) + e * regenPerTick) &&
+          (a.pool ?? -1) <= Math.min(cap, (b.pool ?? 0) + (e + 1) * regenPerTick));
 
       // 11. Malformed / future cursor fails safe: no regeneration, cursor resets.
       await regenCase('a_future_cursor_fails_safe_without_regenerating',
