@@ -23,3 +23,8 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  # TEMPORARY (C5 final validation) — removed after the run.
+  [functions.c5-final-validation]
+    verify_jwt = false
+  [functions.c5-authprobe]
+    verify_jwt = false
