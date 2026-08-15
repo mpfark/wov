@@ -948,7 +948,9 @@ Deno.serve(async (req) => {
       };
       notes.effects_only_counters = counters;
 
-      push('effects_only_mode_confirmed', t.ok && t.mode === 'catchup', { mode: t.mode, tick: t.tick, ok: t.ok });
+      push('effects_only_mode_confirmed', t.ok && t.mode === 'catchup',
+        { mode: t.mode, tick: t.tick, ok: t.ok, raw: t.raw });
+      notes.effects_only_raw = t.raw;
       push('effects_only_zero_player_attacks', counters.player_attacks === 0, counters);
       push('effects_only_zero_creature_attacks', counters.creature_attacks === 0, counters);
       push('effects_only_consumes_no_pending_action',
@@ -971,6 +973,7 @@ Deno.serve(async (req) => {
       const live = await makeCreature({ name: 'Validation Sparring Dummy', hp: 9000 });
       await admin.rpc('encounter_intake', { _character_id: char, _creature_ids: [live] });
       const tLive = await tick('live', char, [live]);
+      notes.control_live_raw = live.raw;
       push('control_live_tick_actually_attacks',
         tLive.events.some((e) => ['autoattack_hit', 'autoattack_miss', 'autoattack_crit', 'ability_hit', 'ability_miss'].includes(e.type)),
         { events: tLive.events.map((e) => e.type).slice(0, 12) });
