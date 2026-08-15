@@ -120,6 +120,18 @@ Deno.serve(async (req) => {
       returning id`;
     created.otherNodeId = otherNodeId;
 
+    // ── TEMPORARY validation authorization ───────────────────────────────
+    // A single-use secret, known only to this invocation, authorizing exactly:
+    // catch-up role, this fixture node, ten minutes. It bypasses ONE thing —
+    // the global maintenance refusal — and nothing else: claim ownership, mode
+    // selection, scope checks, snapshot validation and commit authority are
+    // unchanged. It is never sent to a browser and is deleted in teardown.
+    const validationToken = crypto.randomUUID() + crypto.randomUUID();
+    await sql`insert into public.combat_validation_grants (token_hash, node_id, role, expires_at, note)
+              values (encode(sha256(convert_to(${validationToken}, 'UTF8')), 'hex'),
+                      ${nodeId}, 'catchup', now() + interval '10 minutes', 'c5-final-validation')`;
+    const validationGrant = { token: validationToken, role: 'catchup' as const, nodeId };
+
     const makeChar = async (classKey: string, over: Partial<Record<string, number>> = {}, owner = uid) => {
       const [{ id }] = await sql<{ id: string }[]>`
         insert into public.characters
@@ -178,6 +190,9 @@ Deno.serve(async (req) => {
             db: admin, nowMs: Date.now(), catalog,
             refreshCatalog: () => buildAbilityCatalog(admin, true),
             newBatchId: () => crypto.randomUUID(), caller: 'c5-final-validation',
+            // Catch-up fixtures legitimately stand off-node, where the soak
+            // allowlist (character + node presence) cannot authorize them.
+            ...(role === 'catchup' ? { validationGrant } : {}),
           },
         ) as unknown as Record<string, unknown>;
         if (res.ok === true) break;
@@ -622,7 +637,7 @@ Deno.serve(async (req) => {
                   set stance_state = coalesce(stance_state, '{}'::jsonb)
                       || jsonb_build_object('force_shield_hp', ${remaining},
                                             'force_shield_updated_at',
-                                            to_jsonb(now() - make_interval(secs => ${elapsedMs / 1000}::double precision)))
+                                            to_jsonb(now() - (${elapsedMs}::bigint * interval '1 millisecond')))
                   where id = ${wizard}`;
       };
       const clearSessions = () =>
