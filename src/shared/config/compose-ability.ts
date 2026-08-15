@@ -282,10 +282,17 @@ export function composeAbilityRow(
   // On-Hit Effect keeps working until its Status Application is switched on.
   if (use.on_hit_effect) baseCfg.on_hit_effect = use.on_hit_effect;
 
-  const statusDef = use.applied_status ? statuses?.[use.applied_status] : undefined;
+  const statusKey = use.applied_status ?? null;
+  const statusDef = statusKey ? statuses?.[statusKey] : undefined;
+  // A referenced status that is not authored must never silently degrade into
+  // "no status" (durationMs 0, zero magnitude). The marker is carried forward so
+  // the combat loader can refuse the tick with `missing_status_definition`.
   const effectConfig = statusDef
     ? { ...baseCfg, ...statusEffectConfig(statusDef, use) }
-    : baseCfg;
+    : statusKey && statuses
+      ? { ...baseCfg, status_definition_missing: statusKey }
+      : baseCfg;
+
 
 
   const mechanicCalcs: Record<string, AbilityCalc> = {};
