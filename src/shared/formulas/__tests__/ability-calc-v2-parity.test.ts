@@ -205,22 +205,34 @@ describe('finisher parity — dice × consumed stacks', () => {
           for (const face of facesFor(die)) {
             const gotBase = evaluateCalc(base, inputs(level, raw, { weaponDie: die, roll: fixedRoll(face) }));
             const wantBase = face + mod + (2 + effDexDmg + Math.floor(level / 3));
-            expect(Math.abs(gotBase - wantBase) < 1e-9, `evis base ${JSON.stringify({ level, raw, die, face, gotBase, wantBase })}`).toBe(true);
+            // Messages are built ONLY on mismatch: this sweep runs ~12k
+            // assertions, and eager JSON.stringify made the case slow enough to
+            // brush the default 5s timeout under a loaded parallel suite.
+            if (!(Math.abs(gotBase - wantBase) < 1e-9)) {
+              expect.fail(`evis base ${JSON.stringify({ level, raw, die, face, gotBase, wantBase })}`);
+            }
 
             const gotPer = evaluateCalc(perStack, inputs(level, raw));
             const wantPer = 0.50 + effChaStack * 0.02;
-            expect(Math.abs(gotPer - wantPer) < 1e-9, `evis per-stack ${JSON.stringify({ raw, gotPer, wantPer })}`).toBe(true);
+            if (!(Math.abs(gotPer - wantPer) < 1e-9)) {
+              expect.fail(`evis per-stack ${JSON.stringify({ raw, gotPer, wantPer })}`);
+            }
 
             for (const stacks of STACKS) {
               const got = Math.max(1, Math.round(gotBase * (1 + gotPer * stacks)));
               const want = Math.max(1, Math.round(wantBase * (1 + wantPer * stacks)));
-              expect(got, `evis final ${JSON.stringify({ level, raw, die, face, stacks })}`).toBe(want);
+              if (got !== want) {
+                expect.fail(`evis final ${JSON.stringify({ level, raw, die, face, stacks, got, want })}`);
+              }
             }
           }
         }
       }
     }
-  });
+    // Deterministic sweep, but a big one — never let scheduler noise on a
+    // saturated worker pool masquerade as a parity failure.
+  }, 30_000);
+
 
   it('conflagrate — INT base plus per-stack rider over 0..5 stacks', () => {
     const base = amountOf('conflagrate');

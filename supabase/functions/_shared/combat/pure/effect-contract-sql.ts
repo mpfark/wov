@@ -8,15 +8,11 @@
  * TypeScript by construction.
  *
  * The rendered text is checked in at `supabase/contract/active_effects_validate.sql`
- * and installed verbatim by migration. Two permanent guards keep the three
- * copies aligned:
- *
- *  - `src/test/combat/effects/sql-parity.test.ts` fails when the generator
- *    output and the checked-in artifact differ, and when the artifact's
- *    embedded registry disagrees with the TypeScript registry on mechanics,
- *    source rules, target kinds, bounds, params, mutability or version.
- *  - the deployed harness (`c5-effect-harness`, case `contract_parity`)
- *    compares the artifact against the deployed `prosrc`.
+ * and installed verbatim by migration. A permanent guard keeps the copies
+ * aligned: `src/test/combat/effects/sql-parity.test.ts` fails when the
+ * generator output and the checked-in artifact differ, and when the artifact's
+ * embedded registry disagrees with the TypeScript registry on mechanics,
+ * source rules, target kinds, bounds, params, mutability or version.
  */
 
 import {
