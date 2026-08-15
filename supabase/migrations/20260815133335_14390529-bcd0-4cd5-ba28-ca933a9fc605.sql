@@ -1,0 +1,56 @@
+INSERT INTO public.applied_statuses
+  (key, label, effect_type, classification, stack_noun, tick_interval_ms,
+   magnitude, duration, stacks, modifier, default_damage_type, admin_notes)
+VALUES
+  ('poison', 'Poison', 'poison', 'dot', 'poison', 2000,
+   '{"stat_mult": 1.2, "global_mult": 0.67, "role": "primary"}'::jsonb,
+   '{"base_ms": 25000, "role": null}'::jsonb,
+   '{"role": "secondary", "max_stacks_calc": {"base": 3, "terms": [{"source":"stat","stat":"cha","role":"secondary","clampAtZero":true,"transform":{"kind":"diminishing","cap":4}}], "unit": "count"}}'::jsonb,
+   NULL, 'poison',
+   'Enemy-side DoT. Applied by the Assassin On-Hit Stance (Envenom).'),
+  ('ignite', 'Ignite', 'ignite', 'dot', 'burn', 2000,
+   '{"stat_mult": 0.7, "global_mult": 0.67, "role": "secondary"}'::jsonb,
+   '{"base_ms": 30000, "per_point_ms": 1000, "cap_ms": 45000, "role": "secondary"}'::jsonb,
+   '{"role": null, "max_stacks_calc": {"base": 5, "terms": [], "unit": "count"}}'::jsonb,
+   NULL, 'fire',
+   'Enemy-side fire DoT. Applied by successful Orbs of Fire orb attacks.'),
+  ('bleed', 'Bleed', 'bleed', 'dot', 'bleed', 2000,
+   '{"stat_mult": 1.0, "global_mult": 0.67, "role": "primary"}'::jsonb,
+   '{"base_ms": 20000, "role": null}'::jsonb,
+   '{"role": null, "max_stacks_calc": {"base": 5, "terms": [], "unit": "count"}}'::jsonb,
+   NULL, 'physical',
+   'Enemy-side physical DoT used by on-hit effects and Rend.'),
+  ('scorched', 'Scorched', 'scorched', 'dot', 'scorch', 2000,
+   '{"flat": 3}'::jsonb,
+   '{"base_ms": 6000}'::jsonb,
+   '{"max_stacks_calc": {"base": 3, "terms": [], "unit": "count"}}'::jsonb,
+   NULL, 'fire',
+   'Light, flat burn with no attribute scaling. Preserves Fireball''s legacy on-hit burn exactly (25% / 3 per tick / 6s / 3 stacks).'),
+  ('chilled', 'Chilled', 'chilled', 'damage_amp', 'chill', NULL,
+   '{}'::jsonb,
+   '{"duration_ticks": 3, "role": null}'::jsonb,
+   '{"max_stacks_calc": {"base": 1, "terms": [], "unit": "count"}}'::jsonb,
+   '{"kind": "damage_taken_pct", "value": 10, "eligible_sources": ["weapon","ability","stance","dot","proc"]}'::jsonb,
+   NULL,
+   'Reusable damage-amplification debuff. Duration is authoritative as combat ticks.')
+ON CONFLICT (key) DO UPDATE SET
+  label = EXCLUDED.label,
+  effect_type = EXCLUDED.effect_type,
+  classification = EXCLUDED.classification,
+  stack_noun = EXCLUDED.stack_noun,
+  tick_interval_ms = EXCLUDED.tick_interval_ms,
+  magnitude = EXCLUDED.magnitude,
+  duration = EXCLUDED.duration,
+  stacks = EXCLUDED.stacks,
+  modifier = EXCLUDED.modifier,
+  default_damage_type = EXCLUDED.default_damage_type,
+  admin_notes = EXCLUDED.admin_notes,
+  updated_at = now();
+
+UPDATE public.abilities
+   SET applied_status = 'ignite',
+       status_trigger = 'successful_pulse_hit',
+       status_chance_pct = NULL,
+       status_application_enabled = true,
+       updated_at = now()
+ WHERE ability_key = 'ignite';
