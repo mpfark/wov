@@ -278,6 +278,18 @@ function resolveAbilityConfigs(
       failures.push(`${classKey}:${abilityKey}: not present in the ability catalog`);
       continue;
     }
+    // A configured use whose applied status is not authored would resolve to
+    // zero duration and zero magnitude. Refuse the tick with a diagnosable
+    // reason instead of silently disabling the mechanic.
+    const missingStatus = (entry.effectConfig as Record<string, unknown>)
+      ?.status_definition_missing;
+    if (typeof missingStatus === 'string' && missingStatus.length > 0) {
+      throw new C3Error(
+        'status_config_invalid',
+        `missing_status_definition: ${classKey}:${abilityKey} applies "${missingStatus}", which is not authored`,
+        { retryable: false },
+      );
+    }
     const attrs = effectiveAttrs(caster);
     const config = resolveAbilityConfig(entry, {
       level: num(caster.level, 1),
@@ -286,6 +298,7 @@ function resolveAbilityConfigs(
     });
     for (const f of config.failures) failures.push(f);
     resolved.set(key, config);
+
   }
   return resolved;
 }
