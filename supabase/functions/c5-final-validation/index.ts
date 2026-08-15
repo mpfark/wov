@@ -269,7 +269,17 @@ Deno.serve(async (req) => {
       const actEnv = await userRpc('activate_stance', {
         p_character_id: assassin, p_stance_key: 'envenom', p_tier: 3,
       });
-      for (let i = 0; i < 4; i++) await tick('live', assassin, [dummy]);
+      const applyTicks: unknown[] = [];
+      for (let i = 0; i < 4; i++) {
+        const tk = await tick('live', assassin, [dummy]);
+        applyTicks.push({ ok: tk.ok, mode: tk.mode, events: tk.events.map((e) => String(e.type)) });
+      }
+      // Diagnostic: the applier can only fire if the stance's semantic row
+      // exists AND carries its stack_apply configuration.
+      const applierRows = await sql<Row[]>`select target_id, effect_type, mechanic, magnitude, params, lifetime
+        from public.active_effects where target_id in (${wizard}, ${assassin}) and mechanic = 'stack_apply'`;
+      notes.stack_applier_rows = applierRows;
+      notes.stack_apply_ticks = applyTicks;
       const creatureEffects = await effectsOf(dummy);
       // Landed stacks are ordinary finite DoT debuffs on the creature; their
       // identity is the applying ability, never a "_stack" effect-type suffix.
