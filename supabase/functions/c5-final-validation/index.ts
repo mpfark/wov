@@ -1079,6 +1079,72 @@ Deno.serve(async (req) => {
       push('unknown_character_is_rejected',
         byName.internal_service_role_unknown_character.status === 400,
         byName.internal_service_role_unknown_character);
+      // ── TEMPORARY validation authorization: proofs of its narrowness ────
+      const grantCheck = async (token: string, node: string | undefined, role: string) => {
+        const { data } = await admin.rpc('combat_validation_grant_check', {
+          _token: token, _node_id: node ?? null, _role: role,
+        });
+        return data === true;
+      };
+      const grantProofs = {
+        valid_fixture_node_catchup: await grantCheck(validationToken, created.nodeId, 'catchup'),
+        other_node_denied: await grantCheck(validationToken, created.otherNodeId, 'catchup'),
+        live_role_denied: await grantCheck(validationToken, created.nodeId, 'live'),
+        wrong_token_denied: await grantCheck(crypto.randomUUID(), created.nodeId, 'catchup'),
+        empty_token_denied: await grantCheck('', created.nodeId, 'catchup'),
+      };
+      notes.validation_grant_proofs = grantProofs;
+      push('validation_grant_authorizes_only_the_fixture_node_in_catchup_role',
+        grantProofs.valid_fixture_node_catchup && !grantProofs.other_node_denied &&
+        !grantProofs.live_role_denied && !grantProofs.wrong_token_denied &&
+        !grantProofs.empty_token_denied, grantProofs);
+
+      // Anon and authenticated roles cannot even reach the check function.
+      const reachable = async (claims: Record<string, unknown>) => {
+        try {
+          await sql.begin(async (tx) => {
+            await tx`select set_config('role', ${String(claims.role)}, true)`;
+            await tx`select public.combat_validation_grant_check(${validationToken}, ${created.nodeId!}, 'catchup')`;
+          });
+          return true;
+        } catch { return false; }
+      };
+      const reach = {
+        anon: await reachable({ role: 'anon' }),
+        authenticated: await reachable({ role: 'authenticated' }),
+      };
+      notes.validation_grant_reachability = reach;
+      push('validation_grant_check_is_unreachable_by_players',
+        !reach.anon && !reach.authenticated, reach);
+
+      // An expired/deleted grant stops bypassing maintenance immediately.
+      const expiredToken = crypto.randomUUID();
+      await sql`insert into public.combat_validation_grants (token_hash, node_id, role, expires_at, note)
+                values (encode(sha256(convert_to(${expiredToken}, 'UTF8')), 'hex'),
+                        ${created.nodeId!}, 'catchup', now() - interval '1 minute', 'c5-final-validation-expired')`;
+      const expiredUsable = await grantCheck(expiredToken, created.nodeId, 'catchup');
+      await sql`delete from public.combat_validation_grants
+                where token_hash = encode(sha256(convert_to(${expiredToken}, 'UTF8')), 'hex')`;
+      const deletedUsable = await grantCheck(expiredToken, created.nodeId, 'catchup');
+      push('expired_or_deleted_validation_grant_no_longer_bypasses_maintenance',
+        !expiredUsable && !deletedUsable, { expiredUsable, deletedUsable });
+
+      // A real orchestration attempt with the grant but a non-fixture node is
+      // refused by the maintenance gate, so the grant cannot travel.
+      const offGrantChar = await makeChar('warrior');
+      await sql`delete from public.combat_soak_access where character_id = ${offGrantChar}`;
+      const foreign = await orchestrateCombatResolution(
+        { role: 'catchup', characterId: offGrantChar, nodeId: created.otherNodeId!, creatureIds: [] },
+        {
+          db: admin, nowMs: Date.now(), catalog,
+          refreshCatalog: () => buildAbilityCatalog(admin, true),
+          newBatchId: () => crypto.randomUUID(), caller: 'c5-final-validation',
+          validationGrant,
+        },
+      ) as unknown as Record<string, unknown>;
+      push('validation_grant_cannot_resolve_a_non_fixture_encounter',
+        foreign.ok !== true && foreign.kind === 'maintenance', foreign);
+
       push('duplicate_internal_invocation_does_not_double_resolve',
         byName.internal_service_role_duplicate_invocation.status === 200 &&
         ((byName.internal_service_role_duplicate_invocation.body as Record<string, unknown>)?.ok !== true ||
@@ -1104,6 +1170,8 @@ Deno.serve(async (req) => {
   } finally {
     try {
       await sql`update public.combat_config set value = 'off' where key = 'combat_soak'`;
+      // The temporary validation authorization never outlives the invocation.
+      await sql`delete from public.combat_validation_grants where note like 'c5-final-validation%'`;
       for (const c of created.charIds) {
         await sql`delete from public.combat_soak_access where character_id = ${c}`;
       }
