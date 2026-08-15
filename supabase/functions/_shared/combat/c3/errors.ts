@@ -31,8 +31,17 @@ export type C3ErrorKind =
    * result the commit digest cannot vouch for.
    */
   | 'config_conflict'
+  /**
+   * Authored status configuration (`applied_statuses`) is missing or unusable,
+   * so a status-applying ability would resolve to zero duration / zero
+   * magnitude. Fail closed with the problem list instead of silently disabling
+   * the mechanic. Reasons start with `missing_status_definition` or
+   * `invalid_status_definition`.
+   */
+  | 'status_config_invalid'
   /** Transport/unexpected failure. */
   | 'internal';
+
 
 export interface C3Failure {
   readonly ok: false;
