@@ -635,7 +635,7 @@ Deno.serve(async (req) => {
                   where target_id = ${wizard} and lifetime = 'stance' and effect_type = 'force_shield'`;
         await sql`update public.characters
                   set stance_state = coalesce(stance_state, '{}'::jsonb)
-                      || jsonb_build_object('force_shield_hp', ${remaining},
+                      || jsonb_build_object('force_shield_hp', ${remaining}::int,
                                             'force_shield_updated_at',
                                             to_jsonb(now() - (${elapsedMs}::bigint * interval '1 millisecond')))
                   where id = ${wizard}`;
