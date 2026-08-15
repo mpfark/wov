@@ -256,6 +256,9 @@ export function validateStatusDefinition(
     if (!nonEmpty(row.default_damage_type)) {
       problems.push('default_damage_type is required for a damaging status');
     }
+    if (row.is_periodic === false) {
+      problems.push('is_periodic must be true for a damage-over-time status');
+    }
   } else if (classification === 'damage_amp') {
     problems.push(...modifierProblems(row));
   }
