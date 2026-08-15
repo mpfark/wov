@@ -66,6 +66,21 @@ export interface OrchestrationDeps {
   /** Minimum spacing between ticks of one encounter. */
   readonly rateMs?: number;
   readonly log?: (message: string, detail?: unknown) => void;
+  /**
+   * TEMPORARY C5 validation authorization. Supplied ONLY by the deployed
+   * validation harness, never by `combat-tick` / `combat-catchup`, so no browser
+   * or player request can carry it. It may bypass exactly one thing — the global
+   * maintenance refusal — for one fixture node, in catch-up role, while an
+   * unexpired grant row matching the presented token exists. Claim ownership,
+   * mode selection, scope checks, snapshot validation and commit authority are
+   * untouched.
+   */
+  readonly validationGrant?: {
+    readonly token: string;
+    readonly role: 'catchup';
+    readonly nodeId: string;
+  };
+
 }
 
 export interface OrchestrationSuccess {
