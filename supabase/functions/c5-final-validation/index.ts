@@ -270,10 +270,22 @@ Deno.serve(async (req) => {
       });
       for (let i = 0; i < 4; i++) await tick('live', assassin, [dummy]);
       const creatureEffects = await effectsOf(dummy);
-      const stacks = creatureEffects.filter((r) => String(r.effect_type).endsWith('_stack'));
+      // Landed stacks are ordinary finite DoT debuffs on the creature; their
+      // identity is the applying ability, never a "_stack" effect-type suffix.
+      const stacks = creatureEffects.filter((r) =>
+        String(r.mechanic) === 'dot_debuff' &&
+        ['ignite', 'envenom'].includes(String(r.source_ability_key)));
       push('ignite_and_envenom_apply_target_stacks',
         stacks.length > 0 && !actEnv.error,
-        { stacks: stacks.map((r) => ({ e: r.effect_type, src: r.source_id === assassin ? 'assassin' : 'wizard', stacks: r.stacks })) });
+        {
+          stacks: stacks.map((r) => ({
+            e: r.effect_type, ability: r.source_ability_key,
+            src: r.source_id === assassin ? 'assassin' : 'wizard', stacks: r.stacks,
+          })),
+          all_creature_effects: creatureEffects.map((r) => ({
+            e: r.effect_type, m: r.mechanic, ability: r.source_ability_key, lifetime: r.lifetime,
+          })),
+        });
       push('target_stacks_keep_a_finite_lifetime_of_their_own',
         stacks.length > 0 && stacks.every((r) => r.lifetime === 'timed' && Number(r.expires_at) < STANCE_NO_EXPIRY_MS),
         stacks.map((r) => ({ e: r.effect_type, lifetime: r.lifetime, expires_in_ms: Number(r.expires_at) - Date.now() })));
