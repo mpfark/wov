@@ -148,8 +148,13 @@ Deno.serve(async (req) => {
     };
 
     const openSoak = async (charId: string) => {
-      await sql`insert into public.combat_soak_access (character_id, node_id, expires_at, note)
-                values (${charId}, ${nodeId}, now() + interval '10 minutes', 'c5-final-validation')`;
+      // Both fixture nodes: a catch-up fixture legitimately stands off-node,
+      // and the allowlist is scoped per node.
+      for (const n of [nodeId, otherNodeId]) {
+        await sql`insert into public.combat_soak_access (character_id, node_id, expires_at, note)
+                  values (${charId}, ${n}, now() + interval '10 minutes', 'c5-final-validation')
+                  on conflict do nothing`;
+      }
       await sql`insert into public.combat_config (key, value) values ('combat_soak', 'on')
                 on conflict (key) do update set value = 'on'`;
     };
@@ -617,7 +622,7 @@ Deno.serve(async (req) => {
                   set stance_state = coalesce(stance_state, '{}'::jsonb)
                       || jsonb_build_object('force_shield_hp', ${remaining},
                                             'force_shield_updated_at',
-                                            to_jsonb(now() - make_interval(secs => ${elapsedMs / 1000})))
+                                            to_jsonb(now() - make_interval(secs => ${elapsedMs / 1000}::double precision)))
                   where id = ${wizard}`;
       };
       const clearSessions = () =>
@@ -911,7 +916,7 @@ Deno.serve(async (req) => {
 
       await sql`insert into public.combat_actions
         (id, encounter_id, character_id, node_id, ability_key, target_creature_id, client_seq, status, eligible_after_ms)
-        values (gen_random_uuid(), ${encounterId}, ${char}, ${nodeId}, 'power_strike', ${victim}, 1, 'pending', ${now - 1000})`;
+        values (gen_random_uuid(), ${encounterId}, ${char}, ${nodeId}, 'backstab', ${victim}, 1, 'pending', ${now - 1000})`;
 
       await sql`insert into public.encounter_cast_events
         (encounter_id, node_id, creature_id, cast_key, ability_key, started_at, expires_at, payload)
