@@ -715,6 +715,7 @@ Deno.serve(async (req) => {
       const seedCast = async (o: {
         consumeMode: string; consumePct?: number; consumeFixed?: number; dueMs: number;
         primaryShare?: number; aoeShare?: number; target: string | null; cap?: number; creature?: string;
+        aoeBase?: number;
       }) => {
         await sql`delete from public.encounter_cast_events where encounter_id = ${encounterId}`;
         // A cast that "started" before the participants joined is, by design,
@@ -723,9 +724,9 @@ Deno.serve(async (req) => {
         const startedAt = new Date(Date.now()).toISOString();
         const expiresAt = new Date(Date.now() + o.dueMs).toISOString();
         const config = {
-          label: 'Validation Nova', targetCharacterId: o.target, baseDamage: 10, baseAoeDamage: 4,
+          label: 'Validation Nova', targetCharacterId: o.target, baseDamage: 10,
+          baseAoeDamage: o.aoeBase ?? 4,
           damageType: 'fire', primaryShare: o.primaryShare ?? 1, aoeShare: o.aoeShare ?? 0.5,
-          baseAoeDamageOverride: undefined,
           consumeMode: o.consumeMode, consumePct: o.consumePct ?? 100, consumeFixed: o.consumeFixed ?? 0,
           pauseAutoattacks: true, storedPowerCap: o.cap ?? 400, lockMs: 0, castedText: null,
         };
@@ -801,23 +802,40 @@ Deno.serve(async (req) => {
       push('stored_power_banking_respects_the_cap', capped <= 400, { pool: capped });
 
       // Delayed resolution: a long-overdue cast still resolves exactly once.
+      // Identity is the cast ROW: a later tick legitimately starts a new
+      // telegraph, so "once" is measured on the seeded cast event, not on the
+      // encounter pool.
       await sql`update public.characters set hp = 4000 where id in (${primary}, ${secondary})`;
       await setPool(100, 400);
       await seedCast({ consumeMode: 'all', dueMs: -120_000, target: primary, cap: 400 });
+      const [seeded] = await sql<Row[]>`select id from public.encounter_cast_events
+        where encounter_id = ${encounterId} order by started_at desc limit 1`;
       const tDelayed = await tick('live', primary, [boss]);
       const delayedHits = tDelayed.events.filter((e) => e.type === 'boss_cast_hit').length;
       const delayedPool = await poolNow();
+      const resolvedOnce = async () => {
+        const [r] = await sql<Row[]>`select resolved_at from public.encounter_cast_events where id = ${seeded.id}`;
+        return r?.resolved_at !== null && r?.resolved_at !== undefined;
+      };
+      const firstResolved = await resolvedOnce();
       const tDelayed2 = await tick('live', primary, [boss]);
+      const reResolved = tDelayed2.events.filter((e) =>
+        e.type === 'boss_cast_hit' && Number(e.amount ?? 0) >= 110).length;
       push('delayed_resolution_lands_once_and_consumes_once',
-        delayedHits > 0 && delayedPool === 0 &&
-        tDelayed2.events.filter((e) => e.type === 'boss_cast_hit').length === 0 &&
-        (await poolNow()) === 0,
-        { hits: delayedHits, pool: delayedPool });
+        delayedHits > 0 && delayedPool === 0 && firstResolved && reResolved === 0,
+        { hits: delayedHits, pool_after: delayedPool, cast_resolved: firstResolved, re_resolutions: reResolved });
 
       // Flee / no eligible target: the pool still drains, nobody is hit.
+      // The claimant has to stay on the node — with nobody present there is no
+      // tick to resolve at all. The cast's own target flees and the splash is
+      // authored to zero, so the resolution has no eligible victim.
+      await sql`update public.characters set hp = 4000 where id in (${primary}, ${secondary})`;
       await setPool(100, 400);
-      await seedCast({ consumeMode: 'all', dueMs: -1000, target: primary, cap: 400 });
-      await sql`update public.characters set current_node_id = ${created.otherNodeId} where id in (${primary}, ${secondary})`;
+      await seedCast({
+        consumeMode: 'all', dueMs: -1000, target: secondary, cap: 400,
+        aoeBase: 0, aoeShare: 0,
+      });
+      await sql`update public.characters set current_node_id = ${created.otherNodeId} where id = ${secondary}`;
       const tFlee = await tick('live', primary, [boss]);
       const fleeHits = tFlee.events.filter((e) => e.type === 'boss_cast_hit').length;
       const fleePool = await poolNow();
@@ -825,6 +843,7 @@ Deno.serve(async (req) => {
         fleeHits === 0 && fleePool === 0,
         { hits: fleeHits, pool: fleePool, events: tFlee.events.map((e) => String(e.type)) });
       await sql`update public.characters set current_node_id = ${nodeId} where id in (${primary}, ${secondary})`;
+      await admin.rpc('encounter_intake', { _character_id: secondary, _creature_ids: [boss] });
 
       // Fizzle: the caster dies before the cast is due.
       await sql`update public.characters set hp = 4000 where id in (${primary}, ${secondary})`;
