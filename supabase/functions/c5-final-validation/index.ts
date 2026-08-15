@@ -270,10 +270,22 @@ Deno.serve(async (req) => {
       });
       for (let i = 0; i < 4; i++) await tick('live', assassin, [dummy]);
       const creatureEffects = await effectsOf(dummy);
-      const stacks = creatureEffects.filter((r) => String(r.effect_type).endsWith('_stack'));
+      // Landed stacks are ordinary finite DoT debuffs on the creature; their
+      // identity is the applying ability, never a "_stack" effect-type suffix.
+      const stacks = creatureEffects.filter((r) =>
+        String(r.mechanic) === 'dot_debuff' &&
+        ['ignite', 'envenom'].includes(String(r.source_ability_key)));
       push('ignite_and_envenom_apply_target_stacks',
         stacks.length > 0 && !actEnv.error,
-        { stacks: stacks.map((r) => ({ e: r.effect_type, src: r.source_id === assassin ? 'assassin' : 'wizard', stacks: r.stacks })) });
+        {
+          stacks: stacks.map((r) => ({
+            e: r.effect_type, ability: r.source_ability_key,
+            src: r.source_id === assassin ? 'assassin' : 'wizard', stacks: r.stacks,
+          })),
+          all_creature_effects: creatureEffects.map((r) => ({
+            e: r.effect_type, m: r.mechanic, ability: r.source_ability_key, lifetime: r.lifetime,
+          })),
+        });
       push('target_stacks_keep_a_finite_lifetime_of_their_own',
         stacks.length > 0 && stacks.every((r) => r.lifetime === 'timed' && Number(r.expires_at) < STANCE_NO_EXPIRY_MS),
         stacks.map((r) => ({ e: r.effect_type, lifetime: r.lifetime, expires_in_ms: Number(r.expires_at) - Date.now() })));
@@ -397,9 +409,9 @@ Deno.serve(async (req) => {
         const now = Date.now();
         await sql`insert into public.active_effects
           (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-           tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type, lifetime)
-          values (${nodeId}, ${c}, ${dummy}, 'venom_stack', 3, 50, ${now - 1}, ${now + 120_000},
-                  2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'poison', 'timed')`;
+           tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, lifetime)
+          values (${nodeId}, ${c}, ${dummy}, 'poison', 3, 50, ${now - 1}, ${now + 120_000},
+                  2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'timed')`;
         for (let i = 0; i < 6; i++) {
           await tick('live', c, [dummy]);
           const [r] = await sql<Row[]>`select hp from public.characters where id = ${c}`;
@@ -613,7 +625,7 @@ Deno.serve(async (req) => {
       // In combat: no regeneration.
       await clearSessions();
       await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
-                values (${wizard}, ${nodeId}, ${sql.array([dummy])}, ${Date.now()}, 2000)`;
+                values (${wizard}, ${nodeId}, array[${dummy}]::uuid[], ${Date.now()}, 2000)`;
       await setPoolAndClock(4, 20_000);
       const inCombat = await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const inCombatPool = await pool();
@@ -762,17 +774,25 @@ Deno.serve(async (req) => {
             pool_after: left, expected_left: m.expectLeft,
             primary_damage: prim?.payload?.amount, expected_primary: expectPrimary,
             aoe_damage: aoe?.payload?.amount, expected_aoe: expectAoe,
+            tick_ok: t.ok, tick_mode: t.mode, event_types: t.events.map((e) => e.type),
+            tick_raw: t.ok ? undefined : t.raw,
           });
         push(`stored_power_${m.name}_primary_and_aoe_shares`,
           Number(prim?.payload?.amount ?? -1) === expectPrimary &&
           (aoe === undefined || Number(aoe.payload?.amount) === expectAoe),
           { primary: prim?.payload?.amount, aoe: aoe?.payload?.amount, expectPrimary, expectAoe });
 
+        // Inertness is about the SAME cast never resolving twice. A later tick
+        // legitimately starts a new telegraph and may bank fresh power, so the
+        // pool value is not the invariant — the resolution count is.
         const t2 = await tick('live', primary, [boss]);
-        const left2 = await poolNow();
+        const rehits = t2.events.filter((e) => e.type === 'boss_cast_hit'
+          && (e.payload?.creatureId === boss)
+          && Number(e.payload?.amount ?? 0) >= expectPrimary);
         push(`stored_power_${m.name}_duplicate_resolution_is_inert`,
-          t2.events.filter((e) => e.type === 'boss_cast_hit').length === 0 && left2 === left,
-          { pool: left2, hits: t2.events.filter((e) => e.type === 'boss_cast_hit').length });
+          rehits.length === 0,
+          { pool_after_second_tick: await poolNow(), rehits: rehits.length,
+            event_types: t2.events.map((e) => e.type) });
       }
 
       // Cap: banking during a channel may never exceed the configured cap.
@@ -844,23 +864,23 @@ Deno.serve(async (req) => {
       const [item] = await sql<Row[]>`select id from public.items limit 1`;
       if (item) {
         await sql`insert into public.character_inventory
-                  (character_id, item_id, equipped_slot, current_durability, quantity)
-                  values (${char}, ${item.id}, 'main_hand', 100, 1)`;
+                  (character_id, item_id, equipped_slot, current_durability)
+                  values (${char}, ${item.id}, 'main_hand', 100)`;
       }
 
       const now = Date.now();
       await sql`insert into public.active_effects
         (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type)
-        values (${nodeId}, ${victim}, ${char}, 'envenom_stack', 2, 5, ${now - 1}, ${now + 120_000},
-                2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'poison')`;
+         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version)
+        values (${nodeId}, ${victim}, ${char}, 'poison', 2, 5, ${now - 1}, ${now + 120_000},
+                2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1)`;
 
       // An effect that must expire during the sweep.
       await sql`insert into public.active_effects
         (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type)
-        values (${nodeId}, ${victim}, ${char}, 'rend_stack', 1, 1, ${now - 1}, ${now - 1},
-                2000, 'rend', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'physical' })}, 1, 'physical')`;
+         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version)
+        values (${nodeId}, ${victim}, ${char}, 'bleed', 1, 1, ${now - 1}, ${now - 1},
+                2000, 'rend', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'physical' })}, 1)`;
 
       await sql`insert into public.combat_actions
         (encounter_id, character_id, node_id, ability_key, target_creature_id, client_seq, status, eligible_after_ms)

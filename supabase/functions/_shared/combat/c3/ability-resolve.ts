@@ -187,18 +187,32 @@ function resolveParams(
         stackEffectType: str(cfg.stack_type) ?? str(cfg.effect_type) ?? 'poison',
       };
     case 'stack_apply': {
-      const trigger = str(cfg.trigger) === 'successful_pulse_hit'
+      // Authored vocabulary: `on_hit` (weapon hits) vs `pulse` (own heartbeat).
+      // The legacy resolver name is accepted as an alias.
+      const rawTrigger = str(cfg.trigger);
+      const trigger = rawTrigger === 'pulse' || rawTrigger === 'successful_pulse_hit'
         ? 'successful_pulse_hit' as const
         : 'weapon_hit' as const;
+      const pulseStat = str(cfg.pulse_damage_stat);
+      const pulseStatMod = pulseStat
+        ? num((caster.attrMods as Record<string, unknown>)[pulseStat], 0)
+        : 0;
       return {
         // `amount_calc` is the proc chance for this base (0..1).
         procChance: Math.max(0, Math.min(1, evalCalc(entry.amountCalc, inputs, `${entry.classKey}:${entry.classAbilityKey} amount_calc`, true, failures))),
         stackTrigger: trigger,
         stackEffectType: str(cfg.effect_type) ?? 'poison',
         dotPerTick: dotPerTick(cfg, caster),
-        pulseDamage: Math.max(0, Math.round(num(cfg.pulse_damage, 0))),
+        // The LANDED stack keeps its own authored, finite lifetime — never the
+        // stance's (which is reservation-backed and has no expiry).
+        stackDurationMs: Math.max(0, Math.round(dotDurationMs(cfg, caster, durationMs))),
+        pulseDamage: Math.max(
+          0,
+          Math.round(num(cfg.pulse_damage, num(cfg.pulse_damage_base, 0) + pulseStatMod)),
+        ),
       };
     }
+
     case 'hp_transfer':
       return {
         reserveHp: Math.max(0, Math.round(evalParam(entry, 'reserve_hp', inputs, true, failures))),

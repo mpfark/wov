@@ -182,7 +182,42 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
         critBuffBonus: g() < 0.2 ? 1 : 0,
         blockBuff: g() < 0.2,
         rooted: g() < 0.1,
+        // Reservation-backed stack appliers: Envenom procs off weapon hits,
+        // Orbs of Fire off its own heartbeat. Present often enough that the
+        // sweeps carry nonzero application counters on both triggers.
+        ...(g() < 0.35
+          ? {
+              stackAppliers: [
+                g() < 0.5
+                  ? {
+                      abilityKey: 'envenom',
+                      effectType: 'poison',
+                      trigger: 'weapon_hit' as const,
+                      chance: Number(g().toFixed(2)),
+                      dotPerTick: int(1, 9),
+                      durationMs: 25000,
+                      intervalMs: 2000,
+                      maxStacks: int(1, 5),
+                      damageType: 'poison',
+                      pulseDamage: 0,
+                    }
+                  : {
+                      abilityKey: 'ignite',
+                      effectType: 'ignite',
+                      trigger: 'successful_pulse_hit' as const,
+                      chance: Number(g().toFixed(2)),
+                      dotPerTick: int(1, 9),
+                      durationMs: 30000,
+                      intervalMs: 2000,
+                      maxStacks: 5,
+                      damageType: 'fire',
+                      pulseDamage: int(0, 8),
+                    },
+              ],
+            }
+          : {}),
       },
+
     }),
   );
 

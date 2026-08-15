@@ -357,8 +357,15 @@ export interface ActionParamsSnapshot {
   readonly stackTrigger?: 'weapon_hit' | 'successful_pulse_hit';
   /** `stack_apply`: per-tick DoT magnitude written on (re)application. */
   readonly dotPerTick?: number;
+  /**
+   * `stack_apply`: finite lifetime of the LANDED stack, authored on the base
+   * (`dot_duration_ms` + optional stat scaling / cap). Never the stance's own
+   * lifetime — the stance is reservation-backed and does not expire.
+   */
+  readonly stackDurationMs?: number;
   /** `stack_apply` pulse spark damage applied before the stack lands. */
   readonly pulseDamage?: number;
+
   /** `burst_damage`: crit-threshold widening (lower is easier). */
   readonly critEdge?: number;
   /** `hp_transfer`: HP the caster may never be reduced below. */

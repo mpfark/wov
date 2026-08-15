@@ -1238,7 +1238,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
               stackEffectType: pr.stackEffectType ?? a.abilityKey,
               trigger: pr.stackTrigger ?? 'weapon_hit',
               dotPerTick: Math.max(0, pr.dotPerTick ?? 0),
-              durationMs: Math.max(0, Math.floor(a.durationMs)),
+              durationMs: Math.max(0, Math.floor(pr.stackDurationMs ?? a.durationMs)),
               intervalMs: Math.max(250, Math.floor(stateInterval)),
               maxStacks: Math.max(1, Math.floor(a.maxStacks)),
               ...(typeof pr.pulseDamage === 'number' ? { pulseDamage: pr.pulseDamage } : {}),
@@ -1704,9 +1704,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           }
         }
       }
-
-
     }
+
+    // 3c. Pulse stack appliers (Orbs of Fire) — a heartbeat trigger, not a
+    //     weapon trigger: it fires once per tick per engaged target whether or
+    //     not the swing landed, and never in an offscreen sweep.
+    if (!effectsOnly) for (const p of participants) {
+      if (!isAliveP(p.id) || !isPresent(p.id)) continue;
+      const pulsers = p.buffs.stackAppliers;
+      if (!pulsers || !pulsers.some((ap) => ap.trigger === 'successful_pulse_hit')) continue;
+      const creature = targetOf(p.id);
+      if (!creature || !isAliveC(creature.id)) continue;
+      runStackAppliers(p, creature, 'successful_pulse_hit', nowMs, t);
+    }
+
 
     // 4. Boss casts — resolve in-flight channels first, then start new ones.
     //
