@@ -1,16 +1,23 @@
 /**
  * combat-catchup — thin shell over the C3 shared orchestration (catchup role).
  *
- * Identical pipeline to `combat-tick`; only the role differs. The role decides
- * which claim modes are acceptable (`effects_only`), which is what makes live
- * and catch-up mutually exclusive for one encounter: the claim is the single
- * point of authority and a catch-up sweep never creates an encounter.
+ * INTERNAL ENDPOINT. Ordinary clients may not resolve authoritative ticks here.
+ * The only accepted callers are internal ones presenting a service-role
+ * credential (the service-role key, or any JWT whose `role` claim is
+ * `service_role`) — i.e. the scheduler / world-wake path and internal harnesses.
+ * `verify_jwt` stays false so an internal caller may present the service-role
+ * key directly; the check below is the real gate and it fails closed.
+ *
+ * Scope is still server-derived: the caller names a character, the character's
+ * OWNER is read from the database, and `public.catchup_scope_check` decides the
+ * single node this invocation may sweep. Neither role nor mode is ever accepted
+ * from the request body.
  *
  * No simulation, no mutation, no legacy fallback lives here. Refusals return no
  * events at all.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, json, verifyUserIdFromJwt } from "../_shared/http.ts";
+import { corsHeaders, json } from "../_shared/http.ts";
 import { orchestrateCombatResolution } from "../_shared/combat/c3/orchestration.ts";
 import { buildAbilityCatalog } from "../_shared/combat/c3-catalog.ts";
 import { COMBAT_MAINTENANCE_MESSAGE } from "../_shared/combat/maintenance.ts";
@@ -24,6 +31,27 @@ function fail(kind: string, reason: string, status: number) {
   });
 }
 
+/** Internal callers only: a verified `service_role` credential, nothing else. */
+async function internalCaller(
+  authHeader: string | null,
+  url: string,
+  anonKey: string,
+  srvKey: string,
+): Promise<'internal' | 'not_internal' | 'anonymous'> {
+  if (!authHeader?.toLowerCase().startsWith('bearer ')) return 'anonymous';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return 'anonymous';
+  if (token === srvKey) return 'internal';
+  try {
+    const c = createClient(url, anonKey);
+    const { data, error } = await c.auth.getClaims(token);
+    if (error || !data?.claims) return 'anonymous';
+    return data.claims.role === 'service_role' ? 'internal' : 'not_internal';
+  } catch {
+    return 'anonymous';
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -33,8 +61,13 @@ Deno.serve(async (req) => {
   const db = createClient(url, srvKey);
 
   try {
-    const userId = await verifyUserIdFromJwt(req.headers.get('Authorization'), url, anonKey);
-    if (!userId) return fail('unauthorized', 'invalid or missing token', 401);
+    const caller = await internalCaller(req.headers.get('Authorization'), url, anonKey, srvKey);
+    if (caller === 'anonymous') {
+      return fail('unauthorized', 'missing or invalid credential', 401);
+    }
+    if (caller !== 'internal') {
+      return fail('forbidden', 'combat-catchup is an internal service-role endpoint', 403);
+    }
 
     let body: any;
     try {
@@ -43,11 +76,6 @@ Deno.serve(async (req) => {
       return fail('invalid_request', 'body is not valid JSON', 400);
     }
 
-    // Scope is server-derived. The caller may name a node, but it is only
-    // honoured when `public.catchup_scope_check` places it inside the scope of
-    // a character the caller actually owns (own node, a directly connected
-    // node, or a node where the character still sources an active effect).
-    // Neither a role nor a mode is ever accepted from the request body.
     const requestedNode = typeof body?.node_id === 'string' && UUID_RE.test(body.node_id)
       ? body.node_id
       : null;
@@ -58,21 +86,28 @@ Deno.serve(async (req) => {
       return fail('invalid_request', 'character_id is required', 400);
     }
 
+    // The owner is read from the database, never from the request.
+    const { data: charRow, error: charErr } = await db
+      .from('characters')
+      .select('user_id')
+      .eq('id', characterId)
+      .maybeSingle();
+    if (charErr) return fail('internal', 'character lookup failed', 200);
+    if (!charRow?.user_id) return fail('invalid_request', 'unknown character', 400);
+
     const { data: scope, error: scopeErr } = await db.rpc('catchup_scope_check', {
-      _user_id: userId,
+      _user_id: charRow.user_id,
       _character_id: characterId,
       _node_id: requestedNode,
     });
     if (scopeErr) return fail('internal', 'scope check failed', 200);
     const verdict = typeof scope === 'string' ? scope : 'out_of_scope';
-    if (verdict === 'not_owned') {
-      return fail('unauthorized', 'character does not belong to caller', 401);
-    }
     if (!verdict.startsWith('ok:')) {
       return fail('forbidden', verdict, 403);
     }
     const nodeId = verdict.slice(3);
 
+    // `role` is hard-coded: a caller can never ask for live authority.
     const result = await orchestrateCombatResolution(
       { role: 'catchup', nodeId, characterId },
       {
