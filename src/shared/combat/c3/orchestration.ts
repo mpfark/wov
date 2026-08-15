@@ -160,6 +160,38 @@ async function soakAccessAllowed(
   }
 }
 
+/**
+ * TEMPORARY C5 validation authorization (deployed harness only).
+ *
+ * Every condition must hold: the caller is in catch-up role, the request targets
+ * exactly the granted fixture node, and `public.combat_validation_grant_check`
+ * confirms an unexpired grant row for the presented token, that node and that
+ * role. Fails closed on any error or mismatch.
+ */
+async function validationAccessAllowed(
+  db: OrchestrationDb,
+  req: OrchestrationRequest,
+  deps: OrchestrationDeps,
+): Promise<boolean> {
+  const grant = deps.validationGrant;
+  if (!grant || !grant.token) return false;
+  if (req.role !== 'catchup' || grant.role !== 'catchup') return false;
+  if (!req.nodeId || req.nodeId !== grant.nodeId) return false;
+  try {
+    const { data, error } = await db.rpc('combat_validation_grant_check', {
+      _token: grant.token,
+      _node_id: grant.nodeId,
+      _role: 'catchup',
+    });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+
+
 
 /**
  * Resolve the single encounter this request belongs to.
