@@ -633,7 +633,9 @@ Deno.serve(async (req) => {
                  ae.magnitude::int          as magnitude,
                  (c.stance_state->>'force_shield_hp')::int as mirror,
                  c.stance_state->>'force_shield_updated_at' as cursor,
-                 round(extract(epoch from (now() - (c.stance_state->>'force_shield_updated_at')::timestamptz)) * 1000)::bigint as cursor_elapsed_ms,
+                 case when pg_input_is_valid(coalesce(c.stance_state->>'force_shield_updated_at', ''), 'timestamptz')
+                      then round(extract(epoch from (now() - (c.stance_state->>'force_shield_updated_at')::timestamptz)) * 1000)::bigint
+                 end as cursor_elapsed_ms,
                  exists (select 1 from public.combat_sessions s
                           where s.node_id = c.current_node_id
                             and s.character_id = c.id) as in_combat
