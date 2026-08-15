@@ -335,10 +335,21 @@ function salvageKeys(creatures: readonly any[]): Map<string, string | null> {
  * comes from the pinned snapshot, so the commit digest covers all of it.
  */
 export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
+  // Authored-status contract first: a missing or malformed required status makes
+  // every status application unsound, so no tick may resolve at all.
+  const statusProblems = input.catalog.statusProblems ?? [];
+  if (statusProblems.length > 0) {
+    throw new C3Error('status_config_invalid', statusProblems.join('; '), {
+      retryable: false,
+      detail: { statusProblems },
+    });
+  }
+
   const root = (input.snapshotRoot ?? {}) as Record<string, unknown>;
   const participants = asArray(root.participants);
   const actions = asArray(root.actions);
   const creatures = asArray(root.creatures);
+
 
   const config = configBlock(root);
   const xpBoostMultiplier = pinnedXpBoost(config);
