@@ -848,7 +848,12 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
   // actions
   const actions: ActionSnapshot[] = [];
   const actionIds: string[] = [];
-  arr(root.actions, '$.actions').forEach((entry, i) => {
+  // Effects-only (catch-up) resolution never consumes a queued action, so it
+  // must not require one to be resolvable either: the caster is typically no
+  // longer present at the node, and its ability configuration is intentionally
+  // absent from the snapshot. The rows stay pending for the next live tick.
+  const actionEntries = aux.mode === 'live' ? arr(root.actions, '$.actions') : [];
+  actionEntries.forEach((entry, i) => {
     const path = `$.actions[${i}]`;
     const a = obj(entry, path);
     assertKnownKeys(a, ACTION_KEYS, path);
