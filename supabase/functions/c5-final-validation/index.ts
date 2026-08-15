@@ -397,9 +397,9 @@ Deno.serve(async (req) => {
         const now = Date.now();
         await sql`insert into public.active_effects
           (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-           tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type, lifetime)
-          values (${nodeId}, ${c}, ${dummy}, 'venom_stack', 3, 50, ${now - 1}, ${now + 120_000},
-                  2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'poison', 'timed')`;
+           tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, lifetime)
+          values (${nodeId}, ${c}, ${dummy}, 'poison', 3, 50, ${now - 1}, ${now + 120_000},
+                  2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'timed')`;
         for (let i = 0; i < 6; i++) {
           await tick('live', c, [dummy]);
           const [r] = await sql<Row[]>`select hp from public.characters where id = ${c}`;
@@ -613,7 +613,7 @@ Deno.serve(async (req) => {
       // In combat: no regeneration.
       await clearSessions();
       await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
-                values (${wizard}, ${nodeId}, ${sql.array([dummy])}, ${Date.now()}, 2000)`;
+                values (${wizard}, ${nodeId}, array[${dummy}]::uuid[], ${Date.now()}, 2000)`;
       await setPoolAndClock(4, 20_000);
       const inCombat = await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const inCombatPool = await pool();
@@ -844,23 +844,23 @@ Deno.serve(async (req) => {
       const [item] = await sql<Row[]>`select id from public.items limit 1`;
       if (item) {
         await sql`insert into public.character_inventory
-                  (character_id, item_id, equipped_slot, current_durability, quantity)
-                  values (${char}, ${item.id}, 'main_hand', 100, 1)`;
+                  (character_id, item_id, equipped_slot, current_durability)
+                  values (${char}, ${item.id}, 'main_hand', 100)`;
       }
 
       const now = Date.now();
       await sql`insert into public.active_effects
         (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type)
-        values (${nodeId}, ${victim}, ${char}, 'envenom_stack', 2, 5, ${now - 1}, ${now + 120_000},
-                2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'poison')`;
+         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version)
+        values (${nodeId}, ${victim}, ${char}, 'poison', 2, 5, ${now - 1}, ${now + 120_000},
+                2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1)`;
 
       // An effect that must expire during the sweep.
       await sql`insert into public.active_effects
         (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, damage_type)
-        values (${nodeId}, ${victim}, ${char}, 'rend_stack', 1, 1, ${now - 1}, ${now - 1},
-                2000, 'rend', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'physical' })}, 1, 'physical')`;
+         tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version)
+        values (${nodeId}, ${victim}, ${char}, 'bleed', 1, 1, ${now - 1}, ${now - 1},
+                2000, 'rend', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'physical' })}, 1)`;
 
       await sql`insert into public.combat_actions
         (encounter_id, character_id, node_id, ability_key, target_creature_id, client_seq, status, eligible_after_ms)
