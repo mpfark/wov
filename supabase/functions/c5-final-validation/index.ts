@@ -629,7 +629,7 @@ Deno.serve(async (req) => {
       // In combat: no regeneration.
       await clearSessions();
       await sql`insert into public.combat_sessions (character_id, node_id, engaged_creature_ids, last_tick_at, tick_rate_ms)
-                values (${wizard}, ${nodeId}, array[${dummy}::uuid], ${Date.now()}, 2000)`;
+                values (${wizard}, ${nodeId}, ${[dummy]}::uuid[], ${Date.now()}, 2000)`;
       await setPoolAndClock(4, 20_000);
       const inCombat = await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const inCombatPool = await pool();
