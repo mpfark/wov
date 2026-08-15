@@ -44,7 +44,14 @@ import type { Attributes, ProcSnapshot, ResolutionMode, ResolverConfig } from '.
 export interface AbilityCatalog {
   readonly configVersion: string;
   lookup(classKey: string, abilityKey: string): AbilityConfigEntry | null;
+  /**
+   * Authored-status contract problems found when the catalog was built
+   * (`missing_status_definition` / `invalid_status_definition`). Non-empty means
+   * combat must refuse rather than resolve statuses to zero.
+   */
+  readonly statusProblems?: readonly string[];
 }
+
 
 export interface LoadAuxInput {
   /** Raw `encounter_snapshot_v2` payload (not yet decoded). */
