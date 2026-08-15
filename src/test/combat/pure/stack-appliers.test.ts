@@ -125,6 +125,7 @@ function withApplier(ap: StackApplierSnapshot, mode: 'live' | 'catchup' = 'live'
     mode,
     participants: [{ ...p, buffs: { ...p.buffs, stackAppliers: [ap] } }],
     creatures: [creature({ id: 'm1', hp: 400, maxHp: 400, ac: 1 })],
+    engagements: [{ creatureId: 'm1', characterId: 'c1', lastActionAtMs: 1_699_999_000_000 }],
   });
 }
 
