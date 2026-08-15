@@ -774,17 +774,25 @@ Deno.serve(async (req) => {
             pool_after: left, expected_left: m.expectLeft,
             primary_damage: prim?.payload?.amount, expected_primary: expectPrimary,
             aoe_damage: aoe?.payload?.amount, expected_aoe: expectAoe,
+            tick_ok: t.ok, tick_mode: t.mode, event_types: t.events.map((e) => e.type),
+            tick_raw: t.ok ? undefined : t.raw,
           });
         push(`stored_power_${m.name}_primary_and_aoe_shares`,
           Number(prim?.payload?.amount ?? -1) === expectPrimary &&
           (aoe === undefined || Number(aoe.payload?.amount) === expectAoe),
           { primary: prim?.payload?.amount, aoe: aoe?.payload?.amount, expectPrimary, expectAoe });
 
+        // Inertness is about the SAME cast never resolving twice. A later tick
+        // legitimately starts a new telegraph and may bank fresh power, so the
+        // pool value is not the invariant — the resolution count is.
         const t2 = await tick('live', primary, [boss]);
-        const left2 = await poolNow();
+        const rehits = t2.events.filter((e) => e.type === 'boss_cast_hit'
+          && (e.payload?.creatureId === boss)
+          && Number(e.payload?.amount ?? 0) >= expectPrimary);
         push(`stored_power_${m.name}_duplicate_resolution_is_inert`,
-          t2.events.filter((e) => e.type === 'boss_cast_hit').length === 0 && left2 === left,
-          { pool: left2, hits: t2.events.filter((e) => e.type === 'boss_cast_hit').length });
+          rehits.length === 0,
+          { pool_after_second_tick: await poolNow(), rehits: rehits.length,
+            event_types: t2.events.map((e) => e.type) });
       }
 
       // Cap: banking during a channel may never exceed the configured cap.
