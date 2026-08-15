@@ -696,13 +696,35 @@ Deno.serve(async (req) => {
         { mirror: await mirror(), authoritative: (await pool())?.remaining });
 
       // Duplicate regeneration cannot apply twice: the clock has been consumed.
+      // The clock is inspected around both calls so a failure is diagnosable
+      // (consumed clock vs. real wall-clock elapsing between the two calls).
+      const clock = async () => {
+        const [r] = await sql<Row[]>`
+          select stance_state->>'force_shield_updated_at' as ts,
+                 extract(epoch from (now() - (stance_state->>'force_shield_updated_at')::timestamptz)) * 1000 as elapsed_ms
+          from public.characters where id = ${wizard}`;
+        return { ts: r?.ts as string, elapsed_ms: Math.round(Number(r?.elapsed_ms ?? 0)) };
+      };
       await setPoolAndClock(4, 4_000);
+      const clockBefore = await clock();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const once = (await pool())?.remaining;
+      const clockAfterFirst = await clock();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const twice = (await pool())?.remaining;
-      push('duplicate_regeneration_cannot_apply_twice', once === twice,
-        { after_first: once, after_second: twice });
+      const clockAfterSecond = await clock();
+      // The second call may legitimately add whole ticks that elapsed in real
+      // time between the two calls; what must never happen is the SAME elapsed
+      // window being counted twice.
+      const extraTicks = Math.floor(clockAfterFirst.elapsed_ms / tickMs);
+      push('duplicate_regeneration_cannot_apply_twice',
+        twice === Math.min(cap, (once ?? 0) + extraTicks * regenPerTick),
+        {
+          after_first: once, after_second: twice, cap,
+          clock_before: clockBefore, clock_after_first: clockAfterFirst,
+          clock_after_second: clockAfterSecond,
+          replayable_ticks_between_calls: extraTicks,
+        });
 
       // A live tick under a claim does not regenerate the pool either.
       await setPoolAndClock(2, 30_000);
