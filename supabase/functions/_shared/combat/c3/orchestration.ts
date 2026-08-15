@@ -66,6 +66,21 @@ export interface OrchestrationDeps {
   /** Minimum spacing between ticks of one encounter. */
   readonly rateMs?: number;
   readonly log?: (message: string, detail?: unknown) => void;
+  /**
+   * TEMPORARY C5 validation authorization. Supplied ONLY by the deployed
+   * validation harness, never by `combat-tick` / `combat-catchup`, so no browser
+   * or player request can carry it. It may bypass exactly one thing — the global
+   * maintenance refusal — for one fixture node, in catch-up role, while an
+   * unexpired grant row matching the presented token exists. Claim ownership,
+   * mode selection, scope checks, snapshot validation and commit authority are
+   * untouched.
+   */
+  readonly validationGrant?: {
+    readonly token: string;
+    readonly role: 'catchup';
+    readonly nodeId: string;
+  };
+
 }
 
 export interface OrchestrationSuccess {
@@ -144,6 +159,38 @@ async function soakAccessAllowed(
     return false;
   }
 }
+
+/**
+ * TEMPORARY C5 validation authorization (deployed harness only).
+ *
+ * Every condition must hold: the caller is in catch-up role, the request targets
+ * exactly the granted fixture node, and `public.combat_validation_grant_check`
+ * confirms an unexpired grant row for the presented token, that node and that
+ * role. Fails closed on any error or mismatch.
+ */
+async function validationAccessAllowed(
+  db: OrchestrationDb,
+  req: OrchestrationRequest,
+  deps: OrchestrationDeps,
+): Promise<boolean> {
+  const grant = deps.validationGrant;
+  if (!grant || !grant.token) return false;
+  if (req.role !== 'catchup' || grant.role !== 'catchup') return false;
+  if (!req.nodeId || req.nodeId !== grant.nodeId) return false;
+  try {
+    const { data, error } = await db.rpc('combat_validation_grant_check', {
+      _token: grant.token,
+      _node_id: grant.nodeId,
+      _role: 'catchup',
+    });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+
 
 
 /**
@@ -284,9 +331,12 @@ export async function orchestrateCombatResolution(
 ): Promise<OrchestrationResult> {
   const { db } = deps;
 
-  // 1. Maintenance gate — before any encounter work. The only exception is the
-  // temporary C5 soak allowlist, which is decided by the database.
-  if ((await readCombatMode(db)) !== 'open' && !(await soakAccessAllowed(db, req))) {
+  // 1. Maintenance gate — before any encounter work. The only exceptions are the
+  // temporary C5 soak allowlist and the temporary C5 validation grant, both
+  // decided by the database.
+  if ((await readCombatMode(db)) !== 'open' &&
+      !(await soakAccessAllowed(db, req)) &&
+      !(await validationAccessAllowed(db, req, deps))) {
     return {
       ok: false,
       kind: 'maintenance',
@@ -294,6 +344,7 @@ export async function orchestrateCombatResolution(
       retryable: true,
     };
   }
+
 
 
   let encounterId: string;

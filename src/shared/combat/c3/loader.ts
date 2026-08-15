@@ -44,7 +44,14 @@ import type { Attributes, ProcSnapshot, ResolutionMode, ResolverConfig } from '.
 export interface AbilityCatalog {
   readonly configVersion: string;
   lookup(classKey: string, abilityKey: string): AbilityConfigEntry | null;
+  /**
+   * Authored-status contract problems found when the catalog was built
+   * (`missing_status_definition` / `invalid_status_definition`). Non-empty means
+   * combat must refuse rather than resolve statuses to zero.
+   */
+  readonly statusProblems?: readonly string[];
 }
+
 
 export interface LoadAuxInput {
   /** Raw `encounter_snapshot_v2` payload (not yet decoded). */
@@ -271,6 +278,18 @@ function resolveAbilityConfigs(
       failures.push(`${classKey}:${abilityKey}: not present in the ability catalog`);
       continue;
     }
+    // A configured use whose applied status is not authored would resolve to
+    // zero duration and zero magnitude. Refuse the tick with a diagnosable
+    // reason instead of silently disabling the mechanic.
+    const missingStatus = (entry.effectConfig as Record<string, unknown>)
+      ?.status_definition_missing;
+    if (typeof missingStatus === 'string' && missingStatus.length > 0) {
+      throw new C3Error(
+        'status_config_invalid',
+        `missing_status_definition: ${classKey}:${abilityKey} applies "${missingStatus}", which is not authored`,
+        { retryable: false },
+      );
+    }
     const attrs = effectiveAttrs(caster);
     const config = resolveAbilityConfig(entry, {
       level: num(caster.level, 1),
@@ -279,6 +298,7 @@ function resolveAbilityConfigs(
     });
     for (const f of config.failures) failures.push(f);
     resolved.set(key, config);
+
   }
   return resolved;
 }
@@ -315,10 +335,21 @@ function salvageKeys(creatures: readonly any[]): Map<string, string | null> {
  * comes from the pinned snapshot, so the commit digest covers all of it.
  */
 export function loadSnapshotAux(input: LoadAuxInput): LoadedAux {
+  // Authored-status contract first: a missing or malformed required status makes
+  // every status application unsound, so no tick may resolve at all.
+  const statusProblems = input.catalog.statusProblems ?? [];
+  if (statusProblems.length > 0) {
+    throw new C3Error('status_config_invalid', statusProblems.join('; '), {
+      retryable: false,
+      detail: { statusProblems },
+    });
+  }
+
   const root = (input.snapshotRoot ?? {}) as Record<string, unknown>;
   const participants = asArray(root.participants);
   const actions = asArray(root.actions);
   const creatures = asArray(root.creatures);
+
 
   const config = configBlock(root);
   const xpBoostMultiplier = pinnedXpBoost(config);

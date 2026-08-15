@@ -120,6 +120,18 @@ Deno.serve(async (req) => {
       returning id`;
     created.otherNodeId = otherNodeId;
 
+    // ── TEMPORARY validation authorization ───────────────────────────────
+    // A single-use secret, known only to this invocation, authorizing exactly:
+    // catch-up role, this fixture node, ten minutes. It bypasses ONE thing —
+    // the global maintenance refusal — and nothing else: claim ownership, mode
+    // selection, scope checks, snapshot validation and commit authority are
+    // unchanged. It is never sent to a browser and is deleted in teardown.
+    const validationToken = crypto.randomUUID() + crypto.randomUUID();
+    await sql`insert into public.combat_validation_grants (token_hash, node_id, role, expires_at, note)
+              values (encode(sha256(convert_to(${validationToken}, 'UTF8')), 'hex'),
+                      ${nodeId}, 'catchup', now() + interval '10 minutes', 'c5-final-validation')`;
+    const validationGrant = { token: validationToken, role: 'catchup' as const, nodeId };
+
     const makeChar = async (classKey: string, over: Partial<Record<string, number>> = {}, owner = uid) => {
       const [{ id }] = await sql<{ id: string }[]>`
         insert into public.characters
@@ -178,6 +190,9 @@ Deno.serve(async (req) => {
             db: admin, nowMs: Date.now(), catalog,
             refreshCatalog: () => buildAbilityCatalog(admin, true),
             newBatchId: () => crypto.randomUUID(), caller: 'c5-final-validation',
+            // Catch-up fixtures legitimately stand off-node, where the soak
+            // allowlist (character + node presence) cannot authorize them.
+            ...(role === 'catchup' ? { validationGrant } : {}),
           },
         ) as unknown as Record<string, unknown>;
         if (res.ok === true) break;
@@ -620,9 +635,9 @@ Deno.serve(async (req) => {
                   where target_id = ${wizard} and lifetime = 'stance' and effect_type = 'force_shield'`;
         await sql`update public.characters
                   set stance_state = coalesce(stance_state, '{}'::jsonb)
-                      || jsonb_build_object('force_shield_hp', ${remaining},
+                      || jsonb_build_object('force_shield_hp', ${remaining}::int,
                                             'force_shield_updated_at',
-                                            to_jsonb(now() - make_interval(secs => ${elapsedMs / 1000}::double precision)))
+                                            to_jsonb(now() - (${elapsedMs}::bigint * interval '1 millisecond')))
                   where id = ${wizard}`;
       };
       const clearSessions = () =>
@@ -681,13 +696,35 @@ Deno.serve(async (req) => {
         { mirror: await mirror(), authoritative: (await pool())?.remaining });
 
       // Duplicate regeneration cannot apply twice: the clock has been consumed.
+      // The clock is inspected around both calls so a failure is diagnosable
+      // (consumed clock vs. real wall-clock elapsing between the two calls).
+      const clock = async () => {
+        const [r] = await sql<Row[]>`
+          select stance_state->>'force_shield_updated_at' as ts,
+                 extract(epoch from (now() - (stance_state->>'force_shield_updated_at')::timestamptz)) * 1000 as elapsed_ms
+          from public.characters where id = ${wizard}`;
+        return { ts: r?.ts as string, elapsed_ms: Math.round(Number(r?.elapsed_ms ?? 0)) };
+      };
       await setPoolAndClock(4, 4_000);
+      const clockBefore = await clock();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const once = (await pool())?.remaining;
+      const clockAfterFirst = await clock();
       await userRpc('apply_force_shield_regen', { _character_id: wizard });
       const twice = (await pool())?.remaining;
-      push('duplicate_regeneration_cannot_apply_twice', once === twice,
-        { after_first: once, after_second: twice });
+      const clockAfterSecond = await clock();
+      // The second call may legitimately add whole ticks that elapsed in real
+      // time between the two calls; what must never happen is the SAME elapsed
+      // window being counted twice.
+      const extraTicks = Math.floor(clockAfterFirst.elapsed_ms / tickMs);
+      push('duplicate_regeneration_cannot_apply_twice',
+        twice === Math.min(cap, (once ?? 0) + extraTicks * regenPerTick),
+        {
+          after_first: once, after_second: twice, cap,
+          clock_before: clockBefore, clock_after_first: clockAfterFirst,
+          clock_after_second: clockAfterSecond,
+          replayable_ticks_between_calls: extraTicks,
+        });
 
       // A live tick under a claim does not regenerate the pool either.
       await setPoolAndClock(2, 30_000);
@@ -1064,6 +1101,72 @@ Deno.serve(async (req) => {
       push('unknown_character_is_rejected',
         byName.internal_service_role_unknown_character.status === 400,
         byName.internal_service_role_unknown_character);
+      // ── TEMPORARY validation authorization: proofs of its narrowness ────
+      const grantCheck = async (token: string, node: string | undefined, role: string) => {
+        const { data } = await admin.rpc('combat_validation_grant_check', {
+          _token: token, _node_id: node ?? null, _role: role,
+        });
+        return data === true;
+      };
+      const grantProofs = {
+        valid_fixture_node_catchup: await grantCheck(validationToken, created.nodeId, 'catchup'),
+        other_node_denied: await grantCheck(validationToken, created.otherNodeId, 'catchup'),
+        live_role_denied: await grantCheck(validationToken, created.nodeId, 'live'),
+        wrong_token_denied: await grantCheck(crypto.randomUUID(), created.nodeId, 'catchup'),
+        empty_token_denied: await grantCheck('', created.nodeId, 'catchup'),
+      };
+      notes.validation_grant_proofs = grantProofs;
+      push('validation_grant_authorizes_only_the_fixture_node_in_catchup_role',
+        grantProofs.valid_fixture_node_catchup && !grantProofs.other_node_denied &&
+        !grantProofs.live_role_denied && !grantProofs.wrong_token_denied &&
+        !grantProofs.empty_token_denied, grantProofs);
+
+      // Anon and authenticated roles cannot even reach the check function.
+      const reachable = async (claims: Record<string, unknown>) => {
+        try {
+          await sql.begin(async (tx) => {
+            await tx`select set_config('role', ${String(claims.role)}, true)`;
+            await tx`select public.combat_validation_grant_check(${validationToken}, ${created.nodeId!}, 'catchup')`;
+          });
+          return true;
+        } catch { return false; }
+      };
+      const reach = {
+        anon: await reachable({ role: 'anon' }),
+        authenticated: await reachable({ role: 'authenticated' }),
+      };
+      notes.validation_grant_reachability = reach;
+      push('validation_grant_check_is_unreachable_by_players',
+        !reach.anon && !reach.authenticated, reach);
+
+      // An expired/deleted grant stops bypassing maintenance immediately.
+      const expiredToken = crypto.randomUUID();
+      await sql`insert into public.combat_validation_grants (token_hash, node_id, role, expires_at, note)
+                values (encode(sha256(convert_to(${expiredToken}, 'UTF8')), 'hex'),
+                        ${created.nodeId!}, 'catchup', now() - interval '1 minute', 'c5-final-validation-expired')`;
+      const expiredUsable = await grantCheck(expiredToken, created.nodeId, 'catchup');
+      await sql`delete from public.combat_validation_grants
+                where token_hash = encode(sha256(convert_to(${expiredToken}, 'UTF8')), 'hex')`;
+      const deletedUsable = await grantCheck(expiredToken, created.nodeId, 'catchup');
+      push('expired_or_deleted_validation_grant_no_longer_bypasses_maintenance',
+        !expiredUsable && !deletedUsable, { expiredUsable, deletedUsable });
+
+      // A real orchestration attempt with the grant but a non-fixture node is
+      // refused by the maintenance gate, so the grant cannot travel.
+      const offGrantChar = await makeChar('warrior');
+      await sql`delete from public.combat_soak_access where character_id = ${offGrantChar}`;
+      const foreign = await orchestrateCombatResolution(
+        { role: 'catchup', characterId: offGrantChar, nodeId: created.otherNodeId!, creatureIds: [] },
+        {
+          db: admin, nowMs: Date.now(), catalog,
+          refreshCatalog: () => buildAbilityCatalog(admin, true),
+          newBatchId: () => crypto.randomUUID(), caller: 'c5-final-validation',
+          validationGrant,
+        },
+      ) as unknown as Record<string, unknown>;
+      push('validation_grant_cannot_resolve_a_non_fixture_encounter',
+        foreign.ok !== true && foreign.kind === 'maintenance', foreign);
+
       push('duplicate_internal_invocation_does_not_double_resolve',
         byName.internal_service_role_duplicate_invocation.status === 200 &&
         ((byName.internal_service_role_duplicate_invocation.body as Record<string, unknown>)?.ok !== true ||
@@ -1089,6 +1192,8 @@ Deno.serve(async (req) => {
   } finally {
     try {
       await sql`update public.combat_config set value = 'off' where key = 'combat_soak'`;
+      // The temporary validation authorization never outlives the invocation.
+      await sql`delete from public.combat_validation_grants where note like 'c5-final-validation%'`;
       for (const c of created.charIds) {
         await sql`delete from public.combat_soak_access where character_id = ${c}`;
       }

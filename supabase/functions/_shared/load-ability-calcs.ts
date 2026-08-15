@@ -31,6 +31,23 @@ import { composeAbilityRow, indexAppliedStatuses } from './config/compose-abilit
 import { getClassScaling } from './formulas/classes.ts';
 import { type OnHitEffectConfig } from './combat/on-hit-effects.ts';
 import { type DamageAmpStatusDef } from './combat/creature-damage-modifiers.ts';
+import {
+  formatStatusProblems,
+  validateAbilityStatusReferences,
+  validateStatusDefinitions,
+} from './config/status-contract.ts';
+
+/**
+ * Authored-status contract problems from the most recent successful load
+ * (`missing_status_definition` / `invalid_status_definition`). Non-empty means
+ * combat must refuse: a status that cannot be resolved would otherwise apply
+ * with zero duration and zero magnitude.
+ */
+let statusConfigProblems: string[] = [];
+
+export function getStatusConfigProblems(): readonly string[] {
+  return statusConfigProblems;
+}
 
 export interface ServerAbilityCalcEntry {
   abilityKey: string;
@@ -327,6 +344,21 @@ export async function loadAbilityCalcs(db: any, force = false): Promise<void> {
       if (error) throw error;
       if (data && data.length > 0) {
         // Two-layer composition: base numbers + configured-use identity.
+        // Authored-status contract: a missing or malformed required status, or an
+        // ability referencing a status that does not exist, is recorded here and
+        // fails every subsequent tick closed with a diagnosable reason.
+        const statusProblems = [
+          ...validateStatusDefinitions(statusRows ?? []),
+          ...validateAbilityStatusReferences(
+            (data as any[]).map((row) => row?.ability).filter(Boolean),
+            statusRows ?? [],
+          ),
+        ];
+        statusConfigProblems = formatStatusProblems(statusProblems);
+        if (statusConfigProblems.length > 0) {
+          console.error('[ability-calcs] invalid status configuration',
+            statusConfigProblems.slice(0, 10));
+        }
         const statuses = indexAppliedStatuses(statusRows ?? []);
         setAppliedStatusDefs(statusRows ?? []);
         const composed = (data as any[]).map(row => (
