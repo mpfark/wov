@@ -405,22 +405,15 @@ Deno.serve(async (req) => {
         return false;
       };
 
-      const killByDot = async (c: string) => {
-        await sql`update public.characters set hp = 3 where id = ${c}`;
-        const now = Date.now();
-        await sql`insert into public.active_effects
-          (node_id, target_id, source_id, effect_type, stacks, damage_per_tick, next_tick_at, expires_at,
-           tick_rate_ms, source_ability_key, mechanic, magnitude, params, params_version, lifetime)
-          values (${nodeId}, ${c}, ${dummy}, 'poison', 3, 50, ${now - 1}, ${now + 120_000},
-                  2000, 'envenom', 'dot_debuff', null, ${sql.json({ maxStacks: 5, damageType: 'poison' })}, 1, 'timed')`;
-        for (let i = 0; i < 6; i++) {
-          await tick('live', c, [dummy]);
-          const [r] = await sql<Row[]>`select hp from public.characters where id = ${c}`;
-          if (Number(r.hp) <= 0) return true;
-        }
-        return false;
-      };
-
+      /**
+       * NOTE — there is deliberately no "death by damage-over-time on a
+       * character" fixture. `dot_debuff` (and every periodic hostile mechanic)
+       * targets a creature by contract; nothing in the product applies periodic
+       * damage to a character. The earlier fixture inserted such a row directly
+       * and was rejected by effect-contract validation, which is the contract
+       * working as intended. The wizard/Ignite death case therefore uses a boss
+       * cast, an actual character-damaging path.
+       */
       const killByCast = async (c: string) => {
         const { data: encId } = await admin.rpc('encounter_for_node', { _node_id: nodeId });
         const encounterId = String(encId);
@@ -467,11 +460,11 @@ Deno.serve(async (req) => {
         envDied && envAfter.reserved_empty && envAfter.stance_rows === 0 && envAfter.shield_keys_cleared,
         { rows_before: env.rowsBefore, reserved_before: env.reservedBefore, ...envAfter });
 
-      // 2. Ignite (wizard) killed by a damage-over-time effect.
+      // 2. Ignite (wizard) killed by a boss cast.
       const ign = await arm('wizard', [{ key: 'ignite', tier: 3 }]);
-      const ignDied = await killByDot(ign.id);
+      const ignDied = await killByCast(ign.id);
       const ignAfter = await finalState(ign.id);
-      push('ignite_death_by_dot_clears_everything',
+      push('ignite_death_by_boss_cast_clears_everything',
         ignDied && ignAfter.reserved_empty && ignAfter.stance_rows === 0,
         { rows_before: ign.rowsBefore, died: ignDied, ...ignAfter });
 
@@ -724,11 +717,15 @@ Deno.serve(async (req) => {
         primaryShare?: number; aoeShare?: number; target: string | null; cap?: number; creature?: string;
       }) => {
         await sql`delete from public.encounter_cast_events where encounter_id = ${encounterId}`;
-        const startedAt = new Date(Date.now() - 8000).toISOString();
+        // A cast that "started" before the participants joined is, by design,
+        // ineligible for every one of them. The channel therefore starts now;
+        // dueness comes from `expiresAt`, not from a backdated start.
+        const startedAt = new Date(Date.now()).toISOString();
         const expiresAt = new Date(Date.now() + o.dueMs).toISOString();
         const config = {
           label: 'Validation Nova', targetCharacterId: o.target, baseDamage: 10, baseAoeDamage: 4,
           damageType: 'fire', primaryShare: o.primaryShare ?? 1, aoeShare: o.aoeShare ?? 0.5,
+          baseAoeDamageOverride: undefined,
           consumeMode: o.consumeMode, consumePct: o.consumePct ?? 100, consumeFixed: o.consumeFixed ?? 0,
           pauseAutoattacks: true, storedPowerCap: o.cap ?? 400, lockMs: 0, castedText: null,
         };
