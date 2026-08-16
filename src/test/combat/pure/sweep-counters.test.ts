@@ -15,4 +15,6 @@ describe('sweep counters', () => { it('counts', () => {
   }
   console.log(JSON.stringify({applied,pulses,live,catchup,catchupApplied,finite,infinite}));
   expect(catchupApplied).toBe(0); expect(infinite).toBe(0); expect(applied).toBeGreaterThan(0); expect(pulses).toBeGreaterThan(0);
-}); });
+// Isolation guard: compute-bound 4,000-encounter sweep, explicit budget so it
+// cannot brush the 5s default under parallel load.
+}, 60_000); });
