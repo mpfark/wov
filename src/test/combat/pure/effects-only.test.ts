@@ -77,7 +77,10 @@ describe('effects-only capability invariants', () => {
     expect(expiries).toBeGreaterThan(0);
     expect(deaths).toBeGreaterThan(0);
     expect(rewards).toBeGreaterThan(0);
-  });
+    // Isolation guard: a 4,000-encounter sweep is compute-bound and shares the
+    // machine with the other parity sweeps, so it gets an explicit budget
+    // instead of the 5s default (same class of flake as the eviscerate sweep).
+  }, 60_000);
 
   it('kills offscreen with a due DoT and rewards the source exactly once', () => {
     const p = participant({ id: 'char-1' });
