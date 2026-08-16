@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// (imports the browser Supabase client via useCombatDriver)
 import { describe, it, expect } from 'vitest';
 import { resolveEffectTicks } from '@/features/combat';
 
