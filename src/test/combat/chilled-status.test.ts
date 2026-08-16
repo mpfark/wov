@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// (imports the browser Supabase client via useCombatDriver)
 /**
  * Resolver-level Chilled behaviour: player DoTs are amplified, non-periodic
  * statuses never tick and expire on their own window, and bulk (offscreen)
