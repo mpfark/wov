@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
   try {
     // ── fixture ──
-    const { data: node } = await admin.from("world_nodes").select("id").limit(1).maybeSingle();
+    const { data: node } = await admin.from("nodes").select("id").limit(1).maybeSingle();
     log.nodeId = node?.id ?? null;
     await admin.from("creatures").upsert({
       id: FIXTURE_CREATURE,
