@@ -1,0 +1,1 @@
+select cron.schedule('purge-ground-loot', '*/5 * * * *', $$select public.cleanup_ground_loot();$$);

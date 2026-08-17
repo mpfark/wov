@@ -19,10 +19,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 import {
-  isMaintenanceResponse,
   maintenanceMessage,
   COMBAT_MAINTENANCE_MESSAGE,
 } from '@/shared/combat/maintenance';
+import { interpretTickAck, isTerminalTransportStatus } from '../utils/tick-ack';
+
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
@@ -378,8 +379,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         _creature_id: creatureId,
       })
       .then(({ error }) => {
-        if (error) console.warn('[combat] engagement join failed', error.message);
+        if (!error) return;
+        // A refused engagement must never leave an optimistic local combat
+        // state (or a running worker) behind: the affordance has to come back.
+        console.warn('[combat] engagement join failed', error.message);
+        toast.error('You cannot engage right now.');
+        stopCombat();
       });
+
 
     if (p.party && !p.isLeader) {
       channelRef.current?.send({
@@ -1194,12 +1201,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           console.error('Combat tick error:', error);
           // Don't strand the reservation overlay if the tick failed.
           setPendingCpCost(0);
+          // A 400/401/403 repeats forever: stop rather than tick on cadence.
+          const ectx: any = (error as any)?.context;
+          const estatus = ectx?.status ?? ectx?.response?.status;
+          if (isTerminalTransportStatus(estatus)) {
+            toast.error('Combat is not available for this character right now.');
+            stopCombat();
+          }
         } else {
+          const ack = interpretTickAck(data);
           const result = data as CombatTickResponse;
           if (!result) {
             traceResponse('empty');
             stopCombat();
-          } else if (isMaintenanceResponse(result)) {
+          } else if (ack.kind === 'maintenance') {
             // C0: the resolver refused to simulate — combat is closed. Nothing
             // authoritative changed. Latch it, stop the timer and tell the
             // player once.
@@ -1209,13 +1224,35 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             setPendingCpCost(0);
             if (!maintenanceNoticedRef.current) {
               maintenanceNoticedRef.current = true;
-              const msg = maintenanceMessage(result);
+              const msg = ack.message ?? maintenanceMessage(result);
               toast.info(msg);
               ext.current.addLocalLogEvent(
                 createLogEvent({ type: 'system', message: msg })
               );
             }
             stopCombat();
+          } else if (ack.kind === 'committed') {
+            // C3/C4 acknowledgement: identity only. Adopt the encounter so the
+            // committed-batch stream is subscribed (and recoverable) for it,
+            // and tell the sequencer which tick must exist. Nothing renders.
+            traceResponse('reserved');
+            setPendingCpCost(0);
+            if (ack.encounterId && ack.encounterId !== encounterIdRef.current) {
+              encounterIdRef.current = ack.encounterId;
+              setEncounterId(ack.encounterId);
+            }
+            noteCommittedRef.current(ack.tick, ack.batchId);
+          } else if (ack.kind === 'refused') {
+            traceResponse('reserved');
+            setPendingCpCost(0);
+            if (ack.terminal) {
+              // The encounter can never resolve another live tick for us (the
+              // roster is empty / access is gone). Leaving combat here is what
+              // stops the worker and prevents intake from minting idle
+              // encounters on every later cadence tick.
+              console.log('[combat] terminal tick refusal — leaving combat', ack);
+              stopCombat();
+            }
           } else if ((result as any).tick_reserved_elsewhere) {
 
             // Another participant reserved this tick — it resolved nothing.
@@ -1240,6 +1277,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             processTickResult(result, { seq, receivedAt });
           }
         }
+
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
         stopCombat();
       }
