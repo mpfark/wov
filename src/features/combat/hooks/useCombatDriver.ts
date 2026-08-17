@@ -19,10 +19,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 import {
-  isMaintenanceResponse,
   maintenanceMessage,
   COMBAT_MAINTENANCE_MESSAGE,
 } from '@/shared/combat/maintenance';
+import { interpretTickAck, isTerminalTransportStatus } from '../utils/tick-ack';
+
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
