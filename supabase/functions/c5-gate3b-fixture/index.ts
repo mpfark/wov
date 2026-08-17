@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       // Onboarding gate: pre-create the profile so the observation starts at
       // character select instead of the oath form.
       await db.from('profiles').upsert(
-        { id: user!.id, full_name: 'Gate Three B', oath_accepted_at: new Date().toISOString() },
-        { onConflict: 'id' },
+        { user_id: user!.id, full_name: 'Gate Three B', display_name: 'Gate Three B', has_accepted_oath: true },
+        { onConflict: 'user_id' },
       );
 
       let { data: character } = await db
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
         }
         removed.characters = (chars ?? []).length;
         await db.from('user_roles').delete().eq('user_id', user.id);
-        await db.from('profiles').delete().eq('id', user.id);
+        await db.from('profiles').delete().eq('user_id', user.id);
         const { error } = await db.auth.admin.deleteUser(user.id);
         removed.user_deleted = !error;
         if (error) removed.user_error = error.message;
