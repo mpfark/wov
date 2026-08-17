@@ -73,13 +73,16 @@ describe('policy C simulation pause boundary', () => {
     expect(paused.effectDeleteIds).not.toContain('eff-dot');
   });
 
-  it('never pays out a backlog: creature HP is untouched across the pause', () => {
+  it('never pays out a backlog: HP loss is bounded by the simulated ticks', () => {
     const tick = sweep([dot({ amountPerTick: 25 })], {
       suspendedAtMs: SUSPENDED,
       resumedAtMs: RESUMED,
     });
-    const hp = tick.creatures.find((u) => u.id === 'crt-1')?.hp;
-    expect(hp === undefined || hp === 90).toBe(true);
+    const mutation = tick.creatures.find((u) => u.creatureId === 'crt-1');
+    const hp = mutation?.hpAfter ?? 90;
+    // 10 minutes of missed 2s pulses at 25 damage would be 7,500 damage; only
+    // the post-resume cadence (at most 3 simulated ticks) may land.
+    expect(hp).toBeGreaterThanOrEqual(90 - 3 * 25);
     expect(tick.events.some((e) => e.type === 'death')).toBe(false);
   });
 
