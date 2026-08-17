@@ -261,6 +261,14 @@ export default function NodeView({
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-1">
+                  {(rosterStatus === 'error' || rosterStatus === 'unauthorized') && (
+                    <p className="font-display text-[10px] text-destructive px-1 py-0.5">
+                      {rosterStatus === 'unauthorized'
+                        ? 'You have no standing here — the roster is unavailable.'
+                        : 'The roster could not be confirmed. Retrying shortly.'}
+                      {rosterError ? ` (${rosterError})` : ''}
+                    </p>
+                  )}
                   {creatures.map(c => {
                     const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                     const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
