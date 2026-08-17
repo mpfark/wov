@@ -237,14 +237,15 @@ Deno.serve(async (req) => {
         const now = Date.now();
         const { data: effect, error } = await db.from("active_effects").insert({
           node_id: nodeId, target_id: creatureId, source_id: characterId,
-          effect_type: "bleed", mechanic: "damage_over_time", stacks: 1,
+          effect_type: "bleed", mechanic: "dot_debuff", stacks: 1,
           damage_per_tick: 12, magnitude: 12, tick_rate_ms: 2000,
           next_tick_at: now - 4000,
           expires_at: now + 60_000,
           started_at: now - 10_000,
           source_ability_key: "rend",
           lifetime: "timed",
-          params: { damage_type: "physical" },
+          params_version: 1,
+          params: { damageType: "physical", maxStacks: 5 },
         }).select("*").single();
         if (error) return json({ ok: false, reason: `effect insert failed: ${error.message}` }, 500);
         return json({ ok: true, effect });
