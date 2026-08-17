@@ -295,7 +295,18 @@ describe('C5 — rejected start restores the affordance, accepted start starts o
 
   it('9. the worker interval is created behind a null check and cleared on stop', () => {
     const src = driver();
-    expect(src).toMatch(/if \(!intervalRef\.current\)/);
+    // Every worker creation is immediately preceded by a clear or a null
+    // check, so a second start can never leave two intervals ticking.
+    let from = 0;
+    for (;;) {
+      const at = src.indexOf('intervalRef.current = setWorkerInterval', from);
+      if (at < 0) break;
+      const before = src.slice(Math.max(0, at - 160), at);
+      expect(
+        before.includes('clearWorkerInterval') || before.includes('!intervalRef.current'),
+      ).toBe(true);
+      from = at + 1;
+    }
     const stop = src.slice(src.indexOf('const stopCombat'), src.indexOf('const stopCombat') + 2000);
     expect(stop).toContain('clearWorkerInterval(intervalRef.current)');
     expect(stop).toContain('intervalRef.current = null');
