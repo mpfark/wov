@@ -23,7 +23,4 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
-  # TEMPORARY validation endpoint (run c5v20260817a) — removed at teardown.
-  [functions.combat-harness]
-    verify_jwt = false
 
