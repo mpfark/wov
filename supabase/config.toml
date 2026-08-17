@@ -3,6 +3,8 @@ project_id = "gpclaklkaolyzfnooajt"
 [functions]
   [functions.admin-users]
     verify_jwt = false
+  [functions.c5-gate3-fixture]
+    verify_jwt = false
   [functions.ai-generate-service-npc]
     verify_jwt = false
   [functions.ai-item-illustration]
