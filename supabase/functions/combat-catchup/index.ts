@@ -31,17 +31,44 @@ function fail(kind: string, reason: string, status: number) {
   });
 }
 
-/** Internal callers only: a verified `service_role` credential, nothing else. */
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Internal callers only.
+ *
+ * Three accepted proofs, in order of cost:
+ *  1. the token IS this deployment's own service-role key;
+ *  2. the token's SHA-256 matches the internal dispatcher credential stored in
+ *     the database vault (server-side comparison, the secret never leaves the
+ *     database and the token is never logged);
+ *  3. the token is a JWT whose verified `role` claim is `service_role`.
+ *
+ * (2) exists because the dispatcher's vault credential is a legacy signing-key
+ * JWT: `auth.getClaims` cannot verify it against the current JWKS, so the
+ * dispatcher was rejected with 401 before the handler ever ran.
+ */
 async function internalCaller(
   authHeader: string | null,
   url: string,
   anonKey: string,
   srvKey: string,
+  db: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> },
 ): Promise<'internal' | 'not_internal' | 'anonymous'> {
   if (!authHeader?.toLowerCase().startsWith('bearer ')) return 'anonymous';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!token) return 'anonymous';
   if (token === srvKey) return 'internal';
+  try {
+    const { data, error } = await db.rpc('effects_dispatch_token_check', {
+      _token_sha256: await sha256Hex(token),
+    });
+    if (!error && data === true) return 'internal';
+  } catch (e) {
+    console.error('[combat-catchup] dispatcher credential check failed', e);
+  }
   try {
     const c = createClient(url, anonKey);
     const { data, error } = await c.auth.getClaims(token);
@@ -52,6 +79,7 @@ async function internalCaller(
   }
 }
 
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -61,7 +89,7 @@ Deno.serve(async (req) => {
   const db = createClient(url, srvKey);
 
   try {
-    const caller = await internalCaller(req.headers.get('Authorization'), url, anonKey, srvKey);
+    const caller = await internalCaller(req.headers.get('Authorization'), url, anonKey, srvKey, db);
     if (caller === 'anonymous') {
       return fail('unauthorized', 'missing or invalid credential', 401);
     }
