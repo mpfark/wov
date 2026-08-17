@@ -3620,9 +3620,17 @@ export type Database = {
         Returns: string
       }
       encounter_for_node: { Args: { _node_id: string }; Returns: string }
+      encounter_has_pending_work: {
+        Args: { _encounter_id: string }
+        Returns: boolean
+      }
       encounter_intake: {
         Args: { _character_id: string; _creature_ids?: string[] }
         Returns: Json
+      }
+      encounter_live_owner_active: {
+        Args: { _encounter_id: string }
+        Returns: boolean
       }
       encounter_lock_key: { Args: { _encounter_id: string }; Returns: number }
       encounter_reconcile: {
