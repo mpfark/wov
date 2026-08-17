@@ -378,8 +378,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         _creature_id: creatureId,
       })
       .then(({ error }) => {
-        if (error) console.warn('[combat] engagement join failed', error.message);
+        if (!error) return;
+        // A refused engagement must never leave an optimistic local combat
+        // state (or a running worker) behind: the affordance has to come back.
+        console.warn('[combat] engagement join failed', error.message);
+        toast.error('You cannot engage right now.');
+        stopCombat();
       });
+
 
     if (p.party && !p.isLeader) {
       channelRef.current?.send({
