@@ -1,120 +1,147 @@
-# Correction plan — player-facing node roster reconcile
+# Correction plan — player-facing node roster reconcile (amended)
 
-Combat stays in maintenance. Soak stays off, allowlist empty. `combat-catchup` stays service-role-only. Nothing below is implemented yet.
+Combat stays in maintenance. Soak stays off, allowlist empty. `combat-catchup` stays service-role-only. The full C5 soak does not begin under this plan.
 
 ## 1. Root-cause wiring map (current deployed flow)
 
-Node entry:
-
 ```text
-character.current_node_id changes (useMovementActions → preheatNode)
-  → GamePage line 213: useCreatures(character.current_node_id, nodeChannel, node, handleCatchupRewards, softDeadIds, character.id)
-  → useCreatures effect (line ~305): setCreatures([]) + setCreaturesLoading(true) + fetchCreatures()
-  → fetchCreatures phase 1 (optimistic): prefetchCache hit, else direct read
-       supabase.from('creatures').select('*').eq('node_id').eq('is_alive', true)
-    fetchCreatures phase 2 (authoritative): reconcileNode(node, { characterId, force: true })
+character.current_node_id changes (movement → preheatNode)
+  → GamePage: useCreatures(current_node_id, nodeChannel, node, onCatchupRewards, softDeadIds, character.id)
+  → node-change effect: setCreatures([]) + loading + fetchCreatures()
+  → phase 1 (optimistic): prefetchCache hit, else direct read
+       from('creatures').eq('node_id').eq('is_alive', true)
+    phase 2 (authoritative): reconcileNode(node, { characterId, force: true })
        → invokeWithRetry('combat-catchup', { node_id, character_id, force, reason })
-       → 403 forbidden  ⇒ reconcileNode returns { creatures: [] }
-       → setCreatures([])          ← roster wiped, Attack control never renders
-  → realtime: nodeChannel handlers (onCreatureUpdate / onCreatureInsert / onCreatureDelete)
-  → NodeView line 408: Attack button renders per creature in `creatures`
+       → 403 forbidden ⇒ reconcileNode returns { creatures: [] }
+       → setCreatures([])          ← roster wiped, Attack never renders
+  → realtime: onCreatureUpdate / onCreatureInsert / onCreatureDelete
+  → 30s safety refetch fetchCreatures(true)
 ```
 
-`wake_world` is not part of the roster contract: the realm-slumber gate lives on CharacterSelect ("Awaken the Realm"), the game route mounts only afterwards. But wake is asynchronous — `tick_creatures` is re-armed on wake, so at t≈0 the roster can legitimately contain corpses whose respawn is due but not yet applied. Nothing in the client distinguishes "realm still waking" from "empty node".
-
-Server side of the refused call: `combat-catchup/index.ts` `internalCaller()` → 403 for any non-service-role JWT; the scope derivation it wraps (`public.catchup_scope_check(_user_id, _character_id, _node_id)`, SECURITY DEFINER, STABLE) is still exactly what a player-facing read needs — it verifies ownership and allows only the character's own node or a directly connected node.
+`combat-catchup/index.ts` `internalCaller()` returns 403 for any non-service-role credential. The scope helper it wraps, `public.catchup_scope_check(_user_id, _character_id, _node_id)` (SECURITY DEFINER, STABLE), is still the right ownership/scope primitive for a player-facing read — but it returns "own or adjacent", which is not a single authority level.
 
 ### Why the client was left calling it
-The catch-up hard-gate was added as a *combat authority* fix (effects-only progression must not be player-triggered). The audit at that time covered the tick/authority call sites; it did not cover the fact that `combat-catchup` was doubling as the **roster read** for node entry and the **offscreen DoT wake-up** driver. The endpoint had two responsibilities and only one of them was supposed to become internal.
+The hard-gate was a *combat authority* fix: effects-only progression must not be player-triggered. The audit covered tick/authority call sites but missed that `combat-catchup` was doubling as (a) the node **roster read** and (b) the **offscreen DoT wake-up** driver. Only (b) was meant to become internal.
 
-### Other client call sites broken by the same gate
-- `useCreatures.reconcileNode` — node entry (roster), plus adjacent-node selective wake-up (line ~356).
-- `useOffscreenDotWakeup` — three player-invoked calls: delayed departure catch-up (line 140), `snapshot_only` snapshot (line 182), predicted-lethal wake-up (line 311). These are *authority* calls and must not come back as player-triggered.
+### Client call sites broken by the gate
+- `useCreatures.reconcileNode` — node entry roster; also the adjacent-node selective wake-up.
+- `useOffscreenDotWakeup` — three player-invoked calls (delayed-departure catch-up, `snapshot_only` snapshot, predicted-lethal wake-up). These are authority calls and must not return as player-triggered.
 
-### Additional finding: no internal catch-up path exists
-`cron.job` has no catch-up job, and no `public.*` function references `combat-catchup` (checked via `pg_get_functiondef`). So today effects-only/offscreen progression has **no caller at all** — the player client was its only trigger. This is a second gap, tracked separately below; it must not be closed by re-opening the endpoint to players.
+### Second, separate gap (not closed here)
+`cron.job` has no catch-up job and no `public.*` function references `combat-catchup`, so **no deployed internal caller currently advances effects-only/offscreen catch-up**. The player client was its only trigger. See section 7 — this is a named blocking gap for C5, not part of this migration.
 
 ### What normally supplies the roster
-`public.creatures` itself. RLS: `Anyone can view creatures` — `SELECT` to `authenticated`, `USING (true)`; writes admin-only. The optimistic phase-1 read already works today with a player JWT; only phase 2 fails and then overwrites phase 1 with `[]`.
+`public.creatures`. RLS: `Anyone can view creatures` — `SELECT` to `authenticated` with `USING (true)`; writes admin-only. Phase 1 already works with a player JWT; phase 2 fails and overwrites it with `[]`.
 
-### How updates reach the client afterwards
-Realtime on the unified node channel: `onCreatureUpdate` (HP, `is_alive`, respawn), `onCreatureInsert` (debounced refetch), `onCreatureDelete`. Plus a 30s `fetchCreatures(true)` safety net (skips catch-up), the 150ms reconcile lock, `removeCreatureLocal` on confirmed kills, and `softDeadIds` broadcast hints.
-
-### Every path that can currently produce `setCreatures([])`
-1. `fetchCreatures` with no `nodeId`.
-2. Node-change effect — intentional clear before load.
-3. Phase 2 `reconcileNode` error → `{ creatures: [] }` → `setCreatures(result.creatures)`. **This is the defect.**
-4. Phase 2 success with a genuinely empty node (correct).
-5. Fallback direct read returning `[]`.
-6. `onCreatureUpdate`/`Delete` filtering the last entry out.
+### Paths that can produce `setCreatures([])`
+no `nodeId`; node-change clear; **phase-2 error → `{ creatures: [] }`** (the defect); genuine empty node; empty fallback read; realtime filtering out the last entry.
 
 ## 2. Authority boundary to preserve
-- `combat-catchup` remains service-role-only; its 403 for player JWTs is correct and stays.
-- Effects-only/offscreen progression remains internal authority.
-- The player-facing reconcile must be **read-only**: no tick claim, no effect advancement, no death, rewards, loot, casts or durability, no encounter creation (notably it must never call `encounter_for_node`, which *creates* an encounter row).
-- Node scope derived/verified server-side from the authenticated caller's character, never trusted from the body.
+- `combat-catchup` stays service-role-only; its 403 for player JWTs is correct and unchanged.
+- Effects-only/offscreen progression stays internal authority.
+- The player-facing roster path is **read-only**: no tick claim, no effect advancement, no death, rewards, loot, casts or durability writes, and **no encounter creation** (it must never call `encounter_for_node`, which inserts).
+- The actionable node is resolved server-side from the authenticated caller's owned character; never accepted from the request body.
 
-## 3. Options
+## 3. Options considered
 
-**Option A — dedicated authenticated read-only roster RPC.**
-`public.node_creature_roster(_character_id uuid, _node_id uuid default null)`, SECURITY DEFINER, **STABLE** (so it physically cannot write), reusing `catchup_scope_check` for ownership + node scope, returning the roster plus a scope/staleness envelope. Grants: `EXECUTE` to `authenticated` only. Maintenance-independent (reads only). Failure = explicit error, distinguishable from empty.
-Trade-off: one new interface, but it is the only option that gives a single authoritative roster source with server-derived scope and an explicit envelope.
+**Option A (chosen) — dedicated authenticated read-only current-node roster RPC.** Server resolves the node from character state; explicit response envelope; ownership verified; `EXECUTE` withheld from `anon`.
 
-**Option B — plain table read + internal scheduled catch-up.**
-Delete the client catch-up call, keep the existing `creatures` RLS read as the only source, let a new internal cron own catch-up.
-Trade-off: cheapest, no new API — but the client then trusts a client-supplied `node_id` (no ownership/scope check on the read), cannot express "scope refused" vs "empty", and freshness right after wake/node entry depends entirely on cron cadence. It cannot guarantee a complete roster at t≈0 after wake. Acceptable as a fallback layer, not as the contract.
+**Option B — plain table read + internal scheduled catch-up.** Cheapest, but trusts a client-supplied node id, cannot express "scope refused" vs "empty", and freshness depends on cron cadence. Retained only as non-authoritative fallback (section 6).
 
-**Option C — restore an existing player-safe reconcile contract.**
-None exists. `encounter_resync_snapshot` is encounter-scoped (requires participation/grant, returns combat state, not the node roster). `encounter_snapshot_v2` and `encounter_reconcile` are internal/mutating (`encounter_reconcile` purges participants and resets sessions). So there is nothing to restore.
+**Option C — reuse an existing player-safe reconcile contract.** None exists. `encounter_resync_snapshot` is encounter-scoped and participation-gated; `encounter_snapshot_v2` and `encounter_reconcile` are internal/mutating (`encounter_reconcile` purges participants and resets sessions).
 
-### Recommendation
-**Option A as the contract, with Option B's plain read kept as an explicit degraded fallback** (already present as phase 1 / the 30s net). This preserves the authority split, removes the only remaining player→catch-up dependency for rosters, and gives the client the states it needs to stop wiping rosters on failure.
-
-## 4. Recommended contract
+## 4. Contract — actionable roster is current-node only
 
 ```ts
-// RPC: public.node_creature_roster(_character_id uuid, _node_id uuid | null)
+// RPC: public.node_creature_roster(_character_id uuid)   ← no node argument
 {
-  scope: 'own_node' | 'adjacent',
-  node_id: string,              // server-derived; echo of the resolved scope
-  realm_awake: boolean,         // from world_state
-  respawn_pending: number,      // dead creatures at node whose respawn is due
-  creatures: Array<{
-    id, name, node_id, level, rarity, hp, max_hp, ac,
-    is_alive, spawn_seq, is_aggressive, respawn_at, ...display fields
-  }>
+  node_id: string,            // server-resolved from characters.current_node_id
+  realm_awake: boolean,
+  respawn_pending: number,    // dead creatures at the node whose respawn time is due
+  creatures: Array<{ id, name, node_id, level, rarity, hp, max_hp, ac,
+                     is_alive, spawn_seq, is_aggressive, ...display fields }>
 }
-// refusals: 'not_owned' | 'no_node' | 'out_of_scope' (SQL error / typed reason, never [])
+// refusals raise typed errors, never an empty array:
+//   'not_owned' | 'no_current_node' | 'unauthorized'
 ```
-Only living creatures are returned; dead ones are represented solely by `respawn_pending` so the client never has to reason about corpses.
 
-## 5. Files / functions to change
+- Only living creatures are returned. Dead creatures are represented solely by `respawn_pending` and are never part of the actionable roster.
+- `realm_awake = false` or `respawn_pending > 0` **do not suppress** living creatures. An otherwise-authoritative response stays authoritative and attackable; those fields are advisory ("more may appear shortly").
+- Adjacent-node prefetch does **not** use this RPC and never yields an authoritative roster (section 6).
 
-Migration (new, forward-only):
-- `public.node_creature_roster(...)` — STABLE SECURITY DEFINER, `SET search_path = public`, reuses `catchup_scope_check`; `REVOKE ALL ... FROM public/anon`, `GRANT EXECUTE ... TO authenticated, service_role`.
-- Optional internal catch-up scheduling (separate migration, separate approval).
+### Response classification the client must distinguish
+1. authoritative, living creatures present → `ready`, actionable
+2. authoritative, empty → `empty`, actionable-empty (no error UI)
+3. authoritative with `realm_awake = false` but living creatures → `ready` (+ waking notice), actionable
+4. authoritative with `respawn_pending > 0` → `ready`/`empty` (+ waking notice), actionable
+5. `not_owned` / `unauthorized` → `unauthorized`, non-actionable
+6. server/network failure → `error`, non-actionable
+7. stale response (nodeId or requestId mismatch) → **discarded entirely**, no state change
+
+## 5. Single roster owner and movement-correct failure behaviour
+
+One reducer owns the roster. Shape:
+
+```ts
+type RosterState = {
+  nodeId: string | null;
+  requestId: number;
+  status: 'loading' | 'ready' | 'empty' | 'waking' | 'error' | 'unauthorized';
+  creatures: Creature[];
+  authoritative: boolean;   // true only after a successful RPC for this exact nodeId
+  error: string | null;
+};
+```
+
+Rules:
+- A response may mutate state only when **both** `nodeId` and `requestId` still match the active request; otherwise it is dropped.
+- **Same-node refresh failure**: keep the existing valid roster, set `error`, keep `authoritative` as-is.
+- **Movement to a different node**: never carry the previous node's roster over. Reset to `loading` tagged with the new `nodeId` and a new `requestId`, `authoritative: false`. On failure → `error` for that node with no actionable roster. Cached data may be painted only when tagged with the exact new `nodeId`, and only with `authoritative: false`.
+- **Attack stays disabled** until an authoritative successful response for the current node arrives (`authoritative && (status === 'ready' || status === 'empty')`).
+- Authoritative RPC establishes the roster and its generation; realtime events update it afterwards; the 30s safety refetch replaces it only for the same active `nodeId`/`requestId`; prefetch/cache seeds presentation only.
+- `spawn_seq` participates in reconciliation: an update/death event with a `spawn_seq` lower than the tracked one for that creature is ignored, so a stale death cannot erase a later respawn generation.
+- A realtime disconnect/resubscribe ends with a fresh authoritative fetch for the current node.
+- All direct `setCreatures` calls are removed or funnelled through the reducer (including `removeCreatureLocal` and the soft-dead filter, which stay presentational) so older sources cannot overwrite newer ones.
+
+## 6. Prefetch / plain-read fallback, honestly
+
+The direct `creatures` table read stays, strictly as: non-authoritative cached presentation, degraded/diagnostic display, and a stopgap while the RPC is unavailable. It is always tagged `authoritative: false` and **does not enable Attack** unless the approved combat contract explicitly accepts the RLS read as authoritative — it does not today.
+
+Adjacent-node prefetch stays but is explicitly separate and non-interactive: cached per node id, never marked authoritative for the displayed node, never enabling Attack, and always revalidated by a fresh current-node RPC after movement. "Own or adjacent" scope results are never treated as one authority level.
+
+Note on scope semantics: the new RPC protects **actionable roster scope**, not world-information secrecy. Authenticated users still have unrestricted `SELECT` on `public.creatures` under the existing global policy; that visibility decision is separate and untouched here.
+
+## 7. Offscreen catch-up gap (named blocker, not solved here)
+
+All player invocations of `combat-catchup` are removed, including the three in `useOffscreenDotWakeup` (rewired or removed, per the fully-wired policy). This leaves a recorded blocking gap:
+
+> No deployed internal caller currently advances effects-only/offscreen catch-up.
+
+Gate 3 may be retried after the roster correction, since it tests live terminal handling only. The **full C5 soak must not begin** until an internal service-role owner for catch-up is designed and deployed, with: defined cadence and scope, no player-triggerable path, advancement of approved effects-only state only, validated fled-DoT ownership plus death/reward/loot attribution, defined world sleep/wake behaviour, and idempotent duplicate invocations. That owner is **not** added as part of this migration — it comes back as a separate focused proposal after Gate 3, unless an existing intended internal owner is discovered during implementation.
+
+## 8. Files to change
+
+Migration (forward-only, additive):
+- `public.node_creature_roster(_character_id uuid)` — SECURITY DEFINER, STABLE, `SET search_path = public`; verifies `characters.user_id = auth.uid()`; resolves `current_node_id`; returns the envelope in section 4. `REVOKE ALL ... FROM public, anon`; `GRANT EXECUTE ... TO authenticated, service_role`. STABLE is a guardrail, **not** the security guarantee — the narrowly read-only body plus permanent zero-write tests are required.
 
 Client:
-- `src/features/creatures/hooks/useCreatures.ts` — replace `reconcileNode`'s `combat-catchup` invocation with the RPC; introduce `RosterOutcome = { kind: 'ok' | 'empty' | 'error' | 'unauthorized' | 'waking' | 'stale' }`; never `setCreatures([])` on non-`ok`; keep the previous roster and surface `rosterError`; keep the `fetchTokenRef`/`currentNodeIdRef` stale guards and extend them to the RPC path; single writer for `setCreatures` per fetch; adjacent-node prefetch uses the plain read only.
-- `src/features/combat/hooks/useOffscreenDotWakeup.ts` — remove the three player-invoked `combat-catchup` calls (per the fully-wired policy: rewired or removed), leaving offscreen progression to internal authority.
-- `src/pages/GamePage.tsx` / `src/features/world/components/NodeView.tsx` — render Attack only from a roster whose last outcome was authoritative `ok`; show loading/error state otherwise.
-- `src/features/creatures/index.ts` — export the new outcome type.
+- `src/features/creatures/hooks/useCreatures.ts` — new reducer-based roster owner; RPC replaces the `combat-catchup` call; node/request tagging; spawn_seq reconciliation; resubscribe refetch; adjacent prefetch downgraded to non-authoritative.
+- `src/features/combat/hooks/useOffscreenDotWakeup.ts` — remove the three player catch-up calls.
+- `src/pages/GamePage.tsx`, `src/features/world/components/NodeView.tsx` — gate Attack on `authoritative`; render loading/waking/error/unauthorized states.
+- `src/features/creatures/index.ts` — export `RosterState`/status types.
 
-## 6. Security / RLS implications
-- No RLS change to `creatures` (already `SELECT` to `authenticated`).
-- New RPC is the only added surface: STABLE (write-incapable), ownership-checked, scope-checked, `EXECUTE` withheld from `anon`.
-- `combat-catchup` untouched. `combat_soak_access` untouched: roster reads are allowed under maintenance for everyone, while `combat_soak_access_check` continues to gate *starting* combat, so a non-allowlisted player can see creatures and still be refused a tick.
+## 9. Regression coverage
+Player JWT sees the roster and can attack; authoritative empty node; same-node failure preserves the roster and sets `error`; movement failure yields `error` with no actionable roster and never the old node's creatures; out-of-order responses across rapid movement are discarded on nodeId/requestId mismatch; cached/prefetched data never sets `authoritative`; Attack disabled while non-authoritative; `realm_awake = false` and `respawn_pending > 0` still expose living creatures as attackable; dead creatures excluded; stale `spawn_seq` death cannot erase a respawn; realtime resubscribe triggers a fresh authoritative fetch; RPC performs zero writes (permanent zero-write assertion, not just STABLE); a foreign / non-current node can never become the actionable roster; `combat-catchup` still 403s for player JWTs; write-authority audit asserts no client file invokes `combat-catchup`; maintenance + valid soak allowlist still permits the read while a non-allowlisted player still cannot start combat.
 
-## 7. Regression coverage (all planned, none written yet)
-Unit/integration: creature appears + Attack available with a player JWT; empty node → successful empty; 403/500/network failure preserves the prior roster and sets `rosterError`; scope refusal for a non-adjacent node; RPC cannot advance effects/combat (STABLE + zero-write assertion); `combat-catchup` still 403 for player JWTs; wake-then-load convergence with `respawn_pending`; rapid movement cannot apply a stale prior-node response; death removes the creature; respawn restores it with the new `spawn_seq`; realtime resubscribe converges; maintenance + valid soak allowlist still permits the read; non-allowlisted player still cannot start combat.
-Plus a write-authority audit assertion that no client file invokes `combat-catchup`.
+## 10. Order of work
+1. Add the read-only current-node roster RPC.
+2. Rework `useCreatures` around the single node-tagged roster owner.
+3. Remove every client invocation of `combat-catchup`.
+4. Add authority, movement-race, failure and realtime regression tests.
+5. Run the full combat and application suites.
+6. Validate the deployed RPC with a real player JWT; confirm a foreign/non-current node cannot become the actionable roster; confirm zero combat/runtime writes from roster reads.
+7. Retry Gate 3 in a real browser.
+8. Tear down fixtures, restore maintenance/off state, verify zero leakage.
+9. Return the separate internal catch-up ownership proposal before restarting C5.
 
-Deployed validation (service-role probe + one temporary player character, ≤30min allowlist, maintenance kept on): RPC returns the roster for the owned node, refuses a foreign node, leaves `encounters`/`encounter_tick_batches`/`active_effects` row counts unchanged, and `combat-catchup` still 403s.
-
-## 8. Migration / deployment order, rollback
-1. Migration adding the RPC (additive; nothing calls it yet).
-2. Client rewire + tests; full suite.
-3. Deployed read-only validation, then teardown and leakage check.
-4. Only afterwards: Gate 3 retry, then the internal-catch-up gap as its own checkpoint.
-
-Rollback: dropping the RPC is safe once step 2 is reverted; the plain-read fallback keeps rosters visible. Step 1 alone is inert. No data migration, no destructive change, no schema change to existing tables.
+Rollback: step 1 alone is inert; dropping the RPC is safe once step 2 is reverted. Reverting restores creature *visibility* via the plain read, but **not necessarily a safe actionable roster** — Attack would fall back to a non-authoritative source, so a revert must also disable Attack until the RPC returns. No destructive or schema change to existing tables.
