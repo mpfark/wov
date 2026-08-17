@@ -255,8 +255,6 @@ describe('C5 — combat-tick acknowledgement contract', () => {
 
 describe('C5 — players cannot reach service-role-only maintenance functions', () => {
   it('11. the client bundle never calls the service-role-only RPCs', async () => {
-    const fg = await import('@/features/inventory/hooks/useGroundLoot?raw' as any).catch(() => null);
-    // Source-level assertion: read the files that previously did.
     const fs = await import('node:fs');
     const forbidden = ['cleanup_ground_loot', 'combat_soak_access_check', 'commit_encounter_tick_v2'];
     const files = [
@@ -271,6 +269,5 @@ describe('C5 — players cannot reach service-role-only maintenance functions', 
         expect(src.includes(`rpc("${fn}"`), `${f} must not call ${fn}`).toBe(false);
       }
     }
-    expect(fg === null || true).toBe(true);
   });
 });
