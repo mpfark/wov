@@ -1439,6 +1439,42 @@ export type Database = {
           },
         ]
       }
+      combat_soak_scopes: {
+        Row: {
+          character_ids: string[]
+          created_at: string
+          creature_ids: string[]
+          encounter_id: string | null
+          expires_at: string
+          granted_by: string | null
+          id: string
+          node_id: string
+          updated_at: string
+        }
+        Insert: {
+          character_ids?: string[]
+          created_at?: string
+          creature_ids?: string[]
+          encounter_id?: string | null
+          expires_at: string
+          granted_by?: string | null
+          id?: string
+          node_id: string
+          updated_at?: string
+        }
+        Update: {
+          character_ids?: string[]
+          created_at?: string
+          creature_ids?: string[]
+          encounter_id?: string | null
+          expires_at?: string
+          granted_by?: string | null
+          id?: string
+          node_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       creatures: {
         Row: {
           ac: number
@@ -3495,6 +3531,26 @@ export type Database = {
       drop_stance: {
         Args: { p_character_id: string; p_stance_key: string }
         Returns: Json
+      }
+      effects_due_scopes: {
+        Args: { _limit?: number; _now_ms?: number }
+        Returns: {
+          due_at_ms: number
+          due_count: number
+          earliest_ms: number
+          encounter_id: string
+          live_owner: boolean
+          node_id: string
+          pending_count: number
+        }[]
+      }
+      effects_scope_grant_check: {
+        Args: { _encounter_id: string; _node_id: string }
+        Returns: boolean
+      }
+      effects_scope_revalidate: {
+        Args: { _due_at_ms?: number; _encounter_id: string; _node_id: string }
+        Returns: string
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
       encounter_apply_character_damage: {
