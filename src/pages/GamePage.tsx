@@ -16,7 +16,6 @@ import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
-import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
@@ -58,7 +57,6 @@ import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
 import { useWimp } from '@/features/combat/hooks/useWimp';
-import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
@@ -79,7 +77,7 @@ import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
 
-import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
 
 interface Props {
@@ -802,12 +800,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
 
-  // ── Offscreen DoT wake-up scheduler ──────────────────────────────
-  useOffscreenDotWakeup({
-    currentNodeId: character.current_node_id,
-    characterId: character.id,
-    eventBus: bus,
-  });
+  // Offscreen DoT wake-up was a player-triggered call into the internal
+  // `combat-catchup` endpoint and has been removed. Offscreen progression is
+  // internal authority; no client path may drive it.
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
@@ -1349,6 +1344,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               creaturesLoading={creaturesLoading}
+              rosterActionable={rosterActionable}
+              rosterStatus={rosterStatus}
+              rosterError={rosterError}
               
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
