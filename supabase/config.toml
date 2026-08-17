@@ -19,6 +19,7 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.combat-catchup]
     verify_jwt = false
+
   [functions.ai-suggest-character-name]
     verify_jwt = false
   [functions.process-email-queue]
