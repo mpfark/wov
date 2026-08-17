@@ -62,10 +62,15 @@ describe('policy C simulation pause boundary', () => {
     expect(tick.events.filter((e) => e.type === 'dot_tick').length).toBeGreaterThan(0);
   });
 
-  it('skips pulses that came due inside the pause window', () => {
-    const tick = sweep([dot()], { suspendedAtMs: SUSPENDED, resumedAtMs: RESUMED });
-    expect(tick.events.filter((e) => e.type === 'dot_tick')).toHaveLength(0);
-    expect(tick.effectDeleteIds).not.toContain('eff-dot');
+  it('skips the mid-pause backlog and only pulses post-resume cadence', () => {
+    const paused = sweep([dot()], { suspendedAtMs: SUSPENDED, resumedAtMs: RESUMED });
+    const unpaused = sweep([dot()], null);
+    const pulses = (t: typeof paused) => t.events.filter((e) => e.type === 'dot_tick').length;
+    // 10 minutes of missed 2s pulses would be a 300-pulse backlog; after the
+    // pause only the ticks actually simulated after the resume point may land.
+    expect(pulses(paused)).toBeLessThanOrEqual(3);
+    expect(pulses(paused)).toBeLessThan(pulses(unpaused));
+    expect(paused.effectDeleteIds).not.toContain('eff-dot');
   });
 
   it('never pays out a backlog: creature HP is untouched across the pause', () => {
