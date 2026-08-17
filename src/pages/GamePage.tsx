@@ -177,31 +177,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(characterWithKing);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
-  const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
-    if (!rewards || rewards.length === 0) return;
-    // `bhp_each` from the server is legacy storage for Renown awarded per recipient.
-    let totalXp = 0, totalGold = 0, totalRenown = 0;
-    for (const r of rewards) {
-      totalXp += r.xp_each;
-      totalGold += r.gold_each;
-      totalRenown += r.bhp_each;
-      const parts: string[] = [];
-      if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
-      if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
-      if (r.salvage_each > 0) parts.push(`${r.salvage_each}`);
-      if (r.bhp_each > 0) parts.push(`${r.bhp_each} Renown`);
-      bus.emit('log:local', { event: buildRewardEvent(`${r.creature_name} was slain! Gained ${parts.join(', ')}.`, { effectType: 'offscreen_kill' }) });
-    }
-    // Salvage / gem drops live in character_materials. Realtime on that table
-    // is disabled, so explicitly notify any mounted useMaterials hooks.
-    notifyMaterialsChanged(character.id);
-    updateCharacterLocal({
-      xp: character.xp + totalXp,
-      gold: character.gold + totalGold,
-      bhp: character.bhp + totalRenown,
-      rp_total_earned: (character.rp_total_earned || 0) + totalRenown,
-    });
-  }, [bus, updateCharacterLocal]);
+  // Offscreen kill rewards are no longer surfaced from a client-triggered
+  // catch-up: `combat-catchup` is an internal service-role endpoint. Rewards
+  // arrive with the authoritative batch once an internal catch-up owner exists.
+
   // Resolver uses a ref so we can wire broadcast (which needs name lookup) BEFORE
   // useCreatures (which needs softDeadIds from broadcast). Avoids TDZ on `creatures`.
   const creaturesRef = useRef<{ id: string; name: string }[]>([]);
