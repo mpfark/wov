@@ -210,7 +210,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
-  const { creatures, creaturesLoading, removeCreatureLocal } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds, character.id);
+  const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
