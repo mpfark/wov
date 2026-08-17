@@ -120,14 +120,11 @@ export function useGroundLoot(
     };
   }, [handle, characterId, fetchGroundLoot]);
 
-  // Cleanup expired loot — single call on mount + every 5 minutes
-  useEffect(() => {
-    supabase.rpc('cleanup_ground_loot' as any).then(() => {});
-    const interval = setInterval(() => {
-      supabase.rpc('cleanup_ground_loot' as any).then(() => {});
-    }, 300000);
-    return () => clearInterval(interval);
-  }, []);
+  // Expired-loot cleanup is server-owned: `public.cleanup_ground_loot()` is a
+  // service-role-only maintenance function (EXECUTE was revoked from
+  // `authenticated`), so a client call could only ever return 403 / 42501. The
+  // scheduled job owns the purge; the client just reads the roster of loot.
+
 
   const pickUpItem = useCallback(async (groundLootId: string) => {
     if (!characterId) return;
