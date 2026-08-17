@@ -66,6 +66,10 @@ interface Props {
   partyMemberIds?: Set<string>;
   partyMemberHp?: Map<string, { hp: number; max_hp: number }>;
   creaturesLoading?: boolean;
+  /** True only when an authoritative roster for THIS node has loaded. Gates Attack. */
+  rosterActionable?: boolean;
+  rosterStatus?: 'idle' | 'loading' | 'ready' | 'empty' | 'unauthorized' | 'error';
+  rosterError?: string | null;
   // Status bars props
   statusBarsProps?: Omit<StatusBarsStripProps, 'character'>;
 }
@@ -87,6 +91,9 @@ export default function NodeView({
   partyMemberIds,
   partyMemberHp,
   creaturesLoading,
+  rosterActionable = false,
+  rosterStatus,
+  rosterError,
   statusBarsProps,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
@@ -254,6 +261,14 @@ export default function NodeView({
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-1">
+                  {(rosterStatus === 'error' || rosterStatus === 'unauthorized') && (
+                    <p className="font-display text-[10px] text-destructive px-1 py-0.5">
+                      {rosterStatus === 'unauthorized'
+                        ? 'You have no standing here — the roster is unavailable.'
+                        : 'The roster could not be confirmed. Retrying shortly.'}
+                      {rosterError ? ` (${rosterError})` : ''}
+                    </p>
+                  )}
                   {creatures.map(c => {
                     const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                     const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
@@ -405,7 +420,14 @@ export default function NodeView({
 
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                             {!isActiveTarget && !isEngaged && !isSelected && (
-                              <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); onAttack(c.id); }} className="font-display text-[10px] h-5 px-1.5">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={!rosterActionable}
+                                title={rosterActionable ? undefined : 'Confirming who stands here...'}
+                                onClick={(e) => { e.stopPropagation(); if (!rosterActionable) return; onAttack(c.id); }}
+                                className="font-display text-[10px] h-5 px-1.5"
+                              >
                                 Attack
                               </Button>
                             )}

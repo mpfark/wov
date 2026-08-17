@@ -3805,6 +3805,7 @@ export type Database = {
         }
         Returns: number
       }
+      node_creature_roster: { Args: { _character_id: string }; Returns: Json }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
       pickup_ground_loot: {
         Args: { p_character_id: string; p_loot_id: string }

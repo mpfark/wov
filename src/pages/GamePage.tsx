@@ -16,7 +16,6 @@ import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
-import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
@@ -58,7 +57,6 @@ import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
 import { useWimp } from '@/features/combat/hooks/useWimp';
-import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
@@ -79,7 +77,7 @@ import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
 
-import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
 
 interface Props {
@@ -177,31 +175,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(characterWithKing);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
-  const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
-    if (!rewards || rewards.length === 0) return;
-    // `bhp_each` from the server is legacy storage for Renown awarded per recipient.
-    let totalXp = 0, totalGold = 0, totalRenown = 0;
-    for (const r of rewards) {
-      totalXp += r.xp_each;
-      totalGold += r.gold_each;
-      totalRenown += r.bhp_each;
-      const parts: string[] = [];
-      if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
-      if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
-      if (r.salvage_each > 0) parts.push(`${r.salvage_each}`);
-      if (r.bhp_each > 0) parts.push(`${r.bhp_each} Renown`);
-      bus.emit('log:local', { event: buildRewardEvent(`${r.creature_name} was slain! Gained ${parts.join(', ')}.`, { effectType: 'offscreen_kill' }) });
-    }
-    // Salvage / gem drops live in character_materials. Realtime on that table
-    // is disabled, so explicitly notify any mounted useMaterials hooks.
-    notifyMaterialsChanged(character.id);
-    updateCharacterLocal({
-      xp: character.xp + totalXp,
-      gold: character.gold + totalGold,
-      bhp: character.bhp + totalRenown,
-      rp_total_earned: (character.rp_total_earned || 0) + totalRenown,
-    });
-  }, [bus, updateCharacterLocal]);
+  // Offscreen kill rewards are no longer surfaced from a client-triggered
+  // catch-up: `combat-catchup` is an internal service-role endpoint. Rewards
+  // arrive with the authoritative batch once an internal catch-up owner exists.
+
   // Resolver uses a ref so we can wire broadcast (which needs name lookup) BEFORE
   // useCreatures (which needs softDeadIds from broadcast). Avoids TDZ on `creatures`.
   const creaturesRef = useRef<{ id: string; name: string }[]>([]);
@@ -210,7 +187,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
-  const { creatures, creaturesLoading, removeCreatureLocal } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds, character.id);
+  const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
@@ -823,12 +800,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
 
-  // ── Offscreen DoT wake-up scheduler ──────────────────────────────
-  useOffscreenDotWakeup({
-    currentNodeId: character.current_node_id,
-    characterId: character.id,
-    eventBus: bus,
-  });
+  // Offscreen DoT wake-up was a player-triggered call into the internal
+  // `combat-catchup` endpoint and has been removed. Offscreen progression is
+  // internal authority; no client path may drive it.
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
@@ -1370,6 +1344,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               creaturesLoading={creaturesLoading}
+              rosterActionable={rosterActionable}
+              rosterStatus={rosterStatus}
+              rosterError={rosterError}
               
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
