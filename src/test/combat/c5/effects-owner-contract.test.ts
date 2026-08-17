@@ -123,11 +123,12 @@ describe('encounter_end refuses while qualifying pending work exists', () => {
   });
 
   it('ends the encounter only once engagements, effects and casts are all absent', () => {
-    // Commit only calls encounter_end when engagements hit zero; encounter_end
-    // adds the effects/cast condition. Both halves must remain in place.
+    // Commit only reaches termination when no living engaged creature remains,
+    // and it goes through encounter_end (which adds the effects/cast guard)
+    // rather than writing `ended` itself.
     expect(body).toMatch(/SET\s+status\s*=\s*'ended'/i);
-    const commit = latestFunctionBody('commit_encounter_tick_v2');
-    expect(commit).toMatch(/encounter_end/i);
+    expect(SQL).toMatch(/v_ended\s*:=\s*jsonb_array_length\(v_alive_engaged\)\s*=\s*0/i);
+    expect(SQL).toMatch(/IF\s+v_ended\s+THEN\s*\n\s*PERFORM\s+public\.encounter_end\(_encounter_id\);/i);
   });
 });
 
