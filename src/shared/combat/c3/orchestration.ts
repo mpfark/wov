@@ -418,7 +418,15 @@ export async function orchestrateCombatResolution(
       rngDraws: proposed.rngDraws,
       events: proposed.events,
       configFailures,
+      // Counts owned by the committed proposal, never re-derived from event
+      // text: a diagnostic that greps `events` for a `death` type reported
+      // `deaths = 0` for real offscreen kills (the resolver emits
+      // `creature_killed`).
+      creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
+      characterDeaths: proposed.characters.filter((c) => c.died).length,
+      rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
     };
+
   } catch (e) {
     const failure = toFailure(e);
     // The claim is released on every failure path, so a transient error never
