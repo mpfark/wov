@@ -1,31 +1,39 @@
 /**
- * combat-harness — TEMPORARY validation-only endpoint (run id: c5t20260817b).
+ * combat-harness — TEMPORARY validation-only endpoint (run id: c5t20260817c).
  *
- * NOT PRODUCTION. This run validates ONE thing: the internal dispatcher →
- * Edge delivery path for offscreen effects-only catch-up, including transport
- * result ownership. It is removed at teardown.
+ * NOT PRODUCTION. This run validates ONE thing: genuine contribution-backed
+ * offscreen effects-only catch-up driven by the permanent two-second scheduler,
+ * plus the internal-credential authorization matrix for `combat-catchup`.
+ * It is removed at teardown.
  *
  * Authorization is one-shot and entirely server-side:
  *   1. `POST { section: "authorize", token }` — sha-256 compared against
- *      `app_secrets.harness_token_<run>`; on success the token row is DELETED.
+ *      `app_secrets.harness_token_<run>`; on success the token row is DELETED
+ *      and a 30-minute run deadline is registered.
  *   2. Every later call presents `{ session }`, bounded by the run deadline.
  *
- * Only named, bounded sections run here. No arbitrary SQL, no arbitrary RPC,
- * and every entity it touches is registered in `harness_run_registry` for this
- * run. The service-role key is read from the environment and is never returned,
- * logged or echoed.
+ * Only named, bounded sections run here. No arbitrary SQL, no arbitrary RPC.
+ * The service-role key is read from the environment and is never returned,
+ * logged or echoed; the authorization matrix reports HTTP status codes only.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/http.ts";
 
-const RUN_ID = "c5t20260817b";
+const RUN_ID = "c5t20260817c";
 const TOKEN_KEY = `harness_token_${RUN_ID}`;
 const SESSION_KEY = `harness_session_${RUN_ID}`;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const RUN_MINUTES = 30;
 
 const url = Deno.env.get("SUPABASE_URL")!;
 const srvKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const db = createClient(url, srvKey);
+
+/** Warrior Pressure role — the authored home of Rend. */
+const WARRIOR_ROLES: Record<string, string> = {
+  pressure: "73f3c3cf-9a2a-455a-b158-b9e40872cb93",
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -123,7 +131,9 @@ Deno.serve(async (req) => {
     await db.from("app_secrets").delete().eq("key", TOKEN_KEY); // one shot
     const session = crypto.randomUUID() + crypto.randomUUID();
     await db.from("app_secrets").upsert({ key: SESSION_KEY, value: await sha256(session) });
-    return json({ ok: true, session, run_id: RUN_ID });
+    const deadline = new Date(Date.now() + RUN_MINUTES * 60_000).toISOString();
+    await register("deadline", undefined, deadline);
+    return json({ ok: true, session, run_id: RUN_ID, deadline });
   }
 
   const sessionHash = await secret(SESSION_KEY);
@@ -134,7 +144,8 @@ Deno.serve(async (req) => {
 
   const reg = await registry();
   const deadline = reg.deadline?.[0] ? Date.parse(reg.deadline[0]) : 0;
-  if (!deadline || Date.now() > deadline) {
+  const expired = !deadline || Date.now() > deadline;
+  if (expired && section !== "teardown") {
     await db.from("app_secrets").delete().eq("key", SESSION_KEY);
     await db.rpc("harness_fail_closed", { _run_id: RUN_ID });
     return json({ ok: false, reason: "run deadline passed; access withdrawn" }, 403);
@@ -149,7 +160,7 @@ Deno.serve(async (req) => {
       case "baseline":
         return json({ ok: true, baseline: await baseline() });
 
-      // ── teardown: run-owned state only. Built and exercised before fixtures.
+      // ── teardown: run-owned state only ───────────────────────────────────
       case "teardown": {
         const { data: report, error } = await db.rpc("harness_teardown", { _run_id: RUN_ID });
         const deleted: string[] = [];
@@ -158,17 +169,15 @@ Deno.serve(async (req) => {
           const { error: delErr } = await db.auth.admin.deleteUser(userId);
           deleted.push(`${userId}:${delErr ? delErr.message : "deleted"}`);
         }
-        // restore permanent world/config state
         if (reg.world_state_prev?.[0]) {
           await db.from("world_state").update({ state: reg.world_state_prev[0] }).eq("id", 1);
         }
         await db.from("combat_config").update({ value: "off" }).eq("key", "combat_soak");
         await db.from("combat_config").update({ value: "maintenance" }).eq("key", "combat_mode");
-        await db.rpc("unschedule_effects_catchup");
         await db.from("app_secrets").delete().eq("key", SESSION_KEY);
         await db.from("app_secrets").delete().eq("key", TOKEN_KEY);
         if (body?.purge_registry === true) {
-          await db.from("harness_run_registry").delete().neq("run_id", "__keep__");
+          await db.from("harness_run_registry").delete().eq("run_id", RUN_ID);
         }
         return json({
           ok: !error,
@@ -179,7 +188,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ── fixtures: character, creature, encounter and one overdue DoT ──────
+      // ── fixtures: player character (real credentials), creature, encounter ─
       case "fixtures": {
         const nodeId = typeof body?.node_id === "string" && UUID_RE.test(body.node_id) ? body.node_id : null;
         if (!nodeId) return json({ ok: false, reason: "node_id required" }, 400);
@@ -192,76 +201,58 @@ Deno.serve(async (req) => {
         }
 
         const email = `${RUN_ID}@harness.invalid`;
+        const password = `${crypto.randomUUID()}Aa1!`;
         const { data: created, error: userErr } = await db.auth.admin.createUser({
-          email, password: crypto.randomUUID() + "Aa1!", email_confirm: true,
+          email, password, email_confirm: true,
         });
         if (userErr || !created?.user) return json({ ok: false, reason: `user create failed: ${userErr?.message}` }, 500);
         await register("auth_user", created.user.id, email);
         await register("node_ref", nodeId);
+        // Password is returned exactly once, to the authorized session, so the
+        // browser can drive the real production login path. It is never stored.
+        await db.from("profiles").upsert({ id: created.user.id, display_name: "Harness Fixture" });
 
         const { data: character, error: charErr } = await db.from("characters").insert({
-          user_id: created.user.id, name: "Transportfix", race: "human", class: "warrior",
+          user_id: created.user.id, name: "Fledsource", race: "human", class: "warrior",
           level: 20, hp: 300, max_hp: 300, cp: 400, max_cp: 400, mp: 200, max_mp: 200,
           str: 18, dex: 16, con: 16, int: 10, wis: 10, cha: 10, ac: 14, current_node_id: nodeId,
         }).select("id").single();
         if (charErr || !character) return json({ ok: false, reason: `character insert failed: ${charErr?.message}` }, 500);
         await register("character", character.id);
 
+        // Authored loadout: Rend in its own Pressure role.
+        const { error: loadErr } = await db.from("character_ability_loadout").insert({
+          character_id: character.id,
+          role_id: WARRIOR_ROLES.pressure,
+          ability_id: (await db.from("abilities").select("id").eq("ability_key", "rend").single()).data!.id,
+        });
+        if (loadErr) return json({ ok: false, reason: `loadout insert failed: ${loadErr.message}` }, 500);
+
+        const hp = typeof body?.creature_hp === "number" ? Math.max(10, Math.min(400, body.creature_hp)) : 80;
         const { data: creature, error: creatureErr } = await db.from("creatures").insert({
-          name: "Transport Effigy", description: "Temporary validation fixture.", node_id: nodeId,
-          level: 5, hp: 40, max_hp: 40, ac: 8, is_aggressive: false, base_aggressive: false,
+          name: "Fled Effigy", description: "Temporary validation fixture.", node_id: nodeId,
+          level: 8, hp, max_hp: hp, ac: 8, is_aggressive: false, base_aggressive: false,
           is_humanoid: false, respawn_seconds: 86400, loot_mode: "legacy_table",
-        }).select("id, spawn_seq, hp").single();
+        }).select("id, spawn_seq, hp, max_hp").single();
         if (creatureErr || !creature) return json({ ok: false, reason: `creature insert failed: ${creatureErr?.message}` }, 500);
         await register("creature", creature.id);
 
-        const { data: encounterId, error: encErr } = await db.rpc("encounter_ensure_for_creature", {
-          _creature_id: creature.id,
-        });
-        if (encErr || !encounterId) return json({ ok: false, reason: `encounter ensure failed: ${encErr?.message}` }, 500);
-        await register("encounter", encounterId as string);
-
         return json({
-          ok: true, node_id: nodeId, user_id: created.user.id, character_id: character.id,
-          creature_id: creature.id, creature_spawn_seq: creature.spawn_seq,
-          encounter_id: encounterId,
+          ok: true, node_id: nodeId, user_id: created.user.id, email, password,
+          character_id: character.id, creature: creature,
         });
       }
 
-      // ── one overdue bleed on the fixture creature, attributed to the char ──
-      case "seed_dot": {
-        const nodeId = nodeIds[0];
-        const characterId = characterIds[0];
-        const creatureId = creatureIds[0];
-        if (!nodeId || !characterId || !creatureId) return json({ ok: false, reason: "fixtures missing" }, 400);
-        const now = Date.now();
-        const { data: effect, error } = await db.from("active_effects").insert({
-          node_id: nodeId, target_id: creatureId, source_id: characterId,
-          effect_type: "bleed", mechanic: "dot_debuff", stacks: 1,
-          damage_per_tick: 12, magnitude: 12, tick_rate_ms: 2000,
-          next_tick_at: now - 4000,
-          expires_at: now + 60_000,
-          started_at: now - 10_000,
-          source_ability_key: "rend",
-          lifetime: "timed",
-          params_version: 1,
-          params: { damageType: "physical", maxStacks: 5 },
-        }).select("*").single();
-        if (error) return json({ ok: false, reason: `effect insert failed: ${error.message}` }, 500);
-        return json({ ok: true, effect });
-      }
-
-      // ── access: exact full-scope internal grant for this encounter only ────
+      // ── access: exact 30-minute live + internal grants for this scope only ─
       case "access": {
-        const expires = new Date(Math.min(deadline, Date.now() + 30 * 60 * 1000)).toISOString();
+        const expires = new Date(Math.min(deadline, Date.now() + RUN_MINUTES * 60 * 1000)).toISOString();
         const nodeId = nodeIds[0];
-        const encounterId = (reg.encounter ?? [])[0] ?? null;
         if (!nodeId) return json({ ok: false, reason: "no fixture node" }, 400);
         const { error: accessErr } = await db.from("combat_soak_access")
           .insert({ character_id: characterIds[0], node_id: nodeId, expires_at: expires, note: RUN_ID });
         if (accessErr) return json({ ok: false, reason: `soak access failed: ${accessErr.message}` }, 500);
         const { data: scope, error: scopeErr } = await db.from("combat_soak_scopes").insert({
-          node_id: nodeId, encounter_id: encounterId,
+          node_id: nodeId, encounter_id: null,
           character_ids: characterIds, creature_ids: creatureIds, expires_at: expires,
         }).select("id").single();
         if (scopeErr) return json({ ok: false, reason: `soak scope failed: ${scopeErr.message}` }, 500);
@@ -281,7 +272,7 @@ Deno.serve(async (req) => {
         return json({ ok: true, previous: prev?.state ?? null, state: now?.state ?? null });
       }
 
-      // ── scheduler control ─────────────────────────────────────────────────
+      // ── scheduler control (permanent infrastructure, armed for the run) ────
       case "scheduler": {
         const want = body?.arm === true;
         const { data, error } = await db.rpc(want ? "schedule_effects_catchup" : "unschedule_effects_catchup");
@@ -289,47 +280,91 @@ Deno.serve(async (req) => {
         return json({ ok: !error, error: error?.message ?? null, result: data, cron });
       }
 
-      // ── one manual dispatch, fully traced ─────────────────────────────────
-      case "dispatch_one": {
-        const encounterId = (reg.encounter ?? [])[0];
-        if (!encounterId) return json({ ok: false, reason: "no fixture encounter" }, 400);
-        const { data, error } = await db.rpc("effects_catchup_dispatch_one", { _encounter_id: encounterId });
-        return json({ ok: !error, error: error?.message ?? null, dispatch: data });
-      }
+      // ── authorization matrix for the internal combat-catchup endpoint ──────
+      // Reports HTTP status codes only. No credential, fingerprint or token
+      // value is included in the response.
+      case "auth_matrix": {
+        const target = `${url}/functions/v1/combat-catchup`;
+        const payload = JSON.stringify({
+          scope: "encounter",
+          encounter_id: "00000000-0000-4000-8000-000000000000",
+          node_id: "00000000-0000-4000-8000-000000000000",
+          dispatch_id: "00000000-0000-4000-8000-000000000000",
+        });
+        const probe = async (label: string, authHeader?: string) => {
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (authHeader) headers.Authorization = authHeader;
+          const res = await fetch(target, { method: "POST", headers, body: payload });
+          let kind: string | null = null;
+          try {
+            const j = await res.json();
+            kind = typeof j?.kind === "string" ? j.kind : null;
+          } catch { /* ignore */ }
+          return { label, status: res.status, kind };
+        };
 
-      case "reconcile": {
-        const { data, error } = await db.rpc("effects_catchup_reconcile", { _max: 20 });
-        return json({ ok: !error, error: error?.message ?? null, result: data });
-      }
+        // A real authenticated player token for the fixture user.
+        let playerToken: string | null = null;
+        const email = (reg.auth_user ?? []).length ? `${RUN_ID}@harness.invalid` : null;
+        const password = typeof body?.password === "string" ? body.password : null;
+        if (email && password) {
+          const anon = createClient(url, anonKey);
+          const { data: signIn } = await anon.auth.signInWithPassword({ email, password });
+          playerToken = signIn?.session?.access_token ?? null;
+        }
 
-      case "pass": {
-        const { data, error } = await db.rpc("effects_due_dispatch", { _max_scopes: 5 });
-        return json({ ok: !error, error: error?.message ?? null, result: data });
+        const results = [
+          await probe("internal_service_role", `Bearer ${srvKey}`),
+          await probe("anonymous_no_header"),
+          await probe("malformed_bearer", "Bearer not-a-token"),
+          await probe(
+            "wrong_but_valid_shape",
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+              + "eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjA4NjQxOTkyMX0."
+              + "ZmFrZXNpZ25hdHVyZS1ub3QtdmFsaWQtYXQtYWxsLTAwMDAwMDAwMDA",
+          ),
+          playerToken
+            ? await probe("authenticated_player", `Bearer ${playerToken}`)
+            : { label: "authenticated_player", status: null, kind: "player token unavailable" },
+        ];
+        return json({ ok: true, results });
       }
 
       // ── monitor: read-only observability, credentials never included ──────
       case "monitor": {
         const nodeId = nodeIds[0];
-        const [transport, credential, cron, encounters, effects, creatures, chars, log, batches, awards, loot] =
+        const encIds = (reg.encounter ?? []);
+        const { data: encRows } = await db.from("encounters").select("id").eq("node_id", nodeId);
+        const encounterIds = [...new Set([...encIds, ...(encRows ?? []).map((r: any) => r.id)])];
+        const idFilter = encounterIds.length ? encounterIds : ["00000000-0000-0000-0000-000000000000"];
+        const [transport, credential, cron, encounters, effects, creatures, chars, log, batches, awards, loot,
+          contributions, engagements, actions, deathLoot] =
           await Promise.all([
             db.rpc("effects_transport_snapshot", { _node_id: nodeId }),
             db.rpc("effects_catchup_credential_health"),
             db.rpc("harness_cron_snapshot"),
             db.from("encounters").select("*").eq("node_id", nodeId),
             db.from("active_effects").select("*").eq("node_id", nodeId),
-            db.from("creatures").select("id, name, hp, is_alive, spawn_seq, died_at, rewards_awarded_at").in("id", creatureIds),
+            db.from("creatures").select("id, name, hp, max_hp, is_alive, spawn_seq, died_at, rewards_awarded_at").in("id", creatureIds),
             db.from("characters").select("id, name, hp, xp, gold, level, current_node_id").in("id", characterIds),
-            db.from("effects_catchup_log").select("*").order("id", { ascending: false }).limit(40),
-            db.from("encounter_tick_batches").select("*").in("encounter_id", reg.encounter ?? ["00000000-0000-0000-0000-000000000000"]),
-            db.from("encounter_kill_awards").select("*").in("encounter_id", reg.encounter ?? ["00000000-0000-0000-0000-000000000000"]),
+            db.from("effects_catchup_log").select("*").order("id", { ascending: false }).limit(60),
+            db.from("encounter_tick_batches").select("*").in("encounter_id", idFilter),
+            db.from("encounter_kill_awards").select("*").in("encounter_id", idFilter),
             db.from("node_ground_loot").select("*").eq("node_id", nodeId),
+            db.from("encounter_contributions").select("*").in("encounter_id", idFilter),
+            db.from("encounter_engagements").select("*").in("encounter_id", idFilter),
+            db.from("combat_actions").select("*").eq("node_id", nodeId),
+            db.from("encounter_death_loot").select("*").in("encounter_id", idFilter),
           ]);
+        const { data: dispatch } = await db.from("effects_catchup_dispatch").select("*").in("encounter_id", idFilter);
         return json({
           ok: true,
           transport: transport.data, credential: credential.data, cron: cron.data,
           encounters: encounters.data, effects: effects.data, creatures: creatures.data,
           characters: chars.data, log: log.data,
-          batches: (batches.data ?? []).length, awards: awards.data, ground_loot: loot.data,
+          batches: batches.data, awards: awards.data, ground_loot: loot.data,
+          contributions: contributions.data, engagements: engagements.data,
+          actions: actions.data, death_loot: deathLoot.data, dispatch,
         });
       }
 
