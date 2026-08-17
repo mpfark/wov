@@ -1,16 +1,25 @@
 /**
- * useCreatures — node creature state with hybrid client-assist / server-authoritative model.
+ * useCreatures — single node-tagged roster owner.
  *
- * State priority (highest wins):
- *   1. Server-authoritative — combat-catchup result + postgres_changes UPDATE/DELETE
- *   2. Broadcast hints      — softDeadIds (kill hints), broadcastOverrides (HP).
- *                              Expire in seconds; never grant rewards or persist.
- *   3. prefetchCache        — last-known snapshot, ≤ PREFETCH_TTL old. Painted on
- *                              entry only, then immediately overwritten by phase-2 reconcile.
+ * AUTHORITY MODEL
+ *   The actionable roster comes from exactly one source: the read-only RPC
+ *   `public.node_creature_roster(character_id)`, which resolves the node
+ *   SERVER-SIDE from the owned character's `current_node_id`. Nothing else can
+ *   mark a roster authoritative, and Attack is only enabled for an
+ *   authoritative roster belonging to the currently displayed node.
+ *
+ *   - Authoritative RPC establishes the roster and its generation.
+ *   - Realtime events update that roster afterwards (spawn_seq guarded).
+ *   - The safety refetch replaces it only for the same node + request id.
+ *   - Prefetch / plain table reads seed presentation only: `authoritative`
+ *     stays false, so they can never enable combat.
+ *
+ *   `combat-catchup` is an internal service-role endpoint. The client never
+ *   calls it. Offscreen effects-only progression is internal authority and
+ *   currently has no deployed internal caller (tracked separately).
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { NodeChannelHandle } from '@/features/world';
 import type { GameNode } from '@/features/world';
 
@@ -32,20 +41,42 @@ export interface Creature {
   died_at: string | null;
   loot_table_id: string | null;
   drop_chance: number;
+  spawn_seq?: number | null;
 }
 
-// Module-level prefetch cache: nodeId → creatures[]
+export type RosterStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'empty'
+  | 'unauthorized'
+  | 'error';
+
+export interface RosterState {
+  nodeId: string | null;
+  requestId: number;
+  status: RosterStatus;
+  creatures: Creature[];
+  /** True only after a successful RPC response for exactly this nodeId. */
+  authoritative: boolean;
+  /** Advisory only — never suppresses living creatures. */
+  realmAwake: boolean;
+  respawnPending: number;
+  error: string | null;
+}
+
+// ── Prefetch cache (presentation only, never authoritative) ──────
 const prefetchCache = new Map<string, { data: Creature[]; ts: number }>();
-const PREFETCH_TTL = 15_000; // 15s — short enough to avoid stale paints, long enough to beat RTT
-const PREHEAT_REFRESH_MS = 5_000; // skip preheat if cache is fresher than this
+const PREFETCH_TTL = 15_000;
+const PREHEAT_REFRESH_MS = 5_000;
 
 const isFresh = (entry: { ts: number } | undefined) =>
   !!entry && Date.now() - entry.ts < PREFETCH_TTL;
 
 /**
- * Preheat the prefetch cache for a node we're about to enter.
- * Cheap direct DB read, runs in the background. No-op if cache is already fresh.
- * Safe to call from movement handlers — never throws.
+ * Preheat the presentation cache for a node we're about to enter.
+ * Never authoritative — purely a paint-sooner hint. Safe to call from
+ * movement handlers; never throws.
  */
 export function preheatNode(nodeId: string | null | undefined): void {
   if (!nodeId) return;
@@ -62,236 +93,272 @@ export function preheatNode(nodeId: string | null | undefined): void {
     });
 }
 
-// ── Client-side reconciliation throttle (10s per node) ────────────
-const lastReconcileMap = new Map<string, number>();
-const RECONCILE_THROTTLE_MS = 10_000;
+// ── Authoritative roster fetch ───────────────────────────────────
 
-/**
- * Trigger server-side effect reconciliation for a specific node.
- * Sends only { node_id } — the server recalculates everything from stored effect data.
- * Client-side throttle: max once per 10s per node (bypassed for force=true or partial retries).
- */
-export interface ReconcileResult {
+export interface RosterResponse {
+  node_id: string;
+  realm_awake: boolean;
+  respawn_pending: number;
   creatures: Creature[];
-  kill_rewards?: Array<{
-    creature_name: string;
-    creature_level: number;
-    creature_rarity: string;
-    xp_each: number;
-    gold_each: number;
-    salvage_each: number;
-    bhp_each: number;
-    split_count: number;
-    primary_level: number;
-  }>;
 }
 
-export async function reconcileNode(
-  nodeId: string,
-  opts: { characterId: string; force?: boolean; _retryCount?: number; reason?: string }
-): Promise<ReconcileResult> {
-  const { characterId, force = false, _retryCount = 0, reason } = opts;
+export type RosterOutcome =
+  | { kind: 'ok'; data: RosterResponse }
+  | { kind: 'unauthorized'; reason: string }
+  | { kind: 'error'; reason: string };
 
-  // The server derives the sweep scope from the owning character, so a sweep
-  // without a character identity is not a request we can make at all.
-  if (!characterId) return { creatures: [] };
-
-  // Client-side throttle (skip for force calls like node-entry, or partial retries)
-  if (!force && _retryCount === 0) {
-    const last = lastReconcileMap.get(nodeId);
-    if (last && Date.now() - last < RECONCILE_THROTTLE_MS) {
-      console.log(`[reconcileNode] throttled for ${nodeId}`);
-      return { creatures: [] };
-    }
+/** Classify a postgres error message into a roster outcome. */
+function classifyRosterError(message: string): RosterOutcome {
+  const m = message.toLowerCase();
+  if (m.includes('not_owned') || m.includes('unauthorized') || m.includes('permission denied')) {
+    return { kind: 'unauthorized', reason: message };
   }
+  return { kind: 'error', reason: message };
+}
 
-  lastReconcileMap.set(nodeId, Date.now());
-
-  const { data, error } = await invokeWithRetry<any>('combat-catchup', {
-    body: { node_id: nodeId, character_id: characterId, force, ...(reason ? { reason } : {}) },
+/**
+ * Read the authoritative roster for the character's CURRENT node.
+ * No node argument exists by design: an arbitrary node id can never become
+ * the actionable roster.
+ */
+export async function fetchNodeRoster(characterId: string): Promise<RosterOutcome> {
+  if (!characterId) return { kind: 'error', reason: 'missing character' };
+  const { data, error } = await supabase.rpc('node_creature_roster', {
+    _character_id: characterId,
   });
-
-  if (error) {
-    console.error('[reconcileNode] error:', error);
-    return { creatures: [] };
+  if (error) return classifyRosterError(error.message ?? 'roster read failed');
+  const payload = data as unknown as RosterResponse | null;
+  if (!payload || typeof payload.node_id !== 'string') {
+    return { kind: 'error', reason: 'malformed roster response' };
   }
-
-  // Handle partial resolution: retry until complete (max 3 retries)
-  if (data?.partial && _retryCount < 3) {
-    console.warn(`[reconcileNode] partial resolution for ${nodeId}, retrying (${_retryCount + 1}/3)`);
-    return reconcileNode(nodeId, { characterId, force: true, _retryCount: _retryCount + 1 });
-  }
-
-  if (data?.partial) {
-    console.error(`[reconcileNode] partial resolution not resolved after 3 retries for ${nodeId}`);
-  }
-
   return {
-    creatures: (data?.creatures as Creature[]) ?? [],
-    kill_rewards: data?.kill_rewards,
+    kind: 'ok',
+    data: {
+      node_id: payload.node_id,
+      realm_awake: !!payload.realm_awake,
+      respawn_pending: Number(payload.respawn_pending ?? 0),
+      creatures: (payload.creatures ?? []).filter(c => c.is_alive),
+    },
   };
+}
+
+// ── Reducer: the single roster owner ─────────────────────────────
+
+type RosterAction =
+  /** Node changed (or first mount): hard reset, tagged with the new node. */
+  | { type: 'begin'; nodeId: string | null; requestId: number }
+  /** Non-authoritative paint from cache / plain read. Must match active node. */
+  | { type: 'seed'; nodeId: string; requestId: number; creatures: Creature[] }
+  | { type: 'resolved'; nodeId: string; requestId: number; data: RosterResponse }
+  | { type: 'failed'; nodeId: string; requestId: number; status: 'error' | 'unauthorized'; reason: string }
+  | { type: 'realtimeUpsert'; nodeId: string; creature: Creature }
+  | { type: 'realtimeRemove'; id: string };
+
+const initialRoster: RosterState = {
+  nodeId: null,
+  requestId: 0,
+  status: 'idle',
+  creatures: [],
+  authoritative: false,
+  realmAwake: true,
+  respawnPending: 0,
+  error: null,
+};
+
+/** A response is only allowed to mutate state when node AND request match. */
+const matches = (s: RosterState, nodeId: string, requestId: number) =>
+  s.nodeId === nodeId && s.requestId === requestId;
+
+function rosterReducer(state: RosterState, action: RosterAction): RosterState {
+  switch (action.type) {
+    case 'begin':
+      return {
+        ...initialRoster,
+        nodeId: action.nodeId,
+        requestId: action.requestId,
+        status: action.nodeId ? 'loading' : 'idle',
+      };
+
+    case 'seed': {
+      if (!matches(state, action.nodeId, action.requestId)) return state;
+      // Never downgrade an authoritative roster with cached data.
+      if (state.authoritative) return state;
+      if (state.creatures.length > 0) return state;
+      return { ...state, creatures: action.creatures };
+    }
+
+    case 'resolved': {
+      if (!matches(state, action.nodeId, action.requestId)) return state;
+      const creatures = action.data.creatures;
+      return {
+        ...state,
+        // realm_awake=false / respawn_pending>0 are advisory: living creatures
+        // stay visible and actionable.
+        status: creatures.length > 0 ? 'ready' : 'empty',
+        creatures,
+        authoritative: true,
+        realmAwake: action.data.realm_awake,
+        respawnPending: action.data.respawn_pending,
+        error: null,
+      };
+    }
+
+    case 'failed': {
+      if (!matches(state, action.nodeId, action.requestId)) return state;
+      if (state.authoritative) {
+        // Same-node refresh failure: keep the valid roster, surface the error.
+        return { ...state, error: action.reason };
+      }
+      // Never actionable, never the previous node's creatures.
+      return {
+        ...state,
+        status: action.status,
+        creatures: [],
+        authoritative: false,
+        error: action.reason,
+      };
+    }
+
+    case 'realtimeUpsert': {
+      const c = action.creature;
+      if (state.nodeId !== action.nodeId) return state;
+      // Realtime may only refine an authoritative roster; it can never
+      // manufacture one for a node we have not authoritatively loaded.
+      if (!state.authoritative) return state;
+      const existing = state.creatures.find(x => x.id === c.id);
+      // spawn_seq guard: a stale generation may never overwrite a newer one.
+      if (existing && (existing.spawn_seq ?? 0) > (c.spawn_seq ?? 0)) return state;
+      if (!c.is_alive) {
+        if (!existing) return state;
+        const creatures = state.creatures.filter(x => x.id !== c.id);
+        return { ...state, creatures, status: creatures.length > 0 ? 'ready' : 'empty' };
+      }
+      if (c.node_id !== state.nodeId) {
+        if (!existing) return state;
+        const creatures = state.creatures.filter(x => x.id !== c.id);
+        return { ...state, creatures, status: creatures.length > 0 ? 'ready' : 'empty' };
+      }
+      const creatures = existing
+        ? state.creatures.map(x => (x.id === c.id ? { ...x, ...c } : x))
+        : [...state.creatures, c];
+      return { ...state, creatures, status: 'ready' };
+    }
+
+    case 'realtimeRemove': {
+      if (!state.creatures.some(c => c.id === action.id)) return state;
+      const creatures = state.creatures.filter(c => c.id !== action.id);
+      return { ...state, creatures, status: state.authoritative && creatures.length === 0 ? 'empty' : state.status };
+    }
+
+    default:
+      return state;
+  }
 }
 
 export function useCreatures(
   nodeId: string | null,
   handle?: NodeChannelHandle,
   currentNode?: GameNode | null,
-  onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void,
   softDeadIds?: Set<string>,
   characterId?: string | null,
 ) {
-  const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [creaturesLoading, setCreaturesLoading] = useState(false);
+  const [roster, dispatch] = useReducer(rosterReducer, initialRoster);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
 
-  // Reconcile lock: after authoritative fetch, suppress re-adding creatures not in the set
-  const reconcileLockRef = useRef<Set<string> | null>(null);
-  const reconcileLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Locally hidden ids (confirmed kills) — presentation only, never state.
+  const [locallyRemoved, setLocallyRemoved] = useState<Set<string>>(new Set());
 
-  // Cancellation token: bumped on every node change so stale async responses
-  // from a previous node don't overwrite the current node's state.
-  const fetchTokenRef = useRef(0);
-  // Mirror of current nodeId for callbacks that fire after async work
-  const currentNodeIdRef = useRef<string | null>(nodeId);
-  useEffect(() => { currentNodeIdRef.current = nodeId; }, [nodeId]);
+  const requestIdRef = useRef(0);
+  const rosterRef = useRef(roster);
+  useEffect(() => { rosterRef.current = roster; }, [roster]);
+  const nodeIdRef = useRef<string | null>(nodeId);
+  useEffect(() => { nodeIdRef.current = nodeId; }, [nodeId]);
 
-  const fetchCreatures = useCallback(async (skipCatchup = false) => {
-    if (!nodeId) { setCreatures([]); setCreaturesLoading(false); return; }
-
-    // Capture this fetch's token; if nodeId changes mid-flight, bail out.
-    const myToken = ++fetchTokenRef.current;
-    const myNodeId = nodeId;
-    const isStale = () => fetchTokenRef.current !== myToken || currentNodeIdRef.current !== myNodeId;
-
-    setCreaturesLoading(true);
-
-    // Set prefetched count hint for skeleton rows
-    const cached = prefetchCache.get(nodeId);
-    if (isFresh(cached)) {
-      setPrefetchedCreatureCount(cached!.data.length);
+  /**
+   * Authoritative load for the current node.
+   * `newGeneration` starts a fresh generation (node change / resubscribe);
+   * otherwise the current generation is refreshed in place.
+   */
+  const loadRoster = useCallback(async (newGeneration: boolean) => {
+    const myNodeId = nodeIdRef.current;
+    if (!myNodeId) {
+      dispatch({ type: 'begin', nodeId: null, requestId: ++requestIdRef.current });
+      return;
     }
 
-    if (!skipCatchup) {
-      // ── Phase 1: Optimistic display ────────────────────────────
-      // Show something within ~100ms instead of waiting for the full reconcile.
-      // Prefer the prefetch cache; otherwise fire a fast direct DB read.
+    let requestId = rosterRef.current.requestId;
+    if (newGeneration || rosterRef.current.nodeId !== myNodeId) {
+      requestId = ++requestIdRef.current;
+      dispatch({ type: 'begin', nodeId: myNodeId, requestId });
+
+      // Non-authoritative paint from the presentation cache, tagged to this node.
+      const cached = prefetchCache.get(myNodeId);
       if (isFresh(cached)) {
-        if (!isStale()) setCreatures(cached!.data);
+        setPrefetchedCreatureCount(cached!.data.length);
+        dispatch({ type: 'seed', nodeId: myNodeId, requestId, creatures: cached!.data });
       } else {
-        // Fast direct read (no await blocking phase 2 — they race; phase 2 wins)
         supabase
           .from('creatures')
           .select('*')
           .eq('node_id', myNodeId)
           .eq('is_alive', true)
           .then(({ data }) => {
-            if (isStale() || !data) return;
-            // Only paint if reconcile hasn't already filled in.
-            setCreatures(prev => (prev.length === 0 ? (data as Creature[]) : prev));
+            if (!data) return;
+            dispatch({ type: 'seed', nodeId: myNodeId, requestId, creatures: data as Creature[] });
           });
       }
+    }
 
-      // ── Phase 2: Authoritative reconcile ───────────────────────
-      const t0 = performance.now();
-      const result = await reconcileNode(myNodeId, { characterId: characterId ?? '', force: true });
-      if (isStale()) {
-        // Node changed while we waited — discard.
-        return;
-      }
-      const elapsed = performance.now() - t0;
-      console.log(`[creatures] catchup for ${myNodeId}: ${elapsed.toFixed(0)}ms, ${result.creatures.length} creatures`);
-
-      // Set reconcile lock: only these creature IDs are valid for 150ms.
-      // Short window — just enough to swallow stale realtime echoes from before
-      // the catchup landed. Respawns are still allowed via the node_id check
-      // in onCreatureUpdate (see below).
-      const validIds = new Set(result.creatures.map(c => c.id));
-      reconcileLockRef.current = validIds;
-      if (reconcileLockTimerRef.current) clearTimeout(reconcileLockTimerRef.current);
-      reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 150);
-
-      setCreatures(result.creatures);
-
-      // Notify caller about any kill rewards from catchup
-      if (result.kill_rewards && result.kill_rewards.length > 0 && onCatchupRewards) {
-        onCatchupRewards(result.kill_rewards);
-      }
-      prefetchCache.delete(myNodeId);
-      setCreaturesLoading(false);
+    if (!characterId) {
+      dispatch({ type: 'failed', nodeId: myNodeId, requestId, status: 'unauthorized', reason: 'no character identity' });
       return;
     }
 
-    // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
-    if (isFresh(cached)) {
-      if (!isStale()) setCreatures(cached!.data);
-      prefetchCache.delete(myNodeId);
-      setCreaturesLoading(false);
+    const outcome = await fetchNodeRoster(characterId);
+    if (outcome.kind === 'ok') {
+      // The server resolved the node itself; if it disagrees with the node we
+      // are displaying the response belongs to a different (stale) position.
+      if (outcome.data.node_id !== myNodeId) return;
+      prefetchCache.set(myNodeId, { data: outcome.data.creatures, ts: Date.now() });
+      dispatch({ type: 'resolved', nodeId: myNodeId, requestId, data: outcome.data });
       return;
     }
+    dispatch({
+      type: 'failed',
+      nodeId: myNodeId,
+      requestId,
+      status: outcome.kind === 'unauthorized' ? 'unauthorized' : 'error',
+      reason: outcome.reason,
+    });
+  }, [characterId]);
 
-    // Fallback: direct DB query (used by 30s respawn interval)
-    const { data } = await supabase
-      .from('creatures')
-      .select('*')
-      .eq('node_id', myNodeId)
-      .eq('is_alive', true);
-    if (isStale()) return;
-    if (data) setCreatures(data as Creature[]);
-    setCreaturesLoading(false);
-  }, [nodeId, onCatchupRewards]);
-
-  // Debounced fetch — prevents rapid-fire DB queries during combat
+  // Debounced same-generation refresh (realtime INSERT bursts).
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedFetch = useCallback(() => {
+  const debouncedRefresh = useCallback(() => {
     if (debounceTimer.current) return;
     debounceTimer.current = setTimeout(() => {
       debounceTimer.current = null;
-      fetchCreatures();
+      loadRoster(false);
     }, 500);
-  }, [fetchCreatures]);
+  }, [loadRoster]);
 
-  // Wire up callback refs from the unified node channel
+  // ── Realtime wiring ───────────────────────────────────────────
   useEffect(() => {
     if (!handle) return;
 
     handle.onCreatureUpdate.current = (payload) => {
       const updated = payload.new as Creature;
-      if (!updated) return;
-      // Drop updates for creatures not at the current node (defense against
-      // late events after a node change).
-      if (updated.node_id && currentNodeIdRef.current && updated.node_id !== currentNodeIdRef.current) {
-        return;
-      }
-      setCreatures(prev => {
-        if (!updated.is_alive) {
-          return prev.filter(c => c.id !== updated.id);
-        }
-        const exists = prev.some(c => c.id === updated.id);
-        if (exists) {
-          return prev.map(c => c.id === updated.id ? updated : c);
-        }
-        // During reconcile lock, suppress unknown IDs UNLESS the update
-        // describes a freshly-respawned creature at the current node — those
-        // should always be shown so respawns aren't swallowed.
-        if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
-          if (updated.is_alive && updated.node_id === currentNodeIdRef.current) {
-            return [...prev, updated];
-          }
-          return prev;
-        }
-        return [...prev, updated];
-      });
+      const active = nodeIdRef.current;
+      if (!updated || !active) return;
+      dispatch({ type: 'realtimeUpsert', nodeId: active, creature: updated });
     };
 
-    handle.onCreatureInsert.current = () => { debouncedFetch(); };
+    handle.onCreatureInsert.current = () => { debouncedRefresh(); };
 
     handle.onCreatureDelete.current = (payload) => {
       const deletedId = (payload.old as any)?.id;
-      if (deletedId) {
-        setCreatures(prev => prev.filter(c => c.id !== deletedId));
-      } else {
-        debouncedFetch();
-      }
+      if (deletedId) dispatch({ type: 'realtimeRemove', id: deletedId });
+      else debouncedRefresh();
     };
 
     return () => {
@@ -299,106 +366,105 @@ export function useCreatures(
       handle.onCreatureInsert.current = null;
       handle.onCreatureDelete.current = null;
     };
-  }, [handle, debouncedFetch]);
+  }, [handle, debouncedRefresh]);
 
+  // ── Node change: new generation ───────────────────────────────
   useEffect(() => {
-    // Clear stale creatures immediately so downstream effects don't act on old-node data
-    setCreatures([]);
-    setCreaturesLoading(true);
     setPrefetchedCreatureCount(0);
-
-    // Set prefetch count hint before async fetch
-    if (nodeId) {
-      const cached = prefetchCache.get(nodeId);
-      if (isFresh(cached)) {
-        setPrefetchedCreatureCount(cached!.data.length);
-      }
-    }
-
-    fetchCreatures();
+    setLocallyRemoved(new Set());
+    loadRoster(true);
 
     if (!nodeId) return;
-
-    // Periodic respawn check every 30s (safety net) — only if no channel handle (fallback)
-    const interval = setInterval(() => fetchCreatures(true), 30000);
-
+    // Safety refresh — same node, same generation.
+    const interval = setInterval(() => loadRoster(false), 30000);
     return () => {
       clearInterval(interval);
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [nodeId, fetchCreatures]);
+  }, [nodeId, loadRoster]);
 
-  // ── Selective adjacent-node wake-up ─────────────────────────────
-  // Only reconcile adjacent nodes that have active effects.
-  // Nodes without effects get a cheap direct creature prefetch.
+  // ── Realtime resubscribe / reconnect ⇒ fresh authoritative fetch ──
+  useEffect(() => {
+    if (!handle || !nodeId) return;
+    let known = handle.channelRef.current;
+    const poll = setInterval(() => {
+      const current = handle.channelRef.current;
+      if (current && current !== known) {
+        known = current;
+        loadRoster(true);
+      }
+    }, 2000);
+    const onOnline = () => loadRoster(true);
+    window.addEventListener('online', onOnline);
+    return () => {
+      clearInterval(poll);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [handle, nodeId, loadRoster]);
+
+  // ── Adjacent-node prefetch — explicitly non-interactive ───────
+  // Fills the presentation cache only. It never marks a roster authoritative
+  // for the displayed node and never enables Attack; after movement the
+  // current-node RPC revalidates before anything becomes actionable.
   useEffect(() => {
     if (!currentNode || !currentNode.connections || currentNode.connections.length === 0) return;
+    const adjacentNodeIds = currentNode.connections.filter(c => !c.hidden).map(c => c.node_id);
+    const staleIds = adjacentNodeIds.filter(id => !isFresh(prefetchCache.get(id)));
+    if (staleIds.length === 0) return;
 
-    const adjacentNodeIds = currentNode.connections
-      .filter(c => !c.hidden)
-      .map(c => c.node_id);
-
-    if (adjacentNodeIds.length === 0) return;
-
-    // First: check which adjacent nodes have active effects (lightweight query)
     supabase
-      .from('active_effects')
-      .select('node_id')
-      .in('node_id', adjacentNodeIds)
-      .then(({ data: effectNodes }) => {
-        const nodesWithEffects = new Set((effectNodes || []).map(e => e.node_id));
-        const nodesWithoutEffects = adjacentNodeIds.filter(id => !nodesWithEffects.has(id));
-
-        // Reconcile nodes with active effects (selective wake-up)
-        for (const nid of nodesWithEffects) {
-          // Use the client throttle — won't spam
-          reconcileNode(nid, { characterId: characterId ?? '' }).then(result => {
-            if (result.creatures.length > 0) {
-              prefetchCache.set(nid, { data: result.creatures, ts: Date.now() });
-            }
-          });
+      .from('creatures')
+      .select('*')
+      .in('node_id', staleIds)
+      .eq('is_alive', true)
+      .then(({ data }) => {
+        if (!data) return;
+        const byNode = new Map<string, Creature[]>();
+        for (const id of staleIds) byNode.set(id, []);
+        for (const c of data as Creature[]) {
+          const arr = byNode.get(c.node_id!);
+          if (arr) arr.push(c);
         }
-
-        // Cheap prefetch for nodes without effects (no reconciliation needed)
-        const staleIds = nodesWithoutEffects.filter(id => !isFresh(prefetchCache.get(id)));
-
-        if (staleIds.length === 0) return;
-
-        supabase
-          .from('creatures')
-          .select('*')
-          .in('node_id', staleIds)
-          .eq('is_alive', true)
-          .then(({ data }) => {
-            if (!data) return;
-            const byNode = new Map<string, Creature[]>();
-            for (const id of staleIds) byNode.set(id, []);
-            for (const c of data as Creature[]) {
-              const arr = byNode.get(c.node_id!);
-              if (arr) arr.push(c);
-            }
-            const now = Date.now();
-            for (const [nid, creatures] of byNode) {
-              prefetchCache.set(nid, { data: creatures, ts: now });
-            }
-          });
+        const now = Date.now();
+        for (const [nid, list] of byNode) prefetchCache.set(nid, { data: list, ts: now });
       });
-  }, [currentNode?.id]); // re-run when node changes
+  }, [currentNode?.id]);
 
-  // Imperative hard-remove. Used when combat-tick confirms a kill so the
-  // creature disappears immediately even if the realtime UPDATE for
-  // is_alive=false never lands within the soft-dead TTL. Respawns reappear
-  // via INSERT/UPDATE realtime as normal.
+  /**
+   * Presentational hard-hide used when combat-tick confirms a kill, so the
+   * corpse disappears even if the realtime UPDATE is delayed. Does not touch
+   * roster authority; respawns reappear via realtime / the next fetch.
+   */
   const removeCreatureLocal = useCallback((id: string) => {
-    setCreatures(prev => prev.some(c => c.id === id) ? prev.filter(c => c.id !== id) : prev);
+    setLocallyRemoved(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
   }, []);
 
-  // Apply soft-dead broadcast hints: hide creatures other players reported as killed,
-  // until either the server confirms or the hint expires (~8s).
   const visibleCreatures = useMemo(() => {
-    if (!softDeadIds || softDeadIds.size === 0) return creatures;
-    return creatures.filter(c => !softDeadIds.has(c.id));
-  }, [creatures, softDeadIds]);
+    let list = roster.creatures;
+    if (locallyRemoved.size > 0) list = list.filter(c => !locallyRemoved.has(c.id));
+    if (softDeadIds && softDeadIds.size > 0) list = list.filter(c => !softDeadIds.has(c.id));
+    return list;
+  }, [roster.creatures, locallyRemoved, softDeadIds]);
 
-  return { creatures: visibleCreatures, creaturesLoading, prefetchedCreatureCount, removeCreatureLocal };
+  /** Attack may only be offered for an authoritative roster of this node. */
+  const rosterActionable = roster.authoritative
+    && roster.nodeId === nodeId
+    && (roster.status === 'ready' || roster.status === 'empty');
+
+  return {
+    creatures: visibleCreatures,
+    creaturesLoading: roster.status === 'loading',
+    prefetchedCreatureCount,
+    removeCreatureLocal,
+    rosterStatus: roster.status,
+    rosterActionable,
+    rosterAuthoritative: roster.authoritative,
+    rosterError: roster.error,
+    realmAwake: roster.realmAwake,
+    respawnPending: roster.respawnPending,
+    refreshRoster: () => loadRoster(true),
+  };
 }
+
+export { rosterReducer, initialRoster };
+export type { RosterAction };
