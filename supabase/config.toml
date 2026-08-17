@@ -23,5 +23,3 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
-  [functions.c5-stale-generation-probe]
-    verify_jwt = true
