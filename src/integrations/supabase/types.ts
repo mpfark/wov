@@ -1584,46 +1584,68 @@ export type Database = {
         Row: {
           attempt: number
           backoff_until: number
+          completed_at: string | null
           dispatch_id: string
           due_at_ms: number
           encounter_id: string
           failures: number
+          last_class: string | null
           last_error: string | null
           last_outcome: string | null
+          last_status: number | null
+          last_transport_error: string | null
           lease_until: number
           node_id: string
+          request_generation: number | null
+          request_id: number | null
+          requested_at: string | null
           updated_at: string
         }
         Insert: {
           attempt?: number
           backoff_until?: number
+          completed_at?: string | null
           dispatch_id: string
           due_at_ms: number
           encounter_id: string
           failures?: number
+          last_class?: string | null
           last_error?: string | null
           last_outcome?: string | null
+          last_status?: number | null
+          last_transport_error?: string | null
           lease_until?: number
           node_id: string
+          request_generation?: number | null
+          request_id?: number | null
+          requested_at?: string | null
           updated_at?: string
         }
         Update: {
           attempt?: number
           backoff_until?: number
+          completed_at?: string | null
           dispatch_id?: string
           due_at_ms?: number
           encounter_id?: string
           failures?: number
+          last_class?: string | null
           last_error?: string | null
           last_outcome?: string | null
+          last_status?: number | null
+          last_transport_error?: string | null
           lease_until?: number
           node_id?: string
+          request_generation?: number | null
+          request_id?: number | null
+          requested_at?: string | null
           updated_at?: string
         }
         Relationships: []
       }
       effects_catchup_log: {
         Row: {
+          class: string | null
           created_at: string
           deaths: number | null
           dispatch_id: string | null
@@ -1636,11 +1658,14 @@ export type Database = {
           outcome: string | null
           phase: string
           reason: string | null
+          request_id: number | null
           scopes_claimed: number | null
           scopes_discovered: number | null
+          status: number | null
           ticks: number | null
         }
         Insert: {
+          class?: string | null
           created_at?: string
           deaths?: number | null
           dispatch_id?: string | null
@@ -1653,11 +1678,14 @@ export type Database = {
           outcome?: string | null
           phase: string
           reason?: string | null
+          request_id?: number | null
           scopes_claimed?: number | null
           scopes_discovered?: number | null
+          status?: number | null
           ticks?: number | null
         }
         Update: {
+          class?: string | null
           created_at?: string
           deaths?: number | null
           dispatch_id?: string | null
@@ -1670,8 +1698,10 @@ export type Database = {
           outcome?: string | null
           phase?: string
           reason?: string | null
+          request_id?: number | null
           scopes_claimed?: number | null
           scopes_discovered?: number | null
+          status?: number | null
           ticks?: number | null
         }
         Relationships: []
@@ -3683,6 +3713,26 @@ export type Database = {
         Args: { p_character_id: string; p_stance_key: string }
         Returns: Json
       }
+      effects_catchup_credential_health: { Args: never; Returns: Json }
+      effects_catchup_dispatch_one: {
+        Args: { _encounter_id: string }
+        Returns: Json
+      }
+      effects_catchup_reconcile: { Args: { _max?: number }; Returns: Json }
+      effects_catchup_send: {
+        Args: {
+          _dispatch_id: string
+          _due_at_ms: number
+          _encounter_id: string
+          _generation: number
+          _node_id: string
+        }
+        Returns: number
+      }
+      effects_dispatch_token_check: {
+        Args: { _token_sha256: string }
+        Returns: boolean
+      }
       effects_due_dispatch: { Args: { _max_scopes?: number }; Returns: Json }
       effects_due_scopes: {
         Args: { _limit?: number; _now_ms?: number }
@@ -3704,6 +3754,7 @@ export type Database = {
         Args: { _due_at_ms?: number; _encounter_id: string; _node_id: string }
         Returns: string
       }
+      effects_transport_snapshot: { Args: { _node_id?: string }; Returns: Json }
       email_queue_dispatch: { Args: never; Returns: undefined }
       encounter_apply_character_damage: {
         Args: {
@@ -4067,6 +4118,7 @@ export type Database = {
         Returns: string
       }
       record_world_state: { Args: never; Returns: undefined }
+      redact_transport_text: { Args: { _text: string }; Returns: string }
       regen_creature_hp: { Args: never; Returns: undefined }
       release_encounter_tick: {
         Args: {
