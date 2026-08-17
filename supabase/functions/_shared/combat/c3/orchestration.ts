@@ -370,7 +370,18 @@ export async function orchestrateCombatResolution(
     // 6. Pure simulation. No IO, no clock, no Math.random.
     let proposed: ProposedTick;
     try {
-      proposed = resolveTickPure(decoded.snapshot);
+      // Policy C boundary is authoritative server state, not snapshot payload:
+      // read it here and hand it to the pure resolver, which proposes expiry.
+      let pauseBoundary: { suspendedAtMs: number; resumedAtMs: number } | null = null;
+      try {
+        const { data: pb } = await db.rpc('simulation_pause_boundary', {});
+        if (pb && typeof pb.suspendedAtMs === 'number' && typeof pb.resumedAtMs === 'number') {
+          pauseBoundary = { suspendedAtMs: pb.suspendedAtMs, resumedAtMs: pb.resumedAtMs };
+        }
+      } catch {
+        pauseBoundary = null;
+      }
+      proposed = resolveTickPure({ ...decoded.snapshot, pauseBoundary });
     } catch (e) {
       throw new C3Error('resolver_failed', e instanceof Error ? e.message : String(e), {
         retryable: false,
