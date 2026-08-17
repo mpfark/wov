@@ -190,8 +190,12 @@ async function resolveEncounter(
     return String(data.encounter_id);
   }
 
+  // Internal effects-only workers are encounter-scoped: they name the encounter
+  // the database handed them and never re-derive it from a character.
+  if (req.encounterId) return req.encounterId;
+
   const nodeId = req.nodeId ?? (await nodeOfCharacter(db, req.characterId ?? null));
-  if (!nodeId) throw new C3Error('no_encounter', 'catch-up requires a nodeId or characterId');
+  if (!nodeId) throw new C3Error('no_encounter', 'catch-up requires a nodeId, encounterId or characterId');
   const { data, error } = await db.rpc('encounter_for_node', { _node_id: nodeId });
   if (error) throw new C3Error('internal', `encounter_for_node failed: ${error.message}`);
   if (!data) throw new C3Error('no_encounter', 'no encounter at node');
@@ -302,7 +306,8 @@ export async function orchestrateCombatResolution(
 
   // 1. Maintenance gate — before any encounter work. The only exception is the
   // temporary C5 soak allowlist, decided by the database.
-  if ((await readCombatMode(db)) !== 'open' && !(await soakAccessAllowed(db, req))) {
+  if ((await readCombatMode(db)) !== 'open' && req.scopeGranted !== true
+      && !(await soakAccessAllowed(db, req))) {
     return {
       ok: false,
       kind: 'maintenance',
