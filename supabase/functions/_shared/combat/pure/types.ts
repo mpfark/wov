@@ -491,6 +491,13 @@ export interface EncounterSnapshot {
   readonly tickRateMs: number;
   /** Authoritative time. The simulation never calls Date.now(). */
   readonly nowMs: number;
+  /**
+   * Policy C. Present only when background simulation was genuinely suspended
+   * (world asleep / worker unscheduled) and later resumed. Periodic pulses whose
+   * due time falls inside the window are skipped without damage or healing;
+   * effects whose lifetime ended inside it still expire authoritatively.
+   */
+  readonly pauseBoundary?: { readonly suspendedAtMs: number; readonly resumedAtMs: number } | null;
   readonly participants: readonly ParticipantSnapshot[];
   readonly creatures: readonly CreatureSnapshot[];
   readonly effects: readonly EffectSnapshot[];
