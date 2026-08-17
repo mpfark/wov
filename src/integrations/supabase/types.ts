@@ -2381,6 +2381,33 @@ export type Database = {
           },
         ]
       }
+      harness_run_registry: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_text: string | null
+          id: number
+          kind: string
+          run_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_text?: string | null
+          id?: number
+          kind: string
+          run_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_text?: string | null
+          id?: number
+          kind?: string
+          run_id?: string
+        }
+        Relationships: []
+      }
       issue_reports: {
         Row: {
           character_id: string | null
@@ -3910,6 +3937,9 @@ export type Database = {
       guarded_expire_marketplace_listings: { Args: never; Returns: undefined }
       guarded_expire_timed_state: { Args: never; Returns: undefined }
       guarded_return_unique_items: { Args: never; Returns: undefined }
+      harness_cron_snapshot: { Args: never; Returns: Json }
+      harness_fail_closed: { Args: { _run_id: string }; Returns: Json }
+      harness_teardown: { Args: { _run_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
