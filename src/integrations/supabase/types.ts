@@ -3822,6 +3822,12 @@ export type Database = {
           old_hp: number
         }[]
       }
+      encounter_attribution_roster: {
+        Args: { _encounter_id: string }
+        Returns: {
+          character_id: string
+        }[]
+      }
       encounter_boss_fizzle_cast: {
         Args: { _cast_event_id: string }
         Returns: boolean
