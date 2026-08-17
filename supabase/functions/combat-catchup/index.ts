@@ -79,6 +79,93 @@ Deno.serve(async (req) => {
     const requestedNode = typeof body?.node_id === 'string' && UUID_RE.test(body.node_id)
       ? body.node_id
       : null;
+
+    // ── Internal effects-only scope (encounter_id + node_id, no character) ──
+    // The database dispatcher owns this path. It re-validates the scope at
+    // request time, so a stale or superseded dispatch resolves nothing, and it
+    // records the outcome so the lease is released the moment we finish.
+    if (body?.scope === 'encounter') {
+      const encounterId = typeof body?.encounter_id === 'string' && UUID_RE.test(body.encounter_id)
+        ? body.encounter_id
+        : null;
+      const dispatchId = typeof body?.dispatch_id === 'string' && UUID_RE.test(body.dispatch_id)
+        ? body.dispatch_id
+        : null;
+      if (!encounterId || !requestedNode || !dispatchId) {
+        return fail('invalid_request', 'encounter scope requires encounter_id, node_id and dispatch_id', 400);
+      }
+      const startedAt = Date.now();
+      const record = async (
+        outcome: string,
+        reason: string | null,
+        ticks = 0,
+        effects = 0,
+        deaths = 0,
+      ) => {
+        try {
+          await db.rpc('record_effects_catchup_result', {
+            _dispatch_id: dispatchId,
+            _encounter_id: encounterId,
+            _outcome: outcome,
+            _reason: reason,
+            _ticks: ticks,
+            _effects: effects,
+            _deaths: deaths,
+            _duration_ms: Date.now() - startedAt,
+          });
+        } catch (e) {
+          console.error('[combat-catchup] result recording failed', e);
+        }
+      };
+
+      const { data: scopeCheck, error: scopeCheckErr } = await db.rpc('effects_scope_revalidate', {
+        _encounter_id: encounterId,
+        _node_id: requestedNode,
+        _due_at_ms: typeof body?.due_at_ms === 'number' ? body.due_at_ms : null,
+      });
+      if (scopeCheckErr) {
+        await record('internal', 'revalidate failed');
+        return fail('internal', 'scope revalidation failed', 200);
+      }
+      const scopeVerdict = typeof scopeCheck === 'string' ? scopeCheck : 'out_of_scope';
+      if (!scopeVerdict.startsWith('ok')) {
+        await record('refused', scopeVerdict);
+        return json({ ok: false, kind: 'no_work', reason: scopeVerdict });
+      }
+
+      const internalResult = await orchestrateCombatResolution(
+        {
+          role: 'catchup',
+          nodeId: requestedNode,
+          encounterId,
+          scopeGranted: scopeVerdict === 'ok:granted',
+        },
+        {
+          db,
+          nowMs: Date.now(),
+          catalog: await buildAbilityCatalog(db),
+          refreshCatalog: () => buildAbilityCatalog(db, true),
+          newBatchId: () => crypto.randomUUID(),
+          caller: 'combat-catchup:effects',
+          log: (message, detail) => console.log(message, detail ?? ''),
+        },
+      );
+
+      if (internalResult.ok) {
+        const events = (internalResult as any).events ?? [];
+        await record(
+          'ok',
+          null,
+          1,
+          events.length,
+          events.filter((e: any) => e?.type === 'death' || e?.kind === 'death').length,
+        );
+      } else {
+        await record(internalResult.kind ?? 'internal', internalResult.reason ?? null);
+      }
+      return json(internalResult);
+    }
+
     const characterId = typeof body?.character_id === 'string' && UUID_RE.test(body.character_id)
       ? body.character_id
       : null;
