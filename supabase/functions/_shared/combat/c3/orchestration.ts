@@ -90,6 +90,13 @@ export interface OrchestrationSuccess {
   readonly rngDraws: number;
   readonly events: ProposedTick['events'];
   readonly configFailures: readonly string[];
+  /** Creatures whose death was committed in this tick (authoritative count). */
+  readonly creatureDeaths: number;
+  /** Characters whose death was committed in this tick. */
+  readonly characterDeaths: number;
+  /** Distinct characters that received kill rewards in this tick. */
+  readonly rewardedCharacterIds: readonly string[];
+
 }
 
 export type OrchestrationResult = OrchestrationSuccess | C3Failure;
@@ -418,7 +425,15 @@ export async function orchestrateCombatResolution(
       rngDraws: proposed.rngDraws,
       events: proposed.events,
       configFailures,
+      // Counts owned by the committed proposal, never re-derived from event
+      // text: a diagnostic that greps `events` for a `death` type reported
+      // `deaths = 0` for real offscreen kills (the resolver emits
+      // `creature_killed`).
+      creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
+      characterDeaths: proposed.characters.filter((c) => c.died).length,
+      rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
     };
+
   } catch (e) {
     const failure = toFailure(e);
     // The claim is released on every failure path, so a transient error never

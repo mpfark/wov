@@ -8,3 +8,4 @@
 - [Legacy Retirement](mem://game/class-abilities/legacy-retirement) — no per-class ability branches left; retired mechanic keys removed; authored hit_text/miss_text sentences for T0 attacks
 - [Presence vs Participation](mem://tech/combat-architecture/presence-vs-participation) - Encounter snapshots keep all participants for attribution/rewards; presentAtNode is the only target roster
 - [Stance Lifecycle](mem://game/stance-lifecycle) — Approved stance rules: drop on logout, end on death, reservation released once, stance effect separate from finite target stacks
+- [Fled Attribution](mem://tech/combat-architecture/fled-attribution) — encounter_attribution_roster keeps departed effect owners reward-eligible; deaths counted from committed proposal
