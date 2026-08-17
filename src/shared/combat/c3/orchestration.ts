@@ -90,6 +90,13 @@ export interface OrchestrationSuccess {
   readonly rngDraws: number;
   readonly events: ProposedTick['events'];
   readonly configFailures: readonly string[];
+  /** Creatures whose death was committed in this tick (authoritative count). */
+  readonly creatureDeaths: number;
+  /** Characters whose death was committed in this tick. */
+  readonly characterDeaths: number;
+  /** Distinct characters that received kill rewards in this tick. */
+  readonly rewardedCharacterIds: readonly string[];
+
 }
 
 export type OrchestrationResult = OrchestrationSuccess | C3Failure;
