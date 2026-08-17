@@ -1,0 +1,1 @@
+DELETE FROM auth.users WHERE email = 'c5t20260817c@harness.invalid';

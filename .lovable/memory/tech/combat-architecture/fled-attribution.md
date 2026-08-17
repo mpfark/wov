@@ -33,3 +33,12 @@ committed `ProposedTick`). Never grep `events` for a `death` type — the resolv
 emits `creature_killed`, which is why `combat-catchup` reported `deaths = 0`.
 
 Guard: `src/test/combat/pure/fled-attribution.test.ts`.
+
+Tightened contract (preflight before the deployed revalidation):
+`encounter_attribution_roster` admits participants, plus the character owner of an
+effect that is non-stance, unexpired, not consumed (`remaining` > 0 or NULL),
+bound to the encounter's node, and targeting a LIVING creature of this encounter
+whose current spawn generation postdates `creatures.died_at`, or a living
+participant. It is `service_role`-only (EXECUTE revoked from anon/authenticated)
+and raises 42501 for any JWT role other than `service_role`.
+Extra guard: `src/test/combat/pure/fled-attribution-multi.test.ts`.
