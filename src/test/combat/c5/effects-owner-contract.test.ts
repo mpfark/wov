@@ -294,7 +294,7 @@ describe('C3 maintenance gate for the internal effects-only owner', () => {
     expect(claim?.args._encounter_id).toBe(ENC);
     expect(claim?.args._supported_modes).toEqual(['effects_only']);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.kind).toBe('claim_refused');
+    expect((result as { kind?: string }).kind).toBe('claim_refused');
   });
 
   it('never lets a catch-up caller ask for live authority', async () => {
