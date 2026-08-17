@@ -1,168 +1,129 @@
-# Internal Effects-Only / Offscreen Catch-up Owner (revised)
+# Internal Effects-Only / Offscreen Catch-up Owner (final)
 
-Gate 3 accepted. Delayed-delivery / two-tab remains open C5 coverage. Combat stays in maintenance; nothing is implemented, no soak access is enabled, C5 is not restarted.
+Sleep policy **C — expire without damage across a genuine simulation pause** is approved and written in below. Combat stays in maintenance, C5 is not restarted, combat is not reopened. The seven final corrections are incorporated.
 
-The revision below resolves the seven blocking contract gaps. One item (sleep policy) needs an explicit decision from you before implementation.
+## 0. What is already true (verified in the deployed database)
 
-## 1. Departure lifecycle — traced, and it is broken today
+- `leave_encounter_engagements` deletes engagements and cancels that character's pending actions; it does not touch the encounter or effects.
+- `commit_encounter_tick_v2` ends the encounter purely on `v_alive_engaged = 0` → `encounter_end`, which knows nothing about effects or casts.
+- `encounter_for_node` reuses `active`, revives `idle`, otherwise **creates a new encounter**; participants/contributions/awards stay on the old id, so a new generation cannot attribute a fled source's DoT kill.
+- `encounter_reconcile` is the only effect-aware lifecycle function and is not on the commit path.
+- `pg_cron 1.6.4`, `pg_net 0.19.5`. `tick-creatures` is `*/2 * * * *` (two **minutes**). `email_queue_dispatch` is the deployed vault + `net.http_post` + self-disarm pattern.
+- `world_is_awake()` = any `characters.last_online` within **5 minutes**; `world_watchdog` (*/5) arms/disarms `tick-creatures`; `idle_shutdown_check` (*/30) sleeps the world at **30 minutes**.
+- The pure resolver already expires effects without ticking them (`effectLive` false → `effectDeleteIds`), and already advances periodic cadence from the *due* time. Policy C therefore needs one narrow, explicit addition (§4), not a new lifecycle.
 
-Verified deployed behaviour:
+## 1. Encounter lifecycle correction (stage 1)
 
-- `leave_encounter_engagements(_character_id, _creature_id)` deletes `encounter_engagements` rows and cancels that character's pending `combat_actions`. It does **not** end the encounter and does not consider effects.
-- `commit_encounter_tick_v2` computes `v_alive_engaged` from `encounter_engagements` joined to the surviving creature set and then does exactly:
-  `v_ended := jsonb_array_length(v_alive_engaged) = 0;` … `IF v_ended THEN PERFORM public.encounter_end(_encounter_id); END IF;`
-- `encounter_end(id)` sets `status = 'ended', ended_at = now()` when status is `active`. It has **no knowledge of pending effects or active casts**.
-- `encounter_for_node(node)` selects only `status IN ('active','idle')` (reviving `idle` → `active`) and otherwise **inserts a brand-new encounter row** for that node.
-- `encounter_reconcile(node)` is the only function that does consider effects: with zero participants and zero `active_effects` at the node it sets `idle`, and `ended` only after 30 idle minutes. With effects present it forces `active`. It is not called by the commit path.
-
-Consequences, answering the questions directly:
-
-- Does `leave_encounter_engagements` end the encounter when due effects remain? No — but the **next commit does**, because the engaged set is then empty.
-- Does `encounter_end` distinguish "no engagements" from "no pending effects"? No.
-- Can an encounter be `idle` with zero engagements while effects remain? Only via `encounter_reconcile`; the commit path jumps straight to `ended`.
-- Does `encounter_for_node` reuse, revive or create? Reuses `active`, revives `idle`, and **creates a new encounter when the previous one is `ended`**.
-- If it creates a new encounter, how do old effects/participants/contributions/death attribution attach? They do not. `active_effects` is keyed by `node_id` so those rows follow the node, but `encounter_participants`, `encounter_contributions`, `encounter_engagements`, `encounter_kill_awards` and `encounter_death_loot` are keyed by the old `encounter_id`. A new generation would decode a snapshot with node effects but **no participants**, so DoT kill attribution and rewards for the fled source cannot be resolved.
-- Can `status = 'active'`-only discovery permanently miss work? Yes — the common case (last engaged creature dies or the last player leaves and one more tick commits) leaves `ended` encounters with live `active_effects` rows that nothing will ever advance.
-
-So this must be fixed **before** the scheduler exists. Intended lifecycle, made explicit in SQL:
+Intended lifecycle:
 
 ```text
 no live engagements + pending finite effects/casts
-   -> encounter stays effects-pending (status 'active', tick_owner unchanged)
-   -> internal effects-only owner advances it
-   -> encounter ends only when engagements, pending effects and active casts are all empty
+  -> encounter stays effects-pending (status 'active')
+  -> internal effects-only owner advances it
+  -> encounter ends only when engagements, pending effects and unresolved casts are all empty
 ```
 
-Implementation (migration 1, before anything else):
+`public.encounter_has_pending_work(_encounter_id)` returns true when, at the encounter's node, any of these exist:
 
-1. New helper `public.encounter_has_pending_work(_encounter_id uuid) returns boolean` — true when any `active_effects` row exists at the encounter's node with `expires_at > now_ms`, or any unresolved `encounter_cast_events` row exists. SECURITY DEFINER, `search_path = public`, service-role only.
-2. Change the commit end-condition to `v_ended := jsonb_array_length(v_alive_engaged) = 0 AND NOT public.encounter_has_pending_work(_encounter_id);`. This is the single behavioural change to the commit contract, and it only *delays* an end that already had no live driver.
-3. `encounter_end` keeps its current signature but refuses to end while `encounter_has_pending_work` is true (defence in depth, so no other caller can strand effects).
-4. Discovery therefore covers `status IN ('active','idle')` and never needs to resurrect an `ended` encounter. A one-off repair migration re-opens any existing `ended` encounter that still has unexpired effects at its node (currently zero rows: `encounters` is empty after Gate 3 teardown, so the repair is a no-op safety net).
+- an `active_effects` row with `next_tick_at <= now_ms` (due),
+- an `active_effects` row with `next_tick_at > now_ms` and `expires_at > now_ms` (future finite work),
+- an `active_effects` row with `expires_at <= now_ms` (expired, still awaiting authoritative expiry),
+- an unresolved `encounter_cast_events` row.
 
-Permanent coverage added in this step, before the scheduler: departure-with-pending-DoT keeps the encounter open; the encounter ends on the first tick after the last effect expires; a commit with zero engagements and zero effects still ends immediately; `encounter_for_node` never creates a second generation while effects remain.
+Explicitly **excluded** so an abandoned encounter cannot be held open forever:
 
-## 2. Authoritative due-work discovery — no hint column
+- `lifetime = 'stance'` rows (persistent character stances) — they never expire and are not encounter work,
+- rows whose target creature no longer exists or whose `spawn_seq` differs from the current generation — those are stale and are proposed for expiry once, then never again,
+- rows already deleted/consumed (absent by definition).
 
-`encounters.next_effect_due_at` is dropped from the plan. Discovery reads `active_effects` directly:
+Changes: commit end-condition becomes `v_alive_engaged = 0 AND NOT encounter_has_pending_work(...)`; `encounter_end` refuses while pending work exists (defence in depth); a repair statement re-opens any `ended` encounter still holding non-stance effects (currently a no-op — `encounters` is empty). Tests land in this stage, before any scheduler exists: departure with a pending DoT keeps the encounter open; end on the first tick after the last effect resolves; zero-effect departure still ends immediately; a stance-only node does **not** keep an abandoned encounter open; a stale-`spawn_seq` effect is expired once and stops counting as pending.
+
+## 2. Due-work discovery and internal scope (stage 2)
+
+Discovery reads `active_effects` directly — no hint column, no denormalised due time, so nothing can silently become authoritative:
 
 ```sql
--- index: active_effects (next_tick_at) and (node_id, next_tick_at)
-select e.id, e.node_id, min(ae.next_tick_at) as due_at_ms, count(*) as effect_count
+-- indexes: active_effects (next_tick_at), (node_id, next_tick_at), (node_id, expires_at)
+select e.id as encounter_id, e.node_id,
+       min(ae.next_tick_at)                    as due_at_ms,
+       min(least(ae.next_tick_at, ae.expires_at)) as earliest_ms,
+       count(*) filter (where ae.next_tick_at <= _now_ms or ae.expires_at <= _now_ms) as due_count,
+       count(*) as pending_count
 from public.active_effects ae
 join public.encounters e
-  on e.node_id = ae.node_id and e.encounter_key = 'default'
- and e.status in ('active','idle')
-where ae.next_tick_at <= _now_ms and ae.expires_at > _now_ms
+  on e.node_id = ae.node_id and e.encounter_key = 'default' and e.status in ('active','idle')
+where ae.lifetime <> 'stance'
 group by e.id, e.node_id
-order by min(ae.next_tick_at)
-limit _limit
 ```
 
-`active_effects` is small and bounded by live encounters, and both indexes make this a bounded index scan — no world-wide creature/effect sweep. No denormalised column means no hint/state divergence and therefore no reconciliation-repair machinery to maintain. If measurements later prove a denormalised column is needed, it would come with a repair job that compares the column to `min(next_tick_at)` per node and a test that fails on divergence — but it is not in this plan.
+Expired-but-unexpired-yet rows (`expires_at <= now`) are **due work**, per correction 1: they are resolved through the resolver and C2, never deleted by SQL.
 
-## 3. Internal scope contract: encounter + node + generation, no character
+Internal scope contract: `combat-catchup` accepts `{ scope: 'encounter', encounter_id, node_id, due_at_ms, dispatch_id }`. It does **not** use `catchup_scope_check` for this shape; it calls `public.effects_scope_revalidate(_encounter_id, _node_id, _due_at_ms)`, which re-checks server-side that the encounter exists, is `active`/`idle`, belongs to that node and still has eligible due work. Refusals: `no_encounter`, `node_mismatch`, `nothing_due`, `world_asleep`, `maintenance`, `scope_not_granted`. No character parameter: `orchestrateCombatResolution({ role: 'catchup', nodeId })` already supports character-less catch-up, so multiple sources, deleted sources, source-less effects and source state changes are all handled by one tick over the whole node scope, with attribution staying per-effect via `active_effects.source_id`.
 
-- `combat-catchup` gains a second, internal-only request shape: `{ scope: 'encounter', encounter_id, node_id, due_at_ms }`. The existing `{ character_id }` shape is retained only for harness/manual use and is not what the scheduler sends.
-- For the encounter shape the endpoint does **not** call `catchup_scope_check` (a player-oriented, character-scoped gate). It calls a new `public.effects_scope_revalidate(_encounter_id, _node_id, _due_at_ms)` which re-checks server-side, at request time, that: the encounter exists, is `active`/`idle`, belongs to that node, and still has at least one effect row with `next_tick_at <= now_ms` and `expires_at > now_ms`. Refusal reasons: `no_encounter`, `node_mismatch`, `nothing_due`, `world_asleep`, `maintenance`.
-- `orchestrateCombatResolution` already supports `{ role: 'catchup', nodeId }` without a character, so no orchestration change is needed; `characterId` is simply omitted.
-- This removes every failure mode of character-derived scope: multiple sources in one scope, deleted or offline sources, source-less/world/creature effects, source state changes, and the selected source's effect expiring before the request lands. All due effects at the node are advanced by the one authoritative tick regardless of who owns them; attribution stays per-effect via `active_effects.source_id`.
+## 3. Live/effects-only handoff and arming (correction 5)
 
-## 4. Sleep policy — separated thresholds, and a decision to make
+Discovery uses the **same eligibility semantics as `claim_encounter_tick`**, so discovery and claim do not disagree: a scope is dispatchable only when no live driver is eligible, expressed as a new `public.encounter_live_owner_active(_encounter_id)` — true while any engagement exists whose character is present at the node and within the existing presence grace, or while a live claim/lease is held. Healthy live combat therefore produces **zero** effects-only dispatches; live ticks advance the effects.
 
-Documented facts (verified):
+Arming is wired to the authoritative presence/ownership transition, not to effect creation:
 
-| Event | Trigger | Authoritative timestamp |
-| --- | --- | --- |
-| creature ticking stops | `world_watchdog` (*/5) sees `world_is_awake() = false`, i.e. no `characters.last_online` within **5 minutes**, and unschedules `tick-creatures` | `max(characters.last_online)` |
-| effects-only scheduling stops | same watchdog decision (this plan arms/disarms `effects-catchup` on the same signal) | `max(characters.last_online)` |
-| `world_state.state = 'asleep'` | `idle_shutdown_check` (*/30) when no `last_online` within **30 minutes**, then `shutdown_world()` | `world_state.changed_at` |
-| wake | `wake_world()` from an authenticated client / wake trigger | `world_state.changed_at` |
+- `leave_encounter_engagements` (and `encounter_disengage`) arm the worker when the departure empties the eligible live set and pending work remains.
+- `commit_encounter_tick_v2` arms only when the committed tick leaves pending work **and** `encounter_live_owner_active` is false (the abandoned-tab case where nothing called leave).
+- `world_watchdog` re-arms as repair when the world is awake, pending work exists and the job is missing (covers a browser that vanished: once the presence grace lapses, `encounter_live_owner_active` turns false and the scope becomes eligible).
+- `wake_world()` arms after recording the resume boundary (§4) — it never mutates effect rows.
 
-So there are two distinct boundaries: simulation ownership pauses at ~5 minutes of no presence; the *world* is formally asleep at 30–60 minutes. Paused simulation begins at the last `tick-creatures`/effects-catchup run before disarm and ends at the first run after `wake_world()` re-arms. I am not calling any of this "approved pause semantics" — nothing currently defines effect behaviour across the boundary.
+All arming goes through idempotent `schedule_effects_catchup()`.
 
-Legacy behaviour (what actually happened before): `active_effects.next_tick_at` / `expires_at` are absolute epoch-ms. Nothing shifted them, and the only owner was the deleted client wake-up hook. So in practice sleep consumed effect duration, and whatever the returning client happened to trigger was bounded by `MAX_CATCHUP_TICKS = 30`. That is an accident, not a policy.
+## 4. Policy C: authoritative expiry across a real pause
 
-Choose one:
+Persisted pause boundary — new single-row table `public.simulation_pause_state(id int primary key default 1, last_sim_at_ms bigint, suspended_at_ms bigint, resumed_at_ms bigint, updated_at timestamptz)`, service-role only:
 
-- **A. Frozen simulation** — on wake, shift `next_tick_at` and `expires_at` of all surviving effects forward by the measured sleep duration. No effect time passes while asleep; a 30s DoT resumes with its full remainder. Most faithful to "the world pauses", but rewrites effect rows and can revive damage a player left behind hours ago.
-- **B. Bounded elapsed catch-up** — real time passed; on wake resolve at most 30 missed ticks per effect and discard the remainder, expiring the row. Closest to legacy accident; a long sleep still delivers a burst of offscreen damage and possible kills long after the fact.
-- **C. Expire-without-damage across a sleep boundary (recommended)** — real time passed and the duration is consumed: on wake, any effect whose `expires_at` is already past is deleted with no ticks and no rewards; an effect still within its window resumes from `now` and is bounded by the existing 30-tick cap. Deterministic, no row rewriting, no retroactive damage or loot, and it matches the short (~30s) lifetime of DoTs where a sleep boundary is always vastly longer than the effect.
+- every successful `tick-creatures` and every effects-only dispatch pass writes `last_sim_at_ms`,
+- `world_watchdog` writes `suspended_at_ms = last_sim_at_ms` when it disarms because `world_is_awake()` became false (and clears it on re-arm),
+- `wake_world()` writes `resumed_at_ms = now_ms` and arms the worker. It performs **no effect mutation**.
 
-I recommend **C**. Implementation of C needs one addition: expiry-without-damage on wake must still be an authoritative write, so `wake_world()` calls a new `public.expire_stale_effects()` (service-role/definer, deletes `active_effects` with `expires_at <= now_ms`, logs a count) before re-arming the jobs — never a client and never the resolver. Whichever option you approve, it is written into the plan and covered by a permanent test before implementation starts.
+Resolution: the orchestration passes `pauseBoundary = { suspendedAtMs, resumedAtMs }` into the effects-only snapshot. Inside the resolver's effects step (already the single place that both ticks and expires effects):
 
-## 5. Cron units and cadence
+- a due tick whose `dueAt` falls **inside** `[suspendedAtMs, resumedAtMs)` is skipped — the schedule advances, no damage, no rewards;
+- an effect whose `expires_at` also falls inside that window is proposed for deletion via the existing `effectDeleteIds` path, so C2 deletes it in the atomic committed batch with a normal `effect_expired` event and normal realtime delivery;
+- an effect that is merely late while the world stayed awake (worker delay, Edge retry, claim contention, short outage) takes the **ordinary bounded catch-up** path — up to `MAX_CATCHUP_TICKS = 30` ticks, full damage. Lateness alone never suppresses damage.
 
-- `pg_cron` deployed version is **1.6.4**, which supports sub-minute schedules via the interval form (`'2 seconds'`); the five-field form is standard cron and `*/1 * * * *` means once per **minute**.
-- Existing `tick-creatures` uses exactly `*/2 * * * *` — every two minutes, not two seconds.
-- A one-minute effects-only cadence would mean up to ~60s delay on offscreen damage/kills, up to 30 ticks bursting at once, rewards and loot arriving much later than live combat, and players often returning before the owner ran. That is not acceptable for DoTs whose whole lifetime is ~30s.
+Because ordinary DoTs run 25–34s and suspension only happens after the ~5-minute presence grace, effects normally finish long before any boundary exists; policy C is protection against state surviving a genuine long pause. Parity tests pin both branches (`src/test/combat/pure/pause-boundary.test.ts` plus the existing effects-only sweep), and no SQL path may ever delete an `active_effects` row outside `commit_encounter_tick_v2`.
 
-**Chosen cadence: self-arming short-cadence job**, mirroring the deployed `process-email-queue` pattern.
+## 5. Cadence, self-disarm race, durable dispatch (stage 3)
 
-- Job `effects-catchup`, schedule `'2 seconds'`, created only when due work exists.
-- The dispatcher self-disarms (`cron.unschedule('effects-catchup')`) when a discovery pass finds zero due scopes, guarded by `pg_advisory_xact_lock` and a re-read under the lock — exactly the `email_queue_dispatch` disarm race fix.
-- Arming happens from (a) `commit_encounter_tick_v2` when the committed tick leaves any unexpired effect behind, (b) `wake_world()`, (c) `world_watchdog()` as a repair when the world is awake and due work exists but the job is missing. All three go through idempotent `schedule_effects_catchup()` (`if not exists`), so duplicate workers cannot be scheduled.
-- `world_watchdog()` disarms it when `world_is_awake()` is false; `shutdown_world()` adds `effects-catchup` to its owned-job list.
-- Per invocation: at most 5 scopes; per scope one claim and the existing `MAX_CATCHUP_TICKS = 30`.
+Cadence: job `effects-catchup` on the pg_cron interval form `'2 seconds'` (the five-field `*/1 * * * *` would be once per minute and is rejected as too slow for ~30s DoTs). Per invocation: at most 5 scopes; per scope one claim and the existing 30-tick cap.
 
-This gives near-live effect cadence while due work exists and zero standing cost when it does not.
+Self-disarm (correction 3): a pass distinguishes three states — **due now** (dispatch), **future pending** (`next_tick_at > now` or `expires_at > now` for any effects-pending encounter → stay armed), **no pending work at all** (disarm). Disarm happens only after a `pg_advisory_xact_lock`-guarded re-read proves the third state, mirroring `email_queue_dispatch`'s disarm race fix. Re-arming never depends on another commit happening. Permanent race test: a pass that runs before `next_tick_at` must leave the job armed and the later due tick must still be processed.
 
-## 6. Durable dispatch ownership
+Durable dispatch (corrections 4 and 6): `public.effects_catchup_dispatch(encounter_id uuid primary key, dispatch_id uuid not null, attempt int not null default 0, due_at_ms bigint not null, lease_until bigint not null, last_outcome text, last_error text, backoff_until bigint, updated_at timestamptz)`, service-role only, RLS on, no player policy.
 
-`FOR UPDATE SKIP LOCKED` is explicitly **not** relied on: `net.http_post` is asynchronous and the transaction's locks are gone before the Edge request runs. Instead:
+- Discovery + lease acquisition happen in one transaction; a scope is dispatchable only with no row, an expired `lease_until`, or a lapsed `backoff_until`. Each dispatch mints a fresh `dispatch_id` and bumps `attempt`. `FOR UPDATE SKIP LOCKED` is **not** relied on for dispatch exclusivity — the durable lease is.
+- `record_effects_catchup_result(_dispatch_id, _encounter_id, _outcome, _reason, _ticks, _effects, _deaths, _duration_ms)` atomically: validates `dispatch_id` identity (a late callback carrying an older `dispatch_id` is recorded as `stale_callback` and **must not** clear a newer lease), writes `effects_catchup_log`, and **immediately releases the lease** (`lease_until = 0`) whenever the HTTP request completed — so a success at t is followed by the next due tick 2s later, not after a 10s lease. Failure outcomes keep backoff metadata: 5 consecutive failures set `backoff_until = now + 30s`.
+- Covered cases: successful commit then another due tick 2s later; `nothing_due`/`not_due` refusal; live-mode conflict (`mode_refused`); `stale_claim`; HTTP failure with no callback (lease expiry reclaims, `net._http_response` failure recorded); late callback after a newer lease exists.
+- Duplicate HTTP delivery remains **possible but bounded** (at most one in-flight dispatch per encounter per lease) and non-mutating: correctness comes from `claim_encounter_tick` `in_flight`, `stale_claim`, `already_committed` and `duplicate_batch`.
 
-1. New table `public.effects_catchup_dispatch(encounter_id uuid primary key, lease_until bigint not null, due_at_ms bigint not null, attempt int not null default 0, last_outcome text, last_error text, updated_at timestamptz default now())`. Service-role grants only, RLS enabled, no player policy.
-2. Discovery and lease acquisition happen in **one** transaction: a scope is dispatchable only if it has no dispatch row or its `lease_until <= now_ms`. The row is upserted with `lease_until = now_ms + 10000` (longer than the encounter lease) before `net.http_post` is issued. The lease is durable across the dispatcher's own crash and across concurrent scheduler invocations.
-3. Idempotency key `(encounter_id, due_at_ms)` travels in the request body and is stored on the dispatch row; a duplicate arrival for the same key is refused by `effects_scope_revalidate` (`nothing_due`, because the tick already advanced `next_tick_at`).
-4. Duplicate HTTP delivery is therefore **possible but bounded**: at most one in-flight dispatch per encounter per 10s lease, and correctness is guaranteed by the existing claim/digest contract (`claim_encounter_tick` in_flight refusal, `stale_claim`, `already_committed`, `duplicate_batch`). This plan makes no claim that duplicates are impossible — only that they are bounded and non-mutating.
+## 6. Security and explicit fixture isolation (stage 5)
 
-Recovery cases:
-- `net.http_post` enqueued but delivery failed → lease expires in 10s, `net._http_response` failure is recorded by the next pass, work is retried; after 5 consecutive failures the scope's cadence backs off to 30s and the failure is surfaced in the log table.
-- Edge resolved but result logging failed → the tick already committed authoritatively; the dispatch row simply expires and the next pass finds nothing due (no-op), counted as `unlogged_success`.
-- Dispatcher crashed after leasing → lease expiry reclaims it; nothing was mutated because no tick was claimed.
-- Request arrives after live combat consumed the effect → `effects_scope_revalidate` returns `nothing_due` and zero writes occur.
+Production: `combat_mode = 'open'` is the normal internal scheduling condition. Under maintenance, dispatch refuses unless the **whole scope** is explicitly granted:
 
-## 7. Maintenance and soak isolation is scope-wide
+`public.combat_soak_scopes(id uuid, encounter_id uuid, node_id uuid, character_ids uuid[], creature_ids uuid[], expires_at timestamptz, granted_by uuid)` — service-role only, unexpired rows only. Dispatch refuses (`scope_not_granted`) if any effect source, any effect target, any creature at the node or any participant is not listed in that exact grant. No name matching, no implicit "fixture" notion, no permission inferred from one effect source. Grants are deleted at teardown.
 
-- In `combat_mode = 'open'` the scheduler runs normally — that is the production condition.
-- Under maintenance the dispatcher refuses **unless the entire scope is fixture-isolated**: new table `public.combat_soak_scopes(encounter_id uuid, node_id uuid, expires_at timestamptz, granted_by uuid)` (service-role only, unexpired rows only). Dispatch requires: an unexpired grant for that encounter/node, **and** every `active_effects` row at the node has a `source_id` in the soak character allowlist (or is source-less and belongs to a fixture creature), **and** every creature at the node is a fixture creature. Permission is never inferred from one selected effect source.
-- So during maintenance no permanent character's effect, no non-fixture creature or encounter and no neighbouring node can be advanced. `combat_soak_access_check` keeps its current role for the live path and is unchanged.
+Every new function (`encounter_has_pending_work`, `encounter_live_owner_active`, `effects_due_scopes`, `effects_scope_revalidate`, `effects_due_dispatch`, `record_effects_catchup_result`, `schedule_/unschedule_effects_catchup`) is SECURITY DEFINER with `search_path = public`, `revoke execute from public, anon, authenticated`, `grant execute to service_role`. `combat-catchup` keeps `internalCaller` (401 anonymous, 403 player). The credential is vault secret `effects_catchup_service_role_key`, read only inside definer SQL, rotated by updating the vault row, dropped at teardown. Internal calls carry `Lovable-Context: cron` and a distinct `caller` for log separation. No generic maintenance bypass; no user-controlled scope.
 
-## 8. Migrations, functions, tests, deployment
+## 7. Migrations, code and tests
 
-Migrations, in order:
-1. **Lifecycle fix** — `encounter_has_pending_work`, commit end-condition change, `encounter_end` guard, repair of `ended` encounters holding live effects.
-2. **Discovery** — indexes on `active_effects (next_tick_at)` and `(node_id, next_tick_at)`; `effects_due_scopes(_limit int, _now_ms bigint)`; `effects_scope_revalidate(...)`.
-3. **Dispatch durability** — `effects_catchup_dispatch`, `effects_catchup_log` (scope, encounter, node, outcome, reason, ticks, effects, deaths, duration_ms, due_age_ms, created_at), `record_effects_catchup_result(...)`, prune job entry.
-4. **Dispatcher + schedule** — `effects_due_dispatch(_max_scopes int default 5)` (maintenance/soak-scope gate, world-awake gate, lease acquisition, `net.http_post` with the vault key, self-disarm on empty), `schedule_effects_catchup()` / `unschedule_effects_catchup()`, wiring into `wake_world()`, `world_watchdog()`, `shutdown_world()`, and the arming hook in `commit_encounter_tick_v2`.
-5. **Sleep policy** — `expire_stale_effects()` (or the shift function, if you approve option A) called from `wake_world()`.
+Migrations, in staged order: (1) lifecycle — `encounter_has_pending_work`, `encounter_live_owner_active`, commit end-condition, `encounter_end` guard, repair; (2) discovery — indexes, `effects_due_scopes`, `effects_scope_revalidate`; (3) dispatch — `effects_catchup_dispatch`, `effects_catchup_log`, `record_effects_catchup_result`, `effects_due_dispatch`, `schedule_/unschedule_effects_catchup`, wiring into `wake_world`, `world_watchdog`, `shutdown_world`, `leave_encounter_engagements`, `encounter_disengage`, `commit_encounter_tick_v2` arming, prune entry; (4) policy C — `simulation_pause_state` plus boundary writes and snapshot exposure; (5) grants and `combat_soak_scopes`.
 
-Code changes: `supabase/functions/combat-catchup/index.ts` accepts the encounter-scope body, revalidates via `effects_scope_revalidate`, reports outcomes through `record_effects_catchup_result`, keeps `internalCaller` unchanged; shared mirror sync (`scripts/sync-combat-shared.py`). No resolver, decoder, RNG or commit-authority change beyond the end-condition above. Secret: vault `effects_catchup_service_role_key`, created like `email_queue_service_role_key`, rotated by updating the vault row, torn down by dropping the secret and unscheduling the job.
+Code: `supabase/functions/combat-catchup/index.ts` (encounter-scope body, revalidate, result callback, unchanged authority), resolver pause-boundary branch and snapshot/decoder/`loadSnapshotAux` field, shared mirror sync via `scripts/sync-combat-shared.py`. No other change to resolver authority, RNG, decoder or commit.
 
-Test matrix (permanent, `src/test/combat/c6/*` plus SQL-parity cases):
-- Lifecycle: departure with pending DoT keeps the encounter open; end only after engagements + effects + casts are all empty; `encounter_for_node` never creates a second generation while effects remain; prior-generation effect rows can never be adopted by a new encounter.
-- Access: anonymous 401; player JWT 403; internal service-role accepted; discovery/revalidate/dispatch/commit functions unreachable to `anon`/`authenticated`.
-- Scope: encounter-scope body revalidated server-side; `node_mismatch` and `nothing_due` refusals write nothing; no character parameter required.
-- Behaviour: fled owner's DoT continues; DoT kills offscreen; exactly-once XP/gold/bond/loot per `encounter_death_id`; ground loot at the creature's node; multiple casters keep separate ownership; rewards do not require the source online/alive/present (approved offscreen attribution preserved).
-- Negatives: effects-only originates no autoattack, ability, creature attack, stack, stance or new boss cast; pending actions unconsumed and never abort decoding; existing cast handled only per approved policy; zero durability change.
-- Robustness: duplicate dispatch cannot double-commit; concurrent live/effects-only claims produce one winner; crash after lease recovers; stale `spawn_seq` writes nothing; respawned creature unaffected; expiry removes rows once; effect already consumed → no-op.
-- System: chosen sleep policy behaviour across a simulated sleep/wake; bounded catch-up respects the 30-tick and 5-scope caps; zero due work → job self-disarms and no encounter churn; missing job while awake is detected and re-armed; maintenance dispatch refused without a full-scope soak grant; teardown leaves no credential or probe surface.
+Test matrix (permanent): lifecycle (departure with DoT, end only when fully clear, stance does not hold an encounter, stale `spawn_seq`, no second generation); access (anonymous 401, player 403, internal accepted, every function unreachable to anon/authenticated); scope (revalidation, `node_mismatch`, `nothing_due`, no character parameter, grant-scoped maintenance refusal); behaviour (fled DoT continues, offscreen kill, exactly-once rewards per `encounter_death_id`, node-local ground loot, multiple casters separate, rewards independent of source online/alive/present); negatives (no autoattack/ability/creature attack/new stack/stance/new cast, pending actions unconsumed, zero durability); robustness (duplicate dispatch single commit, live vs effects-only single winner, crash after lease, late callback cannot clear a newer lease, lease released after success so the next 2s tick is not delayed, stale-dispatch callback); scheduling (early pass keeps the job armed and the later due tick lands, disarm only with zero pending work, missing job re-armed, no due work → no churn, healthy live driver produces zero dispatches); policy C (tick inside the pause window suppressed, expiry proposed by the resolver and committed by C2, late-while-awake keeps full damage, bounded 30-tick cap).
 
-Deployment order: migration 1 + lifecycle tests → migration 2/3 → worker change + full suite (including the unchanged 4,000-encounter parity sweep) → migration 4 with the job **not** armed → deployed service-role validation of `effects_due_scopes` and one manual `effects_due_dispatch` → anonymous/player denial probes → arm the job → fled-DoT deployed scenario with a fixture-isolated encounter grant (still `combat_mode = maintenance`) → sleep/wake validation of the approved policy → failure/retry/idempotency validation → short monitoring window on `effects_catchup_log` → teardown of fixtures, grants and probes.
+## 8. Deployment, validation, rollback
 
-Rollback: `unschedule_effects_catchup()` stops all internal effects-only progression while live authority and the claim contract stay intact — the DB claim remains the single arbiter, so ownership is never ambiguous. Full rollback additionally drops the dispatch/log tables and the new functions; the lifecycle fix (item 1) is kept, since reverting it would strand effects again.
+Staged exactly as authorised: lifecycle + tests → discovery/scope → dispatch/scheduling (job **not** armed) → policy-C expiry support → security/fixture gates → full combat and application suites including the unchanged 4,000-encounter parity sweep → deployed validation (service-role discovery, one manual dispatch, anonymous/player denial probes, fled-DoT offscreen kill inside a granted scope, sleep/wake boundary, duplicate dispatch, failure/retry/idempotency) → monitoring window on `effects_catchup_log` → teardown (grants, fixtures, probes, temporary credentials) and baseline comparison.
 
-## C5 entry criteria (updated)
+Stop-on-defect: any product defect or authority ambiguity halts the stage and is reported instead of worked around. Rollback: `unschedule_effects_catchup()` stops all internal effects-only progression with live authority and the claim contract untouched; full rollback drops the dispatch/log/pause tables and new functions but keeps the lifecycle fix, since reverting that would strand effects again.
 
-1. Lifecycle fix deployed with permanent departure-with-DoT coverage green.
-2. Discovery proven to read `active_effects` directly; no hint column exists.
-3. Encounter-scope internal contract deployed; no character-scoped scheduler path.
-4. Sleep policy explicitly approved by you and covered by a test.
-5. Cadence self-arming/disarming verified: job present only while due work exists.
-6. Dispatch lease + idempotency validated, including a forced duplicate dispatch with a single authoritative commit.
-7. Anonymous and player denial probes return 401/403 on every new surface.
-8. One deployed fled-DoT offscreen kill with exactly-once rewards and node-local ground loot, inside a fixture-isolated soak scope.
-9. Monitoring window clean: no orphaned claims, leases, dispatch rows, actions, effects or sessions.
-10. `combat_soak = off`, allowlist and soak scopes empty, `combat_mode = maintenance`; delayed-delivery/two-tab still listed as open C5 coverage.
+## 9. C5 entry criteria
 
-Then, and only on your explicit approval, C5 restarts from a fresh baseline.
+Lifecycle fix green; discovery authoritative with no hint column; encounter-scope internal contract deployed; policy C implemented through resolver + C2 only, with no SQL-side effect deletion; scheduler self-arming with the early-pass race test green; dispatch lease released per result and late callbacks proven harmless; healthy live combat produces zero effects-only dispatches; denial probes 401/403 on every surface; one deployed fled-DoT offscreen kill with exactly-once rewards and node-local loot inside an explicit grant; monitoring window free of orphaned claims, leases, dispatch rows, actions, effects and sessions; `combat_soak = off`, allowlist and soak scopes empty, `combat_mode = maintenance`; delayed-delivery/two-tab still listed as open C5 coverage. C5 restarts only on your explicit approval afterwards.
