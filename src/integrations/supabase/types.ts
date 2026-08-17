@@ -1580,6 +1580,102 @@ export type Database = {
           },
         ]
       }
+      effects_catchup_dispatch: {
+        Row: {
+          attempt: number
+          backoff_until: number
+          dispatch_id: string
+          due_at_ms: number
+          encounter_id: string
+          failures: number
+          last_error: string | null
+          last_outcome: string | null
+          lease_until: number
+          node_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt?: number
+          backoff_until?: number
+          dispatch_id: string
+          due_at_ms: number
+          encounter_id: string
+          failures?: number
+          last_error?: string | null
+          last_outcome?: string | null
+          lease_until?: number
+          node_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt?: number
+          backoff_until?: number
+          dispatch_id?: string
+          due_at_ms?: number
+          encounter_id?: string
+          failures?: number
+          last_error?: string | null
+          last_outcome?: string | null
+          lease_until?: number
+          node_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      effects_catchup_log: {
+        Row: {
+          created_at: string
+          deaths: number | null
+          dispatch_id: string | null
+          due_age_ms: number | null
+          duration_ms: number | null
+          effects: number | null
+          encounter_id: string | null
+          id: number
+          node_id: string | null
+          outcome: string | null
+          phase: string
+          reason: string | null
+          scopes_claimed: number | null
+          scopes_discovered: number | null
+          ticks: number | null
+        }
+        Insert: {
+          created_at?: string
+          deaths?: number | null
+          dispatch_id?: string | null
+          due_age_ms?: number | null
+          duration_ms?: number | null
+          effects?: number | null
+          encounter_id?: string | null
+          id?: number
+          node_id?: string | null
+          outcome?: string | null
+          phase: string
+          reason?: string | null
+          scopes_claimed?: number | null
+          scopes_discovered?: number | null
+          ticks?: number | null
+        }
+        Update: {
+          created_at?: string
+          deaths?: number | null
+          dispatch_id?: string | null
+          due_age_ms?: number | null
+          duration_ms?: number | null
+          effects?: number | null
+          encounter_id?: string | null
+          id?: number
+          node_id?: string | null
+          outcome?: string | null
+          phase?: string
+          reason?: string | null
+          scopes_claimed?: number | null
+          scopes_discovered?: number | null
+          ticks?: number | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3107,6 +3203,30 @@ export type Database = {
         }
         Relationships: []
       }
+      simulation_pause_state: {
+        Row: {
+          id: number
+          last_sim_at_ms: number | null
+          resumed_at_ms: number | null
+          suspended_at_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          last_sim_at_ms?: number | null
+          resumed_at_ms?: number | null
+          suspended_at_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          last_sim_at_ms?: number | null
+          resumed_at_ms?: number | null
+          suspended_at_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       summon_requests: {
         Row: {
           cp_cost: number
@@ -3385,6 +3505,10 @@ export type Database = {
         Args: { _area_type: string }
         Returns: string
       }
+      arm_effects_catchup_for_node: {
+        Args: { _node_id: string }
+        Returns: boolean
+      }
       assassin_abandon_contract: {
         Args: { _character_id: string }
         Returns: undefined
@@ -3532,6 +3656,7 @@ export type Database = {
         Args: { p_character_id: string; p_stance_key: string }
         Returns: Json
       }
+      effects_due_dispatch: { Args: { _max_scopes?: number }; Returns: Json }
       effects_due_scopes: {
         Args: { _limit?: number; _now_ms?: number }
         Returns: {
@@ -3877,6 +4002,7 @@ export type Database = {
       }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
+      prune_effects_catchup_log: { Args: { _keep?: number }; Returns: number }
       prune_encounter_access_grants: {
         Args: { _limit?: number }
         Returns: number
@@ -3896,6 +4022,19 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      record_effects_catchup_result: {
+        Args: {
+          _deaths?: number
+          _dispatch_id: string
+          _duration_ms?: number
+          _effects?: number
+          _encounter_id: string
+          _outcome: string
+          _reason?: string
+          _ticks?: number
+        }
+        Returns: string
       }
       record_world_state: { Args: never; Returns: undefined }
       regen_creature_hp: { Args: never; Returns: undefined }
@@ -3929,6 +4068,7 @@ export type Database = {
         Args: { _family_id: string; _user_id: string }
         Returns: Json
       }
+      schedule_effects_catchup: { Args: never; Returns: undefined }
       schedule_tick_creatures: { Args: never; Returns: undefined }
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
@@ -3947,6 +4087,10 @@ export type Database = {
         Returns: undefined
       }
       shutdown_world: { Args: never; Returns: undefined }
+      sim_note_progress: { Args: never; Returns: undefined }
+      sim_note_resume: { Args: never; Returns: undefined }
+      sim_note_suspend: { Args: never; Returns: undefined }
+      simulation_pause_boundary: { Args: never; Returns: Json }
       status_config_problems: {
         Args: never
         Returns: {
@@ -4016,6 +4160,7 @@ export type Database = {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
       }
+      unschedule_effects_catchup: { Args: never; Returns: undefined }
       unschedule_tick_creatures: { Args: never; Returns: undefined }
       update_party_member_hp: {
         Args: { _character_id: string; _new_hp: number }
