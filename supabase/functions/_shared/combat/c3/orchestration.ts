@@ -60,7 +60,6 @@ export interface OrchestrationRequest {
   readonly scopeGranted?: boolean;
 }
 
-
 export interface OrchestrationDeps {
   readonly db: OrchestrationDb;
   /** Authoritative time, injected once and used everywhere downstream. */

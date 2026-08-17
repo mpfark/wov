@@ -834,6 +834,17 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // delayed invocation or a multi-tick catch-up run cannot drift the
       // cadence of a periodic effect.
       effectNextDue.set(e.id, dueAt + interval);
+      // Policy C: a pulse that came due while the simulation was genuinely
+      // suspended never lands. Fast-forward its cadence past the resume point
+      // instead of paying out a backlog of damage or healing. Expiry is still
+      // authoritative — `effectLive` above proposes the removal.
+      const pause = snapshot.pauseBoundary;
+      if (pause && dueAt >= pause.suspendedAtMs && dueAt < pause.resumedAtMs) {
+        let next = dueAt;
+        while (next < pause.resumedAtMs) next += interval;
+        effectNextDue.set(e.id, next);
+        continue;
+      }
       if (stateMech) {
         pulsePersistentState(e, nowMs, t);
         continue;
