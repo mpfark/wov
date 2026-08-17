@@ -180,17 +180,27 @@ Deno.serve(async (req) => {
       );
 
       if (internalResult.ok) {
-        const events = (internalResult as any).events ?? [];
+        // Counters come from the committed proposal (orchestration result), not
+        // from grepping `events` for a `death` type — the resolver emits
+        // `creature_killed`, so the old filter always reported deaths = 0.
         await record(
           'ok',
           null,
-          1,
-          events.length,
-          events.filter((e: any) => e?.type === 'death' || e?.kind === 'death').length,
+          internalResult.ticksProcessed,
+          internalResult.events.length,
+          internalResult.creatureDeaths,
         );
+        console.log('[combat-catchup] effects tick committed', {
+          encounterId,
+          ticks: internalResult.ticksProcessed,
+          creatureDeaths: internalResult.creatureDeaths,
+          characterDeaths: internalResult.characterDeaths,
+          rewarded: internalResult.rewardedCharacterIds,
+        });
       } else {
         await record(internalResult.kind ?? 'internal', internalResult.reason ?? null);
       }
+
       return json(internalResult);
     }
 
