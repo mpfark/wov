@@ -78,7 +78,7 @@ describe('policy C simulation pause boundary', () => {
       suspendedAtMs: SUSPENDED,
       resumedAtMs: RESUMED,
     });
-    const hp = tick.creatures.find((u) => u.id === 'crt-1')?.hp;
+    const hp = tick.creatures.find((u) => u.creatureId === 'crt-1')?.hpAfter;
     expect(hp === undefined || hp === 90).toBe(true);
     expect(tick.events.some((e) => e.type === 'death')).toBe(false);
   });
