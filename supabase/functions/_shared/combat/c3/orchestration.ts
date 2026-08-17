@@ -47,7 +47,19 @@ export interface OrchestrationRequest {
   readonly nodeId?: string | null;
   /** Creatures the caller wants to engage. Filtered server-side by intake. */
   readonly creatureIds?: readonly string[];
+  /**
+   * Encounter this catch-up invocation owns. Internal effects-only workers are
+   * scoped by `encounter_id + node_id` and carry no character at all.
+   */
+  readonly encounterId?: string | null;
+  /**
+   * Set only by the internal effects-only worker after the database confirmed,
+   * under maintenance, that the ENTIRE scope (encounter, node, characters,
+   * creatures) is explicitly granted. Never derived from a request body.
+   */
+  readonly scopeGranted?: boolean;
 }
+
 
 export interface OrchestrationDeps {
   readonly db: OrchestrationDb;
