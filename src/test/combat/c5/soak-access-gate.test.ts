@@ -271,3 +271,33 @@ describe('C5 — players cannot reach service-role-only maintenance functions', 
     }
   });
 });
+
+/**
+ * 8/9. Client-state guards. `useCombatDriver` is a 1300-line hook whose params
+ * are the whole game context, so these two invariants are pinned at the source
+ * level: the properties are single, local and easy to regress silently.
+ */
+describe('C5 — rejected start restores the affordance, accepted start starts once', () => {
+  const driver = () => require('node:fs').readFileSync('src/features/combat/hooks/useCombatDriver.ts', 'utf8');
+
+  it('8. a refused engagement join rolls the optimistic combat state back', () => {
+    const src = driver();
+    const join = src.slice(src.indexOf("rpc('join_encounter_engagement'"));
+    const handler = join.slice(0, join.indexOf('});', join.indexOf('.then(')) + 3);
+    expect(handler).toContain('stopCombat()');
+  });
+
+  it('8b. a terminal tick refusal or 400/401/403 leaves combat', () => {
+    const src = driver();
+    expect(src).toContain('isTerminalTransportStatus(estatus)');
+    expect(src).toContain('if (ack.terminal)');
+  });
+
+  it('9. the worker interval is created behind a null check and cleared on stop', () => {
+    const src = driver();
+    expect(src).toMatch(/if \(!intervalRef\.current\)/);
+    const stop = src.slice(src.indexOf('const stopCombat'), src.indexOf('const stopCombat') + 2000);
+    expect(stop).toContain('clearWorkerInterval(intervalRef.current)');
+    expect(stop).toContain('intervalRef.current = null');
+  });
+});
