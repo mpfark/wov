@@ -42,35 +42,42 @@ export const MIN_DELAY_MS = 50;
 export const MAX_DELAY_MS = TICK_RATE_MS * 2;
 
 /**
- * Fraction of the measured round trip that elapsed between the server sampling
- * its clock and the browser receiving the answer.
+ * Measured network time is subtracted, never a guessed fraction of the round
+ * trip.
  *
- * `serverNowMs` is stamped inside `claim_encounter_tick`, i.e. early in server
- * processing, so most of the round trip (resolve + commit + downstream
- * transport) happens *after* the sample. Ignoring it is what re-introduces the
- * round trip into every interval. Overestimating only costs a cheap `not_due`
- * refusal, which now carries an accurate boundary and self-corrects; under-
- * estimating permanently inflates the cadence.
+ * The server reports the clock it sampled (`nowMs`) and, for committed ticks,
+ * how long it spent between answering the claim and sampling that clock
+ * (`serverProcessMs`). Everything in the client-measured round trip that is not
+ * server processing is network:
+ *
+ *   networkMs = rtt - serverProcessMs
+ *
+ * That single quantity covers both unknowns exactly once: the part of the
+ * network leg already spent between the server's sample and the response
+ * arriving, and the lead time the *next* request needs to reach the server by
+ * the boundary. No 50 % / 60 % split is required, and nothing is invented when
+ * the server is silent (then `networkMs` is 0 and a late request merely
+ * consumes an already-due boundary, which is phase-preserving).
  */
-export const TRANSIT_SHARE = 0.6;
-
-/** Transit compensation is capped so one pathological response cannot busy-loop. */
-export const MAX_TRANSIT_COMP_MS = 1200;
+export const MAX_NETWORK_COMP_MS = 1500;
 
 /**
  * What the client knows about the server's schedule, learned from the last
- * claim answer (granted or refused — both carry it).
+ * acknowledgement (committed or refused — both carry it).
  */
 export interface ServerCadence {
   /** Server epoch-ms at which the next tick becomes due. */
   nextDueAtMs: number;
   /**
-   * Server epoch-ms when it produced that answer. Used to express the boundary
-   * as a *remaining duration*, which is immune to client/server clock offset.
+   * Server epoch-ms when it produced that answer (commit-transaction clock for
+   * committed ticks). Used to express the boundary as a *remaining duration*,
+   * which is immune to client/server clock offset.
    */
   nowMs: number | null;
   /** Measured client round-trip of the request that carried this report. */
   rttMs?: number | null;
+  /** Server-measured span from claim answer to the clock sample above. */
+  serverProcessMs?: number | null;
 }
 
 export interface PacerInput {
@@ -105,13 +112,21 @@ export function nextTickDelayMs(input: PacerInput): number {
   // Time already spent on the client since that answer arrived counts against
   // the wait, otherwise slow local work is added on top of the cadence.
   const elapsedSinceReceipt = Math.max(0, input.nowMs - input.receivedAtMs);
-  const rtt = Number.isFinite(cadence.rttMs as number) ? Math.max(0, cadence.rttMs as number) : 0;
-  const transit = Math.min(MAX_TRANSIT_COMP_MS, Math.round(rtt * TRANSIT_SHARE));
   return clamp(
-    remainingAtSample - transit - elapsedSinceReceipt + BOUNDARY_BUFFER_MS,
+    remainingAtSample - measuredNetworkMs(cadence) - elapsedSinceReceipt + BOUNDARY_BUFFER_MS,
     rate,
   );
 }
+
+/** Round trip minus the server's own measured processing span, bounded. */
+export function measuredNetworkMs(cadence: ServerCadence): number {
+  const rtt = Number.isFinite(cadence.rttMs as number) ? Math.max(0, cadence.rttMs as number) : 0;
+  const server = Number.isFinite(cadence.serverProcessMs as number)
+    ? Math.max(0, cadence.serverProcessMs as number)
+    : 0;
+  return Math.min(MAX_NETWORK_COMP_MS, Math.max(0, Math.round(rtt - server)));
+}
+
 
 function clamp(delay: number, rateMs: number): number {
   const max = Math.max(MIN_DELAY_MS, rateMs * 2);
