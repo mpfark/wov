@@ -2125,6 +2125,7 @@ export type Database = {
           id: string
           last_activity_at: string
           lease_until: number | null
+          next_tick_due_at: number
           node_id: string
           resolver_id: string | null
           resolving_tick: number | null
@@ -2151,6 +2152,7 @@ export type Database = {
           id?: string
           last_activity_at?: string
           lease_until?: number | null
+          next_tick_due_at?: number
           node_id: string
           resolver_id?: string | null
           resolving_tick?: number | null
@@ -2177,6 +2179,7 @@ export type Database = {
           id?: string
           last_activity_at?: string
           lease_until?: number | null
+          next_tick_due_at?: number
           node_id?: string
           resolver_id?: string | null
           resolving_tick?: number | null
