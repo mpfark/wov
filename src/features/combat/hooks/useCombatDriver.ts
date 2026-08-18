@@ -70,6 +70,17 @@ const SERVER_ABILITY_TYPES = new Set([
  */
 const FOLLOWER_WAKE_STALE_MS = 6000;
 
+/**
+ * Hard floor between two `combat-tick` requests from one driver.
+ *
+ * The server can never produce two simulation ticks closer than the rate, so a
+ * request inside this window is by construction either a refusal or a duplicate
+ * claim attempt. It exists to stop event-driven call sites (ability press,
+ * engage broadcast, visibility change) from stacking on top of the paced wake.
+ */
+const MIN_REQUEST_SPACING_MS = 400;
+
+
 
 
 interface Party {
