@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
           // Real onboarding state: the oath gate is satisfied by the profile row,
           // not bypassed in the client.
           await db.from("profiles").upsert(
-            { user_id: created.user.id, display_name: `S2 ${name}`, has_accepted_oath: true },
+            { user_id: created.user.id, display_name: `S2 ${name}`, full_name: `S2 ${name}`, has_accepted_oath: true },
             { onConflict: "user_id" },
           );
           const { data: character, error: charErr } = await db.from("characters").insert({
