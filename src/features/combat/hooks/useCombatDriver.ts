@@ -389,10 +389,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   /** Adopt the server's cadence report from an acknowledgement. */
   const noteCadence = useCallback(
     (
-      ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null,
+      ack: {
+        nextDueAtMs?: number | null;
+        serverNowMs?: number | null;
+        serverProcessMs?: number | null;
+      } | null,
       receivedAt: number,
       rttMs?: number,
     ) => {
+
       // Every acknowledgement is pacing-relevant, committed ones included: the
       // follow-up gate used to read a timestamp that only legacy renderable
       // payloads ever stamped, so under C4 it was permanently `Infinity` and
