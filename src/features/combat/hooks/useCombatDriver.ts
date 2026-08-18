@@ -1379,7 +1379,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // C3/C4 acknowledgement: identity only. Adopt the encounter so the
             // committed-batch stream is subscribed (and recoverable) for it,
             // and tell the sequencer which tick must exist. Nothing renders.
-            traceResponse('reserved');
+            traceResponse('reserved', {
+              refusalReason: 'committed',
+              nextDueAtMs: ack.nextDueAtMs,
+              serverNowMs: ack.serverNowMs,
+              serverProcessMs: ack.serverProcessMs,
+            });
             setPendingCpCost(0);
             if (ack.encounterId && ack.encounterId !== encounterIdRef.current) {
               encounterIdRef.current = ack.encounterId;
@@ -1389,7 +1394,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
             noteCommittedRef.current(ack.tick, ack.batchId);
           } else if (ack.kind === 'refused') {
-            traceResponse('reserved');
+            traceResponse('reserved', {
+              refusalReason: `${ack.failureKind}:${ack.reason}`,
+              terminal: ack.terminal,
+              nextDueAtMs: ack.nextDueAtMs,
+              serverNowMs: ack.serverNowMs,
+              serverProcessMs: ack.serverProcessMs,
+            });
+
             setPendingCpCost(0);
             if (ack.terminal) {
               // The encounter can never resolve another live tick for us (the
