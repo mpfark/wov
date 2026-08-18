@@ -1350,7 +1350,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         }
       }
     }
-  }, [processTickResult, stopCombat]);
+  }, [processTickResult, stopCombat, rephaseCadence]);
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
 
