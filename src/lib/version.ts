@@ -5,4 +5,4 @@ export const APP_VERSION = "r7";
  * which client bundle was tested. Contains only the short commit of the
  * reviewed repository state at publish time.
  */
-export const BUILD_ID = "r7-cadence-rephase";
+export const BUILD_ID = "r7-pacer-authority";
