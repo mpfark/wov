@@ -246,7 +246,8 @@ Deno.serve(async (req) => {
         const { data: creature, error: creatureErr } = await db.from("creatures").insert({
           name: typeof body?.creature_name === "string" ? body.creature_name : "Soak Effigy",
           description: "Temporary validation fixture.", node_id: nodeId,
-          level: 8, hp, max_hp: hp, ac: 8, is_aggressive: false, base_aggressive: false,
+          level: 8, hp, max_hp: hp, ac: 8,
+          is_aggressive: body?.aggressive === true, base_aggressive: body?.aggressive === true,
           is_humanoid: false, respawn_seconds: 86400, loot_mode: "legacy_table",
         }).select("id, spawn_seq, hp, max_hp").single();
         if (creatureErr || !creature) return json({ ok: false, reason: `creature insert failed: ${creatureErr?.message}` }, 500);
