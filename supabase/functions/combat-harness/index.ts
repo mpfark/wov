@@ -33,6 +33,8 @@ const RUNS = [
   "c5cad_20260819a",
   // C5 stage S2: shared encounter authority (party + solo, multi-creature).
   "c5s2_20260819a",
+  // C5 stage S2 retry, reduced core scope.
+  "c5s2_20260819b",
 ] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RUN_MINUTES = 30;
