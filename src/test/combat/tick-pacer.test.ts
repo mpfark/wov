@@ -107,13 +107,82 @@ describe('tick pacer', () => {
       nextDueAtMs: 5,
       nowMs: null,
       rttMs: null,
+      serverProcessMs: null,
     });
-    // A measured round trip is retained so the delay can compensate for it.
-    expect(readServerCadence({ nextDueAtMs: 5, serverNowMs: 1 }, 240)).toEqual({
+    // A measured round trip AND the server's measured processing span are both
+    // retained: their difference is the network time the delay compensates for.
+    expect(readServerCadence({ nextDueAtMs: 5, serverNowMs: 1, serverProcessMs: 90 }, 240)).toEqual({
       nextDueAtMs: 5,
       nowMs: 1,
       rttMs: 240,
+      serverProcessMs: 90,
     });
 
   });
+
+  it('subtracts measured network time, not a fraction of the round trip', () => {
+    // 1600ms round trip of which the server measured 700ms as its own work:
+    // 900ms is network and nothing else may be guessed.
+    const cadence = {
+      nextDueAtMs: 1_000_000 + 2_000,
+      nowMs: 1_000_000 + 700, // commit-transaction clock
+      rttMs: 1_600,
+      serverProcessMs: 700,
+    };
+    expect(measuredNetworkMs(cadence)).toBe(900);
+    // remaining 1300 - 900 network + 45 buffer
+    expect(nextTickDelayMs({ cadence, receivedAtMs: 0, nowMs: 0 })).toBe(1_300 - 900 + BOUNDARY_BUFFER_MS);
+  });
+
+  it('never treats server processing time as network time', () => {
+    // A slow commit with a fast network: rtt == serverProcess, so there is no
+    // network compensation at all.
+    expect(measuredNetworkMs({ nextDueAtMs: 2, nowMs: 1, rttMs: 900, serverProcessMs: 900 })).toBe(0);
+    // A malformed pair can never produce a negative compensation.
+    expect(measuredNetworkMs({ nextDueAtMs: 2, nowMs: 1, rttMs: 100, serverProcessMs: 900 })).toBe(0);
+    // Nor an unbounded one.
+    expect(measuredNetworkMs({ nextDueAtMs: 2, nowMs: 1, rttMs: 99_000, serverProcessMs: 0 }))
+      .toBe(MAX_NETWORK_COMP_MS);
+  });
+
+  it('holds a 2s request cadence end to end over a latent link', () => {
+    // Full loop with post-commit pacing: 400ms upstream, 700ms server, 200ms
+    // downstream. Request-to-request spacing must stay one interval (plus the
+    // deliberate boundary buffer), and every claim must land already due.
+    const rate = TICK_RATE_MS;
+    const up = 400, server = 700, down = 200;
+    let boundary = 1_000_000;
+    let clientClock = 0;
+    let cadence = null as null | { nextDueAtMs: number; nowMs: number; rttMs: number; serverProcessMs: number };
+    let receivedAt = 0;
+    const requests: number[] = [];
+    const commits: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      const delay = i === 0 ? 0 : nextTickDelayMs({ cadence, receivedAtMs: receivedAt, nowMs: clientClock });
+      clientClock += delay;
+      requests.push(clientClock);
+      const claimAt = clientClock + up;
+      // The claim must be due when it arrives, otherwise the server refuses it.
+      expect(claimAt).toBeGreaterThanOrEqual(boundary);
+      const committedAt = claimAt + server;
+      commits.push(committedAt);
+      const nextBoundary = boundary + rate;
+      receivedAt = committedAt + down;
+      clientClock = receivedAt;
+      cadence = {
+        nextDueAtMs: nextBoundary,
+        nowMs: committedAt,
+        rttMs: up + server + down,
+        serverProcessMs: server,
+      };
+      boundary = nextBoundary;
+    }
+    for (let i = 2; i < requests.length; i++) {
+      expect(requests[i] - requests[i - 1]).toBe(rate + BOUNDARY_BUFFER_MS);
+    }
+    for (let i = 2; i < commits.length; i++) {
+      expect(commits[i] - commits[i - 1]).toBe(rate + BOUNDARY_BUFFER_MS);
+    }
+  });
 });
+
