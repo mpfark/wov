@@ -1046,12 +1046,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         if (!inCombatRef.current) {
           inCombatRef.current = true;
           setInCombat(true);
-          if (intervalRef.current) {
-            clearWorkerTimeout(intervalRef.current);
-            intervalRef.current = null;
-          }
-          doTickRef.current();
+          requestTickNowRef.current('broadcast');
         }
+
       })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
         if (!ext.current.isLeader) return;
