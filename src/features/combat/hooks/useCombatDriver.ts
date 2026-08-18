@@ -294,10 +294,38 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setPendingAbility(null);
     setPendingCpCost(0);
     optimisticCpRef.current = null;
+    if (rephaseTimerRef.current) {
+      clearTimeout(rephaseTimerRef.current);
+      rephaseTimerRef.current = null;
+    }
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
+  }, []);
+
+  /**
+   * Align the cadence with the server's authoritative due boundary.
+   *
+   * The database marks a tick due at `last_commit + rate_ms`, and the commit
+   * timestamp includes the request round-trip. A fixed 2s client poll therefore
+   * lands just *before* the boundary, is refused `not_due`, and then waits a
+   * whole further interval — observed as a ~3.7s committed cadence against a 2s
+   * simulation cadence. Re-phasing collapses that to boundary + latency.
+   */
+  const rephaseCadence = useCallback((nextDueAtMs: number) => {
+    const delay = Math.max(60, Math.min(2000, nextDueAtMs - Date.now() + 60));
+    if (rephaseTimerRef.current) clearTimeout(rephaseTimerRef.current);
+    rephaseTimerRef.current = setTimeout(() => {
+      rephaseTimerRef.current = null;
+      if (!inCombatRef.current) return;
+      if (intervalRef.current) {
+        clearWorkerInterval(intervalRef.current);
+        intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+      }
+      tickCauseRef.current = 'followup';
+      doTickRef.current();
+    }, delay);
   }, []);
 
   // ── Mobile / background-tab catchup ───────────────────────────
