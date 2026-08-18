@@ -2127,6 +2127,7 @@ export type Database = {
           lease_until: number | null
           next_tick_due_at: number
           node_id: string
+          reserved_boundary_at: number | null
           resolver_id: string | null
           resolving_tick: number | null
           started_at: string
@@ -2154,6 +2155,7 @@ export type Database = {
           lease_until?: number | null
           next_tick_due_at?: number
           node_id: string
+          reserved_boundary_at?: number | null
           resolver_id?: string | null
           resolving_tick?: number | null
           started_at?: string
@@ -2181,6 +2183,7 @@ export type Database = {
           lease_until?: number | null
           next_tick_due_at?: number
           node_id?: string
+          reserved_boundary_at?: number | null
           resolver_id?: string | null
           resolving_tick?: number | null
           started_at?: string
