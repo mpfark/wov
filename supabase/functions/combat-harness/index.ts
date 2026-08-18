@@ -31,6 +31,8 @@ const RUNS = [
   "c5s6_20260818a",
   // Fresh cadence confirmation on build r7-postcommit-pacer.
   "c5cad_20260819a",
+  // C5 stage S2: shared encounter authority (party + solo, multi-creature).
+  "c5s2_20260819a",
 ] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RUN_MINUTES = 30;
@@ -273,7 +275,9 @@ Deno.serve(async (req) => {
        * creature dead.
        */
       case "hp_place": {
-        const creatureId = creatureIds[0];
+        const creatureId = typeof body?.creature_id === "string" && creatureIds.includes(body.creature_id)
+          ? body.creature_id
+          : creatureIds[0];
         const hp = Number(body?.hp);
         if (!creatureId) return json({ ok: false, reason: "no fixture creature" }, 400);
         if (!Number.isFinite(hp) || hp < 1 || hp > 500) return json({ ok: false, reason: "hp out of range" }, 400);
@@ -302,6 +306,204 @@ Deno.serve(async (req) => {
         if (scopeErr) return json({ ok: false, reason: `soak scope failed: ${scopeErr.message}` }, 500);
         await db.from("combat_config").update({ value: "on" }).eq("key", "combat_soak");
         return json({ ok: true, scope_id: scope?.id, expires_at: expires });
+      }
+
+
+      /**
+       * ── fixtures_multi (S2): several independently authenticated characters,
+       * one real party, one solo character and several creatures on one
+       * isolated node. Every identity is a genuine Auth user with its own
+       * password, so each browser context authenticates for itself; nothing
+       * authored is edited.
+       */
+      case "fixtures_multi": {
+        const nodeId = typeof body?.node_id === "string" && UUID_RE.test(body.node_id) ? body.node_id : null;
+        if (!nodeId) return json({ ok: false, reason: "node_id required" }, 400);
+        const partyNames: string[] = Array.isArray(body?.party_names) ? body.party_names : [];
+        const soloName: string = typeof body?.solo_name === "string" ? body.solo_name : "";
+        const creatureSpecs: any[] = Array.isArray(body?.creatures) ? body.creatures : [];
+        const NAME_RE = /^[A-Za-z]{3,16}$/;
+        if (partyNames.length < 2 || partyNames.length > 4 || !partyNames.every((n) => NAME_RE.test(n))) {
+          return json({ ok: false, reason: "party_names must be 2-4 alpha names" }, 400);
+        }
+        if (!NAME_RE.test(soloName)) return json({ ok: false, reason: "solo_name required" }, 400);
+        if (creatureSpecs.length < 2 || creatureSpecs.length > 4) {
+          return json({ ok: false, reason: "2-4 creatures required" }, 400);
+        }
+
+        const { count: nodeCreatures } = await db
+          .from("creatures").select("*", { count: "exact", head: true }).eq("node_id", nodeId);
+        const { count: nodeChars } = await db
+          .from("characters").select("*", { count: "exact", head: true }).eq("current_node_id", nodeId);
+        if ((nodeCreatures ?? 0) > 0 || (nodeChars ?? 0) > 0) {
+          return json({ ok: false, reason: "node is not isolated", nodeCreatures, nodeChars }, 400);
+        }
+        await register(run, "node_ref", nodeId);
+
+        const { data: rend } = await db.from("abilities").select("id").eq("ability_key", "rend").single();
+        const made: any[] = [];
+        for (const name of [...partyNames, soloName]) {
+          const email = `${run}_${name.toLowerCase()}@harness.invalid`;
+          const password = `${crypto.randomUUID()}Aa1!`;
+          const { data: created, error: userErr } = await db.auth.admin.createUser({
+            email, password, email_confirm: true,
+          });
+          if (userErr || !created?.user) {
+            return json({ ok: false, reason: `user create failed (${name}): ${userErr?.message}` }, 500);
+          }
+          await register(run, "auth_user", created.user.id, email);
+          // Real onboarding state: the oath gate is satisfied by the profile row,
+          // not bypassed in the client.
+          await db.from("profiles").upsert(
+            { user_id: created.user.id, display_name: `S2 ${name}`, has_accepted_oath: true },
+            { onConflict: "user_id" },
+          );
+          const { data: character, error: charErr } = await db.from("characters").insert({
+            user_id: created.user.id, name, race: "human", class: "warrior",
+            level: 20, hp: 300, max_hp: 300, cp: 400, max_cp: 400, mp: 200, max_mp: 200,
+            str: 18, dex: 16, con: 16, int: 10, wis: 10, cha: 10, ac: 14, current_node_id: nodeId,
+          }).select("id, name").single();
+          if (charErr || !character) {
+            return json({ ok: false, reason: `character insert failed (${name}): ${charErr?.message}` }, 500);
+          }
+          await register(run, "character", character.id);
+          const { error: loadErr } = await db.from("character_ability_loadout").insert({
+            character_id: character.id, role_id: WARRIOR_PRESSURE_ROLE, ability_id: rend!.id,
+          });
+          if (loadErr) return json({ ok: false, reason: `loadout insert failed (${name}): ${loadErr.message}` }, 500);
+          made.push({ name, email, password, user_id: created.user.id, character_id: character.id });
+        }
+
+        const partyChars = made.slice(0, partyNames.length);
+        const solo = made[made.length - 1];
+        const { data: party, error: partyErr } = await db.from("parties")
+          .insert({ leader_id: partyChars[0].character_id, tank_id: partyChars[0].character_id })
+          .select("id").single();
+        if (partyErr || !party) return json({ ok: false, reason: `party insert failed: ${partyErr?.message}` }, 500);
+        await register(run, "party", party.id);
+        const { error: pmErr } = await db.from("party_members").insert(
+          partyChars.map((c) => ({
+            party_id: party.id, character_id: c.character_id, status: "accepted", is_following: false,
+          })),
+        );
+        if (pmErr) return json({ ok: false, reason: `party_members insert failed: ${pmErr.message}` }, 500);
+
+        const creatures: any[] = [];
+        for (const spec of creatureSpecs) {
+          const hp = typeof spec?.hp === "number" ? Math.max(10, Math.min(4000, spec.hp)) : 400;
+          const { data: creature, error: cErr } = await db.from("creatures").insert({
+            name: typeof spec?.name === "string" ? spec.name : "S2 Effigy",
+            description: "Temporary validation fixture.", node_id: nodeId,
+            level: 8, hp, max_hp: hp, ac: 8,
+            is_aggressive: spec?.aggressive === true, base_aggressive: spec?.aggressive === true,
+            is_humanoid: false, respawn_seconds: 86400, loot_mode: "legacy_table",
+          }).select("id, name, hp, max_hp, spawn_seq, is_alive").single();
+          if (cErr || !creature) return json({ ok: false, reason: `creature insert failed: ${cErr?.message}` }, 500);
+          await register(run, "creature", creature.id);
+          creatures.push(creature);
+        }
+
+        return json({
+          ok: true, node_id: nodeId, party_id: party.id,
+          party_leader: partyChars[0].character_id,
+          party: partyChars, solo, creatures,
+        });
+      }
+
+      // ── access_multi: live + internal grants for every S2 character ────────
+      case "access_multi": {
+        const expires = new Date(Math.min(deadline, Date.now() + RUN_MINUTES * 60 * 1000)).toISOString();
+        const nodeId = nodeIds[0];
+        if (!nodeId) return json({ ok: false, reason: "no fixture node" }, 400);
+        if (!characterIds.length) return json({ ok: false, reason: "no fixture characters" }, 400);
+        const { error: accessErr } = await db.from("combat_soak_access").upsert(
+          characterIds.map((id) => ({ character_id: id, node_id: nodeId, expires_at: expires, note: run })),
+          { onConflict: "character_id" },
+        );
+        if (accessErr) return json({ ok: false, reason: `soak access failed: ${accessErr.message}` }, 500);
+        const { data: scope, error: scopeErr } = await db.from("combat_soak_scopes").insert({
+          node_id: nodeId, encounter_id: null,
+          character_ids: characterIds, creature_ids: creatureIds, expires_at: expires,
+        }).select("id").single();
+        if (scopeErr) return json({ ok: false, reason: `soak scope failed: ${scopeErr.message}` }, 500);
+        await db.from("combat_config").update({ value: "on" }).eq("key", "combat_soak");
+        return json({ ok: true, scope_id: scope?.id, expires_at: expires, characters: characterIds.length });
+      }
+
+      /**
+       * ── identity_probe: ownership matrix for the LIVE combat-tick endpoint.
+       * Uses real player JWTs (password sign-in) and asserts that a rejected
+       * request mutates nothing: encounters, participants, engagements, actions
+       * and claim state are counted before and after.
+       */
+      case "identity_probe": {
+        const creds: any[] = Array.isArray(body?.credentials) ? body.credentials : [];
+        if (creds.length < 2) return json({ ok: false, reason: "two credentials required" }, 400);
+        const nodeId = nodeIds[0] ?? null;
+        const target = `${url}/functions/v1/combat-tick`;
+        const anon = createClient(url, anonKey);
+
+        const tokens: Record<string, string | null> = {};
+        for (const c of creds) {
+          const { data: signIn } = await anon.auth.signInWithPassword({
+            email: String(c.email), password: String(c.password),
+          });
+          tokens[String(c.character_id)] = signIn?.session?.access_token ?? null;
+        }
+
+        const countState = async () => {
+          const encQ = await db.from("encounters").select("id, tick_number, tick_state, reserved_boundary_at, claim_token")
+            .eq("node_id", nodeId);
+          const encIds = (encQ.data ?? []).map((r: any) => r.id);
+          const idFilter = encIds.length ? encIds : ["00000000-0000-0000-0000-000000000000"];
+          const one = async (t: string, col: string) =>
+            (await db.from(t).select("*", { count: "exact", head: true }).in(col, idFilter)).count ?? 0;
+          return {
+            encounters: encQ.data,
+            participants: await one("encounter_participants", "encounter_id"),
+            engagements: await one("encounter_engagements", "encounter_id"),
+            batches: await one("encounter_tick_batches", "encounter_id"),
+            actions: (await db.from("combat_actions").select("*", { count: "exact", head: true })
+              .in("character_id", characterIds)).count ?? 0,
+          };
+        };
+
+        const probe = async (label: string, token: string | null, payload: unknown) => {
+          const headers: Record<string, string> = { "Content-Type": "application/json", apikey: anonKey };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(target, { method: "POST", headers, body: JSON.stringify(payload) });
+          let envelope: any = null;
+          try { envelope = await res.json(); } catch { /* ignore */ }
+          return {
+            label, status: res.status,
+            ok: envelope?.ok ?? null, kind: envelope?.kind ?? null, reason: envelope?.reason ?? null,
+          };
+        };
+
+        const owner = creds[0], other = creds[1];
+        const before = await countState();
+        const results = [
+          await probe("owner_own_character", tokens[owner.character_id], {
+            character_id: owner.character_id, node_id: nodeId, member_buffs: {}, engaged_creature_ids: [],
+          }),
+          await probe("owner_foreign_character", tokens[owner.character_id], {
+            character_id: other.character_id, node_id: nodeId, member_buffs: {}, engaged_creature_ids: [],
+          }),
+          await probe("missing_character_id", tokens[owner.character_id], {
+            node_id: nodeId, member_buffs: {}, engaged_creature_ids: [],
+          }),
+          await probe("party_id_only", tokens[owner.character_id], {
+            party_id: body?.party_id ?? null, node_id: nodeId, member_buffs: {}, engaged_creature_ids: [],
+          }),
+          await probe("malformed_character_id", tokens[owner.character_id], {
+            character_id: "not-a-uuid", node_id: nodeId,
+          }),
+          await probe("unauthenticated", null, {
+            character_id: owner.character_id, node_id: nodeId,
+          }),
+        ];
+        const after = await countState();
+        return json({ ok: true, results, before, after });
       }
 
       // ── world: temporary wake for the run; previous value is registered ────
