@@ -29,6 +29,8 @@ const RUNS = [
   "c5s4_20260818a",
   "c5s5_20260818a",
   "c5s6_20260818a",
+  // Fresh cadence confirmation on build r7-postcommit-pacer.
+  "c5cad_20260819a",
 ] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RUN_MINUTES = 30;
