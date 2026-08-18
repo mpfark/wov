@@ -248,6 +248,27 @@ function epochMs(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/**
+ * The cadence report carried by one `claim_encounter_tick` answer.
+ *
+ * Exported so a test can pin the transport contract: the omission of these two
+ * fields from the *success* envelope is what made every client schedule from
+ * response receipt, adding a full round trip to every simulation interval.
+ */
+export function readClaimCadence(data: unknown): {
+  serverNowMs: number | null;
+  boundaryAtMs: number | null;
+  nextDueAtMs: number | null;
+} {
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    serverNowMs: epochMs(d.now_ms),
+    boundaryAtMs: epochMs(d.boundary_at_ms),
+    nextDueAtMs: epochMs(d.next_due_at_ms),
+  };
+}
+
+
 async function claimTick(
   db: OrchestrationDb,
   encounterId: string,
@@ -262,6 +283,7 @@ async function claimTick(
     _supported_modes: MODES_BY_ROLE[req.role],
   });
   if (error) throw new C3Error('internal', `claim_encounter_tick failed: ${error.message}`);
+  const cadence = readClaimCadence(data);
   if (!data?.claimed) {
     // The boundary AND the server's own clock are forwarded verbatim so a live
     // client can express the wait as a remaining duration measured entirely on
@@ -271,8 +293,8 @@ async function claimTick(
     throw new C3Error('claim_refused', String(data?.reason ?? 'refused'), {
       detail: {
         mode: data?.mode ?? null,
-        nextDueAtMs: epochMs(data?.next_due_at_ms),
-        serverNowMs: epochMs(data?.now_ms),
+        nextDueAtMs: cadence.nextDueAtMs,
+        serverNowMs: cadence.serverNowMs,
       },
     });
   }
@@ -281,9 +303,10 @@ async function claimTick(
     token: String(data.claim_token),
     resolverId: String(data.resolver_id),
     dbMode: data.mode === 'live' ? 'live' : 'effects_only',
-    boundaryAtMs: epochMs(data.boundary_at_ms),
-    nextDueAtMs: epochMs(data.next_due_at_ms),
-    serverNowMs: epochMs(data.now_ms),
+    boundaryAtMs: cadence.boundaryAtMs,
+    nextDueAtMs: cadence.nextDueAtMs,
+    serverNowMs: cadence.serverNowMs,
+
   };
 }
 
