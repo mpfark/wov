@@ -1,0 +1,2 @@
+insert into public.app_secrets(key, value) values ('harness_token_c5t20260818e','1a1659696a768710f3a16c81cae452ff384802c1694069c495ce68c9f9858dbc')
+on conflict (key) do update set value = excluded.value;
