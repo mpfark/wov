@@ -127,6 +127,7 @@ function clamp(delay: number, rateMs: number): number {
  */
 export function readServerCadence(
   ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null | undefined,
+  rttMs?: number | null,
 ): ServerCadence | null {
   const due = ack?.nextDueAtMs;
   if (typeof due !== 'number' || !Number.isFinite(due) || due <= 0) return null;
@@ -134,5 +135,7 @@ export function readServerCadence(
   return {
     nextDueAtMs: due,
     nowMs: typeof now === 'number' && Number.isFinite(now) && now > 0 ? now : null,
+    rttMs: typeof rttMs === 'number' && Number.isFinite(rttMs) && rttMs >= 0 ? rttMs : null,
   };
 }
+
