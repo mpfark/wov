@@ -1,6 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { BUILD_ID } from "./lib/version";
+
+// Non-sensitive build identifier, readable from the page so a validation run
+// can prove which published bundle it exercised.
+(window as unknown as { __WOV_BUILD__?: string }).__WOV_BUILD__ = BUILD_ID;
+
 
 // Clean up any stale service workers from the old PWA setup
 navigator.serviceWorker?.getRegistrations().then(regs =>
