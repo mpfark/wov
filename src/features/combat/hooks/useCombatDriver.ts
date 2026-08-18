@@ -30,7 +30,9 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { setWorkerTimeout, clearWorkerTimeout } from '@/lib/worker-timer';
-import { nextTickDelayMs, readServerCadence, type ServerCadence } from '../utils/tick-pacer';
+import { nextTickDelayMs, readServerCadence, measuredNetworkMs, type ServerCadence } from '../utils/tick-pacer';
+import { buildTickRequestBody } from '@/shared/combat/tick-request';
+
 import { getAbilityKeyForSlot } from '@/features/combat/utils/ability-calcs';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
