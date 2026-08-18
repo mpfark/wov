@@ -1890,48 +1890,6 @@ export type Database = {
           },
         ]
       }
-      encounter_contributions: {
-        Row: {
-          character_id: string
-          damage_dealt: number
-          encounter_id: string
-          first_hit_at: string | null
-          healing_done: number
-          last_hit_at: string | null
-        }
-        Insert: {
-          character_id: string
-          damage_dealt?: number
-          encounter_id: string
-          first_hit_at?: string | null
-          healing_done?: number
-          last_hit_at?: string | null
-        }
-        Update: {
-          character_id?: string
-          damage_dealt?: number
-          encounter_id?: string
-          first_hit_at?: string | null
-          healing_done?: number
-          last_hit_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "encounter_contributions_character_id_fkey"
-            columns: ["character_id"]
-            isOneToOne: false
-            referencedRelation: "characters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "encounter_contributions_encounter_id_fkey"
-            columns: ["encounter_id"]
-            isOneToOne: false
-            referencedRelation: "encounters"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       encounter_creatures: {
         Row: {
           attached_at: string
