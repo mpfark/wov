@@ -1414,29 +1414,37 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     } finally {
       tickBusyRef.current = false;
-      // Coalesce overlapping wake-ups. Previously ANY wake-up that arrived
-      // while a tick was in flight queued an immediate follow-up request, so a
-      // slow response produced a burst of back-to-back HTTP calls that all
-      // resolved (or got discarded as stale) at once. Only fire the follow-up
-      // when it can actually do work: a queued ability to dispatch, or enough
-      // elapsed time that the server has a new tick to resolve.
+      // Coalesce overlapping wake-ups.
+      //
+      // A wake that arrived while a request was in flight may only produce an
+      // immediate follow-up when it carries work the server can act on right
+      // now — a queued ability. The previous gate also allowed "enough time has
+      // elapsed", measured from `lastTickRef`, which under C4 is never stamped
+      // in solo combat: `sinceApplied` was permanently `Infinity`, so every
+      // coalesced wake fired at zero delay. That is the measured 0.652s request
+      // gap. Elapsed-time follow-ups are now the pacer's job, and the pacer
+      // aims at the server's boundary.
       let immediate = false;
       if (tickPendingRef.current) {
         tickPendingRef.current = false;
-        const sinceApplied = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-        const hasWork = !!pendingAbilityRef.current || sinceApplied >= 1500;
-        if (hasWork) {
-          tickCauseRef.current = pendingAbilityRef.current ? 'ability' : 'followup';
+        if (pendingAbilityRef.current) {
+          tickCauseRef.current = 'ability';
           immediate = true;
         }
       } else if (pendingAbilityRef.current) {
         tickCauseRef.current = 'ability';
         immediate = true;
       }
+      // An "immediate" follow-up still respects the hard request floor, so a
+      // rapid double press cannot produce two back-to-back claims.
+      if (immediate && Date.now() - lastRequestAtRef.current < MIN_REQUEST_SPACING_MS) {
+        immediate = false;
+      }
       // Single re-arm point: every tick, whatever its outcome, schedules the
       // next one against the server's boundary.
       scheduleNextTick(immediate);
     }
+
   }, [processTickResult, stopCombat, scheduleNextTick, noteCadence]);
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
