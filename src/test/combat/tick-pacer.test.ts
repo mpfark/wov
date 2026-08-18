@@ -106,6 +106,14 @@ describe('tick pacer', () => {
     expect(readServerCadence({ nextDueAtMs: 5, serverNowMs: null })).toEqual({
       nextDueAtMs: 5,
       nowMs: null,
+      rttMs: null,
     });
+    // A measured round trip is retained so the delay can compensate for it.
+    expect(readServerCadence({ nextDueAtMs: 5, serverNowMs: 1 }, 240)).toEqual({
+      nextDueAtMs: 5,
+      nowMs: 1,
+      rttMs: 240,
+    });
+
   });
 });

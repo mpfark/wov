@@ -70,6 +70,17 @@ const SERVER_ABILITY_TYPES = new Set([
  */
 const FOLLOWER_WAKE_STALE_MS = 6000;
 
+/**
+ * Hard floor between two `combat-tick` requests from one driver.
+ *
+ * The server can never produce two simulation ticks closer than the rate, so a
+ * request inside this window is by construction either a refusal or a duplicate
+ * claim attempt. It exists to stop event-driven call sites (ability press,
+ * engage broadcast, visibility change) from stacking on top of the paced wake.
+ */
+const MIN_REQUEST_SPACING_MS = 400;
+
+
 
 
 interface Party {
@@ -239,6 +250,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     cadence: null,
     receivedAt: 0,
   });
+  /**
+   * Client clock of the last *acknowledgement* of any kind (committed, refused,
+   * maintenance). Distinct from `lastTickRef`, which only marks a rendered
+   * legacy payload and is therefore never stamped in C4 solo combat.
+   */
+  const ackAtRef = useRef<number>(0);
+  /** Client clock when the last request was submitted. */
+  const lastRequestAtRef = useRef<number>(0);
+
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -398,9 +418,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const driver = solo || p.isLeader;
       if (driver) {
         if (inCombatRef.current) {
-          tickCauseRef.current = 'visibility';
-          try { doTickRef.current(); } catch { /* noop */ }
+          try { requestTickNowRef.current('visibility'); } catch { /* noop */ }
         }
+
         return;
       }
       // Non-leader: pull a fresh character snapshot in case the broadcast was missed.
@@ -441,10 +461,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;
     traceAbilityPress(label);
-    tickCauseRef.current = 'ability';
-    // Dispatch now; doTick re-arms the pacer against the server boundary when
-    // it finishes, so this never adds a second competing beat.
-    doTickRef.current();
+    // Dispatch through the single request authority; doTick re-arms the pacer
+    // against the server boundary when it finishes, so this never adds a second
+    // competing beat.
+    requestTickNowRef.current('ability');
+
   }, []);
 
   // ── Aggro effects ──────────────────────────────────────────────
@@ -504,11 +525,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
 
 
-      if (intervalRef.current) {
-        clearWorkerTimeout(intervalRef.current);
-        intervalRef.current = null;
-      }
-      doTickRef.current();
+      requestTickNowRef.current('cadence');
+
     }
   }, []);
 
@@ -1028,12 +1046,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         if (!inCombatRef.current) {
           inCombatRef.current = true;
           setInCombat(true);
-          if (intervalRef.current) {
-            clearWorkerTimeout(intervalRef.current);
-            intervalRef.current = null;
-          }
-          doTickRef.current();
+          requestTickNowRef.current('broadcast');
         }
+
       })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
         if (!ext.current.isLeader) return;
@@ -1062,15 +1077,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     }, 1800);
     // Phase 6 fallback heartbeat: if the leader's ticks stop landing, wake the
-    // tick from here. doTick itself decides whether the gap is large enough.
+    // tick from here. This is a follower-only watchdog, never a second beat for
+    // the driver, and it measures staleness from the last acknowledgement (or
+    // rendered tick) rather than from a timestamp only legacy payloads stamp.
     const wake = setInterval(() => {
       if (!inCombatRef.current) return;
-      const since = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-      if (since > FOLLOWER_WAKE_STALE_MS) {
-        tickCauseRef.current = 'wakeup';
-        doTickRef.current();
-      }
+      const last = Math.max(lastTickRef.current, ackAtRef.current);
+      const since = last ? Date.now() - last : Infinity;
+      if (since > FOLLOWER_WAKE_STALE_MS) requestTickNowRef.current('wakeup');
     }, 2000);
+
     return () => { clearInterval(interval); clearInterval(wake); };
   }, [params.party, params.isLeader]);
 
@@ -1217,10 +1233,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
+        lastRequestAtRef.current = tickT0;
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
         const cause = tickCauseRef.current;
         tickCauseRef.current = 'cadence';
         traceTickStart(seq, cause, tickGap, localCastCount > 0);
+
 
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)
@@ -1244,6 +1262,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
         const tickLatency = Date.now() - tickT0;
         const receivedAt = Date.now();
+        // Every answer, whatever its classification, is an acknowledgement for
+        // pacing purposes.
+        ackAtRef.current = receivedAt;
+
         const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
           const res = data as CombatTickResponse | null;
           traceTickResponse(seq, {
@@ -1335,7 +1357,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               encounterIdRef.current = ack.encounterId;
               setEncounterId(ack.encounterId);
             }
-            noteCadence(ack, receivedAt);
+            noteCadence(ack, receivedAt, tickLatency);
+
             noteCommittedRef.current(ack.tick, ack.batchId);
           } else if (ack.kind === 'refused') {
             traceResponse('reserved');
@@ -1351,7 +1374,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               // Cadence refusal: the server told us exactly when the next tick
               // becomes due. Adopting it is enough — the pacer re-arms against
               // that boundary in the finally block below.
-              noteCadence(ack, receivedAt);
+              noteCadence(ack, receivedAt, tickLatency);
             }
           } else if ((result as any).tick_reserved_elsewhere) {
 
@@ -1391,29 +1414,37 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     } finally {
       tickBusyRef.current = false;
-      // Coalesce overlapping wake-ups. Previously ANY wake-up that arrived
-      // while a tick was in flight queued an immediate follow-up request, so a
-      // slow response produced a burst of back-to-back HTTP calls that all
-      // resolved (or got discarded as stale) at once. Only fire the follow-up
-      // when it can actually do work: a queued ability to dispatch, or enough
-      // elapsed time that the server has a new tick to resolve.
+      // Coalesce overlapping wake-ups.
+      //
+      // A wake that arrived while a request was in flight may only produce an
+      // immediate follow-up when it carries work the server can act on right
+      // now — a queued ability. The previous gate also allowed "enough time has
+      // elapsed", measured from `lastTickRef`, which under C4 is never stamped
+      // in solo combat: `sinceApplied` was permanently `Infinity`, so every
+      // coalesced wake fired at zero delay. That is the measured 0.652s request
+      // gap. Elapsed-time follow-ups are now the pacer's job, and the pacer
+      // aims at the server's boundary.
       let immediate = false;
       if (tickPendingRef.current) {
         tickPendingRef.current = false;
-        const sinceApplied = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-        const hasWork = !!pendingAbilityRef.current || sinceApplied >= 1500;
-        if (hasWork) {
-          tickCauseRef.current = pendingAbilityRef.current ? 'ability' : 'followup';
+        if (pendingAbilityRef.current) {
+          tickCauseRef.current = 'ability';
           immediate = true;
         }
       } else if (pendingAbilityRef.current) {
         tickCauseRef.current = 'ability';
         immediate = true;
       }
+      // An "immediate" follow-up still respects the hard request floor, so a
+      // rapid double press cannot produce two back-to-back claims.
+      if (immediate && Date.now() - lastRequestAtRef.current < MIN_REQUEST_SPACING_MS) {
+        immediate = false;
+      }
       // Single re-arm point: every tick, whatever its outcome, schedules the
       // next one against the server's boundary.
       scheduleNextTick(immediate);
     }
+
   }, [processTickResult, stopCombat, scheduleNextTick, noteCadence]);
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
