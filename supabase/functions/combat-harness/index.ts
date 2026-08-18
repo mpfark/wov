@@ -33,6 +33,8 @@ const RUNS = [
   "c5cad_20260819a",
   // C5 stage S2: shared encounter authority (party + solo, multi-creature).
   "c5s2_20260819a",
+  // C5 stage S2 retry, reduced core scope.
+  "c5s2_20260819b",
 ] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RUN_MINUTES = 30;
@@ -355,7 +357,7 @@ Deno.serve(async (req) => {
           // Real onboarding state: the oath gate is satisfied by the profile row,
           // not bypassed in the client.
           await db.from("profiles").upsert(
-            { user_id: created.user.id, display_name: `S2 ${name}`, has_accepted_oath: true },
+            { user_id: created.user.id, display_name: `S2 ${name}`, full_name: `S2 ${name}`, has_accepted_oath: true },
             { onConflict: "user_id" },
           );
           const { data: character, error: charErr } = await db.from("characters").insert({
