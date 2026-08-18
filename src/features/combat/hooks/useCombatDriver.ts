@@ -1216,19 +1216,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // Stage C: `combat_actions` is the sole intent source; the request
         // carries no abilities. Locally collected casts still drive the wake
         // condition above (they were already submitted durably).
-        const body = solo
-          ? {
-              character_id: p.character.id,
-              node_id: p.character.current_node_id,
-              member_buffs: memberBuffs,
-              engaged_creature_ids: engagedCreatureIdsRef.current,
-            }
-          : {
-              party_id: p.party!.id,
-              node_id: p.character.current_node_id,
-              member_buffs: memberBuffs,
-              engaged_creature_ids: engagedCreatureIdsRef.current,
-            };
+        // One builder for both branches: the party branch used to omit
+        // `character_id`, which `combat-tick` rejects with 400 invalid_request
+        // (it is the ownership subject), so no party tick could ever resolve.
+        const body = buildTickRequestBody({
+          characterId: p.character.id,
+          partyId: solo ? null : p.party!.id,
+          nodeId: p.character.current_node_id,
+          memberBuffs,
+          engagedCreatureIds: engagedCreatureIdsRef.current,
+        });
+
 
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
