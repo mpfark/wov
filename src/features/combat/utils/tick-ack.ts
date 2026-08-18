@@ -40,7 +40,21 @@ export type TickAck =
    * another live tick for us, so the driver must leave combat instead of
    * retrying (otherwise `encounter_intake` keeps minting idle encounters).
    */
-  | { kind: 'refused'; reason: string; failureKind: string; terminal: boolean }
+  | {
+      kind: 'refused';
+      reason: string;
+      failureKind: string;
+      terminal: boolean;
+      /**
+       * Server clock (ms) at which this encounter's next tick becomes due.
+       * Present on cadence refusals (`not_due` / `in_flight`) so the client can
+       * re-phase its poll onto the authoritative boundary instead of aliasing
+       * against it (a fixed 2s poll that lands just before a 2s boundary waits
+       * a whole extra interval, which is what turned a 2s simulation cadence
+       * into a ~3.7s committed cadence).
+       */
+      nextDueAtMs: number | null;
+    }
   /** Pre-C3 snake_case payload — the caller keeps its legacy handling. */
   | { kind: 'legacy' }
   /** No parseable body at all. */
