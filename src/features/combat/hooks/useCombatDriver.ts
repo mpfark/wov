@@ -525,11 +525,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
 
 
-      if (intervalRef.current) {
-        clearWorkerTimeout(intervalRef.current);
-        intervalRef.current = null;
-      }
-      doTickRef.current();
+      requestTickNowRef.current('cadence');
+
     }
   }, []);
 
