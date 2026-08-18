@@ -124,6 +124,10 @@ export function interpretTickAck(raw: unknown): TickAck {
       ticksProcessed: typeof data.ticksProcessed === 'number' ? data.ticksProcessed : 0,
       nextDueAtMs: num(data.nextDueAtMs),
       serverNowMs: num(data.serverNowMs),
+      serverProcessMs:
+        typeof data.serverProcessMs === 'number' && Number.isFinite(data.serverProcessMs) && data.serverProcessMs >= 0
+          ? data.serverProcessMs
+          : null,
     };
   }
 
@@ -136,8 +140,12 @@ export function interpretTickAck(raw: unknown): TickAck {
       reason,
       failureKind,
       terminal: isTerminalRefusal(failureKind, reason, detailMode),
-      nextDueAtMs: num(data.detail?.nextDueAtMs),
-      serverNowMs: num(data.detail?.serverNowMs),
+      // Accepted from either position: refusals nest the cadence report under
+      // `detail`, and a top-level pair is tolerated for forward compatibility.
+      nextDueAtMs: num(data.detail?.nextDueAtMs) ?? num(data.nextDueAtMs),
+      serverNowMs: num(data.detail?.serverNowMs) ?? num(data.serverNowMs),
+      serverProcessMs: 0,
+
     };
   }
 
