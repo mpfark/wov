@@ -3643,6 +3643,21 @@ export type Database = {
         }
         Returns: Json
       }
+      commit_encounter_tick_v3: {
+        Args: {
+          _batch_id: string
+          _claim_token: string
+          _encounter_id: string
+          _encounter_version: number
+          _proposed: Json
+          _reserved_boundary_at?: number
+          _snapshot_digest: Json
+          _snapshot_scope: Json
+          _snapshot_version: number
+          _tick: number
+        }
+        Returns: Json
+      }
       consume_maps_for_node: {
         Args: { _character_id: string; _node_id: string }
         Returns: number
