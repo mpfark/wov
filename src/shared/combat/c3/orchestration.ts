@@ -443,13 +443,27 @@ export async function orchestrateCombatResolution(
 
     // 5b. Aux + strict decode. The resolver mode comes from the claim only.
     const mode = claim.dbMode === 'live' ? 'live' : 'catchup';
+    // Simulation time is the SCHEDULED boundary this claim reserved, not the
+    // moment the request happened to reach this isolate. Using arrival time let
+    // queueing, cold starts and commit latency leak into effect expiry and
+    // regeneration, so identical simulations produced different durations.
+    // `deps.nowMs` remains the fallback for legacy/malformed claim answers that
+    // carry no boundary.
+    const scheduledNowMs = claim.boundaryAtMs ?? deps.nowMs;
+    if (claim.boundaryAtMs === null) {
+      deps.log?.('[c3] claim carried no boundary — falling back to arrival time', {
+        encounterId,
+        tick: claim.tick,
+      });
+    }
     const { aux, configFailures } = loadSnapshotAux({
       snapshotRoot: root,
       mode,
-      nowMs: deps.nowMs,
-      ticksToSimulate: ticksToSimulate(req.role, root, deps.nowMs),
+      nowMs: scheduledNowMs,
+      ticksToSimulate: ticksToSimulate(req.role, root, scheduledNowMs),
       catalog,
     });
+
     const decoded = decodeEncounterSnapshot(root, aux);
     if (configFailures.length > 0) {
       deps.log?.('[c3] ability configuration failures', configFailures);
