@@ -1266,8 +1266,27 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // pacing purposes.
         ackAtRef.current = receivedAt;
 
-        const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
+        const traceResponse = (
+          outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty',
+          extra?: {
+            refusalReason?: string;
+            terminal?: boolean;
+            nextDueAtMs?: number | null;
+            serverNowMs?: number | null;
+            serverProcessMs?: number | null;
+          },
+        ) => {
           const res = data as CombatTickResponse | null;
+          // Pacing arithmetic recorded alongside the answer that produced it, so
+          // a validation run can be classified (legit boundary wait vs refusal
+          // loop vs network) without re-deriving anything from a request log.
+          const cadence = readServerCadence(extra ?? null, tickLatency);
+          const networkMs = cadence ? measuredNetworkMs(cadence) : undefined;
+          const remainingMs =
+            cadence && cadence.nowMs !== null ? cadence.nextDueAtMs - cadence.nowMs : undefined;
+          const plannedDelayMs = cadence
+            ? nextTickDelayMs({ cadence, receivedAtMs: receivedAt, nowMs: receivedAt })
+            : undefined;
           traceTickResponse(seq, {
             roundTripMs: tickLatency,
             ticksProcessed: res?.ticks_processed,
@@ -1275,8 +1294,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             batchId: res?.encounter_batch_id ?? null,
             serverResolveMs: res?.trace?.server_resolve_ms,
             outcome,
+            refusalReason: extra?.refusalReason,
+            terminal: extra?.terminal,
+            serverNowMs: extra?.serverNowMs ?? null,
+            nextDueAtMs: extra?.nextDueAtMs ?? null,
+            serverProcessMs: extra?.serverProcessMs ?? null,
+            networkMs,
+            remainingMs,
+            plannedDelayMs,
           });
         };
+
 
         if (seq !== tickSeqRef.current) {
           traceResponse('stale');
