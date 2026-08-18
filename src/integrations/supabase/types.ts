@@ -4098,6 +4098,10 @@ export type Database = {
         Args: { _limit?: number; _older_than_seconds?: number }
         Returns: number
       }
+      prune_terminal_combat_actions: {
+        Args: { _limit?: number; _older_than_seconds?: number }
+        Returns: number
+      }
       purge_creature_engagements: {
         Args: { _creature_id: string }
         Returns: undefined
@@ -4230,6 +4234,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      sweep_stranded_encounters: {
+        Args: { _idle_seconds?: number; _limit?: number }
+        Returns: {
+          closed: boolean
+          encounter_id: string
+        }[]
       }
       switch_order: {
         Args: { _character_id: string; _class: string }
