@@ -66,7 +66,7 @@ const COMBAT_SOURCES = FILES.filter(f =>
 
 const AUTHORITATIVE_TABLES = [
   'characters', 'creatures', 'active_effects', 'encounter_kill_awards',
-  'encounter_death_loot', 'encounter_tick_batches', 'encounter_contributions',
+  'encounter_death_loot', 'encounter_tick_batches',
   'encounter_engagements', 'encounter_cast_events', 'node_ground_loot',
   'combat_actions', 'character_inventory', 'character_materials',
 ];
