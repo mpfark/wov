@@ -491,15 +491,21 @@ export async function orchestrateCombatResolution(
     }
 
     // 7. Atomic commit. Either every mutation lands or none does.
+    // `_reserved_boundary_at` fences the commit: if the encounter's stored
+    // reservation is a different boundary, this resolver's claim was superseded
+    // and nothing lands.
     const batchId = deps.newBatchId();
-    const request = buildCommitRequest(
-      decoded.envelope,
-      proposed,
-      sessionProposal(proposed, root),
-      batchId,
-    );
+    const request = {
+      ...buildCommitRequest(
+        decoded.envelope,
+        proposed,
+        sessionProposal(proposed, root),
+        batchId,
+      ),
+      _reserved_boundary_at: claim.boundaryAtMs,
+    };
     const { data: commit, error: commitErr } = await db.rpc(
-      'commit_encounter_tick_v2',
+      'commit_encounter_tick_v3',
       request as unknown as Record<string, unknown>,
     );
     if (commitErr) {
@@ -507,9 +513,21 @@ export async function orchestrateCombatResolution(
     }
     if (!commit?.committed) {
       const reason = String(commit?.reason ?? 'refused');
-      const kind = reason === 'stale_claim' || reason === 'lease_expired' ? 'lease_lost' : 'commit_refused';
+      const kind = reason === 'stale_claim' || reason === 'lease_expired' || reason === 'boundary_conflict'
+        ? 'lease_lost'
+        : 'commit_refused';
       throw new C3Error(kind, reason);
     }
+
+    // Pacing is reported from the commit transaction, not from the claim: the
+    // client can then subtract the *measured* server span from its own round
+    // trip and knows exactly how much of the interval is still ahead of it.
+    const committedAtMs = epochMs(commit.committed_at_ms) ?? epochMs(commit.committed_at);
+    const nextDueAtMs = epochMs(commit.next_due_at_ms) ?? claim.nextDueAtMs;
+    const serverProcessMs =
+      committedAtMs !== null && claim.serverNowMs !== null
+        ? Math.max(0, committedAtMs - claim.serverNowMs)
+        : null;
 
     return {
       ok: true,
@@ -528,13 +546,11 @@ export async function orchestrateCombatResolution(
       creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
       characterDeaths: proposed.characters.filter((c) => c.died).length,
       rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
-      // The claim reserved boundary B and the schedule already advanced to
-      // B + rate, so the successful answer names the *next* boundary. Paired
-      // with the server's clock it is a remaining duration, immune to clock
-      // offset and to how long this commit took.
-      nextDueAtMs: claim.nextDueAtMs,
-      serverNowMs: claim.serverNowMs,
+      nextDueAtMs,
+      serverNowMs: committedAtMs ?? claim.serverNowMs,
+      serverProcessMs,
     };
+
 
 
   } catch (e) {
