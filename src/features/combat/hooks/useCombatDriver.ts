@@ -461,10 +461,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;
     traceAbilityPress(label);
-    tickCauseRef.current = 'ability';
-    // Dispatch now; doTick re-arms the pacer against the server boundary when
-    // it finishes, so this never adds a second competing beat.
-    doTickRef.current();
+    // Dispatch through the single request authority; doTick re-arms the pacer
+    // against the server boundary when it finishes, so this never adds a second
+    // competing beat.
+    requestTickNowRef.current('ability');
+
   }, []);
 
   // ── Aggro effects ──────────────────────────────────────────────
