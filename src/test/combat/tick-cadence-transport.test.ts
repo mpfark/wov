@@ -59,6 +59,10 @@ describe('cadence transport — claim answer', () => {
 });
 
 describe('cadence transport — committed envelope', () => {
+  // Post-commit pacing: the clock is sampled inside the commit transaction and
+  // the server also reports how long it spent between answering the claim and
+  // that sample, so the client can subtract measured network time instead of a
+  // guessed fraction of the round trip.
   const envelope = {
     ok: true,
     encounterId: 'enc',
@@ -66,20 +70,23 @@ describe('cadence transport — committed envelope', () => {
     batchId: 'batch',
     ticksProcessed: 1,
     nextDueAtMs: GRANT.next_due_at_ms,
-    serverNowMs: GRANT.now_ms,
+    serverNowMs: GRANT.now_ms + 700,
+    serverProcessMs: 700,
   };
 
-  it('carries the cadence through to the client acknowledgement', () => {
+  it('carries the post-commit cadence through to the client acknowledgement', () => {
     const ack = interpretTickAck(envelope);
     expect(ack.kind).toBe('committed');
     expect(ack.kind === 'committed' && ack.nextDueAtMs).toBe(GRANT.next_due_at_ms);
-    expect(ack.kind === 'committed' && ack.serverNowMs).toBe(GRANT.now_ms);
+    expect(ack.kind === 'committed' && ack.serverNowMs).toBe(GRANT.now_ms + 700);
+    expect(ack.kind === 'committed' && ack.serverProcessMs).toBe(700);
   });
 
-  it('paces from the server boundary, not from response receipt', () => {
-    // Round trip 1.6s: the boundary is 2.0s after the server's sample, so only
-    // the remainder may be waited. Scheduling a full 2.0s here is exactly the
-    // 3.6s cadence that was measured live.
+  it('paces from the committed boundary, not from response receipt', () => {
+    // Round trip 1.6s of which 0.7s was measured server work: 0.9s is network.
+    // The boundary is 1.3s after the commit sample, so only that remainder
+    // minus the measured network time may be waited. Scheduling a full 2.0s
+    // here is exactly the 3.6s cadence that was measured live.
     const ack = interpretTickAck(envelope);
     const cadence = readServerCadence(
       ack.kind === 'committed' ? ack : null,
@@ -90,9 +97,24 @@ describe('cadence transport — committed envelope', () => {
       receivedAtMs: 10_000,
       nowMs: 10_000,
     });
-    // 2000 remaining - 960 transit + 45 buffer
-    expect(delay).toBe(1_085);
+    // 1300 remaining - 900 network + 45 buffer
+    expect(delay).toBe(445);
     expect(delay).toBeLessThan(2_000);
+  });
+
+  it('classifies a refusal and still adopts its boundary', () => {
+    const ack = interpretTickAck({
+      ok: false,
+      kind: 'claim_refused',
+      reason: 'not_due',
+      detail: { mode: 'live', nextDueAtMs: 1_700_000_002_000, serverNowMs: 1_700_000_000_500 },
+    });
+    expect(ack.kind === 'refused' && ack.terminal).toBe(false);
+    expect(ack.kind === 'refused' && ack.reason).toBe('not_due');
+    // A refusal does no work, so its processing span is zero by construction.
+    expect(ack.kind === 'refused' && ack.serverProcessMs).toBe(0);
+    const cadence = readServerCadence(ack.kind === 'refused' ? ack : null, 300);
+    expect(nextTickDelayMs({ cadence, receivedAtMs: 0, nowMs: 0 })).toBe(1_500 - 300 + 45);
   });
 
   it('falls back to the nominal rate only when the envelope is silent', () => {
@@ -104,3 +126,4 @@ describe('cadence transport — committed envelope', () => {
     })).toBe(2_000);
   });
 });
+

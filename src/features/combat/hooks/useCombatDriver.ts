@@ -30,7 +30,9 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { setWorkerTimeout, clearWorkerTimeout } from '@/lib/worker-timer';
-import { nextTickDelayMs, readServerCadence, type ServerCadence } from '../utils/tick-pacer';
+import { nextTickDelayMs, readServerCadence, measuredNetworkMs, type ServerCadence } from '../utils/tick-pacer';
+import { buildTickRequestBody } from '@/shared/combat/tick-request';
+
 import { getAbilityKeyForSlot } from '@/features/combat/utils/ability-calcs';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
@@ -387,10 +389,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   /** Adopt the server's cadence report from an acknowledgement. */
   const noteCadence = useCallback(
     (
-      ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null,
+      ack: {
+        nextDueAtMs?: number | null;
+        serverNowMs?: number | null;
+        serverProcessMs?: number | null;
+      } | null,
       receivedAt: number,
       rttMs?: number,
     ) => {
+
       // Every acknowledgement is pacing-relevant, committed ones included: the
       // follow-up gate used to read a timestamp that only legacy renderable
       // payloads ever stamped, so under C4 it was permanently `Infinity` and
@@ -1216,19 +1223,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // Stage C: `combat_actions` is the sole intent source; the request
         // carries no abilities. Locally collected casts still drive the wake
         // condition above (they were already submitted durably).
-        const body = solo
-          ? {
-              character_id: p.character.id,
-              node_id: p.character.current_node_id,
-              member_buffs: memberBuffs,
-              engaged_creature_ids: engagedCreatureIdsRef.current,
-            }
-          : {
-              party_id: p.party!.id,
-              node_id: p.character.current_node_id,
-              member_buffs: memberBuffs,
-              engaged_creature_ids: engagedCreatureIdsRef.current,
-            };
+        // One builder for both branches: the party branch used to omit
+        // `character_id`, which `combat-tick` rejects with 400 invalid_request
+        // (it is the ownership subject), so no party tick could ever resolve.
+        const body = buildTickRequestBody({
+          characterId: p.character.id,
+          partyId: solo ? null : p.party!.id,
+          nodeId: p.character.current_node_id,
+          memberBuffs,
+          engagedCreatureIds: engagedCreatureIdsRef.current,
+        });
+
 
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
@@ -1266,8 +1271,27 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // pacing purposes.
         ackAtRef.current = receivedAt;
 
-        const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
+        const traceResponse = (
+          outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty',
+          extra?: {
+            refusalReason?: string;
+            terminal?: boolean;
+            nextDueAtMs?: number | null;
+            serverNowMs?: number | null;
+            serverProcessMs?: number | null;
+          },
+        ) => {
           const res = data as CombatTickResponse | null;
+          // Pacing arithmetic recorded alongside the answer that produced it, so
+          // a validation run can be classified (legit boundary wait vs refusal
+          // loop vs network) without re-deriving anything from a request log.
+          const cadence = readServerCadence(extra ?? null, tickLatency);
+          const networkMs = cadence ? measuredNetworkMs(cadence) : undefined;
+          const remainingMs =
+            cadence && cadence.nowMs !== null ? cadence.nextDueAtMs - cadence.nowMs : undefined;
+          const plannedDelayMs = cadence
+            ? nextTickDelayMs({ cadence, receivedAtMs: receivedAt, nowMs: receivedAt })
+            : undefined;
           traceTickResponse(seq, {
             roundTripMs: tickLatency,
             ticksProcessed: res?.ticks_processed,
@@ -1275,8 +1299,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             batchId: res?.encounter_batch_id ?? null,
             serverResolveMs: res?.trace?.server_resolve_ms,
             outcome,
+            refusalReason: extra?.refusalReason,
+            terminal: extra?.terminal,
+            serverNowMs: extra?.serverNowMs ?? null,
+            nextDueAtMs: extra?.nextDueAtMs ?? null,
+            serverProcessMs: extra?.serverProcessMs ?? null,
+            networkMs,
+            remainingMs,
+            plannedDelayMs,
           });
         };
+
 
         if (seq !== tickSeqRef.current) {
           traceResponse('stale');
@@ -1351,7 +1384,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // C3/C4 acknowledgement: identity only. Adopt the encounter so the
             // committed-batch stream is subscribed (and recoverable) for it,
             // and tell the sequencer which tick must exist. Nothing renders.
-            traceResponse('reserved');
+            traceResponse('reserved', {
+              refusalReason: 'committed',
+              nextDueAtMs: ack.nextDueAtMs,
+              serverNowMs: ack.serverNowMs,
+              serverProcessMs: ack.serverProcessMs,
+            });
             setPendingCpCost(0);
             if (ack.encounterId && ack.encounterId !== encounterIdRef.current) {
               encounterIdRef.current = ack.encounterId;
@@ -1361,7 +1399,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
             noteCommittedRef.current(ack.tick, ack.batchId);
           } else if (ack.kind === 'refused') {
-            traceResponse('reserved');
+            traceResponse('reserved', {
+              refusalReason: `${ack.failureKind}:${ack.reason}`,
+              terminal: ack.terminal,
+              nextDueAtMs: ack.nextDueAtMs,
+              serverNowMs: ack.serverNowMs,
+              serverProcessMs: ack.serverProcessMs,
+            });
+
             setPendingCpCost(0);
             if (ack.terminal) {
               // The encounter can never resolve another live tick for us (the

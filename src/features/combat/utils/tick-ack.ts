@@ -36,9 +36,16 @@ export type TickAck =
       ticksProcessed: number;
       /** Server boundary for the next tick (pacing authority). */
       nextDueAtMs: number | null;
-      /** Server clock when it produced this answer. */
+      /** Server clock sampled inside the commit transaction. */
       serverNowMs: number | null;
+      /**
+       * Measured server span from claim answer to commit sample. Subtracting it
+       * from the client round trip yields the measured network time, so pacing
+       * needs no arbitrary fraction of the round trip.
+       */
+      serverProcessMs: number | null;
     }
+
   /**
    * The server refused. `terminal` means this encounter can never produce
    * another live tick for us, so the driver must leave combat instead of
@@ -60,7 +67,14 @@ export type TickAck =
       nextDueAtMs: number | null;
       /** Server clock when it produced this answer. */
       serverNowMs: number | null;
+      /**
+       * A refusal performs no simulation, so the server span between its clock
+       * sample and the answer is zero by construction. Stated explicitly so the
+       * pacer applies one uniform rule to every acknowledgement.
+       */
+      serverProcessMs: number | null;
     }
+
 
   /** Pre-C3 snake_case payload — the caller keeps its legacy handling. */
   | { kind: 'legacy' }
@@ -110,6 +124,10 @@ export function interpretTickAck(raw: unknown): TickAck {
       ticksProcessed: typeof data.ticksProcessed === 'number' ? data.ticksProcessed : 0,
       nextDueAtMs: num(data.nextDueAtMs),
       serverNowMs: num(data.serverNowMs),
+      serverProcessMs:
+        typeof data.serverProcessMs === 'number' && Number.isFinite(data.serverProcessMs) && data.serverProcessMs >= 0
+          ? data.serverProcessMs
+          : null,
     };
   }
 
@@ -122,8 +140,12 @@ export function interpretTickAck(raw: unknown): TickAck {
       reason,
       failureKind,
       terminal: isTerminalRefusal(failureKind, reason, detailMode),
-      nextDueAtMs: num(data.detail?.nextDueAtMs),
-      serverNowMs: num(data.detail?.serverNowMs),
+      // Accepted from either position: refusals nest the cadence report under
+      // `detail`, and a top-level pair is tolerated for forward compatibility.
+      nextDueAtMs: num(data.detail?.nextDueAtMs) ?? num(data.nextDueAtMs),
+      serverNowMs: num(data.detail?.serverNowMs) ?? num(data.serverNowMs),
+      serverProcessMs: 0,
+
     };
   }
 

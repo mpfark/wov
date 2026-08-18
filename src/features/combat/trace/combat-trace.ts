@@ -43,8 +43,29 @@ export interface CombatTraceSample {
   /** Shared-encounter identity, when published. */
   encounterTick?: number | null;
   batchId?: string | null;
+  /**
+   * Classification fields (added so a validation run is classifiable from the
+   * trace alone rather than by re-deriving intent from a request log):
+   * why the request was made, what the server answered, and how the next wake
+   * was computed.
+   */
+  refusalReason?: string;
+  terminal?: boolean;
+  /** Server clock sampled in the commit transaction. */
+  serverNowMs?: number | null;
+  /** Next scheduled boundary the server reported. */
+  nextDueAtMs?: number | null;
+  /** Server-measured span from claim answer to the clock sample. */
+  serverProcessMs?: number | null;
+  /** Round trip minus server processing = measured network time. */
+  networkMs?: number;
+  /** Remaining time to the boundary at the server's sample. */
+  remainingMs?: number;
+  /** Delay the pacer chose for the next request after this answer. */
+  plannedDelayMs?: number;
   /** Set when the response was ignored (stale seq, reserved elsewhere, dropped). */
   outcome?: 'applied' | 'stale' | 'reserved' | 'error' | 'duplicate' | 'empty';
+
 }
 
 type Listener = () => void;
@@ -133,6 +154,15 @@ export interface TickResponseTrace {
   outcome: NonNullable<CombatTraceSample['outcome']>;
   /** Server-reported resolve duration in ms, when present in the payload. */
   serverResolveMs?: number;
+  /** Classification of a refusal, so `not_due` bursts are self-evident. */
+  refusalReason?: string;
+  terminal?: boolean;
+  serverNowMs?: number | null;
+  nextDueAtMs?: number | null;
+  serverProcessMs?: number | null;
+  networkMs?: number;
+  remainingMs?: number;
+  plannedDelayMs?: number;
 }
 
 export function traceTickResponse(seq: number, info: TickResponseTrace) {
@@ -145,8 +175,17 @@ export function traceTickResponse(seq: number, info: TickResponseTrace) {
   sample.batchId = info.batchId ?? null;
   sample.outcome = info.outcome;
   sample.serverResolveMs = info.serverResolveMs;
+  sample.refusalReason = info.refusalReason;
+  sample.terminal = info.terminal;
+  sample.serverNowMs = info.serverNowMs ?? null;
+  sample.nextDueAtMs = info.nextDueAtMs ?? null;
+  sample.serverProcessMs = info.serverProcessMs ?? null;
+  sample.networkMs = info.networkMs;
+  sample.remainingMs = info.remainingMs;
+  sample.plannedDelayMs = info.plannedDelayMs;
   emit();
 }
+
 
 /**
  * The result was applied to React state. Also schedules a paint measurement so

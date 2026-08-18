@@ -13,7 +13,7 @@
  *   4. encounter_snapshot_v2          — immutable state under the claim
  *   5. loadSnapshotAux + decode       — strict C1 contract, no defaulting
  *   6. resolveTickPure                — pure, seeded, no IO
- *   7. commit_encounter_tick_v2       — atomic apply, or nothing at all
+ *   7. commit_encounter_tick_v3       — fenced atomic apply, or nothing at all
  *   8. release on any failure          — the claim is never leaked
  *
  * Mutual exclusion: the database decides whether a tick is `live` or
@@ -97,17 +97,25 @@ export interface OrchestrationSuccess {
   /** Distinct characters that received kill rewards in this tick. */
   readonly rewardedCharacterIds: readonly string[];
   /**
-   * Cadence report, forwarded verbatim from the granted claim.
+   * Post-commit cadence report.
    *
-   * Without these two fields a client can only schedule from the moment its
-   * response arrived, which adds the whole round trip to every interval — the
-   * measured 3.687s committed cadence against a 2.0s simulation cadence. They
-   * are advisory: the database still owns due-ness.
+   * `serverNowMs` is the server clock sampled *inside the commit transaction*
+   * and `nextDueAtMs` is the next scheduled boundary as stored after the
+   * reservation was consumed. Claim-time values were wrong for pacing: the
+   * client could not tell how much of the round trip was server processing, so
+   * every estimate of the response leg was a guess.
    */
   readonly nextDueAtMs: number | null;
-  /** Server clock when the claim was granted (pairs with `nextDueAtMs`). */
+  /** Server clock at commit (pairs with `nextDueAtMs`). */
   readonly serverNowMs: number | null;
+  /**
+   * Measured server-side span from the claim answer to the commit sample. The
+   * client subtracts it from its own round trip to obtain the *measured*
+   * network time, instead of applying an arbitrary fraction of the round trip.
+   */
+  readonly serverProcessMs: number | null;
 }
+
 
 
 export type OrchestrationResult = OrchestrationSuccess | C3Failure;
@@ -330,15 +338,30 @@ async function release(
   }
 }
 
+/**
+ * Overdue policy for the live role, stated explicitly rather than implied by a
+ * bare `return 1`.
+ *
+ * `coalesce`: when several scheduled boundaries have already elapsed (tab
+ * throttled, request dropped), a live claim resolves exactly ONE tick and the
+ * missed boundaries are discarded — they are never replayed. The schedule stays
+ * phase-aligned because `claim_encounter_tick` advances from the consumed
+ * boundary, so the only observable consequence is lost simulation time, not a
+ * drifting cadence. Changing this to `replay` is a balance decision and needs
+ * explicit approval; it is deliberately not implemented here.
+ */
+export const LIVE_OVERDUE_POLICY: 'coalesce' | 'replay' = 'coalesce';
+
 /** How many ticks this claim is entitled to simulate. */
 function ticksToSimulate(role: OrchestrationRequest['role'], root: any, nowMs: number): number {
-  if (role === 'live') return 1;
+  if (role === 'live') return LIVE_OVERDUE_POLICY === 'coalesce' ? 1 : 1;
   const rate = Math.max(250, Number(root?.tickRateMs ?? DEFAULT_RATE_MS));
   const last = Number(root?.cursor?.tickAtMs ?? 0);
   if (!last) return 1;
   const elapsed = Math.max(0, nowMs - last);
   return Math.max(1, Math.min(MAX_CATCHUP_TICKS, Math.floor(elapsed / rate)));
 }
+
 
 /** Presence bookkeeping only: never cadence, ownership or roster. */
 function sessionProposal(
@@ -420,13 +443,27 @@ export async function orchestrateCombatResolution(
 
     // 5b. Aux + strict decode. The resolver mode comes from the claim only.
     const mode = claim.dbMode === 'live' ? 'live' : 'catchup';
+    // Simulation time is the SCHEDULED boundary this claim reserved, not the
+    // moment the request happened to reach this isolate. Using arrival time let
+    // queueing, cold starts and commit latency leak into effect expiry and
+    // regeneration, so identical simulations produced different durations.
+    // `deps.nowMs` remains the fallback for legacy/malformed claim answers that
+    // carry no boundary.
+    const scheduledNowMs = claim.boundaryAtMs ?? deps.nowMs;
+    if (claim.boundaryAtMs === null) {
+      deps.log?.('[c3] claim carried no boundary — falling back to arrival time', {
+        encounterId,
+        tick: claim.tick,
+      });
+    }
     const { aux, configFailures } = loadSnapshotAux({
       snapshotRoot: root,
       mode,
-      nowMs: deps.nowMs,
-      ticksToSimulate: ticksToSimulate(req.role, root, deps.nowMs),
+      nowMs: scheduledNowMs,
+      ticksToSimulate: ticksToSimulate(req.role, root, scheduledNowMs),
       catalog,
     });
+
     const decoded = decodeEncounterSnapshot(root, aux);
     if (configFailures.length > 0) {
       deps.log?.('[c3] ability configuration failures', configFailures);
@@ -454,15 +491,21 @@ export async function orchestrateCombatResolution(
     }
 
     // 7. Atomic commit. Either every mutation lands or none does.
+    // `_reserved_boundary_at` fences the commit: if the encounter's stored
+    // reservation is a different boundary, this resolver's claim was superseded
+    // and nothing lands.
     const batchId = deps.newBatchId();
-    const request = buildCommitRequest(
-      decoded.envelope,
-      proposed,
-      sessionProposal(proposed, root),
-      batchId,
-    );
+    const request = {
+      ...buildCommitRequest(
+        decoded.envelope,
+        proposed,
+        sessionProposal(proposed, root),
+        batchId,
+      ),
+      _reserved_boundary_at: claim.boundaryAtMs,
+    };
     const { data: commit, error: commitErr } = await db.rpc(
-      'commit_encounter_tick_v2',
+      'commit_encounter_tick_v3',
       request as unknown as Record<string, unknown>,
     );
     if (commitErr) {
@@ -470,9 +513,21 @@ export async function orchestrateCombatResolution(
     }
     if (!commit?.committed) {
       const reason = String(commit?.reason ?? 'refused');
-      const kind = reason === 'stale_claim' || reason === 'lease_expired' ? 'lease_lost' : 'commit_refused';
+      const kind = reason === 'stale_claim' || reason === 'lease_expired' || reason === 'boundary_conflict'
+        ? 'lease_lost'
+        : 'commit_refused';
       throw new C3Error(kind, reason);
     }
+
+    // Pacing is reported from the commit transaction, not from the claim: the
+    // client can then subtract the *measured* server span from its own round
+    // trip and knows exactly how much of the interval is still ahead of it.
+    const committedAtMs = epochMs(commit.committed_at_ms) ?? epochMs(commit.committed_at);
+    const nextDueAtMs = epochMs(commit.next_due_at_ms) ?? claim.nextDueAtMs;
+    const serverProcessMs =
+      committedAtMs !== null && claim.serverNowMs !== null
+        ? Math.max(0, committedAtMs - claim.serverNowMs)
+        : null;
 
     return {
       ok: true,
@@ -491,13 +546,11 @@ export async function orchestrateCombatResolution(
       creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
       characterDeaths: proposed.characters.filter((c) => c.died).length,
       rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
-      // The claim reserved boundary B and the schedule already advanced to
-      // B + rate, so the successful answer names the *next* boundary. Paired
-      // with the server's clock it is a remaining duration, immune to clock
-      // offset and to how long this commit took.
-      nextDueAtMs: claim.nextDueAtMs,
-      serverNowMs: claim.serverNowMs,
+      nextDueAtMs,
+      serverNowMs: committedAtMs ?? claim.serverNowMs,
+      serverProcessMs,
     };
+
 
 
   } catch (e) {
