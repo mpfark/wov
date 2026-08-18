@@ -36,9 +36,16 @@ export type TickAck =
       ticksProcessed: number;
       /** Server boundary for the next tick (pacing authority). */
       nextDueAtMs: number | null;
-      /** Server clock when it produced this answer. */
+      /** Server clock sampled inside the commit transaction. */
       serverNowMs: number | null;
+      /**
+       * Measured server span from claim answer to commit sample. Subtracting it
+       * from the client round trip yields the measured network time, so pacing
+       * needs no arbitrary fraction of the round trip.
+       */
+      serverProcessMs: number | null;
     }
+
   /**
    * The server refused. `terminal` means this encounter can never produce
    * another live tick for us, so the driver must leave combat instead of
