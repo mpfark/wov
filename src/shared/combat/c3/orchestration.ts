@@ -338,15 +338,30 @@ async function release(
   }
 }
 
+/**
+ * Overdue policy for the live role, stated explicitly rather than implied by a
+ * bare `return 1`.
+ *
+ * `coalesce`: when several scheduled boundaries have already elapsed (tab
+ * throttled, request dropped), a live claim resolves exactly ONE tick and the
+ * missed boundaries are discarded — they are never replayed. The schedule stays
+ * phase-aligned because `claim_encounter_tick` advances from the consumed
+ * boundary, so the only observable consequence is lost simulation time, not a
+ * drifting cadence. Changing this to `replay` is a balance decision and needs
+ * explicit approval; it is deliberately not implemented here.
+ */
+export const LIVE_OVERDUE_POLICY: 'coalesce' | 'replay' = 'coalesce';
+
 /** How many ticks this claim is entitled to simulate. */
 function ticksToSimulate(role: OrchestrationRequest['role'], root: any, nowMs: number): number {
-  if (role === 'live') return 1;
+  if (role === 'live') return LIVE_OVERDUE_POLICY === 'coalesce' ? 1 : 1;
   const rate = Math.max(250, Number(root?.tickRateMs ?? DEFAULT_RATE_MS));
   const last = Number(root?.cursor?.tickAtMs ?? 0);
   if (!last) return 1;
   const elapsed = Math.max(0, nowMs - last);
   return Math.max(1, Math.min(MAX_CATCHUP_TICKS, Math.floor(elapsed / rate)));
 }
+
 
 /** Presence bookkeeping only: never cadence, ownership or roster. */
 function sessionProposal(
