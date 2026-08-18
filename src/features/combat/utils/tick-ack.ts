@@ -105,11 +105,13 @@ export function interpretTickAck(raw: unknown): TickAck {
     const failureKind = typeof data.kind === 'string' ? data.kind : 'internal';
     const reason = typeof data.reason === 'string' ? data.reason : 'refused';
     const detailMode = typeof data.detail?.mode === 'string' ? data.detail.mode : null;
+    const nextDue = data.detail?.nextDueAtMs;
     return {
       kind: 'refused',
       reason,
       failureKind,
       terminal: isTerminalRefusal(failureKind, reason, detailMode),
+      nextDueAtMs: typeof nextDue === 'number' && Number.isFinite(nextDue) ? nextDue : null,
     };
   }
 
