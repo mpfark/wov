@@ -336,14 +336,52 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const scheduleNextTickRef = useRef<(immediate?: boolean) => void>(() => {});
   useEffect(() => { scheduleNextTickRef.current = scheduleNextTick; }, [scheduleNextTick]);
 
+  /**
+   * The one way any non-timer event asks for a tick.
+   *
+   * Combat start, ability presses, engage broadcasts, follower wakes and tab
+   * visibility all used to call `doTick` directly. Each of those bypassed the
+   * pacer entirely, so an event arriving just after a request produced a
+   * back-to-back HTTP call (measured request gaps down to 0.652s against a 2s
+   * cadence). They now share one entry point with a hard minimum spacing, and a
+   * request that arrives while one is in flight is coalesced by `doTick`.
+   */
+  const requestTickNow = useCallback((cause: TickCause) => {
+    if (maintenanceRef.current) return;
+    const now = Date.now();
+    tickCauseRef.current = cause;
+    if (now - lastRequestAtRef.current < MIN_REQUEST_SPACING_MS) {
+      // Too soon to be a distinct simulation tick: let the pacer place it.
+      scheduleNextTickRef.current();
+      return;
+    }
+    if (intervalRef.current) {
+      clearWorkerTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    doTickRef.current();
+  }, []);
+  const requestTickNowRef = useRef(requestTickNow);
+  useEffect(() => { requestTickNowRef.current = requestTickNow; }, [requestTickNow]);
+
   /** Adopt the server's cadence report from an acknowledgement. */
   const noteCadence = useCallback(
-    (ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null, receivedAt: number) => {
-      const cadence = readServerCadence(ack);
+    (
+      ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null,
+      receivedAt: number,
+      rttMs?: number,
+    ) => {
+      // Every acknowledgement is pacing-relevant, committed ones included: the
+      // follow-up gate used to read a timestamp that only legacy renderable
+      // payloads ever stamped, so under C4 it was permanently `Infinity` and
+      // fired zero-delay follow-ups forever.
+      ackAtRef.current = receivedAt;
+      const cadence = readServerCadence(ack, rttMs);
       if (cadence) cadenceRef.current = { cadence, receivedAt };
     },
     [],
   );
+
 
   // ── Mobile / background-tab catchup ───────────────────────────
   // When the tab returns to the foreground:

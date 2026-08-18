@@ -42,6 +42,22 @@ export const MIN_DELAY_MS = 50;
 export const MAX_DELAY_MS = TICK_RATE_MS * 2;
 
 /**
+ * Fraction of the measured round trip that elapsed between the server sampling
+ * its clock and the browser receiving the answer.
+ *
+ * `serverNowMs` is stamped inside `claim_encounter_tick`, i.e. early in server
+ * processing, so most of the round trip (resolve + commit + downstream
+ * transport) happens *after* the sample. Ignoring it is what re-introduces the
+ * round trip into every interval. Overestimating only costs a cheap `not_due`
+ * refusal, which now carries an accurate boundary and self-corrects; under-
+ * estimating permanently inflates the cadence.
+ */
+export const TRANSIT_SHARE = 0.6;
+
+/** Transit compensation is capped so one pathological response cannot busy-loop. */
+export const MAX_TRANSIT_COMP_MS = 1200;
+
+/**
  * What the client knows about the server's schedule, learned from the last
  * claim answer (granted or refused — both carry it).
  */
@@ -53,6 +69,8 @@ export interface ServerCadence {
    * as a *remaining duration*, which is immune to client/server clock offset.
    */
   nowMs: number | null;
+  /** Measured client round-trip of the request that carried this report. */
+  rttMs?: number | null;
 }
 
 export interface PacerInput {
@@ -83,11 +101,16 @@ export function nextTickDelayMs(input: PacerInput): number {
   const serverNow = Number.isFinite(cadence.nowMs as number)
     ? (cadence.nowMs as number)
     : cadence.nextDueAtMs - rate;
-  const remainingAtReceipt = cadence.nextDueAtMs - serverNow;
+  const remainingAtSample = cadence.nextDueAtMs - serverNow;
   // Time already spent on the client since that answer arrived counts against
   // the wait, otherwise slow local work is added on top of the cadence.
   const elapsedSinceReceipt = Math.max(0, input.nowMs - input.receivedAtMs);
-  return clamp(remainingAtReceipt - elapsedSinceReceipt + BOUNDARY_BUFFER_MS, rate);
+  const rtt = Number.isFinite(cadence.rttMs as number) ? Math.max(0, cadence.rttMs as number) : 0;
+  const transit = Math.min(MAX_TRANSIT_COMP_MS, Math.round(rtt * TRANSIT_SHARE));
+  return clamp(
+    remainingAtSample - transit - elapsedSinceReceipt + BOUNDARY_BUFFER_MS,
+    rate,
+  );
 }
 
 function clamp(delay: number, rateMs: number): number {
@@ -96,6 +119,7 @@ function clamp(delay: number, rateMs: number): number {
   return Math.min(max, Math.max(MIN_DELAY_MS, Math.round(delay)));
 }
 
+
 /**
  * Reads the cadence report out of an already-classified tick acknowledgement.
  * Returns null when the answer carried no schedule (transport error, legacy
@@ -103,6 +127,7 @@ function clamp(delay: number, rateMs: number): number {
  */
 export function readServerCadence(
   ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null | undefined,
+  rttMs?: number | null,
 ): ServerCadence | null {
   const due = ack?.nextDueAtMs;
   if (typeof due !== 'number' || !Number.isFinite(due) || due <= 0) return null;
@@ -110,5 +135,7 @@ export function readServerCadence(
   return {
     nextDueAtMs: due,
     nowMs: typeof now === 'number' && Number.isFinite(now) && now > 0 ? now : null,
+    rttMs: typeof rttMs === 'number' && Number.isFinite(rttMs) && rttMs >= 0 ? rttMs : null,
   };
 }
+
