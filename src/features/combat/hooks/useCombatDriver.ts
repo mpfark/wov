@@ -29,7 +29,8 @@ import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
-import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
+import { setWorkerTimeout, clearWorkerTimeout } from '@/lib/worker-timer';
+import { nextTickDelayMs, readServerCadence, type ServerCadence } from '../utils/tick-pacer';
 import { getAbilityKeyForSlot } from '@/features/combat/utils/ability-calcs';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
@@ -230,11 +231,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
 
   /**
-   * One-shot timer used to re-phase the cadence onto the server's next due
-   * boundary after a `not_due` refusal. The worker interval remains the pacing
-   * authority; this only removes the aliasing beat.
+   * The last cadence report the server gave us (boundary + its own clock) and
+   * when it arrived on this client. This is the ONLY input to pacing: the
+   * client no longer owns a period of its own.
    */
-  const rephaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cadenceRef = useRef<{ cadence: ServerCadence | null; receivedAt: number }>({
+    cadence: null,
+    receivedAt: 0,
+  });
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -294,39 +298,52 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setPendingAbility(null);
     setPendingCpCost(0);
     optimisticCpRef.current = null;
-    if (rephaseTimerRef.current) {
-      clearTimeout(rephaseTimerRef.current);
-      rephaseTimerRef.current = null;
-    }
+    cadenceRef.current = { cadence: null, receivedAt: 0 };
     if (intervalRef.current) {
-      clearWorkerInterval(intervalRef.current);
+      clearWorkerTimeout(intervalRef.current);
       intervalRef.current = null;
     }
   }, []);
 
   /**
-   * Align the cadence with the server's authoritative due boundary.
+   * The single pacing authority.
    *
-   * The database marks a tick due at `last_commit + rate_ms`, and the commit
-   * timestamp includes the request round-trip. A fixed 2s client poll therefore
-   * lands just *before* the boundary, is refused `not_due`, and then waits a
-   * whole further interval — observed as a ~3.7s committed cadence against a 2s
-   * simulation cadence. Re-phasing collapses that to boundary + latency.
+   * Exactly one pending timer exists at any moment, and it always aims at the
+   * server's authoritative next-due boundary (falling back to the nominal rate
+   * only before the first answer). Four call sites used to arm competing 2s
+   * worker intervals; that self-owned period aliased against the identical
+   * server period and inflated a 2s cadence to a 2.906s committed cadence with
+   * a third of all requests refused `not_due`.
    */
-  const rephaseCadence = useCallback((nextDueAtMs: number) => {
-    const delay = Math.max(60, Math.min(2000, nextDueAtMs - Date.now() + 60));
-    if (rephaseTimerRef.current) clearTimeout(rephaseTimerRef.current);
-    rephaseTimerRef.current = setTimeout(() => {
-      rephaseTimerRef.current = null;
-      if (!inCombatRef.current) return;
-      if (intervalRef.current) {
-        clearWorkerInterval(intervalRef.current);
-        intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-      }
-      tickCauseRef.current = 'followup';
+  const scheduleNextTick = useCallback((immediate = false) => {
+    if (intervalRef.current) {
+      clearWorkerTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (maintenanceRef.current) return;
+    if (!inCombatRef.current && !pendingAbilityRef.current) return;
+    const { cadence, receivedAt } = cadenceRef.current;
+    const delay = immediate
+      ? 0
+      : nextTickDelayMs({ cadence, receivedAtMs: receivedAt, nowMs: Date.now() });
+    intervalRef.current = setWorkerTimeout(() => {
+      intervalRef.current = null;
       doTickRef.current();
     }, delay);
   }, []);
+
+  /** Stable handle so callbacks defined later can re-arm the pacer. */
+  const scheduleNextTickRef = useRef<(immediate?: boolean) => void>(() => {});
+  useEffect(() => { scheduleNextTickRef.current = scheduleNextTick; }, [scheduleNextTick]);
+
+  /** Adopt the server's cadence report from an acknowledgement. */
+  const noteCadence = useCallback(
+    (ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null, receivedAt: number) => {
+      const cadence = readServerCadence(ack);
+      if (cadence) cadenceRef.current = { cadence, receivedAt };
+    },
+    [],
+  );
 
   // ── Mobile / background-tab catchup ───────────────────────────
   // When the tab returns to the foreground:
@@ -387,8 +404,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     idleCountRef.current = 0;
     traceAbilityPress(label);
     tickCauseRef.current = 'ability';
-    if (intervalRef.current) clearWorkerInterval(intervalRef.current);
-    intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+    // Dispatch now; doTick re-arms the pacer against the server boundary when
+    // it finishes, so this never adds a second competing beat.
     doTickRef.current();
   }, []);
 
@@ -449,9 +466,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
 
 
-      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearWorkerTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
       doTickRef.current();
-      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
     }
   }, []);
 
@@ -611,7 +630,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         const solo = !ext.current.party;
         const driver = solo || ext.current.isLeader;
         if (driver && !intervalRef.current) {
-          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+          scheduleNextTickRef.current();
         }
       }
     }
@@ -971,9 +990,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         if (!inCombatRef.current) {
           inCombatRef.current = true;
           setInCombat(true);
-          if (intervalRef.current) clearWorkerInterval(intervalRef.current);
+          if (intervalRef.current) {
+            clearWorkerTimeout(intervalRef.current);
+            intervalRef.current = null;
+          }
           doTickRef.current();
-          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
         }
       })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
@@ -1276,6 +1297,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               encounterIdRef.current = ack.encounterId;
               setEncounterId(ack.encounterId);
             }
+            noteCadence(ack, receivedAt);
             noteCommittedRef.current(ack.tick, ack.batchId);
           } else if (ack.kind === 'refused') {
             traceResponse('reserved');
@@ -1287,11 +1309,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               // encounters on every later cadence tick.
               console.log('[combat] terminal tick refusal — leaving combat', ack);
               stopCombat();
-            } else if (ack.nextDueAtMs !== null) {
+            } else {
               // Cadence refusal: the server told us exactly when the next tick
-              // becomes due. Re-phase onto that boundary instead of waiting a
-              // whole extra poll interval.
-              rephaseCadence(ack.nextDueAtMs);
+              // becomes due. Adopting it is enough — the pacer re-arms against
+              // that boundary in the finally block below.
+              noteCadence(ack, receivedAt);
             }
           } else if ((result as any).tick_reserved_elsewhere) {
 
@@ -1322,13 +1344,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         stopCombat();
       }
 
-      // Idle detection
+      // Idle detection: the pacer simply stops re-arming once there is nothing
+      // left to drive (see scheduleNextTick's guard).
       if (!inCombatRef.current && !pendingAbilityRef.current) {
         idleCountRef.current++;
-        if (idleCountRef.current >= 2 && intervalRef.current) {
-          clearWorkerInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
       } else {
         idleCountRef.current = 0;
       }
@@ -1340,17 +1359,24 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // resolved (or got discarded as stale) at once. Only fire the follow-up
       // when it can actually do work: a queued ability to dispatch, or enough
       // elapsed time that the server has a new tick to resolve.
+      let immediate = false;
       if (tickPendingRef.current) {
         tickPendingRef.current = false;
         const sinceApplied = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
         const hasWork = !!pendingAbilityRef.current || sinceApplied >= 1500;
         if (hasWork) {
           tickCauseRef.current = pendingAbilityRef.current ? 'ability' : 'followup';
-          setTimeout(() => doTickRef.current(), 0);
+          immediate = true;
         }
+      } else if (pendingAbilityRef.current) {
+        tickCauseRef.current = 'ability';
+        immediate = true;
       }
+      // Single re-arm point: every tick, whatever its outcome, schedules the
+      // next one against the server's boundary.
+      scheduleNextTick(immediate);
     }
-  }, [processTickResult, stopCombat, rephaseCadence]);
+  }, [processTickResult, stopCombat, scheduleNextTick, noteCadence]);
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
 

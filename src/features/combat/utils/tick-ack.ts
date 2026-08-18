@@ -34,6 +34,10 @@ export type TickAck =
       tick: number | null;
       batchId: string | null;
       ticksProcessed: number;
+      /** Server boundary for the next tick (pacing authority). */
+      nextDueAtMs: number | null;
+      /** Server clock when it produced this answer. */
+      serverNowMs: number | null;
     }
   /**
    * The server refused. `terminal` means this encounter can never produce
@@ -48,13 +52,16 @@ export type TickAck =
       /**
        * Server clock (ms) at which this encounter's next tick becomes due.
        * Present on cadence refusals (`not_due` / `in_flight`) so the client can
-       * re-phase its poll onto the authoritative boundary instead of aliasing
-       * against it (a fixed 2s poll that lands just before a 2s boundary waits
-       * a whole extra interval, which is what turned a 2s simulation cadence
-       * into a ~3.7s committed cadence).
+       * pace onto the authoritative boundary instead of aliasing against it (a
+       * client-owned 2s period that lands just before a 2s boundary waits a
+       * whole extra interval, which is what turned a 2s simulation cadence into
+       * a ~2.9s committed cadence).
        */
       nextDueAtMs: number | null;
+      /** Server clock when it produced this answer. */
+      serverNowMs: number | null;
     }
+
   /** Pre-C3 snake_case payload — the caller keeps its legacy handling. */
   | { kind: 'legacy' }
   /** No parseable body at all. */
@@ -91,6 +98,9 @@ export function interpretTickAck(raw: unknown): TickAck {
     return { kind: 'maintenance', message };
   }
 
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
+
   if (data.ok === true) {
     return {
       kind: 'committed',
@@ -98,6 +108,8 @@ export function interpretTickAck(raw: unknown): TickAck {
       tick: typeof data.tick === 'number' ? data.tick : null,
       batchId: typeof data.batchId === 'string' ? data.batchId : null,
       ticksProcessed: typeof data.ticksProcessed === 'number' ? data.ticksProcessed : 0,
+      nextDueAtMs: num(data.nextDueAtMs),
+      serverNowMs: num(data.serverNowMs),
     };
   }
 
@@ -105,15 +117,16 @@ export function interpretTickAck(raw: unknown): TickAck {
     const failureKind = typeof data.kind === 'string' ? data.kind : 'internal';
     const reason = typeof data.reason === 'string' ? data.reason : 'refused';
     const detailMode = typeof data.detail?.mode === 'string' ? data.detail.mode : null;
-    const nextDue = data.detail?.nextDueAtMs;
     return {
       kind: 'refused',
       reason,
       failureKind,
       terminal: isTerminalRefusal(failureKind, reason, detailMode),
-      nextDueAtMs: typeof nextDue === 'number' && Number.isFinite(nextDue) ? nextDue : null,
+      nextDueAtMs: num(data.detail?.nextDueAtMs),
+      serverNowMs: num(data.detail?.serverNowMs),
     };
   }
+
 
   // Pre-C3 renderable payload (still produced by committed batches and party
   // broadcasts).

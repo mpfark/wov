@@ -293,22 +293,25 @@ describe('C5 — rejected start restores the affordance, accepted start starts o
     expect(src).toContain('if (ack.terminal)');
   });
 
-  it('9. the worker interval is created behind a null check and cleared on stop', () => {
+  it('9. exactly one pacing timer exists and it is cleared on stop', () => {
     const src = driver();
-    // Every worker creation is immediately preceded by a clear or a null
-    // check, so a second start can never leave two intervals ticking.
+    // Pacing is one-shot and owned by scheduleNextTick alone: a repeating
+    // interval anywhere in the driver would reintroduce a client-owned period
+    // that aliases against the server boundary.
+    expect(src).not.toContain('setWorkerInterval');
     let from = 0;
     for (;;) {
-      const at = src.indexOf('intervalRef.current = setWorkerInterval', from);
+      const at = src.indexOf('intervalRef.current = setWorkerTimeout', from);
       if (at < 0) break;
-      const before = src.slice(Math.max(0, at - 160), at);
+      const before = src.slice(Math.max(0, at - 400), at);
       expect(
-        before.includes('clearWorkerInterval') || before.includes('!intervalRef.current'),
+        before.includes('clearWorkerTimeout') || before.includes('!intervalRef.current'),
       ).toBe(true);
       from = at + 1;
     }
     const stop = src.slice(src.indexOf('const stopCombat'), src.indexOf('const stopCombat') + 3000);
-    expect(stop).toContain('clearWorkerInterval(intervalRef.current)');
+    expect(stop).toContain('clearWorkerTimeout(intervalRef.current)');
     expect(stop).toContain('intervalRef.current = null');
   });
+
 });
