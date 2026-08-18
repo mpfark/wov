@@ -96,14 +96,6 @@ export interface OrchestrationSuccess {
   readonly characterDeaths: number;
   /** Distinct characters that received kill rewards in this tick. */
   readonly rewardedCharacterIds: readonly string[];
-  /**
-   * Server epoch-ms boundary at which this encounter's next tick becomes due,
-   * and the server clock that produced it. The client's pacing authority aims
-   * at this boundary instead of running its own period (two same-period clocks
-   * alias, which inflated a 2s cadence to ~2.9s committed).
-   */
-  readonly nextDueAtMs: number | null;
-  readonly serverNowMs: number | null;
 
 }
 
@@ -231,14 +223,6 @@ interface Claim {
   readonly token: string;
   readonly resolverId: string;
   readonly dbMode: 'live' | 'effects_only';
-  /** Authoritative next-due boundary reported by the claim (advisory to callers). */
-  readonly nextDueAtMs: number | null;
-  readonly serverNowMs: number | null;
-}
-
-function positive(v: unknown): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 async function claimTick(
@@ -260,12 +244,10 @@ async function claimTick(
     // poll onto the authoritative cadence boundary instead of aliasing against
     // it. It is advisory only: the database still owns due-ness.
     const nextDue = Number(data?.next_due_at_ms);
-    const serverNow = Number(data?.now_ms);
     throw new C3Error('claim_refused', String(data?.reason ?? 'refused'), {
       detail: {
         mode: data?.mode ?? null,
         nextDueAtMs: Number.isFinite(nextDue) && nextDue > 0 ? nextDue : null,
-        serverNowMs: Number.isFinite(serverNow) && serverNow > 0 ? serverNow : null,
       },
     });
   }
@@ -274,8 +256,6 @@ async function claimTick(
     token: String(data.claim_token),
     resolverId: String(data.resolver_id),
     dbMode: data.mode === 'live' ? 'live' : 'effects_only',
-    nextDueAtMs: positive(data.next_due_at_ms),
-    serverNowMs: positive(data.now_ms),
   };
 }
 
@@ -459,8 +439,6 @@ export async function orchestrateCombatResolution(
       creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
       characterDeaths: proposed.characters.filter((c) => c.died).length,
       rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
-      nextDueAtMs: claim.nextDueAtMs,
-      serverNowMs: claim.serverNowMs,
     };
 
   } catch (e) {
