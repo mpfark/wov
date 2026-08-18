@@ -216,7 +216,7 @@ describe('claim/commit schedule semantics (reference machine)', () => {
     m.now = 99_500;
     const c = m.claim();
     expect(c.claimed).toBe(false);
-    if (c.claimed) return;
+    if (!('reason' in c)) throw new Error('expected a refusal');
     expect(c.reason).toBe('not_due');
     expect(c.next_due_at_ms).toBe(100_000);
     expect(c.now_ms).toBe(99_500);
@@ -228,7 +228,7 @@ describe('claim/commit schedule semantics (reference machine)', () => {
     expect(first.claimed).toBe(true);
     const second = m.claim();
     expect(second.claimed).toBe(false);
-    if (second.claimed) return;
+    if (!('reason' in second)) throw new Error('expected a refusal');
     expect(second.reason).toBe('in_flight');
   });
 
