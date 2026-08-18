@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.commit_encounter_tick_v3(uuid, bigint, uuid, uuid, integer, integer, jsonb, jsonb, jsonb, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.commit_encounter_tick_v3(uuid, bigint, uuid, uuid, integer, integer, jsonb, jsonb, jsonb, bigint) TO service_role;
