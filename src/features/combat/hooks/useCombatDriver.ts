@@ -1077,15 +1077,16 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       }
     }, 1800);
     // Phase 6 fallback heartbeat: if the leader's ticks stop landing, wake the
-    // tick from here. doTick itself decides whether the gap is large enough.
+    // tick from here. This is a follower-only watchdog, never a second beat for
+    // the driver, and it measures staleness from the last acknowledgement (or
+    // rendered tick) rather than from a timestamp only legacy payloads stamp.
     const wake = setInterval(() => {
       if (!inCombatRef.current) return;
-      const since = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
-      if (since > FOLLOWER_WAKE_STALE_MS) {
-        tickCauseRef.current = 'wakeup';
-        doTickRef.current();
-      }
+      const last = Math.max(lastTickRef.current, ackAtRef.current);
+      const since = last ? Date.now() - last : Infinity;
+      if (since > FOLLOWER_WAKE_STALE_MS) requestTickNowRef.current('wakeup');
     }, 2000);
+
     return () => { clearInterval(interval); clearInterval(wake); };
   }, [params.party, params.isLeader]);
 
