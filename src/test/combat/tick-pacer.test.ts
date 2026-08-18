@@ -150,8 +150,8 @@ describe('tick pacer', () => {
 
   it('holds a 2s request cadence end to end over a latent link', () => {
     // Full loop with post-commit pacing: 400ms upstream, 700ms server, 200ms
-    // downstream. Request-to-request spacing must stay one interval (plus the
-    // deliberate boundary buffer), and every claim must land already due.
+    // downstream. Request-to-request spacing must settle on exactly one
+    // interval, and every claim must land already due.
     const rate = TICK_RATE_MS;
     const up = 400, server = 700, down = 200;
     let boundary = 1_000_000;
@@ -183,10 +183,10 @@ describe('tick pacer', () => {
       boundary = nextBoundary;
     }
     for (let i = 2; i < requests.length; i++) {
-      expect(requests[i] - requests[i - 1]).toBe(rate + BOUNDARY_BUFFER_MS);
+      expect(requests[i] - requests[i - 1]).toBe(rate);
     }
     for (let i = 2; i < commits.length; i++) {
-      expect(commits[i] - commits[i - 1]).toBe(rate + BOUNDARY_BUFFER_MS);
+      expect(commits[i] - commits[i - 1]).toBe(rate);
     }
   });
 });
