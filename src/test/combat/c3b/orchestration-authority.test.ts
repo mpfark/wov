@@ -142,7 +142,7 @@ function fakeDb(opts: FakeOptions = {}) {
           }
           return { data: root, error: null };
         }
-        case 'commit_encounter_tick_v2':
+        case 'commit_encounter_tick_v3':
           return { data: opts.commit ?? { committed: true }, error: opts.commitError ?? null };
         case 'release_encounter_tick':
           return { data: { released: true }, error: null };
@@ -192,7 +192,7 @@ describe('C3b — live vs catch-up exclusivity', () => {
     expect(r.ok).toBe(false);
     expect((r as any).kind).toBe('claim_refused');
     expect(calls.map(c => c.fn)).not.toContain('encounter_snapshot_v2');
-    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v2');
+    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v3');
     expect((r as any).events).toBeUndefined();
   });
 
@@ -218,7 +218,7 @@ describe('C3b — only committed batches are displayed', () => {
     );
     expect(r.ok).toBe(true);
     expect((r as any).batchId).toBe('batch-1');
-    const commit = calls.find(c => c.fn === 'commit_encounter_tick_v2')!;
+    const commit = calls.find(c => c.fn === 'commit_encounter_tick_v3')!;
     expect(commit.args._batch_id).toBe('batch-1');
     expect(commit.args._tick).toBe(7);
     expect(commit.args._claim_token).toBe('tok');
@@ -249,7 +249,7 @@ describe('C3b — only committed batches are displayed', () => {
       deps(db, { catalog: { configVersion: 'v-stale', lookup: () => null } }) as any,
     );
     expect((r as any).kind).toBe('config_conflict');
-    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v2');
+    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v3');
     expect(calls.some(c => c.fn === 'release_encounter_tick')).toBe(true);
   });
 
@@ -257,7 +257,7 @@ describe('C3b — only committed batches are displayed', () => {
     const { db, calls } = fakeDb({ snapshot: { loaded: false, reason: 'lease_expired' } });
     const r = await orchestrateCombatResolution({ role: 'catchup', nodeId: NODE }, deps(db) as any);
     expect((r as any).kind).toBe('snapshot_refused');
-    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v2');
+    expect(calls.map(c => c.fn)).not.toContain('commit_encounter_tick_v3');
   });
 
   it('is closed while combat is in maintenance — no encounter work at all', async () => {

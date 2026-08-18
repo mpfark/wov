@@ -13,7 +13,7 @@
  *   4. encounter_snapshot_v2          — immutable state under the claim
  *   5. loadSnapshotAux + decode       — strict C1 contract, no defaulting
  *   6. resolveTickPure                — pure, seeded, no IO
- *   7. commit_encounter_tick_v2       — atomic apply, or nothing at all
+ *   7. commit_encounter_tick_v3       — fenced atomic apply, or nothing at all
  *   8. release on any failure          — the claim is never leaked
  *
  * Mutual exclusion: the database decides whether a tick is `live` or
