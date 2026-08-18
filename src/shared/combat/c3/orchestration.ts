@@ -97,17 +97,25 @@ export interface OrchestrationSuccess {
   /** Distinct characters that received kill rewards in this tick. */
   readonly rewardedCharacterIds: readonly string[];
   /**
-   * Cadence report, forwarded verbatim from the granted claim.
+   * Post-commit cadence report.
    *
-   * Without these two fields a client can only schedule from the moment its
-   * response arrived, which adds the whole round trip to every interval — the
-   * measured 3.687s committed cadence against a 2.0s simulation cadence. They
-   * are advisory: the database still owns due-ness.
+   * `serverNowMs` is the server clock sampled *inside the commit transaction*
+   * and `nextDueAtMs` is the next scheduled boundary as stored after the
+   * reservation was consumed. Claim-time values were wrong for pacing: the
+   * client could not tell how much of the round trip was server processing, so
+   * every estimate of the response leg was a guess.
    */
   readonly nextDueAtMs: number | null;
-  /** Server clock when the claim was granted (pairs with `nextDueAtMs`). */
+  /** Server clock at commit (pairs with `nextDueAtMs`). */
   readonly serverNowMs: number | null;
+  /**
+   * Measured server-side span from the claim answer to the commit sample. The
+   * client subtracts it from its own round trip to obtain the *measured*
+   * network time, instead of applying an arbitrary fraction of the round trip.
+   */
+  readonly serverProcessMs: number | null;
 }
+
 
 
 export type OrchestrationResult = OrchestrationSuccess | C3Failure;
