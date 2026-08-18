@@ -468,7 +468,14 @@ export async function orchestrateCombatResolution(
       creatureDeaths: proposed.creatures.filter((c) => c.killed).length,
       characterDeaths: proposed.characters.filter((c) => c.died).length,
       rewardedCharacterIds: [...new Set(proposed.rewards.map((r) => r.characterId))],
+      // The claim reserved boundary B and the schedule already advanced to
+      // B + rate, so the successful answer names the *next* boundary. Paired
+      // with the server's clock it is a remaining duration, immune to clock
+      // offset and to how long this commit took.
+      nextDueAtMs: claim.nextDueAtMs,
+      serverNowMs: claim.serverNowMs,
     };
+
 
   } catch (e) {
     const failure = toFailure(e);
