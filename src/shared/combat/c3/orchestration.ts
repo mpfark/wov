@@ -234,6 +234,18 @@ interface Claim {
   readonly token: string;
   readonly resolverId: string;
   readonly dbMode: 'live' | 'effects_only';
+  /** Scheduled simulation boundary this claim reserved (epoch ms, server clock). */
+  readonly boundaryAtMs: number | null;
+  /** Boundary of the tick after this one — what a client should wait for. */
+  readonly nextDueAtMs: number | null;
+  /** Server clock when the claim was answered. */
+  readonly serverNowMs: number | null;
+}
+
+/** Positive finite epoch-ms, or null. Never defaults a missing clock to zero. */
+function epochMs(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 async function claimTick(
@@ -251,14 +263,16 @@ async function claimTick(
   });
   if (error) throw new C3Error('internal', `claim_encounter_tick failed: ${error.message}`);
   if (!data?.claimed) {
-    // `nextDueAtMs` is forwarded verbatim so a live client can re-phase its
-    // poll onto the authoritative cadence boundary instead of aliasing against
-    // it. It is advisory only: the database still owns due-ness.
-    const nextDue = Number(data?.next_due_at_ms);
+    // The boundary AND the server's own clock are forwarded verbatim so a live
+    // client can express the wait as a remaining duration measured entirely on
+    // the server. Forwarding only the boundary is useless: the client cannot
+    // subtract its own clock from it without inheriting the clock offset, and
+    // guessing `boundary - rate` erases the phase information completely.
     throw new C3Error('claim_refused', String(data?.reason ?? 'refused'), {
       detail: {
         mode: data?.mode ?? null,
-        nextDueAtMs: Number.isFinite(nextDue) && nextDue > 0 ? nextDue : null,
+        nextDueAtMs: epochMs(data?.next_due_at_ms),
+        serverNowMs: epochMs(data?.now_ms),
       },
     });
   }
@@ -267,8 +281,12 @@ async function claimTick(
     token: String(data.claim_token),
     resolverId: String(data.resolver_id),
     dbMode: data.mode === 'live' ? 'live' : 'effects_only',
+    boundaryAtMs: epochMs(data.boundary_at_ms),
+    nextDueAtMs: epochMs(data.next_due_at_ms),
+    serverNowMs: epochMs(data.now_ms),
   };
 }
+
 
 async function release(
   db: OrchestrationDb,
