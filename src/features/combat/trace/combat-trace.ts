@@ -43,8 +43,29 @@ export interface CombatTraceSample {
   /** Shared-encounter identity, when published. */
   encounterTick?: number | null;
   batchId?: string | null;
+  /**
+   * Classification fields (added so a validation run is classifiable from the
+   * trace alone rather than by re-deriving intent from a request log):
+   * why the request was made, what the server answered, and how the next wake
+   * was computed.
+   */
+  refusalReason?: string;
+  terminal?: boolean;
+  /** Server clock sampled in the commit transaction. */
+  serverNowMs?: number | null;
+  /** Next scheduled boundary the server reported. */
+  nextDueAtMs?: number | null;
+  /** Server-measured span from claim answer to the clock sample. */
+  serverProcessMs?: number | null;
+  /** Round trip minus server processing = measured network time. */
+  networkMs?: number;
+  /** Remaining time to the boundary at the server's sample. */
+  remainingMs?: number;
+  /** Delay the pacer chose for the next request after this answer. */
+  plannedDelayMs?: number;
   /** Set when the response was ignored (stale seq, reserved elsewhere, dropped). */
   outcome?: 'applied' | 'stale' | 'reserved' | 'error' | 'duplicate' | 'empty';
+
 }
 
 type Listener = () => void;
