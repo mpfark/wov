@@ -239,6 +239,15 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     cadence: null,
     receivedAt: 0,
   });
+  /**
+   * Client clock of the last *acknowledgement* of any kind (committed, refused,
+   * maintenance). Distinct from `lastTickRef`, which only marks a rendered
+   * legacy payload and is therefore never stamped in C4 solo combat.
+   */
+  const ackAtRef = useRef<number>(0);
+  /** Client clock when the last request was submitted. */
+  const lastRequestAtRef = useRef<number>(0);
+
 
   // ── Helpers ────────────────────────────────────────────────────
 
