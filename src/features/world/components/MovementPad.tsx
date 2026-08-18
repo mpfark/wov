@@ -135,7 +135,10 @@ export default function MovementPad({ currentNode, onMove, disabled, unlockedCon
                 key={dir}
                 onClick={() => handleDirClick(dir)}
                 disabled={!available || disabled || cooldown}
+                aria-label={`Move ${dir}${isLocked ? ' (locked)' : ''}`}
+                data-testid={`move-${dir}`}
                 className={`w-10 h-10 rounded border text-sm font-bold flex items-center justify-center transition-colors relative
+
                   ${available
                     ? isLocked
                       ? 'border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 active:bg-amber-500/40'
