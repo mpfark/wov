@@ -1287,6 +1287,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               // encounters on every later cadence tick.
               console.log('[combat] terminal tick refusal — leaving combat', ack);
               stopCombat();
+            } else if (ack.nextDueAtMs !== null) {
+              // Cadence refusal: the server told us exactly when the next tick
+              // becomes due. Re-phase onto that boundary instead of waiting a
+              // whole extra poll interval.
+              rephaseCadence(ack.nextDueAtMs);
             }
           } else if ((result as any).tick_reserved_elsewhere) {
 
