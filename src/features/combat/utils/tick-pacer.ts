@@ -141,16 +141,22 @@ function clamp(delay: number, rateMs: number): number {
  * payload), which makes the caller fall back to the nominal rate.
  */
 export function readServerCadence(
-  ack: { nextDueAtMs?: number | null; serverNowMs?: number | null } | null | undefined,
+  ack:
+    | { nextDueAtMs?: number | null; serverNowMs?: number | null; serverProcessMs?: number | null }
+    | null
+    | undefined,
   rttMs?: number | null,
 ): ServerCadence | null {
   const due = ack?.nextDueAtMs;
   if (typeof due !== 'number' || !Number.isFinite(due) || due <= 0) return null;
   const now = ack?.serverNowMs;
+  const proc = ack?.serverProcessMs;
   return {
     nextDueAtMs: due,
     nowMs: typeof now === 'number' && Number.isFinite(now) && now > 0 ? now : null,
     rttMs: typeof rttMs === 'number' && Number.isFinite(rttMs) && rttMs >= 0 ? rttMs : null,
+    serverProcessMs: typeof proc === 'number' && Number.isFinite(proc) && proc >= 0 ? proc : null,
   };
 }
+
 
