@@ -1370,7 +1370,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               // Cadence refusal: the server told us exactly when the next tick
               // becomes due. Adopting it is enough — the pacer re-arms against
               // that boundary in the finally block below.
-              noteCadence(ack, receivedAt);
+              noteCadence(ack, receivedAt, tickLatency);
             }
           } else if ((result as any).tick_reserved_elsewhere) {
 
