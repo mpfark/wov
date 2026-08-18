@@ -19,6 +19,11 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.combat-catchup]
     verify_jwt = false
+  # TEMPORARY validation endpoint; removed at teardown. Auth is one-shot and
+  # entirely server-side (sha-256 token -> session), so platform JWT is off.
+  [functions.combat-harness]
+    verify_jwt = false
+
 
   [functions.ai-suggest-character-name]
     verify_jwt = false
