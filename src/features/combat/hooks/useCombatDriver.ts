@@ -229,6 +229,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // happens to report state for) when transitioning idle → in-combat.
   const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
 
+  /**
+   * One-shot timer used to re-phase the cadence onto the server's next due
+   * boundary after a `not_due` refusal. The worker interval remains the pacing
+   * authority; this only removes the aliasing beat.
+   */
+  const rephaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Helpers ────────────────────────────────────────────────────
 
   const updateCreatureHp = useCallback((creatureId: string, hp: number) => {
