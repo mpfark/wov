@@ -1353,7 +1353,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               encounterIdRef.current = ack.encounterId;
               setEncounterId(ack.encounterId);
             }
-            noteCadence(ack, receivedAt);
+            noteCadence(ack, receivedAt, tickLatency);
+
             noteCommittedRef.current(ack.tick, ack.batchId);
           } else if (ack.kind === 'refused') {
             traceResponse('reserved');
