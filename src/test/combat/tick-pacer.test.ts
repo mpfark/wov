@@ -10,10 +10,13 @@ import { describe, it, expect } from 'vitest';
 import {
   nextTickDelayMs,
   readServerCadence,
+  measuredNetworkMs,
   BOUNDARY_BUFFER_MS,
   MIN_DELAY_MS,
+  MAX_NETWORK_COMP_MS,
   TICK_RATE_MS,
 } from '@/features/combat/utils/tick-pacer';
+
 
 describe('tick pacer', () => {
   it('falls back to the nominal rate before the server has reported anything', () => {
