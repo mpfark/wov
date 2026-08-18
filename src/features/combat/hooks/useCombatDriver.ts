@@ -1233,10 +1233,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
+        lastRequestAtRef.current = tickT0;
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
         const cause = tickCauseRef.current;
         tickCauseRef.current = 'cadence';
         traceTickStart(seq, cause, tickGap, localCastCount > 0);
+
 
 
         // Retry transient edge runtime errors (503 cold-start / boot failures)
