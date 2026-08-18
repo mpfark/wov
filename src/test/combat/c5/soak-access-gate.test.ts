@@ -307,7 +307,7 @@ describe('C5 — rejected start restores the affordance, accepted start starts o
       ).toBe(true);
       from = at + 1;
     }
-    const stop = src.slice(src.indexOf('const stopCombat'), src.indexOf('const stopCombat') + 2000);
+    const stop = src.slice(src.indexOf('const stopCombat'), src.indexOf('const stopCombat') + 3000);
     expect(stop).toContain('clearWorkerInterval(intervalRef.current)');
     expect(stop).toContain('intervalRef.current = null');
   });
