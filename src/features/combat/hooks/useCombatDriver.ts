@@ -418,9 +418,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const driver = solo || p.isLeader;
       if (driver) {
         if (inCombatRef.current) {
-          tickCauseRef.current = 'visibility';
-          try { doTickRef.current(); } catch { /* noop */ }
+          try { requestTickNowRef.current('visibility'); } catch { /* noop */ }
         }
+
         return;
       }
       // Non-leader: pull a fresh character snapshot in case the broadcast was missed.
