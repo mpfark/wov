@@ -96,8 +96,19 @@ export interface OrchestrationSuccess {
   readonly characterDeaths: number;
   /** Distinct characters that received kill rewards in this tick. */
   readonly rewardedCharacterIds: readonly string[];
-
+  /**
+   * Cadence report, forwarded verbatim from the granted claim.
+   *
+   * Without these two fields a client can only schedule from the moment its
+   * response arrived, which adds the whole round trip to every interval — the
+   * measured 3.687s committed cadence against a 2.0s simulation cadence. They
+   * are advisory: the database still owns due-ness.
+   */
+  readonly nextDueAtMs: number | null;
+  /** Server clock when the claim was granted (pairs with `nextDueAtMs`). */
+  readonly serverNowMs: number | null;
 }
+
 
 export type OrchestrationResult = OrchestrationSuccess | C3Failure;
 
