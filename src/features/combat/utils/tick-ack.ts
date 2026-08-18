@@ -67,7 +67,14 @@ export type TickAck =
       nextDueAtMs: number | null;
       /** Server clock when it produced this answer. */
       serverNowMs: number | null;
+      /**
+       * A refusal performs no simulation, so the server span between its clock
+       * sample and the answer is zero by construction. Stated explicitly so the
+       * pacer applies one uniform rule to every acknowledgement.
+       */
+      serverProcessMs: number | null;
     }
+
 
   /** Pre-C3 snake_case payload — the caller keeps its legacy handling. */
   | { kind: 'legacy' }
