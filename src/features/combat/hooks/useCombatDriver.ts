@@ -229,6 +229,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // happens to report state for) when transitioning idle → in-combat.
   const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
 
+  /**
+   * One-shot timer used to re-phase the cadence onto the server's next due
+   * boundary after a `not_due` refusal. The worker interval remains the pacing
+   * authority; this only removes the aliasing beat.
+   */
+  const rephaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Helpers ────────────────────────────────────────────────────
 
   const updateCreatureHp = useCallback((creatureId: string, hp: number) => {
@@ -287,10 +294,38 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setPendingAbility(null);
     setPendingCpCost(0);
     optimisticCpRef.current = null;
+    if (rephaseTimerRef.current) {
+      clearTimeout(rephaseTimerRef.current);
+      rephaseTimerRef.current = null;
+    }
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
+  }, []);
+
+  /**
+   * Align the cadence with the server's authoritative due boundary.
+   *
+   * The database marks a tick due at `last_commit + rate_ms`, and the commit
+   * timestamp includes the request round-trip. A fixed 2s client poll therefore
+   * lands just *before* the boundary, is refused `not_due`, and then waits a
+   * whole further interval — observed as a ~3.7s committed cadence against a 2s
+   * simulation cadence. Re-phasing collapses that to boundary + latency.
+   */
+  const rephaseCadence = useCallback((nextDueAtMs: number) => {
+    const delay = Math.max(60, Math.min(2000, nextDueAtMs - Date.now() + 60));
+    if (rephaseTimerRef.current) clearTimeout(rephaseTimerRef.current);
+    rephaseTimerRef.current = setTimeout(() => {
+      rephaseTimerRef.current = null;
+      if (!inCombatRef.current) return;
+      if (intervalRef.current) {
+        clearWorkerInterval(intervalRef.current);
+        intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+      }
+      tickCauseRef.current = 'followup';
+      doTickRef.current();
+    }, delay);
   }, []);
 
   // ── Mobile / background-tab catchup ───────────────────────────
@@ -1252,6 +1287,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               // encounters on every later cadence tick.
               console.log('[combat] terminal tick refusal — leaving combat', ack);
               stopCombat();
+            } else if (ack.nextDueAtMs !== null) {
+              // Cadence refusal: the server told us exactly when the next tick
+              // becomes due. Re-phase onto that boundary instead of waiting a
+              // whole extra poll interval.
+              rephaseCadence(ack.nextDueAtMs);
             }
           } else if ((result as any).tick_reserved_elsewhere) {
 
@@ -1310,7 +1350,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         }
       }
     }
-  }, [processTickResult, stopCombat]);
+  }, [processTickResult, stopCombat, rephaseCadence]);
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
 

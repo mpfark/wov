@@ -370,8 +370,11 @@ Deno.serve(async (req) => {
         const { data: encRows } = await db.from("encounters").select("id").eq("node_id", nodeId);
         const encounterIds = [...new Set([...encIds, ...(encRows ?? []).map((r: any) => r.id)])];
         const idFilter = encounterIds.length ? encounterIds : ["00000000-0000-0000-0000-000000000000"];
+        // `encounter_contributions` was dropped: it was written as zeroes and
+        // read by nothing. Participation evidence is `encounter_participants` +
+        // `encounter_engagements`; reward rights are the attribution roster.
         const [transport, credential, cron, encounters, effects, creatures, chars, log, batches, awards, loot,
-          contributions, engagements, actions, deathLoot] =
+          participants, engagements, actions, deathLoot] =
           await Promise.all([
             db.rpc("effects_transport_snapshot", { _node_id: nodeId }),
             db.rpc("effects_catchup_credential_health"),
@@ -384,7 +387,7 @@ Deno.serve(async (req) => {
             db.from("encounter_tick_batches").select("*").in("encounter_id", idFilter),
             db.from("encounter_kill_awards").select("*").in("encounter_id", idFilter),
             db.from("node_ground_loot").select("*").eq("node_id", nodeId),
-            db.from("encounter_contributions").select("*").in("encounter_id", idFilter),
+            db.from("encounter_participants").select("*").in("encounter_id", idFilter),
             db.from("encounter_engagements").select("*").in("encounter_id", idFilter),
             db.from("combat_actions").select("*").eq("node_id", nodeId),
             db.from("encounter_death_loot").select("*").in("encounter_id", idFilter),
@@ -396,7 +399,7 @@ Deno.serve(async (req) => {
           encounters: encounters.data, effects: effects.data, creatures: creatures.data,
           characters: chars.data, log: log.data,
           batches: batches.data, awards: awards.data, ground_loot: loot.data,
-          contributions: contributions.data, engagements: engagements.data,
+          participants: participants.data, engagements: engagements.data,
           actions: actions.data, death_loot: deathLoot.data, dispatch,
         });
       }

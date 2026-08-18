@@ -240,8 +240,15 @@ async function claimTick(
   });
   if (error) throw new C3Error('internal', `claim_encounter_tick failed: ${error.message}`);
   if (!data?.claimed) {
+    // `nextDueAtMs` is forwarded verbatim so a live client can re-phase its
+    // poll onto the authoritative cadence boundary instead of aliasing against
+    // it. It is advisory only: the database still owns due-ness.
+    const nextDue = Number(data?.next_due_at_ms);
     throw new C3Error('claim_refused', String(data?.reason ?? 'refused'), {
-      detail: { mode: data?.mode ?? null },
+      detail: {
+        mode: data?.mode ?? null,
+        nextDueAtMs: Number.isFinite(nextDue) && nextDue > 0 ? nextDue : null,
+      },
     });
   }
   return {

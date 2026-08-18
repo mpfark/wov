@@ -270,11 +270,10 @@ export function buildCommitPayload(
 
     progression: proposed.progression.map((p) => ({ ...p })),
 
-    contributions: proposed.characters.map((c) => ({
-      characterId: c.characterId,
-      damageDealt: 0,
-      healingDone: 0,
-    })),
+    // `contributions` was removed (2026-08-18): it was a stub that always wrote
+    // zeroes and nothing ever read it. Reward attribution is owned by
+    // `encounter_attribution_roster` (participants + live effect sources).
+
 
     actionTerminal: [
       ...proposed.consumedActionIds.map((id) => ({ id, status: 'consumed', reason: null })),
