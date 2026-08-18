@@ -1262,6 +1262,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
         const tickLatency = Date.now() - tickT0;
         const receivedAt = Date.now();
+        // Every answer, whatever its classification, is an acknowledgement for
+        // pacing purposes.
+        ackAtRef.current = receivedAt;
+
         const traceResponse = (outcome: 'applied' | 'stale' | 'reserved' | 'error' | 'empty') => {
           const res = data as CombatTickResponse | null;
           traceTickResponse(seq, {
