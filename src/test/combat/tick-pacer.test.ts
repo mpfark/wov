@@ -155,7 +155,9 @@ describe('tick pacer', () => {
     const rate = TICK_RATE_MS;
     const up = 400, server = 700, down = 200;
     let boundary = 1_000_000;
-    let clientClock = 0;
+    // One shared clock here so arrival can be compared with the boundary; the
+    // offset-immunity case above covers the skewed-clock behaviour.
+    let clientClock = boundary - up;
     let cadence = null as null | { nextDueAtMs: number; nowMs: number; rttMs: number; serverProcessMs: number };
     let receivedAt = 0;
     const requests: number[] = [];
