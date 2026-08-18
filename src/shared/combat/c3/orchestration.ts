@@ -248,6 +248,27 @@ function epochMs(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/**
+ * The cadence report carried by one `claim_encounter_tick` answer.
+ *
+ * Exported so a test can pin the transport contract: the omission of these two
+ * fields from the *success* envelope is what made every client schedule from
+ * response receipt, adding a full round trip to every simulation interval.
+ */
+export function readClaimCadence(data: unknown): {
+  serverNowMs: number | null;
+  boundaryAtMs: number | null;
+  nextDueAtMs: number | null;
+} {
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    serverNowMs: epochMs(d.now_ms),
+    boundaryAtMs: epochMs(d.boundary_at_ms),
+    nextDueAtMs: epochMs(d.next_due_at_ms),
+  };
+}
+
+
 async function claimTick(
   db: OrchestrationDb,
   encounterId: string,
