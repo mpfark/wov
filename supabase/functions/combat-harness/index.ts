@@ -20,7 +20,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/http.ts";
 
-const RUNS = ["c5p20260818b", "c5t20260818b"] as const;
+const RUNS = ["c5t20260818e"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RUN_MINUTES = 30;
 
