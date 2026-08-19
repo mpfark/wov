@@ -1112,6 +1112,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const pending = pendingAbilityRef.current;
       /** Local cast markers — wake signal only; intent lives in `combat_actions`. */
       let localCastCount = 0;
+      /**
+       * Out-of-combat opener: a durably accepted action with no encounter yet
+       * must be able to wake the very first tick from ANY eligible participant,
+       * including a party follower. The server still serializes wakes.
+       */
+      let openerWake = false;
 
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
@@ -1123,12 +1129,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
           const cpCost = ability.cpCost;
+          const isOpener = !inCombatRef.current && !!targetId;
 
-          // Remember the opener target so processTickResult engages only this
-          // creature (not other aggressive bystanders on the node).
-          if (!inCombatRef.current && targetId) {
-            lastDispatchedOpenerTargetRef.current = targetId;
-          }
 
           const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
 
