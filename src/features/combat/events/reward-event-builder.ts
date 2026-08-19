@@ -110,8 +110,9 @@ export function buildRewardLogEvent(
 
   const remoteMessage = stripLeadingGlyph(ev.message);
   const message = isLocal
-    ? applySelfPerspective(remoteMessage, localCharacterName)
+    ? secondPersonVerbs(applySelfPerspective(remoteMessage, localCharacterName))
     : remoteMessage;
+
 
   // Rewards always describe what the PLAYER gained — the player is the
   // subject, and any creature involved is only the source of the drop.
