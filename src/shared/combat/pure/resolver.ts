@@ -1596,6 +1596,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           emit('ability_miss', `${caster.name}'s ${a.abilityKey} misses ${creature.name}.`, {
             characterId: caster.id,
             creatureId: creature.id,
+            ...presentAbility(caster, creature, a.abilityKey),
           });
           continue;
         }
@@ -1615,6 +1616,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             creatureId: creature.id,
             amount: applied,
             damageType: a.damageType,
+            ...presentAbility(caster, creature, a.abilityKey, attack.isCrit),
           },
         );
       }
