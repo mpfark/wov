@@ -107,10 +107,20 @@ export class PendingActionTracker {
     this.entries.set(action.actionId, { action, superseded: false });
   }
 
+  /**
+   * Drop an action whose durable submission was definitively refused. No
+   * committed tick ever saw it, so it must not enter the ledger as `rejected`:
+   * it simply never existed for the simulation.
+   */
+  abandon(actionId: string): void {
+    this.entries.delete(actionId);
+  }
+
   /** Actions still awaiting a committed outcome (newest last). */
   pending(): SubmittedAction[] {
     return [...this.entries.values()].filter(e => !e.superseded).map(e => e.action);
   }
+
 
   get pendingCount(): number {
     return this.pending().length;

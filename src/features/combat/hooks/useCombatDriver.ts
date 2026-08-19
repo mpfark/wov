@@ -45,6 +45,7 @@ import {
   describeRejection,
   type ActionOutcome,
 } from '../utils/pending-actions';
+import { dispatchDurableAction } from '../utils/dispatch-durable-action';
 import type { ResyncSnapshot } from '../utils/resync';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
@@ -1112,6 +1113,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const pending = pendingAbilityRef.current;
       /** Local cast markers — wake signal only; intent lives in `combat_actions`. */
       let localCastCount = 0;
+      /**
+       * Out-of-combat opener: a durably accepted action with no encounter yet
+       * must be able to wake the very first tick from ANY eligible participant,
+       * including a party follower. The server still serializes wakes.
+       */
+      let openerWake = false;
 
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
@@ -1123,12 +1130,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
           const cpCost = ability.cpCost;
+          const isOpener = !inCombatRef.current && !!targetId;
 
-          // Remember the opener target so processTickResult engages only this
-          // creature (not other aggressive bystanders on the node).
-          if (!inCombatRef.current && targetId) {
-            lastDispatchedOpenerTargetRef.current = targetId;
-          }
 
           const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
 
@@ -1150,48 +1153,85 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               : `${p.character.id}-${Date.now()}`;
           durableSeqRef.current += 1;
           const clientSeq = durableSeqRef.current;
-          // Register locally BEFORE the network call: the pending state must
-          // survive a lost response.
-          actionsRef.current.submit({
-            actionId,
-            abilityKey,
-            label: pending.label,
-            clientSeq,
-            submittedAtTick: lastAppliedTickRef.current,
-          });
+          // Durable intent must be visible BEFORE any tick can snapshot it: an
+          // out-of-combat opener has no engagement yet, so a fire-and-forget
+          // submission raced the tick and the action was never resolved. The
+          // helper registers the pending entry, awaits the RPC and retries with
+          // the SAME action id (idempotent by id) — no sleeps, no new ids.
+          const dispatch = await dispatchDurableAction(
+            {
+              actionId,
+              characterId: p.character.id,
+              abilityKey,
+              targetCreatureId: targetId ?? null,
+              clientSeq,
+              label: pending.label,
+              isOpener,
+              submittedAtTick: lastAppliedTickRef.current,
+            },
+            {
+              tracker: actionsRef.current,
+              submit: async (a) => {
+                const { error } = await supabase.rpc('submit_combat_action', {
+                  _id: a.actionId,
+                  _character_id: a.characterId,
+                  _ability_key: a.abilityKey,
+                  _target_creature_id: a.targetCreatureId,
+                  _target_character_id: null,
+                  _client_seq: a.clientSeq,
+                });
+                return { error: error ? { message: error.message } : null };
+              },
+            },
+          );
           setPendingActionCount(actionsRef.current.pendingCount);
-          void supabase
-            .rpc('submit_combat_action', {
-              _id: actionId,
-              _character_id: p.character.id,
-              _ability_key: abilityKey,
-              _target_creature_id: targetId ?? null,
-              _target_character_id: null,
-              _client_seq: clientSeq,
-            })
-            .then(({ error }) => {
-              if (error) console.warn('[combat] durable action submit failed', error.message);
-            });
 
-          if (p.party && !p.isLeader) {
-            // Stage C: the durable `combat_actions` row above is the only
-            // intent the resolver reads — nothing is relayed to the leader.
-            // Follower: convert reservation into a real local CP debit so the
-            // bar doesn't snap back up before the leader's broadcast confirms.
-            optimisticCpRef.current = expectedCpAfter;
-            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+          if (!dispatch.ok) {
+            // Never durably accepted: not a committed `rejected` outcome, so the
+            // tracker entry is gone, the reservation is refunded, no opener
+            // target is retained and no tick is woken.
+            console.warn('[combat] durable action submit failed', dispatch.error);
             setPendingCpCost(0);
+            lastDispatchedOpenerTargetRef.current = null;
+            p.addLocalLogEvent(
+              buildPositioningEvent(
+                'fizzle',
+                `Your ${pending.label} fizzles before it can take hold.`,
+                { kind: 'player', id: p.character.id, name: p.character.name },
+              ),
+            );
+            toast.error(`${pending.label} could not be cast.`);
           } else {
-            localCastCount += 1;
-            // Solo / leader: commit the debit locally NOW. The reservation
-            // shading goes away, but the filled CP amount stays at the same
-            // visual position (raw - reserved == new raw, reserved 0). When
-            // the tick response comes back, processTickResult will see the
-            // server agrees and skip the CP repaint.
-            optimisticCpRef.current = expectedCpAfter;
-            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
-            setPendingCpCost(0);
+
+            // Remember the opener target so processTickResult engages only this
+            // creature (not other aggressive bystanders on the node).
+            if (isOpener) {
+              lastDispatchedOpenerTargetRef.current = targetId!;
+              openerWake = true;
+            }
+
+            if (p.party && !p.isLeader) {
+              // Stage C: the durable `combat_actions` row above is the only
+              // intent the resolver reads — nothing is relayed to the leader.
+              // Follower: convert reservation into a real local CP debit so the
+              // bar doesn't snap back up before the leader's broadcast confirms.
+              optimisticCpRef.current = expectedCpAfter;
+              ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+              setPendingCpCost(0);
+              if (openerWake) localCastCount += 1;
+            } else {
+              localCastCount += 1;
+              // Solo / leader: commit the debit locally NOW. The reservation
+              // shading goes away, but the filled CP amount stays at the same
+              // visual position (raw - reserved == new raw, reserved 0). When
+              // the tick response comes back, processTickResult will see the
+              // server agrees and skip the CP repaint.
+              optimisticCpRef.current = expectedCpAfter;
+              ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+              setPendingCpCost(0);
+            }
           }
+
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
@@ -1212,7 +1252,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const sinceLastTick = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
       const followerWake =
         !solo && !p.isLeader && inCombatRef.current && sinceLastTick > FOLLOWER_WAKE_STALE_MS;
-      const driver = solo || p.isLeader || followerWake;
+      // A follower opening combat outside of any encounter wakes the first tick
+      // itself; ordinary in-combat follower abilities keep waiting for the
+      // leader's shared cadence.
+      const driver = solo || p.isLeader || followerWake || openerWake;
+
 
       if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
