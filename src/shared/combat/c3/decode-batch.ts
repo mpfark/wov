@@ -86,6 +86,12 @@ function optNum(o: Json, key: string, path: string): number | null {
   return reqNum(o, key, path);
 }
 
+function optBool(o: Json, key: string, path: string): boolean | null {
+  const v = o[key];
+  if (v === undefined || v === null) return null;
+  return reqBool(o, key, path);
+}
+
 function reqBool(o: Json, key: string, path: string): boolean {
   const v = o[key];
   if (typeof v !== 'boolean') {
@@ -241,6 +247,13 @@ const EVENT_KEYS = [
   'creatureId',
   'amount',
   'damageType',
+  'attackerName',
+  'targetName',
+  'attackerClass',
+  'weaponTag',
+  'isCrit',
+  'isHumanoid',
+  'abilityKey',
 ] as const;
 
 const CHARACTER_KEYS = [
@@ -288,6 +301,13 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
       creatureId: optStr(e, 'creatureId', ep),
       amount: optNum(e, 'amount', ep),
       damageType: optStr(e, 'damageType', ep),
+      attackerName: optStr(e, 'attackerName', ep),
+      targetName: optStr(e, 'targetName', ep),
+      attackerClass: optStr(e, 'attackerClass', ep),
+      weaponTag: optStr(e, 'weaponTag', ep),
+      isCrit: optBool(e, 'isCrit', ep),
+      isHumanoid: optBool(e, 'isHumanoid', ep),
+      abilityKey: optStr(e, 'abilityKey', ep),
     } satisfies BatchEvent;
   });
 
@@ -422,6 +442,13 @@ export function projectBatchFromProposal(
       creatureId: e.creatureId,
       amount: e.amount,
       damageType: e.damageType,
+      attackerName: e.attackerName ?? null,
+      targetName: e.targetName ?? null,
+      attackerClass: e.attackerClass ?? null,
+      weaponTag: e.weaponTag ?? null,
+      isCrit: e.isCrit ?? null,
+      isHumanoid: e.isHumanoid ?? null,
+      abilityKey: e.abilityKey ?? null,
     })),
     characters: proposed.characters.map((c) => ({
       characterId: c.characterId,
