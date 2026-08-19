@@ -102,6 +102,18 @@ export interface BatchEvent {
   readonly creatureId: string | null;
   readonly amount: number | null;
   readonly damageType: string | null;
+  /**
+   * Presentation metadata (see `PresentationEvent`). Display-only: the client
+   * turns these into MUD-style tier + flavor prose. Optional so an older
+   * committed batch still decodes.
+   */
+  readonly attackerName: string | null;
+  readonly targetName: string | null;
+  readonly attackerClass: string | null;
+  readonly weaponTag: string | null;
+  readonly isCrit: boolean | null;
+  readonly isHumanoid: boolean | null;
+  readonly abilityKey: string | null;
 }
 
 export interface BatchCharacter {
