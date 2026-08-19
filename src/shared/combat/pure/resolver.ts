@@ -2103,7 +2103,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       emit(
         atk.isCrit ? 'creature_crit' : 'creature_hit',
         `${c.name} hits ${target.name} for ${applied}.`,
-        { characterId: target.id, creatureId: c.id, amount: applied },
+        {
+          characterId: target.id,
+          creatureId: c.id,
+          amount: applied,
+          ...presentCreature(c, target, atk.isCrit),
+        },
       );
 
       // ── reactive_holy (Holy Shield) ──────────────────────────────
