@@ -1162,38 +1162,80 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             submittedAtTick: lastAppliedTickRef.current,
           });
           setPendingActionCount(actionsRef.current.pendingCount);
-          void supabase
-            .rpc('submit_combat_action', {
+          // Durable intent must be visible BEFORE any tick can snapshot it:
+          // an out-of-combat opener has no engagement yet, so a fire-and-forget
+          // submission raced the tick and the action was never resolved.
+          // The same action id is reused across retries (`submit_combat_action`
+          // is idempotent by id); no sleeps, just await + bounded retry.
+          let submitError: any = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const { error } = await supabase.rpc('submit_combat_action', {
               _id: actionId,
               _character_id: p.character.id,
               _ability_key: abilityKey,
               _target_creature_id: targetId ?? null,
               _target_character_id: null,
               _client_seq: clientSeq,
-            })
-            .then(({ error }) => {
-              if (error) console.warn('[combat] durable action submit failed', error.message);
             });
-
-          if (p.party && !p.isLeader) {
-            // Stage C: the durable `combat_actions` row above is the only
-            // intent the resolver reads — nothing is relayed to the leader.
-            // Follower: convert reservation into a real local CP debit so the
-            // bar doesn't snap back up before the leader's broadcast confirms.
-            optimisticCpRef.current = expectedCpAfter;
-            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
-            setPendingCpCost(0);
-          } else {
-            localCastCount += 1;
-            // Solo / leader: commit the debit locally NOW. The reservation
-            // shading goes away, but the filled CP amount stays at the same
-            // visual position (raw - reserved == new raw, reserved 0). When
-            // the tick response comes back, processTickResult will see the
-            // server agrees and skip the CP repaint.
-            optimisticCpRef.current = expectedCpAfter;
-            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
-            setPendingCpCost(0);
+            submitError = error ?? null;
+            if (!submitError) break;
+            const msg = String(submitError?.message ?? '').toLowerCase();
+            const transient =
+              msg.includes('failed to fetch') ||
+              msg.includes('network') ||
+              msg.includes('timeout') ||
+              msg.includes('503') ||
+              msg.includes('temporarily unavailable');
+            if (!transient) break;
           }
+
+          if (submitError) {
+            // Never durably accepted: this is not a committed `rejected`
+            // outcome, so drop it from the tracker entirely, refund the
+            // reservation and do not wake a tick or enter combat.
+            console.warn('[combat] durable action submit failed', submitError.message);
+            actionsRef.current.abandon(actionId);
+            setPendingActionCount(actionsRef.current.pendingCount);
+            setPendingCpCost(0);
+            lastDispatchedOpenerTargetRef.current = null;
+            p.addLocalLogEvent(
+              buildPositioningEvent(
+                'fizzle',
+                `Your ${pending.label} fizzles before it can take hold.`,
+                { kind: 'player', id: p.character.id, name: p.character.name },
+              ),
+            );
+            toast.error(`${pending.label} could not be cast.`);
+          } else {
+            // Remember the opener target so processTickResult engages only this
+            // creature (not other aggressive bystanders on the node).
+            if (isOpener) {
+              lastDispatchedOpenerTargetRef.current = targetId!;
+              openerWake = true;
+            }
+
+            if (p.party && !p.isLeader) {
+              // Stage C: the durable `combat_actions` row above is the only
+              // intent the resolver reads — nothing is relayed to the leader.
+              // Follower: convert reservation into a real local CP debit so the
+              // bar doesn't snap back up before the leader's broadcast confirms.
+              optimisticCpRef.current = expectedCpAfter;
+              ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+              setPendingCpCost(0);
+              if (openerWake) localCastCount += 1;
+            } else {
+              localCastCount += 1;
+              // Solo / leader: commit the debit locally NOW. The reservation
+              // shading goes away, but the filled CP amount stays at the same
+              // visual position (raw - reserved == new raw, reserved 0). When
+              // the tick response comes back, processTickResult will see the
+              // server agrees and skip the CP repaint.
+              optimisticCpRef.current = expectedCpAfter;
+              ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+              setPendingCpCost(0);
+            }
+          }
+
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
