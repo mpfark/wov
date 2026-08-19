@@ -167,6 +167,16 @@ export function batchToTickResponse(
       ...(e.creatureId && creatureNames.has(e.creatureId)
         ? { creature_name: creatureNames.get(e.creatureId)! }
         : {}),
+      // Presentation metadata (display only) — the client owns tier/flavor prose.
+      ...(e.amount !== null && e.amount !== undefined ? { damage: e.amount } : {}),
+      ...(e.damageType ? { damage_type: e.damageType } : {}),
+      ...(e.attackerName ? { attacker_name: e.attackerName } : {}),
+      ...(e.targetName ? { target_name: e.targetName } : {}),
+      ...(e.attackerClass ? { attacker_class: e.attackerClass } : {}),
+      ...(e.weaponTag ? { weapon_tag: e.weaponTag } : {}),
+      ...(e.isCrit !== null && e.isCrit !== undefined ? { is_crit: e.isCrit } : {}),
+      ...(e.isHumanoid !== null && e.isHumanoid !== undefined ? { is_humanoid: e.isHumanoid } : {}),
+      ...(e.abilityKey ? { ability_key: e.abilityKey } : {}),
     })),
     creature_states: batch.creatures.map(c => ({
       id: c.creatureId,
