@@ -1709,7 +1709,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       emit(
         attack.isCrit ? 'autoattack_crit' : 'autoattack_hit',
         `${p.name} hits ${creature.name} for ${applied}.`,
-        { characterId: p.id, creatureId: creature.id, amount: applied },
+        {
+          characterId: p.id,
+          creatureId: creature.id,
+          amount: applied,
+          ...presentPlayer(p, creature, attack.isCrit),
+        },
       );
       // Weapon-hit stack appliers (Envenom) proc off this landed hit.
       runStackAppliers(p, creature, 'weapon_hit', nowMs, t);
