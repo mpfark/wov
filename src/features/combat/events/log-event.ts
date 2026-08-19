@@ -264,6 +264,9 @@ export const SERVER_EVENT_TYPE_MAP: Record<ServerEventType, LogEventType> = {
   loot_drop: 'loot',
   xp_reward: 'reward',
   gold_reward: 'reward',
+  renown_reward: 'reward',
+  salvage_reward: 'loot',
+
   member_death: 'death',
   milestone_ember: 'loot',
   offhand_hit: 'attack',
