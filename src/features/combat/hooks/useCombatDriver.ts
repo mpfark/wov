@@ -45,6 +45,7 @@ import {
   describeRejection,
   type ActionOutcome,
 } from '../utils/pending-actions';
+import { dispatchDurableAction } from '../utils/dispatch-durable-action';
 import type { ResyncSnapshot } from '../utils/resync';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
