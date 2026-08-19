@@ -322,7 +322,9 @@ function formatCreatureAttack(
     });
     // Author inlined the number → don't append the canonical [N] suffix twice.
     const suffix = flavorHasDamageToken(bf.text) ? '' : dmgSuffix;
-    return `${interpolated}!${suffix}`;
+    // Respect authored terminal punctuation instead of doubling it up.
+    const end = /[.!?]$/.test(interpolated.trim()) ? '' : '!';
+    return `${interpolated}${end}${suffix}`;
   }
 
 
