@@ -1256,7 +1256,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const sinceLastTick = lastTickRef.current ? Date.now() - lastTickRef.current : Infinity;
       const followerWake =
         !solo && !p.isLeader && inCombatRef.current && sinceLastTick > FOLLOWER_WAKE_STALE_MS;
-      const driver = solo || p.isLeader || followerWake;
+      // A follower opening combat outside of any encounter wakes the first tick
+      // itself; ordinary in-combat follower abilities keep waiting for the
+      // leader's shared cadence.
+      const driver = solo || p.isLeader || followerWake || openerWake;
+
 
       if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
