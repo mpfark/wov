@@ -168,7 +168,7 @@ export function batchToTickResponse(
         ? { creature_name: creatureNames.get(e.creatureId)! }
         : {}),
       // Presentation metadata (display only) — the client owns tier/flavor prose.
-      ...(e.amount !== null && e.amount !== undefined ? { damage: e.amount } : {}),
+      ...(e.amount !== null && e.amount !== undefined ? { damage: e.amount, amount: e.amount } : {}),
       ...(e.damageType ? { damage_type: e.damageType } : {}),
       ...(e.attackerName ? { attacker_name: e.attackerName } : {}),
       ...(e.targetName ? { target_name: e.targetName } : {}),
