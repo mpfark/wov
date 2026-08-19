@@ -1676,6 +1676,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('autoattack_miss', `${p.name} misses ${creature.name}.`, {
           characterId: p.id,
           creatureId: creature.id,
+          ...presentPlayer(p, creature),
         });
         continue;
       }
