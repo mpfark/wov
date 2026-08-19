@@ -183,6 +183,9 @@ export const SERVER_EVENT_TYPES = [
   'loot_drop',
   'xp_reward',
   'gold_reward',
+  'renown_reward',
+  'salvage_reward',
+
   'member_death',
   'milestone_ember',
   'offhand_hit',
