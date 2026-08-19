@@ -191,6 +191,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       creatureId: extra.creatureId ?? null,
       amount: extra.amount ?? null,
       damageType: extra.damageType ?? null,
+      attackerName: extra.attackerName ?? null,
+      targetName: extra.targetName ?? null,
+      attackerClass: extra.attackerClass ?? null,
+      weaponTag: extra.weaponTag ?? null,
+      isCrit: extra.isCrit ?? null,
+      isHumanoid: extra.isHumanoid ?? null,
+      abilityKey: extra.abilityKey ?? null,
     });
   };
 
