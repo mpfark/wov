@@ -120,6 +120,9 @@ export interface BatchEvent {
   readonly isCrit: boolean | null;
   readonly isHumanoid: boolean | null;
   readonly abilityKey: string | null;
+  /** Chosen boss crit flavor (display only). */
+  readonly bossFlavorName: string | null;
+  readonly bossFlavorText: string | null;
 }
 
 export interface BatchCharacter {
@@ -254,6 +257,8 @@ const EVENT_KEYS = [
   'isCrit',
   'isHumanoid',
   'abilityKey',
+  'bossFlavorName',
+  'bossFlavorText',
 ] as const;
 
 const CHARACTER_KEYS = [
@@ -308,6 +313,8 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
       isCrit: optBool(e, 'isCrit', ep),
       isHumanoid: optBool(e, 'isHumanoid', ep),
       abilityKey: optStr(e, 'abilityKey', ep),
+      bossFlavorName: optStr(e, 'bossFlavorName', ep),
+      bossFlavorText: optStr(e, 'bossFlavorText', ep),
     } satisfies BatchEvent;
   });
 
@@ -449,6 +456,8 @@ export function projectBatchFromProposal(
       isCrit: e.isCrit ?? null,
       isHumanoid: e.isHumanoid ?? null,
       abilityKey: e.abilityKey ?? null,
+      bossFlavorName: e.bossFlavorName ?? null,
+      bossFlavorText: e.bossFlavorText ?? null,
     })),
     characters: proposed.characters.map((c) => ({
       characterId: c.characterId,

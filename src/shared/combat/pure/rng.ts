@@ -30,6 +30,8 @@ export const RNG_STREAMS = [
   'status_chance',
   'proc_select',
   'proc_chance',
+  /** Boss crit flavor selection (presentation only, but must be replayable). */
+  'boss_crit_flavor',
   'creature_attack_roll',
   'creature_attack_damage',
   'creature_target',
