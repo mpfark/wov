@@ -704,6 +704,20 @@ export interface PresentationEvent {
   readonly creatureId: string | null;
   readonly amount: number | null;
   readonly damageType: string | null;
+  /**
+   * Presentation metadata — never simulation input. The resolver already knows
+   * who swung at whom with what, so it carries those facts to the client which
+   * owns the MUD-style tier/flavor prose. Absent = unknown, and the client
+   * falls back to the plain authored `message`.
+   */
+  readonly attackerName?: string | null;
+  readonly targetName?: string | null;
+  readonly attackerClass?: string | null;
+  readonly weaponTag?: string | null;
+  readonly isCrit?: boolean | null;
+  readonly isHumanoid?: boolean | null;
+  /** Canonical `abilities.ability_key`, for ability lines. */
+  readonly abilityKey?: string | null;
 }
 
 export interface RejectedAction {
