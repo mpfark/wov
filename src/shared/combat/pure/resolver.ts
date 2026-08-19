@@ -191,8 +191,51 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       creatureId: extra.creatureId ?? null,
       amount: extra.amount ?? null,
       damageType: extra.damageType ?? null,
+      attackerName: extra.attackerName ?? null,
+      targetName: extra.targetName ?? null,
+      attackerClass: extra.attackerClass ?? null,
+      weaponTag: extra.weaponTag ?? null,
+      isCrit: extra.isCrit ?? null,
+      isHumanoid: extra.isHumanoid ?? null,
+      abilityKey: extra.abilityKey ?? null,
     });
   };
+
+  /**
+   * Presentation metadata for a player-sourced line. Pure lookup of facts the
+   * resolver already holds — the client turns these into tier + flavor prose.
+   */
+  const presentPlayer = (
+    attacker: ParticipantSnapshot,
+    target: CreatureSnapshot,
+    isCrit?: boolean,
+  ) => ({
+    attackerName: attacker.name,
+    targetName: target.name,
+    attackerClass: attacker.classKey,
+    weaponTag: attacker.weapon.tag ?? null,
+    isHumanoid: target.isHumanoid,
+    isCrit: isCrit ?? false,
+  });
+
+  const presentAbility = (
+    attacker: ParticipantSnapshot,
+    target: CreatureSnapshot,
+    abilityKey: string,
+    isCrit?: boolean,
+  ) => ({ ...presentPlayer(attacker, target, isCrit), abilityKey });
+
+  /** Presentation metadata for a creature-sourced line (creature is attacker). */
+  const presentCreature = (
+    attacker: CreatureSnapshot,
+    target: ParticipantSnapshot,
+    isCrit?: boolean,
+  ) => ({
+    attackerName: attacker.name,
+    targetName: target.name,
+    isHumanoid: attacker.isHumanoid,
+    isCrit: isCrit ?? false,
+  });
 
   const effectUpserts: EffectUpsert[] = [];
   const effectDeleteIds = new Set<string>();
@@ -1589,6 +1632,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           emit('ability_miss', `${caster.name}'s ${a.abilityKey} misses ${creature.name}.`, {
             characterId: caster.id,
             creatureId: creature.id,
+            ...presentAbility(caster, creature, a.abilityKey),
           });
           continue;
         }
@@ -1608,6 +1652,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             creatureId: creature.id,
             amount: applied,
             damageType: a.damageType,
+            ...presentAbility(caster, creature, a.abilityKey, attack.isCrit),
           },
         );
       }
@@ -1631,6 +1676,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('autoattack_miss', `${p.name} misses ${creature.name}.`, {
           characterId: p.id,
           creatureId: creature.id,
+          ...presentPlayer(p, creature),
         });
         continue;
       }
@@ -1663,7 +1709,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       emit(
         attack.isCrit ? 'autoattack_crit' : 'autoattack_hit',
         `${p.name} hits ${creature.name} for ${applied}.`,
-        { characterId: p.id, creatureId: creature.id, amount: applied },
+        {
+          characterId: p.id,
+          creatureId: creature.id,
+          amount: applied,
+          ...presentPlayer(p, creature, attack.isCrit),
+        },
       );
       // Weapon-hit stack appliers (Envenom) proc off this landed hit.
       runStackAppliers(p, creature, 'weapon_hit', nowMs, t);
@@ -2024,6 +2075,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('creature_miss', `${c.name} misses ${target.name}.`, {
           characterId: target.id,
           creatureId: c.id,
+          ...presentCreature(c, target),
         });
         continue;
       }
@@ -2051,7 +2103,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       emit(
         atk.isCrit ? 'creature_crit' : 'creature_hit',
         `${c.name} hits ${target.name} for ${applied}.`,
-        { characterId: target.id, creatureId: c.id, amount: applied },
+        {
+          characterId: target.id,
+          creatureId: c.id,
+          amount: applied,
+          ...presentCreature(c, target, atk.isCrit),
+        },
       );
 
       // ── reactive_holy (Holy Shield) ──────────────────────────────
