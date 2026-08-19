@@ -52,6 +52,9 @@ const STAGE10_SPEC: Record<string, Stage10Spec> = {
   // ── Rewards paid out on their own line ──
   xp_reward: { effectType: 'xp', amountKind: 'xp' },
   gold_reward: { effectType: 'gold', amountKind: 'gold' },
+  renown_reward: { effectType: 'renown', amountKind: 'stacks' },
+  salvage_reward: { effectType: 'salvage', amountKind: 'stacks' },
+
   // ── Quests / contracts ──
   contract_complete: { effectType: 'contract', severity: 'notable' },
 };
@@ -72,11 +75,34 @@ function stripLeadingGlyph(message: string): string {
     .trimStart();
 }
 
+/**
+ * Reward prose is authored third-person ("Aldric gains 60 experience."). Once
+ * the local name folds to "You", the verb must drop its third-person -s.
+ */
+const THIRD_PERSON_VERBS: Record<string, string> = {
+  gains: 'gain',
+  loots: 'loot',
+  earns: 'earn',
+  salvages: 'salvage',
+  finds: 'find',
+  claims: 'claim',
+  receives: 'receive',
+};
+
+function secondPersonVerbs(message: string): string {
+  return message.replace(
+    /\b(You|you) ([a-z]+)\b/g,
+    (match, subject: string, verb: string) =>
+      THIRD_PERSON_VERBS[verb] ? `${subject} ${THIRD_PERSON_VERBS[verb]}` : match,
+  );
+}
+
 /** Pull a canonical `[N]` suffix, when the server appends one. */
 function trailingAmount(message: string): number | undefined {
   const m = message.match(/\[(\d+)\]\s*$/);
   return m ? Number(m[1]) : undefined;
 }
+
 
 export interface RewardEventInput {
   type: string;
@@ -107,8 +133,9 @@ export function buildRewardLogEvent(
 
   const remoteMessage = stripLeadingGlyph(ev.message);
   const message = isLocal
-    ? applySelfPerspective(remoteMessage, localCharacterName)
+    ? secondPersonVerbs(applySelfPerspective(remoteMessage, localCharacterName))
     : remoteMessage;
+
 
   // Rewards always describe what the PLAYER gained — the player is the
   // subject, and any creature involved is only the source of the drop.

@@ -445,6 +445,28 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         gold: goldEach,
         renown,
       });
+      // Reward payouts are also presentation events: the numbers travel in the
+      // proposal (state) AND on their own log lines (prose), so the MUD log
+      // reads the payout instead of ending at "<creature> falls."
+      emit('xp_reward', `${r.name} gains ${xp} experience.`, {
+        characterId: r.id,
+        creatureId: creature.id,
+        amount: xp,
+      });
+      if (goldEach > 0) {
+        emit('gold_reward', `${r.name} loots ${goldEach} gold.`, {
+          characterId: r.id,
+          creatureId: creature.id,
+          amount: goldEach,
+        });
+      }
+      if (renown > 0) {
+        emit('renown_reward', `${r.name} earns ${renown} Renown.`, {
+          characterId: r.id,
+          creatureId: creature.id,
+          amount: renown,
+        });
+      }
       bonds.push({
         characterId: r.id,
         amount: bondGainForKill(creature.level, isBoss),
@@ -458,11 +480,23 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           materialKey: creature.salvageMaterialKey,
           quantity: mult,
         });
+        emit(
+          'salvage_reward',
+          `${r.name} salvages ${mult} ${creature.salvageMaterialKey.replace(/_/g, ' ')}.`,
+          { characterId: r.id, creatureId: creature.id, amount: mult },
+        );
       }
       if (rng.sample('gem_chance', creature.id, r.id) < snapshot.config.gemDropChance) {
         const gemKey = rng.pick('gem_pick', PRIMARY_GEM_KEYS, creature.id, r.id);
-        if (gemKey) gems.push({ characterId: r.id, gemKey });
+        if (gemKey) {
+          gems.push({ characterId: r.id, gemKey });
+          emit('gem_drop', `${r.name} finds a ${gemKey.replace(/_/g, ' ')}.`, {
+            characterId: r.id,
+            creatureId: creature.id,
+          });
+        }
       }
+
     }
 
     // ── loot (all three modes preserved) ─────────────────────────
