@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { it } from 'vitest';
-it('live boss flavor in F mode', () => {
-
 import { resolveTickPure } from '@/shared/combat/pure';
 import { buildAttackLogEvent, stripFlavorNumber } from '@/features/combat/utils/combat-text';
 import { creature, participant, snapshot } from './pure/fixtures';
+it('live boss flavor in F mode', () => {
+
 const row = JSON.parse(readFileSync('/tmp/boss.json','utf8'));
 const flavors = (row.flavors as any[]).map(f => ({ name: f.name ?? '', text: f.text ?? '', weight: f.weight ?? 1, damageType: f.damage_type ?? null }));
 const boss = creature({ id: 'crt-boss', name: row.name, rarity: 'boss', hp: 999999, maxHp: 999999, level: 40,
@@ -29,5 +29,6 @@ const dead = resolveTickPure(snapshot({
   creatures: [creature({ ...boss, hp: 1 })],
   engagements: [{ creatureId: 'crt-boss', characterId: 'char-1', lastActionAtMs: 1000 }], ticksToSimulate: 6 }));
 console.log('DEATH CRY:', dead.events.filter(e => e.type === 'boss_death_cry').map(e => e.message));
+
 
 });
