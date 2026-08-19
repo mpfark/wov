@@ -238,7 +238,7 @@ export function formatCombatEvent(
   event: StructuredAttackEvent,
   localCharacterId: string,
 ): string {
-  const isPlayerAttack = (event.type === 'attack_hit' || event.type === 'attack_miss') && event.attacker_name && event.target_name;
+  const isPlayerAttack = PLAYER_ATTACK_TYPES.has(event.type) && !event.type.startsWith('offhand') && !!event.attacker_name && !!event.target_name;
   const isCreatureAttack = (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') && event.attacker_name && event.target_name;
   const isOffhand = (event.type === 'offhand_hit' || event.type === 'offhand_miss') && event.attacker_name && event.target_name;
 
@@ -264,8 +264,8 @@ function formatPlayerAttack(
   flavorIdx?: number,
 ): string {
   const target = event.target_name!;
-  const isMiss = event.type === 'attack_miss' || event.type === 'offhand_miss';
-  const isCrit = !!event.is_crit;
+  const isMiss = event.type.endsWith('_miss');
+  const isCrit = !!event.is_crit || event.type.endsWith('_crit');
   const damage = event.damage ?? 0;
 
   if (isMiss) {
@@ -295,7 +295,7 @@ function formatCreatureAttack(
 ): string {
   const attacker = event.attacker_name!;
   const isMiss = event.type === 'creature_miss';
-  const isCrit = !!event.is_crit;
+  const isCrit = !!event.is_crit || event.type === 'creature_crit';
   const damage = event.damage ?? 0;
 
   if (isMiss) {
@@ -342,7 +342,16 @@ function formatCreatureAttack(
 
 // ── Stage 4: attacks as native structured events ────────────────
 
-const PLAYER_ATTACK_TYPES = new Set(['attack_hit', 'attack_miss', 'offhand_hit', 'offhand_miss']);
+const PLAYER_ATTACK_TYPES = new Set([
+  'attack_hit',
+  'attack_miss',
+  'offhand_hit',
+  'offhand_miss',
+  // C3 pure resolver names the player's weapon swing `autoattack_*`.
+  'autoattack_hit',
+  'autoattack_crit',
+  'autoattack_miss',
+]);
 const CREATURE_ATTACK_TYPES = new Set(['creature_hit', 'creature_crit', 'creature_miss']);
 
 /**
@@ -401,7 +410,7 @@ export function buildAttackLogEvent(
     amount: isMiss ? undefined : damage,
     amountKind: isMiss ? undefined : 'damage',
     damageType: normalizeDamageType(event.boss_flavor?.damage_type) ?? undefined,
-    crit: !!event.is_crit,
+    crit: !!event.is_crit || event.type.endsWith('_crit'),
     scope: 'node',
     // `observed` is applied by the broadcast receiver, not the emitter: a
     // locally-driven party tick renders the actor's own line unstyled.
