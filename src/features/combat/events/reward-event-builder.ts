@@ -52,6 +52,9 @@ const STAGE10_SPEC: Record<string, Stage10Spec> = {
   // ── Rewards paid out on their own line ──
   xp_reward: { effectType: 'xp', amountKind: 'xp' },
   gold_reward: { effectType: 'gold', amountKind: 'gold' },
+  renown_reward: { effectType: 'renown', amountKind: 'stacks' },
+  salvage_reward: { effectType: 'salvage', amountKind: 'stacks' },
+
   // ── Quests / contracts ──
   contract_complete: { effectType: 'contract', severity: 'notable' },
 };
