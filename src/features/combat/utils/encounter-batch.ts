@@ -177,6 +177,17 @@ export function batchToTickResponse(
       ...(e.isCrit !== null && e.isCrit !== undefined ? { is_crit: e.isCrit } : {}),
       ...(e.isHumanoid !== null && e.isHumanoid !== undefined ? { is_humanoid: e.isHumanoid } : {}),
       ...(e.abilityKey ? { ability_key: e.abilityKey } : {}),
+      // Boss crit flavor travels as the same `boss_flavor` payload the legacy
+      // channel used, so the client formatter has one shape to read.
+      ...(e.bossFlavorText
+        ? {
+            boss_flavor: {
+              name: e.bossFlavorName ?? '',
+              text: e.bossFlavorText,
+              ...(e.damageType ? { damage_type: e.damageType } : {}),
+            },
+          }
+        : {}),
     })),
     creature_states: batch.creatures.map(c => ({
       id: c.creatureId,

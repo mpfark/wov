@@ -245,6 +245,17 @@ export interface ActiveCastSnapshot {
 }
 
 
+/**
+ * Presentation-only boss flavor line (`creatures.boss_crit_flavors`). Never
+ * simulation input: it selects prose for a crit that already happened.
+ */
+export interface BossCritFlavorSnapshot {
+  readonly name: string;
+  readonly text: string;
+  readonly weight: number;
+  readonly damageType: string | null;
+}
+
 export interface CreatureSnapshot {
   readonly id: string;
   readonly name: string;
@@ -266,6 +277,10 @@ export interface CreatureSnapshot {
   readonly storedPowerCap: number;
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
+  /** Authored crit flavor pool (display only). */
+  readonly bossCritFlavors?: readonly BossCritFlavorSnapshot[];
+  /** Authored death cry (display only); empty/null = none. */
+  readonly bossDeathCry?: string | null;
 }
 
 export interface EffectSnapshot {
@@ -718,6 +733,9 @@ export interface PresentationEvent {
   readonly isHumanoid?: boolean | null;
   /** Canonical `abilities.ability_key`, for ability lines. */
   readonly abilityKey?: string | null;
+  /** Chosen boss crit flavor: authored name + placeholder text. */
+  readonly bossFlavorName?: string | null;
+  readonly bossFlavorText?: string | null;
 }
 
 export interface RejectedAction {

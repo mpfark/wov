@@ -198,6 +198,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       isCrit: extra.isCrit ?? null,
       isHumanoid: extra.isHumanoid ?? null,
       abilityKey: extra.abilityKey ?? null,
+      bossFlavorName: extra.bossFlavorName ?? null,
+      bossFlavorText: extra.bossFlavorText ?? null,
     });
   };
 
@@ -236,6 +238,22 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     isHumanoid: attacker.isHumanoid,
     isCrit: isCrit ?? false,
   });
+
+  /**
+   * Pick the authored crit flavor for a boss blow. Presentation only, but drawn
+   * from a named RNG stream so a replayed tick yields the same line.
+   */
+  const bossCritFlavor = (attacker: CreatureSnapshot, tickIndex: number) => {
+    const pool = attacker.bossCritFlavors ?? [];
+    if (pool.length === 0) return {};
+    const pick =
+      rng.weighted('boss_crit_flavor', pool, (f) => f.weight, attacker.id, tickIndex) ?? pool[0];
+    return {
+      bossFlavorName: pick.name || null,
+      bossFlavorText: pick.text,
+      ...(pick.damageType ? { damageType: pick.damageType } : {}),
+    };
+  };
 
   const effectUpserts: EffectUpsert[] = [];
   const effectDeleteIds = new Set<string>();
@@ -367,6 +385,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       recipientCharacterIds: sortIds(recipientIds),
     });
     emit('creature_killed', `${creature.name} falls.`, { creatureId: creature.id });
+    // Authored death cry: a separate presentation event so the client can
+    // surface it apart from the plain "falls" line.
+    const deathCry = (creature.bossDeathCry ?? '').trim();
+    if (deathCry) {
+      emit('boss_death_cry', deathCry, { creatureId: creature.id });
+    }
 
     const recipients = recipientIds
       .map((id) => byParticipant.get(id))
@@ -2108,6 +2132,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           creatureId: c.id,
           amount: applied,
           ...presentCreature(c, target, atk.isCrit),
+          ...(atk.isCrit ? bossCritFlavor(c, t) : {}),
         },
       );
 

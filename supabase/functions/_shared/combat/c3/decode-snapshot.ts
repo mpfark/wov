@@ -281,6 +281,8 @@ const CREATURE_KEYS = [
   'id', 'name', 'level', 'rarity', 'hp', 'maxHp', 'ac', 'isAlive', 'spawnSeq', 'isHumanoid',
   'attrs', 'lootMode', 'lootTableId', 'lootTable', 'bossCast', 'configuredStoredPowerCap',
   'effectiveDropChance', 'dropChanceSource', 'rowVersion',
+  // Presentation-only boss flavor (crit prose pool + death cry).
+  'bossCritFlavors', 'bossDeathCry',
 ] as const;
 
 const EFFECT_KEYS = [
@@ -798,6 +800,19 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     });
 
     const bossCast = decodeBossCast(c.bossCast, `${path}.bossCast`);
+    // Display-only: tolerant by design (authored free text, no gameplay effect).
+    const bossCritFlavors = arr(c.bossCritFlavors ?? [], `${path}.bossCritFlavors`)
+      .map((e, j) => {
+        const fp = `${path}.bossCritFlavors[${j}]`;
+        const f = obj(e, fp);
+        return {
+          name: optStr(f, 'name', fp) ?? '',
+          text: optStr(f, 'text', fp) ?? '',
+          weight: optNum(f, 'weight', fp) ?? 1,
+          damageType: optStr(f, 'damage_type', fp) ?? optStr(f, 'damageType', fp),
+        };
+      })
+      .filter((f) => f.text.length > 0);
     const configuredCap = reqNum(c, 'configuredStoredPowerCap', path);
 
     creatures.push({
@@ -827,6 +842,8 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
+      bossCritFlavors: bossCritFlavors,
+      bossDeathCry: optStr(c, 'bossDeathCry', path),
     });
 
     spawnSeqByCreatureId[id] = reqNum(c, 'spawnSeq', path);
