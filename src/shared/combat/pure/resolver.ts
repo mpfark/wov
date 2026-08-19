@@ -2075,6 +2075,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('creature_miss', `${c.name} misses ${target.name}.`, {
           characterId: target.id,
           creatureId: c.id,
+          ...presentCreature(c, target),
         });
         continue;
       }
