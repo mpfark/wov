@@ -1152,50 +1152,44 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               : `${p.character.id}-${Date.now()}`;
           durableSeqRef.current += 1;
           const clientSeq = durableSeqRef.current;
-          // Register locally BEFORE the network call: the pending state must
-          // survive a lost response.
-          actionsRef.current.submit({
-            actionId,
-            abilityKey,
-            label: pending.label,
-            clientSeq,
-            submittedAtTick: lastAppliedTickRef.current,
-          });
+          // Durable intent must be visible BEFORE any tick can snapshot it: an
+          // out-of-combat opener has no engagement yet, so a fire-and-forget
+          // submission raced the tick and the action was never resolved. The
+          // helper registers the pending entry, awaits the RPC and retries with
+          // the SAME action id (idempotent by id) — no sleeps, no new ids.
+          const dispatch = await dispatchDurableAction(
+            {
+              actionId,
+              characterId: p.character.id,
+              abilityKey,
+              targetCreatureId: targetId ?? null,
+              clientSeq,
+              label: pending.label,
+              isOpener,
+              submittedAtTick: lastAppliedTickRef.current,
+            },
+            {
+              tracker: actionsRef.current,
+              submit: async (a) => {
+                const { error } = await supabase.rpc('submit_combat_action', {
+                  _id: a.actionId,
+                  _character_id: a.characterId,
+                  _ability_key: a.abilityKey,
+                  _target_creature_id: a.targetCreatureId,
+                  _target_character_id: null,
+                  _client_seq: a.clientSeq,
+                });
+                return { error: error ? { message: error.message } : null };
+              },
+            },
+          );
           setPendingActionCount(actionsRef.current.pendingCount);
-          // Durable intent must be visible BEFORE any tick can snapshot it:
-          // an out-of-combat opener has no engagement yet, so a fire-and-forget
-          // submission raced the tick and the action was never resolved.
-          // The same action id is reused across retries (`submit_combat_action`
-          // is idempotent by id); no sleeps, just await + bounded retry.
-          let submitError: any = null;
-          for (let attempt = 0; attempt < 3; attempt++) {
-            const { error } = await supabase.rpc('submit_combat_action', {
-              _id: actionId,
-              _character_id: p.character.id,
-              _ability_key: abilityKey,
-              _target_creature_id: targetId ?? null,
-              _target_character_id: null,
-              _client_seq: clientSeq,
-            });
-            submitError = error ?? null;
-            if (!submitError) break;
-            const msg = String(submitError?.message ?? '').toLowerCase();
-            const transient =
-              msg.includes('failed to fetch') ||
-              msg.includes('network') ||
-              msg.includes('timeout') ||
-              msg.includes('503') ||
-              msg.includes('temporarily unavailable');
-            if (!transient) break;
-          }
 
-          if (submitError) {
-            // Never durably accepted: this is not a committed `rejected`
-            // outcome, so drop it from the tracker entirely, refund the
-            // reservation and do not wake a tick or enter combat.
-            console.warn('[combat] durable action submit failed', submitError.message);
-            actionsRef.current.abandon(actionId);
-            setPendingActionCount(actionsRef.current.pendingCount);
+          if (!dispatch.ok) {
+            // Never durably accepted: not a committed `rejected` outcome, so the
+            // tracker entry is gone, the reservation is refunded, no opener
+            // target is retained and no tick is woken.
+            console.warn('[combat] durable action submit failed', dispatch.error);
             setPendingCpCost(0);
             lastDispatchedOpenerTargetRef.current = null;
             p.addLocalLogEvent(
@@ -1207,6 +1201,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             );
             toast.error(`${pending.label} could not be cast.`);
           } else {
+
             // Remember the opener target so processTickResult engages only this
             // creature (not other aggressive bystanders on the node).
             if (isOpener) {
