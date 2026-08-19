@@ -75,11 +75,34 @@ function stripLeadingGlyph(message: string): string {
     .trimStart();
 }
 
+/**
+ * Reward prose is authored third-person ("Aldric gains 60 experience."). Once
+ * the local name folds to "You", the verb must drop its third-person -s.
+ */
+const THIRD_PERSON_VERBS: Record<string, string> = {
+  gains: 'gain',
+  loots: 'loot',
+  earns: 'earn',
+  salvages: 'salvage',
+  finds: 'find',
+  claims: 'claim',
+  receives: 'receive',
+};
+
+function secondPersonVerbs(message: string): string {
+  return message.replace(
+    /\b(You|you) ([a-z]+)\b/g,
+    (match, subject: string, verb: string) =>
+      THIRD_PERSON_VERBS[verb] ? `${subject} ${THIRD_PERSON_VERBS[verb]}` : match,
+  );
+}
+
 /** Pull a canonical `[N]` suffix, when the server appends one. */
 function trailingAmount(message: string): number | undefined {
   const m = message.match(/\[(\d+)\]\s*$/);
   return m ? Number(m[1]) : undefined;
 }
+
 
 export interface RewardEventInput {
   type: string;
