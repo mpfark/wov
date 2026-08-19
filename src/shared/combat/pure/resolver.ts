@@ -201,6 +201,42 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     });
   };
 
+  /**
+   * Presentation metadata for a player-sourced line. Pure lookup of facts the
+   * resolver already holds — the client turns these into tier + flavor prose.
+   */
+  const presentPlayer = (
+    attacker: ParticipantSnapshot,
+    target: CreatureSnapshot,
+    isCrit?: boolean,
+  ) => ({
+    attackerName: attacker.name,
+    targetName: target.name,
+    attackerClass: attacker.classKey,
+    weaponTag: attacker.weapon.tag ?? null,
+    isHumanoid: target.isHumanoid,
+    isCrit: isCrit ?? false,
+  });
+
+  const presentAbility = (
+    attacker: ParticipantSnapshot,
+    target: CreatureSnapshot,
+    abilityKey: string,
+    isCrit?: boolean,
+  ) => ({ ...presentPlayer(attacker, target, isCrit), abilityKey });
+
+  /** Presentation metadata for a creature-sourced line (creature is attacker). */
+  const presentCreature = (
+    attacker: CreatureSnapshot,
+    target: ParticipantSnapshot,
+    isCrit?: boolean,
+  ) => ({
+    attackerName: attacker.name,
+    targetName: target.name,
+    isHumanoid: attacker.isHumanoid,
+    isCrit: isCrit ?? false,
+  });
+
   const effectUpserts: EffectUpsert[] = [];
   const effectDeleteIds = new Set<string>();
   /**
