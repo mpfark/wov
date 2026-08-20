@@ -77,28 +77,29 @@ export function getDamageTierWord(damage: number): string {
 // ── Flavor text tables ──────────────────────────────────────────
 
 const DAMAGE_FLAVOR: Record<string, string[]> = {
-  graze: ['barely scratching it', 'just nicking it'],
-  nick: ['leaving a small mark', 'scratching its surface'],
-  hit: ['landing a solid blow', 'striking firmly'],
-  wound: ['drawing blood', 'opening a clear wound'],
-  maul: ['tearing into it', 'ripping through its defenses'],
-  crush: ['hitting with great force', 'battering it'],
-  devastate: ['leaving it reeling', 'dealing devastating damage'],
-  annihilate: ['leaving it shattered', 'nearly destroying it'],
-  obliterate: ['utterly overwhelming it', 'almost destroying it'],
+  graze: ['barely scratching it', 'just nicking it', 'skimming its hide', 'grazing it in passing'],
+  nick: ['leaving a small mark', 'scratching its surface', 'drawing a thin line of blood', 'nicking it cleanly'],
+  hit: ['landing a solid blow', 'striking firmly', 'connecting squarely', 'driving the blow home'],
+  wound: ['drawing blood', 'opening a clear wound', 'cutting deep', 'tearing a red furrow'],
+  maul: ['tearing into it', 'ripping through its defenses', 'savaging it', 'breaking its guard apart'],
+  crush: ['hitting with great force', 'battering it', 'caving in its guard', 'driving it back a step'],
+  devastate: ['leaving it reeling', 'dealing devastating damage', 'shattering its footing', 'wrecking it'],
+  annihilate: ['leaving it shattered', 'nearly destroying it', 'breaking it apart', 'ruining it utterly'],
+  obliterate: ['utterly overwhelming it', 'almost destroying it', 'unmaking it', 'leaving almost nothing standing'],
 };
 
 const DAMAGE_FLAVOR_YOU: Record<string, string[]> = {
-  graze: ['barely scratching you', 'just nicking you'],
-  nick: ['leaving a small mark on you', 'scratching you'],
-  hit: ['landing a solid blow on you', 'striking you firmly'],
-  wound: ['drawing blood', 'opening a clear wound'],
-  maul: ['tearing into you', 'ripping through your defenses'],
-  crush: ['hitting you with great force', 'battering you'],
-  devastate: ['leaving you reeling', 'dealing devastating damage'],
-  annihilate: ['leaving you shattered', 'nearly breaking you'],
-  obliterate: ['utterly overwhelming you', 'almost destroying you'],
+  graze: ['barely scratching you', 'just nicking you', 'skimming past your guard', 'grazing you in passing'],
+  nick: ['leaving a small mark on you', 'scratching you', 'drawing a thin line of blood', 'nicking you cleanly'],
+  hit: ['landing a solid blow on you', 'striking you firmly', 'connecting squarely', 'driving the blow home'],
+  wound: ['drawing blood', 'opening a clear wound', 'cutting deep', 'tearing a red furrow in you'],
+  maul: ['tearing into you', 'ripping through your defenses', 'savaging you', 'breaking your guard apart'],
+  crush: ['hitting you with great force', 'battering you', 'caving in your guard', 'driving you back a step'],
+  devastate: ['leaving you reeling', 'dealing devastating damage', 'shattering your footing', 'wrecking your stance'],
+  annihilate: ['leaving you shattered', 'nearly breaking you', 'breaking you apart', 'ruining your guard utterly'],
+  obliterate: ['utterly overwhelming you', 'almost destroying you', 'unmaking you', 'leaving you barely standing'],
 };
+
 
 // ── Conjugation helper ──────────────────────────────────────────
 
