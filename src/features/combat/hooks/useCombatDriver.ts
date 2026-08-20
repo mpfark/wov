@@ -384,17 +384,17 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * a third of all requests refused `not_due`.
    */
   const scheduleNextTick = useCallback((immediate = false) => {
-    if (intervalRef.current) {
-      clearWorkerTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (maintenanceRef.current) return;
     // A durable opener is pending work even out of combat (see opener-gates).
     const work = {
       inCombat: inCombatRef.current,
       hasQueuedAbility: !!pendingAbilityRef.current,
       hasDurableOpener: !!openerPendingRef.current,
     };
+    if (intervalRef.current) {
+      clearWorkerTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (maintenanceRef.current) return;
     if (!shouldPaceNextTick(work)) return;
     const { cadence, receivedAt } = cadenceRef.current;
     const delay = immediate
