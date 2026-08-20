@@ -389,8 +389,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       intervalRef.current = null;
     }
     if (maintenanceRef.current) return;
-    // A durably submitted opener is work the pacer must keep alive even though
-    // the client is not in combat yet and the local queue entry is gone.
+    // A durable opener is pending work even out of combat (see opener-gates).
     if (!shouldPaceNextTick({
       inCombat: inCombatRef.current,
       hasQueuedAbility: !!pendingAbilityRef.current,

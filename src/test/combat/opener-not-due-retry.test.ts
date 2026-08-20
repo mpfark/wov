@@ -23,7 +23,9 @@ import {
 
 const MIN_REQUEST_SPACING_MS = 400;
 
-type Refusal = { kind: 'not_due' | 'in_flight' } | { kind: 'committed'; consumed: string[]; dead?: string[] };
+type Refusal =
+  | { kind: 'not_due' | 'in_flight'; consumed?: undefined; dead?: undefined }
+  | { kind: 'committed'; consumed: string[]; dead?: string[] };
 
 /**
  * Minimal driver mirror: the exact sequencing and gates `useCombatDriver` uses.
@@ -139,9 +141,9 @@ class DriverHarness {
     const outcomes = this.tracker.applyCommitted({
       batchId: `b-${this.requests}`,
       tick: this.requests,
-      consumedActionIds: this.opts.rejectReason ? [] : r.consumed,
+      consumedActionIds: this.opts.rejectReason ? [] : (r.consumed ?? []),
       rejectedActions: this.opts.rejectReason
-        ? r.consumed.map(id => ({ actionId: id, reason: this.opts.rejectReason! }))
+        ? (r.consumed ?? []).map(id => ({ actionId: id, reason: this.opts.rejectReason! }))
         : [],
     });
     const opener = this.opener;
