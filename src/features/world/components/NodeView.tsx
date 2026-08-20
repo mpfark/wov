@@ -52,6 +52,8 @@ interface Props {
   abilityTargetId?: string | null;
   /** Index of an ability currently queued/pending cast — that button pulses until resolved. */
   pendingAbilityIndex?: number | null;
+  /** Lifecycle stage of the pending activation — tooltip copy only. */
+  pendingAbilityStage?: 'preparing' | 'submitted' | null;
   /** Active stance map — abilities mapped to active stances render in stance state. */
   reservedBuffs?: ReservedBuffsMap | null;
   actionBindings?: ActionBindings;
@@ -78,6 +80,7 @@ export default function NodeView({
   node, region, area, allNodes = [], players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   pendingAbilityIndex = null,
+  pendingAbilityStage = null,
   reservedBuffs = null,
   actionBindings,
   poisonStacks = {},
@@ -618,7 +621,7 @@ export default function NodeView({
                           : stanceActive
                             ? `${ability.tooltip} · Active — click to drop (CP not refunded).`
                             : isPending
-                              ? `${ability.tooltip} · Queued — casts on next tick.`
+                              ? `${ability.tooltip} · ${pendingAbilityStage === 'submitted' ? 'Waiting for the next combat tick…' : 'Preparing…'}`
                               : `${ability.tooltip} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
                         }
                       </TooltipContent>
