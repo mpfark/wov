@@ -337,15 +337,19 @@ function formatCreatureAttack(
   const punct = isCrit ? '!' : '.';
   const pick = (pool: string[]) =>
     flavorIdx === undefined ? pickRandom(pool) : pool[flavorIdx % pool.length];
+  // The creature's own verb carries the identity of the blow, so consecutive
+  // attacks from the same beast stop reading as one repeated template.
+  const verb = resolveCreatureAttackVerb(attacker, event.is_humanoid, flavorIdx);
 
   if (isLocal) {
     const flavor = pick(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
-    return `${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
+    return `${attacker} ${verb} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
   const flavor = pick(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  return `${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
+  return `${attacker} ${verb} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
+
 
 // ── Stage 4: attacks as native structured events ────────────────
 
