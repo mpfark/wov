@@ -387,7 +387,7 @@ export function buildAttackLogEvent(
   const isLocal = event.character_id === localCharacterId;
   // One flavor pick, reused for both perspectives so the same blow reads
   // consistently for the actor and for observers.
-  const flavorIdx = Math.floor(Math.random() * 4);
+  const flavorIdx = Math.floor(Math.random() * 12);
   const damage = event.damage ?? 0;
   const isMiss = event.type.endsWith('_miss');
 
