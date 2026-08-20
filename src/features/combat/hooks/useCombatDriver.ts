@@ -46,6 +46,7 @@ import {
   type ActionOutcome,
 } from '../utils/pending-actions';
 import { dispatchDurableAction } from '../utils/dispatch-durable-action';
+import { pendingPulse, shouldIssueTickRequest, shouldPaceNextTick } from '../utils/opener-gates';
 import type { ResyncSnapshot } from '../utils/resync';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
@@ -302,19 +303,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    */
   const syncPendingVisual = useCallback(() => {
     const queued = pendingAbilityRef.current;
-    if (queued) {
-      setPendingAbilityIndex(queued.index);
-      setPendingAbilityStage('preparing');
-      return;
-    }
     const durable = actionsRef.current.newestPending();
-    if (durable && durable.slotIndex !== undefined) {
-      setPendingAbilityIndex(durable.slotIndex);
-      setPendingAbilityStage('submitted');
-      return;
-    }
-    setPendingAbilityIndex(null);
-    setPendingAbilityStage(null);
+    const pulse = pendingPulse({
+      queuedIndex: queued ? queued.index : null,
+      durableSlotIndex: durable?.slotIndex ?? null,
+    });
+    setPendingAbilityIndex(pulse.index);
+    setPendingAbilityStage(pulse.stage);
   }, []);
   const syncPendingVisualRef = useRef(syncPendingVisual);
   useEffect(() => { syncPendingVisualRef.current = syncPendingVisual; }, [syncPendingVisual]);
@@ -396,7 +391,11 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     if (maintenanceRef.current) return;
     // A durably submitted opener is work the pacer must keep alive even though
     // the client is not in combat yet and the local queue entry is gone.
-    if (!inCombatRef.current && !pendingAbilityRef.current && !openerPendingRef.current) return;
+    if (!shouldPaceNextTick({
+      inCombat: inCombatRef.current,
+      hasQueuedAbility: !!pendingAbilityRef.current,
+      hasDurableOpener: !!openerPendingRef.current,
+    })) return;
     const { cadence, receivedAt } = cadenceRef.current;
     const delay = immediate
       ? 0
@@ -1358,7 +1357,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       const driver = solo || p.isLeader || followerWake || openerAlive;
 
 
-      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0 || openerAlive)) {
+      if (shouldIssueTickRequest({
+        driver,
+        alive: !p.isDead && p.character.hp > 0,
+        engagedCount: engagedCreatureIdsRef.current.length,
+        localCastCount,
+        hasDurableOpener: openerAlive,
+      })) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
