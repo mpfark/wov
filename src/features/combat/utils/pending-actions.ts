@@ -39,6 +39,12 @@ export interface SubmittedAction {
    * resolver's snapshot pending instead of silently vanishing.
    */
   readonly submittedAtTick: number;
+  /**
+   * Ability-bar slot the activation came from. Presentation identity only — the
+   * pending pulse needs to know *which* button is still awaiting a committed
+   * outcome, and the ability key alone does not identify a slot.
+   */
+  readonly slotIndex?: number;
 }
 
 export type ActionOutcomeKind = 'consumed' | 'rejected' | 'superseded';
@@ -49,8 +55,10 @@ export interface ActionOutcome {
   readonly tick: number;
   readonly label: string;
   readonly abilityKey: string;
+  readonly slotIndex?: number;
   readonly reason?: ActionRejectionReason;
 }
+
 
 export interface CommittedActionOutcomes {
   readonly batchId: string;
@@ -121,10 +129,19 @@ export class PendingActionTracker {
     return [...this.entries.values()].filter(e => !e.superseded).map(e => e.action);
   }
 
-
   get pendingCount(): number {
     return this.pending().length;
   }
+
+  /**
+   * Newest action still awaiting a committed outcome. This is the durable source
+   * of the pending-ability pulse after submission: presentation identity only.
+   */
+  newestPending(): SubmittedAction | undefined {
+    const list = this.pending();
+    return list.length > 0 ? list[list.length - 1] : undefined;
+  }
+
 
   outcomeOf(actionId: string): { kind: ActionOutcomeKind; tick: number; reason?: ActionRejectionReason } | undefined {
     return this.ledger.get(actionId);
@@ -162,6 +179,7 @@ export class PendingActionTracker {
         tick: batch.tick,
         label: entry.action.label,
         abilityKey: entry.action.abilityKey,
+        ...(entry.action.slotIndex !== undefined ? { slotIndex: entry.action.slotIndex } : {}),
         ...(reason ? { reason } : {}),
       });
     };
@@ -197,6 +215,7 @@ export class PendingActionTracker {
         tick,
         label: entry.action.label,
         abilityKey: entry.action.abilityKey,
+        ...(entry.action.slotIndex !== undefined ? { slotIndex: entry.action.slotIndex } : {}),
       });
     }
     return out;

@@ -46,6 +46,7 @@ import {
   type ActionOutcome,
 } from '../utils/pending-actions';
 import { dispatchDurableAction } from '../utils/dispatch-durable-action';
+import { pendingPulse, shouldIssueTickRequest, shouldPaceNextTick } from '../utils/opener-gates';
 import type { ResyncSnapshot } from '../utils/resync';
 import { buildAggroEvent, buildPositioningEvent } from '@/features/combat/events/threat-event-builder';
 import { useCombatLifecycle } from './useCombatLifecycle';
@@ -243,6 +244,28 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // engage only that creature (not other aggressive bystanders the server
   // happens to report state for) when transitioning idle → in-combat.
   const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
+  /**
+   * A durably submitted out-of-combat opener. It outlives `pendingAbilityRef`
+   * (which is consumed the moment `doTick` dispatches) so the pacer keeps
+   * running while the client is still technically out of combat and the action
+   * waits for its first eligible committed boundary. Non-terminal `not_due` /
+   * `in_flight` refusals therefore no longer strand the opener — the same
+   * durable action id is retained, never resubmitted.
+   */
+  const openerPendingRef = useRef<{ actionId: string; targetId: string; slotIndex: number } | null>(null);
+  /**
+   * Target of an opener whose action a committed batch just consumed. Combat is
+   * adopted from this authoritative outcome, not from whether the attack
+   * happened to change the target's HP.
+   */
+  const adoptOpenerTargetRef = useRef<string | null>(null);
+  /**
+   * Ability-bar slot that is visibly pending, plus how far along it is. Feedback
+   * only: it never submits, ticks, or changes CP. Pre-dispatch queue state and
+   * durable pending state are one continuous visual state.
+   */
+  const [pendingAbilityIndex, setPendingAbilityIndex] = useState<number | null>(null);
+  const [pendingAbilityStage, setPendingAbilityStage] = useState<'preparing' | 'submitted' | null>(null);
 
   /**
    * The last cadence report the server gave us (boundary + its own clock) and
@@ -272,6 +295,24 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       return next;
     });
   }, []);
+
+  /**
+   * Recompute the pending pulse from its two sources: the local pre-dispatch
+   * queue and the durable tracker. Called after every lifecycle transition, so
+   * there is exactly one place that decides whether a button pulses.
+   */
+  const syncPendingVisual = useCallback(() => {
+    const queued = pendingAbilityRef.current;
+    const durable = actionsRef.current.newestPending();
+    const pulse = pendingPulse({
+      queuedIndex: queued ? queued.index : null,
+      durableSlotIndex: durable?.slotIndex ?? null,
+    });
+    setPendingAbilityIndex(pulse.index);
+    setPendingAbilityStage(pulse.stage);
+  }, []);
+  const syncPendingVisualRef = useRef(syncPendingVisual);
+  useEffect(() => { syncPendingVisualRef.current = syncPendingVisual; }, [syncPendingVisual]);
 
   const stopCombat = useCallback(() => {
     // Durable disengage (Phase 2): drop this character's engagement rows so
@@ -319,6 +360,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
     pendingAbilityRef.current = null;
     setPendingAbility(null);
+    openerPendingRef.current = null;
+    adoptOpenerTargetRef.current = null;
+    setPendingAbilityIndex(null);
+    setPendingAbilityStage(null);
     setPendingCpCost(0);
     optimisticCpRef.current = null;
     cadenceRef.current = { cadence: null, receivedAt: 0 };
@@ -339,12 +384,18 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * a third of all requests refused `not_due`.
    */
   const scheduleNextTick = useCallback((immediate = false) => {
+    // A durable opener is pending work even out of combat (see opener-gates).
+    const work = {
+      inCombat: inCombatRef.current,
+      hasQueuedAbility: !!pendingAbilityRef.current,
+      hasDurableOpener: !!openerPendingRef.current,
+    };
     if (intervalRef.current) {
       clearWorkerTimeout(intervalRef.current);
       intervalRef.current = null;
     }
     if (maintenanceRef.current) return;
-    if (!inCombatRef.current && !pendingAbilityRef.current) return;
+    if (!shouldPaceNextTick(work)) return;
     const { cadence, receivedAt } = cadenceRef.current;
     const delay = immediate
       ? 0
@@ -466,6 +517,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     const label = ability?.label ?? 'ability';
     pendingAbilityRef.current = { index, targetId, readyAt: Date.now(), cpCost, label };
     setPendingAbility({ index, targetId });
+    setPendingAbilityIndex(index);
+    setPendingAbilityStage('preparing');
     setPendingCpCost(cpCost);
     idleCountRef.current = 0;
     traceAbilityPress(label);
@@ -582,7 +635,21 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // 'superseded': a newer action replaced it and the server never executed
       // it — silent, but distinct from an executed action in the ledger.
     }
-    if (outcomes.length > 0) setPendingActionCount(actionsRef.current.pendingCount);
+    // Authoritative opener resolution: only a committed outcome may clear the
+    // durable opener. A consumed opener hands its target to combat adoption
+    // (hit, miss or zero damage alike); a rejection starts no combat at all.
+    const opener = openerPendingRef.current;
+    if (opener) {
+      const mine = outcomes.find(o => o.actionId === opener.actionId);
+      if (mine) {
+        openerPendingRef.current = null;
+        if (mine.kind === 'consumed') adoptOpenerTargetRef.current = opener.targetId;
+      }
+    }
+    if (outcomes.length > 0) {
+      setPendingActionCount(actionsRef.current.pendingCount);
+      syncPendingVisualRef.current();
+    }
   }, []);
 
   const processTickResult = useCallback((
@@ -662,24 +729,38 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // For a solo/leader T0 opener, engage only the targeted creature so we
       // don't drag in other aggressive bystanders the server happens to
       // include in its tick state. Non-leader broadcast path keeps full set.
-      const openerTarget = lastDispatchedOpenerTargetRef.current;
+      //
+      // The target comes from the *committed* consumption of the opener action
+      // (see applyActionOutcomes), so a consumed opener that missed or dealt no
+      // damage still establishes combat: `creature_states` may legitimately omit
+      // an unchanged creature, and adoption must not depend on an HP change.
+      const openerTarget = adoptOpenerTargetRef.current ?? lastDispatchedOpenerTargetRef.current;
+      adoptOpenerTargetRef.current = null;
       lastDispatchedOpenerTargetRef.current = null;
       const isBroadcastEntry = !!ext.current.party && !ext.current.isLeader;
       let toEngage: string[] = aliveServerCreatures;
-      if (!isBroadcastEntry && openerTarget && aliveServerCreatures.includes(openerTarget)) {
+      // A creature the server reported dead (state flag or death event) can
+      // never be engaged; anything else the opener consumed against is live.
+      const deadIds = new Set<string>([
+        ...data.creature_states.filter(cs => !cs.alive).map(cs => cs.id),
+        ...(data.events ?? [])
+          .filter(ev => ev.type === 'creature_death' || ev.type === 'creature_kill')
+          .map(ev => (ev as { creature_id?: string }).creature_id)
+          .filter((id): id is string => !!id),
+      ]);
+      if (!isBroadcastEntry && openerTarget && !deadIds.has(openerTarget)) {
         toEngage = [openerTarget];
       }
-      // One-shot opener kill: opener target is in creature_states but already
-      // dead. We still need to run the result through interpretCombatTickResult
-      // so the kill log, XP/gold/Renown/salvage, and loot drop are applied.
-      // Treat the dead target as our engagement for this single tick so the
-      // downstream pipeline matches it; aliveEngagedIds === 0 will then
-      // immediately stopCombat.
+      // One-shot opener kill: the opener target is already dead. We still need
+      // to run the result through interpretCombatTickResult so the kill log,
+      // XP/gold/Renown/salvage, and loot drop are applied. Treat the dead target
+      // as our engagement for this single tick so the downstream pipeline
+      // matches it; aliveEngagedIds === 0 will then immediately stopCombat.
       if (
         !isBroadcastEntry &&
-        toEngage.length === 0 &&
         openerTarget &&
-        data.creature_states.some(cs => cs.id === openerTarget)
+        deadIds.has(openerTarget) &&
+        toEngage.length === 0
       ) {
         toEngage = [openerTarget];
       }
@@ -1167,6 +1248,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               clientSeq,
               label: pending.label,
               isOpener,
+              slotIndex: pending.index,
               submittedAtTick: lastAppliedTickRef.current,
             },
             {
@@ -1185,6 +1267,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             },
           );
           setPendingActionCount(actionsRef.current.pendingCount);
+          // Continuous visual state: the queue entry has been consumed, so the
+          // pulse now hangs off the durable tracker entry (or clears if the
+          // submission was abandoned).
+          syncPendingVisualRef.current();
 
           if (!dispatch.ok) {
             // Never durably accepted: not a committed `rejected` outcome, so the
@@ -1193,6 +1279,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             console.warn('[combat] durable action submit failed', dispatch.error);
             setPendingCpCost(0);
             lastDispatchedOpenerTargetRef.current = null;
+            openerPendingRef.current = null;
             p.addLocalLogEvent(
               buildPositioningEvent(
                 'fizzle',
@@ -1207,6 +1294,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // creature (not other aggressive bystanders on the node).
             if (isOpener) {
               lastDispatchedOpenerTargetRef.current = targetId!;
+              // Durable opener: keeps the pacer alive and stays eligible to wake
+              // a tick until a committed batch consumes or rejects THIS action.
+              openerPendingRef.current = {
+                actionId,
+                targetId: targetId!,
+                slotIndex: pending.index,
+              };
               openerWake = true;
             }
 
@@ -1237,8 +1331,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
           // Non-server abilities debit CP synchronously via onAbilityExecute,
-          // so the reservation can be cleared immediately.
+          // so the reservation (and its pending pulse) clears immediately.
           setPendingCpCost(0);
+          syncPendingVisualRef.current();
         }
       }
 
@@ -1255,10 +1350,20 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // A follower opening combat outside of any encounter wakes the first tick
       // itself; ordinary in-combat follower abilities keep waiting for the
       // leader's shared cadence.
-      const driver = solo || p.isLeader || followerWake || openerWake;
+      // A still-unresolved durable opener keeps this client eligible to drive
+      // the tick that will finally resolve it — including across a non-terminal
+      // `not_due` / `in_flight` refusal, where no new action is created.
+      const openerAlive = openerWake || !!openerPendingRef.current;
+      const driver = solo || p.isLeader || followerWake || openerAlive;
 
 
-      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
+      if (shouldIssueTickRequest({
+        driver,
+        alive: !p.isDead && p.character.hp > 0,
+        engagedCount: engagedCreatureIdsRef.current.length,
+        localCastCount,
+        hasDurableOpener: openerAlive,
+      })) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
@@ -1496,7 +1601,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
       // Idle detection: the pacer simply stops re-arming once there is nothing
       // left to drive (see scheduleNextTick's guard).
-      if (!inCombatRef.current && !pendingAbilityRef.current) {
+      if (!inCombatRef.current && !pendingAbilityRef.current && !openerPendingRef.current) {
         idleCountRef.current++;
       } else {
         idleCountRef.current = 0;
@@ -1577,6 +1682,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     stopCombat,
     fleeStopCombat,
     pendingAbility,
+    /** Ability-bar slot currently awaiting its authoritative outcome (pulse). */
+    pendingAbilityIndex,
+    /** `preparing` = pre-submission, `submitted` = awaiting a committed tick. */
+    pendingAbilityStage,
     pendingCpCost,
     queueAbility,
     /** C4: actions submitted but not yet acknowledged by a committed tick. */

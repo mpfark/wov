@@ -273,6 +273,16 @@ const ABILITY_IDENTITY_PROSE: Record<string, [RegExp, string]> = {
 };
 
 /**
+ * Server prose that states its own amount in words, where the styled structured
+ * token is the intended presentation. Holy Shield reads
+ * `Your Holy Shield burns Ithram! [36]` — the sentence drops the numeral and
+ * `EventLogLine` renders the amount exactly once from `event.amount`.
+ */
+const AMOUNT_AS_TOKEN: Record<string, RegExp> = {
+  holy_shield_return: / for \d+\.\s*$/,
+};
+
+/**
  * Fold the local character's name into second person.
  * Pure pronoun rewriting — carries no classification meaning.
  */
@@ -312,9 +322,10 @@ export function buildTickLogEvent(
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
 
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
-  const remoteMessage = humanizeAbilityKeys(
-    identity ? ev.message.replace(identity[0], identity[1]) : ev.message,
-  );
+  const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
+  let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
+  if (amountAsToken) prose = prose.replace(amountAsToken, '!');
+  const remoteMessage = humanizeAbilityKeys(prose);
   const message = isLocal
     ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
