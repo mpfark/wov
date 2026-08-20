@@ -1249,6 +1249,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               clientSeq,
               label: pending.label,
               isOpener,
+              slotIndex: pending.index,
               submittedAtTick: lastAppliedTickRef.current,
             },
             {
@@ -1267,6 +1268,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             },
           );
           setPendingActionCount(actionsRef.current.pendingCount);
+          // Continuous visual state: the queue entry has been consumed, so the
+          // pulse now hangs off the durable tracker entry (or clears if the
+          // submission was abandoned).
+          syncPendingVisualRef.current();
 
           if (!dispatch.ok) {
             // Never durably accepted: not a committed `rejected` outcome, so the
@@ -1275,6 +1280,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             console.warn('[combat] durable action submit failed', dispatch.error);
             setPendingCpCost(0);
             lastDispatchedOpenerTargetRef.current = null;
+            openerPendingRef.current = null;
             p.addLocalLogEvent(
               buildPositioningEvent(
                 'fizzle',
@@ -1289,6 +1295,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             // creature (not other aggressive bystanders on the node).
             if (isOpener) {
               lastDispatchedOpenerTargetRef.current = targetId!;
+              // Durable opener: keeps the pacer alive and stays eligible to wake
+              // a tick until a committed batch consumes or rejects THIS action.
+              openerPendingRef.current = {
+                actionId,
+                targetId: targetId!,
+                slotIndex: pending.index,
+              };
               openerWake = true;
             }
 
@@ -1319,8 +1332,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
           // Non-server abilities debit CP synchronously via onAbilityExecute,
-          // so the reservation can be cleared immediately.
+          // so the reservation (and its pending pulse) clears immediately.
           setPendingCpCost(0);
+          syncPendingVisualRef.current();
         }
       }
 
@@ -1337,10 +1351,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // A follower opening combat outside of any encounter wakes the first tick
       // itself; ordinary in-combat follower abilities keep waiting for the
       // leader's shared cadence.
-      const driver = solo || p.isLeader || followerWake || openerWake;
+      // A still-unresolved durable opener keeps this client eligible to drive
+      // the tick that will finally resolve it — including across a non-terminal
+      // `not_due` / `in_flight` refusal, where no new action is created.
+      const openerAlive = openerWake || !!openerPendingRef.current;
+      const driver = solo || p.isLeader || followerWake || openerAlive;
 
 
-      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0)) {
+      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || localCastCount > 0 || openerAlive)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
@@ -1578,7 +1596,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
       // Idle detection: the pacer simply stops re-arming once there is nothing
       // left to drive (see scheduleNextTick's guard).
-      if (!inCombatRef.current && !pendingAbilityRef.current) {
+      if (!inCombatRef.current && !pendingAbilityRef.current && !openerPendingRef.current) {
         idleCountRef.current++;
       } else {
         idleCountRef.current = 0;
@@ -1659,6 +1677,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     stopCombat,
     fleeStopCombat,
     pendingAbility,
+    /** Ability-bar slot currently awaiting its authoritative outcome (pulse). */
+    pendingAbilityIndex,
+    /** `preparing` = pre-submission, `submitted` = awaiting a committed tick. */
+    pendingAbilityStage,
     pendingCpCost,
     queueAbility,
     /** C4: actions submitted but not yet acknowledged by a committed tick. */
