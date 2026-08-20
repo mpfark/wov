@@ -730,24 +730,38 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       // For a solo/leader T0 opener, engage only the targeted creature so we
       // don't drag in other aggressive bystanders the server happens to
       // include in its tick state. Non-leader broadcast path keeps full set.
-      const openerTarget = lastDispatchedOpenerTargetRef.current;
+      //
+      // The target comes from the *committed* consumption of the opener action
+      // (see applyActionOutcomes), so a consumed opener that missed or dealt no
+      // damage still establishes combat: `creature_states` may legitimately omit
+      // an unchanged creature, and adoption must not depend on an HP change.
+      const openerTarget = adoptOpenerTargetRef.current ?? lastDispatchedOpenerTargetRef.current;
+      adoptOpenerTargetRef.current = null;
       lastDispatchedOpenerTargetRef.current = null;
       const isBroadcastEntry = !!ext.current.party && !ext.current.isLeader;
       let toEngage: string[] = aliveServerCreatures;
-      if (!isBroadcastEntry && openerTarget && aliveServerCreatures.includes(openerTarget)) {
+      // A creature the server reported dead (state flag or death event) can
+      // never be engaged; anything else the opener consumed against is live.
+      const deadIds = new Set<string>([
+        ...data.creature_states.filter(cs => !cs.alive).map(cs => cs.id),
+        ...(data.events ?? [])
+          .filter(ev => ev.type === 'creature_death' || ev.type === 'creature_kill')
+          .map(ev => (ev as { creature_id?: string }).creature_id)
+          .filter((id): id is string => !!id),
+      ]);
+      if (!isBroadcastEntry && openerTarget && !deadIds.has(openerTarget)) {
         toEngage = [openerTarget];
       }
-      // One-shot opener kill: opener target is in creature_states but already
-      // dead. We still need to run the result through interpretCombatTickResult
-      // so the kill log, XP/gold/Renown/salvage, and loot drop are applied.
-      // Treat the dead target as our engagement for this single tick so the
-      // downstream pipeline matches it; aliveEngagedIds === 0 will then
-      // immediately stopCombat.
+      // One-shot opener kill: the opener target is already dead. We still need
+      // to run the result through interpretCombatTickResult so the kill log,
+      // XP/gold/Renown/salvage, and loot drop are applied. Treat the dead target
+      // as our engagement for this single tick so the downstream pipeline
+      // matches it; aliveEngagedIds === 0 will then immediately stopCombat.
       if (
         !isBroadcastEntry &&
-        toEngage.length === 0 &&
         openerTarget &&
-        data.creature_states.some(cs => cs.id === openerTarget)
+        deadIds.has(openerTarget) &&
+        toEngage.length === 0
       ) {
         toEngage = [openerTarget];
       }
