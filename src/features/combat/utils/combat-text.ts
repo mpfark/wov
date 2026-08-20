@@ -189,14 +189,18 @@ const GENERIC_CREATURE_VERBS = ['attacks', 'strikes'];
 export function resolveCreatureAttackVerb(
   creatureName: string,
   isHumanoid?: boolean,
+  /** Deterministic index so both perspectives of one blow read alike. */
+  idx?: number,
 ): string {
+  const pick = (pool: string[]) => (idx === undefined ? pickRandom(pool) : pool[idx % pool.length]);
   const lower = creatureName.toLowerCase();
   for (const [keyword, verbs] of Object.entries(CREATURE_VERB_MAP)) {
-    if (lower.includes(keyword)) return pickRandom(verbs);
+    if (lower.includes(keyword)) return pick(verbs);
   }
-  if (isHumanoid) return pickRandom(HUMANOID_FALLBACK);
-  return pickRandom(GENERIC_CREATURE_VERBS);
+  if (isHumanoid) return pick(HUMANOID_FALLBACK);
+  return pick(GENERIC_CREATURE_VERBS);
 }
+
 
 // ── Structured event types ──────────────────────────────────────
 
