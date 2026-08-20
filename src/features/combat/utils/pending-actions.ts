@@ -39,6 +39,12 @@ export interface SubmittedAction {
    * resolver's snapshot pending instead of silently vanishing.
    */
   readonly submittedAtTick: number;
+  /**
+   * Ability-bar slot the activation came from. Presentation identity only — the
+   * pending pulse needs to know *which* button is still awaiting a committed
+   * outcome, and the ability key alone does not identify a slot.
+   */
+  readonly slotIndex?: number;
 }
 
 export type ActionOutcomeKind = 'consumed' | 'rejected' | 'superseded';
@@ -49,8 +55,10 @@ export interface ActionOutcome {
   readonly tick: number;
   readonly label: string;
   readonly abilityKey: string;
+  readonly slotIndex?: number;
   readonly reason?: ActionRejectionReason;
 }
+
 
 export interface CommittedActionOutcomes {
   readonly batchId: string;
