@@ -390,11 +390,12 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
     if (maintenanceRef.current) return;
     // A durable opener is pending work even out of combat (see opener-gates).
-    if (!shouldPaceNextTick({
+    const work = {
       inCombat: inCombatRef.current,
       hasQueuedAbility: !!pendingAbilityRef.current,
       hasDurableOpener: !!openerPendingRef.current,
-    })) return;
+    };
+    if (!shouldPaceNextTick(work)) return;
     const { cadence, receivedAt } = cadenceRef.current;
     const delay = immediate
       ? 0
