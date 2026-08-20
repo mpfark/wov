@@ -179,6 +179,7 @@ export class PendingActionTracker {
         tick: batch.tick,
         label: entry.action.label,
         abilityKey: entry.action.abilityKey,
+        ...(entry.action.slotIndex !== undefined ? { slotIndex: entry.action.slotIndex } : {}),
         ...(reason ? { reason } : {}),
       });
     };
@@ -214,6 +215,7 @@ export class PendingActionTracker {
         tick,
         label: entry.action.label,
         abilityKey: entry.action.abilityKey,
+        ...(entry.action.slotIndex !== undefined ? { slotIndex: entry.action.slotIndex } : {}),
       });
     }
     return out;

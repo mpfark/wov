@@ -52,7 +52,13 @@ export function isTransientSubmitError(message: string): boolean {
  * definitive failure has been cleaned up.
  */
 export async function dispatchDurableAction(
-  args: DurableSubmitArgs & { label: string; isOpener: boolean; submittedAtTick: number },
+  args: DurableSubmitArgs & {
+    label: string;
+    isOpener: boolean;
+    submittedAtTick: number;
+    /** Ability-bar slot — carried for the pending pulse only. */
+    slotIndex?: number;
+  },
   deps: DispatchDeps,
 ): Promise<DispatchResult> {
   const attempts = deps.attempts ?? 3;
@@ -62,6 +68,7 @@ export async function dispatchDurableAction(
     label: args.label,
     clientSeq: args.clientSeq,
     submittedAtTick: args.submittedAtTick,
+    ...(args.slotIndex !== undefined ? { slotIndex: args.slotIndex } : {}),
   });
 
   let lastError: { message: string } | null = null;
