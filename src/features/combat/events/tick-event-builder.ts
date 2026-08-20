@@ -311,10 +311,14 @@ export function buildTickLogEvent(
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
 
-  const remoteMessage = ev.message;
+  const identity = ABILITY_IDENTITY_PROSE[ev.type];
+  const remoteMessage = humanizeAbilityKeys(
+    identity ? ev.message.replace(identity[0], identity[1]) : ev.message,
+  );
   const message = isLocal
     ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
+
 
   const playerActor: LogActor | undefined = ev.character_id
     ? { kind: 'player', id: ev.character_id }
