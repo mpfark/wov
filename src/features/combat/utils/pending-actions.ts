@@ -129,10 +129,19 @@ export class PendingActionTracker {
     return [...this.entries.values()].filter(e => !e.superseded).map(e => e.action);
   }
 
-
   get pendingCount(): number {
     return this.pending().length;
   }
+
+  /**
+   * Newest action still awaiting a committed outcome. This is the durable source
+   * of the pending-ability pulse after submission: presentation identity only.
+   */
+  newestPending(): SubmittedAction | undefined {
+    const list = this.pending();
+    return list.length > 0 ? list[list.length - 1] : undefined;
+  }
+
 
   outcomeOf(actionId: string): { kind: ActionOutcomeKind; tick: number; reason?: ActionRejectionReason } | undefined {
     return this.ledger.get(actionId);
