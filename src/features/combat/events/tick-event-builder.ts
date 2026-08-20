@@ -215,6 +215,63 @@ export interface TickEventInput {
   ability_key?: string;
 }
 
+/** Verbs whose second-person form is not just "drop the -s". */
+const IRREGULAR_SECOND_PERSON: Record<string, string> = {
+  has: 'have',
+  is: 'are',
+  does: 'do',
+  goes: 'go',
+  was: 'were',
+};
+
+/**
+ * Turn a third-person singular verb into its second-person form.
+ * Purely grammatical — the server authors third-person prose, so once the
+ * local name folds to "You" the verb must follow ("You blocks" → "You block").
+ */
+function secondPersonVerb(verb: string): string {
+  const irregular = IRREGULAR_SECOND_PERSON[verb];
+  if (irregular) return irregular;
+  if (!verb.endsWith('s')) return verb;
+  if (/(?:ss|us|is)$/.test(verb)) return verb;
+  if (/[^aeiou]ies$/.test(verb)) return `${verb.slice(0, -3)}y`;
+  if (/(?:sh|ch|s|x|z)es$/.test(verb)) return verb.slice(0, -2);
+  return verb.slice(0, -1);
+}
+
+/**
+ * Conjugate the verb that directly follows a folded "You" subject.
+ * Only the pronoun subject is touched — "Your ward burns …" keeps its
+ * third-person verb because the subject there is the ward, not the player.
+ */
+export function applySecondPersonGrammar(message: string): string {
+  return message.replace(
+    /(^|[.!?]\s+|\s)(You) ([a-z]+)\b/g,
+    (_m, lead: string, subject: string, verb: string) => `${lead}${subject} ${secondPersonVerb(verb)}`,
+  );
+}
+
+/**
+ * Server prose occasionally interpolates a raw `ability_key`. Render it as the
+ * ability's readable name; display-only, never used to classify a line.
+ */
+export function humanizeAbilityKeys(message: string): string {
+  return message.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (token) =>
+    token
+      .split('_')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' '),
+  );
+}
+
+/**
+ * Ability identity for lines the server writes generically. The effect is a
+ * known ability, so the log names it instead of describing it vaguely.
+ */
+const ABILITY_IDENTITY_PROSE: Record<string, [RegExp, string]> = {
+  holy_shield_return: [/\bward\b/g, 'Holy Shield'],
+};
+
 /**
  * Fold the local character's name into second person.
  * Pure pronoun rewriting — carries no classification meaning.
@@ -233,8 +290,9 @@ export function applySelfPerspective(message: string, characterName: string): st
   msg = msg.replace(new RegExp(` ${characterName} `, 'g'), ' you ');
   msg = msg.replace(new RegExp(` ${characterName}\\.`, 'g'), ' you.');
   msg = msg.replace(new RegExp(` ${characterName}!`, 'g'), ' you!');
-  return msg;
+  return applySecondPersonGrammar(msg);
 }
+
 
 /**
  * Build a structured event for a stage-5/6/7/8 server event, or null when the
@@ -253,10 +311,14 @@ export function buildTickLogEvent(
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
 
-  const remoteMessage = ev.message;
+  const identity = ABILITY_IDENTITY_PROSE[ev.type];
+  const remoteMessage = humanizeAbilityKeys(
+    identity ? ev.message.replace(identity[0], identity[1]) : ev.message,
+  );
   const message = isLocal
     ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
+
 
   const playerActor: LogActor | undefined = ev.character_id
     ? { kind: 'player', id: ev.character_id }

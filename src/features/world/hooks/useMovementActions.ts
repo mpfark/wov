@@ -306,9 +306,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       if (options?.wimpFlee) {
-        emitPositioning(p, 'wimp_flee', `Wimp flee${dirText}!`);
+        emitPositioning(p, 'wimp_flee', `Wounded and outmatched, you break away${dirText}!`);
       } else {
-        emitPositioning(p, 'flee', `You flee${dirText}!`);
+        emitPositioning(p, 'flee', `You disengage and flee${dirText}!`);
+
         // Player took manual action — suppress wimp for the rest of this combat.
         p.onPlayerCombatMove?.();
       }

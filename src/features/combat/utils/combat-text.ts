@@ -77,28 +77,29 @@ export function getDamageTierWord(damage: number): string {
 // ── Flavor text tables ──────────────────────────────────────────
 
 const DAMAGE_FLAVOR: Record<string, string[]> = {
-  graze: ['barely scratching it', 'just nicking it'],
-  nick: ['leaving a small mark', 'scratching its surface'],
-  hit: ['landing a solid blow', 'striking firmly'],
-  wound: ['drawing blood', 'opening a clear wound'],
-  maul: ['tearing into it', 'ripping through its defenses'],
-  crush: ['hitting with great force', 'battering it'],
-  devastate: ['leaving it reeling', 'dealing devastating damage'],
-  annihilate: ['leaving it shattered', 'nearly destroying it'],
-  obliterate: ['utterly overwhelming it', 'almost destroying it'],
+  graze: ['barely scratching it', 'just nicking it', 'skimming its hide', 'grazing it in passing'],
+  nick: ['leaving a small mark', 'scratching its surface', 'drawing a thin line of blood', 'nicking it cleanly'],
+  hit: ['landing a solid blow', 'striking firmly', 'connecting squarely', 'driving the blow home'],
+  wound: ['drawing blood', 'opening a clear wound', 'cutting deep', 'tearing a red furrow'],
+  maul: ['tearing into it', 'ripping through its defenses', 'savaging it', 'breaking its guard apart'],
+  crush: ['hitting with great force', 'battering it', 'caving in its guard', 'driving it back a step'],
+  devastate: ['leaving it reeling', 'dealing devastating damage', 'shattering its footing', 'wrecking it'],
+  annihilate: ['leaving it shattered', 'nearly destroying it', 'breaking it apart', 'ruining it utterly'],
+  obliterate: ['utterly overwhelming it', 'almost destroying it', 'unmaking it', 'leaving almost nothing standing'],
 };
 
 const DAMAGE_FLAVOR_YOU: Record<string, string[]> = {
-  graze: ['barely scratching you', 'just nicking you'],
-  nick: ['leaving a small mark on you', 'scratching you'],
-  hit: ['landing a solid blow on you', 'striking you firmly'],
-  wound: ['drawing blood', 'opening a clear wound'],
-  maul: ['tearing into you', 'ripping through your defenses'],
-  crush: ['hitting you with great force', 'battering you'],
-  devastate: ['leaving you reeling', 'dealing devastating damage'],
-  annihilate: ['leaving you shattered', 'nearly breaking you'],
-  obliterate: ['utterly overwhelming you', 'almost destroying you'],
+  graze: ['barely scratching you', 'just nicking you', 'skimming past your guard', 'grazing you in passing'],
+  nick: ['leaving a small mark on you', 'scratching you', 'drawing a thin line of blood', 'nicking you cleanly'],
+  hit: ['landing a solid blow on you', 'striking you firmly', 'connecting squarely', 'driving the blow home'],
+  wound: ['drawing blood', 'opening a clear wound', 'cutting deep', 'tearing a red furrow in you'],
+  maul: ['tearing into you', 'ripping through your defenses', 'savaging you', 'breaking your guard apart'],
+  crush: ['hitting you with great force', 'battering you', 'caving in your guard', 'driving you back a step'],
+  devastate: ['leaving you reeling', 'dealing devastating damage', 'shattering your footing', 'wrecking your stance'],
+  annihilate: ['leaving you shattered', 'nearly breaking you', 'breaking you apart', 'ruining your guard utterly'],
+  obliterate: ['utterly overwhelming you', 'almost destroying you', 'unmaking you', 'leaving you barely standing'],
 };
+
 
 // ── Conjugation helper ──────────────────────────────────────────
 
@@ -188,14 +189,18 @@ const GENERIC_CREATURE_VERBS = ['attacks', 'strikes'];
 export function resolveCreatureAttackVerb(
   creatureName: string,
   isHumanoid?: boolean,
+  /** Deterministic index so both perspectives of one blow read alike. */
+  idx?: number,
 ): string {
+  const pick = (pool: string[]) => (idx === undefined ? pickRandom(pool) : pool[idx % pool.length]);
   const lower = creatureName.toLowerCase();
   for (const [keyword, verbs] of Object.entries(CREATURE_VERB_MAP)) {
-    if (lower.includes(keyword)) return pickRandom(verbs);
+    if (lower.includes(keyword)) return pick(verbs);
   }
-  if (isHumanoid) return pickRandom(HUMANOID_FALLBACK);
-  return pickRandom(GENERIC_CREATURE_VERBS);
+  if (isHumanoid) return pick(HUMANOID_FALLBACK);
+  return pick(GENERIC_CREATURE_VERBS);
 }
+
 
 // ── Structured event types ──────────────────────────────────────
 
@@ -332,15 +337,19 @@ function formatCreatureAttack(
   const punct = isCrit ? '!' : '.';
   const pick = (pool: string[]) =>
     flavorIdx === undefined ? pickRandom(pool) : pool[flavorIdx % pool.length];
+  // The creature's own verb carries the identity of the blow, so consecutive
+  // attacks from the same beast stop reading as one repeated template.
+  const verb = resolveCreatureAttackVerb(attacker, event.is_humanoid, flavorIdx);
 
   if (isLocal) {
     const flavor = pick(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
-    return `${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
+    return `${attacker} ${verb} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
   const flavor = pick(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  return `${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
+  return `${attacker} ${verb} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
+
 
 // ── Stage 4: attacks as native structured events ────────────────
 
@@ -378,7 +387,7 @@ export function buildAttackLogEvent(
   const isLocal = event.character_id === localCharacterId;
   // One flavor pick, reused for both perspectives so the same blow reads
   // consistently for the actor and for observers.
-  const flavorIdx = Math.floor(Math.random() * 4);
+  const flavorIdx = Math.floor(Math.random() * 12);
   const damage = event.damage ?? 0;
   const isMiss = event.type.endsWith('_miss');
 
