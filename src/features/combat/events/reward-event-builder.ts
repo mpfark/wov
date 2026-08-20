@@ -118,7 +118,7 @@ export function buildRewardLogEvent(
 
   const remoteMessage = stripLeadingGlyph(ev.message);
   const message = isLocal
-    ? secondPersonVerbs(applySelfPerspective(remoteMessage, localCharacterName))
+    ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
 
 
