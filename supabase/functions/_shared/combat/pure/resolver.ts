@@ -31,6 +31,7 @@ import { bondGainForKill } from '../../formulas/bond.ts';
 import { PRIMARY_GEM_KEYS } from '../../formulas/gems.ts';
 import { resolveDamage, resolveHeal, absorbFromShield } from '../resolution.ts';
 import { EFFECT_PARAMS_VERSION } from './effect-contract.ts';
+import type { CreatureControlSnapshot } from './effect-contract.ts';
 import { getPartyXpBonus } from './party-xp.ts';
 import type { ResolverMechanic } from './mechanics.ts';
 import { createTickRandom } from './rng.ts';
@@ -335,6 +336,50 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     return pct;
   };
 
+  // ── control_debuff (Sunder Armor / Nature's Snare / Dissonance) ──
+  // Debuffs applied earlier in this same tick are visible to later beats, and
+  // simultaneous debuffs never sum: the strongest active reduction of each
+  // mode wins.
+  const controlWorking = new Map<string, { acReduction: number; outgoingDamageReduction: number }>();
+
+  const controlFor = (creatureId: string, at: number): CreatureControlSnapshot => {
+    let acReduction = 0;
+    let outgoingDamageReduction = 0;
+    for (const e of effects) {
+      if (e.targetKind !== 'creature' || e.targetId !== creatureId) continue;
+      if (e.mechanic !== 'control_debuff') continue;
+      if (!effectLive(e, at)) continue;
+      const mag = Math.max(0, Number(e.magnitude ?? 0));
+      if (!(mag > 0)) continue;
+      if ((e.params ?? {}).controlMode === 'ac_reduction') {
+        acReduction = Math.max(acReduction, Math.floor(mag));
+      } else {
+        outgoingDamageReduction = Math.max(outgoingDamageReduction, Math.min(0.9, mag));
+      }
+    }
+    const live = controlWorking.get(creatureId);
+    if (live) {
+      acReduction = Math.max(acReduction, live.acReduction);
+      outgoingDamageReduction = Math.max(outgoingDamageReduction, live.outgoingDamageReduction);
+    }
+    return { acReduction, outgoingDamageReduction };
+  };
+
+  /** Effective-AC reduction for a roll-based player attack on this creature. */
+  const sunderOf = (creatureId: string, at: number): number =>
+    controlFor(creatureId, at).acReduction;
+
+  /**
+   * Creature-origin outgoing damage reduction, applied to the ATTEMPTED damage
+   * before the defender's block, ward and personal mitigation so the reported
+   * attempted/mitigated metadata stays truthful.
+   */
+  const reduceCreatureDamage = (creatureId: string, amount: number, at: number): number => {
+    const dr = controlFor(creatureId, at).outgoingDamageReduction;
+    if (!(dr > 0) || amount <= 0) return amount;
+    return Math.max(1, Math.floor(amount * (1 - dr)));
+  };
+
   /**
    * Target eligibility. The snapshot keeps every participant (so attribution,
    * durable effects and reward rights survive a player walking away), but only
@@ -614,6 +659,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     creature: CreatureSnapshot,
     target: ParticipantSnapshot,
     tick: number,
+    at: number,
   ): number => {
     const raw = seededCreatureDamage({
       rng,
@@ -625,7 +671,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       targetLevel: target.level,
       key: [tick, 'channel'],
     });
-    let dmg = scaleCreatureDamage(raw, 'normal', false, 0);
+    let dmg = reduceCreatureDamage(creature.id, scaleCreatureDamage(raw, 'normal', false, 0), at);
     if (target.buffs.mitigationPct > 0) {
       dmg = Math.floor(dmg * (1 - Math.min(0.9, target.buffs.mitigationPct)));
     }
@@ -1128,7 +1174,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             remaining: a.mechanic === 'absorb_buff' ? Math.floor(magnitude) : null,
             params:
               a.mechanic === 'mitigation_buff'
-                ? { mode: prm.mode === 'flat' ? 'flat' : 'percent', ...(prm.taunt === true ? { taunt: true } : {}) }
+                ? { mode: prm.mode === 'flat' ? 'flat' : 'percent' }
                 : a.mechanic === 'offense_buff'
                   ? { offenseMode: prm.offenseMode === 'crit_edge' ? 'crit_edge' : 'damage_mult' }
                   : {},
@@ -1511,6 +1557,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
               attacker: caster,
               creatureId: current.id,
               creatureAC: current.ac,
+              sunderReduction: sunderOf(current.id, nowMs),
               progression,
               key: [a.id, i],
               rollStream: 'multi_hit_roll',
@@ -1556,14 +1603,18 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         }
 
         // ── burst_damage (Grand Finale) ────────────────────────────
-        // A single nuke with its own to-hit roll and an independent crit roll
-        // whose edge is widened by configuration. Costs CP only.
+        // ONE d20 decides miss, hit and crit: the configured `crit_edge`
+        // widens that roll's crit threshold (down to the configured floor).
+        // There is no second, independent crit probability.
         if (a.mechanic === 'burst_damage') {
           const shot = seededAttackRoll({
             rng,
             attacker: caster,
             creatureId: creature.id,
             creatureAC: creature.ac,
+            sunderReduction: sunderOf(creature.id, nowMs),
+            critEdgeBonus: Math.max(0, Math.floor(pr.critEdge ?? 0)),
+            critThresholdFloor: pr.critThresholdFloor ?? 17,
             progression,
             key: ['burst', a.id],
             rollStream: 'burst_roll',
@@ -1580,9 +1631,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             ? seededWeaponAbilityDamage({ rng, attacker: caster, progression, key })
             : 0;
           let dmg = Math.max(1, Math.floor(a.amount + weaponPart));
-          const critEdge = Math.max(0, Math.min(1, pr.critEdge ?? 0));
-          const isCrit =
-            critEdge > 0 && rng.sample('burst_crit', a.id, creature.id) < critEdge;
+          const isCrit = shot.isCrit;
           if (isCrit) dmg = Math.max(1, Math.floor(dmg * 1.5));
           const amp = ampPctFor(creature.id, nowMs);
           if (amp > 0) dmg = Math.floor(dmg * (ampBase + amp / 100));
@@ -1615,6 +1664,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             attacker: caster,
             creatureId: creature.id,
             creatureAC: creature.ac,
+            sunderReduction: sunderOf(creature.id, nowMs),
             progression,
             key: ['finisher', a.id],
             rollStream: 'stack_consume_roll',
@@ -1656,6 +1706,23 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
 
         if (a.mechanic === 'control_debuff') {
+          // The row carries its own semantic mode and resolved magnitude, so
+          // the next tick's snapshot rebuilds exactly this weakening.
+          const controlMode = pr.controlMode ?? 'damage_reduction';
+          const controlMagnitude = controlMode === 'ac_reduction'
+            ? Math.max(0, Math.round(a.amount))
+            : Math.max(0, Math.min(0.9, a.amount));
+          const liveControl = controlWorking.get(creature.id)
+            ?? { acReduction: 0, outgoingDamageReduction: 0 };
+          if (controlMode === 'ac_reduction') {
+            liveControl.acReduction = Math.max(liveControl.acReduction, controlMagnitude);
+          } else {
+            liveControl.outgoingDamageReduction = Math.max(
+              liveControl.outgoingDamageReduction,
+              controlMagnitude,
+            );
+          }
+          controlWorking.set(creature.id, liveControl);
           effectUpserts.push({
             targetKind: 'creature',
             targetId: creature.id,
@@ -1669,7 +1736,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             sourceCharacterId: caster.id,
             mechanic: 'control_debuff',
             abilityKey: a.abilityKey,
-            params: {},
+            magnitude: controlMagnitude,
+            params: { controlMode },
             paramsVersion: EFFECT_PARAMS_VERSION,
           });
           emit('debuff', `${caster.name} applies ${a.abilityKey} to ${creature.name}.`, {
@@ -1729,6 +1797,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           attacker: caster,
           creatureId: creature.id,
           creatureAC: creature.ac,
+          sunderReduction: sunderOf(creature.id, nowMs),
           progression,
           key: ['ability', a.id],
           rollStream: 'ability_roll',
@@ -1775,6 +1844,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         attacker: p,
         creatureId: creature.id,
         creatureAC: creature.ac,
+        sunderReduction: sunderOf(creature.id, nowMs),
         progression,
         key: [t],
       });
@@ -1950,7 +2020,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           ? byParticipant.get(cast.targetCharacterId)
           : undefined;
         const banked = primary && isAliveP(primary.id)
-          ? expectedPausedAutoattack(creature, primary, t)
+          ? expectedPausedAutoattack(creature, primary, t, nowMs)
           : 0;
         if (banked > 0) {
           const next = cap > 0 ? Math.min(cap, pool + banked) : pool + banked;
@@ -2024,7 +2094,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const targets: CastTargetProposal[] = [];
       for (const p of eligible) {
         const isPrimary = p.id === cast.targetCharacterId;
-        const amount = isPrimary ? primaryDamage : aoeDamage;
+        const amount = reduceCreatureDamage(
+          creatureId,
+          isPrimary ? primaryDamage : aoeDamage,
+          nowMs,
+        );
         if (amount <= 0) continue;
         const applied = damageCharacter(p, amount, creatureId, nowMs);
         targets.push({ characterId: p.id, damage: amount, applied, isPrimary });
@@ -2197,7 +2271,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         targetLevel: target.level,
         key: [t],
       });
-      const attempted = scaleCreatureDamage(raw, atk.quality, atk.isCrit, atk.margin);
+      const attempted = reduceCreatureDamage(
+        c.id,
+        scaleCreatureDamage(raw, atk.quality, atk.isCrit, atk.margin),
+        nowMs,
+      );
       let dmg = attempted;
       // One swing = one correlation group. `creatureSwing` increments per swing,
       // so two blows from the same creature on the same character in the same

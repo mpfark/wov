@@ -381,8 +381,13 @@ export interface ActionParamsSnapshot {
   /** `stack_apply` pulse spark damage applied before the stack lands. */
   readonly pulseDamage?: number;
 
-  /** `burst_damage`: crit-threshold widening (lower is easier). */
+  /**
+   * `burst_damage`: crit-threshold widening in d20 points (lower threshold is
+   * easier). Never a probability — the one attack roll decides the crit.
+   */
   readonly critEdge?: number;
+  /** `burst_damage`: the lowest crit threshold the widening may reach. */
+  readonly critThresholdFloor?: number;
   /** `hp_transfer`: HP the caster may never be reduced below. */
   readonly reserveHp?: number;
   readonly minReserveHp?: number;
@@ -403,14 +408,20 @@ export interface ActionParamsSnapshot {
   readonly hpPerTick?: number;
   readonly cpPerTick?: number;
   readonly refreshPolicy?: 'best_of' | 'replace';
-  /** `mitigation_buff`: percent vs flat reduction, and taunt behaviour. */
+  /** `mitigation_buff`: percent vs flat incoming-damage reduction. */
   readonly mode?: 'percent' | 'flat';
-  readonly taunt?: boolean;
   /** `offense_buff`: outgoing damage multiplier vs crit-range widening. */
   readonly offenseMode?: 'damage_mult' | 'crit_edge';
+  /**
+   * `control_debuff`: which weakening the effect represents.
+   * `ac_reduction` lowers the creature's effective AC for roll-based attacks;
+   * `damage_reduction` lowers the creature's outgoing damage.
+   */
+  readonly controlMode?: 'ac_reduction' | 'damage_reduction';
   /** `aura_pulse` / `party_regen`: which sides the pulse touches. */
   readonly healsAllies?: boolean;
   readonly damagesEnemies?: boolean;
+
 }
 
 export interface ActionSnapshot {
