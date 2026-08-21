@@ -38,7 +38,7 @@ describe('mitigation_buff consolidation', () => {
 
     const challenge = byKey('divine_challenge').effect_config;
     expect(challenge.mitigation_mode).toBe('flat');
-    expect(challenge.is_taunt).toBe(true);
+    expect(challenge.is_taunt).toBeUndefined();
     expect(challenge.applies_crit_reduction).toBeUndefined();
   });
 
