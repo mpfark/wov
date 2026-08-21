@@ -21,6 +21,9 @@ import {
   type GameLogEvent,
   type LogActor,
 } from './log-event';
+import { renderAbilityFlavor } from './ability-flavor';
+import { getAbilityLabel } from '@/features/combat/utils/ability-text';
+
 
 /** Server event types handled by this stage. */
 const STAGE5_TYPES = new Set([
