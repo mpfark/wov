@@ -276,16 +276,13 @@ export function applySecondPersonGrammar(message: string): string {
 
 /**
  * Server prose occasionally interpolates a raw `ability_key`. Render it as the
- * ability's readable name; display-only, never used to classify a line.
+ * ability's configured label ("Orbs of Fire", not "Orbs Of Fire"); display-only,
+ * never used to classify a line.
  */
 export function humanizeAbilityKeys(message: string): string {
-  return message.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (token) =>
-    token
-      .split('_')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' '),
-  );
+  return message.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (token) => getAbilityLabel(token));
 }
+
 
 /**
  * Ability identity for lines the server writes generically. The effect is a
