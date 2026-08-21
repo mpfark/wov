@@ -123,6 +123,18 @@ export interface BatchEvent {
   /** Status-stack facts for authored `{stacks}` / `{max_stacks}` templates. */
   readonly stacks: number | null;
   readonly maxStacks: number | null;
+  /** Status identity for lines that name the effect (`ignite`, `poison`, …). */
+  readonly effectType: string | null;
+  /**
+   * Correlation metadata (C3 Phase 3). Events belonging to one beat share
+   * `groupId`; the mitigation triple states what the beat attempted, what was
+   * removed and what landed. Optional so pre-Phase-3 batches still decode.
+   */
+  readonly groupId: string | null;
+  readonly attemptedAmount: number | null;
+  readonly mitigatedAmount: number | null;
+  readonly appliedAmount: number | null;
+  readonly mitigationSource: string | null;
 
   /** Chosen boss crit flavor (display only). */
   readonly bossFlavorName: string | null;
@@ -263,6 +275,12 @@ const EVENT_KEYS = [
   'abilityKey',
   'stacks',
   'maxStacks',
+  'effectType',
+  'groupId',
+  'attemptedAmount',
+  'mitigatedAmount',
+  'appliedAmount',
+  'mitigationSource',
 
   'bossFlavorName',
   'bossFlavorText',
@@ -322,6 +340,12 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
       abilityKey: optStr(e, 'abilityKey', ep),
       stacks: optNum(e, 'stacks', ep),
       maxStacks: optNum(e, 'maxStacks', ep),
+      effectType: optStr(e, 'effectType', ep),
+      groupId: optStr(e, 'groupId', ep),
+      attemptedAmount: optNum(e, 'attemptedAmount', ep),
+      mitigatedAmount: optNum(e, 'mitigatedAmount', ep),
+      appliedAmount: optNum(e, 'appliedAmount', ep),
+      mitigationSource: optStr(e, 'mitigationSource', ep),
 
       bossFlavorName: optStr(e, 'bossFlavorName', ep),
       bossFlavorText: optStr(e, 'bossFlavorText', ep),
@@ -468,6 +492,13 @@ export function projectBatchFromProposal(
       abilityKey: e.abilityKey ?? null,
       stacks: e.stacks ?? null,
       maxStacks: e.maxStacks ?? null,
+      effectType: e.effectType ?? null,
+      groupId: e.groupId ?? null,
+      attemptedAmount: e.attemptedAmount ?? null,
+      mitigatedAmount: e.mitigatedAmount ?? null,
+      appliedAmount: e.appliedAmount ?? null,
+      mitigationSource: e.mitigationSource ?? null,
+
 
       bossFlavorName: e.bossFlavorName ?? null,
       bossFlavorText: e.bossFlavorText ?? null,

@@ -7,10 +7,16 @@
  * ("Orbs of Fire", not `orbs_of_fire`) comes from configuration instead of the
  * server's prose.
  *
+ * Two perspectives are rendered from the SAME template: the observer text keeps
+ * the names, and the self text substitutes a positional marker for the local
+ * character which `perspective.ts` resolves to You / you / your. No global
+ * capitalisation pass ever touches the sentence.
+ *
  * Pure: no React, no side effects, no classification. A missing template simply
  * returns null and the caller keeps the server's fallback sentence.
  */
 import { getAbilityLabel, getAuthoredCombatText } from '@/features/combat/utils/ability-text';
+import { SELF_MARKER, resolveSelfMarkers } from './perspective';
 
 /** Authored `combat_text` slot per server event type. */
 export const FLAVOR_SLOT: Record<string, string> = {
@@ -25,6 +31,10 @@ export interface FlavorTokens {
   stacks?: number | null;
   maxStacks?: number | null;
   abilityKey?: string | null;
+  /** Local character name; matching actor tokens render in second person. */
+  selfName?: string | null;
+  /** Status identity, for `{effect}` in authored text. */
+  effectLabel?: string | null;
 }
 
 /** True when the template states the damage itself, so no `[N]` is appended. */
@@ -32,15 +42,21 @@ export function templateStatesAmount(template: string): boolean {
   return /\{damage\}|\{amount\}/.test(template);
 }
 
-function fill(template: string, tokens: FlavorTokens): string {
+function fill(template: string, tokens: FlavorTokens, self: boolean): string {
+  const actor = (name: string | null | undefined, fallback: string): string => {
+    if (!name) return fallback;
+    if (self && tokens.selfName && name === tokens.selfName) return SELF_MARKER;
+    return name;
+  };
   const map: Record<string, string> = {
-    attacker: tokens.attacker ?? 'Someone',
-    target: tokens.target ?? 'its foe',
+    attacker: actor(tokens.attacker, 'Someone'),
+    target: actor(tokens.target, 'its foe'),
     damage: tokens.amount != null ? String(tokens.amount) : '',
     amount: tokens.amount != null ? String(tokens.amount) : '',
     stacks: tokens.stacks != null ? String(tokens.stacks) : '',
     max_stacks: tokens.maxStacks != null ? String(tokens.maxStacks) : '',
     ability: tokens.abilityKey ? getAbilityLabel(tokens.abilityKey) : '',
+    effect: tokens.effectLabel ?? '',
   };
   return template.replace(/\{([a-z_]+)\}/g, (whole, key: string) =>
     key in map ? map[key] : whole,
@@ -50,16 +66,24 @@ function fill(template: string, tokens: FlavorTokens): string {
 /**
  * Render the authored sentence for an ability line, or null when the ability
  * authors no text for this event type.
+ *
+ * `text` = observer perspective (names), `selfText` = local perspective with
+ * positional pronouns. They are identical when the local character is not one
+ * of the actors.
  */
 export function renderAbilityFlavor(
   serverType: string,
   tokens: FlavorTokens,
-): { text: string; statesAmount: boolean } | null {
+): { text: string; selfText: string; statesAmount: boolean } | null {
   const slot = FLAVOR_SLOT[serverType];
   if (!slot || !tokens.abilityKey) return null;
   const authored = getAuthoredCombatText(tokens.abilityKey)[slot];
   const template =
     typeof authored === 'string' && authored.trim().length > 0 ? authored.trim() : null;
   if (!template) return null;
-  return { text: fill(template, tokens), statesAmount: templateStatesAmount(template) };
+  return {
+    text: fill(template, tokens, false),
+    selfText: resolveSelfMarkers(fill(template, tokens, true)),
+    statesAmount: templateStatesAmount(template),
+  };
 }

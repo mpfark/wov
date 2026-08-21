@@ -60,17 +60,20 @@ function bodyStatesAmount(body: string, amount: number): boolean {
 function renderTokens(event: GameLogEvent, displayMode: CombatLogDisplayMode) {
   // Both legacy strings and client-authored prose may still carry a leading
   // glyph and/or an inline `[N]` tail. Strip both, then re-attach exactly one
-  // number token (inline wins over `amount`, and a number already written into
-  // the sentence suppresses the token entirely) so nothing renders twice.
+  // number token (a pre-composed `numberText` wins, then inline, then `amount`;
+  // a number already written into the sentence suppresses the token entirely)
+  // so nothing renders twice.
   const src = event.legacy?.raw ?? event.message;
   const cleaned = displayMode === 'flavor' ? stripFlavorNumber(src) : src;
   const { body, number: inline } = splitLogTokens(cleaned);
   if (displayMode === 'flavor') return { body, number: '' };
   const number =
+    event.numberText ||
     inline ||
     (event.amount != null && !bodyStatesAmount(body, event.amount) ? `[${event.amount}]` : '');
   return { body, number };
 }
+
 
 
 export default function EventLogLine({

@@ -191,6 +191,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
   const events: PresentationEvent[] = [];
   let seq = 0;
+  /** Monotonic swing counter — the tail of a creature swing's correlation id. */
+  let creatureSwing = 0;
+
   const emit = (
     type: string,
     message: string,
@@ -213,6 +216,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       abilityKey: extra.abilityKey ?? null,
       stacks: extra.stacks ?? null,
       maxStacks: extra.maxStacks ?? null,
+      effectType: extra.effectType ?? null,
+      groupId: extra.groupId ?? null,
+      attemptedAmount: extra.attemptedAmount ?? null,
+      mitigatedAmount: extra.mitigatedAmount ?? null,
+      appliedAmount: extra.appliedAmount ?? null,
+      mitigationSource: extra.mitigationSource ?? null,
+
+
 
       bossFlavorName: extra.bossFlavorName ?? null,
       bossFlavorText: extra.bossFlavorText ?? null,
@@ -785,9 +796,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         continue;
       }
       // The pulse and the stack it lands are one beat: resolve the stack facts
-      // first so both lines can name the same `{stacks}/{max_stacks}`.
+      // first so both lines can name the same `{stacks}/{max_stacks}`, and
+      // stamp one deterministic `groupId` so presentation may render them as a
+      // single line without either event losing its own committed identity.
       const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
       const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
+      const groupId = `pulse|${t}|${ap.abilityKey}|${attacker.id}|${creature.id}`;
       if (ap.pulseDamage > 0) {
         const sparked = damageCreature(
           creature,
@@ -807,6 +821,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             ...presentAbility(attacker, creature, ap.abilityKey),
             stacks: next,
             maxStacks: cap,
+            effectType: ap.effectType,
+            groupId,
+            attemptedAmount: sparked,
+            mitigatedAmount: 0,
+            appliedAmount: sparked,
           });
         }
         if (!isAliveC(creature.id)) return;
@@ -848,8 +867,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           ...presentAbility(attacker, creature, ap.abilityKey),
           stacks: next,
           maxStacks: cap,
+          effectType: ap.effectType,
+          groupId,
         },
       );
+
 
     }
   };
@@ -2175,19 +2197,32 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         targetLevel: target.level,
         key: [t],
       });
-      let dmg = scaleCreatureDamage(raw, atk.quality, atk.isCrit, atk.margin);
+      const attempted = scaleCreatureDamage(raw, atk.quality, atk.isCrit, atk.margin);
+      let dmg = attempted;
+      // One swing = one correlation group. `creatureSwing` increments per swing,
+      // so two blows from the same creature on the same character in the same
+      // tick never share a group.
+      const groupId = `swing|${t}|${c.id}|${target.id}|${creatureSwing++}`;
       const block = seededBlock({ rng, defender, creatureId: c.id, key: [t] });
+      let mitigated = 0;
       if (block.blocked) {
+        mitigated = Math.min(attempted, Math.max(0, block.amount));
         dmg = Math.max(0, dmg - block.amount);
+      }
+      const applied = damageCharacter(target, dmg, c.id, nowMs);
+      if (block.blocked) {
         emit('block', `${target.name} blocks ${c.name}'s blow. [${block.amount}]`, {
           characterId: target.id,
           creatureId: c.id,
           amount: block.amount,
           ...presentCreature(c, target),
+          groupId,
+          attemptedAmount: attempted,
+          mitigatedAmount: mitigated,
+          appliedAmount: applied,
+          mitigationSource: 'block',
         });
-
       }
-      const applied = damageCharacter(target, dmg, c.id, nowMs);
       emit(
         atk.isCrit ? 'creature_crit' : 'creature_hit',
         `${c.name} hits ${target.name} for ${applied}.`,
@@ -2197,8 +2232,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           amount: applied,
           ...presentCreature(c, target, atk.isCrit),
           ...(atk.isCrit ? bossCritFlavor(c, t) : {}),
+          groupId,
+          attemptedAmount: attempted,
+          mitigatedAmount: mitigated,
+          appliedAmount: applied,
         },
       );
+
 
       // ── reactive_holy (Holy Shield) ──────────────────────────────
       // Fires after a landed hit (even a partially blocked one), never on a
