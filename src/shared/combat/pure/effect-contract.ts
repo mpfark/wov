@@ -265,11 +265,16 @@ export const EFFECT_MECHANIC_REGISTRY: Readonly<Record<string, EffectMechanicSpe
     target: 'creature',
     sourceMustBeCharacter: true,
     periodic: false,
-    magnitude: { required: false, min: 0, max: 1 },
+    // `damage_reduction` magnitudes are fractions (0..1); `ac_reduction`
+    // magnitudes are whole AC points, so the bound covers both.
+    magnitude: { required: false, min: 0, max: 1000 },
     remaining: 'unused',
     stackPolicy: 'replace',
-    mutable: ['expiresAtMs'],
-    params: { ampPct: { kind: 'number', min: 0, max: 10 } },
+    mutable: ['expiresAtMs', 'magnitude'],
+    params: {
+      controlMode: { kind: 'enum', values: ['ac_reduction', 'damage_reduction'] },
+      ampPct: { kind: 'number', min: 0, max: 10 },
+    },
   },
 };
 
@@ -568,4 +573,49 @@ export function buildBuffSnapshotFromEffects(
     buffs.stackAppliers = appliers;
   }
   return buffs;
+}
+
+// ── Hostile creature state (control_debuff) ───────────────────────
+/** Strongest active weakening on one creature, by control mode. */
+export interface CreatureControlSnapshot {
+  /** Whole AC points the creature's effective AC is lowered by. */
+  readonly acReduction: number;
+  /** Fraction (0..1) the creature's outgoing damage is lowered by. */
+  readonly outgoingDamageReduction: number;
+}
+
+export const EMPTY_CREATURE_CONTROL: CreatureControlSnapshot = {
+  acReduction: 0,
+  outgoingDamageReduction: 0,
+};
+
+/**
+ * Rebuild per-creature control state from persisted rows.
+ *
+ * Multiple simultaneous debuffs never sum: the strongest active reduction of
+ * each mode wins. Rows whose mode was written before the typed contract fall
+ * back to `damage_reduction`, the only behaviour the untyped rows ever had.
+ */
+export function buildCreatureControlSnapshot(
+  effects: readonly PersistedEffectView[],
+  nowMs: number,
+): Map<string, CreatureControlSnapshot> {
+  const out = new Map<string, { acReduction: number; outgoingDamageReduction: number }>();
+  for (const e of effects) {
+    if (e.targetKind !== 'creature' || e.mechanic !== 'control_debuff') continue;
+    if (e.expiresAtMs <= nowMs) continue;
+    const mag = Math.max(0, Number(e.magnitude ?? 0));
+    if (!(mag > 0)) continue;
+    const mode = (e.params ?? {}).controlMode === 'ac_reduction'
+      ? 'ac_reduction'
+      : 'damage_reduction';
+    const cur = out.get(e.targetId) ?? { acReduction: 0, outgoingDamageReduction: 0 };
+    if (mode === 'ac_reduction') {
+      cur.acReduction = Math.max(cur.acReduction, Math.floor(mag));
+    } else {
+      cur.outgoingDamageReduction = Math.max(cur.outgoingDamageReduction, Math.min(0.9, mag));
+    }
+    out.set(e.targetId, cur);
+  }
+  return new Map([...out].map(([k, v]) => [k, { ...v } as CreatureControlSnapshot]));
 }

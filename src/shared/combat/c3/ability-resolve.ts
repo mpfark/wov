@@ -91,6 +91,32 @@ function str(v: unknown): string | null {
   return typeof v === 'string' && v.length > 0 ? v : null;
 }
 
+/**
+ * Read a closed-vocabulary configuration field.
+ *
+ * A missing field falls back to the documented default; a *present but
+ * unknown* value fails closed with an actionable failure instead of silently
+ * selecting a materially different mechanic (e.g. percent instead of flat
+ * mitigation).
+ */
+function enumParam<T extends string>(
+  cfg: Record<string, unknown>,
+  key: string,
+  values: readonly T[],
+  fallback: T,
+  label: string,
+  failures: string[],
+): T {
+  const raw = cfg[key];
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (typeof raw === 'string' && (values as readonly string[]).includes(raw)) return raw as T;
+  failures.push(
+    `${label} effect_config.${key}: '${String(raw)}' is not one of ${values.join(' | ')}`,
+  );
+  return fallback;
+}
+
+
 /** Evaluate one calc, reporting an actionable failure instead of guessing. */
 function evalCalc(
   calc: AbilityCalc | null | undefined,
@@ -180,7 +206,13 @@ function resolveParams(
       return { minHits: count, maxHits: count };
     }
     case 'burst_damage':
-      return { critEdge: Math.max(0, Math.round(evalParam(entry, 'crit_edge', inputs, true, failures))) };
+      return {
+        // d20 threshold widening, not a probability.
+        critEdge: Math.max(0, Math.round(evalParam(entry, 'crit_edge', inputs, true, failures))),
+        critThresholdFloor: Math.max(2, Math.round(num(cfg.crit_threshold_floor, 17))),
+      };
+
+
     case 'stack_consume':
       return {
         perStackMultiplier: evalParam(entry, 'per_stack_multiplier', inputs, true, failures),
@@ -280,18 +312,38 @@ function resolveParams(
         healsAllies: bool(cfg.heals_allies),
         damagesEnemies: bool(cfg.damages_enemies),
       };
+    // Semantic modes: read explicitly, one branch per mechanic.
+    case 'mitigation_buff':
+      return {
+        mode: enumParam(
+          cfg, 'mitigation_mode', ['percent', 'flat'] as const, 'percent',
+          `${entry.classKey}:${entry.classAbilityKey}`, failures,
+        ),
+      };
+    case 'offense_buff':
+      return {
+        offenseMode: enumParam(
+          cfg, 'offense_mode', ['damage_mult', 'crit_edge'] as const, 'damage_mult',
+          `${entry.classKey}:${entry.classAbilityKey}`, failures,
+        ),
+      };
+    case 'control_debuff':
+      return {
+        controlMode: enumParam(
+          cfg, 'control_mode', ['ac_reduction', 'damage_reduction'] as const, 'damage_reduction',
+          `${entry.classKey}:${entry.classAbilityKey}`, failures,
+        ),
+      };
     // Mechanics whose behaviour is fully described by the core fields.
     case 'weapon_attack':
     case 'spell_attack':
     case 'heal':
     case 'absorb_buff':
-    case 'mitigation_buff':
-    case 'offense_buff':
-    case 'control_debuff':
     case 'dot_debuff':
       void durationMs;
       return undefined;
   }
+
 }
 
 /**
