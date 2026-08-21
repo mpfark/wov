@@ -420,6 +420,18 @@ export function buildTickLogEvent(
     amount = stage8.stacks ? stacks : undefined;
     amountKind = amount !== undefined ? 'stacks' : undefined;
   }
+  // Ability-authored lines: a template that writes the number itself owns the
+  // presentation, so the structured token is dropped rather than repeated.
+  if (flavor) {
+    if (flavor.amountKind === 'stacks') {
+      const stacks = typeof ev.stacks === 'number' && ev.stacks > 0 ? ev.stacks : undefined;
+      amount = stacks;
+      amountKind = stacks !== undefined ? 'stacks' : undefined;
+    } else if (authored?.statesAmount) {
+      amount = undefined;
+      amountKind = undefined;
+    }
+  }
 
   return createLogEvent({
     type,
@@ -435,7 +447,10 @@ export function buildTickLogEvent(
         ? STAGE7_EFFECT_TYPE[ev.type]
         : isStage6
           ? STAGE6_EFFECT_TYPE[ev.type]
-          : undefined,
+          : flavor
+            ? ev.effect_type ?? flavor.effectType
+            : undefined,
+
     severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
     abilityKey: ev.ability_key || undefined,
     crit: ev.is_crit ? true : undefined,
