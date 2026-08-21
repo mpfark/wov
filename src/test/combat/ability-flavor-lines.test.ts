@@ -49,8 +49,9 @@ describe('authored ability flavor', () => {
     expect(ev!.remoteMessage).toContain('(burn x2)');
     expect(ev!.amount).toBeUndefined();
     expect(ev!.amountKind).toBeUndefined();
-    // Local perspective folds the actor to "You".
-    expect(ev!.message.startsWith('A flaming orb leaps from You')).toBe(true);
+    // Local perspective folds the actor to the second person mid-sentence.
+    expect(ev!.message).toContain('leaps from you');
+
   });
 
   it('renders the authored stack sentence with the ability label and a stack amount', () => {
