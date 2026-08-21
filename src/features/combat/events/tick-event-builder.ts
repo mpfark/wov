@@ -21,6 +21,9 @@ import {
   type GameLogEvent,
   type LogActor,
 } from './log-event';
+import { renderAbilityFlavor } from './ability-flavor';
+import { getAbilityLabel } from '@/features/combat/utils/ability-text';
+
 
 /** Server event types handled by this stage. */
 const STAGE5_TYPES = new Set([
@@ -59,12 +62,15 @@ const STAGE6_TYPES = new Set([
   // Mitigation
   'absorb',
   'shield_block',
+  'block',
   'evasion_dodge',
+  'dodge',
   'awareness_resist',
   'battle_cry_dr',
   'divine_challenge_dr',
   'item_buff_dr',
 ]);
+
 
 /**
  * Stage 7 — debuffs and crowd control: the application, refresh, resist,
@@ -165,6 +171,7 @@ const STAGE8_SPEC: Record<string, Stage8Spec> = {
 const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
   consecrate_heal: 'heal',
   shield_block: 'block',
+  block: 'block',
   absorb: 'absorb',
   battle_cry_dr: 'block',
   divine_challenge_dr: 'block',
@@ -177,12 +184,15 @@ const STAGE6_EFFECT_TYPE: Record<string, string> = {
   buff_consumed: 'buff',
   absorb: 'absorb',
   shield_block: 'block',
+  block: 'block',
   evasion_dodge: 'dodge',
+  dodge: 'dodge',
   awareness_resist: 'resist',
   battle_cry_dr: 'battle_cry',
   divine_challenge_dr: 'divine_challenge',
   item_buff_dr: 'item_ward',
 };
+
 
 /** Pull the canonical `[N]` suffix the server appends to mitigation prose. */
 function trailingAmount(message: string): number | undefined {
@@ -205,6 +215,8 @@ export interface TickEventInput {
   is_crit?: boolean;
   /** Stage 8: structured stack count for stacking interactions. */
   stacks?: number;
+  /** Phase 3: stack ceiling, for authored `{max_stacks}` templates. */
+  max_stacks?: number;
   /** Stage 8: effect identity when the server distinguishes it (e.g. 'poison'). */
   effect_type?: string;
   /**
@@ -213,7 +225,21 @@ export interface TickEventInput {
    * Additive metadata only — never used to classify or style the line.
    */
   ability_key?: string;
+  /** Phase 3: presentation names, so authored templates can be filled. */
+  attacker_name?: string;
+  target_name?: string;
 }
+
+/**
+ * Phase 3 — ability lines whose sentence is authored per ability in
+ * `abilities.combat_text`. The server sends facts plus a plain fallback; the
+ * authored template owns identity and wording.
+ */
+const FLAVOR_SPEC: Record<string, { amountKind: 'damage' | 'stacks'; effectType?: string }> = {
+  stance_pulse: { amountKind: 'damage' },
+  stack_applied: { amountKind: 'stacks' },
+};
+
 
 /** Verbs whose second-person form is not just "drop the -s". */
 const IRREGULAR_SECOND_PERSON: Record<string, string> = {
@@ -253,16 +279,13 @@ export function applySecondPersonGrammar(message: string): string {
 
 /**
  * Server prose occasionally interpolates a raw `ability_key`. Render it as the
- * ability's readable name; display-only, never used to classify a line.
+ * ability's configured label ("Orbs of Fire", not "Orbs Of Fire"); display-only,
+ * never used to classify a line.
  */
 export function humanizeAbilityKeys(message: string): string {
-  return message.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (token) =>
-    token
-      .split('_')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' '),
-  );
+  return message.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (token) => getAbilityLabel(token));
 }
+
 
 /**
  * Ability identity for lines the server writes generically. The effect is a
@@ -316,19 +339,34 @@ export function buildTickLogEvent(
   const isStage6 = STAGE6_TYPES.has(ev.type);
   const isStage7 = STAGE7_TYPES.has(ev.type);
   const stage8 = STAGE8_SPEC[ev.type];
-  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8) return null;
+  const flavor = FLAVOR_SPEC[ev.type];
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor) return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
+
+  // Ability-authored lines: the configured template owns the sentence, so the
+  // server's fallback prose is only used when nothing is authored.
+  const authored = flavor
+    ? renderAbilityFlavor(ev.type, {
+        attacker: ev.attacker_name,
+        target: ev.target_name ?? ev.creature_name,
+        amount: ev.damage ?? null,
+        stacks: ev.stacks ?? null,
+        maxStacks: ev.max_stacks ?? null,
+        abilityKey: ev.ability_key ?? null,
+      })
+    : null;
 
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
-  const remoteMessage = humanizeAbilityKeys(prose);
+  const remoteMessage = authored ? authored.text : humanizeAbilityKeys(prose);
   const message = isLocal
     ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
+
 
 
   const playerActor: LogActor | undefined = ev.character_id
@@ -385,6 +423,18 @@ export function buildTickLogEvent(
     amount = stage8.stacks ? stacks : undefined;
     amountKind = amount !== undefined ? 'stacks' : undefined;
   }
+  // Ability-authored lines: a template that writes the number itself owns the
+  // presentation, so the structured token is dropped rather than repeated.
+  if (flavor) {
+    if (flavor.amountKind === 'stacks') {
+      const stacks = typeof ev.stacks === 'number' && ev.stacks > 0 ? ev.stacks : undefined;
+      amount = stacks;
+      amountKind = stacks !== undefined ? 'stacks' : undefined;
+    } else if (authored?.statesAmount) {
+      amount = undefined;
+      amountKind = undefined;
+    }
+  }
 
   return createLogEvent({
     type,
@@ -400,7 +450,10 @@ export function buildTickLogEvent(
         ? STAGE7_EFFECT_TYPE[ev.type]
         : isStage6
           ? STAGE6_EFFECT_TYPE[ev.type]
-          : undefined,
+          : flavor
+            ? ev.effect_type ?? flavor.effectType
+            : undefined,
+
     severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
     abilityKey: ev.ability_key || undefined,
     crit: ev.is_crit ? true : undefined,

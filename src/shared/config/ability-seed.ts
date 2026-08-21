@@ -315,7 +315,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
       max_stacks: { base: 5, terms: [], unit: 'count', note: 'Burn stack ceiling' },
     },
     combat_text: {
-      activate_text: 'Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb may strike your target. Lasts 5 minutes.',
+      activate_text: 'Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb may strike your target.',
       pulse_text: 'A flaming orb leaps from {attacker} and sears {target} (burn x{stacks})! [{damage}]',
       stack_text: "{attacker}'s orb of fire seared {target} with Ignite.",
     },
@@ -469,8 +469,9 @@ export const ABILITY_SEED: AbilitySeed[] = [
       max_stacks: { base: 3, terms: [{ source: 'stat', stat: 'cha', clampAtZero: true, transform: { kind: 'diminishing', cap: 4 } }], unit: 'count', note: 'CHA stack ceiling' },
     },
     combat_text: {
-      activate_text: 'Envenom! Your weapons drip with poison for 5 minutes.',
+      activate_text: 'Envenom! Your weapons drip with poison.',
       proc_text: "{attacker}'s attack poisons {target}!",
+      stack_text: "{attacker}'s venom seeps into {target} (poison x{stacks}).",
     },
 
     class_key: 'assassin', slot: 2,

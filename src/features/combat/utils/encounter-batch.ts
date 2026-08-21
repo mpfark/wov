@@ -177,6 +177,9 @@ export function batchToTickResponse(
       ...(e.isCrit !== null && e.isCrit !== undefined ? { is_crit: e.isCrit } : {}),
       ...(e.isHumanoid !== null && e.isHumanoid !== undefined ? { is_humanoid: e.isHumanoid } : {}),
       ...(e.abilityKey ? { ability_key: e.abilityKey } : {}),
+      ...(e.stacks !== null && e.stacks !== undefined ? { stacks: e.stacks } : {}),
+      ...(e.maxStacks !== null && e.maxStacks !== undefined ? { max_stacks: e.maxStacks } : {}),
+
       // Boss crit flavor travels as the same `boss_flavor` payload the legacy
       // channel used, so the client formatter has one shape to read.
       ...(e.bossFlavorText

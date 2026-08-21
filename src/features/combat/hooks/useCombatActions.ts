@@ -590,7 +590,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const text = getAuthoredCombatText(ability.abilityKey);
       const authored = typeof text.activate_text === 'string' && text.activate_text.trim()
         ? text.activate_text.trim()
-        : `${ability.label}! Active for 5 minutes.`;
+        : `${ability.label}! Active until dropped.`;
       p.addLogEvent(buildBuffEvent(`${authored} (${p.character.cp ?? 0} CP consumed)`));
 
     } else if (ability.type === 'stack_consume' || ability.type === 'execute_attack' || ability.type === 'ignite_consume') {

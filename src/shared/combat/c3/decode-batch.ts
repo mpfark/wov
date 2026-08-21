@@ -120,6 +120,10 @@ export interface BatchEvent {
   readonly isCrit: boolean | null;
   readonly isHumanoid: boolean | null;
   readonly abilityKey: string | null;
+  /** Status-stack facts for authored `{stacks}` / `{max_stacks}` templates. */
+  readonly stacks: number | null;
+  readonly maxStacks: number | null;
+
   /** Chosen boss crit flavor (display only). */
   readonly bossFlavorName: string | null;
   readonly bossFlavorText: string | null;
@@ -257,6 +261,9 @@ const EVENT_KEYS = [
   'isCrit',
   'isHumanoid',
   'abilityKey',
+  'stacks',
+  'maxStacks',
+
   'bossFlavorName',
   'bossFlavorText',
 ] as const;
@@ -313,6 +320,9 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
       isCrit: optBool(e, 'isCrit', ep),
       isHumanoid: optBool(e, 'isHumanoid', ep),
       abilityKey: optStr(e, 'abilityKey', ep),
+      stacks: optNum(e, 'stacks', ep),
+      maxStacks: optNum(e, 'maxStacks', ep),
+
       bossFlavorName: optStr(e, 'bossFlavorName', ep),
       bossFlavorText: optStr(e, 'bossFlavorText', ep),
     } satisfies BatchEvent;
@@ -456,6 +466,9 @@ export function projectBatchFromProposal(
       isCrit: e.isCrit ?? null,
       isHumanoid: e.isHumanoid ?? null,
       abilityKey: e.abilityKey ?? null,
+      stacks: e.stacks ?? null,
+      maxStacks: e.maxStacks ?? null,
+
       bossFlavorName: e.bossFlavorName ?? null,
       bossFlavorText: e.bossFlavorText ?? null,
     })),

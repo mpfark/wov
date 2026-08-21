@@ -95,6 +95,19 @@ interface Working {
   hitters: Set<string>;
 }
 
+/**
+ * The committer's authoritative effect identity: `(source_id, target_id,
+ * effect_type)`. Every stage that proposes or rewrites an effect row keys off
+ * this one helper, so identity logic is never duplicated or drifted.
+ */
+function effectIdentity(
+  row: { sourceCharacterId?: string | null; targetId: string; effectType: string },
+): string {
+  return `${row.sourceCharacterId ?? 'null'}|${row.targetId}|${row.effectType}`;
+}
+
+
+
 export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const rng = createTickRandom({
     encounterId: snapshot.encounterId,
@@ -198,6 +211,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       isCrit: extra.isCrit ?? null,
       isHumanoid: extra.isHumanoid ?? null,
       abilityKey: extra.abilityKey ?? null,
+      stacks: extra.stacks ?? null,
+      maxStacks: extra.maxStacks ?? null,
+
       bossFlavorName: extra.bossFlavorName ?? null,
       bossFlavorText: extra.bossFlavorText ?? null,
     });
@@ -768,6 +784,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       ) {
         continue;
       }
+      // The pulse and the stack it lands are one beat: resolve the stack facts
+      // first so both lines can name the same `{stacks}/{max_stacks}`.
+      const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
+      const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
       if (ap.pulseDamage > 0) {
         const sparked = damageCreature(
           creature,
@@ -777,17 +797,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           nowMs,
         );
         if (sparked > 0) {
-          emit('stance_pulse', `${ap.abilityKey} sears ${creature.name} for ${sparked}.`, {
+          // Fallback prose only: the client renders the ability's authored
+          // `pulse_text` from `abilityKey` + these structured facts.
+          emit('stance_pulse', `${attacker.name} sears ${creature.name} for ${sparked}.`, {
             characterId: attacker.id,
             creatureId: creature.id,
             amount: sparked,
             damageType: ap.damageType,
+            ...presentAbility(attacker, creature, ap.abilityKey),
+            stacks: next,
+            maxStacks: cap,
           });
         }
         if (!isAliveC(creature.id)) return;
       }
-      const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
-      const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
       stackWorking.set(stackTriple(ap.effectType, attacker.id, creature.id), next);
       const interval = ap.intervalMs > 0 ? ap.intervalMs : tickRate;
       effectUpserts.push({
@@ -817,14 +840,17 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
       emit(
         'stack_applied',
-        `${attacker.name}'s ${ap.abilityKey} afflicts ${creature.name} [${next}/${cap}].`,
+        `${attacker.name} afflicts ${creature.name} [${next}/${cap}].`,
         {
           characterId: attacker.id,
           creatureId: creature.id,
-          amount: next,
           damageType: ap.damageType,
+          ...presentAbility(attacker, creature, ap.abilityKey),
+          stacks: next,
+          maxStacks: cap,
         },
       );
+
     }
   };
 
@@ -2119,7 +2145,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('dodge', `${target.name} dodges ${c.name}.`, {
           characterId: target.id,
           creatureId: c.id,
+          ...presentCreature(c, target),
         });
+
         continue;
       }
       const atk = seededCreatureAttack({
@@ -2151,11 +2179,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const block = seededBlock({ rng, defender, creatureId: c.id, key: [t] });
       if (block.blocked) {
         dmg = Math.max(0, dmg - block.amount);
-        emit('block', `${target.name} blocks ${block.amount} of ${c.name}'s blow.`, {
+        emit('block', `${target.name} blocks ${c.name}'s blow. [${block.amount}]`, {
           characterId: target.id,
           creatureId: c.id,
           amount: block.amount,
+          ...presentCreature(c, target),
         });
+
       }
       const applied = damageCharacter(target, dmg, c.id, nowMs);
       emit(
@@ -2206,10 +2236,27 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   }
 
   // ── periodic effect schedules: persist the advanced next due time ──
-  // Derived only from the effect's own snapshotted due time and interval.
+  // Cadence is the ONLY thing this stage owns. When an authoritative stage
+  // already proposed this effect identity in the same tick (a stack landed, a
+  // duration refreshed), that proposal is amended in place so its semantic
+  // values survive; a second full snapshot row would win the later identity
+  // merge and silently regress stacks and expiry. When nothing proposed the
+  // identity, a complete row is materialized from the snapshot so the commit
+  // never receives a partial upsert.
   for (const e of effects) {
     const advanced = effectNextDue.get(e.id);
     if (advanced === undefined || effectDeleteIds.has(e.id)) continue;
+    const identity = effectIdentity(e);
+    const pendingAt = (() => {
+      for (let i = effectUpserts.length - 1; i >= 0; i -= 1) {
+        if (effectIdentity(effectUpserts[i]) === identity) return i;
+      }
+      return -1;
+    })();
+    if (pendingAt >= 0) {
+      effectUpserts[pendingAt] = { ...effectUpserts[pendingAt], nextTickAtMs: advanced };
+      continue;
+    }
     effectUpserts.push({
       lifetime: e.lifetime,
       targetKind: e.targetKind,
@@ -2233,6 +2280,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       paramsVersion: e.paramsVersion,
     });
   }
+
 
   // ── absorb pools: commit the unspent shield HP for the next tick ───
   // The pool lives ONLY here. Reservation bookkeeping never stores it.
@@ -2397,7 +2445,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const mergedEffectUpserts: EffectUpsert[] = [];
   const upsertIndexByIdentity = new Map<string, number>();
   for (const up of stanceMarked) {
-    const key = `${up.sourceCharacterId ?? 'null'}|${up.targetId}|${up.effectType}`;
+    const key = effectIdentity(up);
     const at = upsertIndexByIdentity.get(key);
     if (at === undefined) {
       upsertIndexByIdentity.set(key, mergedEffectUpserts.length);
