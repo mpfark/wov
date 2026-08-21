@@ -336,19 +336,34 @@ export function buildTickLogEvent(
   const isStage6 = STAGE6_TYPES.has(ev.type);
   const isStage7 = STAGE7_TYPES.has(ev.type);
   const stage8 = STAGE8_SPEC[ev.type];
-  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8) return null;
+  const flavor = FLAVOR_SPEC[ev.type];
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor) return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
+
+  // Ability-authored lines: the configured template owns the sentence, so the
+  // server's fallback prose is only used when nothing is authored.
+  const authored = flavor
+    ? renderAbilityFlavor(ev.type, {
+        attacker: ev.attacker_name,
+        target: ev.target_name ?? ev.creature_name,
+        amount: ev.damage ?? null,
+        stacks: ev.stacks ?? null,
+        maxStacks: ev.max_stacks ?? null,
+        abilityKey: ev.ability_key ?? null,
+      })
+    : null;
 
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
-  const remoteMessage = humanizeAbilityKeys(prose);
+  const remoteMessage = authored ? authored.text : humanizeAbilityKeys(prose);
   const message = isLocal
     ? applySelfPerspective(remoteMessage, localCharacterName)
     : remoteMessage;
+
 
 
   const playerActor: LogActor | undefined = ev.character_id
