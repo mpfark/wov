@@ -211,6 +211,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       isCrit: extra.isCrit ?? null,
       isHumanoid: extra.isHumanoid ?? null,
       abilityKey: extra.abilityKey ?? null,
+      stacks: extra.stacks ?? null,
+      maxStacks: extra.maxStacks ?? null,
+
       bossFlavorName: extra.bossFlavorName ?? null,
       bossFlavorText: extra.bossFlavorText ?? null,
     });
@@ -781,6 +784,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       ) {
         continue;
       }
+      // The pulse and the stack it lands are one beat: resolve the stack facts
+      // first so both lines can name the same `{stacks}/{max_stacks}`.
+      const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
+      const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
       if (ap.pulseDamage > 0) {
         const sparked = damageCreature(
           creature,
@@ -790,17 +797,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           nowMs,
         );
         if (sparked > 0) {
-          emit('stance_pulse', `${ap.abilityKey} sears ${creature.name} for ${sparked}.`, {
+          // Fallback prose only: the client renders the ability's authored
+          // `pulse_text` from `abilityKey` + these structured facts.
+          emit('stance_pulse', `${attacker.name} sears ${creature.name} for ${sparked}.`, {
             characterId: attacker.id,
             creatureId: creature.id,
             amount: sparked,
             damageType: ap.damageType,
+            ...presentAbility(attacker, creature, ap.abilityKey),
+            stacks: next,
+            maxStacks: cap,
           });
         }
         if (!isAliveC(creature.id)) return;
       }
-      const cap = Math.max(1, Math.floor(ap.maxStacks || 1));
-      const next = Math.min(cap, stacksOf(ap.effectType, attacker.id, creature.id) + 1);
       stackWorking.set(stackTriple(ap.effectType, attacker.id, creature.id), next);
       const interval = ap.intervalMs > 0 ? ap.intervalMs : tickRate;
       effectUpserts.push({
@@ -830,14 +840,17 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
       emit(
         'stack_applied',
-        `${attacker.name}'s ${ap.abilityKey} afflicts ${creature.name} [${next}/${cap}].`,
+        `${attacker.name} afflicts ${creature.name} [${next}/${cap}].`,
         {
           characterId: attacker.id,
           creatureId: creature.id,
-          amount: next,
           damageType: ap.damageType,
+          ...presentAbility(attacker, creature, ap.abilityKey),
+          stacks: next,
+          maxStacks: cap,
         },
       );
+
     }
   };
 
@@ -2132,7 +2145,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         emit('dodge', `${target.name} dodges ${c.name}.`, {
           characterId: target.id,
           creatureId: c.id,
+          ...presentCreature(c, target),
         });
+
         continue;
       }
       const atk = seededCreatureAttack({
@@ -2164,11 +2179,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const block = seededBlock({ rng, defender, creatureId: c.id, key: [t] });
       if (block.blocked) {
         dmg = Math.max(0, dmg - block.amount);
-        emit('block', `${target.name} blocks ${block.amount} of ${c.name}'s blow.`, {
+        emit('block', `${target.name} blocks ${c.name}'s blow. [${block.amount}]`, {
           characterId: target.id,
           creatureId: c.id,
           amount: block.amount,
+          ...presentCreature(c, target),
         });
+
       }
       const applied = damageCharacter(target, dmg, c.id, nowMs);
       emit(
