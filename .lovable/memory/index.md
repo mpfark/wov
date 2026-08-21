@@ -10,3 +10,4 @@
 - [Stance Lifecycle](mem://game/stance-lifecycle) — Approved stance rules: drop on logout, end on death, reservation released once, stance effect separate from finite target stacks
 - [Fled Attribution](mem://tech/combat-architecture/fled-attribution) — encounter_attribution_roster keeps departed effect owners reward-eligible; deaths counted from committed proposal
 - [Combat Reopening Backlog](mem://project/combat-reopen-backlog) — Post C5-S2 deferred observations, maintenance-rollback criteria, combat_mode/combat_soak switches
+- [Presentation Folding](mem://game/combat-system/presentation-folding) — groupId correlation, full-mitigation folding, perspective markers, numberText ownership

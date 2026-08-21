@@ -15,6 +15,7 @@ import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } fr
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTickLogEvent } from '@/features/combat/events/tick-event-builder';
 import { buildRewardLogEvent } from '@/features/combat/events/reward-event-builder';
+import { foldPresentationGroups } from '@/features/combat/events/fold-groups';
 
 /**
  * A line produced by a tick: either a structured event (server-authored,
@@ -25,9 +26,20 @@ export type TickLogLine = string | GameLogEvent;
 export interface CombatTickResponse {
   events: {
     type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string;
+    /**
+     * Correlation metadata: events belonging to one beat share `group_id`, and
+     * the mitigation triple states what the beat attempted, what mitigation
+     * removed and what actually landed. Presentation-only consumers.
+     */
+    group_id?: string;
+    attempted_amount?: number;
+    mitigated_amount?: number;
+    applied_amount?: number;
+    mitigation_source?: string;
     /** Stage 2+: server-authored structured event. Takes precedence over `message`. */
     log_event?: unknown;
   }[];
+
 
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: {
@@ -180,7 +192,10 @@ export function interpretCombatTickResult(
   if (data.events.length > 0) {
     formattedLogMessages.push('---tick---');
   }
-  for (const ev of data.events) {
+  // Presentation-only: correlated events (pulse + stack, swing + full block)
+  // become one line here. The authoritative batch is untouched.
+  const logEvents = foldPresentationGroups(data.events as any[]);
+  for (const ev of logEvents) {
     if (ev.type === 'tick_separator') {
       formattedLogMessages.push('---tick---');
       continue;

@@ -179,6 +179,19 @@ export function batchToTickResponse(
       ...(e.abilityKey ? { ability_key: e.abilityKey } : {}),
       ...(e.stacks !== null && e.stacks !== undefined ? { stacks: e.stacks } : {}),
       ...(e.maxStacks !== null && e.maxStacks !== undefined ? { max_stacks: e.maxStacks } : {}),
+      ...(e.effectType ? { effect_type: e.effectType } : {}),
+      // Correlation metadata: presentation may fold events that share a group.
+      ...(e.groupId ? { group_id: e.groupId } : {}),
+      ...(e.attemptedAmount !== null && e.attemptedAmount !== undefined
+        ? { attempted_amount: e.attemptedAmount }
+        : {}),
+      ...(e.mitigatedAmount !== null && e.mitigatedAmount !== undefined
+        ? { mitigated_amount: e.mitigatedAmount }
+        : {}),
+      ...(e.appliedAmount !== null && e.appliedAmount !== undefined
+        ? { applied_amount: e.appliedAmount }
+        : {}),
+      ...(e.mitigationSource ? { mitigation_source: e.mitigationSource } : {}),
 
       // Boss crit flavor travels as the same `boss_flavor` payload the legacy
       // channel used, so the client formatter has one shape to read.

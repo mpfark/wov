@@ -28,12 +28,6 @@ const FLAVOR: Record<string, FlavorVariants> = {
       'You shape the spell and let it find {target}…',
     ],
   },
-  fireball: {
-    withTarget: [
-      'You weave arcane flame between your fingers, aimed at {target}…',
-      'Embers spiral into a roaring sphere above your palm, drifting toward {target}…',
-    ],
-  },
   // Consolidated weapon strike: generic mechanic-level fallback. Per-class
   // identity lines live in ABILITY_FLAVOR (keyed by class ability key).
   weapon_attack: {
@@ -111,6 +105,14 @@ const FLAVOR: Record<string, FlavorVariants> = {
  * the mechanic table so two abilities sharing one mechanic keep separate text.
  */
 const ABILITY_FLAVOR: Record<string, FlavorVariants> = {
+  // Fireball is an ability identity, not a mechanic: keyed here so its own text
+  // wins over the generic `spell_attack` mechanic fallback it shares.
+  fireball: {
+    withTarget: [
+      'You weave arcane flame between your fingers, aimed at {target}…',
+      'Embers spiral into a roaring sphere above your palm, drifting toward {target}…',
+    ],
+  },
   power_strike: {
 
     withTarget: [

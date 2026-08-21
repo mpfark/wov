@@ -293,6 +293,32 @@ function formatPlayerAttack(
   return `${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${punct}${dmgSuffix}`;
 }
 
+
+/**
+ * Leading word of a flavor fragment, reduced to a comparable stem.
+ * Purely lexical: it exists to stop one blow from saying the same thing twice
+ * ("strikes you, striking you firmly"), never to classify anything.
+ */
+function leadStem(text: string): string {
+  const word = /^[a-z]+/i.exec(text.trim())?.[0]?.toLowerCase() ?? '';
+  return word.replace(/(?:ing|es|s)$/, '');
+}
+
+/**
+ * Deterministically pick a flavor fragment that does not echo the verb already
+ * used in the sentence. Falls back to the indexed choice when the whole pool
+ * echoes it, so wording never becomes empty.
+ */
+function pickNonEchoing(pool: string[], verb: string, idx: number | undefined): string {
+  const base = idx === undefined ? Math.floor(Math.random() * pool.length) : idx;
+  const verbStem = leadStem(verb);
+  for (let i = 0; i < pool.length; i++) {
+    const candidate = pool[(base + i) % pool.length];
+    if (!verbStem || leadStem(candidate) !== verbStem) return candidate;
+  }
+  return pool[base % pool.length];
+}
+
 function formatCreatureAttack(
   event: StructuredAttackEvent,
   isLocal: boolean,
@@ -335,18 +361,21 @@ function formatCreatureAttack(
 
   const tierWord = getDamageTierWord(damage);
   const punct = isCrit ? '!' : '.';
-  const pick = (pool: string[]) =>
-    flavorIdx === undefined ? pickRandom(pool) : pool[flavorIdx % pool.length];
   // The creature's own verb carries the identity of the blow, so consecutive
-  // attacks from the same beast stop reading as one repeated template.
+  // attacks from the same beast stop reading as one repeated template — and the
+  // flavor fragment is chosen so it never repeats that same verb back.
   const verb = resolveCreatureAttackVerb(attacker, event.is_humanoid, flavorIdx);
 
   if (isLocal) {
-    const flavor = pick(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
+    const flavor = pickNonEchoing(
+      DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit,
+      verb,
+      flavorIdx,
+    );
     return `${attacker} ${verb} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
-  const flavor = pick(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
+  const flavor = pickNonEchoing(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit, verb, flavorIdx);
   return `${attacker} ${verb} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
 

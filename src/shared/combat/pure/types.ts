@@ -740,10 +740,28 @@ export interface PresentationEvent {
    */
   readonly stacks?: number | null;
   readonly maxStacks?: number | null;
+  /** Status identity (`ignite`, `poison`, …) for lines that name the effect. */
+  readonly effectType?: string | null;
+  /**
+   * Deterministic correlation identity: every event belonging to ONE beat (a
+   * stance pulse and the stack it landed; a creature swing and the mitigation
+   * that ate it) carries the same `groupId`. Presentation may combine events
+   * that share it; the committed batch always keeps them separate.
+   */
+  readonly groupId?: string | null;
+  /** Damage the beat attempted before mitigation. */
+  readonly attemptedAmount?: number | null;
+  /** Damage removed by mitigation. */
+  readonly mitigatedAmount?: number | null;
+  /** Damage that actually reached the target. */
+  readonly appliedAmount?: number | null;
+  /** Mitigation identity (`block`, …) — never inferred from prose. */
+  readonly mitigationSource?: string | null;
   /** Chosen boss crit flavor: authored name + placeholder text. */
   readonly bossFlavorName?: string | null;
   readonly bossFlavorText?: string | null;
 }
+
 
 
 export interface RejectedAction {

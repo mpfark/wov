@@ -22,7 +22,16 @@ import {
   type LogActor,
 } from './log-event';
 import { renderAbilityFlavor } from './ability-flavor';
+import {
+  SELF_MARKER,
+  applySecondPersonGrammar,
+  resolveSelfMarkers,
+  secondPersonVerb,
+} from './perspective';
+import type { FoldHint } from './fold-groups';
 import { getAbilityLabel } from '@/features/combat/utils/ability-text';
+
+export { applySecondPersonGrammar, secondPersonVerb };
 
 
 /** Server event types handled by this stage. */
@@ -228,6 +237,12 @@ export interface TickEventInput {
   /** Phase 3: presentation names, so authored templates can be filled. */
   attacker_name?: string;
   target_name?: string;
+  /**
+   * Presentation-only correlation hint written by `foldPresentationGroups`.
+   * Never sent by the server: it records that this line now speaks for its
+   * whole group, so the group's facts render in one number slot.
+   */
+  fold?: FoldHint;
 }
 
 /**
@@ -240,42 +255,6 @@ const FLAVOR_SPEC: Record<string, { amountKind: 'damage' | 'stacks'; effectType?
   stack_applied: { amountKind: 'stacks' },
 };
 
-
-/** Verbs whose second-person form is not just "drop the -s". */
-const IRREGULAR_SECOND_PERSON: Record<string, string> = {
-  has: 'have',
-  is: 'are',
-  does: 'do',
-  goes: 'go',
-  was: 'were',
-};
-
-/**
- * Turn a third-person singular verb into its second-person form.
- * Purely grammatical — the server authors third-person prose, so once the
- * local name folds to "You" the verb must follow ("You blocks" → "You block").
- */
-function secondPersonVerb(verb: string): string {
-  const irregular = IRREGULAR_SECOND_PERSON[verb];
-  if (irregular) return irregular;
-  if (!verb.endsWith('s')) return verb;
-  if (/(?:ss|us|is)$/.test(verb)) return verb;
-  if (/[^aeiou]ies$/.test(verb)) return `${verb.slice(0, -3)}y`;
-  if (/(?:sh|ch|s|x|z)es$/.test(verb)) return verb.slice(0, -2);
-  return verb.slice(0, -1);
-}
-
-/**
- * Conjugate the verb that directly follows a folded "You" subject.
- * Only the pronoun subject is touched — "Your ward burns …" keeps its
- * third-person verb because the subject there is the ward, not the player.
- */
-export function applySecondPersonGrammar(message: string): string {
-  return message.replace(
-    /(^|[.!?]\s+|\s)(You) ([a-z]+)\b/g,
-    (_m, lead: string, subject: string, verb: string) => `${lead}${subject} ${secondPersonVerb(verb)}`,
-  );
-}
 
 /**
  * Server prose occasionally interpolates a raw `ability_key`. Render it as the
@@ -307,23 +286,15 @@ const AMOUNT_AS_TOKEN: Record<string, RegExp> = {
 
 /**
  * Fold the local character's name into second person.
- * Pure pronoun rewriting — carries no classification meaning.
+ *
+ * Every occurrence becomes a positional marker first, so `perspective.ts` picks
+ * You / you / your from where the marker sits. Nothing is capitalised globally,
+ * which is what used to turn a mid-sentence "Aldric's ward" into "Your ward".
  */
 export function applySelfPerspective(message: string, characterName: string): string {
   if (!characterName || !message.includes(characterName)) return message;
-  let msg = message;
-  msg = msg.replace(new RegExp(`${characterName}'s`, 'g'), 'Your');
-  msg = msg.replace(
-    new RegExp(
-      `(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*))${characterName} `,
-      'u',
-    ),
-    '$1You ',
-  );
-  msg = msg.replace(new RegExp(` ${characterName} `, 'g'), ' you ');
-  msg = msg.replace(new RegExp(` ${characterName}\\.`, 'g'), ' you.');
-  msg = msg.replace(new RegExp(` ${characterName}!`, 'g'), ' you!');
-  return applySecondPersonGrammar(msg);
+  const escaped = characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return resolveSelfMarkers(message.replace(new RegExp(`\\b${escaped}\\b`, 'g'), SELF_MARKER));
 }
 
 
@@ -355,6 +326,8 @@ export function buildTickLogEvent(
         stacks: ev.stacks ?? null,
         maxStacks: ev.max_stacks ?? null,
         abilityKey: ev.ability_key ?? null,
+        selfName: localCharacterName,
+        effectLabel: ev.effect_type ? getAbilityLabel(ev.effect_type) : null,
       })
     : null;
 
@@ -362,10 +335,23 @@ export function buildTickLogEvent(
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
+  // A fully-mitigated swing reads as one decisive line. The wording states the
+  // proven outcome (nothing landed) and the amount moves into the token, so the
+  // prose drops the server's inline `[N]`.
+  if (ev.fold?.kind === 'full_block') {
+    prose = prose
+      .replace(/\s*\[\d+\]\s*$/, '')
+      .replace(/\bblocks\b/, 'raises a shield and turns')
+      .replace(/\bblow\.?$/, 'blow aside!');
+  }
   const remoteMessage = authored ? authored.text : humanizeAbilityKeys(prose);
-  const message = isLocal
-    ? applySelfPerspective(remoteMessage, localCharacterName)
-    : remoteMessage;
+  const message = authored
+    ? isLocal
+      ? authored.selfText
+      : authored.text
+    : isLocal
+      ? applySelfPerspective(remoteMessage, localCharacterName)
+      : remoteMessage;
 
 
 
@@ -436,9 +422,27 @@ export function buildTickLogEvent(
     }
   }
 
+  // A folded line speaks for its whole group, so the group's facts render in a
+  // single token and the individual members' own tokens are never shown.
+  let numberText: string | undefined;
+  if (ev.fold?.kind === 'pulse_with_stack' && !authored?.statesAmount) {
+    const label = getAbilityLabel(ev.fold.effectType ?? ev.effect_type ?? '');
+    const parts = [amount !== undefined ? String(amount) : null, `${label} ${ev.fold.stacks}/${ev.fold.maxStacks}`]
+      .filter(Boolean)
+      .join(', ');
+    numberText = `[${parts}]`;
+    amount = undefined;
+    amountKind = undefined;
+  } else if (ev.fold?.kind === 'full_block') {
+    numberText = `[${ev.fold.mitigated} blocked]`;
+    amount = undefined;
+    amountKind = undefined;
+  }
+
   return createLogEvent({
     type,
     message,
+    numberText,
     remoteMessage,
     source,
     target,

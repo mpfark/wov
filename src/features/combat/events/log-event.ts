@@ -90,6 +90,13 @@ export interface GameLogEvent {
   target?: LogActor;
   amount?: number;
   amountKind?: LogAmountKind;
+  /**
+   * Pre-composed structured token for lines that fold several facts into one
+   * number slot (`[7, Ignite 3/5]`, `[18 blocked]`). When present it REPLACES
+   * the `amount` token, so a number is still rendered exactly once.
+   */
+  numberText?: string;
+
   damageType?: string;
   /**
    * Semantic classifier (`resist`, `stack`, `cleanse`, `xp`, …). Owns log
