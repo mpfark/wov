@@ -56,6 +56,13 @@ export function seededAttackRoll(input: {
   creatureId: string;
   creatureAC: number;
   sunderReduction?: number;
+  /**
+   * Extra d20 crit-threshold widening in whole points (Grand Finale's
+   * configured `crit_edge`). Never a probability, never a damage multiplier.
+   */
+  critEdgeBonus?: number;
+  /** Lowest crit threshold the widening may reach (configured floor). */
+  critThresholdFloor?: number;
   progression: WeaponProgressionConfig;
   /** Stream key suffix: which beat of the tick this is. */
   key: readonly (string | number)[];
@@ -69,8 +76,16 @@ export function seededAttackRoll(input: {
   const ihb = getIntHitBonus(attrs.int);
   const dcb = getDexCritBonus(attrs.dex);
   const mileCrit = attacker.level >= 28 ? 1 : 0;
+  const widened =
+    getClassCritRange(attacker.classKey)
+    - dcb
+    - mileCrit
+    - (attacker.buffs.critBuffBonus || 0)
+    - Math.max(0, Math.floor(input.critEdgeBonus ?? 0));
   const effCrit =
-    getClassCritRange(attacker.classKey) - dcb - mileCrit - (attacker.buffs.critBuffBonus || 0);
+    typeof input.critThresholdFloor === 'number'
+      ? Math.max(widened, input.critThresholdFloor)
+      : widened;
   const sdf = getStrDamageFloor(attrs.str);
   const affinity = getWeaponAffinityBonus(attacker.classKey, attacker.weapon.tag);
   const die = getWeaponDieForItem(
