@@ -471,6 +471,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
     combat_text: {
       activate_text: 'Envenom! Your weapons drip with poison.',
       proc_text: "{attacker}'s attack poisons {target}!",
+      stack_text: "{attacker}'s venom seeps into {target} (poison x{stacks}).",
     },
 
     class_key: 'assassin', slot: 2,
