@@ -17,22 +17,28 @@ import { getAbilityCastFlavor, getCastFlavor } from './cast-flavor';
 
 /** ability_key -> authored combat_text record. */
 const AUTHORED_TEXT: Record<string, Record<string, unknown>> = {};
+/** ability_key -> player-facing label ("Orbs of Fire"). */
+const LABELS: Record<string, string> = {};
 
 function prime(): void {
   for (const seed of ABILITY_SEED) {
     if (seed.combat_text && Object.keys(seed.combat_text).length > 0) {
       AUTHORED_TEXT[seed.ability_key] = seed.combat_text;
     }
+    if (seed.label) LABELS[seed.ability_key] = seed.label;
   }
 }
 prime();
 
 /** Replace the authored-text registry from configured rows (config load). */
 export function setAbilityTextRegistry(
-  rows: { ability_key?: string; combat_text?: unknown }[],
+  rows: { ability_key?: string; label?: string | null; combat_text?: unknown }[],
 ): void {
   for (const row of rows) {
     if (!row.ability_key) continue;
+    if (typeof row.label === 'string' && row.label.trim()) {
+      LABELS[row.ability_key] = row.label.trim();
+    }
     const text = row.combat_text;
     if (!text || typeof text !== 'object') continue;
     AUTHORED_TEXT[row.ability_key] = text as Record<string, unknown>;
@@ -42,6 +48,7 @@ export function setAbilityTextRegistry(
 /** Restore the compiled seed text only (tests). */
 export function resetAbilityTextRegistry(): void {
   for (const key of Object.keys(AUTHORED_TEXT)) delete AUTHORED_TEXT[key];
+  for (const key of Object.keys(LABELS)) delete LABELS[key];
   prime();
 }
 
@@ -49,6 +56,21 @@ export function resetAbilityTextRegistry(): void {
 export function getAuthoredCombatText(abilityKey: string): Record<string, unknown> {
   return AUTHORED_TEXT[abilityKey] ?? {};
 }
+
+/**
+ * Player-facing name for an ability key. Falls back to a readable title-case
+ * rendering so a raw `ability_key` never reaches the log.
+ */
+export function getAbilityLabel(abilityKey: string): string {
+  const known = LABELS[abilityKey];
+  if (known) return known;
+  const SMALL = new Set(['of', 'the', 'and', 'in', 'on', 'to']);
+  return abilityKey
+    .split('_')
+    .map((w, i) => (i > 0 && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
 
 function pick(values: string[]): string {
   return values[Math.floor(Math.random() * values.length)];

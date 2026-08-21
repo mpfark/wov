@@ -733,10 +733,18 @@ export interface PresentationEvent {
   readonly isHumanoid?: boolean | null;
   /** Canonical `abilities.ability_key`, for ability lines. */
   readonly abilityKey?: string | null;
+  /**
+   * Status-stack facts for lines whose authored template names them
+   * (`{stacks}` / `{max_stacks}`). Presentation only — the authoritative stack
+   * count still travels on the effect rows.
+   */
+  readonly stacks?: number | null;
+  readonly maxStacks?: number | null;
   /** Chosen boss crit flavor: authored name + placeholder text. */
   readonly bossFlavorName?: string | null;
   readonly bossFlavorText?: string | null;
 }
+
 
 export interface RejectedAction {
   readonly actionId: string;

@@ -95,6 +95,19 @@ interface Working {
   hitters: Set<string>;
 }
 
+/**
+ * The committer's authoritative effect identity: `(source_id, target_id,
+ * effect_type)`. Every stage that proposes or rewrites an effect row keys off
+ * this one helper, so identity logic is never duplicated or drifted.
+ */
+function effectIdentity(
+  row: { sourceCharacterId?: string | null; targetId: string; effectType: string },
+): string {
+  return `${row.sourceCharacterId ?? 'null'}|${row.targetId}|${row.effectType}`;
+}
+
+
+
 export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const rng = createTickRandom({
     encounterId: snapshot.encounterId,
@@ -2206,10 +2219,27 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   }
 
   // ── periodic effect schedules: persist the advanced next due time ──
-  // Derived only from the effect's own snapshotted due time and interval.
+  // Cadence is the ONLY thing this stage owns. When an authoritative stage
+  // already proposed this effect identity in the same tick (a stack landed, a
+  // duration refreshed), that proposal is amended in place so its semantic
+  // values survive; a second full snapshot row would win the later identity
+  // merge and silently regress stacks and expiry. When nothing proposed the
+  // identity, a complete row is materialized from the snapshot so the commit
+  // never receives a partial upsert.
   for (const e of effects) {
     const advanced = effectNextDue.get(e.id);
     if (advanced === undefined || effectDeleteIds.has(e.id)) continue;
+    const identity = effectIdentity(e);
+    const pendingAt = (() => {
+      for (let i = effectUpserts.length - 1; i >= 0; i -= 1) {
+        if (effectIdentity(effectUpserts[i]) === identity) return i;
+      }
+      return -1;
+    })();
+    if (pendingAt >= 0) {
+      effectUpserts[pendingAt] = { ...effectUpserts[pendingAt], nextTickAtMs: advanced };
+      continue;
+    }
     effectUpserts.push({
       lifetime: e.lifetime,
       targetKind: e.targetKind,
@@ -2233,6 +2263,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       paramsVersion: e.paramsVersion,
     });
   }
+
 
   // ── absorb pools: commit the unspent shield HP for the next tick ───
   // The pool lives ONLY here. Reservation bookkeeping never stores it.
@@ -2397,7 +2428,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
   const mergedEffectUpserts: EffectUpsert[] = [];
   const upsertIndexByIdentity = new Map<string, number>();
   for (const up of stanceMarked) {
-    const key = `${up.sourceCharacterId ?? 'null'}|${up.targetId}|${up.effectType}`;
+    const key = effectIdentity(up);
     const at = upsertIndexByIdentity.get(key);
     if (at === undefined) {
       upsertIndexByIdentity.set(key, mergedEffectUpserts.length);

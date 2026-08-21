@@ -172,8 +172,15 @@ export const SERVER_EVENT_TYPES = [
   'divine_challenge_dr',
   'dot_tick',
   'evasion_dodge',
+  // C3 resolver names: the shared shell emits `block` / `dodge` for creature
+  // swings and `stance_pulse` / `stack_applied` for stance appliers.
+  'block',
+  'dodge',
+  'stance_pulse',
+  'stack_applied',
   'gem_drop',
   'holy_shield_return',
+
   'ignite',
   'ignite_proc',
   'ignite_pulse',
@@ -253,6 +260,11 @@ export const SERVER_EVENT_TYPE_MAP: Record<ServerEventType, LogEventType> = {
   divine_challenge_dr: 'mitigation',
   dot_tick: 'dot_tick',
   evasion_dodge: 'mitigation',
+  block: 'mitigation',
+  dodge: 'mitigation',
+  stance_pulse: 'proc',
+  stack_applied: 'debuff',
+
   gem_drop: 'loot',
   holy_shield_return: 'proc',
   ignite: 'dot_tick',
