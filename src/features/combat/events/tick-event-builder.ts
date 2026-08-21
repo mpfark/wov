@@ -212,6 +212,8 @@ export interface TickEventInput {
   is_crit?: boolean;
   /** Stage 8: structured stack count for stacking interactions. */
   stacks?: number;
+  /** Phase 3: stack ceiling, for authored `{max_stacks}` templates. */
+  max_stacks?: number;
   /** Stage 8: effect identity when the server distinguishes it (e.g. 'poison'). */
   effect_type?: string;
   /**
@@ -220,7 +222,21 @@ export interface TickEventInput {
    * Additive metadata only — never used to classify or style the line.
    */
   ability_key?: string;
+  /** Phase 3: presentation names, so authored templates can be filled. */
+  attacker_name?: string;
+  target_name?: string;
 }
+
+/**
+ * Phase 3 — ability lines whose sentence is authored per ability in
+ * `abilities.combat_text`. The server sends facts plus a plain fallback; the
+ * authored template owns identity and wording.
+ */
+const FLAVOR_SPEC: Record<string, { amountKind: 'damage' | 'stacks'; effectType?: string }> = {
+  stance_pulse: { amountKind: 'damage' },
+  stack_applied: { amountKind: 'stacks' },
+};
+
 
 /** Verbs whose second-person form is not just "drop the -s". */
 const IRREGULAR_SECOND_PERSON: Record<string, string> = {
