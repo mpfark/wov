@@ -3490,6 +3490,7 @@ export type Database = {
       ability_damage_type_keys: { Args: never; Returns: string[] }
       ability_damaging_mechanics: { Args: never; Returns: string[] }
       ability_mechanic_params: { Args: never; Returns: Json }
+      ability_roll_based_mechanics: { Args: never; Returns: string[] }
       accept_party_invite: {
         Args: { _membership_id: string }
         Returns: undefined
