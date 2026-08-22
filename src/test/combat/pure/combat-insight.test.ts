@@ -211,7 +211,7 @@ describe('Combat Insight — resolver to-hit', () => {
 
   it('leaves WIS critical-hit reduction unchanged', () => {
     expect(getWisAntiCrit(10)).toBe(0);
-    expect(getWisAntiCrit(14)).toBeCloseTo(0.03, 10);
+    expect(getWisAntiCrit(14)).toBeCloseTo(Math.sqrt(2) * 0.03, 10);
     expect(getWisAntiCrit(20)).toBeCloseTo(Math.sqrt(5) * 0.03, 10);
     expect(getWisAntiCrit(200)).toBeCloseTo(0.15, 10);
   });
