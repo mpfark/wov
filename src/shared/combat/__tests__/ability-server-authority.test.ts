@@ -28,6 +28,9 @@ let loader: Loader;
 
 const calc = (base: number) => ({ base, terms: [] });
 
+/** Mechanics that resolve a d20 attack roll and therefore need accuracy_stat. */
+const ROLL_BASED = new Set(['weapon_attack','spell_attack','multi_attack','burst_damage','stack_consume']);
+
 function row(opts: {
   abilityKey: string; mechanicKey: string; cpCost: number; damageType: string | null;
   isDefault?: boolean; slot?: number; classKey?: string;
@@ -50,7 +53,8 @@ function row(opts: {
       amount_calc: calc(10),
       duration_calc: null,
       interval_ms: null,
-      effect_config: {},
+      // Roll-based mechanics must nominate an accuracy attribute (fail-closed).
+      effect_config: ROLL_BASED.has(opts.mechanicKey) ? { accuracy_stat: 'dex' } : {},
       mechanic_calcs: {},
     },
   };
