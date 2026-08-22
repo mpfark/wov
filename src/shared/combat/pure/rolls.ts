@@ -16,6 +16,7 @@ import {
 import {
   getAccuracyProficiency,
   getAccuracyBonus,
+  getCombatInsightBonus,
   getDexCritBonus,
   getStrDamageFloor,
   getWeaponDieForItem,
@@ -57,7 +58,8 @@ export interface SeededAttack {
  * global INT bonus, and weapon affinity's to-hit bonus applies to weapon-based
  * actions only.
  *
- *   d20 + proficiency(level) + accuracyBonus(stat mod) + affinity(hit, weapon)
+ *   d20 + proficiency(level) + accuracyBonus(stat mod)
+ *       + Combat Insight(INT, when accuracy is not INT) + affinity(hit, weapon)
  */
 export function seededAttackRoll(input: {
   rng: TickRandom;
@@ -88,6 +90,9 @@ export function seededAttackRoll(input: {
     (attrs as unknown as Record<string, number>)[input.accuracyStat],
   );
   const accuracyBonus = getAccuracyBonus(accuracyMod);
+  // Combat Insight: INT's secondary to-hit contribution. Suppressed for
+  // INT-primary actions so INT is never counted twice.
+  const insightBonus = getCombatInsightBonus(input.accuracyStat, attrs.int);
   const proficiency = getAccuracyProficiency(attacker.level);
   const strDmgMod = getStatModifier(attrs.str);
   const dcb = getDexCritBonus(attrs.dex);
@@ -114,7 +119,7 @@ export function seededAttackRoll(input: {
   );
 
   const roll = rng.roll(input.rollStream ?? 'attack_roll', 20, attacker.id, creatureId, ...key);
-  const totalAtk = roll + proficiency + accuracyBonus + affinityHitBonus;
+  const totalAtk = roll + proficiency + accuracyBonus + insightBonus + affinityHitBonus;
   const effectiveAC = Math.max(creatureAC - (input.sunderReduction ?? 0), 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);

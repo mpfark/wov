@@ -188,6 +188,23 @@ export function getAccuracyBonus(modifier: number): number {
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
+/** INT → Hit Bonus: sqrt curve, capped at +5 */
+export function getIntHitBonus(int: number): number {
+  return diminishing(getStatModifier(int), 5);
+}
+
+/**
+ * Combat Insight: the intentional secondary to-hit contribution INT grants to
+ * attacks whose accuracy attribute is *not* INT. INT-primary attacks already
+ * count INT through `getAccuracyBonus`, so they receive nothing here — INT is
+ * never counted twice.
+ */
+export function getCombatInsightBonus(accuracyStat: AccuracyStat, int: number): number {
+  return accuracyStat === 'int' ? 0 : getIntHitBonus(int);
+}
+
+
+
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
@@ -380,7 +397,7 @@ export interface AttackResult {
 /**
  * Resolve a single autoattack roll against a creature.
  *
- *   To-hit:  d20 + proficiency(level) + accuracy bonus (DEX) + weapon affinity
+ *   To-hit:  d20 + proficiency(level) + accuracy bonus (DEX) + INT Combat Insight + weapon affinity
  *   Damage:  1d{weaponDie} + STR mod        (STR damage floor on non-crits)
  *
  * Class only influences:
@@ -392,8 +409,10 @@ export function resolveAttackRoll(
   creatureAC: number,
   sunderReduction: number = 0,
 ): AttackResult {
-  // Autoattacks are weapon-based and DEX-driven for every class.
+  // Autoattacks are weapon-based and DEX-driven for every class; INT adds
+  // Combat Insight on top of the DEX accuracy bonus.
   const accuracyBonus = getAccuracyBonus(getStatModifier(ctx.attackerStat));
+  const insightBonus = getCombatInsightBonus('dex', ctx.int);
   const proficiency = getAccuracyProficiency(ctx.level);
   const strDmgMod = getStatModifier(ctx.str);
   const dcb = getDexCritBonus(ctx.dex);
@@ -406,7 +425,7 @@ export function resolveAttackRoll(
   const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression, ctx.weaponItemRarity);
 
   const roll = rollD20();
-  const totalAtk = roll + proficiency + accuracyBonus + affinity.hitBonus;
+  const totalAtk = roll + proficiency + accuracyBonus + insightBonus + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
