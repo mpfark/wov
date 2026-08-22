@@ -107,6 +107,17 @@ function effectIdentity(
   return `${row.sourceCharacterId ?? 'null'}|${row.targetId}|${row.effectType}`;
 }
 
+/**
+ * The configured accuracy attribute of a roll-based action.
+ *
+ * Configuration is resolved (and fails closed) in `c3/ability-resolve`: a
+ * roll-based ability without a valid `accuracy_stat` never reaches a tick, so
+ * the fallback here is unreachable and exists only to keep this module total.
+ */
+function accuracyStatOf(action: ActionSnapshot): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' {
+  return action.params?.accuracyStat ?? 'dex';
+}
+
 
 
 export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
