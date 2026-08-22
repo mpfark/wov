@@ -233,6 +233,8 @@ export function setServerAbilityCalcs(rows: any[]): RegistrySwapResult {
       duration_calc: durationCalc,
       interval_ms: ability.interval_ms ?? null,
       mechanic_calcs: mechanicCalcs,
+      // Accuracy attribute: authored on the row, read from the composed config.
+      accuracy_stat: (effectConfig as Record<string, unknown>)?.accuracy_stat as string ?? null,
       status: 'active',
     })) {
       errors.push(`${label}: ${err}`);
