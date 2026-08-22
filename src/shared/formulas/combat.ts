@@ -188,6 +188,23 @@ export function getAccuracyBonus(modifier: number): number {
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
+/** INT → Hit Bonus: sqrt curve, capped at +5 */
+export function getIntHitBonus(int: number): number {
+  return diminishing(getStatModifier(int), 5);
+}
+
+/**
+ * Combat Insight: the intentional secondary to-hit contribution INT grants to
+ * attacks whose accuracy attribute is *not* INT. INT-primary attacks already
+ * count INT through `getAccuracyBonus`, so they receive nothing here — INT is
+ * never counted twice.
+ */
+export function getCombatInsightBonus(accuracyStat: AccuracyStat, int: number): number {
+  return accuracyStat === 'int' ? 0 : getIntHitBonus(int);
+}
+
+
+
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
