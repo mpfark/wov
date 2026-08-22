@@ -25,6 +25,7 @@ import {
   getChaSellMultiplier,
 } from '@/lib/game-data';
 import { getWisAntiCrit } from '@/shared/formulas/combat';
+import { getStatModifier } from '@/shared/formulas/stats';
 
 export type StatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
