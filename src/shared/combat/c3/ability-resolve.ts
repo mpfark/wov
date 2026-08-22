@@ -225,15 +225,25 @@ function resolveParams(
   failures: string[],
 ): ActionParamsSnapshot | undefined {
   const cfg = entry.effectConfig as Record<string, unknown>;
+  // Every roll-based mechanic carries its configured accuracy attribute; the
+  // resolver reads it and never assumes one.
+  const accuracy = ROLL_BASED_MECHANICS.has(mechanic)
+    ? {
+        accuracyStat: accuracyStatParam(
+          cfg, `${entry.classKey}:${entry.classAbilityKey}`, failures,
+        ),
+      }
+    : undefined;
   switch (mechanic) {
     case 'multi_attack': {
       // The configured arrow count is authoritative and deterministic: the
       // per-arrow hit rolls are the random part and live in the resolver.
       const count = Math.max(1, Math.round(evalParam(entry, 'arrow_count', inputs, true, failures)));
-      return { minHits: count, maxHits: count };
+      return { ...accuracy, minHits: count, maxHits: count };
     }
     case 'burst_damage':
       return {
+        ...accuracy,
         // d20 threshold widening, not a probability.
         critEdge: Math.max(0, Math.round(evalParam(entry, 'crit_edge', inputs, true, failures))),
         critThresholdFloor: Math.max(2, Math.round(num(cfg.crit_threshold_floor, 17))),
@@ -242,9 +252,11 @@ function resolveParams(
 
     case 'stack_consume':
       return {
+        ...accuracy,
         perStackMultiplier: evalParam(entry, 'per_stack_multiplier', inputs, true, failures),
         stackEffectType: str(cfg.stack_type) ?? str(cfg.effect_type) ?? 'poison',
       };
+
     case 'stack_apply': {
       // Authored vocabulary: `on_hit` (weapon hits) vs `pulse` (own heartbeat).
       // The legacy resolver name is accepted as an alias.
