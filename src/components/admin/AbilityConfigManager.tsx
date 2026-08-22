@@ -358,6 +358,8 @@ export default function AbilityConfigManager() {
     }
 
     setSaving(true);
+    // Roll-based mechanics own an accuracy attribute; automatic ones must not.
+    const accuracyStat = isRollBasedMechanic(draft.mechanic_key) ? draft.accuracy_stat : null;
     const { error } = await supabase.from('abilities').update({
       label: draft.label,
       description: draft.description,
@@ -367,8 +369,7 @@ export default function AbilityConfigManager() {
       ability_type: draft.ability_type,
       class_scale: draft.class_scale,
       primary_attribute: draft.primary_attribute,
-      // Roll-based mechanics own an accuracy attribute; automatic ones must not.
-      accuracy_stat: isRollBasedMechanic(draft.mechanic_key) ? draft.accuracy_stat : null,
+      accuracy_stat: accuracyStat,
       secondary_attribute: draftBase?.supports_secondary_scaling ? draft.secondary_attribute : null,
       applied_status: draft.applied_status,
       status_trigger: draft.applied_status ? draft.status_trigger : null,
