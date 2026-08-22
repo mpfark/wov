@@ -23,6 +23,7 @@ import {
   getAccuracyBonus,
   getChaBuyDiscount,
   getChaSellMultiplier,
+  getIntHitBonus,
 } from '@/lib/game-data';
 import { getWisAntiCrit } from '@/shared/formulas/combat';
 import { getStatModifier } from '@/shared/formulas/stats';
@@ -77,9 +78,12 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
   },
   int: {
     full: 'Intelligence',
-    short: 'Arcane power, CP regen, accuracy for arcane abilities',
+    short: 'Arcane power, CP regen, arcane accuracy, Combat Insight',
     effects: [
       { label: 'CP Regen', value: e => fmtRegen(getCpRegen(e)) },
+      // Combat Insight: INT's secondary to-hit bonus on every attack whose
+      // accuracy attribute is not INT (INT-based abilities count INT once).
+      { label: 'Combat Insight', value: e => fmtPlus(getIntHitBonus(e)) },
       // INT is the accuracy attribute of arcane abilities only; each ability
       // names its own accuracy attribute.
       { label: 'Arcane Accuracy', value: e => fmtPlus(getAccuracyBonus(getStatModifier(e))) },
@@ -125,6 +129,7 @@ if (import.meta.env.DEV) {
       ['STR → Damage floor', () => getStrDamageFloor(20)],
       ['DEX → Crit bonus', () => getDexCritBonus(20)],
       ['INT → Accuracy bonus', () => getAccuracyBonus(getStatModifier(20))],
+      ['INT → Combat Insight', () => getIntHitBonus(20)],
       ['WIS → Anti-crit', () => getWisAntiCrit(20)],
       ['CHA → Buy discount', () => getChaBuyDiscount(20)],
       ['CHA → Sell mult', () => getChaSellMultiplier(20)],
