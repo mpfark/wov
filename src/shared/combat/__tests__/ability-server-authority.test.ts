@@ -47,6 +47,7 @@ function row(opts: {
       id: `${opts.abilityKey}-id`,
       ability_key: opts.abilityKey,
       mechanic_key: opts.mechanicKey,
+      accuracy_stat: ROLL_BASED.has(opts.mechanicKey) ? 'dex' : null,
       status: 'active',
       cp_cost: opts.cpCost,
       damage_type: opts.damageType,
