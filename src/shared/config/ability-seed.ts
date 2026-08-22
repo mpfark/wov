@@ -43,6 +43,12 @@ export interface AbilitySeed {
   tooltip: string;
   /** Legacy ability `type` — the runtime mechanic that consumes this row. */
   mechanic_key: string;
+  /**
+   * Explicit accuracy attribute. Required by roll-based mechanics
+   * (weapon_attack / spell_attack / multi_attack / burst_damage /
+   * stack_consume) and absent on every automatic mechanic.
+   */
+  accuracy_stat?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
   ability_type: AbilityKind;
   damage_type: string | null;
   target_type: AbilityTarget;
@@ -196,6 +202,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'power_strike', label: 'Power Strike', description: 'A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Heavy blow. Rolls weapon damage + STR + bonus.',
+    accuracy_stat: 'dex',
     mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('str'), duration_calc: null, interval_ms: null,
@@ -260,6 +267,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'fireball', label: 'Fireball', description: 'Hurl a ball of arcane flame at your target, scaling with INT',
     tooltip: 'Damage one target. Scales with INT.',
+    accuracy_stat: 'int',
     mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('int'), duration_calc: null, interval_ms: null,
@@ -325,6 +333,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'conflagrate', label: 'Conflagrate', description: 'Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.',
     tooltip: 'Consume burn stacks for bonus damage. Per-stack scales with INT.',
+    accuracy_stat: 'int',
     mechanic_key: 'stack_consume', base_ability_key: 'stack_consume', ability_type: 'damage', damage_type: 'fire',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: {
@@ -352,6 +361,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'aimed_shot', label: 'Aimed Shot', description: 'A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Careful shot. Rolls weapon damage + DEX + bonus.',
+    accuracy_stat: 'dex',
     mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
@@ -374,6 +384,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'barrage', label: 'Barrage', description: 'Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).',
     tooltip: 'Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.',
+    accuracy_stat: 'dex',
     mechanic_key: 'multi_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 25, cp_reserve_pct: null,
     amount_calc: {
@@ -424,6 +435,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'backstab', label: 'Backstab', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).',
     tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.',
+    accuracy_stat: 'dex',
     mechanic_key: 'weapon_attack', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: physicalT0('dex'), duration_calc: null, interval_ms: null,
@@ -479,6 +491,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'eviscerate', label: 'Eviscerate', description: 'A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.',
     tooltip: 'Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).',
+    accuracy_stat: 'dex',
     mechanic_key: 'stack_consume', base_ability_key: 'stack_consume', ability_type: 'damage', damage_type: 'physical',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 40, cp_reserve_pct: null,
     amount_calc: {
@@ -527,6 +540,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'smite', label: 'Smite', description: 'Channel a burst of divine light at your target, scaling with WIS',
     tooltip: 'Damage one target. Scales with WIS.',
+    accuracy_stat: 'wis',
     mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'holy',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('wis'), duration_calc: null, interval_ms: null,
@@ -601,6 +615,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'cutting_words', label: 'Cutting Words', description: 'Unleash a barbed insult that wounds your target, scaling with CHA',
     tooltip: 'Damage one target. Scales with CHA.',
+    accuracy_stat: 'cha',
     mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'psychic',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('cha'), duration_calc: null, interval_ms: null,
@@ -654,6 +669,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'grand_finale', label: 'Grand Finale', description: 'Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.',
     tooltip: 'Burst damage on one target. Damage scales with CHA, crit-edge with INT.',
+    accuracy_stat: 'cha',
     mechanic_key: 'burst_damage', ability_type: 'damage', damage_type: 'psychic',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 60, cp_reserve_pct: null,
     amount_calc: {
@@ -685,6 +701,7 @@ export const ABILITY_SEED: AbilitySeed[] = [
   {
     ability_key: 'judgment', label: 'Judgment', description: 'Pass divine judgment, dealing holy damage scaling with WIS',
     tooltip: 'Holy damage to one target. Scales with WIS.',
+    accuracy_stat: 'wis',
     mechanic_key: 'spell_attack', ability_type: 'damage', damage_type: 'holy',
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('wis', 0.8), duration_calc: null, interval_ms: null,

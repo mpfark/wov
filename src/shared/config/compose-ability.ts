@@ -102,6 +102,11 @@ export interface ConfiguredUseRow {
   class_scale?: number | null;
   primary_attribute?: string | null;
   secondary_attribute?: string | null;
+  /**
+   * Explicit accuracy attribute for roll-based mechanics. Copied verbatim into
+   * `effect_config.accuracy_stat`, which is what the combat loader reads.
+   */
+  accuracy_stat?: string | null;
   /** Status Application: which reusable status, when, how likely, and whether at all. */
   applied_status?: string | null;
   status_trigger?: string | null;
@@ -277,6 +282,10 @@ export function composeAbilityRow(
     const attr = resolveRoleAttribute(use, role);
     if (attr) baseCfg[key] = attr;
   }
+
+  // Accuracy policy: the configured use owns the accuracy attribute, so it is
+  // carried onto the composed row's effect_config for the combat loader.
+  if (isCalcStat(use.accuracy_stat)) baseCfg.accuracy_stat = use.accuracy_stat;
 
   // Legacy compatibility ONLY: the last ability still on the retired one-off
   // On-Hit Effect keeps working until its Status Application is switched on.
