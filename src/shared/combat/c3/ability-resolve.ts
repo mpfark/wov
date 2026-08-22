@@ -373,14 +373,17 @@ function resolveParams(
           `${entry.classKey}:${entry.classAbilityKey}`, failures,
         ),
       };
-    // Mechanics whose behaviour is fully described by the core fields.
+    // Roll-based direct attacks: accuracy is their only parameter.
     case 'weapon_attack':
     case 'spell_attack':
+      return accuracy;
+    // Mechanics whose behaviour is fully described by the core fields.
     case 'heal':
     case 'absorb_buff':
     case 'dot_debuff':
       void durationMs;
       return undefined;
+
   }
 
 }
