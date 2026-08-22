@@ -157,12 +157,37 @@ export function rollWeaponAttackDamage(
   return rollDamage(1, die) + getStatModifier(str);
 }
 
+// ── Accuracy ─────────────────────────────────────────────────────
+
+/** The six attributes any ability may nominate as its accuracy stat. */
+export type AccuracyStat = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+
+const ACCURACY_STATS: readonly AccuracyStat[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+export function isAccuracyStat(v: unknown): v is AccuracyStat {
+  return typeof v === 'string' && (ACCURACY_STATS as readonly string[]).includes(v);
+}
+
+/**
+ * Level → proficiency: the class-agnostic accuracy floor that keeps pace with
+ * creature AC (which climbs ~0.575 per level). `2 + floor(level / 2)`.
+ */
+export function getAccuracyProficiency(level: number): number {
+  return 2 + Math.floor(Math.max(1, level) / 2);
+}
+
+/**
+ * Accuracy stat modifier → to-hit bonus. Positive modifiers follow a bounded
+ * sqrt curve (cap +8); a negative modifier is carried through in full so a
+ * neglected accuracy attribute still hurts.
+ */
+export function getAccuracyBonus(modifier: number): number {
+  if (modifier < 0) return modifier;
+  return Math.min(8, Math.floor(1.5 * Math.sqrt(modifier)));
+}
+
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
-/** INT → Hit Bonus: sqrt curve, capped at +5 */
-export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 5);
-}
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
@@ -348,14 +373,14 @@ export interface AttackResult {
   totalAtk: number;
   effectiveCreatureAC: number;
   baseDamage: number;       // before buff multipliers
-  intHitBonus: number;
+  accuracyBonus: number;
   strFloor: number;
 }
 
 /**
  * Resolve a single autoattack roll against a creature.
  *
- *   To-hit:  d20 + DEX mod + INT hit bonus + weapon affinity bonus
+ *   To-hit:  d20 + proficiency(level) + accuracy bonus (DEX) + weapon affinity
  *   Damage:  1d{weaponDie} + STR mod        (STR damage floor on non-crits)
  *
  * Class only influences:
@@ -367,9 +392,10 @@ export function resolveAttackRoll(
   creatureAC: number,
   sunderReduction: number = 0,
 ): AttackResult {
-  const dexHitMod = getStatModifier(ctx.attackerStat); // attackerStat now = DEX
+  // Autoattacks are weapon-based and DEX-driven for every class.
+  const accuracyBonus = getAccuracyBonus(getStatModifier(ctx.attackerStat));
+  const proficiency = getAccuracyProficiency(ctx.level);
   const strDmgMod = getStatModifier(ctx.str);
-  const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const baseCrit = getClassCritRange(ctx.classKey);
@@ -380,7 +406,7 @@ export function resolveAttackRoll(
   const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression, ctx.weaponItemRarity);
 
   const roll = rollD20();
-  const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
+  const totalAtk = roll + proficiency + accuracyBonus + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -393,7 +419,7 @@ export function resolveAttackRoll(
     baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }
 
-  return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, intHitBonus: ihb, strFloor: sdf };
+  return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, accuracyBonus, strFloor: sdf };
 }
 
 /**

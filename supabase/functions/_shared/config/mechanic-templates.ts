@@ -68,6 +68,12 @@ export interface MechanicTemplate {
   requiresInterval: boolean;
   params: MechanicCalcParam[];
   requiresStackOp?: StackOpSpec;
+  /**
+   * True when the coded handler resolves a d20 attack roll. Roll-based
+   * mechanics must nominate an explicit accuracy attribute
+   * (`abilities.accuracy_stat`); automatic mechanics must not carry one.
+   */
+  rollBased?: boolean;
 }
 
 /** Canonical mapping from configurable stack names to `active_effects.effect_type`. */
@@ -99,6 +105,7 @@ function t(
     requiresAmount?: boolean; requiresDuration?: boolean; requiresInterval?: boolean;
     params?: MechanicCalcParam[];
     stackOp?: StackOpSpec;
+    rollBased?: boolean;
   } = {},
 ): MechanicTemplate {
   const supportsAmount = opts.amount ?? true;
@@ -114,6 +121,7 @@ function t(
     requiresInterval: supportsInterval && (opts.requiresInterval ?? false),
     params: opts.params ?? [],
     ...(opts.stackOp ? { requiresStackOp: opts.stackOp } : {}),
+    ...(opts.rollBased ? { rollBased: true } : {}),
   };
 }
 
@@ -126,11 +134,11 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidated reusable weapon strike (Phase 3). One base ability powers
   // every class signature weapon attack; the class assignment supplies the
   // name, wording and the primary scaling attribute.
-  t('weapon_attack', { requiresAmount: true }),
+  t('weapon_attack', { requiresAmount: true, rollBased: true }),
   // Consolidated reusable spell strike (Phase 4). Fireball, Smite, Judgment and
   // Cutting Words all run through this one base; the class assignment supplies
   // the name, wording, damage type and the casting attribute.
-  t('spell_attack', { requiresAmount: true }),
+  t('spell_attack', { requiresAmount: true, rollBased: true }),
   // (Legacy per-class attack mechanics — power_strike / aimed_shot / backstab /
   // fireball / smite / cutting_words — were removed once every row moved to the
   // consolidated `weapon_attack` and `spell_attack` bases.)
@@ -162,7 +170,7 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // weapon die (`effect_config.weapon_based`) are configuration, so Eviscerate
   // and Conflagrate are the same base ability with different identity.
   t('stack_consume', {
-    requiresAmount: true,
+    requiresAmount: true, rollBased: true,
     params: [P('per_stack_multiplier', 'Bonus per consumed stack', 'mult', 'multiplier', true)],
     stackOp: { stackType: 'poison_stacks', op: 'consume_all', timing: 'on_commit', owner: 'target' },
   }),
@@ -175,7 +183,7 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // `combat_text` (`cast_text` / `hit_text` / `miss_text`) — Barrage is the
   // Ranger identity of this base.
   t('multi_attack', {
-    requiresAmount: true,
+    requiresAmount: true, rollBased: true,
     params: [
       P('arrow_count', 'Number of arrows', 'count', 'magnitude', true),
     ],
@@ -185,7 +193,7 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // (`effect_config.crit_threshold_floor`) and the wording are configuration —
   // Grand Finale is the Bard identity of this base.
   t('burst_damage', {
-    requiresAmount: true,
+    requiresAmount: true, rollBased: true,
     params: [P('crit_edge', 'Crit range widening', 'flat', 'threshold', true)],
   }),
 
@@ -290,6 +298,19 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
 
 ];
 
+/** The six attributes an ability may nominate as its accuracy stat. */
+export const ACCURACY_STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+export type AccuracyStatKey = typeof ACCURACY_STAT_KEYS[number];
+
+export function isAccuracyStatKey(v: unknown): v is AccuracyStatKey {
+  return typeof v === 'string' && (ACCURACY_STAT_KEYS as readonly string[]).includes(v);
+}
+
+/** Does this mechanic resolve a d20 attack roll? */
+export function isRollBasedMechanic(mechanicKey: string): boolean {
+  return getMechanicTemplate(mechanicKey)?.rollBased === true;
+}
+
 const BY_KEY = new Map(MECHANIC_TEMPLATES.map(m => [m.mechanicKey, m]));
 
 export function getMechanicTemplate(mechanicKey: string): MechanicTemplate | null {
@@ -348,6 +369,8 @@ export function validateAbilityForPublish(row: {
   duration_calc?: AbilityCalc | null;
   interval_ms?: number | null;
   mechanic_calcs?: Record<string, AbilityCalc> | null;
+  /** Explicit accuracy attribute; required by roll-based mechanics only. */
+  accuracy_stat?: string | null;
   status?: string | null;
 }): string[] {
   const errors: string[] = [];
@@ -372,6 +395,20 @@ export function validateAbilityForPublish(row: {
     }
     if (row.interval_ms != null && !template.supportsInterval) {
       errors.push(`interval_ms: mechanic "${row.mechanic_key}" does not tick`);
+    }
+
+    // Accuracy policy: every roll-based mechanic names its own attribute, and
+    // automatic mechanics (heals, buffs, DoTs, …) never roll and never carry one.
+    if (template.rollBased) {
+      if (active && !isAccuracyStatKey(row.accuracy_stat)) {
+        errors.push(
+          row.accuracy_stat
+            ? `accuracy_stat: "${row.accuracy_stat}" is not one of ${ACCURACY_STAT_KEYS.join(' | ')}`
+            : `accuracy_stat is required for roll-based mechanic "${row.mechanic_key}"`,
+        );
+      }
+    } else if (row.accuracy_stat) {
+      errors.push(`accuracy_stat: mechanic "${row.mechanic_key}" does not roll to hit`);
     }
 
     if (active) {

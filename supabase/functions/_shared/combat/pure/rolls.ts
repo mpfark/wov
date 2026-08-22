@@ -14,7 +14,8 @@ import {
   diminishing,
 } from '../../formulas/stats.ts';
 import {
-  getIntHitBonus,
+  getAccuracyProficiency,
+  getAccuracyBonus,
   getDexCritBonus,
   getStrDamageFloor,
   getWeaponDieForItem,
@@ -30,9 +31,11 @@ import {
   HIT_QUALITY_MULT,
   CREATURE_CRIT_MULT,
   GLANCING_WEAK_CAP,
+  type AccuracyStat,
   type HitQuality,
   type WeaponProgressionConfig,
 } from '../../formulas/combat.ts';
+
 import { getClassCritRange, getWeaponAffinityBonus } from '../../formulas/classes.ts';
 import type { RngStream, TickRandom } from './rng.ts';
 import type { Attributes, ParticipantSnapshot } from './types.ts';
@@ -47,14 +50,24 @@ export interface SeededAttack {
 }
 
 /**
- * Player → creature autoattack, identical to `resolveAttackRoll` except the
- * d20 and the damage die come from seeded streams.
+ * Player → creature attack roll for every roll-based mechanic.
+ *
+ * Accuracy is explicit: the caller supplies the configured `accuracyStat` and
+ * whether the action is weapon-based. There is no universal DEX assumption, no
+ * global INT bonus, and weapon affinity's to-hit bonus applies to weapon-based
+ * actions only.
+ *
+ *   d20 + proficiency(level) + accuracyBonus(stat mod) + affinity(hit, weapon)
  */
 export function seededAttackRoll(input: {
   rng: TickRandom;
   attacker: ParticipantSnapshot;
   creatureId: string;
   creatureAC: number;
+  /** Configured accuracy attribute for this action (never defaulted here). */
+  accuracyStat: AccuracyStat;
+  /** True only for actions that roll the weapon die (autoattacks included). */
+  weaponBased: boolean;
   sunderReduction?: number;
   /**
    * Extra d20 crit-threshold widening in whole points (Grand Finale's
@@ -71,9 +84,12 @@ export function seededAttackRoll(input: {
 }): SeededAttack {
   const { rng, attacker, creatureId, creatureAC, progression, key } = input;
   const attrs = attacker.attrs;
-  const dexHitMod = getStatModifier(attrs.dex);
+  const accuracyMod = getStatModifier(
+    (attrs as unknown as Record<string, number>)[input.accuracyStat],
+  );
+  const accuracyBonus = getAccuracyBonus(accuracyMod);
+  const proficiency = getAccuracyProficiency(attacker.level);
   const strDmgMod = getStatModifier(attrs.str);
-  const ihb = getIntHitBonus(attrs.int);
   const dcb = getDexCritBonus(attrs.dex);
   const mileCrit = attacker.level >= 28 ? 1 : 0;
   const widened =
@@ -88,6 +104,7 @@ export function seededAttackRoll(input: {
       : widened;
   const sdf = getStrDamageFloor(attrs.str);
   const affinity = getWeaponAffinityBonus(attacker.classKey, attacker.weapon.tag);
+  const affinityHitBonus = input.weaponBased ? affinity.hitBonus : 0;
   const die = getWeaponDieForItem(
     attacker.weapon.tag,
     attacker.weapon.hands,
@@ -97,7 +114,7 @@ export function seededAttackRoll(input: {
   );
 
   const roll = rng.roll(input.rollStream ?? 'attack_roll', 20, attacker.id, creatureId, ...key);
-  const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
+  const totalAtk = roll + proficiency + accuracyBonus + affinityHitBonus;
   const effectiveAC = Math.max(creatureAC - (input.sunderReduction ?? 0), 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -119,6 +136,7 @@ export function seededAttackRoll(input: {
 
   return { hit, isCrit, roll, totalAtk, effectiveAC, baseDamage };
 }
+
 
 /** Weapon-die contribution for a weapon-based ability, seeded. */
 export function seededWeaponAbilityDamage(input: {
