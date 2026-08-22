@@ -157,12 +157,35 @@ export function rollWeaponAttackDamage(
   return rollDamage(1, die) + getStatModifier(str);
 }
 
-// ── Cross-stat bonuses ───────────────────────────────────────────
+// ── Accuracy ─────────────────────────────────────────────────────
 
-/** INT → Hit Bonus: sqrt curve, capped at +5 */
-export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 5);
+/** The six attributes any ability may nominate as its accuracy stat. */
+export type AccuracyStat = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+
+const ACCURACY_STATS: readonly AccuracyStat[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+export function isAccuracyStat(v: unknown): v is AccuracyStat {
+  return typeof v === 'string' && (ACCURACY_STATS as readonly string[]).includes(v);
 }
+
+/**
+ * Level → proficiency: the class-agnostic accuracy floor that keeps pace with
+ * creature AC (which climbs ~0.575 per level). `2 + floor(level / 2)`.
+ */
+export function getAccuracyProficiency(level: number): number {
+  return 2 + Math.floor(Math.max(1, level) / 2);
+}
+
+/**
+ * Accuracy stat modifier → to-hit bonus. Positive modifiers follow a bounded
+ * sqrt curve (cap +8); a negative modifier is carried through in full so a
+ * neglected accuracy attribute still hurts.
+ */
+export function getAccuracyBonus(modifier: number): number {
+  if (modifier < 0) return modifier;
+  return Math.min(8, Math.floor(1.5 * Math.sqrt(modifier)));
+}
+
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
