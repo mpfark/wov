@@ -56,7 +56,7 @@ import {
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
-import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
+import { validateAbilityForPublish, isRollBasedMechanic } from '@/shared/config/mechanic-templates';
 import {
   composeAbilityRow, indexAppliedStatuses, type AppliedStatusDef,
 } from '@/shared/config/compose-ability';
@@ -637,6 +637,23 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {isRollBasedMechanic(draft.mechanic_key) && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Accuracy attribute</Label>
+                        <Select
+                          value={draft.accuracy_stat ?? 'none'}
+                          onValueChange={v => setDraft({ ...draft, accuracy_stat: v === 'none' ? null : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Accuracy attribute"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-xs">None (blocks publish)</SelectItem>
+                            {ATTRIBUTES.map(a => (
+                              <SelectItem key={a} value={a} className="text-xs uppercase">{a}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {draftBase?.supports_secondary_scaling && (
                       <div className="space-y-1">
                         <Label className="text-[11px]">Secondary attribute</Label>
