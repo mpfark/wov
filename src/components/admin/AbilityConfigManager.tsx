@@ -335,12 +335,15 @@ export default function AbilityConfigManager() {
    * Publish gate — a draft with structurally invalid or incomplete calcs is
    * rejected before it can be written. There is no silent legacy fallback.
    */
-  const draftErrors = useMemo(() => composed ? validateAbilityForPublish({
+  const draftErrors = useMemo(() => composed && draft ? validateAbilityForPublish({
     mechanic_key: composed.mechanic_key,
     amount_calc: composed.amount_calc,
     duration_calc: composed.duration_calc,
     mechanic_calcs: composed.mechanic_calcs,
-  }) : [], [composed]);
+    accuracy_stat: draft.accuracy_stat,
+    status: draft.status,
+  }) : [], [composed, draft]);
+
 
   const previewMagnitude = useMemo(
     () => composed?.amount_calc ? evaluateCalc(composed.amount_calc, sample) : 0,
