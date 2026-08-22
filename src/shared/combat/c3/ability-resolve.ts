@@ -157,6 +157,33 @@ function evalParam(
 /** Mechanics whose magnitude always rolls the weapon die. */
 const WEAPON_MECHANICS = new Set<ResolverMechanic>(['weapon_attack', 'multi_attack']);
 
+/** Mechanics that resolve a d20 attack roll and therefore need an accuracy stat. */
+const ROLL_BASED_MECHANICS = new Set<ResolverMechanic>([
+  'weapon_attack', 'spell_attack', 'multi_attack', 'burst_damage', 'stack_consume',
+]);
+
+type AccuracyStatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+
+/**
+ * The configured accuracy attribute of a roll-based action. Fails closed: an
+ * unconfigured or unknown value is an actionable failure, never a silent DEX.
+ */
+function accuracyStatParam(
+  cfg: Record<string, unknown>,
+  label: string,
+  failures: string[],
+): AccuracyStatKey {
+  const raw = cfg.accuracy_stat;
+  if (typeof raw === 'string' && STATS.includes(raw as CalcStat)) return raw as AccuracyStatKey;
+  failures.push(
+    raw === undefined || raw === null || raw === ''
+      ? `${label} accuracy_stat: unconfigured (required for roll-based mechanics)`
+      : `${label} accuracy_stat: '${String(raw)}' is not one of ${STATS.join(' | ')}`,
+  );
+  return 'dex';
+}
+
+
 /**
  * Per-tick DoT magnitude of the applied status, resolved from the status
  * expansion the composer wrote into `effect_config` (`dot_*` keys).
