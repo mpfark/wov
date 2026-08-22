@@ -186,6 +186,8 @@ export function getAccuracyBonus(modifier: number): number {
   return Math.min(8, Math.floor(1.5 * Math.sqrt(modifier)));
 }
 
+// ── Cross-stat bonuses ───────────────────────────────────────────
+
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
