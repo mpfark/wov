@@ -373,14 +373,14 @@ export interface AttackResult {
   totalAtk: number;
   effectiveCreatureAC: number;
   baseDamage: number;       // before buff multipliers
-  intHitBonus: number;
+  accuracyBonus: number;
   strFloor: number;
 }
 
 /**
  * Resolve a single autoattack roll against a creature.
  *
- *   To-hit:  d20 + DEX mod + INT hit bonus + weapon affinity bonus
+ *   To-hit:  d20 + proficiency(level) + accuracy bonus (DEX) + weapon affinity
  *   Damage:  1d{weaponDie} + STR mod        (STR damage floor on non-crits)
  *
  * Class only influences:
@@ -392,9 +392,10 @@ export function resolveAttackRoll(
   creatureAC: number,
   sunderReduction: number = 0,
 ): AttackResult {
-  const dexHitMod = getStatModifier(ctx.attackerStat); // attackerStat now = DEX
+  // Autoattacks are weapon-based and DEX-driven for every class.
+  const accuracyBonus = getAccuracyBonus(getStatModifier(ctx.attackerStat));
+  const proficiency = getAccuracyProficiency(ctx.level);
   const strDmgMod = getStatModifier(ctx.str);
-  const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const baseCrit = getClassCritRange(ctx.classKey);
@@ -405,7 +406,7 @@ export function resolveAttackRoll(
   const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression, ctx.weaponItemRarity);
 
   const roll = rollD20();
-  const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
+  const totalAtk = roll + proficiency + accuracyBonus + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -418,7 +419,7 @@ export function resolveAttackRoll(
     baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }
 
-  return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, intHitBonus: ihb, strFloor: sdf };
+  return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, accuracyBonus, strFloor: sdf };
 }
 
 /**
