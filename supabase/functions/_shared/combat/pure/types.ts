@@ -360,7 +360,14 @@ export interface EffectSnapshot {
  * mechanic falls back to its documented legacy default.
  */
 export interface ActionParamsSnapshot {
+  /**
+   * Roll-based mechanics only: the configured attribute that drives the to-hit
+   * roll. Never defaulted by the resolver — a roll-based action without it is a
+   * configuration failure surfaced by the loader.
+   */
+  readonly accuracyStat?: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
   /** `multi_attack`: inclusive arrow-count range rolled once per cast. */
+
   readonly minHits?: number;
   readonly maxHits?: number;
   /** `stack_consume`: damage = amount * (1 + perStackMultiplier * stacks). */

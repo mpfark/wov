@@ -56,7 +56,7 @@ import {
 import {
   evaluateCalc, type AbilityCalc, type CalcInputs,
 } from '@/shared/formulas/ability-calc';
-import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
+import { validateAbilityForPublish, isRollBasedMechanic } from '@/shared/config/mechanic-templates';
 import {
   composeAbilityRow, indexAppliedStatuses, type AppliedStatusDef,
 } from '@/shared/config/compose-ability';
@@ -85,6 +85,8 @@ export interface AuthoredAbilityRowState {
   class_scale: number;
   primary_attribute: string | null;
   secondary_attribute: string | null;
+  /** Explicit accuracy attribute — roll-based mechanics only. */
+  accuracy_stat: string | null;
   /** Status Application — which reusable status, and when/how often it lands. */
   applied_status: string | null;
   status_trigger: StatusTrigger | null;
@@ -167,7 +169,7 @@ export default function AbilityConfigManager() {
         .select(`
           id, base_ability_id, ability_key, label, description, tooltip,
           mechanic_key, status, damage_type, ability_type, admin_notes,
-          combat_text, class_scale, primary_attribute, secondary_attribute,
+          combat_text, class_scale, primary_attribute, secondary_attribute, accuracy_stat,
           applied_status, status_trigger, status_chance_pct,
           status_application_enabled
 
@@ -226,6 +228,7 @@ export default function AbilityConfigManager() {
       class_scale: typeof a.class_scale === 'number' ? a.class_scale : 1,
       primary_attribute: a.primary_attribute ?? null,
       secondary_attribute: a.secondary_attribute ?? null,
+      accuracy_stat: a.accuracy_stat ?? null,
       applied_status: a.applied_status ?? null,
       status_trigger: (a.status_trigger ?? null) as StatusTrigger | null,
       status_chance_pct: typeof a.status_chance_pct === 'number' ? a.status_chance_pct : null,
@@ -332,12 +335,15 @@ export default function AbilityConfigManager() {
    * Publish gate — a draft with structurally invalid or incomplete calcs is
    * rejected before it can be written. There is no silent legacy fallback.
    */
-  const draftErrors = useMemo(() => composed ? validateAbilityForPublish({
+  const draftErrors = useMemo(() => composed && draft ? validateAbilityForPublish({
     mechanic_key: composed.mechanic_key,
     amount_calc: composed.amount_calc,
     duration_calc: composed.duration_calc,
     mechanic_calcs: composed.mechanic_calcs,
-  }) : [], [composed]);
+    accuracy_stat: draft.accuracy_stat,
+    status: draft.status,
+  }) : [], [composed, draft]);
+
 
   const previewMagnitude = useMemo(
     () => composed?.amount_calc ? evaluateCalc(composed.amount_calc, sample) : 0,
@@ -352,6 +358,8 @@ export default function AbilityConfigManager() {
     }
 
     setSaving(true);
+    // Roll-based mechanics own an accuracy attribute; automatic ones must not.
+    const accuracyStat = isRollBasedMechanic(draft.mechanic_key) ? draft.accuracy_stat : null;
     const { error } = await supabase.from('abilities').update({
       label: draft.label,
       description: draft.description,
@@ -361,6 +369,7 @@ export default function AbilityConfigManager() {
       ability_type: draft.ability_type,
       class_scale: draft.class_scale,
       primary_attribute: draft.primary_attribute,
+      accuracy_stat: accuracyStat,
       secondary_attribute: draftBase?.supports_secondary_scaling ? draft.secondary_attribute : null,
       applied_status: draft.applied_status,
       status_trigger: draft.applied_status ? draft.status_trigger : null,
@@ -632,6 +641,23 @@ export default function AbilityConfigManager() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {isRollBasedMechanic(draft.mechanic_key) && (
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Accuracy attribute</Label>
+                        <Select
+                          value={draft.accuracy_stat ?? 'none'}
+                          onValueChange={v => setDraft({ ...draft, accuracy_stat: v === 'none' ? null : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Accuracy attribute"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-xs">None (blocks publish)</SelectItem>
+                            {ATTRIBUTES.map(a => (
+                              <SelectItem key={a} value={a} className="text-xs uppercase">{a}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {draftBase?.supports_secondary_scaling && (
                       <div className="space-y-1">
                         <Label className="text-[11px]">Secondary attribute</Label>

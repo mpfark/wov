@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 // Allocation/respec confirmation dialogs removed — handled in TrainerPanel.
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
-import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getAccuracyBonus, getAccuracyProficiency, getDexCritBonus, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
 import { getWisAntiCrit, SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount, getShieldWallChanceBonus, getShieldWallAmountBonus } from '@/shared/formulas';
 import { getWeaponDieForItem } from '@/shared/formulas/combat';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
@@ -856,8 +856,8 @@ export default function CharacterPanel({
                   // (Class identity lives in T0 abilities, not in basic-attack stats.)
                   const weaponDie = getWeaponDieForItem(mainHandTag ?? null, isTwoHanded ? 2 : 1, mainHandLevel ?? null, weaponProgression, mainHandRarity ?? null);
                   const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
-                  const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
-                  const intHit = getIntHitBonus(eInt);
+                  const hitMod = getAccuracyBonus(getStatModifier(character.dex + (equipmentBonuses.dex || 0))); // DEX — accuracy
+                  const proficiency = getAccuracyProficiency(character.level);
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = getClassCritRange(character.class) - dexCrit;
                   const dexModForCrit = getStatModifier(eDex);
@@ -876,7 +876,7 @@ export default function CharacterPanel({
                   const totalAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, offHandIsShield);
 
                    const affinityHit = isProficient ? 1 : 0;
-                   const totalHitBonus = hitMod + intHit + affinityHit;
+                   const totalHitBonus = proficiency + hitMod + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;
@@ -937,7 +937,7 @@ export default function CharacterPanel({
                   const offenseRows: DerivedRow[] = [
                     { label: 'Attack', value: `1d${weaponDie} ${dmgMod >= 0 ? '+' : ''}${dmgMod}${isProficient ? '' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack damage: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}\nTo-hit uses DEX (separate from damage).${isProficient ? '\n Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
-                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${hitMod} DEX + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})\n(Damage scales from STR; accuracy from DEX.)` },
+                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${proficiency} proficiency + ${hitMod} DEX accuracy${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})\n(Autoattack damage scales from STR; accuracy from DEX. Each ability names its own accuracy attribute.)` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critStanceActive ? `, +${critBonusAmount} Eagle Eye` : ''}`, buffed: critStanceActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];

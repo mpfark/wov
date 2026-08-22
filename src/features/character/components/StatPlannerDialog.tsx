@@ -5,7 +5,7 @@ import { Character } from '@/features/character';
 import {
   getStatModifier, getMpRegenRate,
   getStatRegen, getCpRegen,
-  getIntHitBonus, getDexCritBonus, getWisAntiCrit,
+  getAccuracyBonus, getAccuracyProficiency, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
 } from '@/lib/game-data';
@@ -87,9 +87,8 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       // Autoattacks are weapon-based for every class: DEX drives to-hit,
       // STR drives damage.
-      const atkMod = getStatModifier(eDex);
-      const intHit = getIntHitBonus(eInt);
-      const totalHit = atkMod + intHit;
+      const atkMod = getAccuracyBonus(getStatModifier(eDex));
+      const totalHit = getAccuracyProficiency(character.level) + atkMod;
       const dexCrit = getDexCritBonus(eDex);
       const critRange = getClassCritRange(character.class) - dexCrit;
       const wisAntiCrit = getWisAntiCrit(eWis);

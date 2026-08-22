@@ -12,8 +12,10 @@ describe('seed publish validation', () => {
         duration_calc: a.duration_calc,
         interval_ms: a.interval_ms,
         mechanic_calcs: a.mechanic_calcs ?? {},
+        accuracy_stat: a.accuracy_stat ?? null,
         status: 'active',
       });
+
       for (const e of errs) problems.push(`${a.class_key}:${a.ability_key} → ${e}`);
     }
     expect(problems).toEqual([]);

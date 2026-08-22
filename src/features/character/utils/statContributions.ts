@@ -20,11 +20,12 @@ import {
   getMaxMp,
   getStrDamageFloor,
   getDexCritBonus,
-  getIntHitBonus,
+  getAccuracyBonus,
   getChaBuyDiscount,
   getChaSellMultiplier,
 } from '@/lib/game-data';
 import { getWisAntiCrit } from '@/shared/formulas/combat';
+import { getStatModifier } from '@/shared/formulas/stats';
 
 export type StatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -76,10 +77,12 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
   },
   int: {
     full: 'Intelligence',
-    short: 'Arcane power, CP regen, improves hit chance',
+    short: 'Arcane power, CP regen, accuracy for arcane abilities',
     effects: [
       { label: 'CP Regen', value: e => fmtRegen(getCpRegen(e)) },
-      { label: 'Hit Chance', value: e => fmtPlus(getIntHitBonus(e)) },
+      // INT is the accuracy attribute of arcane abilities only; each ability
+      // names its own accuracy attribute.
+      { label: 'Arcane Accuracy', value: e => fmtPlus(getAccuracyBonus(getStatModifier(e))) },
     ],
   },
   wis: {
@@ -121,7 +124,7 @@ if (import.meta.env.DEV) {
       ['DEX → Max MP', () => getMaxMp(10, 20)],
       ['STR → Damage floor', () => getStrDamageFloor(20)],
       ['DEX → Crit bonus', () => getDexCritBonus(20)],
-      ['INT → Hit bonus', () => getIntHitBonus(20)],
+      ['INT → Accuracy bonus', () => getAccuracyBonus(getStatModifier(20))],
       ['WIS → Anti-crit', () => getWisAntiCrit(20)],
       ['CHA → Buy discount', () => getChaBuyDiscount(20)],
       ['CHA → Sell mult', () => getChaSellMultiplier(20)],

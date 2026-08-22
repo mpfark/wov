@@ -157,6 +157,33 @@ function evalParam(
 /** Mechanics whose magnitude always rolls the weapon die. */
 const WEAPON_MECHANICS = new Set<ResolverMechanic>(['weapon_attack', 'multi_attack']);
 
+/** Mechanics that resolve a d20 attack roll and therefore need an accuracy stat. */
+const ROLL_BASED_MECHANICS = new Set<ResolverMechanic>([
+  'weapon_attack', 'spell_attack', 'multi_attack', 'burst_damage', 'stack_consume',
+]);
+
+type AccuracyStatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+
+/**
+ * The configured accuracy attribute of a roll-based action. Fails closed: an
+ * unconfigured or unknown value is an actionable failure, never a silent DEX.
+ */
+function accuracyStatParam(
+  cfg: Record<string, unknown>,
+  label: string,
+  failures: string[],
+): AccuracyStatKey {
+  const raw = cfg.accuracy_stat;
+  if (typeof raw === 'string' && STATS.includes(raw as CalcStat)) return raw as AccuracyStatKey;
+  failures.push(
+    raw === undefined || raw === null || raw === ''
+      ? `${label} accuracy_stat: unconfigured (required for roll-based mechanics)`
+      : `${label} accuracy_stat: '${String(raw)}' is not one of ${STATS.join(' | ')}`,
+  );
+  return 'dex';
+}
+
+
 /**
  * Per-tick DoT magnitude of the applied status, resolved from the status
  * expansion the composer wrote into `effect_config` (`dot_*` keys).
@@ -198,15 +225,25 @@ function resolveParams(
   failures: string[],
 ): ActionParamsSnapshot | undefined {
   const cfg = entry.effectConfig as Record<string, unknown>;
+  // Every roll-based mechanic carries its configured accuracy attribute; the
+  // resolver reads it and never assumes one.
+  const accuracy = ROLL_BASED_MECHANICS.has(mechanic)
+    ? {
+        accuracyStat: accuracyStatParam(
+          cfg, `${entry.classKey}:${entry.classAbilityKey}`, failures,
+        ),
+      }
+    : undefined;
   switch (mechanic) {
     case 'multi_attack': {
       // The configured arrow count is authoritative and deterministic: the
       // per-arrow hit rolls are the random part and live in the resolver.
       const count = Math.max(1, Math.round(evalParam(entry, 'arrow_count', inputs, true, failures)));
-      return { minHits: count, maxHits: count };
+      return { ...accuracy, minHits: count, maxHits: count };
     }
     case 'burst_damage':
       return {
+        ...accuracy,
         // d20 threshold widening, not a probability.
         critEdge: Math.max(0, Math.round(evalParam(entry, 'crit_edge', inputs, true, failures))),
         critThresholdFloor: Math.max(2, Math.round(num(cfg.crit_threshold_floor, 17))),
@@ -215,9 +252,11 @@ function resolveParams(
 
     case 'stack_consume':
       return {
+        ...accuracy,
         perStackMultiplier: evalParam(entry, 'per_stack_multiplier', inputs, true, failures),
         stackEffectType: str(cfg.stack_type) ?? str(cfg.effect_type) ?? 'poison',
       };
+
     case 'stack_apply': {
       // Authored vocabulary: `on_hit` (weapon hits) vs `pulse` (own heartbeat).
       // The legacy resolver name is accepted as an alias.
@@ -334,14 +373,17 @@ function resolveParams(
           `${entry.classKey}:${entry.classAbilityKey}`, failures,
         ),
       };
-    // Mechanics whose behaviour is fully described by the core fields.
+    // Roll-based direct attacks: accuracy is their only parameter.
     case 'weapon_attack':
     case 'spell_attack':
+      return accuracy;
+    // Mechanics whose behaviour is fully described by the core fields.
     case 'heal':
     case 'absorb_buff':
     case 'dot_debuff':
       void durationMs;
       return undefined;
+
   }
 
 }

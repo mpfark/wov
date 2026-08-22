@@ -107,6 +107,17 @@ function effectIdentity(
   return `${row.sourceCharacterId ?? 'null'}|${row.targetId}|${row.effectType}`;
 }
 
+/**
+ * The configured accuracy attribute of a roll-based action.
+ *
+ * Configuration is resolved (and fails closed) in `c3/ability-resolve`: a
+ * roll-based ability without a valid `accuracy_stat` never reaches a tick, so
+ * the fallback here is unreachable and exists only to keep this module total.
+ */
+function accuracyStatOf(action: ActionSnapshot): 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha' {
+  return action.params?.accuracyStat ?? 'dex';
+}
+
 
 
 export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
@@ -1557,6 +1568,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
               attacker: caster,
               creatureId: current.id,
               creatureAC: current.ac,
+              accuracyStat: accuracyStatOf(a),
+              weaponBased: a.weaponBased,
               sunderReduction: sunderOf(current.id, nowMs),
               progression,
               key: [a.id, i],
@@ -1612,6 +1625,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             attacker: caster,
             creatureId: creature.id,
             creatureAC: creature.ac,
+            accuracyStat: accuracyStatOf(a),
+            weaponBased: a.weaponBased,
             sunderReduction: sunderOf(creature.id, nowMs),
             critEdgeBonus: Math.max(0, Math.floor(pr.critEdge ?? 0)),
             critThresholdFloor: pr.critThresholdFloor ?? 17,
@@ -1664,6 +1679,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             attacker: caster,
             creatureId: creature.id,
             creatureAC: creature.ac,
+            accuracyStat: accuracyStatOf(a),
+            weaponBased: a.weaponBased,
             sunderReduction: sunderOf(creature.id, nowMs),
             progression,
             key: ['finisher', a.id],
@@ -1797,6 +1814,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           attacker: caster,
           creatureId: creature.id,
           creatureAC: creature.ac,
+          accuracyStat: accuracyStatOf(a),
+          weaponBased: a.weaponBased,
           sunderReduction: sunderOf(creature.id, nowMs),
           progression,
           key: ['ability', a.id],
@@ -1844,6 +1863,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         attacker: p,
         creatureId: creature.id,
         creatureAC: creature.ac,
+        // Autoattacks are always weapon-based and always DEX-driven.
+        accuracyStat: 'dex',
+        weaponBased: true,
         sunderReduction: sunderOf(creature.id, nowMs),
         progression,
         key: [t],

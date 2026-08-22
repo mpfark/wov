@@ -11,7 +11,8 @@
 
 import {
   getStatModifier,
-  getIntHitBonus,
+  getAccuracyBonus,
+  getAccuracyProficiency,
   getWeaponAffinityBonus,
   getWeaponDieForItem,
 } from '@/shared/formulas';
@@ -20,6 +21,8 @@ export interface PredictionContext {
   classKey: string;
   /** Effective DEX (drives autoattack to-hit roll). */
   attackerStat: number;
+  /** Character level (drives the accuracy proficiency term). */
+  level: number;
   int: number;
   /** Effective STR (drives autoattack damage). */
   str: number;
@@ -42,22 +45,22 @@ export interface PredictionResult {
 /**
  * Estimate average damage conservatively (weapon-die based).
  *
- *   To-hit:  d20 + DEX mod + INT hit bonus + weapon affinity
+ *   To-hit:  d20 + proficiency(level) + DEX accuracy bonus + weapon affinity
  *   Damage:  avg(1d{die}) + STR mod (× affinity)
  *
  * Returns { shouldPredict: false } if hit chance is too uncertain.
  */
 export function predictConservativeDamage(ctx: PredictionContext): PredictionResult {
-  const dexHitMod = getStatModifier(ctx.attackerStat); // attackerStat = DEX
+  const accuracyBonus = getAccuracyBonus(getStatModifier(ctx.attackerStat)); // DEX
+  const proficiency = getAccuracyProficiency(ctx.level);
   const strDmgMod = getStatModifier(ctx.str);
-  const ihb = getIntHitBonus(ctx.int);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const effectiveAC = Math.max(ctx.creatureAC - (ctx.sunderReduction || 0), 0);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
   const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, undefined, ctx.weaponItemRarity);
 
-  // Estimate hit chance: need roll + dexHitMod + ihb + affinity >= effectiveAC
-  const threshold = Math.max(effectiveAC - dexHitMod - ihb - affinity.hitBonus, 1);
+  // Estimate hit chance: roll + proficiency + accuracy + affinity >= effectiveAC
+  const threshold = Math.max(effectiveAC - proficiency - accuracyBonus - affinity.hitBonus, 1);
   const hitChance = Math.min((21 - threshold) / 20, 1);
 
   if (hitChance < 0.70) {

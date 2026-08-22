@@ -37,6 +37,9 @@ let loader: Loader;
 const calc = (base: number) => ({ base, terms: [] });
 
 /** One joined `class_ability_assignments` row as the loader expects it. */
+/** Mechanics that resolve a d20 attack roll and therefore need accuracy_stat. */
+const ROLL_BASED = new Set(['weapon_attack','spell_attack','multi_attack','burst_damage','stack_consume']);
+
 function row(opts: {
   classKey: string;
   abilityKey: string;
@@ -61,11 +64,13 @@ function row(opts: {
       id: `${opts.abilityKey}-id`,
       ability_key: opts.abilityKey,
       mechanic_key: opts.mechanicKey,
+      accuracy_stat: ROLL_BASED.has(opts.mechanicKey) ? 'dex' : null,
       status: opts.abilityStatus ?? 'active',
       amount_calc: calc(opts.amount),
       duration_calc: null,
       interval_ms: null,
-      effect_config: {},
+      // Roll-based mechanics must nominate an accuracy attribute (fail-closed).
+      effect_config: ROLL_BASED.has(opts.mechanicKey) ? { accuracy_stat: 'dex' } : {},
       mechanic_calcs: opts.mechanicCalcs ?? {},
     },
   };

@@ -46,6 +46,7 @@ export function useAbilityRegistry(): { loaded: boolean } {
             ability:abilities (
               ability_key, label, description, tooltip, mechanic_key, ability_type, status,
               damage_type, combat_text, class_scale, primary_attribute, secondary_attribute,
+              accuracy_stat,
               applied_status, status_trigger, status_chance_pct, status_application_enabled,
               on_hit_effect,
               base:base_abilities (

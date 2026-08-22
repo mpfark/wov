@@ -635,7 +635,7 @@ exports[`C3a golden abilities > ranger:barrage > matches its stored golden diges
   ],
   "creatures": [
     {
-      "hp": "400->384",
+      "hp": "400->301",
       "id": "crt-1",
       "killed": false,
     },
@@ -643,15 +643,15 @@ exports[`C3a golden abilities > ranger:barrage > matches its stored golden diges
   "effectDeletes": 0,
   "effectUpserts": [],
   "events": [
-    "ability_miss",
-    "ability_miss",
-    "ability_miss",
+    "ability_hit",
+    "ability_hit",
+    "ability_hit",
     "volley",
     "autoattack_hit",
     "autoattack_hit",
     "creature_hit",
   ],
-  "rngDraws": 14,
+  "rngDraws": 17,
 }
 `;
 
