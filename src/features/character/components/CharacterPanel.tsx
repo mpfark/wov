@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 // Allocation/respec confirmation dialogs removed — handled in TrainerPanel.
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
-import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getAccuracyBonus, getAccuracyProficiency, getDexCritBonus, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getAccuracyBonus, getAccuracyProficiency, getCombatInsightBonus, getDexCritBonus, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
 import { getWisAntiCrit, SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount, getShieldWallChanceBonus, getShieldWallAmountBonus } from '@/shared/formulas';
 import { getWeaponDieForItem } from '@/shared/formulas/combat';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
@@ -858,6 +858,7 @@ export default function CharacterPanel({
                   const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
                   const hitMod = getAccuracyBonus(getStatModifier(character.dex + (equipmentBonuses.dex || 0))); // DEX — accuracy
                   const proficiency = getAccuracyProficiency(character.level);
+                  const insightBonus = getCombatInsightBonus('dex', eInt); // INT Combat Insight
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = getClassCritRange(character.class) - dexCrit;
                   const dexModForCrit = getStatModifier(eDex);
@@ -876,7 +877,7 @@ export default function CharacterPanel({
                   const totalAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, offHandIsShield);
 
                    const affinityHit = isProficient ? 1 : 0;
-                   const totalHitBonus = proficiency + hitMod + affinityHit;
+                   const totalHitBonus = proficiency + hitMod + insightBonus + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;

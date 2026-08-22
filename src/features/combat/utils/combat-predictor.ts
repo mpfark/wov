@@ -13,6 +13,7 @@ import {
   getStatModifier,
   getAccuracyBonus,
   getAccuracyProficiency,
+  getCombatInsightBonus,
   getWeaponAffinityBonus,
   getWeaponDieForItem,
 } from '@/shared/formulas';
@@ -45,13 +46,15 @@ export interface PredictionResult {
 /**
  * Estimate average damage conservatively (weapon-die based).
  *
- *   To-hit:  d20 + proficiency(level) + DEX accuracy bonus + weapon affinity
+ *   To-hit:  d20 + proficiency(level) + DEX accuracy bonus + INT Combat Insight
+ *            + weapon affinity
  *   Damage:  avg(1d{die}) + STR mod (× affinity)
  *
  * Returns { shouldPredict: false } if hit chance is too uncertain.
  */
 export function predictConservativeDamage(ctx: PredictionContext): PredictionResult {
   const accuracyBonus = getAccuracyBonus(getStatModifier(ctx.attackerStat)); // DEX
+  const insightBonus = getCombatInsightBonus('dex', ctx.int); // INT Combat Insight
   const proficiency = getAccuracyProficiency(ctx.level);
   const strDmgMod = getStatModifier(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
@@ -60,7 +63,10 @@ export function predictConservativeDamage(ctx: PredictionContext): PredictionRes
   const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, undefined, ctx.weaponItemRarity);
 
   // Estimate hit chance: roll + proficiency + accuracy + affinity >= effectiveAC
-  const threshold = Math.max(effectiveAC - proficiency - accuracyBonus - affinity.hitBonus, 1);
+  const threshold = Math.max(
+    effectiveAC - proficiency - accuracyBonus - insightBonus - affinity.hitBonus,
+    1,
+  );
   const hitChance = Math.min((21 - threshold) / 20, 1);
 
   if (hitChance < 0.70) {
