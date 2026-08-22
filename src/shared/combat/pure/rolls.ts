@@ -14,7 +14,8 @@ import {
   diminishing,
 } from '../../formulas/stats';
 import {
-  getIntHitBonus,
+  getAccuracyProficiency,
+  getAccuracyBonus,
   getDexCritBonus,
   getStrDamageFloor,
   getWeaponDieForItem,
@@ -30,9 +31,11 @@ import {
   HIT_QUALITY_MULT,
   CREATURE_CRIT_MULT,
   GLANCING_WEAK_CAP,
+  type AccuracyStat,
   type HitQuality,
   type WeaponProgressionConfig,
 } from '../../formulas/combat';
+
 import { getClassCritRange, getWeaponAffinityBonus } from '../../formulas/classes';
 import type { RngStream, TickRandom } from './rng';
 import type { Attributes, ParticipantSnapshot } from './types';
