@@ -19,10 +19,25 @@ function resolverEventTypes(): string[] {
   const re = /emit\(/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(src))) {
-    // The message is always a template literal, so the type argument is
-    // everything up to the first backtick.
-    const head = src.slice(m.index + m[0].length, src.indexOf('`', m.index));
-    for (const lit of head.matchAll(/'([a-z0-9_]+)'/g)) types.add(lit[1]);
+    // Scan the first argument only: stop at the top-level comma (or the
+    // message template literal), so unrelated literals never leak in.
+    let depth = 0;
+    let head = '';
+    for (let i = m.index + m[0].length; i < src.length; i++) {
+      const ch = src[i];
+      if (ch === '`') break;
+      if (ch === '(' || ch === '[' || ch === '{') depth++;
+      else if (ch === ')' || ch === ']' || ch === '}') {
+        if (depth === 0) break;
+        depth--;
+      } else if (ch === ',' && depth === 0) break;
+      head += ch;
+    }
+    // A ternary selects between two literal types; a comparison against a
+    // non-type literal is discarded by requiring the literal to follow `?`,
+    // `:` or start the argument.
+    const cleaned = head.replace(/[a-zA-Z0-9_.$\[\]]+\s*[=!]==?\s*'[a-z0-9_]+'/g, '');
+    for (const lit of cleaned.matchAll(/'([a-z0-9_]+)'/g)) types.add(lit[1]);
   }
   return [...types].sort();
 }
@@ -65,7 +80,7 @@ const AMBIENT_BY_DESIGN = new Set([
   'level_bonus',
 ]);
 
-const OUTCOME_PREFIX = /^(?:ability|attack|autoattack|offhand|creature)_/;
+const OUTCOME_PREFIX = /^(?:ability|attack|autoattack|offhand|creature)_(?:hit|crit|miss)$/;
 
 describe('server event coverage', () => {
   const emitted = resolverEventTypes();
