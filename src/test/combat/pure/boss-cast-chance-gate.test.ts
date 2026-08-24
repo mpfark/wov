@@ -37,15 +37,26 @@ const cast = (over: Partial<BossCastSnapshot> = {}): BossCastSnapshot => ({
   ...over,
 });
 
+/**
+ * A long-lived target and a one-tick cast/cooldown so the boss gets a fresh
+ * start opportunity on (almost) every simulated tick — otherwise channel time
+ * and cooldown, not the gate, would decide the count.
+ */
 function starts(chance: number, ticks = 1) {
-  const out = resolveTickPure(
+  return resolveTickPure(
     snapshot({
-      participants: [participant()],
-      creatures: [creature({ rarity: 'boss', bossCast: cast({ chance }) })],
+      participants: [participant({ hp: 500_000, maxHp: 500_000 })],
+      creatures: [
+        creature({
+          rarity: 'boss',
+          hp: 500_000,
+          maxHp: 500_000,
+          bossCast: cast({ chance, castTicks: 1, cooldownTicks: 1 }),
+        }),
+      ],
       ticksToSimulate: ticks,
     }),
   );
-  return out;
 }
 
 describe('boss cast — per-tick start chance', () => {
@@ -69,10 +80,13 @@ describe('boss cast — per-tick start chance', () => {
     expect(decide()).toBe(first);
   });
 
-  it('a partial chance gates some ticks but not all over a long window', () => {
-    const many = starts(0.5, 60).events.filter((e) => e.type === 'boss_cast_start').length;
-    const always = starts(1, 60).events.filter((e) => e.type === 'boss_cast_start').length;
-    expect(many).toBeGreaterThan(0);
-    expect(many).toBeLessThan(always);
+  it('a partial chance gates some start opportunities but not all', () => {
+    const count = (chance: number) =>
+      starts(chance, 120).events.filter((e) => e.type === 'boss_cast_start').length;
+    const always = count(1);
+    const half = count(0.5);
+    expect(always).toBeGreaterThan(10);
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(always);
   });
 });
