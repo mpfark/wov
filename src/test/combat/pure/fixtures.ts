@@ -251,6 +251,10 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
               damageAoe: int(0, 20),
               damageType: 'fire',
               targetMode: pick(['tank_strict', 'tank_preferred', 'random_alive'] as const),
+              // Parity/golden fixtures pin the start chance to 1 so the gate is
+              // never the reason a cast is absent; the gate itself is covered by
+              // its own deterministic test.
+              chance: 1,
               channeling: g() < 0.5,
               storedPowerCap: 5,
               primaryShare: 1,
