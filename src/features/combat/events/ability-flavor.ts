@@ -168,9 +168,7 @@ export function renderAbilityFlavor(
 ): { text: string; selfText: string; statesAmount: boolean } | null {
   const slot = FLAVOR_SLOT[serverType];
   if (!slot || !tokens.abilityKey) return null;
-  const authored = getAuthoredCombatText(tokens.abilityKey)[slot];
-  const template =
-    typeof authored === 'string' && authored.trim().length > 0 ? authored.trim() : null;
+  const template = resolveSlotTemplate(tokens.abilityKey, slot);
   if (!template) return null;
   return {
     text: fill(template, tokens, false),
@@ -178,3 +176,27 @@ export function renderAbilityFlavor(
     statesAmount: templateStatesAmount(template),
   };
 }
+
+/**
+ * Render a hit / crit / miss outcome line for an ability.
+ *
+ * Precedence: authored canonical slot → legacy alias → verb alias composed into
+ * the slot sentence → generic identity sentence. Never null when the event
+ * carries an ability key, so an ability outcome can never fall back to the
+ * resolver's unconjugated debug prose.
+ */
+export function renderAbilityOutcome(
+  serverType: string,
+  tokens: FlavorTokens,
+): { text: string; selfText: string; statesAmount: boolean } | null {
+  const slot = FLAVOR_SLOT[serverType];
+  if (!slot || (slot !== 'hit' && slot !== 'miss') || !tokens.abilityKey) return null;
+  const template = resolveSlotTemplate(tokens.abilityKey, slot) ?? GENERIC_OUTCOME[slot] ?? null;
+  if (!template) return null;
+  return {
+    text: fill(template, tokens, false),
+    selfText: resolveSelfMarkers(fill(template, tokens, true)),
+    statesAmount: templateStatesAmount(template),
+  };
+}
+
