@@ -39,8 +39,10 @@ const STAGE5_TYPES = new Set([
   // Abilities
   'ability_cast',
   'ability_hit',
+  'ability_crit',
   'ability_miss',
   'ability_fail',
+
   // Procs
   'proc',
   'buff_proc',
