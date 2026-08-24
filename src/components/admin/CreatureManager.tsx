@@ -16,9 +16,8 @@ import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
 import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
-import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
+import { renderFlavor } from '@shared/proc-log-format';
 import { bossCastFormFromCreature, buildBossCastSave } from './boss-cast-form';
-import { BOSS_CAST_DEFAULTS } from '@/shared/combat/c3/boss-cast-contract';
 
 
 interface Creature {
