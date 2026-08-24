@@ -39,18 +39,24 @@ Presentation-only correction. No change to combat math, accuracy, damage, mitiga
 
 ### C. Ability highlighting
 - Add an `ability` family to `EventLogFamily` / `FAMILY_STYLE` (`event-log-styles.ts`) and a `.log-edge-ability` rule in `src/index.css` using the existing gold/accent token: slightly stronger gold left border, medium-weight brighter ability text, ordinary structured amount token. No emoji, badge, container or animation.
-- `presentation.ts`: `ability` type with a **player** source resolves to the `ability` family; creature-sourced lines keep `threat`. Damage-type and perspective styling are untouched. A successful Judgment hit can no longer render neutral grey.
+- `presentation.ts`: `ability` type with a **player** source resolves to the `ability` family; creature-sourced lines keep `threat`.
+- The family supplies the **base** ability identity only. It is applied so that the more specific structured styling still wins where it exists: damage-type accents on the number/text and critical emphasis (`crit` → `strong`) are layered on top and are not overwritten. A successful Judgment hit can no longer render neutral grey; a critical one keeps its extra emphasis.
 
 ## Tests
 New/extended deterministic tests (no wording asserted that the server owns):
 - `raises → raise`, never `rais`; both coordinated verbs conjugated for self (`You raise … and turn …`); observer stays third person (`raises … and turns …`).
-- Full mitigation still yields exactly one rendered line with one `[N blocked]` token; partial mitigation keeps both lines.
-- Judgment cast resolves via exact ability key; hit uses authored flavor; miss keeps ability identity; damage renders exactly once as `[N]`; cast/hit/miss all classify as the `ability` presentation family.
+- Full mitigation still yields exactly one rendered line with one token; partial mitigation keeps both lines.
+- Shield template scoping: a `block`/`shield_block` fold uses the shield line; an absorb/immunity fold keeps its own effect identity and is never described as a shield block.
+- Judgment cast resolves via exact ability key; hit uses authored canonical `hit` text; miss keeps ability identity; damage renders exactly once as `[N]`; cast/hit/miss all classify as the `ability` presentation family.
+- Alias compatibility: a legacy `hit_text` / `miss_text` row still renders, and a save/merge preserves unknown `combat_text` keys.
+- Critical regression: `ability_crit` yields `crit: true`, keeps critical emphasis distinct from `ability_hit`, and still renders the amount exactly once.
+- **Event-type coverage contract test**: every presentation event type emitted by the authoritative resolver is present in `SERVER_EVENT_TYPES`, `SERVER_EVENT_TYPE_MAP` and the relevant structured-builder registration. The test fails if a future event like `ability_crit` could silently fall into legacy prose.
 - Player, party-observer and unrelated-observer perspectives stay grammatical.
 - Regression guards: Holy Shield, Ignite pulse folding, ordinary autoattacks, creature attacks.
 
 ## Verification
-Focused suites, full test suite, typecheck and production build. Report root cause, files changed, exact before/after rendered lines and test results. No deploy and no publish in the implementation turn.
+Focused suites, full test suite, typecheck and production build. Report root cause, files changed, exact before/after rendered lines, the proposed Judgment `combat_text` before/after, and test results. No deploy, no publish, and the Judgment data migration is not applied in the implementation turn.
 
 ## Files expected to change
-`src/features/combat/events/perspective.ts`, `tick-event-builder.ts`, `ability-flavor.ts`, `log-event.ts`, `presentation.ts`, `src/features/combat/utils/event-log-styles.ts`, `src/features/combat/utils/ability-text.ts` (authored Judgment text via `src/shared/config/ability-seed.ts`), `src/index.css`, plus tests under `src/test/combat/` and `src/features/combat/events/__tests__/`.
+`src/features/combat/events/perspective.ts`, `tick-event-builder.ts`, `ability-flavor.ts`, `log-event.ts`, `presentation.ts`, `src/features/combat/utils/event-log-styles.ts`, `src/features/combat/utils/ability-text.ts`, `src/shared/config/ability-seed.ts` (canonical Judgment `hit`/`miss`), `src/index.css`, a prepared-but-unapplied Judgment `combat_text` migration, plus tests under `src/test/combat/` and `src/features/combat/events/__tests__/`.
+
