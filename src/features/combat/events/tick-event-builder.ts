@@ -372,6 +372,7 @@ export function buildTickLogEvent(
   const isStage7 = STAGE7_TYPES.has(ev.type);
   const stage8 = STAGE8_SPEC[ev.type];
   const flavor = FLAVOR_SPEC[ev.type];
+  const isAbilityOutcome = ABILITY_OUTCOME_TYPES.has(ev.type);
   if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor) return null;
 
   const type = mapServerEventType(ev.type);
@@ -379,40 +380,51 @@ export function buildTickLogEvent(
 
   // Ability-authored lines: the configured template owns the sentence, so the
   // server's fallback prose is only used when nothing is authored.
+  const flavorTokens = {
+    attacker: ev.attacker_name,
+    target: ev.target_name ?? ev.creature_name,
+    amount: ev.damage ?? null,
+    stacks: ev.stacks ?? null,
+    maxStacks: ev.max_stacks ?? null,
+    abilityKey: ev.ability_key ?? null,
+    selfName: localCharacterName,
+    effectLabel: ev.effect_type ? getAbilityLabel(ev.effect_type) : null,
+  };
   const authored = flavor
-    ? renderAbilityFlavor(ev.type, {
-        attacker: ev.attacker_name,
-        target: ev.target_name ?? ev.creature_name,
-        amount: ev.damage ?? null,
-        stacks: ev.stacks ?? null,
-        maxStacks: ev.max_stacks ?? null,
-        abilityKey: ev.ability_key ?? null,
-        selfName: localCharacterName,
-        effectLabel: ev.effect_type ? getAbilityLabel(ev.effect_type) : null,
-      })
-    : null;
+    ? renderAbilityFlavor(ev.type, flavorTokens)
+    : isAbilityOutcome
+      ? renderAbilityOutcome(ev.type, flavorTokens)
+      : null;
 
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
-  // A fully-mitigated swing reads as one decisive line. The wording states the
-  // proven outcome (nothing landed) and the amount moves into the token, so the
-  // prose drops the server's inline `[N]`.
-  if (ev.fold?.kind === 'full_block') {
-    prose = prose
-      .replace(/\s*\[\d+\]\s*$/, '')
-      .replace(/\bblocks\b/, 'raises a shield and turns')
-      .replace(/\bblow\.?$/, 'blow aside!');
-  }
-  const remoteMessage = authored ? authored.text : humanizeAbilityKeys(prose);
-  const message = authored
+  // A fully-mitigated swing reads as one decisive line: the authored pair states
+  // the proven outcome (nothing landed) in the grammar each perspective needs,
+  // and the amount moves into the structured token.
+  const foldPair =
+    ev.fold?.kind === 'full_block'
+      ? mitigationFoldPair(ev.fold.source, ev.target_name, ev.attacker_name ?? ev.creature_name)
+      : null;
+  if (ev.fold?.kind === 'full_block') prose = prose.replace(/\s*\[\d+\]\s*$/, '');
+  const remoteMessage = foldPair
+    ? foldPair.observer
+    : authored
+      ? authored.text
+      : humanizeAbilityKeys(prose);
+  const message = foldPair
     ? isLocal
-      ? authored.selfText
-      : authored.text
-    : isLocal
-      ? applySelfPerspective(remoteMessage, localCharacterName)
-      : remoteMessage;
+      ? foldPair.self
+      : foldPair.observer
+    : authored
+      ? isLocal
+        ? authored.selfText
+        : authored.text
+      : isLocal
+        ? applySelfPerspective(remoteMessage, localCharacterName)
+        : remoteMessage;
+
 
 
 
