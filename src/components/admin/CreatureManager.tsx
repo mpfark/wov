@@ -276,7 +276,80 @@ export default function CreatureManager() {
     }
 
     const generated = generateCreatureStats(form.level, form.rarity);
-    const payload = {
+
+    // ── Boss cast: canonical write, preservation, validation ──────────────
+    // One authoritative stored shape (millisecond timing, `base_amount` /
+    // `base_aoe_amount`, `cast_flavor` / `hit_flavor`, `accumulate.*`). The
+    // legacy `amount` mirror is retired so no value has two homes, and every
+    // key the form does not expose — stable identity included — survives a
+    // round-trip untouched.
+    const castRaw = form.boss_cast_raw ?? undefined;
+    const castExisting = (castRaw ?? {}) as Record<string, unknown>;
+    const castEnabledNow =
+      (form.rarity === 'boss' || form.rarity === 'rare') && form.boss_cast_enabled;
+    let bossCastPayload: Record<string, unknown> | null = null;
+    if (castEnabledNow) {
+      const castLabel = form.boss_cast_label.trim() || BOSS_CAST_DEFAULTS.label;
+      // Identity is stable: an already-stored key is kept; otherwise the
+      // deterministic, creature-anchored derivation is used — the same rule the
+      // decoder fallback and the backfill apply.
+      const [identity] = deriveCastIdentities([{
+        creatureId: selectedId ?? 'new',
+        label: castLabel,
+        abilityKey: (castExisting.ability_key as string | undefined) ?? null,
+      }]);
+      const sp = (castExisting.stored_power ?? {}) as Record<string, unknown>;
+      const acc = (castExisting.accumulate ?? {}) as Record<string, unknown>;
+      bossCastPayload = buildCanonicalBossCast({
+        abilityKey: identity.key,
+        enabled: true,
+        label: castLabel,
+        damageType: form.boss_cast_damage_type || null,
+        castFlavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+        hitFlavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
+        baseAmount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
+        baseAoeAmount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
+        castMs: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
+        cooldownMs: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
+        chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
+        lockMs: Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS,
+        targetMode: (castExisting.target_mode as any) === 'tank_strict'
+          || (castExisting.target_mode as any) === 'random_alive'
+          ? (castExisting.target_mode as any)
+          : 'tank_preferred',
+        storedPower: {
+          consumeMode: (sp.consume_mode as string) ?? BOSS_CAST_DEFAULTS.consumeMode,
+          consumePct: Number(sp.consume_pct ?? BOSS_CAST_DEFAULTS.consumePct),
+          consumeAmount: Number(sp.consume_amount ?? sp.consume_fixed ?? 0),
+          primaryShare: Math.max(0, Number(form.boss_cast_primary_share)),
+          aoeShare: Math.max(0, Number(form.boss_cast_aoe_share)),
+          cap: Math.max(0, Math.floor(form.boss_cast_sp_cap)) || null,
+        },
+        accumulate: {
+          enabled: typeof acc.enabled === 'boolean' ? (acc.enabled as boolean) : true,
+          source: (acc.source as string) ?? 'primary_target',
+          method: (acc.method as string) ?? 'expected',
+          pauseAutoattacks: typeof acc.pause_autoattacks === 'boolean'
+            ? (acc.pause_autoattacks as boolean)
+            : true,
+          critDuringCast: (acc.crit_during_cast as string) ?? 'disabled',
+        },
+      }, castRaw);
+
+      const problems = validateCanonicalBossCast(bossCastPayload, {
+        rarity: form.rarity as any,
+        creatureId: selectedId ?? 'new',
+        level: form.level,
+        tickRateMs: TICK_RATE_MS,
+      });
+      if (problems.length > 0) {
+        setLoading(false);
+        toast.error(`Boss cast cannot be saved: ${problems[0]}`);
+        return;
+      }
+    }
+
+
       name: form.name.trim(),
       description: form.description.trim(),
       node_id: form.node_id || null,
