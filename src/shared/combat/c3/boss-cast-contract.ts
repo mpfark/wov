@@ -122,17 +122,41 @@ function bool(o: Rec | null, key: string): boolean | null {
   return typeof raw === 'boolean' ? raw : null;
 }
 
-/** ms -> ticks on the authoritative grid: rounded, never below one tick. */
+/** Raised when the caller supplies timing context the contract cannot honour. */
+export class BossCastContractError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BossCastContractError';
+  }
+}
+
+/** The authoritative tick rate must be a finite, positive millisecond value. */
+export function isValidTickRateMs(tickRateMs: unknown): tickRateMs is number {
+  return typeof tickRateMs === 'number' && Number.isFinite(tickRateMs) && tickRateMs > 0;
+}
+
+/**
+ * ms -> ticks on the authoritative grid: rounded, never below one tick.
+ *
+ * There is deliberately no fallback rate. Timing comes from the
+ * encounter/snapshot cadence; silently substituting 2000 ms would let a broken
+ * context publish casts on a grid nobody authorised. An invalid rate fails
+ * closed.
+ */
 export function msToTicks(ms: number, tickRateMs: number, minTicks = 1): number {
-  const rate = Number.isFinite(tickRateMs) && tickRateMs > 0 ? tickRateMs : 2000;
-  return Math.max(minTicks, Math.round(ms / rate));
+  if (!isValidTickRateMs(tickRateMs)) {
+    throw new BossCastContractError(
+      `boss cast timing requires an authoritative tick rate; received ${String(tickRateMs)}`,
+    );
+  }
+  return Math.max(minTicks, Math.round(ms / tickRateMs));
 }
 
 /**
  * The label slug used as a *temporary* identity for rows that predate
  * `ability_key`. Punctuation and case collapse, so "Headsman's Measure" and
- * "Headsmans  measure" produce the same slug — which is exactly why the
- * backfill validates uniqueness before writing.
+ * "Headsmans  measure" produce the same slug — which is exactly why the slug is
+ * never used bare: it is always anchored to the immutable creature id.
  */
 export function slugifyCastLabel(label: string): string {
   return label
@@ -150,6 +174,24 @@ export function disambiguateCastKey(slug: string, creatureId: string): string {
   return `${slug}__${creatureId.replace(/-/g, '').slice(0, 8)}`;
 }
 
+/**
+ * The ONE fallback identity rule, shared by the single-row runtime decoder and
+ * the backfill. A single row cannot know whether another boss shares its label,
+ * so the creature-anchored form is always used — the decoder and the migration
+ * therefore derive byte-identical keys, and punctuation/case collisions stay
+ * unique because the anchor differs.
+ */
+export function deriveCastFallbackKey(
+  label: string | null | undefined,
+  creatureId: string,
+): string | null {
+  const anchor = (creatureId ?? '').trim();
+  if (!anchor) return null;
+  const slug = slugifyCastLabel((label ?? '').trim() || BOSS_CAST_DEFAULTS.label)
+    || slugifyCastLabel(BOSS_CAST_DEFAULTS.label);
+  return disambiguateCastKey(slug, anchor);
+}
+
 export interface CastIdentityRow {
   readonly creatureId: string;
   readonly label: string | null | undefined;
@@ -160,40 +202,27 @@ export interface CastIdentityRow {
 export interface CastIdentityResult {
   readonly creatureId: string;
   readonly key: string;
-  /** True when the base slug collided and the creature-anchored form was used. */
-  readonly disambiguated: boolean;
+  /** True when the key came from the creature-anchored label fallback. */
+  readonly derived: boolean;
 }
 
 /**
- * Derive canonical identities for a whole set of rows. Used by the backfill
- * preparation, the validation tests, and the collision report. Stable across
- * reruns: the result depends only on (label, creatureId) pairs, not on order.
+ * Derive canonical identities for a set of rows using exactly the rule the
+ * runtime decoder applies to a single row. Stable across reruns and independent
+ * of order: the result depends only on (label, creatureId).
  */
 export function deriveCastIdentities(rows: readonly CastIdentityRow[]): CastIdentityResult[] {
-  const base = rows.map((r) => {
+  return rows.map((r) => {
     const existing = r.abilityKey?.trim();
-    const slug = slugifyCastLabel((r.label ?? '').trim() || BOSS_CAST_DEFAULTS.label);
+    if (existing) return { creatureId: r.creatureId, key: existing, derived: false };
     return {
       creatureId: r.creatureId,
-      existing: existing && existing.length > 0 ? existing : null,
-      slug: slug || slugifyCastLabel(BOSS_CAST_DEFAULTS.label),
-    };
-  });
-  const counts = new Map<string, number>();
-  for (const b of base) {
-    if (b.existing) continue;
-    counts.set(b.slug, (counts.get(b.slug) ?? 0) + 1);
-  }
-  return base.map((b) => {
-    if (b.existing) return { creatureId: b.creatureId, key: b.existing, disambiguated: false };
-    const collided = (counts.get(b.slug) ?? 0) > 1;
-    return {
-      creatureId: b.creatureId,
-      key: collided ? disambiguateCastKey(b.slug, b.creatureId) : b.slug,
-      disambiguated: collided,
+      key: deriveCastFallbackKey(r.label, r.creatureId) ?? '',
+      derived: true,
     };
   });
 }
+
 
 /** Validation used by the backfill: keys must exist, be non-empty and unique. */
 export function validateCastIdentities(results: readonly CastIdentityResult[]): string[] {
@@ -231,12 +260,29 @@ export function legacyCastDamage(level: number): number {
 }
 
 /**
+ * True when a stored cast object should be treated as live for this rarity.
+ * The single owner of "is this cast on?", shared by the runtime decoder and the
+ * admin editor's load transform so the checkbox can never disagree with the
+ * resolver.
+ */
+export function bossCastIsEnabled(raw: unknown, rarity: CreatureRarity | null | undefined): boolean {
+  if (!isRec(raw) || Object.keys(raw).length === 0) return false;
+  return castEnabled(rarity, bool(raw, 'enabled'));
+}
+
+/**
  * Normalize a stored `boss_cast` object into the runtime contract, or null when
- * the creature does not telegraph. Never throws on legacy shapes.
+ * the creature does not telegraph. Never throws on legacy shapes; throws only
+ * when the *caller's* timing context is invalid (see `msToTicks`).
  */
 export function normalizeBossCast(raw: unknown, ctx: BossCastContext): BossCastSnapshot | null {
   if (!isRec(raw) || Object.keys(raw).length === 0) return null;
   if (!castEnabled(ctx.rarity, bool(raw, 'enabled'))) return null;
+  if (!isValidTickRateMs(ctx.tickRateMs)) {
+    throw new BossCastContractError(
+      `boss cast decode requires an authoritative tick rate; received ${String(ctx.tickRateMs)}`,
+    );
+  }
 
   const acc = isRec(raw.accumulate) ? (raw.accumulate as Rec) : null;
   const sp = isRec(raw.stored_power) ? (raw.stored_power as Rec) : null;
@@ -247,9 +293,9 @@ export function normalizeBossCast(raw: unknown, ctx: BossCastContext): BossCastS
     str(raw, 'abilityKey') ??
     str(raw, 'cast_key') ??
     str(raw, 'castKey') ??
-    slugifyCastLabel(label) ??
-    null;
+    deriveCastFallbackKey(label, ctx.creatureId);
   if (!abilityKey) return null;
+
 
   const castTicks =
     posNum(raw, 'cast_ticks') ??
@@ -431,25 +477,35 @@ export function buildCanonicalBossCast(
 }
 
 /**
- * Authoring-side validation. An enabled cast must decode into a runnable
- * contract: identity, positive timing, and non-zero damage somewhere.
+ * Authoring-side validation. Applies to *enabled* casts only: a disabled legacy
+ * configuration is allowed to stay incomplete rather than forcing the admin to
+ * finish or delete it.
+ *
+ * `chance` is accepted on the inclusive range [0, 1] — exactly the range the
+ * runtime contract accepts. (A stored 0 means "never starts"; it is a distinct
+ * authoring statement from `enabled: false`, which also stops accumulation.)
  */
 export function validateCanonicalBossCast(
   stored: Record<string, unknown>,
   ctx: BossCastContext,
 ): string[] {
   const problems: string[] = [];
+  if (bool(stored, 'enabled') === false) return problems;
+  if (!isValidTickRateMs(ctx.tickRateMs)) {
+    return ['no authoritative tick rate available for boss-cast timing'];
+  }
   if (!str(stored, 'ability_key')) problems.push('missing stable cast identity (ability_key)');
   if (!str(stored, 'label')) problems.push('missing cast label');
   if ((posNum(stored, 'cast_ms') ?? 0) <= 0) problems.push('cast duration must be at least one tick');
   if ((posNum(stored, 'cooldown_ms') ?? 0) <= 0) problems.push('cooldown must be positive');
   const chance = num(stored, 'chance');
-  if (chance === null || chance <= 0 || chance > 1) problems.push('start chance must be between 0 (exclusive) and 1');
+  if (chance === null || chance < 0 || chance > 1) problems.push('start chance must be between 0 and 1');
   const sp = isRec(stored.stored_power) ? (stored.stored_power as Rec) : null;
   const damage = (posNum(stored, 'base_amount') ?? 0) + (num(stored, 'base_aoe_amount') ?? 0) + (num(sp, 'cap') ?? 0);
   if (damage <= 0) problems.push('cast would land for zero damage (set flat damage, AoE damage or a Stored Power cap)');
-  if (bool(stored, 'enabled') !== false && !normalizeBossCast(stored, ctx)) {
+  if (!normalizeBossCast(stored, ctx)) {
     problems.push('cast is enabled but does not decode into a runnable contract');
   }
+
   return problems;
 }
