@@ -20,29 +20,43 @@ Presentation-only correction. No change to combat math, accuracy, damage, mitiga
   - self: `You raise your shield and turn <Creature>'s blow aside!`
   - observer: `<Name> raises their shield and turns <Creature>'s blow aside!`
   Rendered through the existing `SELF_MARKER` / `resolveSelfMarkers` path; no new broad regex over prose.
-- Folding rules in `fold-groups.ts` stay exactly as they are (same `groupId`, mitigation covers the whole attempted amount, applied damage genuinely zero). Partial mitigation, misses, dodges, immunity, natural zero damage and unrelated attacks remain unfolded. `[N blocked]` still renders once from `numberText`.
+- **Shield template is scoped to real shield/block mitigation only.** The fold template is selected by `mitigationSource`: `block` / `shield_block` get the shield line; absorb (Force Shield), immunity, dodge-style and any future defensive source keep their own ability/effect identity and their own authored mitigation text (authored slot first, then their existing prose). No generic "zero damage grouped attack" is described as a shield block; an unrecognised mitigation source falls back to its own unmodified prose plus the `[N blocked]`-equivalent token for its kind.
+- Folding rules in `fold-groups.ts` stay exactly as they are (same `groupId`, mitigation covers the whole attempted amount, applied damage genuinely zero). Partial mitigation, misses, dodges, immunity, natural zero damage and unrelated attacks remain unfolded. The token still renders once from `numberText`.
 
 ### B. Judgment (and every ability outcome) identity + amount
-- Register `ability_crit` in `SERVER_EVENT_TYPES`, map it to the `ability` structured type with `crit: true`, and add it to `STAGE5_TYPES` so it can never fall into the legacy path again. Audit the resolver's emitted type list against `SERVER_EVENT_TYPES` and close any other gap found the same way.
-- Extend the flavor contract (`ability-flavor.ts` `FLAVOR_SLOT`, `tick-event-builder.ts` `FLAVOR_SPEC`) with `hit_text` / `miss_text` slots so `ability_hit`, `ability_crit` and `ability_miss` resolve authored text by **exact `abilityKey` first**, then the ability-key identity table, then a label-based generic line — mechanic text last.
-- Author Judgment's hit/miss text (seed `combat_text`) so cast, hit and miss share the readable identity "Judgment". Fallback when nothing is authored: `You pass divine judgment upon <Creature>! [48]`.
-- Strip the server fallback's inline `for N.` when the structured amount is present, so the number renders exactly once as `[48]` — never both. Templates that write `{damage}` themselves keep owning the number (existing `statesAmount` rule).
+- Register `ability_crit` in `SERVER_EVENT_TYPES` / `SERVER_EVENT_TYPE_MAP` (structured type `ability`) and in `STAGE5_TYPES`, carrying **`crit: true`** all the way through decoding, event creation, presentation and styling. A critical ability hit stays visually and semantically distinct from an ordinary hit (existing `strong` / crit emphasis), while the amount still renders exactly once.
+- **Canonical flavor contract preserved.** The canonical runtime slots stay `cast`, `hit`, `miss`, `activate`, `pulse`, `apply`, `tick`, `mitigate`, `retaliate`. `hit_text`, `miss_text`, `hit_verb`, `miss_verb` and any other historical keys are read as **compatibility aliases only**; new writes (seed, admin save, migration) use the canonical `hit` / `miss` keys. No second canonical contract is introduced, and unknown existing `combat_text` keys are never dropped on an admin save or a migration.
+- Resolution order for `ability_hit` / `ability_crit` / `ability_miss`: exact ability-key authored flavor → ability-identity fallback table → label-based generic line **written without an inline amount**. The structured amount is then rendered once as `[N]`.
+- **No prose amount parsing for registered events.** The resolver's generic sentence is not regex-stripped of `for N`; the body is rebuilt from the chain above. Legacy prose parsing remains only for genuinely legacy/unregistered events, and `ability_hit` / `ability_crit` can never reach it (enforced by the coverage test below).
+- Judgment authored text: canonical `hit` / `miss` values so cast, hit and miss all read as "Judgment". Fallback when nothing is authored: `You pass divine judgment upon <Creature>!` + `[48]` token.
 - Raw keys never reach the log: identity goes through `getAbilityLabel`.
+
+### B2. Production data migration for Judgment (prepared, not applied)
+- Idempotent, replayable SQL that merges canonical keys into the existing `abilities.combat_text` row for exactly `ability_key = 'judgment'` using a JSONB merge, so unrelated and unknown keys survive.
+- Before/after of the row's `combat_text` value will be reported with the implementation (read-only query for the current value, plus the exact merged result).
+- Created in the repo/migration draft but **not applied** in the implementation turn.
+
 
 ### C. Ability highlighting
 - Add an `ability` family to `EventLogFamily` / `FAMILY_STYLE` (`event-log-styles.ts`) and a `.log-edge-ability` rule in `src/index.css` using the existing gold/accent token: slightly stronger gold left border, medium-weight brighter ability text, ordinary structured amount token. No emoji, badge, container or animation.
-- `presentation.ts`: `ability` type with a **player** source resolves to the `ability` family; creature-sourced lines keep `threat`. Damage-type and perspective styling are untouched. A successful Judgment hit can no longer render neutral grey.
+- `presentation.ts`: `ability` type with a **player** source resolves to the `ability` family; creature-sourced lines keep `threat`.
+- The family supplies the **base** ability identity only. It is applied so that the more specific structured styling still wins where it exists: damage-type accents on the number/text and critical emphasis (`crit` → `strong`) are layered on top and are not overwritten. A successful Judgment hit can no longer render neutral grey; a critical one keeps its extra emphasis.
 
 ## Tests
 New/extended deterministic tests (no wording asserted that the server owns):
 - `raises → raise`, never `rais`; both coordinated verbs conjugated for self (`You raise … and turn …`); observer stays third person (`raises … and turns …`).
-- Full mitigation still yields exactly one rendered line with one `[N blocked]` token; partial mitigation keeps both lines.
-- Judgment cast resolves via exact ability key; hit uses authored flavor; miss keeps ability identity; damage renders exactly once as `[N]`; cast/hit/miss all classify as the `ability` presentation family.
+- Full mitigation still yields exactly one rendered line with one token; partial mitigation keeps both lines.
+- Shield template scoping: a `block`/`shield_block` fold uses the shield line; an absorb/immunity fold keeps its own effect identity and is never described as a shield block.
+- Judgment cast resolves via exact ability key; hit uses authored canonical `hit` text; miss keeps ability identity; damage renders exactly once as `[N]`; cast/hit/miss all classify as the `ability` presentation family.
+- Alias compatibility: a legacy `hit_text` / `miss_text` row still renders, and a save/merge preserves unknown `combat_text` keys.
+- Critical regression: `ability_crit` yields `crit: true`, keeps critical emphasis distinct from `ability_hit`, and still renders the amount exactly once.
+- **Event-type coverage contract test**: every presentation event type emitted by the authoritative resolver is present in `SERVER_EVENT_TYPES`, `SERVER_EVENT_TYPE_MAP` and the relevant structured-builder registration. The test fails if a future event like `ability_crit` could silently fall into legacy prose.
 - Player, party-observer and unrelated-observer perspectives stay grammatical.
 - Regression guards: Holy Shield, Ignite pulse folding, ordinary autoattacks, creature attacks.
 
 ## Verification
-Focused suites, full test suite, typecheck and production build. Report root cause, files changed, exact before/after rendered lines and test results. No deploy and no publish in the implementation turn.
+Focused suites, full test suite, typecheck and production build. Report root cause, files changed, exact before/after rendered lines, the proposed Judgment `combat_text` before/after, and test results. No deploy, no publish, and the Judgment data migration is not applied in the implementation turn.
 
 ## Files expected to change
-`src/features/combat/events/perspective.ts`, `tick-event-builder.ts`, `ability-flavor.ts`, `log-event.ts`, `presentation.ts`, `src/features/combat/utils/event-log-styles.ts`, `src/features/combat/utils/ability-text.ts` (authored Judgment text via `src/shared/config/ability-seed.ts`), `src/index.css`, plus tests under `src/test/combat/` and `src/features/combat/events/__tests__/`.
+`src/features/combat/events/perspective.ts`, `tick-event-builder.ts`, `ability-flavor.ts`, `log-event.ts`, `presentation.ts`, `src/features/combat/utils/event-log-styles.ts`, `src/features/combat/utils/ability-text.ts`, `src/shared/config/ability-seed.ts` (canonical Judgment `hit`/`miss`), `src/index.css`, a prepared-but-unapplied Judgment `combat_text` migration, plus tests under `src/test/combat/` and `src/features/combat/events/__tests__/`.
+
