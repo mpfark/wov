@@ -35,6 +35,8 @@ import type { CreatureControlSnapshot } from './effect-contract';
 import { getPartyXpBonus } from './party-xp';
 import type { ResolverMechanic } from './mechanics';
 import { createTickRandom } from './rng';
+import { stepBossCastSchedule, bossCastNeedsChanceRoll } from './boss-cast-schedule';
+
 import {
   orderActions,
   orderCreatures,
@@ -2164,29 +2166,21 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       if (!isAliveC(c.id) || !c.bossCast) continue;
       if (w.activeCasts.has(c.id)) continue;
       const cast = c.bossCast;
-      const cooldown = w.castCooldown.get(c.id) ?? 0;
-      if (cooldown > 0) {
-        w.castCooldown.set(c.id, cooldown - 1);
-        continue;
-      }
-      const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
+      const cooldownBefore = w.castCooldown.get(c.id) ?? 0;
       let target: ParticipantSnapshot | null = null;
-      if (pool.length > 0) {
-        const tankPool = orderTankPool(pool.filter((p) => p.isTank));
-        if (cast.targetMode === 'tank_strict' || cast.targetMode === 'tank_preferred') {
-          target = rng.pick('tank_pool', tankPool, c.id, t) ?? null;
-          if (!target && cast.targetMode === 'tank_preferred') {
+      if (cooldownBefore <= 0) {
+        const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
+        if (pool.length > 0) {
+          const tankPool = orderTankPool(pool.filter((p) => p.isTank));
+          if (cast.targetMode === 'tank_strict' || cast.targetMode === 'tank_preferred') {
+            target = rng.pick('tank_pool', tankPool, c.id, t) ?? null;
+            if (!target && cast.targetMode === 'tank_preferred') {
+              target = rng.pick('creature_target', pool, c.id, t) ?? null;
+            }
+          } else {
             target = rng.pick('creature_target', pool, c.id, t) ?? null;
           }
-        } else {
-          target = rng.pick('creature_target', pool, c.id, t) ?? null;
         }
-      }
-      if (!target) {
-        // Nothing to telegraph at. No cast row is created, so no orphan
-        // channel can be left behind for the next tick to resolve, and the
-        // chance stream is left untouched.
-        continue;
       }
 
       // Per-tick start chance, restored from the pre-C3 handler (which rolled
@@ -2195,8 +2189,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // catch-up, first attempt or lease retry — reproduces the same decision.
       // A failed roll mutates nothing: no cooldown is consumed, no cast row is
       // created, and the boss is eligible again on the next tick.
-      if (cast.chance <= 0) continue;
-      if (cast.chance < 1 && rng.sample('boss_cast_start', c.id, t) > cast.chance) continue;
+      const gate = stepBossCastSchedule({
+        channeling: false,
+        cooldownTicks: cooldownBefore,
+        hasTarget: target !== null,
+        chance: cast.chance,
+        roll:
+          cooldownBefore <= 0 && target !== null && bossCastNeedsChanceRoll(cast.chance)
+            ? rng.sample('boss_cast_start', c.id, t)
+            : null,
+        configuredCooldownTicks: cast.cooldownTicks,
+      });
+      w.castCooldown.set(c.id, gate.cooldownTicksAfter);
+      if (gate.outcome !== 'start' || !target) continue;
+
 
 
       const resolvesAtMs = nowMs + Math.max(1, cast.castTicks) * tickRate;
@@ -2245,7 +2251,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         targets: [],
         config: frozen,
       });
-      w.castCooldown.set(c.id, Math.max(1, cast.cooldownTicks));
+      // Cooldown was already set by the schedule step on the `start` outcome.
       emit(
         'boss_cast_start',
         cast.castingText ?? `${c.name} begins ${cast.label}.`,

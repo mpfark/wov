@@ -18,3 +18,11 @@ export {
   orderTankPool,
 } from './ordering.ts';
 export { getPartyXpBonus } from './party-xp.ts';
+export {
+  stepBossCastSchedule,
+  bossCastNeedsChanceRoll,
+  type BossCastGateInput,
+  type BossCastGateResult,
+  type BossCastGateOutcome,
+} from './boss-cast-schedule.ts';
+

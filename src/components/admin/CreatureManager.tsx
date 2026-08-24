@@ -16,13 +16,8 @@ import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
 import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
-import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
-import {
-  buildCanonicalBossCast,
-  deriveCastIdentities,
-  validateCanonicalBossCast,
-  BOSS_CAST_DEFAULTS,
-} from '@/shared/combat/c3/boss-cast-contract';
+import { renderFlavor } from '@shared/proc-log-format';
+import { bossCastFormFromCreature, buildBossCastSave } from './boss-cast-form';
 
 
 interface Creature {
@@ -146,6 +141,11 @@ export default function CreatureManager() {
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
 
+  // A new creature's permanent UUID, allocated client-side when the blank
+  // editor opens. The insert carries it explicitly, so the boss-cast identity is
+  // anchored to the same immutable id the row is stored under — no placeholder,
+  // no post-insert identity repair.
+  const [newCreatureId, setNewCreatureId] = useState<string>(() => crypto.randomUUID());
   const [cmRegions, setCmRegions] = useState<RegionOption[]>([]);
   const [cmAreas, setCmAreas] = useState<AreaOption[]>([]);
 
@@ -188,6 +188,7 @@ export default function CreatureManager() {
   const openNew = () => {
     setSelectedId(null);
     setIsNew(true);
+    setNewCreatureId(crypto.randomUUID());
     setForm(defaultForm());
   };
 
@@ -211,31 +212,14 @@ export default function CreatureManager() {
       loot_mode: (c as any).loot_mode || 'legacy_table',
       boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
       boss_death_cry: typeof (c as any).boss_death_cry === 'string' ? (c as any).boss_death_cry : '',
-      boss_cast_enabled: !!((c as any).boss_cast),
-      boss_cast_label: (c as any).boss_cast?.label ?? 'Cataclysm',
-      boss_cast_damage_type: (c as any).boss_cast?.damage_type ?? '',
-      boss_cast_flavor: (c as any).boss_cast?.cast_flavor ?? '',
-      boss_cast_hit_flavor: (c as any).boss_cast?.hit_flavor ?? '',
+      // Boss cast: loaded through the shared pure transform, so the checkbox
+      // mirrors runtime eligibility (rarity + stored `enabled`) instead of mere
+      // presence, and every unexposed key is carried in `boss_cast_raw`.
+      ...bossCastFormFromCreature(
+        { rarity: c.rarity, boss_cast: (c as any).boss_cast },
+        TICK_RATE_MS,
+      ),
 
-
-      
-      boss_cast_ticks: Math.max(1, Math.round((Number((c as any).boss_cast?.cast_ms) || 4000) / TICK_RATE_MS)),
-      boss_cast_cooldown_ms: Number((c as any).boss_cast?.cooldown_ms) || 20000,
-      boss_cast_chance: Number.isFinite(Number((c as any).boss_cast?.chance)) ? Number((c as any).boss_cast?.chance) : 0.3,
-      boss_cast_lock_ticks: Math.max(0, Math.round((Number((c as any).boss_cast?.lock_ms) || 0) / TICK_RATE_MS)),
-      // Prefer new `base_amount`; fall back to legacy `amount` so pre-migration bosses open correctly.
-      boss_cast_base_amount: Number((c as any).boss_cast?.base_amount) || Number((c as any).boss_cast?.amount) || 0,
-      boss_cast_base_aoe_amount: Number((c as any).boss_cast?.base_aoe_amount) || 0,
-      boss_cast_primary_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.primary_share))
-        ? Number((c as any).boss_cast?.stored_power?.primary_share)
-        : 1.0,
-      boss_cast_aoe_share: Number.isFinite(Number((c as any).boss_cast?.stored_power?.aoe_share))
-        ? Number((c as any).boss_cast?.stored_power?.aoe_share)
-        : 0.4,
-      boss_cast_sp_cap: Number((c as any).boss_cast?.stored_power?.cap) || 0,
-      boss_cast_raw: ((c as any).boss_cast && typeof (c as any).boss_cast === 'object')
-        ? ((c as any).boss_cast as Record<string, unknown>)
-        : null,
 
     });
     // Load entries for selected loot table
@@ -278,76 +262,24 @@ export default function CreatureManager() {
     const generated = generateCreatureStats(form.level, form.rarity);
 
     // ── Boss cast: canonical write, preservation, validation ──────────────
-    // One authoritative stored shape (millisecond timing, `base_amount` /
-    // `base_aoe_amount`, `cast_flavor` / `hit_flavor`, `accumulate.*`). The
-    // legacy `amount` mirror is retired so no value has two homes, and every
-    // key the form does not expose — stable identity included — survives a
-    // round-trip untouched.
-    const castRaw = form.boss_cast_raw ?? undefined;
-    const castExisting = (castRaw ?? {}) as Record<string, unknown>;
-    const castEnabledNow =
-      (form.rarity === 'boss' || form.rarity === 'rare') && form.boss_cast_enabled;
-    let bossCastPayload: Record<string, unknown> | null = null;
-    if (castEnabledNow) {
-      const castLabel = form.boss_cast_label.trim() || BOSS_CAST_DEFAULTS.label;
-      // Identity is stable: an already-stored key is kept; otherwise the
-      // deterministic, creature-anchored derivation is used — the same rule the
-      // decoder fallback and the backfill apply.
-      const [identity] = deriveCastIdentities([{
-        creatureId: selectedId ?? 'new',
-        label: castLabel,
-        abilityKey: (castExisting.ability_key as string | undefined) ?? null,
-      }]);
-      const sp = (castExisting.stored_power ?? {}) as Record<string, unknown>;
-      const acc = (castExisting.accumulate ?? {}) as Record<string, unknown>;
-      bossCastPayload = buildCanonicalBossCast({
-        abilityKey: identity.key,
-        enabled: true,
-        label: castLabel,
-        damageType: form.boss_cast_damage_type || null,
-        castFlavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
-        hitFlavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
-        baseAmount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
-        baseAoeAmount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
-        castMs: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
-        cooldownMs: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
-        chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
-        lockMs: Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS,
-        targetMode: (castExisting.target_mode as any) === 'tank_strict'
-          || (castExisting.target_mode as any) === 'random_alive'
-          ? (castExisting.target_mode as any)
-          : 'tank_preferred',
-        storedPower: {
-          consumeMode: (sp.consume_mode as string) ?? BOSS_CAST_DEFAULTS.consumeMode,
-          consumePct: Number(sp.consume_pct ?? BOSS_CAST_DEFAULTS.consumePct),
-          consumeAmount: Number(sp.consume_amount ?? sp.consume_fixed ?? 0),
-          primaryShare: Math.max(0, Number(form.boss_cast_primary_share)),
-          aoeShare: Math.max(0, Number(form.boss_cast_aoe_share)),
-          cap: Math.max(0, Math.floor(form.boss_cast_sp_cap)) || null,
-        },
-        accumulate: {
-          enabled: typeof acc.enabled === 'boolean' ? (acc.enabled as boolean) : true,
-          source: (acc.source as string) ?? 'primary_target',
-          method: (acc.method as string) ?? 'expected',
-          pauseAutoattacks: typeof acc.pause_autoattacks === 'boolean'
-            ? (acc.pause_autoattacks as boolean)
-            : true,
-          critDuringCast: (acc.crit_during_cast as string) ?? 'disabled',
-        },
-      }, castRaw);
-
-      const problems = validateCanonicalBossCast(bossCastPayload, {
-        rarity: form.rarity as any,
-        creatureId: selectedId ?? 'new',
-        level: form.level,
-        tickRateMs: TICK_RATE_MS,
-      });
-      if (problems.length > 0) {
-        setLoading(false);
-        toast.error(`Boss cast cannot be saved: ${problems[0]}`);
-        return;
-      }
+    // One authoritative stored shape, one pure transform (`buildBossCastSave`).
+    // A new creature's permanent id is allocated *before* the insert so the cast
+    // identity is anchored to the immutable id it will actually be stored under
+    // — never a placeholder, never a best-effort follow-up update.
+    const creatureId = selectedId ?? newCreatureId;
+    const castSave = buildBossCastSave(form, {
+      rarity: form.rarity,
+      creatureId,
+      level: form.level,
+      tickRateMs: TICK_RATE_MS,
+    });
+    if (castSave.problems.length > 0) {
+      setLoading(false);
+      toast.error(`Boss cast cannot be saved: ${castSave.problems[0]}`);
+      return;
     }
+    const bossCastPayload = castSave.payload;
+
 
 
     const payload = {
@@ -388,7 +320,11 @@ export default function CreatureManager() {
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Creature updated');
     } else {
-      const { data, error } = await supabase.from('creatures').insert(payload).select().single();
+      const { data, error } = await supabase
+        .from('creatures')
+        .insert({ ...payload, id: creatureId })
+        .select()
+        .single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Creature created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
