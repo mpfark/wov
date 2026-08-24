@@ -350,7 +350,9 @@ export default function CreatureManager() {
     }
 
 
+    const payload = {
       name: form.name.trim(),
+
       description: form.description.trim(),
       node_id: form.node_id || null,
       level: form.level,
