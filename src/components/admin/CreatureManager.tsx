@@ -17,6 +17,12 @@ import LootTablePicker from './LootTablePicker';
 import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 import { renderFlavor, FLAVOR_MAX_LEN } from '@shared/proc-log-format';
+import {
+  buildCanonicalBossCast,
+  deriveCastIdentities,
+  validateCanonicalBossCast,
+  BOSS_CAST_DEFAULTS,
+} from '@/shared/combat/c3/boss-cast-contract';
 
 
 interface Creature {
@@ -114,6 +120,10 @@ const defaultForm = () => ({
   boss_cast_primary_share: 1.0,
   boss_cast_aoe_share: 0.4,
   boss_cast_sp_cap: 0, // 0 = no cap
+  // The stored object exactly as loaded. Anything the form does not expose —
+  // stable identity, Stored Power consume vocabulary, accumulate tuning, and
+  // any genuinely unknown key — is carried through on save instead of erased.
+  boss_cast_raw: null as Record<string, unknown> | null,
 
 });
 
@@ -223,6 +233,9 @@ export default function CreatureManager() {
         ? Number((c as any).boss_cast?.stored_power?.aoe_share)
         : 0.4,
       boss_cast_sp_cap: Number((c as any).boss_cast?.stored_power?.cap) || 0,
+      boss_cast_raw: ((c as any).boss_cast && typeof (c as any).boss_cast === 'object')
+        ? ((c as any).boss_cast as Record<string, unknown>)
+        : null,
 
     });
     // Load entries for selected loot table
@@ -290,36 +303,7 @@ export default function CreatureManager() {
         }))
         .filter(f => f.text.length > 0),
       boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
-      boss_cast: (form.rarity === 'boss' || form.rarity === 'rare') && form.boss_cast_enabled ? {
-        enabled: true,
-        label: form.boss_cast_label.trim() || 'Cataclysm',
-        // Authored log flavor; blank → server default wording.
-        damage_type: form.boss_cast_damage_type || null,
-        cast_flavor: form.boss_cast_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
-        hit_flavor: form.boss_cast_hit_flavor.trim().slice(0, FLAVOR_MAX_LEN) || null,
-
-        // Mirror flat-damage into legacy `amount` so the two fields never drift.
-        amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
-        cast_ms: Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS,
-        cooldown_ms: Math.max(1000, Math.floor(form.boss_cast_cooldown_ms)),
-        chance: Math.max(0, Math.min(1, Number(form.boss_cast_chance))),
-        lock_ms: Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS,
-        base_amount: Math.max(0, Math.floor(form.boss_cast_base_amount)),
-        base_aoe_amount: Math.max(0, Math.floor(form.boss_cast_base_aoe_amount)),
-        stored_power: {
-          consume_mode: 'all',
-          primary_share: Math.max(0, Number(form.boss_cast_primary_share)),
-          aoe_share: Math.max(0, Number(form.boss_cast_aoe_share)),
-          cap: Math.max(0, Math.floor(form.boss_cast_sp_cap)) || null,
-        },
-        accumulate: {
-          enabled: true,
-          source: 'primary_target',
-          method: 'expected',
-          pause_autoattacks: true,
-          crit_during_cast: 'disabled',
-        },
-      } : null,
+      boss_cast: bossCastPayload,
 
     } as any;
 
