@@ -8,7 +8,11 @@
  * fails.
  */
 import { describe, expect, it } from 'vitest';
-import { resolveTickPure } from '@/shared/combat/pure';
+import {
+  bossCastNeedsChanceRoll,
+  resolveTickPure,
+  stepBossCastSchedule,
+} from '@/shared/combat/pure';
 import { creature, participant, snapshot } from './fixtures';
 import type { BossCastSnapshot } from '@/shared/combat/pure/types';
 
@@ -89,5 +93,116 @@ describe('boss cast — per-tick start chance', () => {
     expect(always).toBeGreaterThan(10);
     expect(half).toBeGreaterThan(0);
     expect(half).toBeLessThan(always);
+  });
+});
+
+// ── The gate as a state step ────────────────────────────────────────────────
+// The resolver's cooldown ledger is internal working state, so these assert the
+// transition directly rather than inferring it from a missing event.
+
+const gate = (over: Partial<Parameters<typeof stepBossCastSchedule>[0]> = {}) =>
+  stepBossCastSchedule({
+    channeling: false,
+    cooldownTicks: 0,
+    hasTarget: true,
+    chance: 1,
+    roll: null,
+    configuredCooldownTicks: 10,
+    ...over,
+  });
+
+describe('boss cast — gate state transitions', () => {
+  it('freezes the cooldown while a cast is channeling', () => {
+    expect(gate({ channeling: true, cooldownTicks: 10 })).toEqual({
+      outcome: 'channeling',
+      cooldownTicksAfter: 10,
+    });
+    expect(gate({ channeling: true, cooldownTicks: 0 }).cooldownTicksAfter).toBe(0);
+  });
+
+  it('counts the cooldown down only from resolution, one tick at a time', () => {
+    let cd = gate().cooldownTicksAfter;
+    expect(cd).toBe(10);
+    const seen: number[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const step = gate({ cooldownTicks: cd });
+      expect(step.outcome).toBe('cooling_down');
+      cd = step.cooldownTicksAfter;
+      seen.push(cd);
+    }
+    expect(seen).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
+    expect(gate({ cooldownTicks: cd }).outcome).toBe('start');
+  });
+
+  it('always spends at least one cooldown tick, even if authored as zero', () => {
+    expect(gate({ configuredCooldownTicks: 0 }).cooldownTicksAfter).toBe(1);
+    expect(gate({ configuredCooldownTicks: -5 }).cooldownTicksAfter).toBe(1);
+  });
+
+  it('a refused roll leaves the cooldown untouched and stays eligible', () => {
+    const refused = gate({ chance: 0.2, roll: 0.9 });
+    expect(refused).toEqual({ outcome: 'refused', cooldownTicksAfter: 0 });
+    // Next tick, same state, a passing roll starts immediately.
+    expect(gate({ chance: 0.2, roll: 0.1 }).outcome).toBe('start');
+  });
+
+  it('checks the chance only after cooldown and target selection', () => {
+    expect(gate({ cooldownTicks: 3, chance: 1, hasTarget: false }).outcome).toBe('cooling_down');
+    expect(gate({ hasTarget: false, chance: 1 })).toEqual({
+      outcome: 'no_target',
+      cooldownTicksAfter: 0,
+    });
+  });
+
+  it('draws randomness only for a genuinely uncertain chance', () => {
+    expect(bossCastNeedsChanceRoll(0)).toBe(false);
+    expect(bossCastNeedsChanceRoll(1)).toBe(false);
+    expect(bossCastNeedsChanceRoll(0.5)).toBe(true);
+    // With no roll supplied, the certain cases still decide correctly.
+    expect(gate({ chance: 0, roll: null }).outcome).toBe('refused');
+    expect(gate({ chance: 1, roll: null }).outcome).toBe('start');
+  });
+
+  it('treats the boundary roll as a pass', () => {
+    expect(gate({ chance: 0.25, roll: 0.25 }).outcome).toBe('start');
+    expect(gate({ chance: 0.25, roll: 0.2500001 }).outcome).toBe('refused');
+  });
+});
+
+describe('boss cast — the gate does not disturb the rest of the tick', () => {
+  /** Same fixture, one with a gated cast, one with no cast at all. */
+  const run = (bossCast: BossCastSnapshot | null) =>
+    resolveTickPure(
+      snapshot({
+        participants: [participant({ hp: 500_000, maxHp: 500_000 })],
+        creatures: [
+          creature({
+            rarity: 'boss',
+            hp: 500_000,
+            maxHp: 500_000,
+            bossCast: bossCast ?? undefined,
+          }),
+        ],
+        ticksToSimulate: 30,
+      }),
+    );
+
+  it('a fully refused cast leaves autoattacks byte-identical to no cast', () => {
+    const withGate = run(cast({ chance: 0, castTicks: 1, cooldownTicks: 1 }));
+    const without = run(null);
+    const attacks = (out: ReturnType<typeof run>) =>
+      out.events.filter((e) => e.type.startsWith('autoattack')).map((e) => JSON.stringify(e));
+    expect(attacks(withGate)).toEqual(attacks(without));
+    expect(withGate.events.some((e) => e.type.startsWith('boss_cast'))).toBe(false);
+  });
+
+  it('replays an identical cast/no-cast sequence for a fixed seed', () => {
+    const sequence = () =>
+      starts(0.35, 60)
+        .events.filter((e) => e.type === 'boss_cast_start')
+        .map((e) => (e as { tick?: number }).tick ?? -1);
+    const first = sequence();
+    expect(sequence()).toEqual(first);
+    expect(first.length).toBeGreaterThan(0);
   });
 });
