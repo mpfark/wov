@@ -3930,6 +3930,7 @@ export type Database = {
       }
       expire_king_slayer: { Args: never; Returns: undefined }
       expire_marketplace_listings: { Args: never; Returns: number }
+      final_maintenance_sweep: { Args: never; Returns: undefined }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
       forge_soulring: {
         Args: { p_character_id: string; p_stats: Json }
@@ -3973,10 +3974,17 @@ export type Database = {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
       }
+      guarded_cleanup_ground_loot: { Args: never; Returns: undefined }
       guarded_expire_king_slayer: { Args: never; Returns: undefined }
       guarded_expire_marketplace_listings: { Args: never; Returns: undefined }
       guarded_expire_timed_state: { Args: never; Returns: undefined }
+      guarded_prune_combat_audit_log: { Args: never; Returns: undefined }
+      guarded_prune_effects_catchup_log: { Args: never; Returns: undefined }
+      guarded_prune_encounter_access_grants: { Args: never; Returns: undefined }
+      guarded_prune_encounter_tick_batches: { Args: never; Returns: undefined }
+      guarded_prune_terminal_combat_actions: { Args: never; Returns: undefined }
       guarded_return_unique_items: { Args: never; Returns: undefined }
+      guarded_sweep_stranded_encounters: { Args: never; Returns: undefined }
       harness_cron_snapshot: { Args: never; Returns: Json }
       harness_fail_closed: { Args: { _run_id: string }; Returns: Json }
       harness_teardown: { Args: { _run_id: string }; Returns: Json }
@@ -4254,6 +4262,7 @@ export type Database = {
       }
       wake_world: { Args: never; Returns: Json }
       world_is_awake: { Args: never; Returns: boolean }
+      world_state_is_awake: { Args: never; Returns: boolean }
       world_watchdog: { Args: never; Returns: undefined }
     }
     Enums: {
