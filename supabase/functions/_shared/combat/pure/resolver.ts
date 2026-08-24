@@ -2184,9 +2184,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       }
       if (!target) {
         // Nothing to telegraph at. No cast row is created, so no orphan
-        // channel can be left behind for the next tick to resolve.
+        // channel can be left behind for the next tick to resolve, and the
+        // chance stream is left untouched.
         continue;
       }
+
+      // Per-tick start chance, restored from the pre-C3 handler (which rolled
+      // `Math.random() > chance` once per invocation after the cooldown check).
+      // Deterministic here: its own named stream, so replaying a tick — live or
+      // catch-up, first attempt or lease retry — reproduces the same decision.
+      // A failed roll mutates nothing: no cooldown is consumed, no cast row is
+      // created, and the boss is eligible again on the next tick.
+      if (cast.chance <= 0) continue;
+      if (cast.chance < 1 && rng.sample('boss_cast_start', c.id, t) > cast.chance) continue;
+
 
       const resolvesAtMs = nowMs + Math.max(1, cast.castTicks) * tickRate;
       const frozen: ActiveCastSnapshot = {

@@ -184,7 +184,13 @@ export interface BossCastSnapshot {
   readonly damageAoe: number;
   readonly damageType: string | null;
   readonly targetMode: 'tank_strict' | 'tank_preferred' | 'random_alive';
+  /**
+   * Per-tick start chance 0..1 (historical default 0.30). Restored with the
+   * decoder fix: without it every boss telegraphs on a fixed metronome.
+   */
+  readonly chance: number;
   readonly channeling: boolean;
+
   readonly storedPowerCap: number;
   /** Fraction of the released pool the primary target takes. */
   readonly primaryShare: number;
