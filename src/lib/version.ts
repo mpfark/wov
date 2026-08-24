@@ -5,4 +5,4 @@ export const APP_VERSION = "r7";
  * which client bundle was tested. Contains only the short commit of the
  * reviewed repository state at publish time.
  */
-export const BUILD_ID = "r7-phase3-presentation";
+export const BUILD_ID = "r7-batch2-accuracy-insight";
