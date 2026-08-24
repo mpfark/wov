@@ -403,8 +403,10 @@ export function buildTickLogEvent(
   // A fully-mitigated swing reads as one decisive line: the authored pair states
   // the proven outcome (nothing landed) in the grammar each perspective needs,
   // and the amount moves into the structured token.
+  // The observer sentence needs the defender's name; without it the server's
+  // own prose (minus its inline token) stays truthful, so nothing is invented.
   const foldPair =
-    ev.fold?.kind === 'full_block'
+    ev.fold?.kind === 'full_block' && (ev.target_name || isLocal)
       ? mitigationFoldPair(ev.fold.source, ev.target_name, ev.attacker_name ?? ev.creature_name)
       : null;
   if (ev.fold?.kind === 'full_block') prose = prose.replace(/\s*\[\d+\]\s*$/, '');
