@@ -29,6 +29,10 @@ const IRREGULAR_SECOND_PERSON: Record<string, string> = {
  * Turn a third-person singular verb into its second-person form.
  * Purely grammatical — the server authors third-person prose, so once the
  * local name folds to "You" the verb must follow ("You blocks" → "You block").
+ *
+ * Only a genuine sibilant/`o` cluster loses the whole `-es` ("passes" → "pass",
+ * "goes" → "go"). Everything else drops the single `-s`, so "raises" becomes
+ * "raise" rather than the truncated "rais".
  */
 export function secondPersonVerb(verb: string): string {
   const irregular = IRREGULAR_SECOND_PERSON[verb];
@@ -36,9 +40,10 @@ export function secondPersonVerb(verb: string): string {
   if (!verb.endsWith('s')) return verb;
   if (/(?:ss|us|is)$/.test(verb)) return verb;
   if (/[^aeiou]ies$/.test(verb)) return `${verb.slice(0, -3)}y`;
-  if (/(?:sh|ch|s|x|z)es$/.test(verb)) return verb.slice(0, -2);
+  if (/(?:sh|ch|ss|x|z|o)es$/.test(verb)) return verb.slice(0, -2);
   return verb.slice(0, -1);
 }
+
 
 /**
  * Conjugate the verb that directly follows a folded "You" subject.

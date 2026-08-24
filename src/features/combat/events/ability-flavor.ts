@@ -18,11 +18,102 @@
 import { getAbilityLabel, getAuthoredCombatText } from '@/features/combat/utils/ability-text';
 import { SELF_MARKER, resolveSelfMarkers } from './perspective';
 
-/** Authored `combat_text` slot per server event type. */
-export const FLAVOR_SLOT: Record<string, string> = {
-  stance_pulse: 'pulse_text',
-  stack_applied: 'stack_text',
+/**
+ * Canonical runtime flavor slots. These names are the contract:
+ * `cast`, `hit`, `miss`, `activate`, `pulse`, `apply`, `tick`, `mitigate`,
+ * `retaliate`. Historical keys (`pulse_text`, `stack_text`, `hit_text`,
+ * `hit_verb`, …) are read as compatibility ALIASES only — nothing writes them
+ * any more, and an unknown authored key is never removed.
+ */
+export const CANONICAL_FLAVOR_SLOTS = [
+  'cast',
+  'hit',
+  'miss',
+  'activate',
+  'pulse',
+  'apply',
+  'tick',
+  'mitigate',
+  'retaliate',
+] as const;
+
+export type CanonicalFlavorSlot = (typeof CANONICAL_FLAVOR_SLOTS)[number];
+
+/** Canonical slot per server event type. */
+export const FLAVOR_SLOT: Record<string, CanonicalFlavorSlot> = {
+  stance_pulse: 'pulse',
+  stack_applied: 'apply',
+  ability_hit: 'hit',
+  ability_crit: 'hit',
+  ability_miss: 'miss',
 };
+
+/** Legacy keys read for a canonical slot, in precedence order after it. */
+const SLOT_ALIASES: Record<CanonicalFlavorSlot, string[]> = {
+  cast: ['cast_text'],
+  hit: ['hit_text'],
+  miss: ['miss_text'],
+  activate: ['activate_text'],
+  pulse: ['pulse_text'],
+  apply: ['stack_text', 'apply_text'],
+  tick: ['tick_text'],
+  mitigate: ['mitigate_text'],
+  retaliate: ['retaliate_text'],
+};
+
+/**
+ * Verb-only compatibility keys. A verb is not a sentence, so it is composed
+ * into the canonical sentence shape for its slot.
+ */
+const SLOT_VERB_ALIAS: Partial<Record<CanonicalFlavorSlot, string>> = {
+  hit: 'hit_verb',
+  miss: 'miss_verb',
+};
+
+/** Sentence built from a verb-only alias. */
+const VERB_TEMPLATE: Partial<Record<CanonicalFlavorSlot, string>> = {
+  hit: '{attacker} {verb} {target}!',
+  miss: "{attacker}'s {ability} {verb} {target}.",
+};
+
+/**
+ * Last-resort sentence when an ability authors nothing for an outcome slot.
+ * It states identity only — never an inline amount, so the structured `[N]`
+ * token stays the single place a number is rendered.
+ */
+const GENERIC_OUTCOME: Partial<Record<CanonicalFlavorSlot, string>> = {
+  hit: '{attacker} strikes {target} with {ability}!',
+  miss: "{attacker}'s {ability} misses {target}.",
+};
+
+function trimmedString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+/**
+ * Authored template for a canonical slot: canonical key first, then legacy
+ * aliases, then a verb-only alias composed into the slot's sentence shape.
+ */
+export function resolveSlotTemplate(
+  abilityKey: string,
+  slot: CanonicalFlavorSlot,
+): string | null {
+  const text = getAuthoredCombatText(abilityKey);
+  const canonical = trimmedString(text[slot]);
+  if (canonical) return canonical;
+  for (const alias of SLOT_ALIASES[slot]) {
+    const aliased = trimmedString(text[alias]);
+    if (aliased) return aliased;
+  }
+  const verbKey = SLOT_VERB_ALIAS[slot];
+  const shape = VERB_TEMPLATE[slot];
+  if (verbKey && shape) {
+    const verb = trimmedString(text[verbKey]);
+    if (verb) return shape.replace('{verb}', verb);
+  }
+  return null;
+}
+
 
 export interface FlavorTokens {
   attacker?: string | null;
@@ -77,9 +168,7 @@ export function renderAbilityFlavor(
 ): { text: string; selfText: string; statesAmount: boolean } | null {
   const slot = FLAVOR_SLOT[serverType];
   if (!slot || !tokens.abilityKey) return null;
-  const authored = getAuthoredCombatText(tokens.abilityKey)[slot];
-  const template =
-    typeof authored === 'string' && authored.trim().length > 0 ? authored.trim() : null;
+  const template = resolveSlotTemplate(tokens.abilityKey, slot);
   if (!template) return null;
   return {
     text: fill(template, tokens, false),
@@ -87,3 +176,27 @@ export function renderAbilityFlavor(
     statesAmount: templateStatesAmount(template),
   };
 }
+
+/**
+ * Render a hit / crit / miss outcome line for an ability.
+ *
+ * Precedence: authored canonical slot → legacy alias → verb alias composed into
+ * the slot sentence → generic identity sentence. Never null when the event
+ * carries an ability key, so an ability outcome can never fall back to the
+ * resolver's unconjugated debug prose.
+ */
+export function renderAbilityOutcome(
+  serverType: string,
+  tokens: FlavorTokens,
+): { text: string; selfText: string; statesAmount: boolean } | null {
+  const slot = FLAVOR_SLOT[serverType];
+  if (!slot || (slot !== 'hit' && slot !== 'miss') || !tokens.abilityKey) return null;
+  const template = resolveSlotTemplate(tokens.abilityKey, slot) ?? GENERIC_OUTCOME[slot] ?? null;
+  if (!template) return null;
+  return {
+    text: fill(template, tokens, false),
+    selfText: resolveSelfMarkers(fill(template, tokens, true)),
+    statesAmount: templateStatesAmount(template),
+  };
+}
+

@@ -133,12 +133,16 @@ export interface GameLogEvent {
  */
 export const SERVER_EVENT_TYPES = [
   'ability_cast',
+  'ability_crit',
   'ability_fail',
   'ability_hit',
   'ability_miss',
   'absorb',
   'attack_hit',
   'attack_miss',
+  'autoattack_crit',
+  'autoattack_hit',
+  'autoattack_miss',
   'awareness_resist',
   'battle_cry_dr',
   'bleed',
@@ -218,12 +222,16 @@ export type ServerEventType = (typeof SERVER_EVENT_TYPES)[number];
 /** Exhaustive server-type → structured-type mapping. */
 export const SERVER_EVENT_TYPE_MAP: Record<ServerEventType, LogEventType> = {
   ability_cast: 'ability',
+  ability_crit: 'ability',
   ability_fail: 'error',
   ability_hit: 'ability',
   ability_miss: 'ability',
   absorb: 'mitigation',
   attack_hit: 'attack',
   attack_miss: 'attack',
+  autoattack_crit: 'attack',
+  autoattack_hit: 'attack',
+  autoattack_miss: 'attack',
   awareness_resist: 'mitigation',
   battle_cry_dr: 'mitigation',
   bleed: 'dot_tick',

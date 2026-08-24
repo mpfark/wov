@@ -21,7 +21,7 @@ import {
   type GameLogEvent,
   type LogActor,
 } from './log-event';
-import { renderAbilityFlavor } from './ability-flavor';
+import { renderAbilityFlavor, renderAbilityOutcome } from './ability-flavor';
 import {
   SELF_MARKER,
   applySecondPersonGrammar,
@@ -39,8 +39,10 @@ const STAGE5_TYPES = new Set([
   // Abilities
   'ability_cast',
   'ability_hit',
+  'ability_crit',
   'ability_miss',
   'ability_fail',
+
   // Procs
   'proc',
   'buff_proc',
@@ -255,6 +257,65 @@ const FLAVOR_SPEC: Record<string, { amountKind: 'damage' | 'stacks'; effectType?
   stack_applied: { amountKind: 'stacks' },
 };
 
+/**
+ * Ability outcomes whose sentence is authored per ability (`hit` / `miss`
+ * canonical slots) and never taken from the resolver's plain fallback prose.
+ * A critical hit is the same sentence with the crit flag set — it is not a
+ * separate wording, which is how `ability_crit` used to fall out of the
+ * structured path entirely.
+ */
+const ABILITY_OUTCOME_TYPES = new Set(['ability_hit', 'ability_crit', 'ability_miss']);
+
+/**
+ * Perspective-paired sentences for a swing that mitigation ate completely.
+ * Authored per mitigation source rather than conjugated: both verbs are written
+ * in the form the perspective needs, so no regex ever rewrites a verb.
+ * `{defender}` and `{creature}` are the only tokens.
+ */
+const MITIGATION_FOLD_TEMPLATE: Record<string, { self: string; observer: string }> = {
+  block: {
+    self: "You raise your shield and turn {creature}'s blow aside!",
+    observer: "{defender} raises their shield and turns {creature}'s blow aside!",
+  },
+  shield_block: {
+    self: "You raise your shield and turn {creature}'s blow aside!",
+    observer: "{defender} raises their shield and turns {creature}'s blow aside!",
+  },
+  absorb: {
+    self: "Your ward drinks {creature}'s blow whole!",
+    observer: "{defender}'s ward drinks {creature}'s blow whole!",
+  },
+  battle_cry: {
+    self: "You shrug off {creature}'s blow!",
+    observer: '{defender} shrugs off {creature}\u2019s blow!',
+  },
+  divine_challenge: {
+    self: "You shrug off {creature}'s blow!",
+    observer: "{defender} shrugs off {creature}'s blow!",
+  },
+  item_ward: {
+    self: "Your wards drink {creature}'s blow whole!",
+    observer: "{defender}'s wards drink {creature}'s blow whole!",
+  },
+};
+
+/** Render a full-mitigation fold pair, or null when the source has no template. */
+function mitigationFoldPair(
+  source: string,
+  defender: string | undefined,
+  creature: string | undefined,
+): { self: string; observer: string } | null {
+  const pair = MITIGATION_FOLD_TEMPLATE[source];
+  if (!pair) return null;
+  const fill = (t: string) =>
+    t
+      .replace(/\{defender\}/g, defender ?? 'Someone')
+      .replace(/\{creature\}/g, creature ?? 'its foe');
+  return { self: fill(pair.self), observer: fill(pair.observer) };
+}
+
+
+
 
 /**
  * Server prose occasionally interpolates a raw `ability_key`. Render it as the
@@ -311,6 +372,7 @@ export function buildTickLogEvent(
   const isStage7 = STAGE7_TYPES.has(ev.type);
   const stage8 = STAGE8_SPEC[ev.type];
   const flavor = FLAVOR_SPEC[ev.type];
+  const isAbilityOutcome = ABILITY_OUTCOME_TYPES.has(ev.type);
   if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor) return null;
 
   const type = mapServerEventType(ev.type);
@@ -318,40 +380,53 @@ export function buildTickLogEvent(
 
   // Ability-authored lines: the configured template owns the sentence, so the
   // server's fallback prose is only used when nothing is authored.
+  const flavorTokens = {
+    attacker: ev.attacker_name,
+    target: ev.target_name ?? ev.creature_name,
+    amount: ev.damage ?? null,
+    stacks: ev.stacks ?? null,
+    maxStacks: ev.max_stacks ?? null,
+    abilityKey: ev.ability_key ?? null,
+    selfName: localCharacterName,
+    effectLabel: ev.effect_type ? getAbilityLabel(ev.effect_type) : null,
+  };
   const authored = flavor
-    ? renderAbilityFlavor(ev.type, {
-        attacker: ev.attacker_name,
-        target: ev.target_name ?? ev.creature_name,
-        amount: ev.damage ?? null,
-        stacks: ev.stacks ?? null,
-        maxStacks: ev.max_stacks ?? null,
-        abilityKey: ev.ability_key ?? null,
-        selfName: localCharacterName,
-        effectLabel: ev.effect_type ? getAbilityLabel(ev.effect_type) : null,
-      })
-    : null;
+    ? renderAbilityFlavor(ev.type, flavorTokens)
+    : isAbilityOutcome
+      ? renderAbilityOutcome(ev.type, flavorTokens)
+      : null;
 
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
-  // A fully-mitigated swing reads as one decisive line. The wording states the
-  // proven outcome (nothing landed) and the amount moves into the token, so the
-  // prose drops the server's inline `[N]`.
-  if (ev.fold?.kind === 'full_block') {
-    prose = prose
-      .replace(/\s*\[\d+\]\s*$/, '')
-      .replace(/\bblocks\b/, 'raises a shield and turns')
-      .replace(/\bblow\.?$/, 'blow aside!');
-  }
-  const remoteMessage = authored ? authored.text : humanizeAbilityKeys(prose);
-  const message = authored
+  // A fully-mitigated swing reads as one decisive line: the authored pair states
+  // the proven outcome (nothing landed) in the grammar each perspective needs,
+  // and the amount moves into the structured token.
+  // The observer sentence needs the defender's name; without it the server's
+  // own prose (minus its inline token) stays truthful, so nothing is invented.
+  const foldPair =
+    ev.fold?.kind === 'full_block' && (ev.target_name || isLocal)
+      ? mitigationFoldPair(ev.fold.source, ev.target_name, ev.attacker_name ?? ev.creature_name)
+      : null;
+  if (ev.fold?.kind === 'full_block') prose = prose.replace(/\s*\[\d+\]\s*$/, '');
+  const remoteMessage = foldPair
+    ? foldPair.observer
+    : authored
+      ? authored.text
+      : humanizeAbilityKeys(prose);
+  const message = foldPair
     ? isLocal
-      ? authored.selfText
-      : authored.text
-    : isLocal
-      ? applySelfPerspective(remoteMessage, localCharacterName)
-      : remoteMessage;
+      ? foldPair.self
+      : foldPair.observer
+    : authored
+      ? isLocal
+        ? authored.selfText
+        : authored.text
+      : isLocal
+        ? applySelfPerspective(remoteMessage, localCharacterName)
+        : remoteMessage;
+
 
 
 
@@ -411,8 +486,8 @@ export function buildTickLogEvent(
   }
   // Ability-authored lines: a template that writes the number itself owns the
   // presentation, so the structured token is dropped rather than repeated.
-  if (flavor) {
-    if (flavor.amountKind === 'stacks') {
+  if (flavor || isAbilityOutcome) {
+    if (flavor?.amountKind === 'stacks') {
       const stacks = typeof ev.stacks === 'number' && ev.stacks > 0 ? ev.stacks : undefined;
       amount = stacks;
       amountKind = stacks !== undefined ? 'stacks' : undefined;
@@ -460,7 +535,7 @@ export function buildTickLogEvent(
 
     severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
     abilityKey: ev.ability_key || undefined,
-    crit: ev.is_crit ? true : undefined,
+    crit: ev.is_crit || ev.type === 'ability_crit' ? true : undefined,
     scope: 'node',
   });
 }
