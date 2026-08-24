@@ -68,8 +68,9 @@ describe('boss cast — per-tick start chance', () => {
   it('never starts at chance 0, and consumes no cooldown', () => {
     const out = starts(0, 4);
     expect(out.events.some((e) => e.type === 'boss_cast_start')).toBe(false);
-    // A refused roll leaves the boss eligible: no cast row, no channel state.
-    expect(out.creatures[0].castCooldownTicksAfter ?? 0).toBe(0);
+    // A refused roll leaves nothing behind: no channel, so nothing resolves.
+    expect(out.events.some((e) => e.type.startsWith('boss_cast'))).toBe(false);
+    expect(out.casts ?? []).toHaveLength(0);
   });
 
   it('is deterministic: the same tick resolves the same way every time', () => {
