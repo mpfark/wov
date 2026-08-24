@@ -32,14 +32,16 @@ export interface LogPresentation {
  * anything else acting on the player is `threat`. Never inferred from words.
  */
 interface TypeSpec {
-  family: EventLogFamily | 'bySource';
+  family: EventLogFamily | 'bySource' | 'byAbilitySource';
   severity: LogSeverity;
   marker?: EventLogMarker;
 }
 
 const TYPE_SPEC: Record<LogEventType, TypeSpec> = {
   attack: { family: 'bySource', severity: 'routine' },
-  ability: { family: 'bySource', severity: 'routine' },
+  // Player ability casts and their outcomes share one subtle identity, distinct
+  // from an ordinary weapon swing. Creature-sourced ability lines stay `threat`.
+  ability: { family: 'byAbilitySource', severity: 'routine' },
   proc: { family: 'bySource', severity: 'routine' },
   debuff: { family: 'bySource', severity: 'routine' },
   dot_tick: { family: 'threat', severity: 'routine' },
@@ -77,6 +79,9 @@ export function defaultSeverity(type: LogEventType): LogSeverity {
 
 export function familyForEvent(event: GameLogEvent): EventLogFamily {
   const spec = TYPE_SPEC[event.type] ?? TYPE_SPEC.unknown;
+  if (spec.family === 'byAbilitySource') {
+    return event.source?.kind === 'player' ? 'ability' : 'threat';
+  }
   if (spec.family !== 'bySource') return spec.family;
   return event.source?.kind === 'player' ? 'action' : 'threat';
 }
