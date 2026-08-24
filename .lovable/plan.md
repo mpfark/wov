@@ -178,15 +178,23 @@ Resolved behavior (asserting damage and timing, not merely that a start event ex
 
 The implementation turn ends after: code and admin corrections; migrations **prepared, not applied**; focused tests; full suite; typecheck; production build; shared Edge mirror verification. No deploy, no publish, no production boss-data change, no live fixture.
 
-Scoped live verification is a later coordinated release:
-1. Review the complete 28-boss mechanical migration.
-2. Enter maintenance.
-3. Apply the reviewed migration.
-4. Deploy `combat-tick` and `combat-catchup` together from the same committed mirror.
-5. Publish the admin/frontend bundle if the admin contract changed.
-6. Verify one controlled boss cast from warning through committed damage, cooldown, and later irregular chance timing.
-7. Confirm Stored Power and autoattack behavior where applicable.
-8. Tear down the fixture and reopen only if every check passes.
+Because the live admin can still erase fields it does not understand, the corrected admin round-trip is published and verified **before** the mechanical backfill is applied:
+
+1. Review the code, canonical schema and complete 28-row migration.
+2. Confirm full tests, typecheck, build and mirror sync.
+3. Publish the frontend/admin bundle containing the preservation and validation correction.
+4. Verify the live build identifier and admin contract without saving production boss data.
+5. Enter combat maintenance.
+6. Apply the reviewed mechanical migration.
+7. Verify all 28 stored objects satisfy the canonical contract and decode successfully.
+8. Deploy `combat-tick` and `combat-catchup` together from the same committed shared mirror.
+9. Run the scoped controlled boss-cast verification (warning, resolution, damage, cooldown, later irregular chance timing).
+10. Tear down fixtures and reopen only if warning, resolution, damage, cooldown, chance, channeling and cleanup checks all pass.
+
+If frontend-first compatibility cannot be guaranteed, stop and report the incompatibility rather than silently changing this order.
+
+Before any code or data change, report: the resolved precedence table, the canonical stored schema, the 28-key identity mapping, and the historical `enabled` rule.
+
 
 ## Out of scope
 - No changes to authored damage numbers, chance values, cooldowns, creature AC, or crit thresholds.
