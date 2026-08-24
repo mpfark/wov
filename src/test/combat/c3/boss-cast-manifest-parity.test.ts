@@ -55,7 +55,7 @@ function applyBackfill(img: BossCastProductionImage): Rec {
       (typeof b.ability_key === 'string' && b.ability_key.trim()) ||
       (typeof b.cast_key === 'string' && b.cast_key.trim()) ||
       img.expectedKey,
-    label: img.expectedEnabled !== undefined ? (b.label as string) ?? BOSS_CAST_DEFAULTS.label : b.label,
+    label: typeof b.label === 'string' && b.label.trim() ? b.label : BOSS_CAST_DEFAULTS.label,
     enabled: isBool(b.enabled) ? b.enabled : img.expectedEnabled,
     cast_ms: castMs,
     cooldown_ms: cdMs,
