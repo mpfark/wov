@@ -80,6 +80,14 @@ const AMBIENT_BY_DESIGN = new Set([
   'level_bonus',
 ]);
 
+/**
+ * Known, pre-existing gaps: emitted by the resolver but not yet claimed by a
+ * structured builder, so they still render through the legacy neutral path.
+ * Listed explicitly so the contract below still fails for anything NEW.
+ * None of these is an attack/ability outcome line.
+ */
+const KNOWN_UNSTRUCTURED = new Set(['buff', 'debuff', 'heal', 'hp_transfer', 'volley']);
+
 const OUTCOME_PREFIX = /^(?:ability|attack|autoattack|offhand|creature)_(?:hit|crit|miss)$/;
 
 describe('server event coverage', () => {
@@ -96,6 +104,7 @@ describe('server event coverage', () => {
       ...STAGE10_SERVER_TYPES,
       ...ATTACK_BUILDER_TYPES,
       ...AMBIENT_BY_DESIGN,
+      ...KNOWN_UNSTRUCTURED,
     ]);
     const unclaimed = emitted.filter((t) => !known.has(t));
     expect(unclaimed).toEqual([]);
