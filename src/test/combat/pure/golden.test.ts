@@ -272,6 +272,8 @@ describe('pure resolver — golden rules', () => {
     damage: 40,
     damageAoe: 0,
     damageType: 'fire' as string | null,
+    // Certainty, so these goldens exercise targeting/timing rather than the gate.
+    chance: 1,
     targetMode: 'tank_strict' as 'tank_strict' | 'tank_preferred' | 'random_alive',
     channeling: true,
     storedPowerCap: 5,
