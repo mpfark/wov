@@ -257,6 +257,65 @@ const FLAVOR_SPEC: Record<string, { amountKind: 'damage' | 'stacks'; effectType?
   stack_applied: { amountKind: 'stacks' },
 };
 
+/**
+ * Ability outcomes whose sentence is authored per ability (`hit` / `miss`
+ * canonical slots) and never taken from the resolver's plain fallback prose.
+ * A critical hit is the same sentence with the crit flag set — it is not a
+ * separate wording, which is how `ability_crit` used to fall out of the
+ * structured path entirely.
+ */
+const ABILITY_OUTCOME_TYPES = new Set(['ability_hit', 'ability_crit', 'ability_miss']);
+
+/**
+ * Perspective-paired sentences for a swing that mitigation ate completely.
+ * Authored per mitigation source rather than conjugated: both verbs are written
+ * in the form the perspective needs, so no regex ever rewrites a verb.
+ * `{defender}` and `{creature}` are the only tokens.
+ */
+const MITIGATION_FOLD_TEMPLATE: Record<string, { self: string; observer: string }> = {
+  block: {
+    self: "You raise your shield and turn {creature}'s blow aside!",
+    observer: "{defender} raises their shield and turns {creature}'s blow aside!",
+  },
+  shield_block: {
+    self: "You raise your shield and turn {creature}'s blow aside!",
+    observer: "{defender} raises their shield and turns {creature}'s blow aside!",
+  },
+  absorb: {
+    self: "Your ward drinks {creature}'s blow whole!",
+    observer: "{defender}'s ward drinks {creature}'s blow whole!",
+  },
+  battle_cry: {
+    self: "You shrug off {creature}'s blow!",
+    observer: '{defender} shrugs off {creature}\u2019s blow!',
+  },
+  divine_challenge: {
+    self: "You shrug off {creature}'s blow!",
+    observer: "{defender} shrugs off {creature}'s blow!",
+  },
+  item_ward: {
+    self: "Your wards drink {creature}'s blow whole!",
+    observer: "{defender}'s wards drink {creature}'s blow whole!",
+  },
+};
+
+/** Render a full-mitigation fold pair, or null when the source has no template. */
+function mitigationFoldPair(
+  source: string,
+  defender: string | undefined,
+  creature: string | undefined,
+): { self: string; observer: string } | null {
+  const pair = MITIGATION_FOLD_TEMPLATE[source];
+  if (!pair) return null;
+  const fill = (t: string) =>
+    t
+      .replace(/\{defender\}/g, defender ?? 'Someone')
+      .replace(/\{creature\}/g, creature ?? 'its foe');
+  return { self: fill(pair.self), observer: fill(pair.observer) };
+}
+
+
+
 
 /**
  * Server prose occasionally interpolates a raw `ability_key`. Render it as the
