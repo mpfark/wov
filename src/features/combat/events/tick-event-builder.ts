@@ -21,7 +21,7 @@ import {
   type GameLogEvent,
   type LogActor,
 } from './log-event';
-import { renderAbilityFlavor } from './ability-flavor';
+import { renderAbilityFlavor, renderAbilityOutcome } from './ability-flavor';
 import {
   SELF_MARKER,
   applySecondPersonGrammar,
@@ -484,8 +484,8 @@ export function buildTickLogEvent(
   }
   // Ability-authored lines: a template that writes the number itself owns the
   // presentation, so the structured token is dropped rather than repeated.
-  if (flavor) {
-    if (flavor.amountKind === 'stacks') {
+  if (flavor || isAbilityOutcome) {
+    if (flavor?.amountKind === 'stacks') {
       const stacks = typeof ev.stacks === 'number' && ev.stacks > 0 ? ev.stacks : undefined;
       amount = stacks;
       amountKind = stacks !== undefined ? 'stacks' : undefined;
@@ -533,7 +533,7 @@ export function buildTickLogEvent(
 
     severity: stage8 ? stage8.severity : isStage7 ? stage7Severity(ev.type) : undefined,
     abilityKey: ev.ability_key || undefined,
-    crit: ev.is_crit ? true : undefined,
+    crit: ev.is_crit || ev.type === 'ability_crit' ? true : undefined,
     scope: 'node',
   });
 }
