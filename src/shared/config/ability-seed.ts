@@ -706,7 +706,13 @@ export const ABILITY_SEED: AbilitySeed[] = [
     target_type: 'enemy', activation_mode: 'queued', cp_cost: 10, cp_reserve_pct: null,
     amount_calc: spellT0('wis', 0.8), duration_calc: null, interval_ms: null,
     effect_config: { ...SPELL_ATTACK_CONFIG, stat: 'wis' },
-    combat_text: { hit_verb: 'passes divine judgment upon', miss_verb: 'pronounces sentence on' },
+    combat_text: {
+      hit: '{attacker} passes divine judgment upon {target}!',
+      miss: "{attacker}'s {ability} pronounces sentence, but {target} is spared.",
+      hit_verb: 'passes divine judgment upon',
+      miss_verb: 'pronounces sentence on',
+    },
+
     base_ability_key: 'spell_attack',
     class_key: 'templar', slot: 0,
   },
