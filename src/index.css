@@ -451,6 +451,7 @@
 /* Left-edge accents: the primary category indicator. Restrained on
    purpose — colour never carries meaning on its own. */
 .log-edge-action   { border-left-color: hsl(var(--log-player) / 0.55); }
+.log-edge-ability  { border-left-color: hsl(var(--gold, var(--log-player)) / 0.75); }
 .log-edge-threat   { border-left-color: hsl(var(--log-enemy) / 0.55); }
 .log-edge-support  { border-left-color: hsl(var(--log-heal) / 0.5); }
 .log-edge-ambient  { border-left-color: hsl(var(--border-subtle) / 0.35); }

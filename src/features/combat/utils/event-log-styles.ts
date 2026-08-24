@@ -364,7 +364,8 @@ export function splitLogTokens(log: string): LogTokens {
 // rather than a colour chart.
 
 export type EventLogFamily =
-  | 'action'    // player attacks / abilities
+  | 'action'    // player weapon attacks
+  | 'ability'   // player ability casts and their outcomes
   | 'threat'    // incoming attacks and damage
   | 'support'   // healing, regen, buffs, mitigation
   | 'ambient'   // movement, ordinary loot, narration, unknown/legacy
@@ -398,6 +399,13 @@ export const FAMILY_STYLE: Record<EventLogFamily, Omit<EventLogPresentation, 'fa
   action: {
     edgeClass: 'log-edge-action',
     textClass: 'text-log-player/90',
+    numberClass: 'text-log-number-damage',
+  },
+  // Ability identity: the same player voice, one notch brighter with a firmer
+  // gold edge. The amount token keeps the shared damage colour.
+  ability: {
+    edgeClass: 'log-edge-ability',
+    textClass: 'text-log-player font-medium',
     numberClass: 'text-log-number-damage',
   },
   threat: {
