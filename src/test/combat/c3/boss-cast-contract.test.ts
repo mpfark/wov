@@ -14,7 +14,6 @@ import {
   castEnabled,
   deriveCastIdentities,
   deriveCastFallbackKey,
-  slugifyCastLabel,
   msToTicks,
   BossCastContractError,
   BOSS_CAST_DEFAULTS,
@@ -294,5 +293,32 @@ describe('boss cast — admin round-trip preserves data', () => {
       undefined,
     );
     expect(validateCanonicalBossCast(bad, ctx()).length).toBeGreaterThan(0);
+  });
+});
+
+describe('boss cast — authoring validation scope', () => {
+  const runnable = {
+    ability_key: 'k',
+    label: 'L',
+    cast_ms: 4000,
+    cooldown_ms: 20000,
+    base_amount: 10,
+  };
+
+  it('accepts the inclusive chance range [0, 1]', () => {
+    for (const chance of [0, 0.001, 0.5, 1]) {
+      expect(validateCanonicalBossCast({ ...runnable, chance }, ctx())).toEqual([]);
+    }
+    for (const chance of [-0.1, 1.1]) {
+      expect(validateCanonicalBossCast({ ...runnable, chance }, ctx()).join(' ')).toMatch(
+        /start chance/,
+      );
+    }
+  });
+
+  it('does not police a disabled legacy configuration', () => {
+    expect(
+      validateCanonicalBossCast({ enabled: false, label: 'Half-authored' }, ctx()),
+    ).toEqual([]);
   });
 });
