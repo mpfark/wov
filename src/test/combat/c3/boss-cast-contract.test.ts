@@ -13,7 +13,10 @@ import {
   validateCanonicalBossCast,
   castEnabled,
   deriveCastIdentities,
+  deriveCastFallbackKey,
   slugifyCastLabel,
+  msToTicks,
+  BossCastContractError,
   BOSS_CAST_DEFAULTS,
   type BossCastContext,
 } from '@/shared/combat/c3/boss-cast-contract';
@@ -44,7 +47,15 @@ describe('boss cast — stored shapes decode', () => {
   it('decodes a legacy production row with no ability_key', () => {
     const cast = normalizeBossCast(legacyRow, ctx());
     expect(cast).not.toBeNull();
-    expect(cast!.abilityKey).toBe(slugifyCastLabel('Ruinous Decree'));
+    // The fallback is creature-anchored — the exact key the backfill prepares.
+    expect(cast!.abilityKey).toBe(
+      deriveCastFallbackKey('Ruinous Decree', ctx().creatureId),
+    );
+    expect(cast!.abilityKey).toBe(
+      deriveCastIdentities([
+        { creatureId: ctx().creatureId, label: 'Ruinous Decree', abilityKey: null },
+      ])[0].key,
+    );
     expect(cast!.label).toBe('Ruinous Decree');
     // 4000ms / 2000ms tick rate.
     expect(cast!.castTicks).toBe(2);
@@ -136,6 +147,67 @@ describe('boss cast — identity is stable and collision-safe', () => {
     const again = deriveCastIdentities(rows).map((r) => r.key);
     expect(new Set(first).size).toBe(2);
     expect(again).toEqual(first);
+  });
+
+  it('the runtime decoder derives exactly the migration key, row by row', () => {
+    const rows = [
+      { creatureId: 'aaaaaaaa-1111-1111-1111-111111111111', label: "Headsman's Measure" },
+      { creatureId: 'bbbbbbbb-2222-2222-2222-222222222222', label: 'Headsmans  MEASURE!' },
+      { creatureId: 'cccccccc-3333-3333-3333-333333333333', label: 'Cataclysm' },
+    ];
+    const migration = deriveCastIdentities(rows.map((r) => ({ ...r, abilityKey: null })));
+    rows.forEach((row, i) => {
+      const cast = normalizeBossCast(
+        { ...legacyRow, label: row.label },
+        ctx({ creatureId: row.creatureId }),
+      );
+      expect(cast!.abilityKey).toBe(migration[i].key);
+    });
+    // Punctuation/case collisions stay unique because the anchor differs.
+    expect(new Set(migration.map((m) => m.key)).size).toBe(3);
+  });
+
+  it('never rewrites an explicit key when the label changes', () => {
+    const a = normalizeBossCast({ ...legacyRow, ability_key: 'pinned' }, ctx());
+    const b = normalizeBossCast(
+      { ...legacyRow, ability_key: 'pinned', label: 'Renamed Entirely' },
+      ctx(),
+    );
+    expect(a!.abilityKey).toBe('pinned');
+    expect(b!.abilityKey).toBe('pinned');
+  });
+
+  it('keeps cast_key as a compatibility fallback', () => {
+    const cast = normalizeBossCast({ ...legacyRow, cast_key: 'legacy_cast_key' }, ctx());
+    expect(cast!.abilityKey).toBe('legacy_cast_key');
+  });
+});
+
+describe('boss cast — timing fails closed without an authoritative tick rate', () => {
+  it('converts on the supplied grid, 2000 ms and otherwise', () => {
+    expect(msToTicks(4000, 2000)).toBe(2);
+    expect(msToTicks(4000, 1000)).toBe(4);
+    expect(msToTicks(5000, 3000)).toBe(2);
+    expect(msToTicks(100, 2000)).toBe(1);
+    expect(normalizeBossCast(legacyRow, ctx({ tickRateMs: 1000 }))!.castTicks).toBe(4);
+  });
+
+  it('throws instead of silently assuming 2000 ms', () => {
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, undefined as any]) {
+      expect(() => msToTicks(4000, bad)).toThrow(BossCastContractError);
+      expect(() => normalizeBossCast(legacyRow, ctx({ tickRateMs: bad }))).toThrow(
+        BossCastContractError,
+      );
+    }
+  });
+
+  it('reports an invalid tick rate as an authoring problem', () => {
+    const problems = validateCanonicalBossCast(
+      { ability_key: 'k', label: 'L', cast_ms: 4000, cooldown_ms: 20000, chance: 0.3, base_amount: 10 },
+      ctx({ tickRateMs: 0 }),
+    );
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toMatch(/tick rate/i);
   });
 });
 
