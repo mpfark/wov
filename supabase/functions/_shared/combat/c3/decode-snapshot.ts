@@ -21,6 +21,7 @@
  */
 
 import { decodeError } from './errors.ts';
+import { normalizeBossCast, type BossCastContext } from './boss-cast-contract.ts';
 import {
   EFFECT_MECHANIC_REGISTRY,
   EFFECT_PARAMS_VERSION,
@@ -504,49 +505,20 @@ function decodeWeapon(equipment: readonly Json[], path: string): WeaponSnapshot 
   };
 }
 
-function decodeBossCast(value: unknown, path: string): BossCastSnapshot | null {
+/**
+ * Boss casts are decoded by the shared boss-cast contract, which owns the
+ * complete stored vocabulary (canonical and legacy) and the historical
+ * eligibility rule. Rarity, level and the authoritative tick rate are handed in
+ * as explicit context — never inferred from the cast itself.
+ */
+function decodeBossCast(
+  value: unknown,
+  ctx: BossCastContext,
+): BossCastSnapshot | null {
   if (value === undefined || value === null) return null;
-  const o = obj(value, path);
-  if (Object.keys(o).length === 0) return null;
-  const abilityKey = optStr(o, 'ability_key', path) ?? optStr(o, 'abilityKey', path);
-  if (!abilityKey) return null;
-  const storedPower = o.stored_power ? obj(o.stored_power, `${path}.stored_power`) : null;
-  const consume = storedPower ?? o;
-  return {
-    abilityKey,
-    castKey: optStr(o, 'cast_key', path) ?? optStr(o, 'castKey', path) ?? abilityKey,
-    label: optStr(o, 'label', path) ?? abilityKey,
-    castTicks: optNum(o, 'cast_ticks', path) ?? 1,
-    cooldownTicks: optNum(o, 'cooldown_ticks', path) ?? 0,
-    damage: optNum(o, 'damage', path) ?? 0,
-    damageAoe: optNum(o, 'damage_aoe', path) ?? 0,
-    damageType: optStr(o, 'damage_type', path),
-    targetMode: oneOf(
-      optStr(o, 'target_mode', path) ?? 'tank_preferred',
-      ['tank_strict', 'tank_preferred', 'random_alive'] as const,
-      `${path}.target_mode`,
-    ),
-    channeling: Boolean(o.channeling),
-    storedPowerCap: storedPower ? (optNum(storedPower, 'cap', `${path}.stored_power`) ?? 0) : 0,
-    primaryShare: storedPower
-      ? (optNum(storedPower, 'primary_share', `${path}.stored_power`) ?? 1)
-      : 1,
-    aoeShare: storedPower ? (optNum(storedPower, 'aoe_share', `${path}.stored_power`) ?? 0) : 0,
-    consumeMode: oneOf(
-      optStr(consume, 'consume_mode', path) ?? 'all',
-      ['all', 'percent', 'fixed', 'preserve', 'reset', 'ignore'] as const,
-      `${path}.consume_mode`,
-    ),
-    consumePct: optNum(consume, 'consume_pct', path) ?? 100,
-    consumeFixed: optNum(consume, 'consume_fixed', path) ?? 0,
-    pauseAutoattacks: o.pause_autoattacks === undefined
-      ? Boolean(o.channeling)
-      : Boolean(o.pause_autoattacks),
-    lockMs: optNum(o, 'lock_ms', path) ?? 0,
-    castingText: optStr(o, 'casting_text', path),
-    castedText: optStr(o, 'casted_text', path),
-  };
+  return normalizeBossCast(value, ctx);
 }
+
 
 /**
  * An in-flight telegraph. The frozen contract lives under `payload.config`
@@ -799,7 +771,14 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       };
     });
 
-    const bossCast = decodeBossCast(c.bossCast, `${path}.bossCast`);
+    const creatureLevel = reqNum(c, 'level', path);
+    const bossCast = decodeBossCast(c.bossCast, {
+      rarity,
+      creatureId: id,
+      level: creatureLevel,
+      tickRateMs,
+    });
+
     // Display-only: tolerant by design (authored free text, no gameplay effect).
     const bossCritFlavors = arr(c.bossCritFlavors ?? [], `${path}.bossCritFlavors`)
       .map((e, j) => {
@@ -818,7 +797,7 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
     creatures.push({
       id,
       name: reqStr(c, 'name', path),
-      level: reqNum(c, 'level', path),
+      level: creatureLevel,
       rarity,
       hp: reqNum(c, 'hp', path),
       maxHp: reqNum(c, 'maxHp', path),
