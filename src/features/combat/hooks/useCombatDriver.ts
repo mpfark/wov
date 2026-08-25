@@ -1428,6 +1428,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             nextDueAtMs?: number | null;
             serverNowMs?: number | null;
             serverProcessMs?: number | null;
+            /** Deployed server combat build identity, when the answer stamps it. */
+            serverBuild?: string | null;
           },
         ) => {
           const res = data as CombatTickResponse | null;
@@ -1456,6 +1458,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             networkMs,
             remainingMs,
             plannedDelayMs,
+            serverBuild: extra?.serverBuild ?? null,
           });
         };
 
@@ -1538,6 +1541,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               nextDueAtMs: ack.nextDueAtMs,
               serverNowMs: ack.serverNowMs,
               serverProcessMs: ack.serverProcessMs,
+              serverBuild: ack.serverBuild,
             });
             setPendingCpCost(0);
             if (ack.encounterId && ack.encounterId !== encounterIdRef.current) {
@@ -1554,6 +1558,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               nextDueAtMs: ack.nextDueAtMs,
               serverNowMs: ack.serverNowMs,
               serverProcessMs: ack.serverProcessMs,
+              serverBuild: ack.serverBuild,
             });
 
             setPendingCpCost(0);

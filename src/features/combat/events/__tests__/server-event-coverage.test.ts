@@ -66,6 +66,7 @@ const AMBIENT_BY_DESIGN = new Set([
   'boss_cast_channel',
   'boss_cast_evaded',
   'boss_cast_fizzle',
+  'boss_cast_no_effect',
   'boss_death_cry',
   'character_died',
   'creature_killed',

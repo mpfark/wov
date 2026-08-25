@@ -63,6 +63,11 @@ export interface CombatTraceSample {
   remainingMs?: number;
   /** Delay the pacer chose for the next request after this answer. */
   plannedDelayMs?: number;
+  /**
+   * Server combat build identity from the response envelope. Recorded so a
+   * cadence report proves which deployed code produced every sample.
+   */
+  serverBuild?: string | null;
   /** Set when the response was ignored (stale seq, reserved elsewhere, dropped). */
   outcome?: 'applied' | 'stale' | 'reserved' | 'error' | 'duplicate' | 'empty';
 
@@ -163,6 +168,7 @@ export interface TickResponseTrace {
   networkMs?: number;
   remainingMs?: number;
   plannedDelayMs?: number;
+  serverBuild?: string | null;
 }
 
 export function traceTickResponse(seq: number, info: TickResponseTrace) {
@@ -183,6 +189,7 @@ export function traceTickResponse(seq: number, info: TickResponseTrace) {
   sample.networkMs = info.networkMs;
   sample.remainingMs = info.remainingMs;
   sample.plannedDelayMs = info.plannedDelayMs;
+  sample.serverBuild = info.serverBuild ?? null;
   emit();
 }
 

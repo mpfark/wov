@@ -490,6 +490,29 @@ export async function orchestrateCombatResolution(
       });
     }
 
+    // 6b. Server-side diagnostics for casts that reached someone yet landed
+    // nothing. These never become player prose: the committed event carries the
+    // structured reason, the numbers stay in the function log.
+    for (const c of proposed.casts) {
+      if (c.phase !== 'resolve' || !c.noEffectReason) continue;
+      deps.log?.('[c3] boss cast landed no damage', {
+        encounterId,
+        tick: claim.tick,
+        creatureId: c.creatureId,
+        castKey: c.castKey,
+        abilityKey: c.abilityKey,
+        reason: c.noEffectReason,
+        eligibleCount: c.eligibleCount ?? null,
+        baseDamage: c.config?.baseDamage ?? null,
+        baseAoeDamage: c.config?.baseAoeDamage ?? null,
+        primaryShare: c.config?.primaryShare ?? null,
+        aoeShare: c.config?.aoeShare ?? null,
+        storedPowerConsumed: c.storedPowerConsumed,
+        primaryDamage: c.damage,
+        aoeDamage: c.aoeDamage,
+      });
+    }
+
     // 7. Atomic commit. Either every mutation lands or none does.
     // `_reserved_boundary_at` fences the commit: if the encounter's stored
     // reservation is a different boundary, this resolver's claim was superseded

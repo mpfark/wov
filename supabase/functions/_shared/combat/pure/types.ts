@@ -715,6 +715,14 @@ export interface CastMutation {
   readonly targets: readonly CastTargetProposal[];
   /** Frozen authored contract, persisted on `start` and read back on resolve. */
   readonly config: ActiveCastSnapshot | null;
+  /**
+   * Server-side diagnostic: why a resolution reached eligible participants but
+   * landed nothing. `null` when the cast hit, fizzled, or found an empty room
+   * (the latter is the `boss_cast_evaded` event). Never player prose.
+   */
+  readonly noEffectReason?: 'zero_damage' | 'fully_mitigated' | null;
+  /** Diagnostic: how many participants passed the telegraph fence. */
+  readonly eligibleCount?: number;
 }
 
 
@@ -784,6 +792,12 @@ export interface PresentationEvent {
   /** Chosen boss crit flavor: authored name + placeholder text. */
   readonly bossFlavorName?: string | null;
   readonly bossFlavorText?: string | null;
+  /**
+   * Structured, machine-readable reason for a non-damaging outcome
+   * (`zero_damage`, `fully_mitigated`, …). Presentation may branch on it; it is
+   * never player prose and never simulation input.
+   */
+  readonly outcomeReason?: string | null;
 }
 
 

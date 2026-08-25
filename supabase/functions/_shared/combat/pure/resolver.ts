@@ -241,6 +241,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
       bossFlavorName: extra.bossFlavorName ?? null,
       bossFlavorText: extra.bossFlavorText ?? null,
+      outcomeReason: extra.outcomeReason ?? null,
     });
   };
 
@@ -2111,18 +2112,35 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // Eligibility: alive, and already present when the channel began.
       // Leaving the node purges the participant row, so anyone who fled and
       // walked back in re-joined later and is not caught by this cast.
+      //
+      // Clock-domain exception for the cast's OWN frozen primary target: the
+      // participant row is stamped with database wall-clock at intake, while
+      // `startedAtMs` is the claim's *scheduled* boundary, which can be a
+      // fraction of a second earlier. The boss selected this character as its
+      // target during the cast-start tick, so its join identity is frozen with
+      // the cast; excluding it later on a clock-domain difference would make a
+      // cast dodge its own target. This is not a tolerance window — it is
+      // membership decided once, at cast start.
       const eligible = participants.filter(
-        (p) => isAliveP(p.id) && isPresent(p.id) && p.joinedAtMs <= cast.startedAtMs,
+        (p) =>
+          isAliveP(p.id) &&
+          isPresent(p.id) &&
+          (p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId),
       );
 
       const targets: CastTargetProposal[] = [];
+      /**
+       * Highest raw (pre-mitigation) amount any eligible participant was owed.
+       * A cast that produced no target because the configuration resolved to
+       * zero damage is NOT the same event as a cast that found an empty room —
+       * the two are reported separately and truthfully below.
+       */
+      let maxRawAmount = 0;
       for (const p of eligible) {
         const isPrimary = p.id === cast.targetCharacterId;
-        const amount = reduceCreatureDamage(
-          creatureId,
-          isPrimary ? primaryDamage : aoeDamage,
-          nowMs,
-        );
+        const raw = isPrimary ? primaryDamage : aoeDamage;
+        if (raw > maxRawAmount) maxRawAmount = raw;
+        const amount = reduceCreatureDamage(creatureId, raw, nowMs);
         if (amount <= 0) continue;
         const applied = damageCharacter(p, amount, creatureId, nowMs);
         targets.push({ characterId: p.id, damage: amount, applied, isPrimary });
@@ -2137,8 +2155,23 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           },
         );
       }
+      let noEffectReason: 'zero_damage' | 'fully_mitigated' | null = null;
       if (targets.length === 0) {
-        emit('boss_cast_evaded', `${cast.label} lands on empty ground.`, { creatureId });
+        if (eligible.length === 0) {
+          // Genuinely nobody the cast could reach: everyone died, fled, or
+          // joined after the channel began.
+          emit('boss_cast_evaded', `${cast.label} lands on empty ground.`, { creatureId });
+        } else {
+          // Someone WAS standing there. Saying "empty ground" was the defect:
+          // it read as a dodge and hid a zero-damage configuration for weeks.
+          noEffectReason = maxRawAmount <= 0 ? 'zero_damage' : 'fully_mitigated';
+          emit('boss_cast_no_effect', `${cast.label} dissipates without effect.`, {
+            creatureId,
+            characterId: cast.targetCharacterId,
+            damageType: cast.damageType,
+            outcomeReason: noEffectReason,
+          });
+        }
       }
 
       casts.push({
@@ -2157,6 +2190,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         lockMs: targets.length > 0 ? cast.lockMs : 0,
         targets,
         config: cast,
+        // Server-side diagnostic only. The orchestration logs it; it never
+        // becomes player prose and never reaches the committed event message.
+        noEffectReason,
+        eligibleCount: eligible.length,
       });
     }
 

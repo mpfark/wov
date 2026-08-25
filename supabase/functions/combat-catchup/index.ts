@@ -17,19 +17,27 @@
  * events at all.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, json } from "../_shared/http.ts";
+import { corsHeaders, json as rawJson } from "../_shared/http.ts";
+import { EDGE_COMBAT_BUILD_ID, stampCombatBuild } from "../_shared/combat/build-identity.ts";
 import { orchestrateCombatResolution } from "../_shared/combat/c3/orchestration.ts";
 import { buildAbilityCatalog } from "../_shared/combat/c3-catalog.ts";
 import { COMBAT_MAINTENANCE_MESSAGE } from "../_shared/combat/maintenance.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Every response leaves through here, so none can omit the build identity. */
+function json(data: unknown) {
+  return rawJson(stampCombatBuild(data));
+}
+
 function fail(kind: string, reason: string, status: number) {
-  return new Response(JSON.stringify({ ok: false, kind, reason }), {
+  return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind, reason })), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+console.log('[combat-catchup] boot', { serverBuild: EDGE_COMBAT_BUILD_ID });
 
 async function sha256Hex(input: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));

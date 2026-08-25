@@ -23,7 +23,7 @@ import { isMaintenanceResponse } from '@/shared/combat/maintenance';
 
 export type TickAck =
   /** Combat is globally closed. Latch it and stop. */
-  | { kind: 'maintenance'; message?: string }
+  | { kind: 'maintenance'; message?: string; serverBuild: string | null }
   /**
    * The tick was committed. Carries the identity the batch stream needs.
    * Nothing here is rendered.
@@ -44,6 +44,12 @@ export type TickAck =
        * needs no arbitrary fraction of the round trip.
        */
       serverProcessMs: number | null;
+      /**
+       * Server combat build identity, when the deployed function stamps it.
+       * Optional so a pre-stamp deployment still decodes; a null value is
+       * itself evidence that the running function predates the stamp.
+       */
+      serverBuild: string | null;
     }
 
   /**
@@ -73,6 +79,8 @@ export type TickAck =
        * pacer applies one uniform rule to every acknowledgement.
        */
       serverProcessMs: number | null;
+      /** Server combat build identity, when the deployed function stamps it. */
+      serverBuild: string | null;
     }
 
 
@@ -101,6 +109,8 @@ function isTerminalRefusal(failureKind: string, reason: string, detailMode: stri
 export function interpretTickAck(raw: unknown): TickAck {
   if (!raw || typeof raw !== 'object') return { kind: 'unknown' };
   const data = raw as Record<string, any>;
+  const buildOf = (d: Record<string, any>): string | null =>
+    typeof d.serverBuild === 'string' && d.serverBuild.length > 0 ? d.serverBuild : null;
 
   // Legacy gated payload (`maintenance: true`) and the C3 refusal kind.
   if (isMaintenanceResponse(data) || (data.ok === false && data.kind === 'maintenance')) {
@@ -109,7 +119,7 @@ export function interpretTickAck(raw: unknown): TickAck {
       : typeof data.reason === 'string' && data.reason.length > 0
         ? data.reason
         : undefined;
-    return { kind: 'maintenance', message };
+    return { kind: 'maintenance', message, serverBuild: buildOf(data) };
   }
 
   const num = (v: unknown): number | null =>
@@ -128,6 +138,7 @@ export function interpretTickAck(raw: unknown): TickAck {
         typeof data.serverProcessMs === 'number' && Number.isFinite(data.serverProcessMs) && data.serverProcessMs >= 0
           ? data.serverProcessMs
           : null,
+      serverBuild: buildOf(data),
     };
   }
 
@@ -145,7 +156,7 @@ export function interpretTickAck(raw: unknown): TickAck {
       nextDueAtMs: num(data.detail?.nextDueAtMs) ?? num(data.nextDueAtMs),
       serverNowMs: num(data.detail?.serverNowMs) ?? num(data.serverNowMs),
       serverProcessMs: 0,
-
+      serverBuild: buildOf(data),
     };
   }
 
