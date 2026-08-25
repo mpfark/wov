@@ -6,8 +6,8 @@ export const APP_VERSION = "r7";
  * reviewed repository state at publish time.
  *
  * Must be released together with the matching Edge combat build identity
- * (`EDGE_COMBAT_BUILD_ID`, `r7-aggression-bosscast-buildid`): this release pairs
- * the restored damaged-creature aggression transition with the deployed
- * boss-cast contract and the truthful zero-damage cast outcome.
+ * (`EDGE_COMBAT_BUILD_ID`, `r7-mitigation-fold-buildid`): this release pairs
+ * the correlated boss-cast mitigation contract (full mitigation folds into one
+ * defensive line) with the deployed aggression and boss-cast behaviour.
  */
-export const BUILD_ID = "r7-aggression-bosscast";
+export const BUILD_ID = "r7-mitigation-fold";
