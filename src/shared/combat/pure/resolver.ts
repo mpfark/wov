@@ -2112,8 +2112,20 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // Eligibility: alive, and already present when the channel began.
       // Leaving the node purges the participant row, so anyone who fled and
       // walked back in re-joined later and is not caught by this cast.
+      //
+      // Clock-domain exception for the cast's OWN frozen primary target: the
+      // participant row is stamped with database wall-clock at intake, while
+      // `startedAtMs` is the claim's *scheduled* boundary, which can be a
+      // fraction of a second earlier. The boss selected this character as its
+      // target during the cast-start tick, so its join identity is frozen with
+      // the cast; excluding it later on a clock-domain difference would make a
+      // cast dodge its own target. This is not a tolerance window — it is
+      // membership decided once, at cast start.
       const eligible = participants.filter(
-        (p) => isAliveP(p.id) && isPresent(p.id) && p.joinedAtMs <= cast.startedAtMs,
+        (p) =>
+          isAliveP(p.id) &&
+          isPresent(p.id) &&
+          (p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId),
       );
 
       const targets: CastTargetProposal[] = [];
