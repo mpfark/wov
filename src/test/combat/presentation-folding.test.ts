@@ -222,3 +222,63 @@ describe('ability identity and wording', () => {
     }
   });
 });
+
+/**
+ * Boss casts resolved against a character follow the SAME defensive contract as
+ * a creature swing: the cast keeps its identity, the mitigation carries the
+ * structured breakdown, and full mitigation renders one folded defensive line
+ * instead of a bare [0] hit.
+ */
+describe('boss-cast mitigation folding', () => {
+  const group_id = 'cast|cast-1|cr-1|char-local';
+
+  function castGroup(attempted: number, mitigated: number, applied: number): FoldableEvent[] {
+    return [
+      {
+        type: 'boss_cast_mitigated',
+        message: "Riptide Cut crashes against Aldric's defenses!",
+        group_id,
+        character_id: LOCAL_ID,
+        creature_id: 'cr-1',
+        amount: mitigated,
+        attempted_amount: attempted,
+        mitigated_amount: mitigated,
+        applied_amount: applied,
+        mitigation_source: 'cast_mitigation',
+        target_name: LOCAL_NAME,
+        attacker_name: 'Ser Caldris',
+      },
+      {
+        type: 'boss_cast_hit',
+        message: `Riptide Cut strikes Aldric for ${applied}.`,
+        group_id,
+        character_id: LOCAL_ID,
+        creature_id: 'cr-1',
+        amount: applied,
+        attempted_amount: attempted,
+        mitigated_amount: mitigated,
+        applied_amount: applied,
+      },
+    ];
+  }
+
+  it('folds a fully mitigated cast into the defensive line', () => {
+    const out = foldPresentationGroups(castGroup(31, 31, 0));
+    expect(out.map((e) => e.type)).toEqual(['boss_cast_mitigated']);
+    expect(out[0].fold).toEqual({ kind: 'full_block', mitigated: 31, source: 'cast_mitigation' });
+  });
+
+  it('keeps both lines when the cast was only partly mitigated', () => {
+    const out = foldPresentationGroups(castGroup(31, 12, 19));
+    expect(out.map((e) => e.type)).toEqual(['boss_cast_mitigated', 'boss_cast_hit']);
+    expect(out.every((e) => e.fold === undefined)).toBe(true);
+  });
+
+  it('renders the folded cast as a blocked amount, not a [0] hit', () => {
+    const folded = foldPresentationGroups(castGroup(31, 31, 0))[0];
+    const line = buildTickLogEvent(folded as never, LOCAL_ID, LOCAL_NAME);
+    expect(line).not.toBeNull();
+    expect(line!.numberText).toBe('[31 blocked]');
+    expect(line!.message).not.toContain('[0]');
+  });
+});

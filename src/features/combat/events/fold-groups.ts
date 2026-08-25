@@ -41,7 +41,9 @@ export type FoldHint =
   | { kind: 'pulse_with_stack'; stacks: number; maxStacks: number; effectType?: string }
   | { kind: 'full_block'; mitigated: number; source: string };
 
-const LANDED_CREATURE_ATTACKS = new Set(['creature_hit', 'creature_crit']);
+// A boss cast that resolved against a character is the same beat shape as a
+// swing: one attack event plus the defensive result that ate part or all of it.
+const LANDED_CREATURE_ATTACKS = new Set(['creature_hit', 'creature_crit', 'boss_cast_hit']);
 
 function num(v: unknown): number | undefined {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
