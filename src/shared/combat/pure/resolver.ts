@@ -2155,10 +2155,38 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         const isPrimary = p.id === cast.targetCharacterId;
         const raw = isPrimary ? primaryDamage : aoeDamage;
         if (raw > maxRawAmount) maxRawAmount = raw;
-        const amount = reduceCreatureDamage(creatureId, raw, nowMs);
-        if (amount <= 0) continue;
-        const applied = damageCharacter(p, amount, creatureId, nowMs);
-        targets.push({ characterId: p.id, damage: amount, applied, isPrimary });
+        const attempted = reduceCreatureDamage(creatureId, raw, nowMs);
+        if (attempted <= 0) continue;
+        // One resolution against one character = one correlation group, exactly
+        // as a creature swing does, so presentation can fold the defensive
+        // result and the hit into a single truthful line.
+        const groupId = `cast|${cast.castEventId}|${creatureId}|${p.id}`;
+        const detail = damageCharacterDetail(p, attempted, creatureId, nowMs);
+        const applied = detail.applied;
+        targets.push({ characterId: p.id, damage: attempted, applied, isPrimary });
+        if (detail.mitigated > 0) {
+          // A cast the defender stopped is a defensive result, not a missing
+          // damage budget. It keeps the cast's identity and reports the amount
+          // it swallowed; the folding contract decides whether it stands alone
+          // (partial) or speaks for the whole group (full).
+          emit(
+            'boss_cast_mitigated',
+            detail.wardUsed >= attempted
+              ? `${cast.label} breaks upon ${p.name}'s ward.`
+              : `${cast.label} crashes against ${p.name}'s defenses!`,
+            {
+              characterId: p.id,
+              creatureId,
+              amount: detail.mitigated,
+              damageType: cast.damageType,
+              groupId,
+              attemptedAmount: attempted,
+              mitigatedAmount: detail.mitigated,
+              appliedAmount: applied,
+              mitigationSource: detail.wardUsed >= attempted ? 'cast_ward' : 'cast_mitigation',
+            },
+          );
+        }
         emit(
           'boss_cast_hit',
           cast.castedText ?? `${cast.label} strikes ${p.name} for ${applied}.`,
@@ -2167,9 +2195,17 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             creatureId,
             amount: applied,
             damageType: cast.damageType,
+            groupId,
+            attemptedAmount: attempted,
+            mitigatedAmount: detail.mitigated,
+            appliedAmount: applied,
           },
         );
       }
+      // `fully_mitigated` can no longer be reached from here: a cast with a raw
+      // budget always resolves against its target and reports the defence
+      // above. The reason stays in the contract so an older committed batch
+      // still decodes, and so a future non-damaging outcome has a slot.
       let noEffectReason: 'zero_damage' | 'fully_mitigated' | null = null;
       if (targets.length === 0) {
         if (eligible.length === 0) {
