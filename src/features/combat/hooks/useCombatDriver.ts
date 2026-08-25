@@ -1458,6 +1458,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             networkMs,
             remainingMs,
             plannedDelayMs,
+            serverBuild: extra?.serverBuild ?? null,
           });
         };
 
