@@ -1428,6 +1428,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             nextDueAtMs?: number | null;
             serverNowMs?: number | null;
             serverProcessMs?: number | null;
+            /** Deployed server combat build identity, when the answer stamps it. */
+            serverBuild?: string | null;
           },
         ) => {
           const res = data as CombatTickResponse | null;
