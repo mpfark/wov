@@ -80,6 +80,8 @@ const STAGE6_TYPES = new Set([
   'battle_cry_dr',
   'divine_challenge_dr',
   'item_buff_dr',
+  // A boss cast the defender stopped is a mitigation outcome like any other.
+  'boss_cast_mitigated',
 ]);
 
 
@@ -187,6 +189,7 @@ const STAGE6_AMOUNT_KIND: Record<string, 'heal' | 'block' | 'absorb'> = {
   battle_cry_dr: 'block',
   divine_challenge_dr: 'block',
   item_buff_dr: 'block',
+  boss_cast_mitigated: 'block',
 };
 
 /** Effect label per stage-6 server type — structured, never parsed from prose. */
@@ -202,6 +205,7 @@ const STAGE6_EFFECT_TYPE: Record<string, string> = {
   battle_cry_dr: 'battle_cry',
   divine_challenge_dr: 'divine_challenge',
   item_buff_dr: 'item_ward',
+  boss_cast_mitigated: 'block',
 };
 
 
