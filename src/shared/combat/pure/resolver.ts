@@ -630,16 +630,24 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
   }
 
-  const damageCharacter = (
+  /**
+   * The defender-side damage pipeline, with the mitigation it performed
+   * reported back. `mitigated` is measured BEFORE the HP clamp, so an overkill
+   * blow never masquerades as mitigation, and `wardUsed` distinguishes an
+   * absorb ward from flat/percent mitigation for presentation.
+   */
+  const damageCharacterDetail = (
     target: ParticipantSnapshot,
     amount: number,
     creatureId: string | null,
     nowMs: number,
-  ): number => {
-    if (amount <= 0 || !isAliveP(target.id)) return 0;
+  ): { applied: number; mitigated: number; wardUsed: number } => {
+    if (amount <= 0 || !isAliveP(target.id)) return { applied: 0, mitigated: 0, wardUsed: 0 };
     // Ward first (mid-pipeline), then flat/percent mitigation, then HP.
-    const ward = absorbFromShield(amount, w.shield.get(target.id) ?? 0);
+    const shieldBefore = w.shield.get(target.id) ?? 0;
+    const ward = absorbFromShield(amount, shieldBefore);
     w.shield.set(target.id, ward.shieldAfter);
+    const wardUsed = Math.max(0, shieldBefore - ward.shieldAfter);
     let remaining = ward.remaining;
     if (target.buffs.mitigationPct > 0) {
       remaining = Math.floor(remaining * (1 - Math.min(0.9, target.buffs.mitigationPct)));
@@ -658,8 +666,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       });
     }
     void nowMs;
-    return res.applied;
+    return { applied: res.applied, mitigated: Math.max(0, amount - remaining), wardUsed };
   };
+
+  const damageCharacter = (
+    target: ParticipantSnapshot,
+    amount: number,
+    creatureId: string | null,
+    nowMs: number,
+  ): number => damageCharacterDetail(target, amount, creatureId, nowMs).applied;
 
   /**
    * The authored Stored Power contract: while a boss channels, its paused
