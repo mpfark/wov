@@ -277,7 +277,8 @@ describe('boss-cast mitigation folding', () => {
   it('renders the folded cast as a blocked amount, not a [0] hit', () => {
     const folded = foldPresentationGroups(castGroup(31, 31, 0))[0];
     const line = buildTickLogEvent(folded as never, LOCAL_ID, LOCAL_NAME);
-    expect(line.message).toContain('31 blocked');
-    expect(line.message).not.toContain('[0]');
+    expect(line).not.toBeNull();
+    expect(line!.numberText).toBe('[31 blocked]');
+    expect(line!.message).not.toContain('[0]');
   });
 });
