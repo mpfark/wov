@@ -16,24 +16,32 @@
  * fails closed; the handler simply forwards that refusal.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, json, verifyUserIdFromJwt } from "../_shared/http.ts";
+import { corsHeaders, json as rawJson, verifyUserIdFromJwt } from "../_shared/http.ts";
+import { EDGE_COMBAT_BUILD_ID, stampCombatBuild } from "../_shared/combat/build-identity.ts";
 import { orchestrateCombatResolution } from "../_shared/combat/c3/orchestration.ts";
 import { buildAbilityCatalog } from "../_shared/combat/c3-catalog.ts";
 import { COMBAT_MAINTENANCE_MESSAGE } from "../_shared/combat/maintenance.ts";
 
+/** Every response leaves through here, so none can omit the build identity. */
+function json(data: unknown) {
+  return rawJson(stampCombatBuild(data));
+}
+
 function badRequest(reason: string) {
-  return new Response(JSON.stringify({ ok: false, kind: 'invalid_request', reason }), {
+  return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'invalid_request', reason })), {
     status: 400,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
 function unauthorized(reason: string) {
-  return new Response(JSON.stringify({ ok: false, kind: 'unauthorized', reason }), {
+  return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'unauthorized', reason })), {
     status: 401,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+console.log('[combat-tick] boot', { serverBuild: EDGE_COMBAT_BUILD_ID });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

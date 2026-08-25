@@ -1538,6 +1538,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               nextDueAtMs: ack.nextDueAtMs,
               serverNowMs: ack.serverNowMs,
               serverProcessMs: ack.serverProcessMs,
+              serverBuild: ack.serverBuild,
             });
             setPendingCpCost(0);
             if (ack.encounterId && ack.encounterId !== encounterIdRef.current) {
@@ -1554,6 +1555,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               nextDueAtMs: ack.nextDueAtMs,
               serverNowMs: ack.serverNowMs,
               serverProcessMs: ack.serverProcessMs,
+              serverBuild: ack.serverBuild,
             });
 
             setPendingCpCost(0);

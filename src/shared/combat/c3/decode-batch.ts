@@ -139,6 +139,11 @@ export interface BatchEvent {
   /** Chosen boss crit flavor (display only). */
   readonly bossFlavorName: string | null;
   readonly bossFlavorText: string | null;
+  /**
+   * Structured non-damaging outcome reason (`zero_damage`, `fully_mitigated`).
+   * Display may branch on it; it is never rendered raw.
+   */
+  readonly outcomeReason: string | null;
 }
 
 export interface BatchCharacter {
@@ -284,6 +289,7 @@ const EVENT_KEYS = [
 
   'bossFlavorName',
   'bossFlavorText',
+  'outcomeReason',
 ] as const;
 
 const CHARACTER_KEYS = [
@@ -349,6 +355,7 @@ export function decodeTickBatch(raw: unknown): DecodedBatch {
 
       bossFlavorName: optStr(e, 'bossFlavorName', ep),
       bossFlavorText: optStr(e, 'bossFlavorText', ep),
+      outcomeReason: optStr(e, 'outcomeReason', ep),
     } satisfies BatchEvent;
   });
 
@@ -502,6 +509,7 @@ export function projectBatchFromProposal(
 
       bossFlavorName: e.bossFlavorName ?? null,
       bossFlavorText: e.bossFlavorText ?? null,
+      outcomeReason: e.outcomeReason ?? null,
     })),
     characters: proposed.characters.map((c) => ({
       characterId: c.characterId,

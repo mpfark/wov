@@ -192,6 +192,7 @@ export function batchToTickResponse(
         ? { applied_amount: e.appliedAmount }
         : {}),
       ...(e.mitigationSource ? { mitigation_source: e.mitigationSource } : {}),
+      ...(e.outcomeReason ? { outcome_reason: e.outcomeReason } : {}),
 
       // Boss crit flavor travels as the same `boss_flavor` payload the legacy
       // channel used, so the client formatter has one shape to read.
