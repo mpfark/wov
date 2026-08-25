@@ -630,16 +630,24 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
   }
 
-  const damageCharacter = (
+  /**
+   * The defender-side damage pipeline, with the mitigation it performed
+   * reported back. `mitigated` is measured BEFORE the HP clamp, so an overkill
+   * blow never masquerades as mitigation, and `wardUsed` distinguishes an
+   * absorb ward from flat/percent mitigation for presentation.
+   */
+  const damageCharacterDetail = (
     target: ParticipantSnapshot,
     amount: number,
     creatureId: string | null,
     nowMs: number,
-  ): number => {
-    if (amount <= 0 || !isAliveP(target.id)) return 0;
+  ): { applied: number; mitigated: number; wardUsed: number } => {
+    if (amount <= 0 || !isAliveP(target.id)) return { applied: 0, mitigated: 0, wardUsed: 0 };
     // Ward first (mid-pipeline), then flat/percent mitigation, then HP.
-    const ward = absorbFromShield(amount, w.shield.get(target.id) ?? 0);
+    const shieldBefore = w.shield.get(target.id) ?? 0;
+    const ward = absorbFromShield(amount, shieldBefore);
     w.shield.set(target.id, ward.shieldAfter);
+    const wardUsed = Math.max(0, shieldBefore - ward.shieldAfter);
     let remaining = ward.remaining;
     if (target.buffs.mitigationPct > 0) {
       remaining = Math.floor(remaining * (1 - Math.min(0.9, target.buffs.mitigationPct)));
@@ -658,8 +666,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       });
     }
     void nowMs;
-    return res.applied;
+    return { applied: res.applied, mitigated: Math.max(0, amount - remaining), wardUsed };
   };
+
+  const damageCharacter = (
+    target: ParticipantSnapshot,
+    amount: number,
+    creatureId: string | null,
+    nowMs: number,
+  ): number => damageCharacterDetail(target, amount, creatureId, nowMs).applied;
 
   /**
    * The authored Stored Power contract: while a boss channels, its paused
@@ -2140,10 +2155,38 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         const isPrimary = p.id === cast.targetCharacterId;
         const raw = isPrimary ? primaryDamage : aoeDamage;
         if (raw > maxRawAmount) maxRawAmount = raw;
-        const amount = reduceCreatureDamage(creatureId, raw, nowMs);
-        if (amount <= 0) continue;
-        const applied = damageCharacter(p, amount, creatureId, nowMs);
-        targets.push({ characterId: p.id, damage: amount, applied, isPrimary });
+        const attempted = reduceCreatureDamage(creatureId, raw, nowMs);
+        if (attempted <= 0) continue;
+        // One resolution against one character = one correlation group, exactly
+        // as a creature swing does, so presentation can fold the defensive
+        // result and the hit into a single truthful line.
+        const groupId = `cast|${cast.castEventId}|${creatureId}|${p.id}`;
+        const detail = damageCharacterDetail(p, attempted, creatureId, nowMs);
+        const applied = detail.applied;
+        targets.push({ characterId: p.id, damage: attempted, applied, isPrimary });
+        if (detail.mitigated > 0) {
+          // A cast the defender stopped is a defensive result, not a missing
+          // damage budget. It keeps the cast's identity and reports the amount
+          // it swallowed; the folding contract decides whether it stands alone
+          // (partial) or speaks for the whole group (full).
+          emit(
+            'boss_cast_mitigated',
+            detail.wardUsed >= attempted
+              ? `${cast.label} breaks upon ${p.name}'s ward.`
+              : `${cast.label} crashes against ${p.name}'s defenses!`,
+            {
+              characterId: p.id,
+              creatureId,
+              amount: detail.mitigated,
+              damageType: cast.damageType,
+              groupId,
+              attemptedAmount: attempted,
+              mitigatedAmount: detail.mitigated,
+              appliedAmount: applied,
+              mitigationSource: detail.wardUsed >= attempted ? 'cast_ward' : 'cast_mitigation',
+            },
+          );
+        }
         emit(
           'boss_cast_hit',
           cast.castedText ?? `${cast.label} strikes ${p.name} for ${applied}.`,
@@ -2152,9 +2195,17 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             creatureId,
             amount: applied,
             damageType: cast.damageType,
+            groupId,
+            attemptedAmount: attempted,
+            mitigatedAmount: detail.mitigated,
+            appliedAmount: applied,
           },
         );
       }
+      // `fully_mitigated` can no longer be reached from here: a cast with a raw
+      // budget always resolves against its target and reports the defence
+      // above. The reason stays in the contract so an older committed batch
+      // still decodes, and so a future non-damaging outcome has a slot.
       let noEffectReason: 'zero_damage' | 'fully_mitigated' | null = null;
       if (targets.length === 0) {
         if (eligible.length === 0) {
