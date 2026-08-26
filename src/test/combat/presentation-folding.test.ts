@@ -282,3 +282,196 @@ describe('boss-cast mitigation folding', () => {
     expect(line!.message).not.toContain('[0]');
   });
 });
+
+/**
+ * Boss-cast flavor substitution and applied-damage presentation.
+ *
+ * The authored cast text lives on the creature's cast configuration and travels
+ * verbatim in the committed batch. Substitution is presentation work: `%a` /
+ * `{creature}` resolve to the acting creature's display name, applied damage
+ * renders exactly once, and an unfillable token never reaches the player.
+ */
+describe('boss-cast flavor substitution and amount', () => {
+  const START_TEXT = '%a shifts with unnatural grace...';
+  const HIT_TEXT = "%a's blade slips through guard and armor alike...";
+  const CREATURE = 'Ser Caldris, the Drowned Blade';
+
+  function startEvent(): FoldableEvent {
+    return {
+      type: 'boss_cast_start',
+      message: START_TEXT,
+      character_id: LOCAL_ID,
+      creature_id: 'cr-1',
+      creature_name: CREATURE,
+    };
+  }
+
+  function hitEvent(over: Partial<FoldableEvent> = {}): FoldableEvent {
+    return {
+      type: 'boss_cast_hit',
+      message: HIT_TEXT,
+      group_id: 'cast|cast-9|cr-1|char-local',
+      character_id: LOCAL_ID,
+      creature_id: 'cr-1',
+      creature_name: CREATURE,
+      amount: 9,
+      attempted_amount: 9,
+      mitigated_amount: 0,
+      applied_amount: 9,
+      ...over,
+    };
+  }
+
+  it('substitutes the creature name into a cast start line', () => {
+    const line = buildTickLogEvent(startEvent() as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(line.message).toBe(`${CREATURE} shifts with unnatural grace...`);
+    expect(line.remoteMessage).toBe(`${CREATURE} shifts with unnatural grace...`);
+    expect(line.message).not.toContain('%a');
+  });
+
+  it('keeps possessive flavor grammatical and shows applied damage once', () => {
+    const line = buildTickLogEvent(hitEvent() as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(line.message).toBe(`${CREATURE}'s blade slips through guard and armor alike...`);
+    expect(line.amount).toBe(9);
+    expect(line.amountKind).toBe('damage');
+    expect(line.message).not.toMatch(/\[\d+\]/);
+    expect(line.message).not.toContain('%a');
+  });
+
+  it('prefers appliedAmount over the pre-mitigation attempt', () => {
+    const line = buildTickLogEvent(
+      hitEvent({ amount: 19, attempted_amount: 31, mitigated_amount: 12, applied_amount: 19 }) as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(line.amount).toBe(19);
+  });
+
+  it('falls back to amount only when appliedAmount is absent', () => {
+    const ev = hitEvent({ applied_amount: undefined, damage: 7, amount: 7 });
+    const line = buildTickLogEvent(ev as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(line.amount).toBe(7);
+  });
+
+  it('never renders a duplicate bracketed amount when the author wrote the number', () => {
+    const line = buildTickLogEvent(
+      hitEvent({ message: '%a rips into %e for %v!' }) as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(line.message).toContain('9');
+    expect(line.amount).toBeUndefined();
+  });
+
+  it('drops a token this event cannot fill instead of printing it raw', () => {
+    const line = buildTickLogEvent(
+      hitEvent({ message: '%a channels {unknown_token} and strikes!' }) as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(line.message).toBe(`${CREATURE} channels and strikes!`);
+    expect(line.message).not.toMatch(/[{%]/);
+  });
+
+  it('renders the local target in second person and observers in third', () => {
+    const ev = hitEvent({ message: '%a cuts {target} down to size!', target_name: LOCAL_NAME });
+    const mine = buildTickLogEvent(ev as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(mine.message).toBe(`${CREATURE} cuts you down to size!`);
+    const theirs = buildTickLogEvent(ev as never, 'someone-else', 'Mira')!;
+    expect(theirs.message).toContain(LOCAL_NAME);
+    expect(theirs.message).not.toMatch(/\byou\b/i);
+  });
+
+  it('folds full mitigation to one blocked line and shows no hit amount', () => {
+    const group: FoldableEvent[] = [
+      {
+        type: 'boss_cast_mitigated',
+        message: `Riptide Cut crashes against ${LOCAL_NAME}'s defenses!`,
+        group_id: 'cast|cast-9|cr-1|char-local',
+        character_id: LOCAL_ID,
+        creature_id: 'cr-1',
+        creature_name: CREATURE,
+        amount: 9,
+        attempted_amount: 9,
+        mitigated_amount: 9,
+        applied_amount: 0,
+        mitigation_source: 'cast_mitigation',
+      },
+      hitEvent({ amount: 0, applied_amount: 0, mitigated_amount: 9 }),
+    ];
+    const out = foldPresentationGroups(group);
+    expect(out.map((e) => e.type)).toEqual(['boss_cast_mitigated']);
+    const line = buildTickLogEvent(out[0] as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(line.numberText).toBe('[9 blocked]');
+    expect(line.amount).toBeUndefined();
+    expect(line.message).not.toContain('[0]');
+  });
+
+  it('shows the blocked amount from structured facts on a partial mitigation', () => {
+    const mitigated: FoldableEvent = {
+      type: 'boss_cast_mitigated',
+      message: `Riptide Cut crashes against ${LOCAL_NAME}'s defenses!`,
+      group_id: 'cast|cast-9|cr-1|char-local',
+      character_id: LOCAL_ID,
+      creature_id: 'cr-1',
+      creature_name: CREATURE,
+      amount: 12,
+      attempted_amount: 31,
+      mitigated_amount: 12,
+      applied_amount: 19,
+      mitigation_source: 'cast_mitigation',
+    };
+    const hit = hitEvent({ amount: 19, attempted_amount: 31, mitigated_amount: 12, applied_amount: 19 });
+    const out = foldPresentationGroups([mitigated, hit]);
+    expect(out).toHaveLength(2);
+    const block = buildTickLogEvent(out[0] as never, LOCAL_ID, LOCAL_NAME)!;
+    const strike = buildTickLogEvent(out[1] as never, LOCAL_ID, LOCAL_NAME)!;
+    expect(block.amount).toBe(12);
+    expect(block.amountKind).toBe('block');
+    expect(strike.amount).toBe(19);
+    expect(strike.numberText).toBeUndefined();
+  });
+});
+
+/**
+ * Verbatim authored strings taken from the live creature configuration, so the
+ * substitution contract is proven against the exact text production stores.
+ */
+describe('production authored boss-cast text', () => {
+  it('fills creature and target tokens in the stored Riptide Cut and Headsman lines', () => {
+    const caldris = buildTickLogEvent(
+      {
+        type: 'boss_cast_hit',
+        message: "%a's blade slips through guard and armor alike in a single, fluid motion.",
+        character_id: LOCAL_ID,
+        creature_id: 'cr-1',
+        creature_name: 'Ser Caldris, the Drowned Blade',
+        applied_amount: 14,
+        attempted_amount: 22,
+        mitigated_amount: 8,
+      } as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(caldris.message).toBe(
+      "Ser Caldris, the Drowned Blade's blade slips through guard and armor alike in a single, fluid motion.",
+    );
+    expect(caldris.amount).toBe(14);
+
+    const varkhul = buildTickLogEvent(
+      {
+        type: 'boss_cast_start',
+        message:
+          'Varkhul lowers the head of his axe and draws its blackglass edge slowly across the stone, measuring the distance to %e.',
+        character_id: LOCAL_ID,
+        creature_id: 'cr-2',
+        creature_name: 'Varkhul, the Ashen Headsman',
+      } as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(varkhul.message).toMatch(/measuring the distance to you\.$/);
+    expect(varkhul.remoteMessage).toMatch(/measuring the distance to Aldric\.$/);
+    expect(varkhul.message).not.toMatch(/[%{]/);
+  });
+});
