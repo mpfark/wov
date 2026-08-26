@@ -30,8 +30,36 @@ import {
 } from './perspective';
 import type { FoldHint } from './fold-groups';
 import { getAbilityLabel } from '@/features/combat/utils/ability-text';
+import { renderFlavor, flavorHasDamageToken } from '@shared/proc-log-format';
+import { normalizeDamageType } from '@/shared/combat/damage-types';
 
 export { applySecondPersonGrammar, secondPersonVerb };
+
+/**
+ * Boss-cast lines whose sentence is AUTHORED on the creature's cast config
+ * (`casting_text` / `casted_text`) and therefore carries flavor tokens
+ * (`{creature}`, `%a`, `{target}`, `{damage}`, …). The resolver forwards the
+ * authored string verbatim — substitution is presentation work, exactly as it
+ * already is for boss crit flavors in `combat-text.ts`. Nothing here mutates
+ * the stored authored text.
+ */
+const BOSS_CAST_FLAVOR_TYPES = new Set(['boss_cast_start', 'boss_cast_hit']);
+
+/**
+ * Any token the authored template used that this event cannot fill. Leaving
+ * `%a` or `{cast}` in the rendered line is a player-facing defect, so an
+ * unfilled token is dropped (with the possessive/space it dangles) instead.
+ */
+const UNKNOWN_TOKEN_RE = /\{[a-z_]+\}(?:'s|\u2019s)?|%[a-z](?:'s|\u2019s)?/gi;
+
+export function sanitizeFlavorTokens(text: string): string {
+  return text
+    .replace(UNKNOWN_TOKEN_RE, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.!?;:])/g, '$1')
+    .trim();
+}
+
 
 
 /** Server event types handled by this stage. */
@@ -216,7 +244,7 @@ function trailingAmount(message: string): number | undefined {
 }
 
 /** Types whose actor is the creature rather than the player. */
-const CREATURE_SOURCE_TYPES = new Set(['member_death']);
+const CREATURE_SOURCE_TYPES = new Set(['member_death', 'boss_cast_start', 'boss_cast_hit']);
 
 
 
@@ -243,6 +271,17 @@ export interface TickEventInput {
   /** Phase 3: presentation names, so authored templates can be filled. */
   attacker_name?: string;
   target_name?: string;
+  /** Canonical damage-type key, for `{damage_type}` in authored flavor. */
+  damage_type?: string;
+  /**
+   * Correlated mitigation facts (one resolution against one character).
+   * `applied_amount` is the HP the defender actually lost and is the ONLY
+   * player-facing damage number; `attempted_amount` is pre-mitigation and must
+   * never be shown as HP lost.
+   */
+  attempted_amount?: number;
+  mitigated_amount?: number;
+  applied_amount?: number;
   /**
    * Presentation-only correlation hint written by `foldPresentationGroups`.
    * Never sent by the server: it records that this line now speaks for its
@@ -250,6 +289,7 @@ export interface TickEventInput {
    */
   fold?: FoldHint;
 }
+
 
 /**
  * Phase 3 — ability lines whose sentence is authored per ability in
@@ -377,7 +417,9 @@ export function buildTickLogEvent(
   const stage8 = STAGE8_SPEC[ev.type];
   const flavor = FLAVOR_SPEC[ev.type];
   const isAbilityOutcome = ABILITY_OUTCOME_TYPES.has(ev.type);
-  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor) return null;
+  const isBossCast = BOSS_CAST_FLAVOR_TYPES.has(ev.type);
+  if (!STAGE5_TYPES.has(ev.type) && !isStage6 && !isStage7 && !stage8 && !flavor && !isBossCast)
+    return null;
 
   const type = mapServerEventType(ev.type);
   const isLocal = !!ev.character_id && ev.character_id === localCharacterId;
@@ -400,9 +442,37 @@ export function buildTickLogEvent(
       ? renderAbilityOutcome(ev.type, flavorTokens)
       : null;
 
+  /**
+   * HP the defender actually lost. `applied_amount` is authoritative; `amount`
+   * (mirrored onto `damage`) is the compatibility fallback for batches written
+   * before the correlated contract existed.
+   */
+  const appliedDamage =
+    typeof ev.applied_amount === 'number' ? ev.applied_amount : ev.damage;
+
   const identity = ABILITY_IDENTITY_PROSE[ev.type];
   const amountAsToken = AMOUNT_AS_TOKEN[ev.type];
   let prose = identity ? ev.message.replace(identity[0], identity[1]) : ev.message;
+  if (isBossCast) {
+    // Same substitution contract as boss crit flavors: the acting creature's
+    // current display name fills `{creature}` / `%a`, the resolved target fills
+    // `{target}` / `%e`, and applied damage fills `{damage}` / `%v`. Whatever
+    // the author used that this event cannot fill is dropped, never rendered.
+    prose = sanitizeFlavorTokens(
+      renderFlavor(prose, {
+        creature: ev.creature_name ?? ev.attacker_name ?? '',
+        // The resolver stamps the afflicted character id; the display name for
+        // the local player is known here, so `{target}` fills and then folds to
+        // second person through the normal perspective pass.
+        target: ev.target_name ?? (isLocal ? localCharacterName : ''),
+
+        cast: ev.ability_key ? getAbilityLabel(ev.ability_key) : '',
+        damage: appliedDamage ?? '',
+        damageType: normalizeDamageType(ev.damage_type) ?? undefined,
+      }),
+    );
+  }
+
   if (amountAsToken) prose = prose.replace(amountAsToken, '!');
   // A fully-mitigated swing reads as one decisive line: the authored pair states
   // the proven outcome (nothing landed) in the grammar each perspective needs,
@@ -466,7 +536,13 @@ export function buildTickLogEvent(
   let amountKind: GameLogEvent['amountKind'] = hasDamage ? 'damage' : undefined;
   if (isStage6) {
     const kind = STAGE6_AMOUNT_KIND[ev.type];
-    const parsed = kind ? trailingAmount(remoteMessage) : undefined;
+    // Prefer the structured mitigated amount; the trailing `[N]` the older
+    // mitigation prose carries stays supported as the compatibility fallback.
+    const structured =
+      typeof ev.mitigated_amount === 'number' && ev.mitigated_amount > 0
+        ? ev.mitigated_amount
+        : undefined;
+    const parsed = kind ? trailingAmount(remoteMessage) ?? structured : undefined;
     if (kind && parsed !== undefined) {
       amount = parsed;
       amountKind = kind;
@@ -475,6 +551,19 @@ export function buildTickLogEvent(
       amountKind = undefined;
     }
   }
+  // A boss cast that landed reports the HP its target actually lost, exactly
+  // once: `appliedAmount` (never the pre-mitigation attempt), and only when the
+  // authored sentence did not already write the number itself.
+  if (isBossCast) {
+    const landed =
+      ev.type === 'boss_cast_hit' && typeof appliedDamage === 'number' && appliedDamage > 0
+        ? appliedDamage
+        : undefined;
+    const authorWroteIt = flavorHasDamageToken(ev.message);
+    amount = landed !== undefined && !authorWroteIt ? landed : undefined;
+    amountKind = amount !== undefined ? 'damage' : undefined;
+  }
+
   // Status lines carry effect identity, not a damage number — any `[N]` in the
   // prose belongs to the effect's own description, so nothing is re-attached.
   if (isStage7) {
