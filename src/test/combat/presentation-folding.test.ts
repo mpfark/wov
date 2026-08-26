@@ -432,3 +432,46 @@ describe('boss-cast flavor substitution and amount', () => {
     expect(strike.numberText).toBeUndefined();
   });
 });
+
+/**
+ * Verbatim authored strings taken from the live creature configuration, so the
+ * substitution contract is proven against the exact text production stores.
+ */
+describe('production authored boss-cast text', () => {
+  it('fills creature and target tokens in the stored Riptide Cut and Headsman lines', () => {
+    const caldris = buildTickLogEvent(
+      {
+        type: 'boss_cast_hit',
+        message: "%a's blade slips through guard and armor alike in a single, fluid motion.",
+        character_id: LOCAL_ID,
+        creature_id: 'cr-1',
+        creature_name: 'Ser Caldris, the Drowned Blade',
+        applied_amount: 14,
+        attempted_amount: 22,
+        mitigated_amount: 8,
+      } as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(caldris.message).toBe(
+      "Ser Caldris, the Drowned Blade's blade slips through guard and armor alike in a single, fluid motion.",
+    );
+    expect(caldris.amount).toBe(14);
+
+    const varkhul = buildTickLogEvent(
+      {
+        type: 'boss_cast_start',
+        message:
+          'Varkhul lowers the head of his axe and draws its blackglass edge slowly across the stone, measuring the distance to %e.',
+        character_id: LOCAL_ID,
+        creature_id: 'cr-2',
+        creature_name: 'Varkhul, the Ashen Headsman',
+      } as never,
+      LOCAL_ID,
+      LOCAL_NAME,
+    )!;
+    expect(varkhul.message).toMatch(/measuring the distance to you\.$/);
+    expect(varkhul.remoteMessage).toMatch(/measuring the distance to Aldric\.$/);
+    expect(varkhul.message).not.toMatch(/[%{]/);
+  });
+});
