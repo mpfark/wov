@@ -147,6 +147,17 @@ export interface ParticipantSnapshot {
   readonly isTank: boolean;
   /** Stable tiebreaker for ordering; never a wall clock read inside sim. */
   readonly joinedAtMs: number;
+  /**
+   * Participation generation (`encounter_participants.generation`).
+   *
+   * Identity of *this* visit to the encounter. Intake issues a new generation
+   * whenever a participant row is created or moves encounter, so a character
+   * who left and walked back in never carries the identity a telegraphed cast
+   * froze for their previous visit. `0` means "no live participation row"
+   * (an attribution-only source), which matches no frozen roster entry.
+   */
+  readonly generation?: number;
+
   readonly isUncappedXp: boolean;
   /** Current MP, from the snapshotted character row. */
   readonly mp: number;
