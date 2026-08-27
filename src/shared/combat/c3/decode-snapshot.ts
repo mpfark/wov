@@ -830,6 +830,10 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
+      // Durable recovery boundary. Absent on an older snapshot shape, which
+      // simply means "no recorded recovery".
+      castReadyAtMs: optNum(c, 'castReadyAtMs', path) ?? 0,
+
       bossCritFlavors: bossCritFlavors,
       bossDeathCry: optStr(c, 'bossDeathCry', path),
     });
