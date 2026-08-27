@@ -284,8 +284,9 @@ const CREATURE_KEYS = [
   'id', 'name', 'level', 'rarity', 'hp', 'maxHp', 'ac', 'isAlive', 'spawnSeq', 'isHumanoid',
   'attrs', 'lootMode', 'lootTableId', 'lootTable', 'bossCast', 'configuredStoredPowerCap',
   'effectiveDropChance', 'dropChanceSource', 'rowVersion',
-  // Durable telegraph recovery boundary.
-  'castReadyAtMs',
+  // Durable telegraph recovery boundary: authoritative tick + ms mirror.
+  'castReadyTick', 'castReadyAtMs',
+
   // Presentation-only boss flavor (crit prose pool + death cry).
   'bossCritFlavors', 'bossDeathCry',
 ] as const;
