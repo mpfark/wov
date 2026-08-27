@@ -341,6 +341,12 @@ export interface CreatureSnapshot {
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
   /**
+   * The creature's live spawn generation. A cast freezes it and only that exact
+   * spawn may resolve the cast or be held by its recovery boundary.
+   */
+  readonly spawnSeq?: number;
+
+  /**
    * AUTHORITATIVE durable telegraph recovery boundary, as an encounter tick
    * number, read from spawn-fenced recovery state (`creatures.cast_ready_tick`
    * guarded by `cast_ready_spawn_seq`/`cast_ready_encounter_id`). `0` = Ready.
