@@ -241,8 +241,33 @@ export interface ActiveCastSnapshot {
   readonly abilityKey: string;
   readonly castKey: string;
   readonly label: string;
+  /**
+   * Compatibility / observability only. Wall-clock SCHEDULES and OBSERVES a
+   * tick; it never decides one. Telemetry, logs, browser scheduling and the
+   * telegraph UI read these; the state machine reads the tick fields below.
+   */
   readonly startedAtMs: number;
   readonly resolvesAtMs: number;
+  /**
+   * Authoritative mechanical lifecycle, in encounter tick numbers:
+   *   resolvesTick = startedTick + castTicks
+   *   readyTick    = resolvesTick + cooldownTicks
+   * Every mechanical decision (channeling, resolution, recovery, whether a
+   * successor may begin) compares these against the current encounter tick, so
+   * retries, delayed browser requests and catch-up cannot change the outcome.
+   * Absent only on a legacy row created before this contract, which is
+   * cancelled safely rather than resolved from timestamps.
+   */
+  readonly startedTick?: number;
+  readonly resolvesTick?: number;
+  readonly readyTick?: number;
+  /**
+   * The caster's `spawn_seq` at cast start. Resolution and recovery apply only
+   * to that exact spawn: a creature that died and respawned starts Ready with
+   * no inherited cast and no inherited cooldown. Never inferred from dates.
+   */
+  readonly casterSpawnSeq?: number;
+
   /** Primary target chosen when the channel began. */
   readonly targetCharacterId: string | null;
   /** Authored flat damage, before Stored Power is added. */
