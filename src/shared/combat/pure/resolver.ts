@@ -2012,13 +2012,22 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
 
-    // 4. Boss casts — resolve in-flight channels first, then start new ones.
+    // 4. Boss casts — one authoritative lifecycle per creature, per tick.
+    //
+    //   Ready --start--> Casting --(due)--> Resolve --> Recovering --> Ready
+    //                       \-- caster gone --> Fizzle --> Recovering
     //
     // A cast is a two-sided contract: it is telegraphed on one tick and lands
     // on a later one. The authored contract is frozen when the channel begins
     // and read back from the in-flight cast, never re-read from the creature,
     // so a configuration edit mid-channel cannot retune a live telegraph.
-    const pausedByCast = new Set<string>();
+    //
+    // `bossActed` is the tick's action budget: starting, channelling or
+    // resolving a cast is the creature's ONE action for this tick. It can
+    // therefore neither swing (step 5) nor begin a second channel in the same
+    // tick — the two ways a boss used to act twice.
+    const bossActed = new Set<string>();
+
 
     for (const [creatureId, cast] of sortBy([...w.activeCasts.entries()], ([id]) => id)) {
       const creature = byCreature.get(creatureId);
