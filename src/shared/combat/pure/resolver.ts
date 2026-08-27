@@ -2087,6 +2087,16 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           });
         }
         w.activeCasts.delete(creatureId);
+        // A terminal outcome still enters Recovering: the frozen boundary is
+        // honoured in-memory for the rest of this multi-tick run, and it stays
+        // durable on the cast row the snapshot reads back.
+        if (cast.readyTick !== undefined) {
+          w.castReadyTick.set(
+            creatureId,
+            Math.max(w.castReadyTick.get(creatureId) ?? 0, cast.readyTick),
+          );
+        }
+
         casts.push({
           creatureId,
           abilityKey: cast.abilityKey,
