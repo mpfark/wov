@@ -2022,11 +2022,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     // and read back from the in-flight cast, never re-read from the creature,
     // so a configuration edit mid-channel cannot retune a live telegraph.
     //
-    // `bossActed` is the tick's action budget: starting, channelling or
-    // resolving a cast is the creature's ONE action for this tick. It can
-    // therefore neither swing (step 5) nor begin a second channel in the same
-    // tick — the two ways a boss used to act twice.
+    // `bossActed` is the tick's lifecycle budget: fizzling, channelling or
+    // resolving a cast is the creature's ONE cast-lifecycle step for this tick,
+    // so a cast that resolves can no longer start its successor in the same
+    // tick. Whether a channelling boss may still swing remains the authored
+    // `pauseAutoattacks` decision, tracked separately.
     const bossActed = new Set<string>();
+    const pausedByCast = new Set<string>();
+
 
 
     for (const [creatureId, cast] of sortBy([...w.activeCasts.entries()], ([id]) => id)) {
