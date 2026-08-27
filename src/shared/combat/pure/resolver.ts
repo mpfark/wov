@@ -2155,7 +2155,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           cap: cast.storedPowerCap,
         });
       }
+      // Resolving is this creature's lifecycle step for the tick; its
+      // successor may only start on a later one.
+      bossActed.add(creatureId);
       w.activeCasts.delete(creatureId);
+
 
       const primaryDamage = Math.max(0, cast.baseDamage + Math.floor(used * cast.primaryShare));
       const aoeDamage = Math.max(0, cast.baseAoeDamage + Math.floor(used * cast.aoeShare));
