@@ -147,6 +147,17 @@ export interface ParticipantSnapshot {
   readonly isTank: boolean;
   /** Stable tiebreaker for ordering; never a wall clock read inside sim. */
   readonly joinedAtMs: number;
+  /**
+   * Participation generation (`encounter_participants.generation`).
+   *
+   * Identity of *this* visit to the encounter. Intake issues a new generation
+   * whenever a participant row is created or moves encounter, so a character
+   * who left and walked back in never carries the identity a telegraphed cast
+   * froze for their previous visit. `0` means "no live participation row"
+   * (an attribution-only source), which matches no frozen roster entry.
+   */
+  readonly generation?: number;
+
   readonly isUncappedXp: boolean;
   /** Current MP, from the snapshotted character row. */
   readonly mp: number;
@@ -248,6 +259,29 @@ export interface ActiveCastSnapshot {
   readonly storedPowerCap: number;
   readonly lockMs: number;
   readonly castedText: string | null;
+  /**
+   * Durable recovery boundary, frozen when the channel began:
+   * `resolvesAtMs + cooldownTicks * tickRateMs`. The snapshot reads it back as
+   * `CreatureSnapshot.castReadyAtMs`, so the start gate survives restarts,
+   * catch-up and lease retries instead of living only in per-tick memory.
+   * Absent on a cast that started before this contract existed.
+   */
+  readonly readyAtMs?: number;
+  /**
+   * Membership decided once, at cast start: the exact participants the channel
+   * may reach, each pinned to the participation generation they carried then.
+   * At resolution a participant is eligible only if it is alive, present, and
+   * still carries its frozen generation. Absent on a legacy in-flight cast,
+   * which falls back to the historical join fence.
+   */
+  readonly frozenRoster?: readonly FrozenCastParticipant[];
+}
+
+/** One `(character, participation generation)` pair frozen with a cast. */
+export interface FrozenCastParticipant {
+  readonly characterId: string;
+  readonly generation: number;
+
 }
 
 
@@ -283,6 +317,14 @@ export interface CreatureSnapshot {
   readonly storedPowerCap: number;
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
+  /**
+   * Durable telegraph readiness boundary (epoch ms) derived from this
+   * creature's cast rows. `0` = no recorded recovery. The resolver seeds its
+   * cooldown ledger from it, so a boss cannot re-cast just because the
+   * in-memory ledger was rebuilt.
+   */
+  readonly castReadyAtMs?: number;
+
   /** Authored crit flavor pool (display only). */
   readonly bossCritFlavors?: readonly BossCritFlavorSnapshot[];
   /** Authored death cry (display only); empty/null = none. */
