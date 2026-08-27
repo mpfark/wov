@@ -12,3 +12,4 @@
 - [Combat Reopening Backlog](mem://project/combat-reopen-backlog) — Post C5-S2 deferred observations, maintenance-rollback criteria, combat_mode/combat_soak switches
 - [Presentation Folding](mem://game/combat-system/presentation-folding) — groupId correlation, full-mitigation folding, perspective markers, numberText ownership
 - [Combat Insight](mem://game/combat-system/combat-insight) — INT secondary to-hit (restored getIntHitBonus, cap +5) on non-INT accuracy attacks; client preview parity
+- [Generation-Scoped Recovery](mem://tech/combat-architecture/generation-scoped-recovery) — boss-cast cooldown ledger keyed by (creatureId, spawnSeq); spawn fence makes old-generation recovery inert
