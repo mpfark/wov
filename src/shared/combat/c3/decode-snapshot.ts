@@ -270,6 +270,8 @@ const PARTICIPANT_KEYS = [
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
   'presentAtNode',
+  // Participation generation: identity of THIS visit to the encounter.
+  'generation',
   'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
 ] as const;
 
@@ -282,9 +284,12 @@ const CREATURE_KEYS = [
   'id', 'name', 'level', 'rarity', 'hp', 'maxHp', 'ac', 'isAlive', 'spawnSeq', 'isHumanoid',
   'attrs', 'lootMode', 'lootTableId', 'lootTable', 'bossCast', 'configuredStoredPowerCap',
   'effectiveDropChance', 'dropChanceSource', 'rowVersion',
+  // Durable telegraph recovery boundary.
+  'castReadyAtMs',
   // Presentation-only boss flavor (crit prose pool + death cry).
   'bossCritFlavors', 'bossDeathCry',
 ] as const;
+
 
 const EFFECT_KEYS = [
   'id', 'targetId', 'sourceId', 'effectType', 'stacks', 'amountPerTick', 'expiresAtMs',
