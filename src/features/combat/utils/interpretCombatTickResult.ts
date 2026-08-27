@@ -269,6 +269,8 @@ export function interpretCombatTickResult(
       msg = msg.replace(new RegExp(` ${characterName} `, 'g'), ' you ');
       msg = msg.replace(new RegExp(` ${characterName}\\.`, 'g'), ' you.');
       msg = msg.replace(new RegExp(` ${characterName}!`, 'g'), ' you!');
+      // A folded "You" subject must carry a second-person verb ("You falls" → "You fall").
+      msg = applySecondPersonGrammar(msg);
     }
     formattedLogMessages.push(msg);
   }
