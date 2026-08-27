@@ -2039,6 +2039,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // encounter): the cast is cancelled. Killing the boss in time is the
       // counterplay, so no damage lands. Stored Power follows the fizzle rule.
       if (gone) {
+        // A fizzle is still this creature's lifecycle step for the tick.
+        bossActed.add(creatureId);
+
         const keep = cast.consumeMode === 'preserve' || cast.consumeMode === 'ignore';
         const remaining = keep ? pool : 0;
         w.storedPower.set(creatureId, remaining);
