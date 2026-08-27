@@ -10,10 +10,14 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { clearWorkerInterval } from '@/lib/worker-timer';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface UseCombatLifecycleParams {
+  /**
+   * Identity only (logging / caller convenience). This hook performs NO
+   * departure write: ending participation is server-authoritative.
+   */
   characterId: string;
+
   currentNodeId: string | null;
   isDead: boolean;
   inCombat: boolean;
