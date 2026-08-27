@@ -103,7 +103,7 @@ describe('encounter_leave_node / encounter_end_participation — security contra
 
   it('closes unresolved legacy casts instead of resolving them by timestamp', () => {
     expect(sql).toMatch(
-      /UPDATE public\.encounter_cast_events[\s\S]*?WHERE resolved_at IS NULL[\s\S]*?frozenRoster'\) IS NULL/,
+      /UPDATE public\.encounter_cast_events[\s\S]*?WHERE resolved_at IS NULL[\s\S]*?frozenRoster\}'\) IS NULL/,
     );
   });
 });
