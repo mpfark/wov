@@ -2370,9 +2370,26 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         storedPowerCap: cast.storedPowerCap || c.storedPowerCap,
         lockMs: cast.lockMs,
         castedText: cast.castedText,
+        // Recovery boundary, durable from this moment: the cast owns its own
+        // cooldown, so a rebuilt working state reads the same readiness.
+        readyAtMs: resolvesAtMs + Math.max(1, cast.cooldownTicks) * tickRate,
+        // Membership decided once, here. The primary target is always a member
+        // (it was selected on this tick), and every other engaged, living,
+        // present participant is pinned to its current participation
+        // generation. A later visit carries a new generation and is out.
+        frozenRoster: [
+          ...new Map(
+            [
+              target,
+              ...engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id)),
+            ].map((p) => [p.id, { characterId: p.id, generation: p.generation ?? 0 }]),
+          ).values(),
+        ],
       };
       w.activeCasts.set(c.id, frozen);
+      bossActed.add(c.id);
       if (frozen.pauseAutoattacks) pausedByCast.add(c.id);
+
 
       casts.push({
         creatureId: c.id,
