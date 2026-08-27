@@ -2057,6 +2057,7 @@ export type Database = {
           generation: number
           joined_at: string
           last_action_at: string
+          node_id: string | null
         }
         Insert: {
           character_id: string
@@ -2064,6 +2065,7 @@ export type Database = {
           generation?: number
           joined_at?: string
           last_action_at?: string
+          node_id?: string | null
         }
         Update: {
           character_id?: string
@@ -2071,6 +2073,7 @@ export type Database = {
           generation?: number
           joined_at?: string
           last_action_at?: string
+          node_id?: string | null
         }
         Relationships: [
           {
@@ -2085,6 +2088,13 @@ export type Database = {
             columns: ["encounter_id"]
             isOneToOne: false
             referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounter_participants_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
             referencedColumns: ["id"]
           },
         ]
@@ -3861,6 +3871,10 @@ export type Database = {
       }
       encounter_disengage: { Args: { _character_id: string }; Returns: number }
       encounter_end: { Args: { _encounter_id: string }; Returns: undefined }
+      encounter_end_participation: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: Json
+      }
       encounter_engage: { Args: { _character_id: string }; Returns: string }
       encounter_ensure_for_character: {
         Args: { _character_id: string }
@@ -3877,10 +3891,6 @@ export type Database = {
       }
       encounter_intake: {
         Args: { _character_id: string; _creature_ids?: string[] }
-        Returns: Json
-      }
-      encounter_leave_node: {
-        Args: { _character_id: string; _node_id: string }
         Returns: Json
       }
       encounter_live_owner_active: {
