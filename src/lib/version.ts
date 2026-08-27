@@ -2,12 +2,11 @@ export const APP_VERSION = "r7";
 
 /**
  * Non-sensitive build identifier, recorded so a validation report can prove
- * which client bundle was tested. Contains only the short commit of the
- * reviewed repository state at publish time.
+ * which client bundle was tested.
  *
- * Must be released together with the matching Edge combat build identity
- * (`EDGE_COMBAT_BUILD_ID`, `r8-bosscast-lifecycle-respawn-buildid`): this release pairs
- * the boss-cast flavor-token substitution (%a resolves to the acting creature)
- * with applied-damage presentation on a landed cast.
+ * Presentation-only release: pairs with the unchanged Edge combat identity
+ * (`EDGE_COMBAT_BUILD_ID` = `r8-bosscast-lifecycle-respawn-buildid`). This
+ * frontend adds the local-death grammar fold ("You fall in battle" instead of
+ * "You falls in battle") on the legacy name-substitution path.
  */
-export const BUILD_ID = "r8-bosscast-lifecycle-respawn";
+export const BUILD_ID = "r8-bosscast-lifecycle-deathgrammar";
