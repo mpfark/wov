@@ -14,6 +14,7 @@ import type { Character } from '@/features/character';
 import { formatCombatEvent, buildAttackLogEvent, type StructuredAttackEvent } from './combat-text';
 import { createLogEvent, isGameLogEvent, type GameLogEvent } from '@/features/combat/events/log-event';
 import { buildTickLogEvent } from '@/features/combat/events/tick-event-builder';
+import { applySecondPersonGrammar } from '@/features/combat/events/perspective';
 import { buildRewardLogEvent } from '@/features/combat/events/reward-event-builder';
 import { foldPresentationGroups } from '@/features/combat/events/fold-groups';
 
