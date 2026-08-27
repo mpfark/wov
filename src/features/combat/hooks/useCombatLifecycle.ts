@@ -80,8 +80,9 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
       if (leftNodeId && characterId) {
         void supabase
           .rpc('encounter_leave_node', {
-            p_character_id: characterId,
-            p_node_id: leftNodeId,
+            _character_id: characterId,
+            _node_id: leftNodeId,
+
           })
           .then(({ error }) => {
             if (error) console.warn('[combat] leave-node failed', error.message);
