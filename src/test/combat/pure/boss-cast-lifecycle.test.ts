@@ -264,7 +264,7 @@ describe('boss-cast lifecycle — durable cooldown', () => {
   });
 });
 
-});
+
 
 // ── 3. Participation generations ────────────────────────────────────────────
 
