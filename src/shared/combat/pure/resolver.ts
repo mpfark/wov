@@ -2160,24 +2160,32 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const primaryDamage = Math.max(0, cast.baseDamage + Math.floor(used * cast.primaryShare));
       const aoeDamage = Math.max(0, cast.baseAoeDamage + Math.floor(used * cast.aoeShare));
 
-      // Eligibility: alive, and already present when the channel began.
-      // Leaving the node purges the participant row, so anyone who fled and
-      // walked back in re-joined later and is not caught by this cast.
+      // Eligibility is membership decided ONCE, at cast start.
       //
-      // Clock-domain exception for the cast's OWN frozen primary target: the
-      // participant row is stamped with database wall-clock at intake, while
-      // `startedAtMs` is the claim's *scheduled* boundary, which can be a
-      // fraction of a second earlier. The boss selected this character as its
-      // target during the cast-start tick, so its join identity is frozen with
-      // the cast; excluding it later on a clock-domain difference would make a
-      // cast dodge its own target. This is not a tolerance window — it is
-      // membership decided once, at cast start.
-      const eligible = participants.filter(
-        (p) =>
-          isAliveP(p.id) &&
-          isPresent(p.id) &&
-          (p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId),
-      );
+      // The authoritative rule is the frozen roster: each participant the boss
+      // could reach when the channel began, pinned to the participation
+      // generation they carried then. At resolution a character is eligible
+      // only if they are alive, present, and still carry that same generation.
+      // A character who left the node and walked back in gets a fresh
+      // generation from intake, so the returning visit is a different identity
+      // and the cast cannot reach across the departure — the exact defect that
+      // let a Granite Slam land 47 seconds late on a character who had left.
+      //
+      // A cast that started before frozen rosters existed falls back to the
+      // historical join fence, including its clock-domain exception for the
+      // cast's own primary target (`joinedAtMs` is database wall-clock while
+      // `startedAtMs` is the claim's scheduled boundary, which can be a
+      // fraction of a second earlier — a cast must never dodge its own target).
+      const frozenRoster = cast.frozenRoster;
+      const eligible = participants.filter((p) => {
+        if (!isAliveP(p.id) || !isPresent(p.id)) return false;
+        if (frozenRoster) {
+          const pinned = frozenRoster.find((r) => r.characterId === p.id);
+          return pinned !== undefined && pinned.generation === (p.generation ?? 0);
+        }
+        return p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId;
+      });
+
 
       const targets: CastTargetProposal[] = [];
       /**
