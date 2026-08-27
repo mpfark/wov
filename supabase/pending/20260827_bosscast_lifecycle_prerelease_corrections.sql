@@ -360,20 +360,31 @@ BEGIN
         'bossDeathCry', COALESCE(cr.boss_death_cry, ''),
         'configuredStoredPowerCap',
           COALESCE(NULLIF((cr.boss_cast #>> '{stored_power,cap}')::numeric, 0), 0),
-        -- Durable telegraph recovery: the cast froze its own readiness boundary
-        -- when the channel began, so the start gate survives restarts, catch-up
-        -- and lease retries instead of living only in per-tick memory.
-        -- Spawn fencing: a recovery boundary belongs to the spawn that froze
-        -- it. A creature that has since died and respawned starts Ready, so a
-        -- resolved row from a previous life cannot silence the new one.
+        -- Durable telegraph recovery, authoritative in ENCOUNTER TICKS: the
+        -- cast froze its readiness boundary when the channel began, so the start
+        -- gate survives restarts, catch-up and lease retries instead of living
+        -- only in per-tick memory.
+        -- Spawn fencing is by spawn_seq, not by time: a boundary belongs to the
+        -- spawn that froze it, so a creature that died and respawned starts
+        -- Ready and a resolved row from a previous life cannot silence it.
         -- `max()` keeps the newest boundary authoritative; an older row can
         -- never lower it.
+        'castReadyTick', COALESCE((
+          SELECT max(COALESCE((ce.payload #>> '{config,readyTick}')::bigint, 0))
+          FROM public.encounter_cast_events ce
+          WHERE ce.encounter_id = _encounter_id
+            AND ce.creature_id = cr.id
+            AND COALESCE((ce.payload #>> '{config,casterSpawnSeq}')::bigint, -1)
+                = COALESCE(cr.spawn_seq, 0)), 0),
+        -- Compatibility mirror only. No mechanical gate reads this.
         'castReadyAtMs', COALESCE((
           SELECT max(COALESCE((ce.payload #>> '{config,readyAtMs}')::bigint, 0))
           FROM public.encounter_cast_events ce
           WHERE ce.encounter_id = _encounter_id
             AND ce.creature_id = cr.id
-            AND ce.started_at >= COALESCE(cr.died_at, ce.started_at)), 0),
+            AND COALESCE((ce.payload #>> '{config,casterSpawnSeq}')::bigint, -1)
+                = COALESCE(cr.spawn_seq, 0)), 0),
+
         -- explicit loot precedence: authored -> pool config -> legacy fallback (0.5)
         'effectiveDropChance', COALESCE(
           cr.drop_chance,
