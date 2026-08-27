@@ -343,12 +343,19 @@ export interface CreatureSnapshot {
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
   /**
-   * Durable telegraph readiness boundary (epoch ms) derived from this
-   * creature's cast rows. `0` = no recorded recovery. The resolver seeds its
-   * cooldown ledger from it, so a boss cannot re-cast just because the
-   * in-memory ledger was rebuilt.
+   * AUTHORITATIVE durable telegraph recovery boundary, as an encounter tick
+   * number, read from spawn-fenced recovery state (`creatures.cast_ready_tick`
+   * guarded by `cast_ready_spawn_seq`/`cast_ready_encounter_id`). `0` = Ready.
+   * A cast may begin only when `currentTick >= castReadyTick`, so recovery
+   * survives restarts, catch-up, lease retries AND pruning of the cast row.
+   */
+  readonly castReadyTick?: number;
+  /**
+   * Compatibility / observability mirror of the above in epoch ms. Never a
+   * mechanical input.
    */
   readonly castReadyAtMs?: number;
+
 
   /** Authored crit flavor pool (display only). */
   readonly bossCritFlavors?: readonly BossCritFlavorSnapshot[];
