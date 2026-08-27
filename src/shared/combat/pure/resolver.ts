@@ -2038,12 +2038,23 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const pool = w.storedPower.get(creatureId) ?? 0;
       const basePool = creature?.storedPower ?? 0;
 
+      // A cast that carries no frozen roster started before participation
+      // generations existed. Its eligibility cannot be established (the old
+      // timestamp fence is exactly the predicate that let a Granite Slam land
+      // 47s late on a returning character), so it FAILS SAFE: cancelled, no
+      // damage, no target eligibility guesswork. Only in-flight legacy rows
+      // during the coordinated deployment can reach this branch; historical
+      // resolved rows are never re-resolved.
+      const legacyNoRoster = cast.frozenRoster === undefined;
+
       // Caster gone (killed during the channel, or detached from the
       // encounter): the cast is cancelled. Killing the boss in time is the
       // counterplay, so no damage lands. Stored Power follows the fizzle rule.
-      if (gone) {
-        // A fizzle is still this creature's lifecycle step for the tick.
+      if (gone || legacyNoRoster) {
+        // A terminal outcome is still this creature's lifecycle step for the
+        // tick: it can neither swing nor start a successor cast.
         bossActed.add(creatureId);
+
 
         const keep = cast.consumeMode === 'preserve' || cast.consumeMode === 'ignore';
         const remaining = keep ? pool : 0;
@@ -2073,9 +2084,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           targets: [],
           config: cast,
         });
+        // Distinct terminal outcomes, never used interchangeably:
+        //   caster_gone      -> cancelled (the boss is no longer there)
+        //   legacy_no_roster -> cancelled (membership unknowable, fail safe)
         emit('boss_cast_fizzle', `${cast.label} collapses unfinished.`, {
           creatureId,
+          outcomeReason: gone ? 'caster_gone' : 'legacy_no_roster',
         });
+
         continue;
       }
 
@@ -2421,8 +2437,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     //    Live only.
     if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id)) continue;
-      // A channeling boss banks its autoattack instead of swinging it.
-      if (pausedByCast.has(c.id)) continue;
+      // One primary action per creature per tick. Any cast-lifecycle step
+      // taken above (start, channel, resolution, cancellation) IS this
+      // creature's action, so it does not also swing; `pausedByCast` remains
+      // for the authored channel-pause bookkeeping.
+      if (bossActed.has(c.id) || pausedByCast.has(c.id)) continue;
+
       const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
       if (pool.length === 0) continue;
       const tankPool = orderTankPool(pool.filter((p) => p.isTank));

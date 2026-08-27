@@ -13,7 +13,7 @@
  *  - both functions import it from here, so they can never disagree;
  *  - it is a build label, never a secret and never simulation input.
  */
-export const EDGE_COMBAT_BUILD_ID = 'r7-bosscast-flavor-buildid';
+export const EDGE_COMBAT_BUILD_ID = 'r8-bosscast-lifecycle-buildid';
 
 /**
  * Stamp the build identity onto any response body. Objects gain a

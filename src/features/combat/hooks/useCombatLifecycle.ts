@@ -78,16 +78,26 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
       console.log('[combat] Node change — cleared creature HP overrides, ending live combat');
       stopCombat();
       if (leftNodeId && characterId) {
-        void supabase
-          .rpc('encounter_leave_node', {
+        // Safeguard only, never the guarantee: the authoritative departure is
+        // the server-side trigger on characters.current_node_id, and intake
+        // rotates the participation generation for a stale row. This call just
+        // makes the common case immediate. Retried once, and failures are
+        // reported rather than swallowed.
+        const leave = async (attempt: number): Promise<void> => {
+          const { error } = await supabase.rpc('encounter_leave_node', {
             _character_id: characterId,
             _node_id: leftNodeId,
-
-          })
-          .then(({ error }) => {
-            if (error) console.warn('[combat] leave-node failed', error.message);
           });
+          if (!error) return;
+          console.warn(`[combat] leave-node failed (attempt ${attempt})`, error.message);
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 750));
+            await leave(attempt + 1);
+          }
+        };
+        void leave(1);
       }
+
     }
   }, [currentNodeId, characterId, stopCombat, aggroProcessedRef, recentlyKilledRef, pendingAggroRef, creatureHpOverridesRef, setCreatureHpOverrides]);
 

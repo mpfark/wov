@@ -396,6 +396,12 @@ export function randomSnapshot(seed: number): EncounterSnapshot {
         storedPowerCap: cast.storedPowerCap,
         lockMs: cast.lockMs,
         castedText: cast.castedText,
+        // Frozen membership: casts created under the lifecycle contract always
+        // carry the roster they could reach, pinned to participation generation.
+        frozenRoster: participants.map((p) => ({
+          characterId: p.id,
+          generation: p.generation ?? 0,
+        })),
       };
     });
 
