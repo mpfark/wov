@@ -222,7 +222,7 @@ BEGIN
 END;
 $function$;
 
--- 4. Spawn-fenced durable recovery -------------------------------------------
+-- 3. Tick-authoritative, spawn-fenced durable recovery -------------------------------------------
 CREATE OR REPLACE FUNCTION public.encounter_snapshot_v2(_encounter_id uuid, _claim_token uuid, _tick bigint)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -516,14 +516,18 @@ BEGIN
     || jsonb_build_object('stateDigest', public.encounter_state_digest(_encounter_id, v_scope));
 END;
 $function$;
--- 5. Close unresolved legacy casts -------------------------------------------
--- Any cast still in flight at deployment predates frozen rosters. The resolver
--- fails such a cast safely as cancelled, but closing them here means no live
+-- 4. Close unresolved legacy casts -------------------------------------------
+-- Any cast still in flight at deployment predates the authoritative contract:
+-- it lacks a frozen roster, tick boundaries, or the caster's spawn fence. The
+-- resolver cancels such a row safely, but closing them here means no live
 -- encounter carries one at all. Historical resolved rows are untouched.
 UPDATE public.encounter_cast_events
 SET resolved_at = now(),
     payload = COALESCE(payload, '{}'::jsonb)
               || jsonb_build_object('outcome', 'cancelled',
-                                    'outcomeReason', 'legacy_no_roster')
+                                    'outcomeReason', 'legacy_no_contract')
 WHERE resolved_at IS NULL
-  AND (payload #> '{config,frozenRoster}') IS NULL;
+  AND ((payload #> '{config,frozenRoster}') IS NULL
+       OR (payload #>> '{config,resolvesTick}') IS NULL
+       OR (payload #>> '{config,readyTick}') IS NULL
+       OR (payload #>> '{config,casterSpawnSeq}') IS NULL);
