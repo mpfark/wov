@@ -96,7 +96,7 @@ interface Working {
    * Authoritative recovery ledger: the earliest ENCOUNTER TICK on which each
    * creature may begin a new cast. Never wall-clock.
    */
-  castReadyTick: Map<string, number>;
+  castReadyTick: Map<CreatureGenerationKey, number>;
 
   /** In-flight telegraphed casts, keyed by caster. At most one per creature. */
   activeCasts: Map<string, ActiveCastSnapshot>;
@@ -210,7 +210,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     // per-tick counter is only a floor, converted into the same tick domain.
     castReadyTick: new Map(
       creatures.map((c) => [
-        c.id,
+        generationKey(c.id, c.spawnSeq),
         Math.max(
           c.castReadyTick ?? 0,
           snapshot.tickNumber + Math.max(0, c.castCooldownTicks),
@@ -2091,9 +2091,16 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         // honoured in-memory for the rest of this multi-tick run, and it stays
         // durable on the cast row the snapshot reads back.
         if (cast.readyTick !== undefined) {
+          // Recovery belongs to the generation that CAST, never to whatever
+          // life currently wears this creature id. When the spawn fence trips
+          // the two keys differ, so the respawn cannot see this boundary at
+          // all — the historical value stays for audit and is mechanically
+          // inert. Terminal outcomes of the casting generation keep their
+          // cooldown exactly as before.
+          const key = generationKey(creatureId, cast.casterSpawnSeq);
           w.castReadyTick.set(
-            creatureId,
-            Math.max(w.castReadyTick.get(creatureId) ?? 0, cast.readyTick),
+            key,
+            Math.max(w.castReadyTick.get(key) ?? 0, cast.readyTick),
           );
         }
 
@@ -2215,9 +2222,10 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       w.activeCasts.delete(creatureId);
       // Recovering begins at the boundary frozen when the channel started.
       if (cast.readyTick !== undefined) {
+        const key = generationKey(creatureId, cast.casterSpawnSeq);
         w.castReadyTick.set(
-          creatureId,
-          Math.max(w.castReadyTick.get(creatureId) ?? 0, cast.readyTick),
+          key,
+          Math.max(w.castReadyTick.get(key) ?? 0, cast.readyTick),
         );
       }
 
@@ -2364,7 +2372,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const cast = c.bossCast;
       // Readiness is a tick comparison against the durable boundary; the
       // remaining span is only derived for the (unchanged) gate contract.
-      const readyTick = w.castReadyTick.get(c.id) ?? 0;
+      const readyTick = w.castReadyTick.get(generationKey(c.id, c.spawnSeq)) ?? 0;
       const cooldownBefore = Math.max(0, readyTick - currentTick);
       let target: ParticipantSnapshot | null = null;
       if (cooldownBefore <= 0) {
@@ -2459,7 +2467,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       w.activeCasts.set(c.id, frozen);
       // Recovery is armed at start, so a cast that starts and resolves inside one
       // multi-tick run still cannot be followed by a free successor.
-      w.castReadyTick.set(c.id, readyTickNext);
+      w.castReadyTick.set(generationKey(c.id, c.spawnSeq), readyTickNext);
       bossActed.add(c.id);
       if (frozen.pauseAutoattacks) pausedByCast.add(c.id);
 
