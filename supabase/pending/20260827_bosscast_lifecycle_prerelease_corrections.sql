@@ -118,34 +118,24 @@ WHEN (OLD.current_node_id IS DISTINCT FROM NEW.current_node_id
       AND OLD.current_node_id IS NOT NULL)
 EXECUTE FUNCTION public.characters_end_participation_on_node_change();
 
--- Client-callable safeguard, now with an explicit privilege gate.
-CREATE OR REPLACE FUNCTION public.encounter_leave_node(_character_id uuid, _node_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-BEGIN
-  -- Authenticated callers must own the character. A caller with no uid is only
-  -- allowed when it is the service role (edge/recovery path).
-  IF auth.uid() IS NOT NULL THEN
-    IF NOT public.owns_character(_character_id) THEN
-      RAISE EXCEPTION 'not your character';
-    END IF;
-  ELSIF COALESCE(auth.role(), current_user) <> 'service_role' THEN
-    RAISE EXCEPTION 'not authorized';
-  END IF;
+-- The client departure path is REMOVED, not merely demoted: with the trigger in
+-- place a browser call can only ever be redundant, and a surface that exists can
+-- be relied on by mistake. Dropping it makes the server the single authority.
+DROP FUNCTION IF EXISTS public.encounter_leave_node(uuid, uuid);
 
-  RETURN public.encounter_end_participation(_character_id, _node_id);
-END;
-$function$;
+-- 2. Participation generations from reconciled state -------------------------
+-- The participant row records the node it was taken at, so "is this the same
+-- visit?" is answered by comparing state, never by measuring elapsed time.
+ALTER TABLE public.encounter_participants
+  ADD COLUMN IF NOT EXISTS node_id uuid REFERENCES public.nodes(id) ON DELETE SET NULL;
 
-REVOKE ALL ON FUNCTION public.encounter_leave_node(uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.encounter_leave_node(uuid, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.encounter_leave_node(uuid, uuid) TO service_role;
+UPDATE public.encounter_participants ep
+   SET node_id = e.node_id
+  FROM public.encounters e
+ WHERE e.id = ep.encounter_id AND ep.node_id IS NULL;
 
--- 3. Intake generation rotation ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.encounter_intake(_character_id uuid, _creature_ids uuid[] DEFAULT '{}'::uuid[])
+
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
