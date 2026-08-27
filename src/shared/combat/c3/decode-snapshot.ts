@@ -575,6 +575,27 @@ function decodeActiveCast(value: unknown, path: string): ActiveCastSnapshot | nu
       (storedPower ? (optNum(storedPower, 'cap', path) ?? 0) : 0),
     lockMs: (cfg ? optNum(cfg, 'lockMs', path) : null) ?? optNum(payload, 'lock_ms', path) ?? 0,
     castedText: (cfg ? optStr(cfg, 'castedText', path) : null) ?? optStr(payload, 'text', path),
+    // Durable lifecycle state frozen at cast start. A cast that started before
+    // this contract carries neither: `readyAtMs` 0 means "no recorded
+    // recovery", and an absent roster falls back to the historical join fence
+    // in the resolver (documented there).
+    readyAtMs: (cfg ? optNum(cfg, 'readyAtMs', path) : null) ?? 0,
+    ...(cfg && Array.isArray((cfg as Record<string, unknown>).frozenRoster)
+      ? {
+          frozenRoster: arr(
+            (cfg as Record<string, unknown>).frozenRoster,
+            `${path}.payload.config.frozenRoster`,
+          ).map((e, i) => {
+            const rp = `${path}.payload.config.frozenRoster[${i}]`;
+            const r = obj(e, rp);
+            return {
+              characterId: reqStr(r, 'characterId', rp),
+              generation: optNum(r, 'generation', rp) ?? 0,
+            };
+          }),
+        }
+      : {}),
+
   };
 }
 
