@@ -2457,8 +2457,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         ],
       };
       w.activeCasts.set(c.id, frozen);
+      // Recovery is armed at start, so a cast that starts and resolves inside one
+      // multi-tick run still cannot be followed by a free successor.
+      w.castReadyTick.set(c.id, readyTickNext);
       bossActed.add(c.id);
       if (frozen.pauseAutoattacks) pausedByCast.add(c.id);
+
 
 
       casts.push({
