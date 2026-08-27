@@ -92,7 +92,12 @@ interface Working {
   cKilled: Set<string>;
   cLastSource: Map<string, { characterId: string | null; kind: CreatureMutation['lastSourceKind'] }>;
   storedPower: Map<string, number>;
-  castCooldown: Map<string, number>;
+  /**
+   * Authoritative recovery ledger: the earliest ENCOUNTER TICK on which each
+   * creature may begin a new cast. Never wall-clock.
+   */
+  castReadyTick: Map<string, number>;
+
   /** In-flight telegraphed casts, keyed by caster. At most one per creature. */
   activeCasts: Map<string, ActiveCastSnapshot>;
   hitters: Set<string>;
