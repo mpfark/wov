@@ -285,13 +285,11 @@ export interface ActiveCastSnapshot {
   readonly lockMs: number;
   readonly castedText: string | null;
   /**
-   * Durable recovery boundary, frozen when the channel began:
-   * `resolvesAtMs + cooldownTicks * tickRateMs`. The snapshot reads it back as
-   * `CreatureSnapshot.castReadyAtMs`, so the start gate survives restarts,
-   * catch-up and lease retries instead of living only in per-tick memory.
-   * Absent on a cast that started before this contract existed.
+   * Compatibility / observability mirror of `readyTick`
+   * (`resolvesAtMs + cooldownTicks * tickRateMs`). Never a mechanical input.
    */
   readonly readyAtMs?: number;
+
   /**
    * Membership decided once, at cast start: the exact participants the channel
    * may reach, each pinned to the participation generation they carried then.
