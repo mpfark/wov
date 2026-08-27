@@ -115,6 +115,7 @@ describe('off-node participants are not targets', () => {
     castingText: 'It gathers ruin.',
     castedText: 'The beam lands.',
     channeling: false,
+    frozenRoster: [{ characterId: gone.id, generation: 0 }],
   } as ActiveCastSnapshot;
 
   const boss = creature({ id: 'crt-boss', hp: 400, maxHp: 400, rarity: 'boss', storedPower: 3 });

@@ -509,6 +509,7 @@ describe('Batch 1 — control debuffs reduce creature outgoing damage', () => {
       startedAtMs: NOW - 2000,
       resolvesAtMs: NOW + 6000,
       targetCharacterId: 'char-1',
+      frozenRoster: [{ characterId: 'char-1', generation: 0 }],
     } as never;
     const run = (effects: EffectSnapshot[]) =>
       resolveTickPure(enc({ creatures: [boss], activeCasts: [casting], effects }));

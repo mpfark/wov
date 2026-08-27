@@ -341,6 +341,7 @@ describe('pure resolver — golden rules', () => {
             startedAtMs: 1_699_999_990_000,
             resolvesAtMs: 1_699_999_999_000, // already due
             targetCharacterId: 'char-1',
+            frozenRoster: [{ characterId: 'char-1', generation: 0 }],
             baseDamage: 10,
             baseAoeDamage: 0,
             damageType: 'fire',

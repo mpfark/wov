@@ -10,4 +10,4 @@ export const APP_VERSION = "r7";
  * the boss-cast flavor-token substitution (%a resolves to the acting creature)
  * with applied-damage presentation on a landed cast.
  */
-export const BUILD_ID = "r7-bosscast-flavor";
+export const BUILD_ID = "r8-bosscast-lifecycle";
