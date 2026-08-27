@@ -46,7 +46,7 @@ export interface UseCombatLifecycleParams {
 
 export function useCombatLifecycle(params: UseCombatLifecycleParams) {
   const {
-    characterId,
+    
     currentNodeId, isDead, inCombat, isLeader, party,
     stopCombat, intervalRef, lastTickRef, inCombatRef, tickBusyRef, tickPendingRef,
     creatureHpOverridesRef, setCreatureHpOverrides, channelRef,
