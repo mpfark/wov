@@ -317,6 +317,14 @@ export interface CreatureSnapshot {
   readonly storedPowerCap: number;
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
+  /**
+   * Durable telegraph readiness boundary (epoch ms) derived from this
+   * creature's cast rows. `0` = no recorded recovery. The resolver seeds its
+   * cooldown ledger from it, so a boss cannot re-cast just because the
+   * in-memory ledger was rebuilt.
+   */
+  readonly castReadyAtMs?: number;
+
   /** Authored crit flavor pool (display only). */
   readonly bossCritFlavors?: readonly BossCritFlavorSnapshot[];
   /** Authored death cry (display only); empty/null = none. */
