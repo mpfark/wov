@@ -161,31 +161,26 @@ BEGIN
   v_enc := public.encounter_for_node(v_node);
   PERFORM pg_advisory_xact_lock(public.encounter_lock_key(v_enc));
 
-  -- Participation generation: a fresh row, or a row that moves to another
-  -- encounter, is a NEW visit and must not inherit the identity a telegraphed
-  -- cast froze for the previous one. Someone who never left keeps theirs.
-  INSERT INTO public.encounter_participants AS ep (encounter_id, character_id, last_action_at, generation)
-  VALUES (v_enc, _character_id, now(), nextval('public.encounter_participation_generation_seq'))
+  -- Participation generation: a fresh row is a new visit. An existing row is
+  -- the SAME visit only if it was taken for this encounter AND at this node.
+  -- Any mismatch is a reconciled fact — the character is demonstrably not where
+  -- the row says — so the identity is rotated. No elapsed-time heuristic is
+  -- involved anywhere: nothing here guesses from clocks.
+  INSERT INTO public.encounter_participants AS ep
+    (encounter_id, character_id, node_id, last_action_at, generation)
+  VALUES (v_enc, _character_id, v_node, now(),
+          nextval('public.encounter_participation_generation_seq'))
   ON CONFLICT (character_id) DO UPDATE
      SET encounter_id = EXCLUDED.encounter_id,
+         node_id = EXCLUDED.node_id,
          last_action_at = now(),
          generation = CASE
-           -- A different encounter is plainly a new visit.
            WHEN ep.encounter_id IS DISTINCT FROM EXCLUDED.encounter_id
-             THEN nextval('public.encounter_participation_generation_seq')
-           -- Same encounter, but the row was left behind by a departure that
-           -- never reached the server (browser closed, RPC failed, trigger
-           -- skipped): the row is only a CONTINUOUS visit if it was refreshed
-           -- recently enough that the character cannot have been elsewhere.
-           WHEN ep.last_action_at < now() - interval '3 seconds'
-             AND NOT EXISTS (
-               SELECT 1 FROM public.encounter_participants ep2
-               WHERE ep2.character_id = _character_id
-                 AND ep2.encounter_id = v_enc
-                 AND ep2.last_action_at >= now() - interval '3 seconds')
+             OR ep.node_id IS DISTINCT FROM EXCLUDED.node_id
              THEN nextval('public.encounter_participation_generation_seq')
            ELSE ep.generation
          END;
+
 
   -- Every living creature at the node belongs to the node's encounter.
   INSERT INTO public.encounter_creatures (encounter_id, creature_id)
