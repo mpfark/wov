@@ -719,7 +719,10 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       partyId,
       isTank: partyId ? aux.tankByPartyId.get(partyId) === id : true,
       joinedAtMs: reqNum(p, 'joinedAtMs', path),
-      // Complete participation arrives; presence is the target filter. A
+      // Identity of this visit. A snapshot without it predates participation
+      // generations; 0 then means "unknown", which matches no frozen roster.
+      generation: optNum(p, 'generation', path) ?? 0,
+
       // snapshot without the flag predates it and is treated as present.
       presentAtNode: p.presentAtNode === undefined || p.presentAtNode === null
         ? true
