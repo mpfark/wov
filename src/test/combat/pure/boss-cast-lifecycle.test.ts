@@ -214,49 +214,56 @@ describe('boss-cast lifecycle — action budget', () => {
   });
 });
 
-// ── 2. Durable recovery ─────────────────────────────────────────────────────
+// ── 2. Durable recovery (in ticks) ──────────────────────────────────────────
 
 describe('boss-cast lifecycle — durable cooldown', () => {
-  it('a resolved cast cannot restart until its frozen readyAtMs', () => {
-    // The cast resolved on the previous tick and left a boundary 25s out.
-    const readyAt = NOW + 20 * 1000;
+  it('a resolved cast cannot restart until its frozen readyTick', () => {
+    // The cast resolved earlier and left a boundary ten ticks out.
     const out = resolveTickPure(
-      enc({ creatures: [boss({ castReadyAtMs: readyAt })] }),
+      enc({ creatures: [boss({ castReadyTick: BASE_TICK + 10 })] }),
     );
     expect(types(out)).not.toContain('boss_cast_start');
   });
 
-  it('start is allowed again once the boundary has passed', () => {
-    const out = resolveTickPure(enc({ creatures: [boss({ castReadyAtMs: NOW - 1 })] }));
+  it('start is allowed again once the boundary tick has passed', () => {
+    const out = resolveTickPure(enc({ creatures: [boss({ castReadyTick: BASE_TICK })] }));
     expect(types(out)).toContain('boss_cast_start');
   });
 
   it('replaying the same tick consumes the boundary identically (no double spend)', () => {
-    const run = () => resolveTickPure(enc({ creatures: [boss({ castReadyAtMs: NOW + 6 * TICK })] }));
+    const run = () =>
+      resolveTickPure(enc({ creatures: [boss({ castReadyTick: BASE_TICK + 6 })] }));
     expect(types(run())).toEqual(types(run()));
     expect(types(run())).not.toContain('boss_cast_start');
   });
 
-  it("a start freezes readyAtMs from the scheduled resolution plus the authored cooldown", () => {
+  it('a start freezes readyTick from the scheduled resolution plus the authored cooldown', () => {
     const out = resolveTickPure(enc());
     const start = out.casts.find((c) => c.phase === 'start');
     expect(start).toBeDefined();
     const cfg = start!.config as ActiveCastSnapshot;
-    expect(cfg.readyAtMs).toBe(cfg.resolvesAtMs + 13 * TICK);
-    // Granite Slam's authored 25s recovery survives the round trip.
+    expect(cfg.startedTick).toBe(BASE_TICK);
+    expect(cfg.resolvesTick).toBe(BASE_TICK + 1);
+    expect(cfg.readyTick).toBe(cfg.resolvesTick! + 13);
+    // Compatibility mirror still describes Granite Slam's authored 25s recovery.
     expect(cfg.readyAtMs! - cfg.resolvesAtMs).toBe(26_000);
   });
 
   it('recovery is per creature, not shared', () => {
     const out = resolveTickPure(
       enc({
-        creatures: [boss({ castReadyAtMs: NOW + 10 * TICK }), boss({ id: 'crt-2', castReadyAtMs: 0 })],
+        creatures: [
+          boss({ castReadyTick: BASE_TICK + 10 }),
+          boss({ id: 'crt-2', castReadyTick: 0 }),
+        ],
       }),
     );
     const starts = out.events.filter((e) => e.type === 'boss_cast_start');
     expect(starts).toHaveLength(1);
     expect((starts[0] as { creatureId?: string }).creatureId).toBe('crt-2');
   });
+});
+
 });
 
 // ── 3. Participation generations ────────────────────────────────────────────
