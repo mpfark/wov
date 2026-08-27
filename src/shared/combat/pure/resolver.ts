@@ -2035,7 +2035,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     const bossActed = new Set<string>();
     const pausedByCast = new Set<string>();
 
-
+    /** The authoritative tick being resolved right now. */
+    const currentTick = snapshot.tickNumber + t;
 
     for (const [creatureId, cast] of sortBy([...w.activeCasts.entries()], ([id]) => id)) {
       const creature = byCreature.get(creatureId);
@@ -2043,22 +2044,36 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const pool = w.storedPower.get(creatureId) ?? 0;
       const basePool = creature?.storedPower ?? 0;
 
-      // A cast that carries no frozen roster started before participation
-      // generations existed. Its eligibility cannot be established (the old
-      // timestamp fence is exactly the predicate that let a Granite Slam land
-      // 47s late on a returning character), so it FAILS SAFE: cancelled, no
-      // damage, no target eligibility guesswork. Only in-flight legacy rows
-      // during the coordinated deployment can reach this branch; historical
-      // resolved rows are never re-resolved.
-      const legacyNoRoster = cast.frozenRoster === undefined;
+      // A cast without the full authoritative contract — tick lifecycle, caster
+      // spawn identity, frozen roster — has no state this resolver can act on.
+      // Nothing is inferred from timestamps (the old wall-clock fence is exactly
+      // what let a Granite Slam land 47s late on a returning character), so such
+      // a row FAILS SAFE: cancelled, no damage, no eligibility guesswork. Only
+      // rows in flight across the coordinated deployment reach this branch.
+      const legacyNoContract =
+        cast.frozenRoster === undefined ||
+        cast.startedTick === undefined ||
+        cast.resolvesTick === undefined ||
+        cast.readyTick === undefined ||
+        cast.casterSpawnSeq === undefined;
+
+      // Spawn fence: a cast belongs to the exact life that started it. If the
+      // caster died and respawned, the row is not this creature's cast — the new
+      // spawn starts Ready, inherits no channel and no recovery.
+      const spawnChanged =
+        !legacyNoContract &&
+        creature !== undefined &&
+        creature.spawnSeq !== undefined &&
+        creature.spawnSeq !== cast.casterSpawnSeq;
 
       // Caster gone (killed during the channel, or detached from the
       // encounter): the cast is cancelled. Killing the boss in time is the
       // counterplay, so no damage lands. Stored Power follows the fizzle rule.
-      if (gone || legacyNoRoster) {
+      if (gone || legacyNoContract || spawnChanged) {
         // A terminal outcome is still this creature's lifecycle step for the
         // tick: it can neither swing nor start a successor cast.
         bossActed.add(creatureId);
+
 
 
         const keep = cast.consumeMode === 'preserve' || cast.consumeMode === 'ignore';
