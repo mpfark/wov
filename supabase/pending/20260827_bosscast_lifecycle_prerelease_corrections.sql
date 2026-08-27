@@ -1,6 +1,6 @@
 -- Final correction to the authoritative boss-cast lifecycle.
--- NOT APPLIED: reviewed only. Apply during the coordinated maintenance window,
--- before deploying the matching Edge/frontend build (r8-bosscast-lifecycle).
+-- APPLIED 2026-08-27 in the coordinated maintenance window (reference copy of the
+-- reviewed SQL; the recorded migration is authoritative).
 --
 --  1. Server-authoritative departure: a trigger on characters.current_node_id
 --     ends participation for the node being left, so no client callback is load
