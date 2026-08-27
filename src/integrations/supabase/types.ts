@@ -2054,18 +2054,21 @@ export type Database = {
         Row: {
           character_id: string
           encounter_id: string
+          generation: number
           joined_at: string
           last_action_at: string
         }
         Insert: {
           character_id: string
           encounter_id: string
+          generation?: number
           joined_at?: string
           last_action_at?: string
         }
         Update: {
           character_id?: string
           encounter_id?: string
+          generation?: number
           joined_at?: string
           last_action_at?: string
         }
@@ -3874,6 +3877,10 @@ export type Database = {
       }
       encounter_intake: {
         Args: { _character_id: string; _creature_ids?: string[] }
+        Returns: Json
+      }
+      encounter_leave_node: {
+        Args: { _character_id: string; _node_id: string }
         Returns: Json
       }
       encounter_live_owner_active: {

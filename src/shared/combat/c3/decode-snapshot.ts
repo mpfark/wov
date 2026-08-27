@@ -270,6 +270,8 @@ const PARTICIPANT_KEYS = [
   'id', 'name', 'level', 'classKey', 'hp', 'maxHp', 'cp', 'maxCp', 'mp', 'maxMp', 'ac',
   'attrs', 'stanceState', 'reservedBuffs', 'partyId', 'joinedAtMs', 'rowVersion', 'equipment',
   'presentAtNode',
+  // Participation generation: identity of THIS visit to the encounter.
+  'generation',
   'xp', 'unspentStatPoints', 'respecPoints', 'bhp',
 ] as const;
 
@@ -282,9 +284,12 @@ const CREATURE_KEYS = [
   'id', 'name', 'level', 'rarity', 'hp', 'maxHp', 'ac', 'isAlive', 'spawnSeq', 'isHumanoid',
   'attrs', 'lootMode', 'lootTableId', 'lootTable', 'bossCast', 'configuredStoredPowerCap',
   'effectiveDropChance', 'dropChanceSource', 'rowVersion',
+  // Durable telegraph recovery boundary.
+  'castReadyAtMs',
   // Presentation-only boss flavor (crit prose pool + death cry).
   'bossCritFlavors', 'bossDeathCry',
 ] as const;
+
 
 const EFFECT_KEYS = [
   'id', 'targetId', 'sourceId', 'effectType', 'stacks', 'amountPerTick', 'expiresAtMs',
@@ -570,6 +575,27 @@ function decodeActiveCast(value: unknown, path: string): ActiveCastSnapshot | nu
       (storedPower ? (optNum(storedPower, 'cap', path) ?? 0) : 0),
     lockMs: (cfg ? optNum(cfg, 'lockMs', path) : null) ?? optNum(payload, 'lock_ms', path) ?? 0,
     castedText: (cfg ? optStr(cfg, 'castedText', path) : null) ?? optStr(payload, 'text', path),
+    // Durable lifecycle state frozen at cast start. A cast that started before
+    // this contract carries neither: `readyAtMs` 0 means "no recorded
+    // recovery", and an absent roster falls back to the historical join fence
+    // in the resolver (documented there).
+    readyAtMs: (cfg ? optNum(cfg, 'readyAtMs', path) : null) ?? 0,
+    ...(cfg && Array.isArray((cfg as Record<string, unknown>).frozenRoster)
+      ? {
+          frozenRoster: arr(
+            (cfg as Record<string, unknown>).frozenRoster,
+            `${path}.payload.config.frozenRoster`,
+          ).map((e, i) => {
+            const rp = `${path}.payload.config.frozenRoster[${i}]`;
+            const r = obj(e, rp);
+            return {
+              characterId: reqStr(r, 'characterId', rp),
+              generation: optNum(r, 'generation', rp) ?? 0,
+            };
+          }),
+        }
+      : {}),
+
   };
 }
 
@@ -714,8 +740,12 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
       partyId,
       isTank: partyId ? aux.tankByPartyId.get(partyId) === id : true,
       joinedAtMs: reqNum(p, 'joinedAtMs', path),
+      // Identity of this visit. A snapshot without it predates participation
+      // generations; 0 then means "unknown", which matches no frozen roster.
+      generation: optNum(p, 'generation', path) ?? 0,
       // Complete participation arrives; presence is the target filter. A
       // snapshot without the flag predates it and is treated as present.
+
       presentAtNode: p.presentAtNode === undefined || p.presentAtNode === null
         ? true
         : p.presentAtNode === true,
@@ -821,6 +851,10 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
+      // Durable recovery boundary. Absent on an older snapshot shape, which
+      // simply means "no recorded recovery".
+      castReadyAtMs: optNum(c, 'castReadyAtMs', path) ?? 0,
+
       bossCritFlavors: bossCritFlavors,
       bossDeathCry: optStr(c, 'bossDeathCry', path),
     });

@@ -198,7 +198,22 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     cKilled: new Set<string>(),
     cLastSource: new Map(),
     storedPower: new Map(creatures.map((c) => [c.id, c.storedPower])),
-    castCooldown: new Map(creatures.map((c) => [c.id, c.castCooldownTicks])),
+    // Recovery is durable: the ledger is seeded from the boundary the cast
+    // froze when its channel began (`castReadyAtMs`), so a rebuilt working
+    // state — restart, catch-up, lease retry — cannot hand a boss a free cast.
+    castCooldown: new Map(
+      creatures.map((c) => [
+        c.id,
+        Math.max(
+          c.castCooldownTicks,
+          Math.ceil(
+            Math.max(0, (c.castReadyAtMs ?? 0) - snapshot.nowMs) /
+              Math.max(1, snapshot.tickRateMs),
+          ),
+        ),
+      ]),
+    ),
+
     activeCasts: new Map(snapshot.activeCasts.map((c) => [c.creatureId, c])),
     hitters: new Set<string>(),
   };
@@ -1997,13 +2012,25 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     }
 
 
-    // 4. Boss casts — resolve in-flight channels first, then start new ones.
+    // 4. Boss casts — one authoritative lifecycle per creature, per tick.
+    //
+    //   Ready --start--> Casting --(due)--> Resolve --> Recovering --> Ready
+    //                       \-- caster gone --> Fizzle --> Recovering
     //
     // A cast is a two-sided contract: it is telegraphed on one tick and lands
     // on a later one. The authored contract is frozen when the channel begins
     // and read back from the in-flight cast, never re-read from the creature,
     // so a configuration edit mid-channel cannot retune a live telegraph.
+    //
+    // `bossActed` is the tick's lifecycle budget: fizzling, channelling or
+    // resolving a cast is the creature's ONE cast-lifecycle step for this tick,
+    // so a cast that resolves can no longer start its successor in the same
+    // tick. Whether a channelling boss may still swing remains the authored
+    // `pauseAutoattacks` decision, tracked separately.
+    const bossActed = new Set<string>();
     const pausedByCast = new Set<string>();
+
+
 
     for (const [creatureId, cast] of sortBy([...w.activeCasts.entries()], ([id]) => id)) {
       const creature = byCreature.get(creatureId);
@@ -2015,6 +2042,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // encounter): the cast is cancelled. Killing the boss in time is the
       // counterplay, so no damage lands. Stored Power follows the fizzle rule.
       if (gone) {
+        // A fizzle is still this creature's lifecycle step for the tick.
+        bossActed.add(creatureId);
+
         const keep = cast.consumeMode === 'preserve' || cast.consumeMode === 'ignore';
         const remaining = keep ? pool : 0;
         w.storedPower.set(creatureId, remaining);
@@ -2053,8 +2083,14 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // is derived from a creature autoattack, so effects-only carries the
       // channel forward without banking anything.
       if (nowMs < cast.resolvesAtMs) {
+        // Channelling is the creature's lifecycle step for this tick, so it
+        // cannot also begin a second one. Whether it may still swing stays the
+        // authored decision (`pauseAutoattacks`).
+        bossActed.add(creatureId);
         if (cast.pauseAutoattacks) pausedByCast.add(creatureId);
         if (effectsOnly) continue;
+
+
         const cap = cast.storedPowerCap;
         const primary = cast.targetCharacterId
           ? byParticipant.get(cast.targetCharacterId)
@@ -2119,29 +2155,41 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           cap: cast.storedPowerCap,
         });
       }
+      // Resolving is this creature's lifecycle step for the tick; its
+      // successor may only start on a later one.
+      bossActed.add(creatureId);
       w.activeCasts.delete(creatureId);
+
 
       const primaryDamage = Math.max(0, cast.baseDamage + Math.floor(used * cast.primaryShare));
       const aoeDamage = Math.max(0, cast.baseAoeDamage + Math.floor(used * cast.aoeShare));
 
-      // Eligibility: alive, and already present when the channel began.
-      // Leaving the node purges the participant row, so anyone who fled and
-      // walked back in re-joined later and is not caught by this cast.
+      // Eligibility is membership decided ONCE, at cast start.
       //
-      // Clock-domain exception for the cast's OWN frozen primary target: the
-      // participant row is stamped with database wall-clock at intake, while
-      // `startedAtMs` is the claim's *scheduled* boundary, which can be a
-      // fraction of a second earlier. The boss selected this character as its
-      // target during the cast-start tick, so its join identity is frozen with
-      // the cast; excluding it later on a clock-domain difference would make a
-      // cast dodge its own target. This is not a tolerance window — it is
-      // membership decided once, at cast start.
-      const eligible = participants.filter(
-        (p) =>
-          isAliveP(p.id) &&
-          isPresent(p.id) &&
-          (p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId),
-      );
+      // The authoritative rule is the frozen roster: each participant the boss
+      // could reach when the channel began, pinned to the participation
+      // generation they carried then. At resolution a character is eligible
+      // only if they are alive, present, and still carry that same generation.
+      // A character who left the node and walked back in gets a fresh
+      // generation from intake, so the returning visit is a different identity
+      // and the cast cannot reach across the departure — the exact defect that
+      // let a Granite Slam land 47 seconds late on a character who had left.
+      //
+      // A cast that started before frozen rosters existed falls back to the
+      // historical join fence, including its clock-domain exception for the
+      // cast's own primary target (`joinedAtMs` is database wall-clock while
+      // `startedAtMs` is the claim's scheduled boundary, which can be a
+      // fraction of a second earlier — a cast must never dodge its own target).
+      const frozenRoster = cast.frozenRoster;
+      const eligible = participants.filter((p) => {
+        if (!isAliveP(p.id) || !isPresent(p.id)) return false;
+        if (frozenRoster) {
+          const pinned = frozenRoster.find((r) => r.characterId === p.id);
+          return pinned !== undefined && pinned.generation === (p.generation ?? 0);
+        }
+        return p.joinedAtMs <= cast.startedAtMs || p.id === cast.targetCharacterId;
+      });
+
 
       const targets: CastTargetProposal[] = [];
       /**
@@ -2252,7 +2300,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     // but must never begin one.
     if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id) || !c.bossCast) continue;
+      // One lifecycle step per creature per tick: a cast that fizzled or
+      // resolved above has spent this tick and enters recovery instead.
+      if (bossActed.has(c.id)) continue;
       if (w.activeCasts.has(c.id)) continue;
+
       const cast = c.bossCast;
       const cooldownBefore = w.castCooldown.get(c.id) ?? 0;
       let target: ParticipantSnapshot | null = null;
@@ -2318,9 +2370,26 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         storedPowerCap: cast.storedPowerCap || c.storedPowerCap,
         lockMs: cast.lockMs,
         castedText: cast.castedText,
+        // Recovery boundary, durable from this moment: the cast owns its own
+        // cooldown, so a rebuilt working state reads the same readiness.
+        readyAtMs: resolvesAtMs + Math.max(1, cast.cooldownTicks) * tickRate,
+        // Membership decided once, here. The primary target is always a member
+        // (it was selected on this tick), and every other engaged, living,
+        // present participant is pinned to its current participation
+        // generation. A later visit carries a new generation and is out.
+        frozenRoster: [
+          ...new Map(
+            [
+              target,
+              ...engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id)),
+            ].map((p) => [p.id, { characterId: p.id, generation: p.generation ?? 0 }]),
+          ).values(),
+        ],
       };
       w.activeCasts.set(c.id, frozen);
+      bossActed.add(c.id);
       if (frozen.pauseAutoattacks) pausedByCast.add(c.id);
+
 
       casts.push({
         creatureId: c.id,

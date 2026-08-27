@@ -1651,7 +1651,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Lifecycle effects ──────────────────────────────────────────
 
   const { fleeStopCombat } = useCombatLifecycle({
+    characterId: params.character.id,
     currentNodeId: params.character.current_node_id,
+
     isDead: params.isDead,
     inCombat,
     isLeader: params.isLeader,
