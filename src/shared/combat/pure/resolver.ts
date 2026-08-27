@@ -2362,9 +2362,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       if (w.activeCasts.has(c.id)) continue;
 
       const cast = c.bossCast;
-      const cooldownBefore = w.castCooldown.get(c.id) ?? 0;
+      // Readiness is a tick comparison against the durable boundary; the
+      // remaining span is only derived for the (unchanged) gate contract.
+      const readyTick = w.castReadyTick.get(c.id) ?? 0;
+      const cooldownBefore = Math.max(0, readyTick - currentTick);
       let target: ParticipantSnapshot | null = null;
       if (cooldownBefore <= 0) {
+
         const pool = engagedWith(c.id).filter((p) => isAliveP(p.id) && isPresent(p.id));
         if (pool.length > 0) {
           const tankPool = orderTankPool(pool.filter((p) => p.isTank));
