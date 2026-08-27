@@ -241,8 +241,33 @@ export interface ActiveCastSnapshot {
   readonly abilityKey: string;
   readonly castKey: string;
   readonly label: string;
+  /**
+   * Compatibility / observability only. Wall-clock SCHEDULES and OBSERVES a
+   * tick; it never decides one. Telemetry, logs, browser scheduling and the
+   * telegraph UI read these; the state machine reads the tick fields below.
+   */
   readonly startedAtMs: number;
   readonly resolvesAtMs: number;
+  /**
+   * Authoritative mechanical lifecycle, in encounter tick numbers:
+   *   resolvesTick = startedTick + castTicks
+   *   readyTick    = resolvesTick + cooldownTicks
+   * Every mechanical decision (channeling, resolution, recovery, whether a
+   * successor may begin) compares these against the current encounter tick, so
+   * retries, delayed browser requests and catch-up cannot change the outcome.
+   * Absent only on a legacy row created before this contract, which is
+   * cancelled safely rather than resolved from timestamps.
+   */
+  readonly startedTick?: number;
+  readonly resolvesTick?: number;
+  readonly readyTick?: number;
+  /**
+   * The caster's `spawn_seq` at cast start. Resolution and recovery apply only
+   * to that exact spawn: a creature that died and respawned starts Ready with
+   * no inherited cast and no inherited cooldown. Never inferred from dates.
+   */
+  readonly casterSpawnSeq?: number;
+
   /** Primary target chosen when the channel began. */
   readonly targetCharacterId: string | null;
   /** Authored flat damage, before Stored Power is added. */
@@ -260,13 +285,11 @@ export interface ActiveCastSnapshot {
   readonly lockMs: number;
   readonly castedText: string | null;
   /**
-   * Durable recovery boundary, frozen when the channel began:
-   * `resolvesAtMs + cooldownTicks * tickRateMs`. The snapshot reads it back as
-   * `CreatureSnapshot.castReadyAtMs`, so the start gate survives restarts,
-   * catch-up and lease retries instead of living only in per-tick memory.
-   * Absent on a cast that started before this contract existed.
+   * Compatibility / observability mirror of `readyTick`
+   * (`resolvesAtMs + cooldownTicks * tickRateMs`). Never a mechanical input.
    */
   readonly readyAtMs?: number;
+
   /**
    * Membership decided once, at cast start: the exact participants the channel
    * may reach, each pinned to the participation generation they carried then.
@@ -318,12 +341,25 @@ export interface CreatureSnapshot {
   /** Remaining cooldown in ticks before the next cast may start. */
   readonly castCooldownTicks: number;
   /**
-   * Durable telegraph readiness boundary (epoch ms) derived from this
-   * creature's cast rows. `0` = no recorded recovery. The resolver seeds its
-   * cooldown ledger from it, so a boss cannot re-cast just because the
-   * in-memory ledger was rebuilt.
+   * The creature's live spawn generation. A cast freezes it and only that exact
+   * spawn may resolve the cast or be held by its recovery boundary.
+   */
+  readonly spawnSeq?: number;
+
+  /**
+   * AUTHORITATIVE durable telegraph recovery boundary, as an encounter tick
+   * number, read from spawn-fenced recovery state (`creatures.cast_ready_tick`
+   * guarded by `cast_ready_spawn_seq`/`cast_ready_encounter_id`). `0` = Ready.
+   * A cast may begin only when `currentTick >= castReadyTick`, so recovery
+   * survives restarts, catch-up, lease retries AND pruning of the cast row.
+   */
+  readonly castReadyTick?: number;
+  /**
+   * Compatibility / observability mirror of the above in epoch ms. Never a
+   * mechanical input.
    */
   readonly castReadyAtMs?: number;
+
 
   /** Authored crit flavor pool (display only). */
   readonly bossCritFlavors?: readonly BossCritFlavorSnapshot[];

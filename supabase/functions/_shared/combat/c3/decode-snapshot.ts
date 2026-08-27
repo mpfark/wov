@@ -284,8 +284,9 @@ const CREATURE_KEYS = [
   'id', 'name', 'level', 'rarity', 'hp', 'maxHp', 'ac', 'isAlive', 'spawnSeq', 'isHumanoid',
   'attrs', 'lootMode', 'lootTableId', 'lootTable', 'bossCast', 'configuredStoredPowerCap',
   'effectiveDropChance', 'dropChanceSource', 'rowVersion',
-  // Durable telegraph recovery boundary.
-  'castReadyAtMs',
+  // Durable telegraph recovery boundary: authoritative tick + ms mirror.
+  'castReadyTick', 'castReadyAtMs',
+
   // Presentation-only boss flavor (crit prose pool + death cry).
   'bossCritFlavors', 'bossDeathCry',
 ] as const;
@@ -575,11 +576,25 @@ function decodeActiveCast(value: unknown, path: string): ActiveCastSnapshot | nu
       (storedPower ? (optNum(storedPower, 'cap', path) ?? 0) : 0),
     lockMs: (cfg ? optNum(cfg, 'lockMs', path) : null) ?? optNum(payload, 'lock_ms', path) ?? 0,
     castedText: (cfg ? optStr(cfg, 'castedText', path) : null) ?? optStr(payload, 'text', path),
-    // Durable lifecycle state frozen at cast start. A cast that started before
-    // this contract carries neither: `readyAtMs` 0 means "no recorded
-    // recovery", and an absent roster falls back to the historical join fence
-    // in the resolver (documented there).
+    // Compatibility / observability only (telemetry, telegraph UI). A cast that
+    // started before this contract carries no recorded recovery: `readyAtMs` 0.
     readyAtMs: (cfg ? optNum(cfg, 'readyAtMs', path) : null) ?? 0,
+    // AUTHORITATIVE tick lifecycle. Strictly decoded and only ever present as a
+    // set: a row missing any of them has no authoritative mechanical state and
+    // the resolver cancels it safely rather than inferring ticks from
+    // timestamps. Never defaulted.
+    ...(cfg &&
+    typeof cfg.startedTick === 'number' &&
+    typeof cfg.resolvesTick === 'number' &&
+    typeof cfg.readyTick === 'number' &&
+    typeof cfg.casterSpawnSeq === 'number'
+      ? {
+          startedTick: reqNum(cfg, 'startedTick', `${path}.payload.config`),
+          resolvesTick: reqNum(cfg, 'resolvesTick', `${path}.payload.config`),
+          readyTick: reqNum(cfg, 'readyTick', `${path}.payload.config`),
+          casterSpawnSeq: reqNum(cfg, 'casterSpawnSeq', `${path}.payload.config`),
+        }
+      : {}),
     ...(cfg && Array.isArray((cfg as Record<string, unknown>).frozenRoster)
       ? {
           frozenRoster: arr(
@@ -595,6 +610,7 @@ function decodeActiveCast(value: unknown, path: string): ActiveCastSnapshot | nu
           }),
         }
       : {}),
+
 
   };
 }
@@ -851,9 +867,15 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
-      // Durable recovery boundary. Absent on an older snapshot shape, which
-      // simply means "no recorded recovery".
+      // AUTHORITATIVE durable recovery boundary (encounter tick). Absent on an
+      // older snapshot shape, which simply means Ready.
+      castReadyTick: optNum(c, 'castReadyTick', path) ?? 0,
+      // Compatibility / observability mirror only.
       castReadyAtMs: optNum(c, 'castReadyAtMs', path) ?? 0,
+      // The live spawn generation, so a starting cast can freeze it and a
+      // resolving cast can prove it is still the same life.
+      spawnSeq: reqNum(c, 'spawnSeq', path),
+
 
       bossCritFlavors: bossCritFlavors,
       bossDeathCry: optStr(c, 'bossDeathCry', path),
