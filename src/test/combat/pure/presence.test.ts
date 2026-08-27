@@ -100,6 +100,11 @@ describe('off-node participants are not targets', () => {
     label: 'Doom Beam',
     startedAtMs: NOW - TICK,
     resolvesAtMs: NOW,
+    // Authoritative lifecycle is in ticks (fixture snapshots resolve tick 42).
+    startedTick: 41,
+    resolvesTick: 42,
+    readyTick: 55,
+    casterSpawnSeq: 0,
     targetCharacterId: gone.id,
     baseDamage: 40,
     baseAoeDamage: 20,

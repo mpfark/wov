@@ -54,15 +54,30 @@ const bossCast = (over: Partial<BossCastSnapshot> = {}): BossCastSnapshot => ({
   ...over,
 });
 
-const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot =>
-  ({
+/**
+ * The snapshot tick these fixtures resolve on (see `snapshot()` in fixtures).
+ * The lifecycle is authoritative in TICKS, so the millisecond fields are only
+ * mirrors: tick boundaries are derived from them here so a test that moves
+ * `resolvesAtMs` keeps a coherent contract without restating every field.
+ */
+const BASE_TICK = 42;
+
+const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot => {
+  const startedAtMs = over.startedAtMs ?? NOW - TICK;
+  const resolvesAtMs = over.resolvesAtMs ?? NOW - 1;
+  const resolvesTick = BASE_TICK + Math.ceil((resolvesAtMs - NOW) / TICK);
+  return {
     castEventId: 'cast-1',
     creatureId: 'crt-1',
     abilityKey: 'granite_slam',
     castKey: 'granite_slam',
     label: 'Granite Slam',
-    startedAtMs: NOW - TICK,
-    resolvesAtMs: NOW - 1, // due
+    startedAtMs,
+    resolvesAtMs, // default: due this tick
+    startedTick: BASE_TICK + Math.floor((startedAtMs - NOW) / TICK),
+    resolvesTick,
+    readyTick: resolvesTick + 13,
+    casterSpawnSeq: 0,
     targetCharacterId: 'char-1',
     baseDamage: 40,
     baseAoeDamage: 10,
@@ -76,10 +91,12 @@ const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot 
     storedPowerCap: 0,
     lockMs: 0,
     castedText: null,
-    readyAtMs: NOW - 1 + 13 * TICK,
+    readyAtMs: resolvesAtMs + 13 * TICK,
     frozenRoster: [{ characterId: 'char-1', generation: 10 }],
     ...over,
-  }) as ActiveCastSnapshot;
+  } as ActiveCastSnapshot;
+};
+
 
 function boss(over: Partial<CreatureSnapshot> = {}): CreatureSnapshot {
   return creature({
@@ -197,43 +214,48 @@ describe('boss-cast lifecycle — action budget', () => {
   });
 });
 
-// ── 2. Durable recovery ─────────────────────────────────────────────────────
+// ── 2. Durable recovery (in ticks) ──────────────────────────────────────────
 
 describe('boss-cast lifecycle — durable cooldown', () => {
-  it('a resolved cast cannot restart until its frozen readyAtMs', () => {
-    // The cast resolved on the previous tick and left a boundary 25s out.
-    const readyAt = NOW + 20 * 1000;
+  it('a resolved cast cannot restart until its frozen readyTick', () => {
+    // The cast resolved earlier and left a boundary ten ticks out.
     const out = resolveTickPure(
-      enc({ creatures: [boss({ castReadyAtMs: readyAt })] }),
+      enc({ creatures: [boss({ castReadyTick: BASE_TICK + 10 })] }),
     );
     expect(types(out)).not.toContain('boss_cast_start');
   });
 
-  it('start is allowed again once the boundary has passed', () => {
-    const out = resolveTickPure(enc({ creatures: [boss({ castReadyAtMs: NOW - 1 })] }));
+  it('start is allowed again once the boundary tick has passed', () => {
+    const out = resolveTickPure(enc({ creatures: [boss({ castReadyTick: BASE_TICK })] }));
     expect(types(out)).toContain('boss_cast_start');
   });
 
   it('replaying the same tick consumes the boundary identically (no double spend)', () => {
-    const run = () => resolveTickPure(enc({ creatures: [boss({ castReadyAtMs: NOW + 6 * TICK })] }));
+    const run = () =>
+      resolveTickPure(enc({ creatures: [boss({ castReadyTick: BASE_TICK + 6 })] }));
     expect(types(run())).toEqual(types(run()));
     expect(types(run())).not.toContain('boss_cast_start');
   });
 
-  it("a start freezes readyAtMs from the scheduled resolution plus the authored cooldown", () => {
+  it('a start freezes readyTick from the scheduled resolution plus the authored cooldown', () => {
     const out = resolveTickPure(enc());
     const start = out.casts.find((c) => c.phase === 'start');
     expect(start).toBeDefined();
     const cfg = start!.config as ActiveCastSnapshot;
-    expect(cfg.readyAtMs).toBe(cfg.resolvesAtMs + 13 * TICK);
-    // Granite Slam's authored 25s recovery survives the round trip.
+    expect(cfg.startedTick).toBe(BASE_TICK);
+    expect(cfg.resolvesTick).toBe(BASE_TICK + 1);
+    expect(cfg.readyTick).toBe(cfg.resolvesTick! + 13);
+    // Compatibility mirror still describes Granite Slam's authored 25s recovery.
     expect(cfg.readyAtMs! - cfg.resolvesAtMs).toBe(26_000);
   });
 
   it('recovery is per creature, not shared', () => {
     const out = resolveTickPure(
       enc({
-        creatures: [boss({ castReadyAtMs: NOW + 10 * TICK }), boss({ id: 'crt-2', castReadyAtMs: 0 })],
+        creatures: [
+          boss({ castReadyTick: BASE_TICK + 10 }),
+          boss({ id: 'crt-2', castReadyTick: 0 }),
+        ],
       }),
     );
     const starts = out.events.filter((e) => e.type === 'boss_cast_start');
@@ -241,6 +263,8 @@ describe('boss-cast lifecycle — durable cooldown', () => {
     expect((starts[0] as { creatureId?: string }).creatureId).toBe('crt-2');
   });
 });
+
+
 
 // ── 3. Participation generations ────────────────────────────────────────────
 
@@ -322,13 +346,13 @@ describe('boss-cast lifecycle — frozen generation cohort', () => {
 // ── 4. Legacy in-flight casts fail safe ─────────────────────────────────────
 
 describe('boss-cast lifecycle — legacy in-flight casts', () => {
-  it('a cast with no frozen roster is cancelled, never resolved by timestamp', () => {
+  it('a cast without the authoritative contract is cancelled, never resolved by timestamp', () => {
     const legacy = activeCast();
     delete (legacy as { frozenRoster?: unknown }).frozenRoster;
     const out = resolveTickPure(enc({ activeCasts: [legacy] }));
     const fizzle = out.events.find((e) => e.type === 'boss_cast_fizzle');
     expect(fizzle).toBeDefined();
-    expect((fizzle as { outcomeReason?: string }).outcomeReason).toBe('legacy_no_roster');
+    expect((fizzle as { outcomeReason?: string }).outcomeReason).toBe('legacy_no_contract');
     expect(types(out)).not.toContain('boss_cast_hit');
     expect(swings(out)).toBe(0);
   });

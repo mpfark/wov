@@ -10,10 +10,14 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { clearWorkerInterval } from '@/lib/worker-timer';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface UseCombatLifecycleParams {
+  /**
+   * Identity only (logging / caller convenience). This hook performs NO
+   * departure write: ending participation is server-authoritative.
+   */
   characterId: string;
+
   currentNodeId: string | null;
   isDead: boolean;
   inCombat: boolean;
@@ -42,7 +46,7 @@ export interface UseCombatLifecycleParams {
 
 export function useCombatLifecycle(params: UseCombatLifecycleParams) {
   const {
-    characterId,
+    
     currentNodeId, isDead, inCombat, isLeader, party,
     stopCombat, intervalRef, lastTickRef, inCombatRef, tickBusyRef, tickPendingRef,
     creatureHpOverridesRef, setCreatureHpOverrides, channelRef,
@@ -58,17 +62,18 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
     if (!party && channelRef.current) stopCombat();
   }, [party, stopCombat, channelRef]);
 
-  // Node change — clear overrides, reset aggro, stop combat, and END
-  // PARTICIPATION on the node we left.
+  // Node change — clear overrides, reset aggro, stop live combat.
   //
-  // Leaving is an authoritative act, not the absence of one: until the server
-  // is told, the departed character keeps a live participation row, so an
-  // in-flight telegraphed cast could still find them — and did, landing a
-  // Granite Slam 47s late on a character who had walked away and come back.
-  // `encounter_leave_node` closes the visit; re-entry issues a new generation.
+  // Departure itself is NOT a client concern. The authoritative act is the
+  // server-side trigger on `characters.current_node_id`: node movement and the
+  // end of participation happen in one transaction, whatever moved the
+  // character (walk, flee, teleport, party follow, admin relocation), and
+  // re-entry receives a fresh participation generation from intake. The client
+  // deliberately calls no departure RPC, so no browser callback can be skipped,
+  // delayed or lost — which is exactly how a Granite Slam once landed 47s late
+  // on a character who had walked away and come back.
   useEffect(() => {
     if (currentNodeId !== prevNodeRef.current) {
-      const leftNodeId = prevNodeRef.current;
       prevNodeRef.current = currentNodeId;
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
@@ -77,29 +82,9 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
       setCreatureHpOverrides({});
       console.log('[combat] Node change — cleared creature HP overrides, ending live combat');
       stopCombat();
-      if (leftNodeId && characterId) {
-        // Safeguard only, never the guarantee: the authoritative departure is
-        // the server-side trigger on characters.current_node_id, and intake
-        // rotates the participation generation for a stale row. This call just
-        // makes the common case immediate. Retried once, and failures are
-        // reported rather than swallowed.
-        const leave = async (attempt: number): Promise<void> => {
-          const { error } = await supabase.rpc('encounter_leave_node', {
-            _character_id: characterId,
-            _node_id: leftNodeId,
-          });
-          if (!error) return;
-          console.warn(`[combat] leave-node failed (attempt ${attempt})`, error.message);
-          if (attempt < 2) {
-            await new Promise((r) => setTimeout(r, 750));
-            await leave(attempt + 1);
-          }
-        };
-        void leave(1);
-      }
-
     }
-  }, [currentNodeId, characterId, stopCombat, aggroProcessedRef, recentlyKilledRef, pendingAggroRef, creatureHpOverridesRef, setCreatureHpOverrides]);
+  }, [currentNodeId, stopCombat, aggroProcessedRef, recentlyKilledRef, pendingAggroRef, creatureHpOverridesRef, setCreatureHpOverrides]);
+
 
 
   // Death — clear commitment buffs (Envenom / Ignite) AND stance reservations.

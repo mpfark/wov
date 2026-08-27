@@ -340,6 +340,10 @@ describe('pure resolver — golden rules', () => {
             label: 'Doom',
             startedAtMs: 1_699_999_990_000,
             resolvesAtMs: 1_699_999_999_000, // already due
+            startedTick: 41,
+            resolvesTick: 42, // due on the snapshot tick
+            readyTick: 55,
+            casterSpawnSeq: 0,
             targetCharacterId: 'char-1',
             frozenRoster: [{ characterId: 'char-1', generation: 0 }],
             baseDamage: 10,

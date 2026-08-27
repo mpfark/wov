@@ -1,22 +1,3 @@
--- Final correction to the authoritative boss-cast lifecycle.
--- NOT APPLIED: reviewed only. Apply during the coordinated maintenance window,
--- before deploying the matching Edge/frontend build (r8-bosscast-lifecycle).
---
---  1. Server-authoritative departure: a trigger on characters.current_node_id
---     ends participation for the node being left, so no client callback is load
---     bearing. The client-callable `encounter_leave_node` is REMOVED: the
---     browser has no departure surface at all.
---  2. Participation generations are rotated from RECONCILED STATE, never from
---     elapsed time: a participant row records the node it was taken at, and
---     intake rotates whenever that node (or the encounter) is not the one the
---     character is actually standing in.
---  3. The telegraph lifecycle is authoritative in ENCOUNTER TICKS. Cast rows
---     carry started/resolves/ready ticks plus the caster's spawn_seq, and the
---     snapshot exposes `castReadyTick` fenced to the creature's live spawn.
---  4. Unresolved legacy casts are closed before reopening.
-
--- 1. Departure: one internal implementation, one (server) caller -------------
-
 CREATE OR REPLACE FUNCTION public.encounter_end_participation(_character_id uuid, _node_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -60,7 +41,7 @@ BEGIN
   )
   SELECT count(*)::int INTO v_engagements FROM del;
 
-  -- Only the owned character's row, only for the encounter of the node left.
+  -- Only that character's row, only for the encounter of the node left.
   WITH del AS (
     DELETE FROM public.encounter_participants
     WHERE encounter_id = v_enc AND character_id = _character_id
@@ -102,7 +83,7 @@ BEGIN
   BEGIN
     PERFORM public.encounter_end_participation(OLD.id, OLD.current_node_id);
   EXCEPTION WHEN OTHERS THEN
-    -- Movement must never fail because cleanup did; intake's stale-row check is
+    -- Movement must never fail because cleanup did; intake's reconciliation is
     -- the second line of defence.
     NULL;
   END;
@@ -120,12 +101,12 @@ EXECUTE FUNCTION public.characters_end_participation_on_node_change();
 
 -- The client departure path is REMOVED, not merely demoted: with the trigger in
 -- place a browser call can only ever be redundant, and a surface that exists can
--- be relied on by mistake. Dropping it makes the server the single authority.
+-- be relied on by mistake. The server is the single authority.
 DROP FUNCTION IF EXISTS public.encounter_leave_node(uuid, uuid);
 
--- 2. Participation generations from reconciled state -------------------------
--- The participant row records the node it was taken at, so "is this the same
--- visit?" is answered by comparing state, never by measuring elapsed time.
+-- Participation generations from reconciled state: the participant row records
+-- the node it was taken at, so "is this the same visit?" is answered by
+-- comparing state, never by measuring elapsed time.
 ALTER TABLE public.encounter_participants
   ADD COLUMN IF NOT EXISTS node_id uuid REFERENCES public.nodes(id) ON DELETE SET NULL;
 
@@ -135,7 +116,6 @@ UPDATE public.encounter_participants ep
  WHERE e.id = ep.encounter_id AND ep.node_id IS NULL;
 
 CREATE OR REPLACE FUNCTION public.encounter_intake(_character_id uuid, _creature_ids uuid[] DEFAULT '{}'::uuid[])
-
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -163,9 +143,8 @@ BEGIN
 
   -- Participation generation: a fresh row is a new visit. An existing row is
   -- the SAME visit only if it was taken for this encounter AND at this node.
-  -- Any mismatch is a reconciled fact — the character is demonstrably not where
-  -- the row says — so the identity is rotated. No elapsed-time heuristic is
-  -- involved anywhere: nothing here guesses from clocks.
+  -- Any mismatch is a reconciled fact, so the identity is rotated. Nothing
+  -- here guesses from clocks.
   INSERT INTO public.encounter_participants AS ep
     (encounter_id, character_id, node_id, last_action_at, generation)
   VALUES (v_enc, _character_id, v_node, now(),
@@ -180,7 +159,6 @@ BEGIN
              THEN nextval('public.encounter_participation_generation_seq')
            ELSE ep.generation
          END;
-
 
   -- Every living creature at the node belongs to the node's encounter.
   INSERT INTO public.encounter_creatures (encounter_id, creature_id)
@@ -222,7 +200,7 @@ BEGIN
 END;
 $function$;
 
--- 3. Tick-authoritative, spawn-fenced durable recovery -------------------------------------------
+-- Tick-authoritative, spawn-fenced durable telegraph recovery.
 CREATE OR REPLACE FUNCTION public.encounter_snapshot_v2(_encounter_id uuid, _claim_token uuid, _tick bigint)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -342,9 +320,6 @@ BEGIN
       JOIN public.characters c ON c.id = r.character_id
       LEFT JOIN public.encounter_participants ep
         ON ep.encounter_id = _encounter_id AND ep.character_id = c.id
-      -- Presence, not participation: a character who walked off the node is not
-      -- a legal target for anything resolved here (telegraphed casts included),
-      -- even while their delivery/RLS grace still lets them watch the fight.
       ), '[]'::jsonb),
     'creatures', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
@@ -367,8 +342,6 @@ BEGIN
         -- Spawn fencing is by spawn_seq, not by time: a boundary belongs to the
         -- spawn that froze it, so a creature that died and respawned starts
         -- Ready and a resolved row from a previous life cannot silence it.
-        -- `max()` keeps the newest boundary authoritative; an older row can
-        -- never lower it.
         'castReadyTick', COALESCE((
           SELECT max(COALESCE((ce.payload #>> '{config,readyTick}')::bigint, 0))
           FROM public.encounter_cast_events ce
@@ -384,7 +357,6 @@ BEGIN
             AND ce.creature_id = cr.id
             AND COALESCE((ce.payload #>> '{config,casterSpawnSeq}')::bigint, -1)
                 = COALESCE(cr.spawn_seq, 0)), 0),
-
         -- explicit loot precedence: authored -> pool config -> legacy fallback (0.5)
         'effectiveDropChance', COALESCE(
           cr.drop_chance,
@@ -516,10 +488,10 @@ BEGIN
     || jsonb_build_object('stateDigest', public.encounter_state_digest(_encounter_id, v_scope));
 END;
 $function$;
--- 4. Close unresolved legacy casts -------------------------------------------
--- Any cast still in flight at deployment predates the authoritative contract:
--- it lacks a frozen roster, tick boundaries, or the caster's spawn fence. The
--- resolver cancels such a row safely, but closing them here means no live
+
+-- Close unresolved legacy casts: any cast still in flight at deployment predates
+-- the authoritative contract (no frozen roster, tick boundaries, or spawn fence).
+-- The resolver cancels such a row safely, but closing them here means no live
 -- encounter carries one at all. Historical resolved rows are untouched.
 UPDATE public.encounter_cast_events
 SET resolved_at = now(),

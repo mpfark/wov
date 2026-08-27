@@ -508,6 +508,10 @@ describe('Batch 1 — control debuffs reduce creature outgoing damage', () => {
       abilityKey: 'stone_wrath',
       startedAtMs: NOW - 2000,
       resolvesAtMs: NOW + 6000,
+      startedTick: 41,
+      resolvesTick: 45, // still channelling
+      readyTick: 51,
+      casterSpawnSeq: 0,
       targetCharacterId: 'char-1',
       frozenRoster: [{ characterId: 'char-1', generation: 0 }],
     } as never;

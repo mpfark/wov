@@ -3,9 +3,11 @@
  *
  * A live-database privilege matrix still has to run in the maintenance window;
  * this pins the properties that must not silently regress in the repository:
- * definer + fixed search_path, an explicit ownership/privilege gate, no PUBLIC
- * or anon execute, advisory locking, scoping to the node being LEFT, and a
- * server-side trigger so no browser callback is load bearing.
+ * departure is server-only (no client-callable RPC at all), definer + fixed
+ * search_path, advisory locking, writes scoped to the node being LEFT, a
+ * trigger on the node change itself, participation generations rotated from
+ * reconciled state rather than elapsed time, and a tick/spawn-fenced telegraph
+ * recovery boundary.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -14,43 +16,40 @@ const PENDING =
   'supabase/pending/20260827_bosscast_lifecycle_prerelease_corrections.sql';
 const sql = readFileSync(PENDING, 'utf8');
 
-describe('encounter_leave_node / encounter_end_participation — security contract', () => {
-  it('both functions are SECURITY DEFINER with a fixed search_path', () => {
+describe('encounter departure — security contract', () => {
+  it('every departure function is SECURITY DEFINER with a fixed search_path', () => {
     const fns = sql.split('CREATE OR REPLACE FUNCTION').slice(1);
     const relevant = fns.filter((f) =>
-      /encounter_leave_node|encounter_end_participation|characters_end_participation_on_node_change/.test(
+      /encounter_end_participation|characters_end_participation_on_node_change/.test(
         f.split('\n')[0],
       ),
     );
-    expect(relevant).toHaveLength(3);
+    expect(relevant).toHaveLength(2);
     for (const f of relevant) {
       expect(f).toMatch(/SECURITY DEFINER/);
       expect(f).toMatch(/SET search_path TO 'public'/);
     }
   });
 
-  it('rejects a non-owner and an unauthenticated non-service caller', () => {
-    expect(sql).toMatch(/IF NOT public\.owns_character\(_character_id\) THEN\s*\n\s*RAISE EXCEPTION 'not your character'/);
-    expect(sql).toMatch(/ELSIF COALESCE\(auth\.role\(\), current_user\) <> 'service_role' THEN\s*\n\s*RAISE EXCEPTION 'not authorized'/);
+  it('removes the client departure path entirely', () => {
+    expect(sql).toContain(
+      'DROP FUNCTION IF EXISTS public.encounter_leave_node(uuid, uuid);',
+    );
+    // No grant may resurrect a client-callable departure surface.
+    expect(sql).not.toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.encounter_leave_node/,
+    );
   });
 
-  it('grants execute only to authenticated and service_role, never PUBLIC or anon', () => {
-    expect(sql).toContain(
-      'REVOKE ALL ON FUNCTION public.encounter_leave_node(uuid, uuid) FROM PUBLIC',
-    );
-    expect(sql).toContain(
-      'GRANT EXECUTE ON FUNCTION public.encounter_leave_node(uuid, uuid) TO authenticated',
-    );
-    expect(sql).toContain(
-      'GRANT EXECUTE ON FUNCTION public.encounter_leave_node(uuid, uuid) TO service_role',
-    );
-    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.encounter_(leave_node|end_participation)\(uuid, uuid\) TO (anon|PUBLIC)/);
-    // The internal implementation is not client-callable at all.
+  it('the internal implementation is service_role only, never PUBLIC or anon', () => {
     expect(sql).toContain(
       'REVOKE ALL ON FUNCTION public.encounter_end_participation(uuid, uuid) FROM PUBLIC',
     );
+    expect(sql).toContain(
+      'GRANT EXECUTE ON FUNCTION public.encounter_end_participation(uuid, uuid) TO service_role',
+    );
     expect(sql).not.toMatch(
-      /GRANT EXECUTE ON FUNCTION public\.encounter_end_participation\(uuid, uuid\) TO authenticated/,
+      /GRANT EXECUTE ON FUNCTION public\.encounter_end_participation\(uuid, uuid\) TO (anon|authenticated|PUBLIC)/,
     );
   });
 
@@ -90,20 +89,35 @@ describe('encounter_leave_node / encounter_end_participation — security contra
     expect(sql).toContain('PERFORM public.encounter_end_participation(OLD.id, OLD.current_node_id);');
   });
 
-  it('intake rotates the participation generation for a stale row', () => {
-    expect(sql).toContain("WHEN ep.last_action_at < now() - interval '3 seconds'");
+  it('rotates the participation generation from reconciled state, never from elapsed time', () => {
     expect(sql).toContain(
-      "WHEN ep.encounter_id IS DISTINCT FROM EXCLUDED.encounter_id\n             THEN nextval('public.encounter_participation_generation_seq')",
+      'ALTER TABLE public.encounter_participants\n  ADD COLUMN IF NOT EXISTS node_id uuid',
     );
+    expect(sql).toContain(
+      "WHEN ep.encounter_id IS DISTINCT FROM EXCLUDED.encounter_id\n             OR ep.node_id IS DISTINCT FROM EXCLUDED.node_id\n             THEN nextval('public.encounter_participation_generation_seq')",
+    );
+    // No time-based guessing anywhere in intake's generation decision.
+    const intake = sql.slice(
+      sql.indexOf('FUNCTION public.encounter_intake('),
+      sql.indexOf('-- 3. Tick-authoritative'),
+    );
+    expect(intake).not.toMatch(/interval '\d+ seconds'/);
   });
 
-  it('the durable recovery boundary is fenced to the live spawn', () => {
-    expect(sql).toContain('AND ce.started_at >= COALESCE(cr.died_at, ce.started_at)');
+  it('the durable recovery boundary is in ticks and fenced by spawn_seq', () => {
+    expect(sql).toContain("'castReadyTick', COALESCE((");
+    expect(sql).toContain("(ce.payload #>> '{config,readyTick}')::bigint");
+    expect(sql).toContain(
+      "COALESCE((ce.payload #>> '{config,casterSpawnSeq}')::bigint, -1)\n                = COALESCE(cr.spawn_seq, 0)",
+    );
+    // Wall-clock death fencing is gone.
+    expect(sql).not.toContain('AND ce.started_at >= COALESCE(cr.died_at, ce.started_at)');
   });
 
-  it('closes unresolved legacy casts instead of resolving them by timestamp', () => {
+  it('closes unresolved legacy casts that lack the authoritative contract', () => {
     expect(sql).toMatch(
-      /UPDATE public\.encounter_cast_events[\s\S]*?WHERE resolved_at IS NULL[\s\S]*?frozenRoster\}'\) IS NULL/,
+      /UPDATE public\.encounter_cast_events[\s\S]*?WHERE resolved_at IS NULL[\s\S]*?config,casterSpawnSeq\}'\) IS NULL/,
     );
+    expect(sql).toContain("'outcomeReason', 'legacy_no_contract'");
   });
 });
