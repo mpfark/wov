@@ -346,13 +346,13 @@ describe('boss-cast lifecycle — frozen generation cohort', () => {
 // ── 4. Legacy in-flight casts fail safe ─────────────────────────────────────
 
 describe('boss-cast lifecycle — legacy in-flight casts', () => {
-  it('a cast with no frozen roster is cancelled, never resolved by timestamp', () => {
+  it('a cast without the authoritative contract is cancelled, never resolved by timestamp', () => {
     const legacy = activeCast();
     delete (legacy as { frozenRoster?: unknown }).frozenRoster;
     const out = resolveTickPure(enc({ activeCasts: [legacy] }));
     const fizzle = out.events.find((e) => e.type === 'boss_cast_fizzle');
     expect(fizzle).toBeDefined();
-    expect((fizzle as { outcomeReason?: string }).outcomeReason).toBe('legacy_no_roster');
+    expect((fizzle as { outcomeReason?: string }).outcomeReason).toBe('legacy_no_contract');
     expect(types(out)).not.toContain('boss_cast_hit');
     expect(swings(out)).toBe(0);
   });
