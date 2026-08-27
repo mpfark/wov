@@ -2063,8 +2063,8 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       const spawnChanged =
         !legacyNoContract &&
         creature !== undefined &&
-        creature.spawnSeq !== undefined &&
-        creature.spawnSeq !== cast.casterSpawnSeq;
+        (creature.spawnSeq ?? 0) !== (cast.casterSpawnSeq ?? 0);
+
 
       // Caster gone (killed during the channel, or detached from the
       // encounter): the cast is cancelled. Killing the boss in time is the
