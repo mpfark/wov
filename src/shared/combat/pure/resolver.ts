@@ -203,21 +203,21 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     cKilled: new Set<string>(),
     cLastSource: new Map(),
     storedPower: new Map(creatures.map((c) => [c.id, c.storedPower])),
-    // Recovery is durable: the ledger is seeded from the boundary the cast
-    // froze when its channel began (`castReadyAtMs`), so a rebuilt working
-    // state — restart, catch-up, lease retry — cannot hand a boss a free cast.
-    castCooldown: new Map(
+    // Recovery is durable AND tick-based: the ledger is seeded from the
+    // spawn-fenced boundary the database holds for this creature
+    // (`castReadyTick`), so a rebuilt working state — restart, catch-up, lease
+    // retry, delayed request — reads exactly the same readiness. The legacy
+    // per-tick counter is only a floor, converted into the same tick domain.
+    castReadyTick: new Map(
       creatures.map((c) => [
         c.id,
         Math.max(
-          c.castCooldownTicks,
-          Math.ceil(
-            Math.max(0, (c.castReadyAtMs ?? 0) - snapshot.nowMs) /
-              Math.max(1, snapshot.tickRateMs),
-          ),
+          c.castReadyTick ?? 0,
+          snapshot.tickNumber + Math.max(0, c.castCooldownTicks),
         ),
       ]),
     ),
+
 
     activeCasts: new Map(snapshot.activeCasts.map((c) => [c.creatureId, c])),
     hitters: new Set<string>(),
