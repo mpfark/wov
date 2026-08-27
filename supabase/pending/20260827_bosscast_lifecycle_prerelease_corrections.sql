@@ -1,19 +1,22 @@
--- Pre-release correction to the authoritative boss-cast lifecycle.
+-- Final correction to the authoritative boss-cast lifecycle.
 -- NOT APPLIED: reviewed only. Apply during the coordinated maintenance window,
--- before deploying the matching Edge/frontend build.
+-- before deploying the matching Edge/frontend build (r8-bosscast-lifecycle).
 --
 --  1. Server-authoritative departure: a trigger on characters.current_node_id
 --     ends participation for the node being left, so no client callback is load
---     bearing. `encounter_leave_node` remains as an idempotent client safeguard.
---  2. `encounter_leave_node` ownership is explicit: an authenticated caller must
---     own the character; a null-uid caller must be service_role.
---  3. Intake rotates the participation generation for a stale row, so a missed
---     departure cannot preserve the previous visit's identity.
---  4. The durable telegraph recovery boundary is fenced to the creature's live
---     spawn.
---  5. Unresolved legacy casts are closed before reopening.
+--     bearing. The client-callable `encounter_leave_node` is REMOVED: the
+--     browser has no departure surface at all.
+--  2. Participation generations are rotated from RECONCILED STATE, never from
+--     elapsed time: a participant row records the node it was taken at, and
+--     intake rotates whenever that node (or the encounter) is not the one the
+--     character is actually standing in.
+--  3. The telegraph lifecycle is authoritative in ENCOUNTER TICKS. Cast rows
+--     carry started/resolves/ready ticks plus the caster's spawn_seq, and the
+--     snapshot exposes `castReadyTick` fenced to the creature's live spawn.
+--  4. Unresolved legacy casts are closed before reopening.
 
--- 1/2. Departure: one internal implementation, two callers -------------------
+-- 1. Departure: one internal implementation, one (server) caller -------------
+
 CREATE OR REPLACE FUNCTION public.encounter_end_participation(_character_id uuid, _node_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
