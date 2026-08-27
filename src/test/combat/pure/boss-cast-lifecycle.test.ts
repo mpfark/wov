@@ -388,15 +388,10 @@ describe('boss-cast lifecycle — caster spawn identity', () => {
     expect((start!.config as ActiveCastSnapshot).casterSpawnSeq).toBe(4);
   });
 
-  // OPEN DEFECT (r8 closeout, 2026-08-27): this currently FAILS. The terminal
-  // branch in `resolver.ts` writes `castReadyTick` for every cancellation,
-  // including a spawn-fenced one, so within a multi-tick run the respawned life
-  // inherits the dead life's recovery boundary. The durable snapshot value is
-  // spawn-fenced in SQL, so the state heals on the next snapshot; the deviation
-  // is confined to the remainder of one resolution run. Skipped, not deleted:
-  // it is the reproduction for the reviewed correction. Do not enable until the
-  // resolver skips the recovery write when `spawnChanged`.
-  it.skip('the respawned life inherits no recovery from the cancelled cast', () => {
+  // Recovery is owned by `(creatureId, spawnSeq)`. The cancelled cast's
+  // boundary is written to spawn 0's key, which the live spawn-1 creature never
+  // reads — so the respawn starts Ready with no inherited channel or cooldown.
+  it('the respawned life inherits no recovery from the cancelled cast', () => {
     // Tick 1 cancels the stale-spawn cast; a later tick in the same run must be
     // free to cast again — the dead life's readyTick belongs to a spawn that
     // no longer exists.
@@ -410,7 +405,90 @@ describe('boss-cast lifecycle — caster spawn identity', () => {
     expect(types(out)).toContain('boss_cast_fizzle');
     expect(types(out)).toContain('boss_cast_start');
   });
+
+  it("the respawn's own new cast records its own generation and its own recovery", () => {
+    const out = resolveTickPure(
+      enc({
+        creatures: [boss({ spawnSeq: 2, castReadyTick: 0 })],
+        activeCasts: [activeCast({ casterSpawnSeq: 1 })],
+        ticksToSimulate: 4,
+      }),
+    );
+    const starts = out.casts.filter((c) => c.phase === 'start');
+    expect(starts).toHaveLength(1);
+    expect((starts[0].config as ActiveCastSnapshot).casterSpawnSeq).toBe(2);
+    // Spawn 2's own recovery still applies: 1 cast tick + 13 cooldown ticks
+    // leaves no room for a second start inside a 4-tick run.
+    expect((starts[0].config as ActiveCastSnapshot).readyTick).toBe(
+      (starts[0].config as ActiveCastSnapshot).resolvesTick! + 13,
+    );
+  });
+
+  it('a same-generation terminal outcome KEEPS its cooldown', () => {
+    // The frozen target left, so the cast evades — but the caster is the same
+    // life, so recovery applies and no successor may start in the same run.
+    const out = resolveTickPure(
+      enc({
+        creatures: [boss({ spawnSeq: 1, castReadyTick: 0 })],
+        activeCasts: [activeCast({ casterSpawnSeq: 1, frozenRoster: [] })],
+        ticksToSimulate: 4,
+      }),
+    );
+    expect(out.casts.filter((c) => c.phase === 'start')).toHaveLength(0);
+  });
+
+  it('two creatures sharing a spawn_seq keep independent recovery', () => {
+    const out = resolveTickPure(
+      enc({
+        creatures: [
+          boss({ spawnSeq: 3, castReadyTick: BASE_TICK + 10 }),
+          boss({ id: 'crt-2', spawnSeq: 3, castReadyTick: 0 }),
+        ],
+      }),
+    );
+    const starts = out.casts.filter((c) => c.phase === 'start');
+    expect(starts.map((c) => c.creatureId)).toEqual(['crt-2']);
+  });
+
+  it('the durable snapshot boundary and the in-memory ledger agree for one generation', () => {
+    // Same creature id, same generation, durable boundary in the future: the
+    // in-memory ledger is seeded from it and refuses the start.
+    const out = resolveTickPure(
+      enc({ creatures: [boss({ spawnSeq: 7, castReadyTick: BASE_TICK + 3 })], ticksToSimulate: 3 }),
+    );
+    expect(types(out)).not.toContain('boss_cast_start');
+  });
+
+  it('a replayed cancellation does not duplicate or extend recovery', () => {
+    const run = () =>
+      resolveTickPure(
+        enc({
+          creatures: [boss({ spawnSeq: 1, castReadyTick: 0 })],
+          activeCasts: [activeCast({ casterSpawnSeq: 0 })],
+          ticksToSimulate: 4,
+        }),
+      );
+    const a = run();
+    const b = run();
+    expect(b.casts.map((c) => `${c.creatureId}:${c.phase}`)).toEqual(
+      a.casts.map((c) => `${c.creatureId}:${c.phase}`),
+    );
+  });
+
+  it('catch-up (effects-only) uses the same generation key and starts nothing', () => {
+    const out = resolveTickPure(
+      enc({
+        creatures: [boss({ spawnSeq: 1, castReadyTick: 0 })],
+        activeCasts: [activeCast({ casterSpawnSeq: 0 })],
+        ticksToSimulate: 4,
+        effectsOnly: true,
+      }),
+    );
+    expect(types(out)).toContain('boss_cast_fizzle');
+    expect(types(out)).not.toContain('boss_cast_start');
+  });
 });
+
 
 // ── 6. Wall-clock mirrors never control mechanics ───────────────────────────
 
