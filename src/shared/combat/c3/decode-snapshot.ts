@@ -866,9 +866,15 @@ export function decodeEncounterSnapshot(raw: unknown, aux: SnapshotAux): Decoded
 
       storedPowerCap: configuredCap,
       castCooldownTicks: aux.castCooldownTicksByCreatureId.get(id) ?? 0,
-      // Durable recovery boundary. Absent on an older snapshot shape, which
-      // simply means "no recorded recovery".
+      // AUTHORITATIVE durable recovery boundary (encounter tick). Absent on an
+      // older snapshot shape, which simply means Ready.
+      castReadyTick: optNum(c, 'castReadyTick', path) ?? 0,
+      // Compatibility / observability mirror only.
       castReadyAtMs: optNum(c, 'castReadyAtMs', path) ?? 0,
+      // The live spawn generation, so a starting cast can freeze it and a
+      // resolving cast can prove it is still the same life.
+      spawnSeq: reqNum(c, 'spawnSeq', path),
+
 
       bossCritFlavors: bossCritFlavors,
       bossDeathCry: optStr(c, 'bossDeathCry', path),
