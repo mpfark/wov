@@ -54,15 +54,30 @@ const bossCast = (over: Partial<BossCastSnapshot> = {}): BossCastSnapshot => ({
   ...over,
 });
 
-const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot =>
-  ({
+/**
+ * The snapshot tick these fixtures resolve on (see `snapshot()` in fixtures).
+ * The lifecycle is authoritative in TICKS, so the millisecond fields are only
+ * mirrors: tick boundaries are derived from them here so a test that moves
+ * `resolvesAtMs` keeps a coherent contract without restating every field.
+ */
+const BASE_TICK = 42;
+
+const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot => {
+  const startedAtMs = over.startedAtMs ?? NOW - TICK;
+  const resolvesAtMs = over.resolvesAtMs ?? NOW - 1;
+  const resolvesTick = BASE_TICK + Math.ceil((resolvesAtMs - NOW) / TICK);
+  return {
     castEventId: 'cast-1',
     creatureId: 'crt-1',
     abilityKey: 'granite_slam',
     castKey: 'granite_slam',
     label: 'Granite Slam',
-    startedAtMs: NOW - TICK,
-    resolvesAtMs: NOW - 1, // due
+    startedAtMs,
+    resolvesAtMs, // default: due this tick
+    startedTick: BASE_TICK + Math.floor((startedAtMs - NOW) / TICK),
+    resolvesTick,
+    readyTick: resolvesTick + 13,
+    casterSpawnSeq: 0,
     targetCharacterId: 'char-1',
     baseDamage: 40,
     baseAoeDamage: 10,
@@ -76,10 +91,12 @@ const activeCast = (over: Partial<ActiveCastSnapshot> = {}): ActiveCastSnapshot 
     storedPowerCap: 0,
     lockMs: 0,
     castedText: null,
-    readyAtMs: NOW - 1 + 13 * TICK,
+    readyAtMs: resolvesAtMs + 13 * TICK,
     frozenRoster: [{ characterId: 'char-1', generation: 10 }],
     ...over,
-  }) as ActiveCastSnapshot;
+  } as ActiveCastSnapshot;
+};
+
 
 function boss(over: Partial<CreatureSnapshot> = {}): CreatureSnapshot {
   return creature({
