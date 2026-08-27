@@ -364,3 +364,75 @@ describe('boss-cast lifecycle — legacy in-flight casts', () => {
     expect(out.casts.filter((c) => c.phase === 'fizzle')).toHaveLength(1);
   });
 });
+
+// ── 5. Creature spawn identity fences the cast ──────────────────────────────
+
+describe('boss-cast lifecycle — caster spawn identity', () => {
+  it('a cast is cancelled when the caster respawned under a new spawn_seq', () => {
+    const out = resolveTickPure(
+      enc({
+        creatures: [boss({ spawnSeq: 1 })],
+        activeCasts: [activeCast({ casterSpawnSeq: 0 })],
+      }),
+    );
+    const fizzle = out.events.find((e) => e.type === 'boss_cast_fizzle');
+    expect((fizzle as { outcomeReason?: string }).outcomeReason).toBe('caster_respawned');
+    expect(types(out)).not.toContain('boss_cast_hit');
+    expect(types(out)).not.toContain('boss_cast_start');
+    expect(swings(out)).toBe(0);
+  });
+
+  it('a new cast records the CURRENT spawn identity', () => {
+    const out = resolveTickPure(enc({ creatures: [boss({ spawnSeq: 4 })] }));
+    const start = out.casts.find((c) => c.phase === 'start');
+    expect((start!.config as ActiveCastSnapshot).casterSpawnSeq).toBe(4);
+  });
+
+  it('the respawned life inherits no recovery from the cancelled cast', () => {
+    // Tick 1 cancels the stale-spawn cast; a later tick in the same run must be
+    // free to cast again — the dead life's readyTick belongs to a spawn that
+    // no longer exists.
+    const out = resolveTickPure(
+      enc({
+        creatures: [boss({ spawnSeq: 1, castReadyTick: 0 })],
+        activeCasts: [activeCast({ casterSpawnSeq: 0 })],
+        ticksToSimulate: 4,
+      }),
+    );
+    expect(types(out)).toContain('boss_cast_fizzle');
+    expect(types(out)).toContain('boss_cast_start');
+  });
+});
+
+// ── 6. Wall-clock mirrors never control mechanics ───────────────────────────
+
+describe('boss-cast lifecycle — ticks, not wall clock', () => {
+  it('a cast overdue by wall clock does NOT resolve before its resolvesTick', () => {
+    const cast = activeCast();
+    const out = resolveTickPure(
+      enc({
+        activeCasts: [{ ...cast, resolvesAtMs: NOW - 60_000, resolvesTick: BASE_TICK + 5 }],
+      }),
+    );
+    expect(types(out)).not.toContain('boss_cast_hit');
+    expect(types(out)).not.toContain('boss_cast_resolve');
+  });
+
+  it('a stale readyAtMs mirror cannot unlock a start before readyTick', () => {
+    const out = resolveTickPure(
+      enc({ creatures: [boss({ castReadyTick: BASE_TICK + 10 })], nowMs: NOW + 600_000 }),
+    );
+    expect(types(out)).not.toContain('boss_cast_start');
+  });
+
+  it('delay alone (no departure) never removes a frozen member from the cohort', () => {
+    // The request arrived a minute late: the mirrors are stale, the generation
+    // did not rotate, and the cast resolves on its authoritative tick as usual.
+    const out = resolveTickPure(
+      enc({
+        activeCasts: [activeCast({ startedAtMs: NOW - 90_000, resolvesAtMs: NOW - 60_000 })],
+      }),
+    );
+    expect(types(out)).toContain('boss_cast_hit');
+  });
+});
