@@ -2400,11 +2400,15 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
             : null,
         configuredCooldownTicks: cast.cooldownTicks,
       });
-      w.castCooldown.set(c.id, gate.cooldownTicksAfter);
       if (gate.outcome !== 'start' || !target) continue;
 
 
 
+      // Authoritative lifecycle, in ticks. The ms mirrors are derived from them
+      // for telemetry and the telegraph UI only.
+      const startedTick = currentTick;
+      const resolvesTick = startedTick + Math.max(1, Math.floor(cast.castTicks));
+      const readyTickNext = resolvesTick + Math.max(1, Math.floor(cast.cooldownTicks));
       const resolvesAtMs = nowMs + Math.max(1, cast.castTicks) * tickRate;
       const frozen: ActiveCastSnapshot = {
         // The committer creates the row and stamps the real id. Within this
@@ -2417,6 +2421,12 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         label: cast.label,
         startedAtMs: nowMs,
         resolvesAtMs,
+        startedTick,
+        resolvesTick,
+        readyTick: readyTickNext,
+        // The exact life that owns this channel. A respawned creature carries a
+        // different spawn_seq and neither resolves nor inherits this cast.
+        casterSpawnSeq: c.spawnSeq ?? 0,
         targetCharacterId: target.id,
         baseDamage: cast.damage,
         baseAoeDamage: cast.damageAoe,
@@ -2430,9 +2440,9 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         storedPowerCap: cast.storedPowerCap || c.storedPowerCap,
         lockMs: cast.lockMs,
         castedText: cast.castedText,
-        // Recovery boundary, durable from this moment: the cast owns its own
-        // cooldown, so a rebuilt working state reads the same readiness.
+        // Compatibility mirror of `readyTick`.
         readyAtMs: resolvesAtMs + Math.max(1, cast.cooldownTicks) * tickRate,
+
         // Membership decided once, here. The primary target is always a member
         // (it was selected on this tick), and every other engaged, living,
         // present participant is pinned to its current participation
