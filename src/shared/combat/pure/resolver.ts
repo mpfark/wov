@@ -84,6 +84,21 @@ import type {
   StoredPowerMutation,
 } from './types';
 
+/**
+ * The identity a cast recovery boundary belongs to: one exact life of one
+ * creature, `(creatureId, spawnSeq)`. A creature id alone is NOT an identity —
+ * a boss that dies and respawns keeps its id but is a different generation, and
+ * keying recovery by id alone let a respawn inherit the dead life's cooldown for
+ * the remainder of a multi-tick resolver run. The brand keeps the key from being
+ * confused with a bare creature id at the type level.
+ */
+type CreatureGenerationKey = string & { readonly __creatureGeneration: unique symbol };
+
+/** The ONE way a generation-scoped ledger key is produced, on every path. */
+function generationKey(creatureId: string, spawnSeq: number | undefined): CreatureGenerationKey {
+  return `${creatureId}#${spawnSeq ?? 0}` as CreatureGenerationKey;
+}
+
 interface Working {
   hp: Map<string, number>;
   cp: Map<string, number>;
@@ -93,10 +108,12 @@ interface Working {
   cLastSource: Map<string, { characterId: string | null; kind: CreatureMutation['lastSourceKind'] }>;
   storedPower: Map<string, number>;
   /**
-   * Authoritative recovery ledger: the earliest ENCOUNTER TICK on which each
-   * creature may begin a new cast. Never wall-clock.
+   * Authoritative recovery ledger: the earliest ENCOUNTER TICK on which a
+   * specific creature GENERATION may begin a new cast. Never wall-clock, never
+   * keyed by creature id alone.
    */
   castReadyTick: Map<CreatureGenerationKey, number>;
+
 
   /** In-flight telegraphed casts, keyed by caster. At most one per creature. */
   activeCasts: Map<string, ActiveCastSnapshot>;
