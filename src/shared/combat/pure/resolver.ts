@@ -2080,11 +2080,13 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       // is derived from a creature autoattack, so effects-only carries the
       // channel forward without banking anything.
       if (nowMs < cast.resolvesAtMs) {
-        // Channelling is the creature's action for this tick: it cannot also
-        // swing. Banking stays gated on the authored pause, so a non-pausing
-        // channel still banks nothing.
+        // Channelling is the creature's lifecycle step for this tick, so it
+        // cannot also begin a second one. Whether it may still swing stays the
+        // authored decision (`pauseAutoattacks`).
         bossActed.add(creatureId);
+        if (cast.pauseAutoattacks) pausedByCast.add(creatureId);
         if (effectsOnly) continue;
+
 
         const cap = cast.storedPowerCap;
         const primary = cast.targetCharacterId
