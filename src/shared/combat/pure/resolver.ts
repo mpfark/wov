@@ -2300,7 +2300,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
     // but must never begin one.
     if (!effectsOnly) for (const c of creatures) {
       if (!isAliveC(c.id) || !c.bossCast) continue;
+      // One lifecycle step per creature per tick: a cast that fizzled or
+      // resolved above has spent this tick and enters recovery instead.
+      if (bossActed.has(c.id)) continue;
       if (w.activeCasts.has(c.id)) continue;
+
       const cast = c.bossCast;
       const cooldownBefore = w.castCooldown.get(c.id) ?? 0;
       let target: ParticipantSnapshot | null = null;
