@@ -259,6 +259,29 @@ export interface ActiveCastSnapshot {
   readonly storedPowerCap: number;
   readonly lockMs: number;
   readonly castedText: string | null;
+  /**
+   * Durable recovery boundary, frozen when the channel began:
+   * `resolvesAtMs + cooldownTicks * tickRateMs`. The snapshot reads it back as
+   * `CreatureSnapshot.castReadyAtMs`, so the start gate survives restarts,
+   * catch-up and lease retries instead of living only in per-tick memory.
+   * Absent on a cast that started before this contract existed.
+   */
+  readonly readyAtMs?: number;
+  /**
+   * Membership decided once, at cast start: the exact participants the channel
+   * may reach, each pinned to the participation generation they carried then.
+   * At resolution a participant is eligible only if it is alive, present, and
+   * still carries its frozen generation. Absent on a legacy in-flight cast,
+   * which falls back to the historical join fence.
+   */
+  readonly frozenRoster?: readonly FrozenCastParticipant[];
+}
+
+/** One `(character, participation generation)` pair frozen with a cast. */
+export interface FrozenCastParticipant {
+  readonly characterId: string;
+  readonly generation: number;
+
 }
 
 
