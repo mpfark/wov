@@ -481,7 +481,7 @@ describe('boss-cast lifecycle — caster spawn identity', () => {
         creatures: [boss({ spawnSeq: 1, castReadyTick: 0 })],
         activeCasts: [activeCast({ casterSpawnSeq: 0 })],
         ticksToSimulate: 4,
-        effectsOnly: true,
+        mode: 'catchup',
       }),
     );
     expect(types(out)).toContain('boss_cast_fizzle');
