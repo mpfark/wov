@@ -2105,11 +2105,16 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
           config: cast,
         });
         // Distinct terminal outcomes, never used interchangeably:
-        //   caster_gone      -> cancelled (the boss is no longer there)
-        //   legacy_no_roster -> cancelled (membership unknowable, fail safe)
+        //   caster_gone        -> cancelled (the boss is no longer there)
+        //   legacy_no_contract -> cancelled (state unknowable, fail safe)
+        //   caster_respawned   -> cancelled (row belongs to a previous life)
         emit('boss_cast_fizzle', `${cast.label} collapses unfinished.`, {
           creatureId,
-          outcomeReason: gone ? 'caster_gone' : 'legacy_no_roster',
+          outcomeReason: gone
+            ? 'caster_gone'
+            : legacyNoContract
+              ? 'legacy_no_contract'
+              : 'caster_respawned',
         });
 
         continue;
@@ -2117,8 +2122,11 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
 
       // Still channeling: bank the paused autoattack as Stored Power. Banking
       // is derived from a creature autoattack, so effects-only carries the
-      // channel forward without banking anything.
-      if (nowMs < cast.resolvesAtMs) {
+      // channel forward without banking anything. The boundary is the frozen
+      // TICK, never wall-clock: a request that arrives late resolves the cast on
+      // the same tick it always would have.
+      if (currentTick < (cast.resolvesTick ?? 0)) {
+
         // Channelling is the creature's lifecycle step for this tick, so it
         // cannot also begin a second one. Whether it may still swing stays the
         // authored decision (`pauseAutoattacks`).
