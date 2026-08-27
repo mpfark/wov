@@ -2482,7 +2482,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
         targets: [],
         config: frozen,
       });
-      // Cooldown was already set by the schedule step on the `start` outcome.
+      // Recovery was armed above, in ticks.
       emit(
         'boss_cast_start',
         cast.castingText ?? `${c.name} begins ${cast.label}.`,
