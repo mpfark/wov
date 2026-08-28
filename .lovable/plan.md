@@ -1,6 +1,8 @@
-# Combat Replacement — Authoritative Plan (C-next, revision 2)
+# Combat Replacement — Authoritative Plan (C-next, revision 3)
 
-Read-only planning revision. Nothing was changed. Evidence: the previous audit (installed schema via `pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`, plus the current repository) and two narrow corrective checks recorded in §7 and §12.
+Read-only planning revision. Nothing was changed. Evidence: the original audit (installed schema via `pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`, plus the current repository) and three narrow corrective read-only checks recorded in §7.1, §8 and §6b.
+
+**Changed from revision 2:** §1 (claim lifecycle now separates last-committed tick from claimed candidate tick, with pseudocode), §4 (`node_encounter` gains `claimed_tick`; new §4a state-version and intent-cutoff contract), §6b (Battle Cry secondary effects approved and specified), §8 (conditional `character_effects` boundary approved; single authoritative `combat_flee` RPC approved), §9 (B2/B3/B4/B5/B7/B9/B11/B12/B13 updated), §10 (tests 30–53 added), §12 (previous questions 1–3 now decided). Everything else in revision 2 is retained.
 
 Retained direction (unchanged): replacement rather than compatibility-preserving refactor; combat may stay unavailable throughout; authored world/NPC/creature/loot/item/class/ability content preserved; transient combat runtime state disposable; legacy compatibility paths, dual reads/writes, client combat authority and ignored `member_buffs` deleted; one node encounter owning shared creature state; solo players and multiple parties on the same spawn; newest present participant tanks; final damaging source owns the kill; the killer's eligible party shares the reward; bosses use the shared mechanic catalogue; telegraphs are simple delayed boss actions; frozen rosters, participation generations and general Stored Power retired; two-second authoritative cadence; no burst catch-up; committed events and rewards exactly-once.
 
