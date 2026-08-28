@@ -288,17 +288,17 @@ Both are authored and both reference distinct base abilities, so neither is dele
 
 - **B0 Maintenance boundary.** `combat_mode='maintenance'`; disable existing combat workers and scheduled combat jobs; stop old handlers accepting new combat work. **No truncation and no drops.** Old runtime tables stay intact, read-only, as reconciliation and rollback evidence.
 - **B1 New schema.** Create the isolated replacement tables of §4 with grants (`SELECT` to `authenticated` scoped by node/character, `ALL` to `service_role`), RLS, indexes and constraints. Nothing shares a name with a legacy table.
-- **B2 Snapshot + atomic commit contract.** `node_tick_claim` (SKIP LOCKED, monotonic tick, `next_due_at` 2 s guard, snapshot + `state_version`) and `node_tick_commit` (claim/version validated, single transaction, unique `(encounter_id, tick)`, idempotent rewards). No game mechanics yet.
-- **B3 Resolver foundation.** Typed `NodeSnapshot`/`ProposedTick`, seeded RNG, deterministic ordering, ordered structured events, retained formulas imported. Golden-snapshot tests.
-- **B4 Core mechanics.** Attacks, damage, healing, effects, CP, death.
-- **B5 Shared-node participation.** Multiple parties, newest-present tank, presence transitions.
-- **B6 Kill and reward authority.** Final-hit ownership, qualifying participation, exactly-once rewards.
-- **B7 Retained player abilities.** All 36 assignments mapped through the closed catalogue; frost identity resolved per §7.1; dead ability columns dropped; movement/rest callers of the old party HP RPCs re-pointed.
+- **B2 Snapshot + atomic commit contract.** `node_tick_claim` / `node_tick_commit` exactly as specified in §1a: last-committed `tick` vs `claimed_tick` candidate, `FOR UPDATE SKIP LOCKED`, lease and lease-recovery (same candidate reclaimed with a new token), `next_due_at` 2 s guard, `intent_cutoff_seq`, `state_version` fence per §4a, unique `(encounter_id, tick)`, idempotent rewards, exact-intent-id consumption. No game mechanics yet.
+- **B3 Resolver foundation.** Typed `NodeSnapshot`/`ProposedTick`, RNG seeded from `(encounter_id, candidate_tick, stream)` so a reclaimed candidate tick reproduces the same result from the same snapshot, deterministic ordering, ordered structured events, retained formulas imported. Golden-snapshot tests.
+- **B4 Core mechanics.** Attacks, damage, healing, effects, CP, death — including the general `mitigation_buff` handler parameters (`mitigation_mode`, `shield_dr_bonus`, `crit_softening_pct`, `mitigation_ceiling_pct`) and the documented damage-pipeline order of §6b, with no ability identity checks.
+- **B5 Shared-node participation.** Multiple parties, newest-present tank, presence transitions. Enumerates and implements every presence mutation that bumps `state_version` and therefore invalidates a claimed snapshot (entry, re-entry, departure, node change, death, flee).
+- **B6 Kill and reward authority.** Final-hit ownership, qualifying participation, exactly-once rewards, party-membership fencing per §4a.
+- **B7 Retained player abilities.** All 36 assignments mapped through the closed catalogue; frost identity resolved per §7.1; Battle Cry's `crit_softening_pct` authored (batch fails if absent) and `shield_dr_bonus` carried over; dead ability columns dropped; movement/rest callers of the old party HP RPCs re-pointed.
 - **B8 Simplified boss abilities.** Author `boss_ability` from `boss_cast`; delayed actions; empty-node result.
-- **B9 World clock and dispatcher.** 1 s dispatcher, 2 s authoritative cadence, late-worker behaviour, sleep/wake re-basing, `combat-intent` endpoint.
+- **B9 World clock, dispatcher and flee.** 1 s dispatcher, 2 s authoritative cadence, late-worker behaviour, sleep/wake re-basing, `combat-intent` endpoint, and the authoritative `combat_flee` RPC (§8) with wimp integration — reusing existing movement/path/lock/cost rules, with no general movement remediation.
 - **B10 Frontend replacement.** Intent-only client, server-effect-driven buff display, `node_tick_batch` cursor; presentation layer kept.
-- **B11 Acceptance and parity verification** (§10) while combat stays in maintenance.
-- **B12 Cutover.** Reset creature combat state in place (`hp=max_hp`, `is_alive=true`, death/reward timestamps null — rows never deleted), activate the new loop, `combat_mode='open'`. Non-combat-effect reconciliation completed here.
+- **B11 Acceptance and parity verification** (§10, all 53 scenarios) while combat stays in maintenance.
+- **B12 Cutover.** Reset creature combat state in place (`hp=max_hp`, `is_alive=true`, death/reward timestamps null — rows never deleted), activate the new loop, `combat_mode='open'`. Non-combat-effect reconciliation completed here; `character_effects` created only if that reconciliation proves it is needed (§8).
 - **B13 Legacy deletion.** Only after successful cutover evidence: drop the 16 legacy runtime tables, the ~60 retired functions, obsolete triggers/policies/jobs, `member_buffs`, `combat_soak`, `combat_audit_log`, `party_combat_log`, and the deleted frontend modules.
 
 ### Migration safeguards (corrected)
