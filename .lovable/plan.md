@@ -1,6 +1,8 @@
-# Combat Replacement — Authoritative Plan (C-next, revision 2)
+# Combat Replacement — Authoritative Plan (C-next, revision 3)
 
-Read-only planning revision. Nothing was changed. Evidence: the previous audit (installed schema via `pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`, plus the current repository) and two narrow corrective checks recorded in §7 and §12.
+Read-only planning revision. Nothing was changed. Evidence: the original audit (installed schema via `pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`, plus the current repository) and three narrow corrective read-only checks recorded in §7.1, §8 and §6b.
+
+**Changed from revision 2:** §1 (claim lifecycle now separates last-committed tick from claimed candidate tick, with pseudocode), §4 (`node_encounter` gains `claimed_tick`; new §4a state-version and intent-cutoff contract), §6b (Battle Cry secondary effects approved and specified), §8 (conditional `character_effects` boundary approved; single authoritative `combat_flee` RPC approved), §9 (B2/B3/B4/B5/B7/B9/B11/B12/B13 updated), §10 (tests 30–53 added), §12 (previous questions 1–3 now decided). Everything else in revision 2 is retained.
 
 Retained direction (unchanged): replacement rather than compatibility-preserving refactor; combat may stay unavailable throughout; authored world/NPC/creature/loot/item/class/ability content preserved; transient combat runtime state disposable; legacy compatibility paths, dual reads/writes, client combat authority and ignored `member_buffs` deleted; one node encounter owning shared creature state; solo players and multiple parties on the same spawn; newest present participant tanks; final damaging source owns the kill; the killer's eligible party shares the reward; bosses use the shared mechanic catalogue; telegraphs are simple delayed boss actions; frozen rosters, participation generations and general Stored Power retired; two-second authoritative cadence; no burst catch-up; committed events and rewards exactly-once.
 
@@ -12,13 +14,18 @@ The previous revision's single in-database `node_tick` PLPGSQL resolver is **rep
 client (display + intent only)
   |  POST /combat-intent  { character_id, ability_key?, target_creature_id? }   <- no state in body
   v
-public.combat_intent(...)                  -- validates, writes one queued intent row
-                                           
+public.combat_intent(...)                  -- validates, writes one queued intent row (server seq)
+
 dispatcher (pg_cron 1s wall clock) -> thin worker (Edge fn `node-tick`, TypeScript)
-  1. public.node_tick_claim(node_id)       -- SKIP LOCKED claim, monotonic tick, returns
-                                           --   { encounter_id, tick, state_version, snapshot }
-  2. resolveNodeTick(snapshot, seed)       -- PURE TypeScript. No IO. Returns ProposedTick.
-  3. public.node_tick_commit(...)          -- atomic; applies only if claim + state_version valid
+  1. public.node_tick_claim(node_id)       -- FOR UPDATE SKIP LOCKED; candidate_tick = tick + 1
+                                           --   returns { encounter_id, last_committed_tick,
+                                           --     candidate_tick, state_version, claim_token,
+                                           --     intent_cutoff_seq, snapshot }
+                                           --   DOES NOT advance node_encounter.tick
+  2. resolveNodeTick(snapshot, seed)       -- PURE TypeScript. No IO. seed = (encounter_id,
+                                           --   candidate_tick, stream). Returns ProposedTick.
+  3. public.node_tick_commit(...)          -- atomic; applies only if claim + lease + last
+                                           --   committed tick + state_version all still valid
   v
 realtime: node_tick_batch rows             -- client renders committed events exactly once
 ```
@@ -27,9 +34,55 @@ realtime: node_tick_batch rows             -- client renders committed events ex
 
 Mechanics are small typed handlers (`mechanics/<key>.ts`, one file per catalogue entry, each `(ctx, ability, actor, target) => MechanicOutcome`) registered in a closed map — explicitly *not* another 3,000-line monolith. The existing shared formulas are imported directly (§3).
 
-**Postgres owns state safety and atomicity**: authoritative `node_encounter`/`node_creature`/`node_fighter`/`node_intent`/`node_effect` rows; tick claim and locking; monotonic tick identity; snapshot loading; narrow optimistic `state_version` validation; one atomic commit of HP, CP, MP, effects, participation, kills, rewards and event batches; unique tick/batch constraints; idempotent final rewards; rejection of stale or duplicate commits; durable committed presentation events.
+**Postgres owns state safety and atomicity**: authoritative `node_encounter`/`node_creature`/`node_fighter`/`node_intent`/`node_effect` rows; tick claim and locking; committed-tick identity; snapshot loading; narrow optimistic `state_version` validation; one atomic commit of HP, CP, MP, effects, participation, kills, rewards and event batches; unique tick/batch constraints; idempotent final rewards; rejection of stale or duplicate commits; durable committed presentation events.
 
-**Why two workers cannot corrupt state.** `node_tick_claim` takes the encounter row with `FOR UPDATE SKIP LOCKED`, so only one worker obtains tick N; a second worker gets `no_claim` and exits. Independently, `node_tick_commit` re-checks (a) that the claim token/lease it was issued is still the current one, and (b) that `node_encounter.state_version` still equals the snapshot's version, and (c) the unique `(encounter_id, tick)` on `node_tick_batch`. If a lease expired and another worker already resolved tick N, the late commit fails the version/claim check and writes nothing — the whole commit is one transaction, so there is no partial application. `state_version` increments on every commit, which also makes a duplicated HTTP request a no-op returning `{ok:true, kind:'already_committed'}`. Result classification always comes from the structured body, never from HTTP 200.
+### 1a. Tick claim and commit lifecycle (corrected)
+
+Two distinct numbers, never conflated:
+
+- `node_encounter.tick` — the **last successfully committed tick**. It advances only inside a successful commit.
+- `node_encounter.claimed_tick` — the **currently claimed candidate tick** (`tick + 1`), non-null only while a claim is outstanding. An explicit column is used rather than inferring the candidate from `tick + 1` at commit time, so a stale proposal can be compared against the claim that is actually outstanding.
+
+```text
+node_tick_claim(node_id):
+  SELECT ... FROM node_encounter WHERE node_id = $1 AND next_due_at <= now()
+    FOR UPDATE SKIP LOCKED;                        -- locked/absent -> { ok:false, kind:'no_claim' }
+  IF claimed_tick IS NOT NULL AND claim_expires_at > now()
+      -> { ok:false, kind:'no_claim', reason:'in_flight' }   -- no lease captured, nothing written
+  candidate_tick    := tick + 1;                   -- same value on a reclaim after lease expiry
+  claim_token       := gen_random_uuid();
+  claimed_tick      := candidate_tick;
+  claim_expires_at  := now() + lease;
+  intent_cutoff_seq := max(node_intent.seq) among pending intents for this encounter;
+  RETURN { encounter_id, last_committed_tick: tick, candidate_tick, state_version,
+           claim_token, intent_cutoff_seq, snapshot }   -- tick is NOT advanced
+
+resolver: proposed := resolveNodeTick(snapshot, seed(encounter_id, candidate_tick))
+
+node_tick_commit(encounter_id, claim_token, candidate_tick, expected_last_tick,
+                 expected_state_version, intent_ids, proposed):
+  SELECT ... FOR UPDATE;
+  IF tick >= candidate_tick                        -> { ok:true,  kind:'already_committed' }
+  IF claim_token <> stored OR claimed_tick <> candidate_tick
+     OR claim_expires_at <= now()                  -> { ok:false, kind:'stale_claim' }
+  IF tick <> expected_last_tick
+     OR state_version <> expected_state_version    -> { ok:false, kind:'stale_snapshot' }
+  -- single transaction from here: HP/CP/MP, effects, participation, deaths, rewards
+  INSERT INTO node_tick_batch(encounter_id, tick=candidate_tick, events)  -- unique (enc, tick)
+  INSERT rewards ON CONFLICT DO NOTHING            -- node_reward_claim idempotency
+  UPDATE node_intent SET status='consumed' WHERE id = ANY(intent_ids)     -- exact ids only
+  UPDATE node_encounter SET tick = candidate_tick,
+         state_version = state_version + 1,
+         claimed_tick = NULL, claim_token = NULL, claim_expires_at = NULL,
+         next_due_at = greatest(now(), next_due_at) + interval '2 seconds';
+  RETURN { ok:true, kind:'committed', tick: candidate_tick }
+```
+
+Worked example: last committed tick 10, claimed candidate 11. Successful commit → committed tick 11. Crash or stale commit → committed tick stays 10, nothing partially applied, and the next worker reclaims candidate tick 11 with the same `(encounter_id, 11)` seed, so no tick is skipped and the reclaimed resolution is identical for an identical snapshot.
+
+**Result classifications** (always read from the structured body, never HTTP 200): claim → `committed`-eligible grant, `no_claim` (row locked, absent, or actively leased), `not_due`. Commit → `committed`, `already_committed`, `stale_claim`, `stale_snapshot`. Only `committed` writes anything.
+
+**Why two workers cannot corrupt state.** The claim row lock with `SKIP LOCKED` means only one worker can even read a claim for an encounter at a time, and an actively leased claim yields `no_claim` without capturing a lease. After lease expiry a second worker may reclaim the *same* candidate tick with a *new* token; the first worker's late proposal then fails `stale_claim`. Independently, `state_version` fences any authoritative mutation that happened after the snapshot (§4a), and the unique `(encounter_id, tick)` on `node_tick_batch` makes a duplicated request a no-op. Every check and every write is in one transaction, so a rejected proposal writes nothing at all.
 
 The claim → snapshot → resolve → commit sequence is retained but stripped of everything that existed for legacy compatibility: no digest recomputation round-trip, no live/catch-up duality, no `encounter_snapshot_v2` participation generations, no frozen cast state, no Stored Power, no migration of live encounters. The worker is thin: claim, call the resolver, commit, log one diagnostic line. It contains no alternate combat logic and no fallback path.
 
@@ -81,11 +134,11 @@ No module is labelled "preserved unchanged" unless the new resolver imports it.
 
 | table | columns of note |
 |---|---|
-| `node_encounter` | `node_id` unique, `tick int not null`, `state_version bigint`, `claim_token uuid`, `claim_expires_at timestamptz`, `next_due_at timestamptz`, `status` |
+| `node_encounter` | `node_id` unique, `tick int not null` (**last committed tick**), `claimed_tick int null` (**candidate tick while claimed**), `state_version bigint`, `claim_token uuid`, `claim_expires_at timestamptz`, `intent_cutoff_seq bigint`, `next_due_at timestamptz`, `status` |
 | `node_creature` | `creature_id`, `spawn_seq`, `hp`, `pending_action jsonb` (`{ability_key, resolve_at_tick}`), `tank_fighter_id` |
 | `node_fighter` | `character_id`, `entry_seq bigserial` (authoritative "newest"), `present bool`, `party_id_at_entry` |
 | `node_effect` | `kind`, `effect_type`, `target_character_id`/`target_creature_id`, `source_character_id`, `stacks`, `magnitude`, **`expires_at timestamptz`**, **`next_due_at timestamptz`**, `interval_ms`, `last_pulse_tick int`, `is_reservation bool` |
-| `node_intent` | `character_id`, `ability_key`, `target_creature_id`, `status`; at most one unresolved per character |
+| `node_intent` | `id`, **`seq bigserial`** (server-assigned ordering identity), `character_id`, `ability_key`, `target_creature_id`, `status` (`pending`/`consumed`/`rejected`), `created_at`; at most one pending per character |
 | `node_reward_claim` | unique `(creature_id, spawn_seq, character_id)` |
 | `node_tick_batch` | unique `(encounter_id, tick)`, `events jsonb`, `created_at` |
 | `boss_ability` | `creature_id`, `ability_key`, `weight`, `windup_ticks`, `targeting`, `magnitude/calc`, `damage_type`, `effect`, `telegraph_text`, `resolution_text` |
@@ -101,6 +154,29 @@ No module is labelled "preserved unchanged" unless the new resolver imports it.
 - World sleep: dispatch disabled; on wake every encounter's `next_due_at` re-bases to `now()`.
 - No present players: ticks continue while creatures are damaged or effects pend (offscreen DoTs); the encounter ends when nothing is pending. Empty-node telegraphs give the empty-ground result.
 - **Stances are the documented exception**: their lifetime is controlled by activation/reservation/drop/death, not an expiry timestamp (`is_reservation = true`, `expires_at null`).
+
+### 4a. State-version and intent-cutoff contract
+
+`node_encounter.state_version` is the single optimistic fence. The rule: **any authoritative mutation that changes state included in a claimed snapshot must increment `state_version`**; anything that does not increment it must be provably excluded from the snapshot and deferred to the next tick.
+
+Mutations that increment `state_version` (each performed by an authoritative RPC or the commit, never by a client):
+
+| state | writer |
+|---|---|
+| fighter presence, entry/re-entry, departure, movement out of the node | `combat_intake`, `combat_flee` (§8), node-change trigger |
+| character HP/CP/MP used by combat | commit; `combat_flee` opportunity damage |
+| creature HP, death | commit |
+| effect creation, mutation, deletion, expiry sweep | commit; stance intents |
+| stance activation/drop (reservation) | stance intent RPC |
+| creature spawn/respawn (`spawn_seq` bump) | respawn job |
+| pending boss action | commit |
+| tank-relevant entry order | presence writers above |
+| party membership changes affecting reward eligibility | party RPCs (`node_encounter` bump for the encounters the character participates in) |
+| anything else the resolver reads | by construction: if the resolver reads it, its writer bumps the version |
+
+**Intent cutoff.** Intents are the one deliberate exception, so ordinary play never invalidates an in-flight tick. `node_intent.seq` is a server-assigned `bigserial` — client timestamps are never used for ordering. `node_tick_claim` records `intent_cutoff_seq = max(seq)` over pending intents and the snapshot contains only intents with `seq <= intent_cutoff_seq`, ordered by `seq`. Inserting an intent therefore does **not** bump `state_version`; a later intent stays `pending` and is picked up by the next tick. The commit consumes exactly the intent ids carried in the proposal (`WHERE id = ANY(intent_ids)`), never a range or a "all pending" predicate, so an intent submitted after the cutoff can never be marked consumed.
+
+No digest system is reintroduced. One narrow exception is acknowledged: equipment changes read by the resolver (weapon dice, shield for Battle Cry's shield bonus — §6b) are not encounter-scoped writes. They are handled by including the equipment fields the resolver reads in the snapshot **and** bumping the encounter `state_version` from the equip/unequip path for encounters the character participates in; equipping is already blocked in combat, so the bump is cheap and rare. If that proves insufficient in B2, the fallback is to make equipment changes a combat intent — not to restore a digest.
 
 ## 5. Participation, tank, kill
 
@@ -119,6 +195,42 @@ Eligibility belongs to `(creature_id, spawn_seq, character_id)`; survives leavin
 **Telegraph.** Boss selects by weight; `windup_ticks > 0` writes `pending_action` and commits an announcement; at `resolve_at_tick` targeting is evaluated fresh (AoE → all present eligible players; single-target → current tank), resolves through the ordinary mechanic handler, then selection resumes. Leaving before resolution avoids it; re-entering restores eligibility. No frozen rosters, no generations, no Stored Power.
 
 **Authoritative ability rule.** The client sends `{character_id, ability_key, target_creature_id}` only. CP costs, cooldowns, buffs, stances, DoTs, mitigation, absorb, evasion, retaliation and regeneration are all `node_effect` rows written by the commit. Nothing renders as active without an effect row — structurally removing the Divine Challenge local-state defect and the ignored `member_buffs` transport.
+
+## 6b. Battle Cry secondary effects (approved) — authored parameters of `mitigation_buff`
+
+Both authored secondary effects are implemented. Nothing is removed from the ability description or configuration, and the resolver contains **no Battle Cry identity check** — these are ordinary authored parameters of the shared `mitigation_buff` handler, equally available to any future ability or boss ability.
+
+Narrow read-only evidence (installed rows): `battle_cry` is `mitigation_buff`, `amount_calc` = `0.10 + diminishing_float(STR, 0.02/pt, cap 0.12)` as `percent`, note "STR magnitude; +0.05 DR with a shield equipped", `effect_config` = `{mitigation_mode: percent, shield_dr_bonus: 0.05, applies_crit_reduction: true, resolved_by: combat-tick}`. `divine_challenge` is the same handler with `{mitigation_mode: flat, is_taunt: true}` and a WIS flat calc. So the shield bonus **already has an authored magnitude** (`shield_dr_bonus = 0.05`); crit softening is currently **only the boolean** `applies_crit_reduction`.
+
+Handler parameters (authored, no hardcoding, no hidden fallback):
+
+| parameter | meaning |
+|---|---|
+| `mitigation_mode` | `percent` or `flat` |
+| `shield_dr_bonus` | additive percentage mitigation, applied only when the snapshot confirms an equipped shield |
+| `crit_softening_pct` | **new authored field**; fraction of the critical *bonus* removed |
+| `mitigation_ceiling_pct` | documented ceiling on total percentage mitigation |
+| `is_taunt` | unchanged (Divine Challenge) |
+
+**Shield bonus.** Applies only when the authoritative equipment snapshot shows an equipped off-hand shield (never from client state). Magnitude comes from `shield_dr_bonus`, is added to the resolved percentage mitigation, and the sum is clamped to `mitigation_ceiling_pct`.
+
+**Critical-hit softening.** It reduces the *additional* damage a critical hit contributed. It never changes the attacker's crit chance and never rewrites hit quality after the roll. `softened = normal + critBonus * (1 - crit_softening_pct)`; with normal 40, critical 60 (bonus 20) and 50 % softening → 50, then ordinary mitigation applies.
+
+**Damage-pipeline order** (single documented order for every incoming hit):
+1. attack roll and hit quality (unchanged; softening does not touch it);
+2. raw damage roll, including the critical bonus;
+3. **crit softening** — reduce only the critical bonus;
+4. attacker-side and target-side amplification (e.g. Chilled);
+5. percentage mitigation: `mitigation_buff` percent contributions + `shield_dr_bonus`, clamped to the ceiling;
+6. flat mitigation (Divine Challenge);
+7. block reduction (`block_buff`);
+8. absorb pool (`absorb_buff` — Force Shield, Divine Aegis) via `absorbFromShield`;
+9. glancing/graded caps and floors;
+10. HP resolution via `resolveDamage`.
+
+**Authoring gate.** `crit_softening_pct` must be authored before the ability is published: the ability-mapping batch (B7) either adds it to `battle_cry`'s configuration or fails the batch. No default is invented in code; a missing magnitude means "no softening applied" **and** a failed authoring assertion, never a silent fallback percentage.
+
+Every mitigation step emits structured metadata on the combat event (`percentMitigated`, `shieldBonusApplied`, `critSoftened`, `flatMitigated`, `blocked`, `absorbed`) so the log can explain the number without recomputing it.
 
 ## 7. Ability reconciliation (36 assignments → 20 handlers)
 
@@ -166,27 +278,27 @@ Both are authored and both reference distinct base abilities, so neither is dele
 
 **Logs.** `combat_audit_log` and `party_combat_log` are retired. The new system has one slim structured diagnostic log (`node_tick_log`): encounter id, tick number, claim/result classification, resolver/build version, elapsed ms, failure code. No duplicated player-facing prose. Player-facing history comes from committed `node_tick_batch` events (plus the existing client log archive).
 
-**Wimp / flee / summon / teleport.** Wimp and flee are preserved as an authoritative server combat intent; a successful flee updates presence and movement atomically (or through one explicitly coordinated authoritative contract). Summon is deferred from the first replacement unless a retained ability requires it; `summon_requests` is left untouched. Ordinary teleport is unavailable during combat unless an explicitly authored ability permits it. The parked general movement-security work is **not** pulled into this replacement.
+**Wimp / flee / summon / teleport (approved contract).** Fleeing is **one authoritative `combat_flee(character_id, direction)` RPC**, not an asynchronous intent-to-movement handoff. In a single coordinated authoritative operation it: verifies ownership and current combat/node state; validates the requested direction/path against the existing authored movement rules; validates movement locks (locked connections, key items) and resource requirements (MP cost, cooldown); resolves any authored flee/opportunity damage; applies that damage; **prevents movement if the character dies**; moves the surviving character; sets their `node_fighter.present = false`; removes them from tank eligibility; **preserves reward eligibility already earned** for the current `(creature_id, spawn_seq)`; emits the authoritative structured flee/damage result into the node's committed event stream; and increments the encounter `state_version` so any in-flight proposal that assumed their presence is fenced (§4a). Wimp uses the same contract with its configured direction. Summon is deferred from the first replacement unless a retained ability requires it (`summon_requests` untouched). Ordinary teleport is unavailable during combat unless an explicitly authored ability permits it. Ordinary out-of-combat movement and the parked general movement-security work stay **outside** this replacement; the RPC reuses the existing authored movement/path/lock/cost rules rather than redesigning them.
 
 **Stances.** Same authoritative action/effect framework: activation and dropping are server intents; reservation and available CP are authoritative; the semantic state is a `node_effect` row with `is_reservation = true`; no client stance authority; no client renders a stance active without authoritative confirmation; lifetime is controlled by reservation/drop/death. The existing `activate_stance`/`drop_stance`/`clear_stances`/`enforce_stance_effect_lifetime` RPCs are replaced by the intent/effect route, not preserved for compatibility.
 
-**Non-combat effects.** Narrow reconciliation before `active_effects` is removed. A read-only check of current contents shows only combat rows (`battle_cry`, `holy_shield`, `shield_wall`, one row each), i.e. no food/inn/consumable rows are live today. Before deletion, batch B12 must additionally grep every writer (consumable hooks, inn/rest paths, edge functions) for non-combat `effect_type` values; any found are moved to a character-level home (`character_effects`, keyed by `character_id` with wall-clock `expires_at`) rather than into the node combat table, and nothing durable is silently deleted. This is not permission for a general consumable/progression redesign.
+**Non-combat effects (approved, conditional).** Narrow reconciliation before `active_effects` is removed. A read-only check of current contents shows only combat rows (`battle_cry`, `holy_shield`, `shield_wall`, one row each) — no food/inn/consumable rows are live today. B12 additionally greps every writer (consumable hooks, inn/rest paths, edge functions, RPCs) for non-combat `effect_type` values. The approved boundary is: `node_effect` holds combat state belonging to an active node encounter; `character_effect` holds character-level state that may persist without an encounter. **`character_effects` is created only if that reconciliation proves a retained non-combat effect needs it** — never speculatively — keyed by `character_id` with wall-clock `expires_at`. Nothing durable is silently deleted. This is not permission for a consumable, inn, inventory or progression redesign.
 
 ## 9. Implementation batches (dependency-ordered, no intermediate combat, no shims)
 
 - **B0 Maintenance boundary.** `combat_mode='maintenance'`; disable existing combat workers and scheduled combat jobs; stop old handlers accepting new combat work. **No truncation and no drops.** Old runtime tables stay intact, read-only, as reconciliation and rollback evidence.
 - **B1 New schema.** Create the isolated replacement tables of §4 with grants (`SELECT` to `authenticated` scoped by node/character, `ALL` to `service_role`), RLS, indexes and constraints. Nothing shares a name with a legacy table.
-- **B2 Snapshot + atomic commit contract.** `node_tick_claim` (SKIP LOCKED, monotonic tick, `next_due_at` 2 s guard, snapshot + `state_version`) and `node_tick_commit` (claim/version validated, single transaction, unique `(encounter_id, tick)`, idempotent rewards). No game mechanics yet.
-- **B3 Resolver foundation.** Typed `NodeSnapshot`/`ProposedTick`, seeded RNG, deterministic ordering, ordered structured events, retained formulas imported. Golden-snapshot tests.
-- **B4 Core mechanics.** Attacks, damage, healing, effects, CP, death.
-- **B5 Shared-node participation.** Multiple parties, newest-present tank, presence transitions.
-- **B6 Kill and reward authority.** Final-hit ownership, qualifying participation, exactly-once rewards.
-- **B7 Retained player abilities.** All 36 assignments mapped through the closed catalogue; frost identity resolved per §7.1; dead ability columns dropped; movement/rest callers of the old party HP RPCs re-pointed.
+- **B2 Snapshot + atomic commit contract.** `node_tick_claim` / `node_tick_commit` exactly as specified in §1a: last-committed `tick` vs `claimed_tick` candidate, `FOR UPDATE SKIP LOCKED`, lease and lease-recovery (same candidate reclaimed with a new token), `next_due_at` 2 s guard, `intent_cutoff_seq`, `state_version` fence per §4a, unique `(encounter_id, tick)`, idempotent rewards, exact-intent-id consumption. No game mechanics yet.
+- **B3 Resolver foundation.** Typed `NodeSnapshot`/`ProposedTick`, RNG seeded from `(encounter_id, candidate_tick, stream)` so a reclaimed candidate tick reproduces the same result from the same snapshot, deterministic ordering, ordered structured events, retained formulas imported. Golden-snapshot tests.
+- **B4 Core mechanics.** Attacks, damage, healing, effects, CP, death — including the general `mitigation_buff` handler parameters (`mitigation_mode`, `shield_dr_bonus`, `crit_softening_pct`, `mitigation_ceiling_pct`) and the documented damage-pipeline order of §6b, with no ability identity checks.
+- **B5 Shared-node participation.** Multiple parties, newest-present tank, presence transitions. Enumerates and implements every presence mutation that bumps `state_version` and therefore invalidates a claimed snapshot (entry, re-entry, departure, node change, death, flee).
+- **B6 Kill and reward authority.** Final-hit ownership, qualifying participation, exactly-once rewards, party-membership fencing per §4a.
+- **B7 Retained player abilities.** All 36 assignments mapped through the closed catalogue; frost identity resolved per §7.1; Battle Cry's `crit_softening_pct` authored (batch fails if absent) and `shield_dr_bonus` carried over; dead ability columns dropped; movement/rest callers of the old party HP RPCs re-pointed.
 - **B8 Simplified boss abilities.** Author `boss_ability` from `boss_cast`; delayed actions; empty-node result.
-- **B9 World clock and dispatcher.** 1 s dispatcher, 2 s authoritative cadence, late-worker behaviour, sleep/wake re-basing, `combat-intent` endpoint.
+- **B9 World clock, dispatcher and flee.** 1 s dispatcher, 2 s authoritative cadence, late-worker behaviour, sleep/wake re-basing, `combat-intent` endpoint, and the authoritative `combat_flee` RPC (§8) with wimp integration — reusing existing movement/path/lock/cost rules, with no general movement remediation.
 - **B10 Frontend replacement.** Intent-only client, server-effect-driven buff display, `node_tick_batch` cursor; presentation layer kept.
-- **B11 Acceptance and parity verification** (§10) while combat stays in maintenance.
-- **B12 Cutover.** Reset creature combat state in place (`hp=max_hp`, `is_alive=true`, death/reward timestamps null — rows never deleted), activate the new loop, `combat_mode='open'`. Non-combat-effect reconciliation completed here.
+- **B11 Acceptance and parity verification** (§10, all 53 scenarios) while combat stays in maintenance.
+- **B12 Cutover.** Reset creature combat state in place (`hp=max_hp`, `is_alive=true`, death/reward timestamps null — rows never deleted), activate the new loop, `combat_mode='open'`. Non-combat-effect reconciliation completed here; `character_effects` created only if that reconciliation proves it is needed (§8).
 - **B13 Legacy deletion.** Only after successful cutover evidence: drop the 16 legacy runtime tables, the ~60 retired functions, obsolete triggers/policies/jobs, `member_buffs`, `combat_soak`, `combat_audit_log`, `party_combat_log`, and the deleted frontend modules.
 
 ### Migration safeguards (corrected)
@@ -201,7 +313,7 @@ Both are authored and both reference distinct base abilities, so neither is dele
 
 Retained (1–12): solo ten-tick sanity with no client writes; two parties + one solo on one shared HP pool with identical committed events; kill stealing rewards only the killer's eligible party; tank order A,B,C → C, C leaves → B, C returns → C, party movement → leader; leave/re-entry targeting eligibility; healer-only eligibility; offscreen DoT kill attribution; reactive (Holy Shield) kill attribution; delayed boss ability resolving at N+k with AoE/tank/empty-node variants and no boss autoattack during wind-up; effect expiry including across a sleep boundary; duplicate tick → one batch; exactly-once rewards.
 
-Added (13–29):
+Added in revision 2 (13–29):
 13. Two workers attempt the same tick → one claim, one batch, the other returns `no_claim`.
 14. Stale snapshot version rejected before any partial state write (HP, effects, rewards all unchanged).
 15. Resolver determinism: identical snapshot + seed → byte-identical `ProposedTick`.
@@ -209,7 +321,7 @@ Added (13–29):
 17. Effect expiring during sleep is removed on wake with no pulse.
 18. Divine Challenge creates an authoritative `node_effect` row and measurably reduces damage.
 19. Battle Cry percentage reduction applies from the effect row.
-20. Battle Cry shield bonus and crit-softening: implemented and tested, or explicitly removed from authored wording/configuration (decision recorded in the mapping batch).
+20. Battle Cry secondary effects are implemented (shield bonus + crit softening) — removal from authored text is no longer an accepted outcome (see 45–48).
 21. Instant defensive abilities (Divine Aegis, Disengage) enter the authoritative action/effect system — no instant client-only application.
 22. Holy Shield event ordering: retaliation event precedes death and reward events.
 23. Holy Shield final-hit ownership with exactly-once rewards.
@@ -220,21 +332,56 @@ Added (13–29):
 28. Player-facing committed batches render exactly once (replay/duplicate delivery safe).
 29. No ability can appear active in the UI without an authoritative effect row.
 
-## 11. Parts of the original plan that cannot support these corrections
+Added in revision 3 (30–53):
 
-- §1 "resolution runs in the database as one SQL/PLPGSQL transaction" and "no Edge Function required for the core loop" — replaced by §1 hybrid.
-- §2 row classifying `resolution.ts`/`tick-rng.ts` as "port to SQL" — replaced by §3 retained-and-imported.
-- §4 `node_effect` `expires_at_tick`/`next_tick_at_tick` — replaced by wall-clock `expires_at`/`next_due_at` in §4.
-- §9 **B0** "truncate runtime tables" — replaced by the non-destructive maintenance boundary; deletion moves to B13.
-- §9 **B2** "mechanic catalogue + resolver core in SQL" — replaced by B2/B3/B4.
-- §11 unresolved questions 1–8 — now decided in §3, §4, §6, §7.1 and §8.
+*Claim lifecycle (§1a)*
+30. Claiming candidate tick 11 leaves the committed tick at 10 (`claimed_tick = 11`, `tick = 10`).
+31. Worker crash after claim leaves the committed tick at 10 and no state applied.
+32. Lease expiry allows candidate tick 11 to be reclaimed with a new token, same candidate number.
+33. Late commit from the expired claim is rejected (`stale_claim`) with no partial writes.
+34. A successful commit advances `tick` exactly once and clears the claim.
+35. Duplicate commit of the same candidate returns `already_committed` and writes nothing.
+36. Two workers cannot commit different results for the same candidate tick.
+37. Identical snapshot + reclaimed candidate-tick seed produces an identical `ProposedTick`.
+
+*State-version and intent cutoff (§4a)*
+38. An intent submitted after the claim cutoff stays `pending` and resolves on the next tick.
+39. Commit consumes only the intent ids present in its snapshot (a later intent stays pending).
+40. Presence/movement mutation bumps `state_version` and invalidates the stale proposal.
+41. Effect or stance mutation bumps `state_version` and invalidates the stale proposal.
+42. Creature respawn (`spawn_seq` bump) invalidates a proposal belonging to the previous spawn.
+43. Party membership change cannot expand reward eligibility inside a stale proposal.
+44. Equipment change fencing: a snapshot whose equipment read is stale is rejected, not applied.
+
+*Battle Cry (§6b)*
+45. Percentage mitigation without a shield equipped.
+46. Shield bonus applies only with authoritative shield equipment, clamped by the ceiling.
+47. Crit softening reduces only the critical bonus (40/60/20/50 % → 50), leaving hit quality and crit chance untouched.
+48. Authored magnitude required: missing `crit_softening_pct` fails the authoring assertion — no hidden fallback percentage.
+49. Interaction order with flat mitigation (Divine Challenge), block and absorb, plus correct mitigation metadata on the combat event.
+
+*Flee (§8)*
+50. Manual flee succeeds atomically: damage, movement, `present = false`, tank re-selection, event, version bump.
+51. Fatal opportunity damage prevents movement (character dies at the original node).
+52. Wimp invokes the same flee contract with its configured direction.
+53. Flee preserves already-earned spawn-specific reward eligibility; and invalid direction, locked path or insufficient movement resources fail with no partial state change.
+
+## 11. Parts of earlier revisions that had to be replaced
+
+Revision 1 → 2: in-database PLPGSQL resolver and "no Edge Function for the core loop" (→ §1 hybrid); "port `resolution.ts`/`tick-rng.ts` to SQL" (→ §3 retained-and-imported); `expires_at_tick`/`next_tick_at_tick` (→ wall-clock §4); B0 "truncate runtime tables" (→ non-destructive maintenance boundary, deletion in B13); B2 "resolver core in SQL" (→ B2/B3/B4).
+
+Revision 2 → 3:
+- §1's single `tick` value conflated the committed tick with the claimed candidate — replaced by the explicit `tick` / `claimed_tick` pair and the §1a lifecycle, pseudocode and result classifications.
+- §1's "monotonic tick" wording in B2 implied the cursor advanced at claim time — corrected.
+- The `state_version` fence was asserted but never scoped — replaced by the §4a mutation table, the intent-cutoff rule (`node_intent.seq`, server-assigned) and the single acknowledged equipment exception.
+- §12's Battle Cry question and its "or remove the authored wording" option — replaced by the approved §6b specification (both effects implemented as authored `mitigation_buff` parameters, documented pipeline order, authoring gate on `crit_softening_pct`).
+- §8's flee wording ("intent … atomically, or a coordinated contract") — replaced by the single authoritative `combat_flee` RPC.
+- §8's unconditional `character_effects` proposal — replaced by the conditional, reconciliation-gated boundary.
 
 ## 12. Genuinely unresolved questions
 
-1. **Battle Cry secondary effects** — the authored wording implies a shield bonus and crit softening that the current implementation does not apply. Implement both, or amend the authored text? (Test 20 covers either outcome; the decision is authoring, not architecture.)
-2. **Non-combat effect home** — if B12's writer grep finds live food/inn/consumable effects, confirm the proposed `character_effects` table as their home rather than extending `node_effect`.
-3. **Flee coordination** — flee touches both combat presence and movement. Confirm the preferred contract: a single authoritative `combat_flee` RPC that also performs the move, or a combat intent that emits an authoritative move request.
+None blocking. Two items are deliberately deferred rather than open: summon stays out of the first replacement unless a retained ability requires it, and the `character_effects` table is created only if B12's writer reconciliation proves a retained non-combat effect needs it. Both decisions are already made; only their trigger conditions are evaluated during implementation.
 
 ---
 
-This turn was read-only planning. No repository file other than this plan document was written, and no schema, data, migration, job, grant, policy, Edge Function, configuration, combat mode or world state was changed. The only database access was two narrow read-only `SELECT` queries (the frost-identity check in §7.1 and the `active_effects` contents check in §8).
+This turn was read-only planning. No repository file other than this plan document was written, and no schema, data, migration, scheduled job, grant, policy, Edge Function, configuration, combat mode or world state was changed. The only database access was three narrow read-only `SELECT` queries (the frost-identity check in §7.1, the `active_effects` contents check in §8, and the Battle Cry / Divine Challenge authored-configuration check in §6b).
