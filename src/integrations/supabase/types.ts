@@ -539,6 +539,68 @@ export type Database = {
         }
         Relationships: []
       }
+      boss_ability: {
+        Row: {
+          ability_key: string
+          amount_calc: Json | null
+          created_at: string
+          creature_id: string
+          damage_type: string | null
+          effect: Json | null
+          id: string
+          label: string | null
+          magnitude: number | null
+          resolution_text: string | null
+          targeting: string
+          telegraph_text: string | null
+          updated_at: string
+          weight: number
+          windup_ticks: number
+        }
+        Insert: {
+          ability_key: string
+          amount_calc?: Json | null
+          created_at?: string
+          creature_id: string
+          damage_type?: string | null
+          effect?: Json | null
+          id?: string
+          label?: string | null
+          magnitude?: number | null
+          resolution_text?: string | null
+          targeting?: string
+          telegraph_text?: string | null
+          updated_at?: string
+          weight?: number
+          windup_ticks?: number
+        }
+        Update: {
+          ability_key?: string
+          amount_calc?: Json | null
+          created_at?: string
+          creature_id?: string
+          damage_type?: string | null
+          effect?: Json | null
+          id?: string
+          label?: string | null
+          magnitude?: number | null
+          resolution_text?: string | null
+          targeting?: string
+          telegraph_text?: string | null
+          updated_at?: string
+          weight?: number
+          windup_ticks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boss_ability_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_ability_loadout: {
         Row: {
           ability_id: string
@@ -2763,6 +2825,275 @@ export type Database = {
         }
         Relationships: []
       }
+      node_creature: {
+        Row: {
+          created_at: string
+          creature_id: string
+          died_at: string | null
+          encounter_id: string
+          hp: number
+          id: string
+          is_alive: boolean
+          last_damaged_at: string | null
+          pending_action: Json | null
+          spawn_seq: number
+          tank_fighter_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creature_id: string
+          died_at?: string | null
+          encounter_id: string
+          hp: number
+          id?: string
+          is_alive?: boolean
+          last_damaged_at?: string | null
+          pending_action?: Json | null
+          spawn_seq: number
+          tank_fighter_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creature_id?: string
+          died_at?: string | null
+          encounter_id?: string
+          hp?: number
+          id?: string
+          is_alive?: boolean
+          last_damaged_at?: string | null
+          pending_action?: Json | null
+          spawn_seq?: number
+          tank_fighter_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_creature_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_creature_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_effect: {
+        Row: {
+          ability_key: string | null
+          config: Json
+          created_at: string
+          effect_type: string
+          encounter_id: string
+          expires_at: string | null
+          id: string
+          interval_ms: number | null
+          is_reservation: boolean
+          kind: string
+          last_pulse_tick: number | null
+          magnitude: number | null
+          next_due_at: string | null
+          source_character_id: string | null
+          source_creature_id: string | null
+          stacks: number
+          target_character_id: string | null
+          target_creature_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ability_key?: string | null
+          config?: Json
+          created_at?: string
+          effect_type: string
+          encounter_id: string
+          expires_at?: string | null
+          id?: string
+          interval_ms?: number | null
+          is_reservation?: boolean
+          kind: string
+          last_pulse_tick?: number | null
+          magnitude?: number | null
+          next_due_at?: string | null
+          source_character_id?: string | null
+          source_creature_id?: string | null
+          stacks?: number
+          target_character_id?: string | null
+          target_creature_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ability_key?: string | null
+          config?: Json
+          created_at?: string
+          effect_type?: string
+          encounter_id?: string
+          expires_at?: string | null
+          id?: string
+          interval_ms?: number | null
+          is_reservation?: boolean
+          kind?: string
+          last_pulse_tick?: number | null
+          magnitude?: number | null
+          next_due_at?: string | null
+          source_character_id?: string | null
+          source_creature_id?: string | null
+          stacks?: number
+          target_character_id?: string | null
+          target_creature_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_effect_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_effect_source_character_id_fkey"
+            columns: ["source_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_effect_source_creature_id_fkey"
+            columns: ["source_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_effect_target_character_id_fkey"
+            columns: ["target_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_effect_target_creature_id_fkey"
+            columns: ["target_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_encounter: {
+        Row: {
+          claim_expires_at: string | null
+          claim_token: string | null
+          claimed_tick: number | null
+          created_at: string
+          id: string
+          intent_cutoff_seq: number | null
+          next_due_at: string
+          node_id: string
+          state_version: number
+          status: string
+          tick: number
+          updated_at: string
+        }
+        Insert: {
+          claim_expires_at?: string | null
+          claim_token?: string | null
+          claimed_tick?: number | null
+          created_at?: string
+          id?: string
+          intent_cutoff_seq?: number | null
+          next_due_at?: string
+          node_id: string
+          state_version?: number
+          status?: string
+          tick?: number
+          updated_at?: string
+        }
+        Update: {
+          claim_expires_at?: string | null
+          claim_token?: string | null
+          claimed_tick?: number | null
+          created_at?: string
+          id?: string
+          intent_cutoff_seq?: number | null
+          next_due_at?: string
+          node_id?: string
+          state_version?: number
+          status?: string
+          tick?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_encounter_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: true
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_fighter: {
+        Row: {
+          character_id: string
+          created_at: string
+          encounter_id: string
+          entry_seq: number
+          id: string
+          joined_at: string
+          left_at: string | null
+          party_id_at_entry: string | null
+          present: boolean
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          encounter_id: string
+          entry_seq?: number
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          party_id_at_entry?: string | null
+          present?: boolean
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          encounter_id?: string
+          entry_seq?: number
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          party_id_at_entry?: string | null
+          present?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_fighter_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_fighter_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       node_ground_loot: {
         Row: {
           applied_gems: Json
@@ -2823,6 +3154,177 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      node_intent: {
+        Row: {
+          ability_key: string | null
+          character_id: string
+          created_at: string
+          encounter_id: string
+          id: string
+          reject_reason: string | null
+          seq: number
+          status: string
+          target_creature_id: string | null
+        }
+        Insert: {
+          ability_key?: string | null
+          character_id: string
+          created_at?: string
+          encounter_id: string
+          id?: string
+          reject_reason?: string | null
+          seq?: number
+          status?: string
+          target_creature_id?: string | null
+        }
+        Update: {
+          ability_key?: string | null
+          character_id?: string
+          created_at?: string
+          encounter_id?: string
+          id?: string
+          reject_reason?: string | null
+          seq?: number
+          status?: string
+          target_creature_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_intent_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_intent_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_intent_target_creature_id_fkey"
+            columns: ["target_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_reward_claim: {
+        Row: {
+          character_id: string
+          created_at: string
+          creature_id: string
+          gold_awarded: number
+          id: string
+          is_killer: boolean
+          spawn_seq: number
+          xp_awarded: number
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          creature_id: string
+          gold_awarded?: number
+          id?: string
+          is_killer?: boolean
+          spawn_seq: number
+          xp_awarded?: number
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          creature_id?: string
+          gold_awarded?: number
+          id?: string
+          is_killer?: boolean
+          spawn_seq?: number
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_reward_claim_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_reward_claim_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_tick_batch: {
+        Row: {
+          created_at: string
+          encounter_id: string
+          events: Json
+          id: string
+          tick: number
+        }
+        Insert: {
+          created_at?: string
+          encounter_id: string
+          events?: Json
+          id?: string
+          tick: number
+        }
+        Update: {
+          created_at?: string
+          encounter_id?: string
+          events?: Json
+          id?: string
+          tick?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_tick_batch_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_tick_log: {
+        Row: {
+          build_id: string | null
+          created_at: string
+          elapsed_ms: number | null
+          encounter_id: string | null
+          failure_code: string | null
+          id: number
+          result_kind: string | null
+          tick: number | null
+        }
+        Insert: {
+          build_id?: string | null
+          created_at?: string
+          elapsed_ms?: number | null
+          encounter_id?: string | null
+          failure_code?: string | null
+          id?: number
+          result_kind?: string | null
+          tick?: number | null
+        }
+        Update: {
+          build_id?: string | null
+          created_at?: string
+          elapsed_ms?: number | null
+          encounter_id?: string | null
+          failure_code?: string | null
+          id?: number
+          result_kind?: string | null
+          tick?: number | null
+        }
+        Relationships: []
       }
       nodes: {
         Row: {
@@ -3940,6 +4442,10 @@ export type Database = {
       encounter_stored_power_set_cap: {
         Args: { _cap: number; _encounter_id: string }
         Returns: undefined
+      }
+      encounter_visible_to_caller: {
+        Args: { _encounter_id: string }
+        Returns: boolean
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
