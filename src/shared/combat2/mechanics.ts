@@ -8,6 +8,7 @@
  */
 
 import { getStatModifier } from '../formulas/stats';
+import { getClassCritRange } from '../formulas/classes';
 import {
   getAccuracyBonus,
   getAccuracyProficiency,
@@ -16,7 +17,6 @@ import {
   HIT_QUALITY_MULT,
   GLANCING_WEAK_CAP,
   getWeaponDieForItem,
-  getClassCritRange,
   getDexCritBonus,
   type AccuracyStat,
 } from '../formulas/combat';
