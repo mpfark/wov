@@ -468,11 +468,3 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
 
   reactive_damage: (ctx, spec) => selfBuff(ctx, spec, 'reactive'),
 };
-
-// `stack_consume` reports how many stacks it burned; declared here so the
-// outcome shape stays typed without widening the shared interface.
-declare module './mechanics' {
-  interface MechanicOutcome {
-    meta_stacks_consumed?: number;
-  }
-}
