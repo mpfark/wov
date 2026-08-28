@@ -138,7 +138,7 @@ No module is labelled "preserved unchanged" unless the new resolver imports it.
 | `node_creature` | `creature_id`, `spawn_seq`, `hp`, `pending_action jsonb` (`{ability_key, resolve_at_tick}`), `tank_fighter_id` |
 | `node_fighter` | `character_id`, `entry_seq bigserial` (authoritative "newest"), `present bool`, `party_id_at_entry` |
 | `node_effect` | `kind`, `effect_type`, `target_character_id`/`target_creature_id`, `source_character_id`, `stacks`, `magnitude`, **`expires_at timestamptz`**, **`next_due_at timestamptz`**, `interval_ms`, `last_pulse_tick int`, `is_reservation bool` |
-| `node_intent` | `character_id`, `ability_key`, `target_creature_id`, `status`; at most one unresolved per character |
+| `node_intent` | `id`, **`seq bigserial`** (server-assigned ordering identity), `character_id`, `ability_key`, `target_creature_id`, `status` (`pending`/`consumed`/`rejected`), `created_at`; at most one pending per character |
 | `node_reward_claim` | unique `(creature_id, spawn_seq, character_id)` |
 | `node_tick_batch` | unique `(encounter_id, tick)`, `events jsonb`, `created_at` |
 | `boss_ability` | `creature_id`, `ability_key`, `weight`, `windup_ticks`, `targeting`, `magnitude/calc`, `damage_type`, `effect`, `telegraph_text`, `resolution_text` |
