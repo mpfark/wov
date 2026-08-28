@@ -155,6 +155,29 @@ No module is labelled "preserved unchanged" unless the new resolver imports it.
 - No present players: ticks continue while creatures are damaged or effects pend (offscreen DoTs); the encounter ends when nothing is pending. Empty-node telegraphs give the empty-ground result.
 - **Stances are the documented exception**: their lifetime is controlled by activation/reservation/drop/death, not an expiry timestamp (`is_reservation = true`, `expires_at null`).
 
+### 4a. State-version and intent-cutoff contract
+
+`node_encounter.state_version` is the single optimistic fence. The rule: **any authoritative mutation that changes state included in a claimed snapshot must increment `state_version`**; anything that does not increment it must be provably excluded from the snapshot and deferred to the next tick.
+
+Mutations that increment `state_version` (each performed by an authoritative RPC or the commit, never by a client):
+
+| state | writer |
+|---|---|
+| fighter presence, entry/re-entry, departure, movement out of the node | `combat_intake`, `combat_flee` (§8), node-change trigger |
+| character HP/CP/MP used by combat | commit; `combat_flee` opportunity damage |
+| creature HP, death | commit |
+| effect creation, mutation, deletion, expiry sweep | commit; stance intents |
+| stance activation/drop (reservation) | stance intent RPC |
+| creature spawn/respawn (`spawn_seq` bump) | respawn job |
+| pending boss action | commit |
+| tank-relevant entry order | presence writers above |
+| party membership changes affecting reward eligibility | party RPCs (`node_encounter` bump for the encounters the character participates in) |
+| anything else the resolver reads | by construction: if the resolver reads it, its writer bumps the version |
+
+**Intent cutoff.** Intents are the one deliberate exception, so ordinary play never invalidates an in-flight tick. `node_intent.seq` is a server-assigned `bigserial` — client timestamps are never used for ordering. `node_tick_claim` records `intent_cutoff_seq = max(seq)` over pending intents and the snapshot contains only intents with `seq <= intent_cutoff_seq`, ordered by `seq`. Inserting an intent therefore does **not** bump `state_version`; a later intent stays `pending` and is picked up by the next tick. The commit consumes exactly the intent ids carried in the proposal (`WHERE id = ANY(intent_ids)`), never a range or a "all pending" predicate, so an intent submitted after the cutoff can never be marked consumed.
+
+No digest system is reintroduced. One narrow exception is acknowledged: equipment changes read by the resolver (weapon dice, shield for Battle Cry's shield bonus — §6b) are not encounter-scoped writes. They are handled by including the equipment fields the resolver reads in the snapshot **and** bumping the encounter `state_version` from the equip/unequip path for encounters the character participates in; equipping is already blocked in combat, so the bump is cheap and rare. If that proves insufficient in B2, the fallback is to make equipment changes a combat intent — not to restore a digest.
+
 ## 5. Participation, tank, kill
 
 **Participation.** `node_fighter` row on first intent or on being attacked; `entry_seq` from a bigserial. Leaving sets `present=false`; re-entry inserts a new `entry_seq`.
