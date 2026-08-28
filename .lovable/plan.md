@@ -134,7 +134,7 @@ No module is labelled "preserved unchanged" unless the new resolver imports it.
 
 | table | columns of note |
 |---|---|
-| `node_encounter` | `node_id` unique, `tick int not null`, `state_version bigint`, `claim_token uuid`, `claim_expires_at timestamptz`, `next_due_at timestamptz`, `status` |
+| `node_encounter` | `node_id` unique, `tick int not null` (**last committed tick**), `claimed_tick int null` (**candidate tick while claimed**), `state_version bigint`, `claim_token uuid`, `claim_expires_at timestamptz`, `intent_cutoff_seq bigint`, `next_due_at timestamptz`, `status` |
 | `node_creature` | `creature_id`, `spawn_seq`, `hp`, `pending_action jsonb` (`{ability_key, resolve_at_tick}`), `tank_fighter_id` |
 | `node_fighter` | `character_id`, `entry_seq bigserial` (authoritative "newest"), `present bool`, `party_id_at_entry` |
 | `node_effect` | `kind`, `effect_type`, `target_character_id`/`target_creature_id`, `source_character_id`, `stacks`, `magnitude`, **`expires_at timestamptz`**, **`next_due_at timestamptz`**, `interval_ms`, `last_pulse_tick int`, `is_reservation bool` |
