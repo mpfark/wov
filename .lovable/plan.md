@@ -1,124 +1,131 @@
-# Combat Replacement — Authoritative Plan (C-next)
+# Combat Replacement — Authoritative Plan (C-next, revision 2)
 
-Read-only planning. Nothing was changed. Evidence: installed schema (`pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`) and the current repository.
+Read-only planning revision. Nothing was changed. Evidence: the previous audit (installed schema via `pg_class`, `pg_proc`, `pg_policies`, `cron.job`, `information_schema.columns`, plus the current repository) and two narrow corrective checks recorded in §7 and §12.
 
-## 1. Proposed architecture
+Retained direction (unchanged): replacement rather than compatibility-preserving refactor; combat may stay unavailable throughout; authored world/NPC/creature/loot/item/class/ability content preserved; transient combat runtime state disposable; legacy compatibility paths, dual reads/writes, client combat authority and ignored `member_buffs` deleted; one node encounter owning shared creature state; solo players and multiple parties on the same spawn; newest present participant tanks; final damaging source owns the kill; the killer's eligible party shares the reward; bosses use the shared mechanic catalogue; telegraphs are simple delayed boss actions; frozen rosters, participation generations and general Stored Power retired; two-second authoritative cadence; no burst catch-up; committed events and rewards exactly-once.
 
-One loop, one writer, one shape.
+## 1. Corrected architecture — hybrid: TypeScript rules, Postgres safety
+
+The previous revision's single in-database `node_tick` PLPGSQL resolver is **replaced**. Combat math is not ported to SQL.
 
 ```text
 client (display + intent only)
   |  POST /combat-intent  { character_id, ability_key?, target_creature_id? }   <- no state in body
   v
-public.combat_intent(...)            -- validates, writes one queued intent row
-  |
-scheduler (pg_cron 1s: node_tick_dispatch)  -- wall clock only
+public.combat_intent(...)                  -- validates, writes one queued intent row
+                                           
+dispatcher (pg_cron 1s wall clock) -> thin worker (Edge fn `node-tick`, TypeScript)
+  1. public.node_tick_claim(node_id)       -- SKIP LOCKED claim, monotonic tick, returns
+                                           --   { encounter_id, tick, state_version, snapshot }
+  2. resolveNodeTick(snapshot, seed)       -- PURE TypeScript. No IO. Returns ProposedTick.
+  3. public.node_tick_commit(...)          -- atomic; applies only if claim + state_version valid
   v
-public.node_tick(node_id)            -- ONE function: claim -> resolve -> commit, single txn
-  |    reads: node_encounter, node_creature (shared HP), node_fighter, node_effect, node_intent
-  |    writes: same tables + node_tick_batch (presentation) + durable rewards
-  v
-realtime: node_tick_batch rows       -- client renders committed events exactly once
+realtime: node_tick_batch rows             -- client renders committed events exactly once
 ```
 
-Key simplifications versus today:
-- Resolution runs **in the database** as one SQL/PLPGSQL transaction per node tick. The claim/lease/digest/version/snapshot round-trip between an Edge Function and Postgres (`claim_encounter_tick` → `encounter_snapshot_v2` → `encounter_state_digest` → `commit_encounter_tick_v3`) disappears; atomicity comes from `SELECT ... FOR UPDATE` on the encounter row plus a unique `(encounter_id, tick)` batch key.
-- Edge Functions keep only what needs non-SQL work: none for the core loop. `combat-tick` and `combat-catchup` are retired. (If AI-authored text is ever needed at tick time, it stays out of the loop.)
-- One resolver serves solo, party, multi-party, boss and offscreen effects. No live/catch-up split: a late tick is just a tick.
-- Mechanics become a **closed catalogue** implemented once, shared by player and boss abilities.
+**TypeScript owns game-rule resolution.** A new, substantially smaller pure resolver (`src/shared/combat2/`) owns: deterministic RNG; player and boss ability calculations; mechanic handlers; hit/crit/dodge/block decisions; damage and healing pipelines; mitigation and absorb ordering; target and tank selection; DoTs and periodic effects; reactive effects (Holy Shield); boss ability selection; delayed boss-action resolution; kill-source attribution; proposed reward eligibility; correctly ordered structured presentation events. It takes an immutable snapshot plus a seed and returns a proposed state transition. It performs no database writes.
 
-### Closed mechanic catalogue (target)
-`weapon_attack`, `spell_attack`, `multi_attack`, `burst_damage`, `dot_debuff`, `heal`, `hp_transfer`, `party_regen`, `absorb_buff`, `mitigation_buff`, `block_buff`, `evasion_buff`, `offense_buff`, `regen_buff`, `stealth_buff`, `control_debuff`, `stack_apply`, `stack_consume`, `aura_pulse`, `reactive_damage`.
+Mechanics are small typed handlers (`mechanics/<key>.ts`, one file per catalogue entry, each `(ctx, ability, actor, target) => MechanicOutcome`) registered in a closed map — explicitly *not* another 3,000-line monolith. The existing shared formulas are imported directly (§3).
 
-Twenty mechanics; every one of the 21 installed base mechanics maps in (see §6). Bosses use the same list.
+**Postgres owns state safety and atomicity**: authoritative `node_encounter`/`node_creature`/`node_fighter`/`node_intent`/`node_effect` rows; tick claim and locking; monotonic tick identity; snapshot loading; narrow optimistic `state_version` validation; one atomic commit of HP, CP, MP, effects, participation, kills, rewards and event batches; unique tick/batch constraints; idempotent final rewards; rejection of stale or duplicate commits; durable committed presentation events.
 
-### New runtime tables (all combat-runtime, all disposable)
-| table | purpose |
-|---|---|
-| `node_encounter` | one row per node with live combat: `tick`, `next_due_at`, `status`, lock target |
-| `node_creature` | shared spawn state: `creature_id`, `spawn_seq`, `hp`, `tank_fighter_id`, `pending_action` |
-| `node_fighter` | participation: `character_id`, `entry_seq` (bigserial — authoritative "newest"), `present`, `party_id_at_entry` |
-| `node_effect` | every persisted effect (player + creature), `expires_at_tick`, `next_tick_at_tick`, `source_character_id` |
-| `node_intent` | queued player action, at most one unresolved per character |
-| `node_reward_claim` | idempotency key `(creature_id, spawn_seq, character_id)` |
-| `node_tick_batch` | committed presentation events, unique `(encounter_id, tick)` |
+**Why two workers cannot corrupt state.** `node_tick_claim` takes the encounter row with `FOR UPDATE SKIP LOCKED`, so only one worker obtains tick N; a second worker gets `no_claim` and exits. Independently, `node_tick_commit` re-checks (a) that the claim token/lease it was issued is still the current one, and (b) that `node_encounter.state_version` still equals the snapshot's version, and (c) the unique `(encounter_id, tick)` on `node_tick_batch`. If a lease expired and another worker already resolved tick N, the late commit fails the version/claim check and writes nothing — the whole commit is one transaction, so there is no partial application. `state_version` increments on every commit, which also makes a duplicated HTTP request a no-op returning `{ok:true, kind:'already_committed'}`. Result classification always comes from the structured body, never from HTTP 200.
 
-Boss telegraph = `node_creature.pending_action` (`{ability_key, resolve_at_tick}`). No cast table, no cast lifecycle RPCs, no Stored Power.
+The claim → snapshot → resolve → commit sequence is retained but stripped of everything that existed for legacy compatibility: no digest recomputation round-trip, no live/catch-up duality, no `encounter_snapshot_v2` participation generations, no frozen cast state, no Stored Power, no migration of live encounters. The worker is thin: claim, call the resolver, commit, log one diagnostic line. It contains no alternate combat logic and no fallback path.
 
-## 2. Component classification
+### Closed mechanic catalogue
+`weapon_attack`, `spell_attack`, `multi_attack`, `burst_damage`, `dot_debuff`, `heal`, `hp_transfer`, `party_regen`, `absorb_buff`, `mitigation_buff`, `block_buff`, `evasion_buff`, `offense_buff`, `regen_buff`, `stealth_buff`, `control_debuff`, `stack_apply`, `stack_consume`, `aura_pulse`, `reactive_damage`. Twenty handlers; bosses use the same list.
+
+## 2. Component classification (corrected)
 
 | Component | Class |
 |---|---|
-| Authored content: `regions/areas/nodes/paths`, `npcs`, `creatures` (identity, stats, level, hp/max_hp, ac, respawn, loot_table_id, `boss_crit_flavors`, `boss_death_cry`), `loot_tables*`, `items`, `materials`, `classes`, `races`, `guide_*` | preserve unchanged |
-| `abilities`, `base_abilities`, `class_ability_assignments`, `applied_statuses`, `character_ability_loadout` | preserve but simplify (drop dead columns, §6) |
-| Character durable state: `characters` progression/inventory/renown, `character_*`, `parties`, `party_members` | preserve unchanged (HP/CP/MP written only by the tick — separate objective already logged) |
-| `src/shared/formulas/*` (rolls, stats, damage types, xp, economy, bond) | preserve unchanged — reused by the new resolver |
-| `src/shared/combat/resolution.ts`, `damage-types.ts`, `creature-damage-modifiers.ts`, `ability-magnitude.ts`, `tick-rng.ts` | preserve but simplify — port to SQL or keep as the single magnitude/mitigation source |
+| Authored content: `regions/areas/nodes/paths`, `npcs`, `creatures` (identity, stats, level, hp/max_hp, ac, respawn, loot, `boss_crit_flavors`, `boss_death_cry`), `loot_tables*`, `items`, `materials`, `classes`, `races`, `guide_*` | preserve unchanged |
+| `abilities`, `base_abilities`, `class_ability_assignments`, `applied_statuses`, `character_ability_loadout` | preserve but simplify (drop dead columns, §7) |
+| Character durable state: `characters`, `character_*`, `parties`, `party_members` | preserve unchanged (HP/CP/MP written only by the commit) |
+| `src/shared/formulas/*` | **retained and imported by the new resolver** (per-file classification in §3) |
+| `src/shared/combat/resolution.ts`, `damage-types.ts`, `creature-damage-modifiers.ts`, `ability-magnitude.ts`, `tick-rng.ts` | retained, imported directly — **not** ported to SQL |
+| `src/shared/config/compose-ability.ts`, `effective-ability.ts`, `status-contract.ts` | preserve but simplify (drop legacy alias keys) |
 | Presentation: `src/features/combat/events/*`, `combat-text.ts`, `perspective.ts`, `fold-groups.ts`, `EventLogPanel` | preserve but simplify (drop legacy adapter + client event builders) |
-| `src/shared/combat/pure/resolver.ts` (2993 lines), `types.ts`, `effect-contract*.ts`, `boss-cast-schedule.ts` | replace |
-| `src/shared/combat/c2/*`, `c3/*` and the mirrored `supabase/functions/_shared/combat/**` | delete |
-| Edge `combat-tick`, `combat-catchup` | delete |
-| Client authority: `useCombatDriver` (1703 lines), `useBuffState`, `useGameLoop`, `combat-resolver.ts`, `combat-predictor.ts`, `stances.ts`, `tick-pacer.ts`, `tick-ack.ts`, `pending-actions.ts`, `opener-gates.ts`, `resync.ts`, `dispatch-durable-action.ts`, `mapServerEffectsToBuffState.ts`, `interpretCombatTickResult.ts`, `legacy-adapter.ts`, `useBossCasts`, `member_buffs` transport | delete |
-| Runtime tables: `encounters`, `encounter_participants`, `encounter_engagements`, `encounter_creatures`, `encounter_cast_events`, `encounter_tick_batches`, `encounter_access_grants`, `encounter_kill_awards`, `encounter_death_loot`, `combat_actions`, `combat_sessions`, `active_effects`, `effects_catchup_dispatch`, `effects_catchup_log`, `combat_soak_access`, `combat_soak_scopes` | delete/reset |
-| `combat_audit_log` (9k rows), `party_combat_log`, `world_slumber_log` | delete/reset (truncate; logs only) |
+| `src/shared/combat/pure/resolver.ts` (2993 lines), `types.ts`, `effect-contract*.ts`, `boss-cast-schedule.ts` | replace (new small resolver + typed handlers) |
+| `src/shared/combat/c2/*`, `c3/*`, mirrored `supabase/functions/_shared/combat/**` | delete |
+| Edge `combat-tick`, `combat-catchup` | delete; replaced by thin `node-tick` worker + `combat-intent` |
+| Client authority: `useCombatDriver`, `useBuffState`, `useGameLoop`, `combat-resolver.ts`, `combat-predictor.ts`, `stances.ts`, `tick-pacer.ts`, `tick-ack.ts`, `pending-actions.ts`, `opener-gates.ts`, `resync.ts`, `dispatch-durable-action.ts`, `mapServerEffectsToBuffState.ts`, `interpretCombatTickResult.ts`, `legacy-adapter.ts`, `useBossCasts`, `member_buffs` transport | delete |
+| Runtime tables: `encounters`, `encounter_participants`, `encounter_engagements`, `encounter_creatures`, `encounter_cast_events`, `encounter_tick_batches`, `encounter_access_grants`, `encounter_kill_awards`, `encounter_death_loot`, `combat_actions`, `combat_sessions`, `active_effects`, `effects_catchup_dispatch`, `effects_catchup_log`, `combat_soak_access`, `combat_soak_scopes` | delete — **only in the final legacy-removal batch** (§9), kept read-only until then |
+| `combat_audit_log`, `party_combat_log` | retire in the legacy batch; replaced by one slim structured diagnostic log (§8) |
 | `combat_config` (`combat_mode`), `world_state`, `simulation_pause_state` | preserve but simplify — keep `combat_mode`, drop `combat_soak` |
-| `node_ground_loot`, `loot_pool_config`, `summon_requests`, `xp_boost`, `weapon_progression_config` | preserve unchanged |
-| Uncertain — needs decision | `active_effects` for **non-combat** buffs (food/inn) if any; whether `combat_audit_log` is kept as a thin new-loop audit; whether `party_combat_log` survives now that `node_tick_batch` carries shared events |
+| `node_ground_loot`, `loot_pool_config`, `xp_boost`, `weapon_progression_config` | preserve unchanged |
+| `summon_requests` | preserve unchanged; summon deferred from the replacement (§8) |
+| Uncertain | none of the previously listed items remain open except those in §12 |
 
-## 3. Installed-schema inventory affected
+## 3. One authoritative implementation of formulas
 
-**Tables (delete/reset, 16):** listed above; sizes 32–240 kB each except `combat_audit_log` (5 MB).
+The earlier contradiction ("preserve `src/shared/formulas/*` unchanged" **and** "port formula constants into SQL") is resolved in favour of TypeScript. Postgres validates stored values and commit boundaries; it keeps no second copy of any combat calculation.
 
-**Functions to drop (retired loop):** `claim_encounter_tick`, `commit_encounter_tick_v2`, `commit_encounter_tick_v3`, `encounter_snapshot_v2`, `encounter_state_digest`, `encounter_intake`, `encounter_engage`, `encounter_disengage`, `encounter_ensure_for_character`, `encounter_ensure_for_creature`, `encounter_end`, `encounter_end_participation`, `encounter_reconcile`, `encounter_resync_snapshot`, `encounter_detach_creature`, `encounter_for_node`, `encounter_lock_key`, `encounter_live_owner_active`, `encounter_has_pending_work`, `encounter_death_id`, `encounter_attribution_roster`, `encounter_apply_damage`, `encounter_apply_heal`, `encounter_apply_character_damage/heal/resource`, `encounter_boss_start_cast`, `encounter_boss_resolve_cast`, `encounter_boss_fizzle_cast`, `encounter_stored_power_add/consume/set_cap`, `activate_stance`, `drop_stance`, `clear_stances`, `enforce_stance_effect_lifetime`, `cancel_combat_action`, `damage_party_member`, `heal_party_member`, `update_party_member_hp`, `degrade_party_member_equipment`, `award_party_member` (both overloads), `award_class_bond_for_kill`, all `effects_*` (11), all `catchup/soak` checks, `prune_encounter_tick_batches`, `prune_encounter_access_grants`, `prune_terminal_combat_actions`, `prune_combat_audit_log`, `sweep_stranded_encounters` + their `guarded_*` wrappers.
-
-Movement/rest callers of `damage_party_member` / `heal_party_member` / `award_class_bond_for_kill` must be re-pointed at the new equivalents in the same batch (§9 B4) — these are the only non-combat consumers found.
-
-**Triggers:** on `encounters`, `encounter_participants`, `combat_actions`, `active_effects`, `applied_statuses`, `combat_config`, `party_combat_log` — dropped with their tables or rewritten for the new tables. `characters`' departure trigger (generation rotation) is replaced by `node_fighter.present = false`.
-
-**Policies:** all policies on the 16 deleted tables. New tables get read-only-to-`authenticated` policies scoped by node/character, writes reserved for the tick (`service_role`/owner). No client writes.
-
-**Scheduled jobs:** remove `prune-encounter-tick-batches`, `prune-encounter-access-grants`, `prune-terminal-combat-actions`, `prune-combat-audit`, `sweep-stranded-encounters`, `prune-effects-catchup-log`, `expire-timed-state`. Keep `world-watchdog` (respawns), `purge-ground-loot`, `return-unique-items`, `prune-logs`, `idle-shutdown-check`. Add `node-tick-dispatch` (1s) and `prune-node-tick-batch` (5 min).
-
-## 4. Frontend combat writer/reader inventory
-
-| file | today | after |
+| formula module | class | note |
 |---|---|---|
-| `useCombatDriver.ts` | writes: intents, HP/CP/MP, buffs, casts, `member_buffs`, pacing, acks | delete; replaced by ~200-line `useCombatIntent` (send) |
-| `useBuffState.ts` | owns 14 local buffs incl. Divine Challenge | delete; buffs read from `node_effect` |
-| `useGameLoop.ts` | client regen, expiry, cooldowns | delete; regen/expiry are tick-owned |
-| `combat-resolver.ts`, `combat-predictor.ts`, `ability-calcs.ts` | client damage math | delete (calc previews may stay read-only in tooltips) |
-| `stances.ts`, `useBossCasts.ts`, `tick-pacer/ack`, `pending-actions`, `resync`, `opener-gates` | client authority | delete |
-| `useEncounterBatches.ts`, `encounter-batch.ts` | sequencer/gap recovery | replace with a simple "last rendered tick" cursor over `node_tick_batch` |
-| `useCreatureBroadcast`, `useMergedCreatureState` | client HP merging | replace with direct reads of `node_creature` |
-| `events/*`, `EventLogPanel`, `log-archive` | render committed events | keep |
-| `StatusBarsStrip`, `GamePage` buff props | read local buff objects | keep component, feed from server effects |
+| `stats.ts` (modifiers, dice, diminishing) | retained | imported by resolver + handlers |
+| `combat.ts` (hit/crit bands, AC, mitigation) | retained | single hit-quality authority |
+| `resources.ts`, `cp/cp-math.ts` | retained | CP reservation and stance math |
+| `ability-calc.ts` (v2 calc engine) | retained | drives authored `amount_calc`/`duration_calc` |
+| `effective.ts`, `bond.ts`, `xp.ts`, `economy.ts`, `creatures.ts`, `items.ts`, `gems.ts`, `classes.ts`, `races.ts` | retained | unchanged consumers |
+| `src/shared/combat/resolution.ts`, `creature-damage-modifiers.ts`, `damage-types.ts`, `ability-magnitude.ts` | retained | damage/heal/ward/amp primitives |
+| `tick-rng.ts` | simplified | one seeded stream API `(encounterId, tick, stream, ...parts)`; drop per-call helper sprawl |
+| `src/shared/combat/pure/*` (resolver, types, ordering, effect-contract, boss-cast-schedule) | replaced | superseded by the new resolver + handlers |
+| `src/features/combat/utils/combat-resolver.ts`, `combat-predictor.ts`, `ability-calcs.ts` | deleted | client mirrors of server math |
+| `supabase/functions/_shared/formulas/*` (byte-mirrors) | retained as mirrors | mirror script stays; no divergent logic |
 
-## 5. Contracts
+No module is labelled "preserved unchanged" unless the new resolver imports it.
 
-**Tick.** `node_encounter.tick` is a monotone integer; identity = `(encounter_id, tick)`. Cadence 2000 ms of authoritative time. `node_tick_dispatch` runs every second and calls `node_tick` for encounters with `next_due_at <= now()`.
-- *Late worker*: resolve **exactly one** tick and set `next_due_at = now() + 2s`. No burst catch-up. Periodic effects use the documented rule: **one pulse per tick maximum; missed pulses are dropped, but duration still expires in wall time** (skip-not-stack).
-- *World sleep*: dispatch is disabled; on wake, every encounter's `next_due_at` is re-based to `now()` and effects whose `expires_at` passed during sleep expire without damage (Policy C, unchanged).
-- *Duplicate request*: unique `(encounter_id, tick)` on `node_tick_batch` makes the second commit a no-op; the caller gets `{ok:true, kind:'already_committed'}`. Result classification is always the structured body, never HTTP status.
-- *No present players*: the tick still runs while creatures are damaged or effects exist (offscreen DoTs), then the encounter ends when nothing is pending. Empty-node telegraphs produce the empty-ground result.
+## 4. Runtime schema (corrected timing model)
 
-**Participation.** `node_fighter` row created on first intent or on being attacked; `entry_seq` from a bigserial. Leaving the node sets `present=false`; re-entry inserts a new `entry_seq`.
+| table | columns of note |
+|---|---|
+| `node_encounter` | `node_id` unique, `tick int not null`, `state_version bigint`, `claim_token uuid`, `claim_expires_at timestamptz`, `next_due_at timestamptz`, `status` |
+| `node_creature` | `creature_id`, `spawn_seq`, `hp`, `pending_action jsonb` (`{ability_key, resolve_at_tick}`), `tank_fighter_id` |
+| `node_fighter` | `character_id`, `entry_seq bigserial` (authoritative "newest"), `present bool`, `party_id_at_entry` |
+| `node_effect` | `kind`, `effect_type`, `target_character_id`/`target_creature_id`, `source_character_id`, `stacks`, `magnitude`, **`expires_at timestamptz`**, **`next_due_at timestamptz`**, `interval_ms`, `last_pulse_tick int`, `is_reservation bool` |
+| `node_intent` | `character_id`, `ability_key`, `target_creature_id`, `status`; at most one unresolved per character |
+| `node_reward_claim` | unique `(creature_id, spawn_seq, character_id)` |
+| `node_tick_batch` | unique `(encounter_id, tick)`, `events jsonb`, `created_at` |
+| `boss_ability` | `creature_id`, `ability_key`, `weight`, `windup_ticks`, `targeting`, `magnitude/calc`, `damage_type`, `effect`, `telegraph_text`, `resolution_text` |
+| `node_tick_log` | slim diagnostics (§8) |
 
-**Tank.** Tank = the present fighter with the highest `entry_seq`, evaluated at resolution time, per creature. Party movement inserts followers before the leader, so the leader is newest and becomes tank. Death or departure drops the fighter from selection and the next-newest present fighter takes over.
+### Tick and effect timing contract
 
-**Kill.** The source of the final damaging hit owns the kill: direct hits → attacker; DoT ticks → `node_effect.source_character_id`; reactive damage (Holy Shield) → the defender. Kill stealing allowed.
+- Lifetimes are **wall clock** (`expires_at`, `next_due_at`, both `timestamptz`). The integer `tick` exists for ordering, RNG seeding and commit identity only. `expires_at_tick`/`next_tick_at_tick` from revision 1 are removed.
+- Authoritative cadence stays **2000 ms**. The dispatcher may poll more often (1 s) but must never create two authoritative ticks for one encounter less than 2 s apart (`next_due_at` guard inside `node_tick_claim`).
+- A periodic effect pulses **at most once per authoritative tick**: the resolver pulses only if `next_due_at <= now` and `last_pulse_tick < tick`, then sets `next_due_at = max(now, next_due_at) + interval_ms`. Missed pulses are discarded, never accumulated. No burst catch-up.
+- Duration continues in wall time regardless of pulses. Effects whose `expires_at` passed while the world slept are removed on wake **without** applying missed damage or healing.
+- Late worker: one tick resolves, `next_due_at` re-bases to now; no simulated backlog.
+- World sleep: dispatch disabled; on wake every encounter's `next_due_at` re-bases to `now()`.
+- No present players: ticks continue while creatures are damaged or effects pend (offscreen DoTs); the encounter ends when nothing is pending. Empty-node telegraphs give the empty-ground result.
+- **Stances are the documented exception**: their lifetime is controlled by activation/reservation/drop/death, not an expiry timestamp (`is_reservation = true`, `expires_at null`).
 
-**Reward.** Solo owner → owner only. Party owner → eligible members of the owner's party at death. **Recommendation: eligibility requires one qualifying interaction** (damage dealt, damaging/controlling effect applied, heal/buff on an involved party member, or being attacked by that spawn) — party entry alone does not qualify. This includes healers and supports while preventing tag-along rewards. Eligibility is recorded per `(creature_id, spawn_seq, character_id)` and survives leaving, death and disconnect; it dies with the spawn. No damage thresholds. Rewards insert into `node_reward_claim` (unique key) in the same transaction as the death — exactly once.
+## 5. Participation, tank, kill
 
-**Telegraph.** Boss selects an ability by weight; if it has `windup_ticks > 0` the tick writes `pending_action` and commits an announcement event; at `resolve_at_tick` targeting is evaluated fresh (AoE → all present eligible players; single-target → current tank), the ability resolves through the ordinary mechanic, and selection resumes. Leaving before resolution avoids it; re-entering makes you eligible again. No frozen rosters, no generations, no Stored Power.
+**Participation.** `node_fighter` row on first intent or on being attacked; `entry_seq` from a bigserial. Leaving sets `present=false`; re-entry inserts a new `entry_seq`.
 
-**Authoritative ability rule.** Client sends `{character_id, ability_key, target_creature_id}` only. CP costs, cooldowns, buffs, stances, DoTs, mitigation, absorb, evasion, retaliation and regeneration are all rows in `node_effect` written by `node_tick`. A buff cannot render unless a `node_effect` row exists — this structurally removes the Divine Challenge defect and the ignored `member_buffs` transport.
+**Tank.** Highest `entry_seq` among present fighters, evaluated at resolution time, per creature. Party movement inserts followers before the leader, so the leader is newest and tanks by default. Death or departure drops a fighter from selection; the next-newest present fighter takes over.
 
-## 6. Ability reconciliation (36 assignments, 21 base mechanics)
+**Kill.** Final damaging source owns it: direct hit → attacker; DoT tick → `node_effect.source_character_id`; reactive damage (Holy Shield) → the defender. Kill stealing allowed.
 
-| new mechanic | abilities |
+## 6. Reward rules (approved)
+
+Party entry alone is **insufficient**. A party member becomes eligible for that exact spawn through at least one qualifying interaction: dealing damage; applying a damaging or controlling effect; healing or buffing a party member actively involved with that spawn; being attacked by the creature.
+
+Eligibility belongs to `(creature_id, spawn_seq, character_id)`; survives leaving the node, death and disconnection; does not survive the creature's death/respawn; requires the character to still be in the killer's party when the creature dies; uses no contribution percentage or damage threshold. Solo final hit → that player only. Rewards insert into `node_reward_claim` in the same transaction as the death — exactly once.
+
+**Telegraph.** Boss selects by weight; `windup_ticks > 0` writes `pending_action` and commits an announcement; at `resolve_at_tick` targeting is evaluated fresh (AoE → all present eligible players; single-target → current tank), resolves through the ordinary mechanic handler, then selection resumes. Leaving before resolution avoids it; re-entering restores eligibility. No frozen rosters, no generations, no Stored Power.
+
+**Authoritative ability rule.** The client sends `{character_id, ability_key, target_creature_id}` only. CP costs, cooldowns, buffs, stances, DoTs, mitigation, absorb, evasion, retaliation and regeneration are all `node_effect` rows written by the commit. Nothing renders as active without an effect row — structurally removing the Divine Challenge local-state defect and the ignored `member_buffs` transport.
+
+## 7. Ability reconciliation (36 assignments → 20 handlers)
+
+| handler | abilities |
 |---|---|
 | `weapon_attack` | power_strike, aimed_shot, backstab, weapon_attack (autoattack) |
-| `spell_attack` | fireball, frost_bolt, judgment, smite, cutting_words |
+| `spell_attack` | fireball, frost identity (§7.1), judgment, smite, cutting_words |
 | `multi_attack` | barrage |
 | `burst_damage` | grand_finale |
 | `dot_debuff` | rend |
@@ -136,71 +143,98 @@ Movement/rest callers of `damage_party_member` / `heal_party_member` / `award_cl
 | `stack_apply` | ignite, envenom |
 | `stack_consume` | conflagrate, eviscerate |
 | `aura_pulse` | consecrate |
-| `reactive_damage` | holy_shield (renamed from `reactive_holy`) |
+| `reactive_damage` | holy_shield |
 
-Every ability maps with no new mechanic invented. `frostbolt` is a duplicate key of `frost_bolt` — resolve by deleting the unused row (decision Q4).
+Authored columns retained: `label`, `description`, `tooltip`, `damage_type`, `target_type`, `activation_mode`, `cp_cost`, `cp_reserve_pct`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `combat_text`, `accuracy_stat`, primary/secondary attribute, `class_scale`, and the consolidated Status Application fields. Dropped after mapping (no consumer): `effect_config` legacy alias keys, `calc_version`, `base_abilities.capabilities`/`on_hit_allowed`/`allowed_target_types`, `trigger_type` duplicates of `status_trigger`.
 
-Authored columns retained: `label`, `description`, `tooltip`, `damage_type`, `target_type`, `activation_mode`, `cp_cost`, `cp_reserve_pct`, `amount_calc`, `duration_calc`, `interval_ms`, `mechanic_calcs`, `combat_text`, `accuracy_stat`, `primary/secondary_attribute`, `class_scale`, status application (`status_*`, `applied_status`/`on_hit_effect` consolidated onto the single Status Application model already in place).
+### 7.1 `frostbolt` vs `frost_bolt` — evidence
 
-Columns with no real consumer in the new system (drop after mapping): `effect_config` legacy alias keys, `calc_version`, `base_abilities.capabilities`/`on_hit_allowed`/`allowed_target_types` (validation-only), `trigger_type` duplicates of `status_trigger`.
+Narrow installed check (read-only) of both rows against assignments, loadouts, base-ability references and authored text:
 
-## 7. Boss reconciliation
+| key | label | mechanic | class assignments | loadout rows | base_ability_id | description |
+|---|---|---|---|---|---|---|
+| `frostbolt` | Frostbolt | `spell_attack` | **1** | 0 | `bdf214f8…` | "A bolt of frost that damages and chills the enemy…" |
+| `frost_bolt` | Frost Bolt | `spell_attack` | 0 | 0 | `7d59f353…` | "A lance of splintering ice, slower to shape than flame…" |
 
-**Survives:** `creatures.name/description/level/hp/max_hp/stats/ac/rarity/is_humanoid/is_aggressive/respawn_seconds/loot_table_id/drop_chance/loot_mode`, `boss_crit_flavors`, `boss_death_cry`, and the authored intent inside `boss_cast` (28 boss rows).
+Both are authored and both reference distinct base abilities, so neither is deleted on the basis of its name. `frostbolt` is the **active authored identity** (it carries the only class assignment). During ability mapping: keep `frostbolt` as the live identity, compare the two authored descriptions/calculations and merge any better authored wording into it, then delete `frost_bolt` plus its now-unreferenced base ability if that base ability has no other referencing row. If the check at mapping time shows `frost_bolt`'s base ability is shared, it is retained and only the duplicate ability row is removed.
 
-**Migrated:** `boss_cast` JSON is re-authored into `boss_ability` rows `{creature_id, ability_key, weight, windup_ticks, targeting, magnitude/calc, damage_type, effect, telegraph_text, resolution_text}`. Legacy identity ambiguity (`label` vs `ability_key`) is resolved once at authoring time — no fallback mapping.
+## 8. Boss reconciliation, logging, and the deferred/parked decisions
 
-**Retired:** `encounter_cast_events` and its whole lifecycle, `cast_key`/payload plumbing, `encounter.stored_power*`, `spawn_seq`-fenced cast recovery, participation generations, frozen target rosters, `creatures.rewards_awarded_at` / `last_damaged_at` (moved into runtime tables).
+**Boss data survives:** `creatures.name/description/level/hp/max_hp/stats/ac/rarity/is_humanoid/is_aggressive/respawn_seconds/loot_table_id/drop_chance/loot_mode`, `boss_crit_flavors`, `boss_death_cry`, and the authored intent inside `boss_cast` (28 boss rows), re-authored into `boss_ability` rows. The `label` vs `ability_key` identity ambiguity is resolved once at authoring time — no fallback mapping.
 
-## 8. Deletion/reset migration strategy
+**Boss runtime retired:** `encounter_cast_events` and its lifecycle, `cast_key`/payload plumbing, `encounter.stored_power*`, `spawn_seq`-fenced cast recovery, participation generations, frozen target rosters, `creatures.rewards_awarded_at`/`last_damaged_at` (moved into runtime tables).
 
-Safeguards, in order, one migration each:
-1. **Content freeze assertion.** Migration begins with `DO` blocks asserting expected row counts for `regions/areas/nodes/creatures/npcs/items/abilities/classes` and aborting on mismatch. No `DROP` in this migration.
-2. **Runtime-only deletion list is explicit.** Only the 16 tables named in §3 plus the named functions; `DROP TABLE` never uses `CASCADE` across schemas, and no `DROP` touches a table with a foreign key from durable player data. `characters`, `character_inventory`, `character_materials`, `parties` are untouched.
-3. **Creature reset, not delete.** Combat state on `creatures` is reset in place (`hp = max_hp`, `is_alive = true`, `died_at/rewards_awarded_at/last_damaged_at = null`, `boss_cast` retained until §7 authoring completes) — rows are never deleted.
-4. **Cron off first.** Disable all combat jobs before dropping their functions, re-add the two new jobs last.
-5. `combat_mode = 'maintenance'` for the entire sequence; it is the last thing flipped.
-6. Every migration idempotent (`if exists` / `if not exists`), and the drop batch runs only after the new loop's tests pass.
+**Logs.** `combat_audit_log` and `party_combat_log` are retired. The new system has one slim structured diagnostic log (`node_tick_log`): encounter id, tick number, claim/result classification, resolver/build version, elapsed ms, failure code. No duplicated player-facing prose. Player-facing history comes from committed `node_tick_batch` events (plus the existing client log archive).
 
-## 9. Implementation batches (no intermediate combat required)
+**Wimp / flee / summon / teleport.** Wimp and flee are preserved as an authoritative server combat intent; a successful flee updates presence and movement atomically (or through one explicitly coordinated authoritative contract). Summon is deferred from the first replacement unless a retained ability requires it; `summon_requests` is left untouched. Ordinary teleport is unavailable during combat unless an explicitly authored ability permits it. The parked general movement-security work is **not** pulled into this replacement.
 
-- **B0** Close combat: `combat_mode='maintenance'`, disable combat cron, truncate runtime tables. Content untouched.
-- **B1** Schema: create the 7 new runtime tables with grants (read-only `authenticated`, `ALL service_role`), RLS, indexes, and `boss_ability`.
-- **B2** Mechanic catalogue + resolver core in SQL: attack/damage/heal resolution reusing the shared formula constants; `node_tick` claim→resolve→commit with unique `(encounter_id, tick)`.
-- **B3** Participation, tank, kill ownership, reward eligibility and idempotent reward commit.
-- **B4** Ability mapping: map all 36 assignments onto the catalogue; re-point movement/rest callers of the old party HP RPCs; drop dead ability columns.
-- **B5** Boss abilities: author `boss_ability` from `boss_cast`, wind-up telegraphs, empty-node result.
-- **B6** Intent endpoint + `node_tick_dispatch` cron + world sleep/wake re-basing.
-- **B7** Frontend: delete the client-authority modules, add `useCombatIntent`, batch cursor, server-effect-driven buff display; keep the presentation layer.
-- **B8** Legacy drop: drop the 16 tables, ~60 functions, obsolete triggers/policies/jobs, `member_buffs`, `combat_soak`.
-- **B9** Acceptance tests (§10), then reopen combat.
+**Stances.** Same authoritative action/effect framework: activation and dropping are server intents; reservation and available CP are authoritative; the semantic state is a `node_effect` row with `is_reservation = true`; no client stance authority; no client renders a stance active without authoritative confirmation; lifetime is controlled by reservation/drop/death. The existing `activate_stance`/`drop_stance`/`clear_stances`/`enforce_stance_effect_lifetime` RPCs are replaced by the intent/effect route, not preserved for compatibility.
+
+**Non-combat effects.** Narrow reconciliation before `active_effects` is removed. A read-only check of current contents shows only combat rows (`battle_cry`, `holy_shield`, `shield_wall`, one row each), i.e. no food/inn/consumable rows are live today. Before deletion, batch B12 must additionally grep every writer (consumable hooks, inn/rest paths, edge functions) for non-combat `effect_type` values; any found are moved to a character-level home (`character_effects`, keyed by `character_id` with wall-clock `expires_at`) rather than into the node combat table, and nothing durable is silently deleted. This is not permission for a general consumable/progression redesign.
+
+## 9. Implementation batches (dependency-ordered, no intermediate combat, no shims)
+
+- **B0 Maintenance boundary.** `combat_mode='maintenance'`; disable existing combat workers and scheduled combat jobs; stop old handlers accepting new combat work. **No truncation and no drops.** Old runtime tables stay intact, read-only, as reconciliation and rollback evidence.
+- **B1 New schema.** Create the isolated replacement tables of §4 with grants (`SELECT` to `authenticated` scoped by node/character, `ALL` to `service_role`), RLS, indexes and constraints. Nothing shares a name with a legacy table.
+- **B2 Snapshot + atomic commit contract.** `node_tick_claim` (SKIP LOCKED, monotonic tick, `next_due_at` 2 s guard, snapshot + `state_version`) and `node_tick_commit` (claim/version validated, single transaction, unique `(encounter_id, tick)`, idempotent rewards). No game mechanics yet.
+- **B3 Resolver foundation.** Typed `NodeSnapshot`/`ProposedTick`, seeded RNG, deterministic ordering, ordered structured events, retained formulas imported. Golden-snapshot tests.
+- **B4 Core mechanics.** Attacks, damage, healing, effects, CP, death.
+- **B5 Shared-node participation.** Multiple parties, newest-present tank, presence transitions.
+- **B6 Kill and reward authority.** Final-hit ownership, qualifying participation, exactly-once rewards.
+- **B7 Retained player abilities.** All 36 assignments mapped through the closed catalogue; frost identity resolved per §7.1; dead ability columns dropped; movement/rest callers of the old party HP RPCs re-pointed.
+- **B8 Simplified boss abilities.** Author `boss_ability` from `boss_cast`; delayed actions; empty-node result.
+- **B9 World clock and dispatcher.** 1 s dispatcher, 2 s authoritative cadence, late-worker behaviour, sleep/wake re-basing, `combat-intent` endpoint.
+- **B10 Frontend replacement.** Intent-only client, server-effect-driven buff display, `node_tick_batch` cursor; presentation layer kept.
+- **B11 Acceptance and parity verification** (§10) while combat stays in maintenance.
+- **B12 Cutover.** Reset creature combat state in place (`hp=max_hp`, `is_alive=true`, death/reward timestamps null — rows never deleted), activate the new loop, `combat_mode='open'`. Non-combat-effect reconciliation completed here.
+- **B13 Legacy deletion.** Only after successful cutover evidence: drop the 16 legacy runtime tables, the ~60 retired functions, obsolete triggers/policies/jobs, `member_buffs`, `combat_soak`, `combat_audit_log`, `party_combat_log`, and the deleted frontend modules.
+
+### Migration safeguards (corrected)
+1. Content-freeze assertion first: `DO` blocks asserting expected row counts for `regions/areas/nodes/creatures/npcs/items/abilities/classes`, aborting on mismatch. No `DROP` in that migration.
+2. Deletion is an explicit named list; `DROP TABLE` never uses `CASCADE` across schemas; nothing with a foreign key from durable player data is dropped. `characters`, `character_inventory`, `character_materials`, `parties` untouched.
+3. Creature combat state is reset in place, never deleted.
+4. Cron off before functions are dropped; new jobs added last.
+5. `combat_mode='maintenance'` for the whole sequence; flipped last.
+6. Every migration idempotent; the drop batch runs only in B13.
 
 ## 10. Acceptance tests
 
-1. Solo: 10 ticks, one action per tick, HP monotone, no client writes.
-2. Two parties + one solo on one creature: single shared HP, all three see identical committed events.
-3. Kill stealing: last hit from party B while party A did 90% → only B's eligible members are rewarded.
-4. Tank change: entry order A,B,C → tank C; C leaves → B; C returns → C again; party movement → leader is tank.
-5. Leave/re-enter: departure removes targeting eligibility; re-entry restores it with a new entry sequence.
-6. Healer eligibility: healer only heals a party member, never touches the creature → still rewarded.
-7. Offscreen DoT kill: applier leaves the node, DoT kills → applier owns the kill, party rewarded once.
-8. Reactive kill: Holy Shield retaliation lands the final blow → defender owns the kill.
-9. Delayed boss ability: announced at tick N, resolves at N+k against the tank present at N+k; AoE hits all present; empty node → empty-ground result; no boss autoattack during wind-up.
-10. Effect expiry: buff/DoT expires at its tick; across a sleep boundary it expires without damage.
-11. Duplicate tick: two concurrent `node_tick` calls for the same tick → one batch, one set of effects, second returns `already_committed`.
-12. Exactly-once rewards: repeated death commits and duplicate ticks produce exactly one `node_reward_claim` per member.
+Retained (1–12): solo ten-tick sanity with no client writes; two parties + one solo on one shared HP pool with identical committed events; kill stealing rewards only the killer's eligible party; tank order A,B,C → C, C leaves → B, C returns → C, party movement → leader; leave/re-entry targeting eligibility; healer-only eligibility; offscreen DoT kill attribution; reactive (Holy Shield) kill attribution; delayed boss ability resolving at N+k with AoE/tank/empty-node variants and no boss autoattack during wind-up; effect expiry including across a sleep boundary; duplicate tick → one batch; exactly-once rewards.
 
-## 11. Unresolved questions (approval needed)
+Added (13–29):
+13. Two workers attempt the same tick → one claim, one batch, the other returns `no_claim`.
+14. Stale snapshot version rejected before any partial state write (HP, effects, rewards all unchanged).
+15. Resolver determinism: identical snapshot + seed → byte-identical `ProposedTick`.
+16. Delayed worker: each periodic effect pulses at most once.
+17. Effect expiring during sleep is removed on wake with no pulse.
+18. Divine Challenge creates an authoritative `node_effect` row and measurably reduces damage.
+19. Battle Cry percentage reduction applies from the effect row.
+20. Battle Cry shield bonus and crit-softening: implemented and tested, or explicitly removed from authored wording/configuration (decision recorded in the mapping batch).
+21. Instant defensive abilities (Divine Aegis, Disengage) enter the authoritative action/effect system — no instant client-only application.
+22. Holy Shield event ordering: retaliation event precedes death and reward events.
+23. Holy Shield final-hit ownership with exactly-once rewards.
+24. Boss telegraph resolves against the node/tank current at resolution.
+25. Leaving before resolution avoids the delayed action.
+26. Re-entering before resolution restores eligibility.
+27. No stale "gathers force" event addressed to an ineligible historical target.
+28. Player-facing committed batches render exactly once (replay/duplicate delivery safe).
+29. No ability can appear active in the UI without an authoritative effect row.
 
-1. **Reward eligibility** — confirm the recommendation: one qualifying interaction required, party entry alone insufficient.
-2. **Tick cadence** — keep 2000 ms authoritative, or change now while nothing is live?
-3. **In-DB resolution** — confirm moving resolution from the Edge Function into `node_tick` (removes ~10k lines of TS but moves combat math into SQL and away from the vitest suite; mitigation: formula constants stay shared and the suite gets a SQL-fixture harness).
-4. **`frostbolt` vs `frost_bolt`** — delete the duplicate ability row (which one is authored?).
-5. **Logs** — truncate and retire `combat_audit_log` and `party_combat_log`, or keep a slim audit on the new loop?
-6. **Wimp/flee, summon, teleport-in-combat** — carried over as intents in B6, or deliberately dropped for now?
-7. **Stances** — reserve-CP stances become ordinary long-lived `node_effect` rows with a reserved-CP field; confirm no separate stance table/RPCs.
-8. **Non-combat `active_effects`** (food/inn buffs) — do any exist that must survive the table drop?
+## 11. Parts of the original plan that cannot support these corrections
 
-## Anything unproven
+- §1 "resolution runs in the database as one SQL/PLPGSQL transaction" and "no Edge Function required for the core loop" — replaced by §1 hybrid.
+- §2 row classifying `resolution.ts`/`tick-rng.ts` as "port to SQL" — replaced by §3 retained-and-imported.
+- §4 `node_effect` `expires_at_tick`/`next_tick_at_tick` — replaced by wall-clock `expires_at`/`next_due_at` in §4.
+- §9 **B0** "truncate runtime tables" — replaced by the non-destructive maintenance boundary; deletion moves to B13.
+- §9 **B2** "mechanic catalogue + resolver core in SQL" — replaced by B2/B3/B4.
+- §11 unresolved questions 1–8 — now decided in §3, §4, §6, §7.1 and §8.
 
-The exact set of non-combat callers of `damage_party_member`/`heal_party_member`/`award_class_bond_for_kill` was read from the repo, not exercised at runtime; B4 must re-verify before dropping them. Boss `boss_cast` payload completeness across all 28 bosses was not field-by-field validated in this turn.
+## 12. Genuinely unresolved questions
+
+1. **Battle Cry secondary effects** — the authored wording implies a shield bonus and crit softening that the current implementation does not apply. Implement both, or amend the authored text? (Test 20 covers either outcome; the decision is authoring, not architecture.)
+2. **Non-combat effect home** — if B12's writer grep finds live food/inn/consumable effects, confirm the proposed `character_effects` table as their home rather than extending `node_effect`.
+3. **Flee coordination** — flee touches both combat presence and movement. Confirm the preferred contract: a single authoritative `combat_flee` RPC that also performs the move, or a combat intent that emits an authoritative move request.
+
+---
+
+This turn was read-only planning. No repository file other than this plan document was written, and no schema, data, migration, job, grant, policy, Edge Function, configuration, combat mode or world state was changed. The only database access was two narrow read-only `SELECT` queries (the frost-identity check in §7.1 and the `active_effects` contents check in §8).
