@@ -313,7 +313,7 @@ Both are authored and both reference distinct base abilities, so neither is dele
 
 Retained (1–12): solo ten-tick sanity with no client writes; two parties + one solo on one shared HP pool with identical committed events; kill stealing rewards only the killer's eligible party; tank order A,B,C → C, C leaves → B, C returns → C, party movement → leader; leave/re-entry targeting eligibility; healer-only eligibility; offscreen DoT kill attribution; reactive (Holy Shield) kill attribution; delayed boss ability resolving at N+k with AoE/tank/empty-node variants and no boss autoattack during wind-up; effect expiry including across a sleep boundary; duplicate tick → one batch; exactly-once rewards.
 
-Added (13–29):
+Added in revision 2 (13–29):
 13. Two workers attempt the same tick → one claim, one batch, the other returns `no_claim`.
 14. Stale snapshot version rejected before any partial state write (HP, effects, rewards all unchanged).
 15. Resolver determinism: identical snapshot + seed → byte-identical `ProposedTick`.
@@ -321,7 +321,7 @@ Added (13–29):
 17. Effect expiring during sleep is removed on wake with no pulse.
 18. Divine Challenge creates an authoritative `node_effect` row and measurably reduces damage.
 19. Battle Cry percentage reduction applies from the effect row.
-20. Battle Cry shield bonus and crit-softening: implemented and tested, or explicitly removed from authored wording/configuration (decision recorded in the mapping batch).
+20. Battle Cry secondary effects are implemented (shield bonus + crit softening) — removal from authored text is no longer an accepted outcome (see 45–48).
 21. Instant defensive abilities (Divine Aegis, Disengage) enter the authoritative action/effect system — no instant client-only application.
 22. Holy Shield event ordering: retaliation event precedes death and reward events.
 23. Holy Shield final-hit ownership with exactly-once rewards.
@@ -332,21 +332,56 @@ Added (13–29):
 28. Player-facing committed batches render exactly once (replay/duplicate delivery safe).
 29. No ability can appear active in the UI without an authoritative effect row.
 
-## 11. Parts of the original plan that cannot support these corrections
+Added in revision 3 (30–53):
 
-- §1 "resolution runs in the database as one SQL/PLPGSQL transaction" and "no Edge Function required for the core loop" — replaced by §1 hybrid.
-- §2 row classifying `resolution.ts`/`tick-rng.ts` as "port to SQL" — replaced by §3 retained-and-imported.
-- §4 `node_effect` `expires_at_tick`/`next_tick_at_tick` — replaced by wall-clock `expires_at`/`next_due_at` in §4.
-- §9 **B0** "truncate runtime tables" — replaced by the non-destructive maintenance boundary; deletion moves to B13.
-- §9 **B2** "mechanic catalogue + resolver core in SQL" — replaced by B2/B3/B4.
-- §11 unresolved questions 1–8 — now decided in §3, §4, §6, §7.1 and §8.
+*Claim lifecycle (§1a)*
+30. Claiming candidate tick 11 leaves the committed tick at 10 (`claimed_tick = 11`, `tick = 10`).
+31. Worker crash after claim leaves the committed tick at 10 and no state applied.
+32. Lease expiry allows candidate tick 11 to be reclaimed with a new token, same candidate number.
+33. Late commit from the expired claim is rejected (`stale_claim`) with no partial writes.
+34. A successful commit advances `tick` exactly once and clears the claim.
+35. Duplicate commit of the same candidate returns `already_committed` and writes nothing.
+36. Two workers cannot commit different results for the same candidate tick.
+37. Identical snapshot + reclaimed candidate-tick seed produces an identical `ProposedTick`.
+
+*State-version and intent cutoff (§4a)*
+38. An intent submitted after the claim cutoff stays `pending` and resolves on the next tick.
+39. Commit consumes only the intent ids present in its snapshot (a later intent stays pending).
+40. Presence/movement mutation bumps `state_version` and invalidates the stale proposal.
+41. Effect or stance mutation bumps `state_version` and invalidates the stale proposal.
+42. Creature respawn (`spawn_seq` bump) invalidates a proposal belonging to the previous spawn.
+43. Party membership change cannot expand reward eligibility inside a stale proposal.
+44. Equipment change fencing: a snapshot whose equipment read is stale is rejected, not applied.
+
+*Battle Cry (§6b)*
+45. Percentage mitigation without a shield equipped.
+46. Shield bonus applies only with authoritative shield equipment, clamped by the ceiling.
+47. Crit softening reduces only the critical bonus (40/60/20/50 % → 50), leaving hit quality and crit chance untouched.
+48. Authored magnitude required: missing `crit_softening_pct` fails the authoring assertion — no hidden fallback percentage.
+49. Interaction order with flat mitigation (Divine Challenge), block and absorb, plus correct mitigation metadata on the combat event.
+
+*Flee (§8)*
+50. Manual flee succeeds atomically: damage, movement, `present = false`, tank re-selection, event, version bump.
+51. Fatal opportunity damage prevents movement (character dies at the original node).
+52. Wimp invokes the same flee contract with its configured direction.
+53. Flee preserves already-earned spawn-specific reward eligibility; and invalid direction, locked path or insufficient movement resources fail with no partial state change.
+
+## 11. Parts of earlier revisions that had to be replaced
+
+Revision 1 → 2: in-database PLPGSQL resolver and "no Edge Function for the core loop" (→ §1 hybrid); "port `resolution.ts`/`tick-rng.ts` to SQL" (→ §3 retained-and-imported); `expires_at_tick`/`next_tick_at_tick` (→ wall-clock §4); B0 "truncate runtime tables" (→ non-destructive maintenance boundary, deletion in B13); B2 "resolver core in SQL" (→ B2/B3/B4).
+
+Revision 2 → 3:
+- §1's single `tick` value conflated the committed tick with the claimed candidate — replaced by the explicit `tick` / `claimed_tick` pair and the §1a lifecycle, pseudocode and result classifications.
+- §1's "monotonic tick" wording in B2 implied the cursor advanced at claim time — corrected.
+- The `state_version` fence was asserted but never scoped — replaced by the §4a mutation table, the intent-cutoff rule (`node_intent.seq`, server-assigned) and the single acknowledged equipment exception.
+- §12's Battle Cry question and its "or remove the authored wording" option — replaced by the approved §6b specification (both effects implemented as authored `mitigation_buff` parameters, documented pipeline order, authoring gate on `crit_softening_pct`).
+- §8's flee wording ("intent … atomically, or a coordinated contract") — replaced by the single authoritative `combat_flee` RPC.
+- §8's unconditional `character_effects` proposal — replaced by the conditional, reconciliation-gated boundary.
 
 ## 12. Genuinely unresolved questions
 
-1. **Battle Cry secondary effects** — the authored wording implies a shield bonus and crit softening that the current implementation does not apply. Implement both, or amend the authored text? (Test 20 covers either outcome; the decision is authoring, not architecture.)
-2. **Non-combat effect home** — if B12's writer grep finds live food/inn/consumable effects, confirm the proposed `character_effects` table as their home rather than extending `node_effect`.
-3. **Flee coordination** — flee touches both combat presence and movement. Confirm the preferred contract: a single authoritative `combat_flee` RPC that also performs the move, or a combat intent that emits an authoritative move request.
+None blocking. Two items are deliberately deferred rather than open: summon stays out of the first replacement unless a retained ability requires it, and the `character_effects` table is created only if B12's writer reconciliation proves a retained non-combat effect needs it. Both decisions are already made; only their trigger conditions are evaluated during implementation.
 
 ---
 
-This turn was read-only planning. No repository file other than this plan document was written, and no schema, data, migration, job, grant, policy, Edge Function, configuration, combat mode or world state was changed. The only database access was two narrow read-only `SELECT` queries (the frost-identity check in §7.1 and the `active_effects` contents check in §8).
+This turn was read-only planning. No repository file other than this plan document was written, and no schema, data, migration, scheduled job, grant, policy, Edge Function, configuration, combat mode or world state was changed. The only database access was three narrow read-only `SELECT` queries (the frost-identity check in §7.1, the `active_effects` contents check in §8, and the Battle Cry / Divine Challenge authored-configuration check in §6b).
