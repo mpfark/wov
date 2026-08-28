@@ -96,6 +96,9 @@ export interface MechanicOutcome {
   consumeEffectIds: string[];
   events: Array<Omit<TickEvent, 'seq'>>;
   missed?: boolean;
+  /** How many stacks a finisher burned (`stack_consume`). */
+  meta_stacks_consumed?: number;
+
 }
 
 const emptyOutcome = (): MechanicOutcome => ({ effects: [], consumeEffectIds: [], events: [] });
