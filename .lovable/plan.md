@@ -196,6 +196,42 @@ Eligibility belongs to `(creature_id, spawn_seq, character_id)`; survives leavin
 
 **Authoritative ability rule.** The client sends `{character_id, ability_key, target_creature_id}` only. CP costs, cooldowns, buffs, stances, DoTs, mitigation, absorb, evasion, retaliation and regeneration are all `node_effect` rows written by the commit. Nothing renders as active without an effect row — structurally removing the Divine Challenge local-state defect and the ignored `member_buffs` transport.
 
+## 6b. Battle Cry secondary effects (approved) — authored parameters of `mitigation_buff`
+
+Both authored secondary effects are implemented. Nothing is removed from the ability description or configuration, and the resolver contains **no Battle Cry identity check** — these are ordinary authored parameters of the shared `mitigation_buff` handler, equally available to any future ability or boss ability.
+
+Narrow read-only evidence (installed rows): `battle_cry` is `mitigation_buff`, `amount_calc` = `0.10 + diminishing_float(STR, 0.02/pt, cap 0.12)` as `percent`, note "STR magnitude; +0.05 DR with a shield equipped", `effect_config` = `{mitigation_mode: percent, shield_dr_bonus: 0.05, applies_crit_reduction: true, resolved_by: combat-tick}`. `divine_challenge` is the same handler with `{mitigation_mode: flat, is_taunt: true}` and a WIS flat calc. So the shield bonus **already has an authored magnitude** (`shield_dr_bonus = 0.05`); crit softening is currently **only the boolean** `applies_crit_reduction`.
+
+Handler parameters (authored, no hardcoding, no hidden fallback):
+
+| parameter | meaning |
+|---|---|
+| `mitigation_mode` | `percent` or `flat` |
+| `shield_dr_bonus` | additive percentage mitigation, applied only when the snapshot confirms an equipped shield |
+| `crit_softening_pct` | **new authored field**; fraction of the critical *bonus* removed |
+| `mitigation_ceiling_pct` | documented ceiling on total percentage mitigation |
+| `is_taunt` | unchanged (Divine Challenge) |
+
+**Shield bonus.** Applies only when the authoritative equipment snapshot shows an equipped off-hand shield (never from client state). Magnitude comes from `shield_dr_bonus`, is added to the resolved percentage mitigation, and the sum is clamped to `mitigation_ceiling_pct`.
+
+**Critical-hit softening.** It reduces the *additional* damage a critical hit contributed. It never changes the attacker's crit chance and never rewrites hit quality after the roll. `softened = normal + critBonus * (1 - crit_softening_pct)`; with normal 40, critical 60 (bonus 20) and 50 % softening → 50, then ordinary mitigation applies.
+
+**Damage-pipeline order** (single documented order for every incoming hit):
+1. attack roll and hit quality (unchanged; softening does not touch it);
+2. raw damage roll, including the critical bonus;
+3. **crit softening** — reduce only the critical bonus;
+4. attacker-side and target-side amplification (e.g. Chilled);
+5. percentage mitigation: `mitigation_buff` percent contributions + `shield_dr_bonus`, clamped to the ceiling;
+6. flat mitigation (Divine Challenge);
+7. block reduction (`block_buff`);
+8. absorb pool (`absorb_buff` — Force Shield, Divine Aegis) via `absorbFromShield`;
+9. glancing/graded caps and floors;
+10. HP resolution via `resolveDamage`.
+
+**Authoring gate.** `crit_softening_pct` must be authored before the ability is published: the ability-mapping batch (B7) either adds it to `battle_cry`'s configuration or fails the batch. No default is invented in code; a missing magnitude means "no softening applied" **and** a failed authoring assertion, never a silent fallback percentage.
+
+Every mitigation step emits structured metadata on the combat event (`percentMitigated`, `shieldBonusApplied`, `critSoftened`, `flatMitigated`, `blocked`, `absorbed`) so the log can explain the number without recomputing it.
+
 ## 7. Ability reconciliation (36 assignments → 20 handlers)
 
 | handler | abilities |
