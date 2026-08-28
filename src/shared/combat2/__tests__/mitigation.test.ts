@@ -96,12 +96,21 @@ describe('combat2 mitigation pipeline (plan §6b)', () => {
     expect(params.isTaunt).toBe(true);
   });
 
-  it('caps glancing damage and never goes below the floor when damage lands', () => {
+  it('caps glancing damage and applies the floor only when damage lands', () => {
     const capped = applyMitigationPipeline({ normalDamage: 40, critBonus: 0, gradedCap: 3 });
     expect(capped.applied).toBe(3);
-    const floored = applyMitigationPipeline({
+
+    // 0.99 is clamped to the default 0.75 ceiling, so 10 → 3 gets through.
+    const clamped = applyMitigationPipeline({
       normalDamage: 10, critBonus: 0, percentMitigation: 0.99, minimumDamage: 1,
     });
-    expect(floored.applied).toBe(1);
+    expect(clamped.applied).toBe(3);
+
+    // Fully mitigated damage stays fully mitigated: the floor never resurrects it.
+    const fully = applyMitigationPipeline({
+      normalDamage: 10, critBonus: 0, flatMitigation: 100, minimumDamage: 1,
+    });
+    expect(fully.applied).toBe(0);
   });
 });
+
