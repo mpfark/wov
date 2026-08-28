@@ -4596,6 +4596,26 @@ export type Database = {
         Returns: number
       }
       node_creature_roster: { Args: { _character_id: string }; Returns: Json }
+      node_encounter_bump_version: {
+        Args: { _encounter_id: string }
+        Returns: number
+      }
+      node_tick_claim: {
+        Args: { _lease_ms?: number; _node_id: string }
+        Returns: Json
+      }
+      node_tick_commit: {
+        Args: {
+          _candidate_tick: number
+          _claim_token: string
+          _encounter_id: string
+          _expected_last_tick: number
+          _expected_state_version: number
+          _intent_ids: string[]
+          _proposed: Json
+        }
+        Returns: Json
+      }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
       pickup_ground_loot: {
         Args: { p_character_id: string; p_loot_id: string }
