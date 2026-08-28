@@ -14,13 +14,18 @@ The previous revision's single in-database `node_tick` PLPGSQL resolver is **rep
 client (display + intent only)
   |  POST /combat-intent  { character_id, ability_key?, target_creature_id? }   <- no state in body
   v
-public.combat_intent(...)                  -- validates, writes one queued intent row
-                                           
+public.combat_intent(...)                  -- validates, writes one queued intent row (server seq)
+
 dispatcher (pg_cron 1s wall clock) -> thin worker (Edge fn `node-tick`, TypeScript)
-  1. public.node_tick_claim(node_id)       -- SKIP LOCKED claim, monotonic tick, returns
-                                           --   { encounter_id, tick, state_version, snapshot }
-  2. resolveNodeTick(snapshot, seed)       -- PURE TypeScript. No IO. Returns ProposedTick.
-  3. public.node_tick_commit(...)          -- atomic; applies only if claim + state_version valid
+  1. public.node_tick_claim(node_id)       -- FOR UPDATE SKIP LOCKED; candidate_tick = tick + 1
+                                           --   returns { encounter_id, last_committed_tick,
+                                           --     candidate_tick, state_version, claim_token,
+                                           --     intent_cutoff_seq, snapshot }
+                                           --   DOES NOT advance node_encounter.tick
+  2. resolveNodeTick(snapshot, seed)       -- PURE TypeScript. No IO. seed = (encounter_id,
+                                           --   candidate_tick, stream). Returns ProposedTick.
+  3. public.node_tick_commit(...)          -- atomic; applies only if claim + lease + last
+                                           --   committed tick + state_version all still valid
   v
 realtime: node_tick_batch rows             -- client renders committed events exactly once
 ```
@@ -29,9 +34,55 @@ realtime: node_tick_batch rows             -- client renders committed events ex
 
 Mechanics are small typed handlers (`mechanics/<key>.ts`, one file per catalogue entry, each `(ctx, ability, actor, target) => MechanicOutcome`) registered in a closed map — explicitly *not* another 3,000-line monolith. The existing shared formulas are imported directly (§3).
 
-**Postgres owns state safety and atomicity**: authoritative `node_encounter`/`node_creature`/`node_fighter`/`node_intent`/`node_effect` rows; tick claim and locking; monotonic tick identity; snapshot loading; narrow optimistic `state_version` validation; one atomic commit of HP, CP, MP, effects, participation, kills, rewards and event batches; unique tick/batch constraints; idempotent final rewards; rejection of stale or duplicate commits; durable committed presentation events.
+**Postgres owns state safety and atomicity**: authoritative `node_encounter`/`node_creature`/`node_fighter`/`node_intent`/`node_effect` rows; tick claim and locking; committed-tick identity; snapshot loading; narrow optimistic `state_version` validation; one atomic commit of HP, CP, MP, effects, participation, kills, rewards and event batches; unique tick/batch constraints; idempotent final rewards; rejection of stale or duplicate commits; durable committed presentation events.
 
-**Why two workers cannot corrupt state.** `node_tick_claim` takes the encounter row with `FOR UPDATE SKIP LOCKED`, so only one worker obtains tick N; a second worker gets `no_claim` and exits. Independently, `node_tick_commit` re-checks (a) that the claim token/lease it was issued is still the current one, and (b) that `node_encounter.state_version` still equals the snapshot's version, and (c) the unique `(encounter_id, tick)` on `node_tick_batch`. If a lease expired and another worker already resolved tick N, the late commit fails the version/claim check and writes nothing — the whole commit is one transaction, so there is no partial application. `state_version` increments on every commit, which also makes a duplicated HTTP request a no-op returning `{ok:true, kind:'already_committed'}`. Result classification always comes from the structured body, never from HTTP 200.
+### 1a. Tick claim and commit lifecycle (corrected)
+
+Two distinct numbers, never conflated:
+
+- `node_encounter.tick` — the **last successfully committed tick**. It advances only inside a successful commit.
+- `node_encounter.claimed_tick` — the **currently claimed candidate tick** (`tick + 1`), non-null only while a claim is outstanding. An explicit column is used rather than inferring the candidate from `tick + 1` at commit time, so a stale proposal can be compared against the claim that is actually outstanding.
+
+```text
+node_tick_claim(node_id):
+  SELECT ... FROM node_encounter WHERE node_id = $1 AND next_due_at <= now()
+    FOR UPDATE SKIP LOCKED;                        -- locked/absent -> { ok:false, kind:'no_claim' }
+  IF claimed_tick IS NOT NULL AND claim_expires_at > now()
+      -> { ok:false, kind:'no_claim', reason:'in_flight' }   -- no lease captured, nothing written
+  candidate_tick    := tick + 1;                   -- same value on a reclaim after lease expiry
+  claim_token       := gen_random_uuid();
+  claimed_tick      := candidate_tick;
+  claim_expires_at  := now() + lease;
+  intent_cutoff_seq := max(node_intent.seq) among pending intents for this encounter;
+  RETURN { encounter_id, last_committed_tick: tick, candidate_tick, state_version,
+           claim_token, intent_cutoff_seq, snapshot }   -- tick is NOT advanced
+
+resolver: proposed := resolveNodeTick(snapshot, seed(encounter_id, candidate_tick))
+
+node_tick_commit(encounter_id, claim_token, candidate_tick, expected_last_tick,
+                 expected_state_version, intent_ids, proposed):
+  SELECT ... FOR UPDATE;
+  IF tick >= candidate_tick                        -> { ok:true,  kind:'already_committed' }
+  IF claim_token <> stored OR claimed_tick <> candidate_tick
+     OR claim_expires_at <= now()                  -> { ok:false, kind:'stale_claim' }
+  IF tick <> expected_last_tick
+     OR state_version <> expected_state_version    -> { ok:false, kind:'stale_snapshot' }
+  -- single transaction from here: HP/CP/MP, effects, participation, deaths, rewards
+  INSERT INTO node_tick_batch(encounter_id, tick=candidate_tick, events)  -- unique (enc, tick)
+  INSERT rewards ON CONFLICT DO NOTHING            -- node_reward_claim idempotency
+  UPDATE node_intent SET status='consumed' WHERE id = ANY(intent_ids)     -- exact ids only
+  UPDATE node_encounter SET tick = candidate_tick,
+         state_version = state_version + 1,
+         claimed_tick = NULL, claim_token = NULL, claim_expires_at = NULL,
+         next_due_at = greatest(now(), next_due_at) + interval '2 seconds';
+  RETURN { ok:true, kind:'committed', tick: candidate_tick }
+```
+
+Worked example: last committed tick 10, claimed candidate 11. Successful commit → committed tick 11. Crash or stale commit → committed tick stays 10, nothing partially applied, and the next worker reclaims candidate tick 11 with the same `(encounter_id, 11)` seed, so no tick is skipped and the reclaimed resolution is identical for an identical snapshot.
+
+**Result classifications** (always read from the structured body, never HTTP 200): claim → `committed`-eligible grant, `no_claim` (row locked, absent, or actively leased), `not_due`. Commit → `committed`, `already_committed`, `stale_claim`, `stale_snapshot`. Only `committed` writes anything.
+
+**Why two workers cannot corrupt state.** The claim row lock with `SKIP LOCKED` means only one worker can even read a claim for an encounter at a time, and an actively leased claim yields `no_claim` without capturing a lease. After lease expiry a second worker may reclaim the *same* candidate tick with a *new* token; the first worker's late proposal then fails `stale_claim`. Independently, `state_version` fences any authoritative mutation that happened after the snapshot (§4a), and the unique `(encounter_id, tick)` on `node_tick_batch` makes a duplicated request a no-op. Every check and every write is in one transaction, so a rejected proposal writes nothing at all.
 
 The claim → snapshot → resolve → commit sequence is retained but stripped of everything that existed for legacy compatibility: no digest recomputation round-trip, no live/catch-up duality, no `encounter_snapshot_v2` participation generations, no frozen cast state, no Stored Power, no migration of live encounters. The worker is thin: claim, call the resolver, commit, log one diagnostic line. It contains no alternate combat logic and no fallback path.
 
