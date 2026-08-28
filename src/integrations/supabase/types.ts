@@ -4106,6 +4106,10 @@ export type Database = {
         Args: { _limit?: number; _older_than_seconds?: number }
         Returns: number
       }
+      prune_ended_encounters: {
+        Args: { _limit?: number; _older_than_seconds?: number }
+        Returns: number
+      }
       prune_terminal_combat_actions: {
         Args: { _limit?: number; _older_than_seconds?: number }
         Returns: number
