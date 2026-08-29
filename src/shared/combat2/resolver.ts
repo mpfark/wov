@@ -683,28 +683,36 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         meta: { deathCry: creature.row.boss_death_cry, killedBy: creature.killedBy },
       });
 
-      const killer = creature.killedBy ? chars.get(creature.killedBy) : undefined;
-      const killerParty = killer?.fighter.party_id ?? null;
+      // Reward eligibility is DURABLE QUALIFICATION for exactly this spawn, not
+      // presence and not party membership: a player who tagged the creature and
+      // then walked away is still paid, and a bystander who never interacted is
+      // not. Party members are paid only through their own qualification.
       const baseXp = getCreatureXp(creature.row.level, creature.row.rarity ?? 'common');
-      const eligible = snapshot.fighters.filter((f) => {
-        if (f.character_id === creature.killedBy) return true;
-        if (!killerParty || f.party_id !== killerParty) return false;
-        return true;
-      });
-      const seen = new Set<string>();
-      for (const fighter of eligible) {
-        if (seen.has(fighter.character_id)) continue;
-        seen.add(fighter.character_id);
-        const penalty = getXpPenalty(fighter.level, creature.row.level);
+      const levelOf = new Map(snapshot.fighters.map((f) => [f.character_id, f.level]));
+      const recipients = new Set<string>();
+      for (const key of [...alreadyQualified, ...proposedQualified]) {
+        const [creatureId, spawnSeq, characterId] = key.split(':');
+        if (creatureId !== creature.row.creature_id) continue;
+        if (Number(spawnSeq) !== creature.row.spawn_seq) continue;
+        recipients.add(characterId);
+      }
+      for (const characterId of [...recipients].sort()) {
+        const level = levelOf.get(characterId);
+        // XP scaling needs the recipient's level; an unknown level means the
+        // fighter row is not in this snapshot, so the payout waits for a
+        // snapshot that carries it rather than being computed from a guess.
+        if (level === undefined) continue;
+        const penalty = getXpPenalty(level, creature.row.level);
         proposed.rewards.push({
           creature_id: creature.row.creature_id,
           spawn_seq: creature.row.spawn_seq,
-          character_id: fighter.character_id,
+          character_id: characterId,
           xp_awarded: Math.max(0, Math.floor(baseXp * penalty)),
           gold_awarded: 0,
-          is_killer: fighter.character_id === creature.killedBy,
+          is_killer: characterId === creature.killedBy,
         });
       }
+
     }
 
     if (creature.dirty || died) {
