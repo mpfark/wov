@@ -57,28 +57,35 @@ export interface SnapshotEncounter {
 }
 
 /**
- * One equipped item as projected by the authoritative claim.
+ * One equipped item as projected by the authoritative claim
+ * (`character_inventory` x `items`, scoped to the owning character).
  *
- * The weapon fields (`weapon_tag`, `hands`, `item_level`, `rarity`) are what the
- * retained weapon formula needs. They are optional in the TYPE only because the
- * installed claim projection does not emit them yet; when a main hand is present
- * WITHOUT them the resolver refuses the action (`equipment_contract_incomplete`)
- * rather than rolling a die it cannot justify.
+ * `item_present` is false when the inventory row points at an item that no
+ * longer exists; the resolver then fails closed instead of treating the
+ * character as unarmed. The weapon fields are what the retained weapon formula
+ * needs and are projected verbatim: a NULL is a real "not authored" and is
+ * never defaulted here. When a main hand is equipped without them the resolver
+ * refuses the action (`equipment_contract_incomplete`) rather than rolling a die
+ * it cannot justify.
  */
 export interface SnapshotEquipment {
   slot: string;
   item_id: string;
   inventory_id: string;
+  /** Owner of the inventory row. Always the fighter this equipment belongs to. */
+  character_id: string;
   durability: number | null;
   applied_gems: unknown;
   stat_override: unknown;
   crafted_level: number | null;
-  item_type?: string | null;
-  weapon_tag?: string | null;
-  hands?: number | null;
-  item_level?: number | null;
-  rarity?: string | null;
+  item_present: boolean;
+  item_type: string | null;
+  weapon_tag: string | null;
+  hands: number | null;
+  item_level: number | null;
+  rarity: string | null;
 }
+
 
 
 export interface SnapshotFighter {
