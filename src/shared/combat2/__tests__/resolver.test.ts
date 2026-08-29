@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { resolveNodeTick, selectTank } from '../resolver';
+import { buildAbilitySpec } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
-import type { NodeSnapshot, SnapshotCreature, SnapshotFighter } from '../types';
+import type { NodeSnapshot, SnapshotCreature, SnapshotFighter, SnapshotIntent } from '../types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 const nowPlus = (msOffset: number): string => new Date(Date.parse(NOW) + msOffset).toISOString();
@@ -145,7 +146,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-1', seq: 7, character_id: 'ch-1', ability_key: 'power_strike', target_creature_id: 'cr-1' },
+          abilityIntent('i-1', 7, 'ch-1', 'power_strike', 'cr-1'),
         ],
       }),
       { abilities },
@@ -157,7 +158,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-9', seq: 8, character_id: 'ch-1', ability_key: 'not_a_real_ability', target_creature_id: 'cr-1' },
+          abilityIntent('i-9', 8, 'ch-1', 'not_a_real_ability', 'cr-1'),
         ],
       }),
       { abilities },
@@ -170,7 +171,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-2', seq: 9, character_id: 'ch-1', ability_key: 'power_strike', target_creature_id: 'cr-1' },
+          abilityIntent('i-2', 9, 'ch-1', 'power_strike', 'cr-1'),
         ],
       }),
       { abilities },
