@@ -495,6 +495,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   }
 
 
+  // Reactive retaliation bookkeeping: one reaction per reactive effect per
+  // attacking creature spawn per tick when the authored configuration says so.
+  const reactedThisTick = new Set<string>();
+
   // ── 3. creature actions ───────────────────────────────────────
   for (const creature of creatures.values()) {
     if (creature.hp <= 0) continue;
@@ -572,10 +576,6 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     if (!tank) continue;
     applyCreatureDamage(creature, tank, null, 0);
   }
-
-  // Reactive retaliation bookkeeping: one reaction per reactive effect per
-  // attacking creature spawn per tick when the authored configuration says so.
-  const reactedThisTick = new Set<string>();
 
   function applyCreatureDamage(
     creature: WorkingCreature,
