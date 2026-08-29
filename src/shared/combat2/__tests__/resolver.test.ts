@@ -356,7 +356,7 @@ describe('combat2 resolver', () => {
     expect(out.characters.find((c) => c.id === 'ch-1')?.hp ?? 100).toBe(100);
   });
 
-  it('shares the reward with the killer party only, exactly once per character', () => {
+  it('pays only characters durably qualified for this spawn, exactly once each', () => {
     const out = resolveNodeTick(
       snapshot({
         creatures: [creature({ hp: 1 })],
@@ -378,7 +378,9 @@ describe('combat2 resolver', () => {
       }),
       { abilities },
     );
+    // ch-2 and ch-3 never interacted with this spawn: party membership alone is
+    // not qualification, so only the damage-over-time source is paid.
     const ids = out.rewards.map((r) => r.character_id).sort();
-    expect(ids).toEqual(['ch-1', 'ch-2']);
+    expect(ids).toEqual(['ch-1']);
   });
 });

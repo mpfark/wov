@@ -144,10 +144,6 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       party_id_at_qualification: chars.get(characterId)?.fighter.party_id ?? null,
     });
   };
-  const isQualified = (creature: WorkingCreature, characterId: string): boolean => {
-    const key = `${creature.row.creature_id}:${creature.row.spawn_seq}:${characterId}`;
-    return alreadyQualified.has(key) || proposedQualified.has(key);
-  };
 
   // ── out-of-tick events ────────────────────────────────────────
   // The commit folds these into THIS tick's batch and marks them consumed in the
