@@ -77,25 +77,57 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
   };
 }
 
-const weaponAttack: AbilitySpec = {
+/** An intent row exactly as `node_intent` shapes it. */
+function abilityIntent(
+  id: string,
+  seq: number,
+  characterId: string,
+  abilityKey: string,
+  targetCreatureId: string | null,
+): SnapshotIntent {
+  return {
+    id,
+    seq,
+    character_id: characterId,
+    intent_kind: 'ability',
+    ability_key: abilityKey,
+    stance_key: null,
+    target_creature_id: targetCreatureId,
+  };
+}
+
+/** Built through the real adapter from an authored record, never hand-shaped. */
+const built = buildAbilitySpec({
+  classKey: 'warrior',
+  classAbilityKey: 'power_strike',
   abilityKey: 'power_strike',
   label: 'Power Strike',
   mechanic: 'weapon_attack',
+  targetType: 'enemy',
+  activationMode: 'queued',
   damageType: 'physical',
-  accuracyStat: 'dex',
-  scalingStat: 'str',
   cpCost: 5,
-  baseAmount: 6,
-  perModifier: 2,
-  durationMs: null,
+  cpReservePct: null,
   intervalMs: null,
-  weaponBased: false,
-  attackCount: 1,
-  effectType: null,
-  config: {},
-};
+  amountCalc: {
+    version: 2,
+    base: 6,
+    terms: [{ source: 'stat', stat: 'str', mult: 2, role: 'primary' }],
+    rounding: 'floor',
+    unit: 'hp',
+  },
+  durationCalc: null,
+  mechanicCalcs: null,
+  effectConfig: { accuracy_stat: 'dex', stat: 'str' },
+});
+if (!('spec' in built)) throw new Error('fixture spec rejected');
+const weaponAttack: AbilitySpec = built.spec;
 
-const abilities = new Map<string, AbilitySpec>([[weaponAttack.abilityKey, weaponAttack]]);
+const abilities = new Map<string, AbilitySpec>([
+  [weaponAttack.abilityKey, weaponAttack],
+  [`warrior:${weaponAttack.abilityKey}`, weaponAttack],
+]);
+
 
 describe('combat2 resolver', () => {
   it('is deterministic for an identical snapshot and candidate tick', () => {
