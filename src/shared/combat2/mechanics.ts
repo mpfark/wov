@@ -4,11 +4,23 @@
  * One typed handler per catalogue entry, each `(ctx, spec) => MechanicOutcome`.
  * Handlers are pure: they read the snapshot view they are given and return
  * proposed mutations. They never mutate the snapshot, never touch IO and never
- * branch on an ability identity — all behaviour comes from authored parameters.
+ * branch on an ability identity — every number comes from the authored
+ * `AbilityCalc` records carried by the spec (see `catalog.ts`).
+ *
+ * Magnitudes are evaluated by the retained `ability-calc` evaluator, with the
+ * dice and the bounded-range randomness injected from the tick's seeded RNG, so
+ * a re-resolved tick reproduces the same numbers exactly.
  */
 
 import { getStatModifier } from '../formulas/stats';
 import { getClassCritRange } from '../formulas/classes';
+import {
+  evaluateCalc,
+  type AbilityCalc,
+  type CalcContextKey,
+  type CalcInputs,
+  type CalcStat,
+} from '../formulas/ability-calc';
 import {
   getAccuracyBonus,
   getAccuracyProficiency,
@@ -18,41 +30,56 @@ import {
   GLANCING_WEAK_CAP,
   getWeaponDieForItem,
   getDexCritBonus,
+  UNARMED_DIE,
+  DEFAULT_WEAPON_PROGRESSION,
   type AccuracyStat,
+  type WeaponProgressionConfig,
 } from '../formulas/combat';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import type {
   MechanicKey,
   ProposedEffectInsert,
   SnapshotCreature,
+  SnapshotEquipment,
   SnapshotFighter,
   TickEvent,
 } from './types';
 import type { TickRandom } from './rng';
 
-/** Authored ability definition, flattened from `abilities` + `base_abilities`. */
+export type AbilityTargetType = 'self' | 'ally' | 'party' | 'enemy' | 'node';
+export type AbilityActivation = 'queued' | 'instant' | 'stance';
+
+/**
+ * Authored ability definition, flattened from `abilities` + `base_abilities` +
+ * the class assignment. Built ONLY by `catalog.ts`; never hand-written in
+ * production code.
+ */
 export interface AbilitySpec {
   abilityKey: string;
+  classKey: string;
+  classAbilityKey: string;
   label: string;
   mechanic: MechanicKey;
+  targetType: AbilityTargetType;
+  activation: AbilityActivation;
   damageType: string | null;
   accuracyStat: AccuracyStat;
-  /** Primary scaling stat for magnitude. */
-  scalingStat: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+  /** Primary scaling attribute, as authored (`stat` / `magnitude_stat`). */
+  scalingStat: CalcStat;
   cpCost: number;
-  /** Flat magnitude contribution before stat scaling. */
-  baseAmount: number;
-  /** Magnitude added per point of the scaling stat's modifier. */
-  perModifier: number;
-  /** Wall-clock lifetime, ms (buffs/debuffs). */
-  durationMs: number | null;
-  /** Pulse interval, ms (periodic effects). */
+  /** Fraction of max CP reserved while a stance is active. */
+  cpReservePct: number | null;
+  amountCalc: AbilityCalc | null;
+  durationCalc: AbilityCalc | null;
+  mechanicCalcs: Record<string, AbilityCalc>;
   intervalMs: number | null;
-  /** Whether the magnitude also rolls the actor's weapon die. */
+  /** Authored: the magnitude includes the actor's weapon die. */
   weaponBased: boolean;
-  /** Number of separate attacks (`multi_attack`). */
-  attackCount: number;
+  /** Authored unarmed die override; falls back to the retained `UNARMED_DIE`. */
+  unarmedDie: number | null;
+  requiresShield: boolean;
   effectType: string | null;
+  stackType: string | null;
   config: Record<string, unknown>;
 }
 
@@ -67,17 +94,14 @@ export interface MechanicContext {
   ally?: SnapshotFighter;
   /** Effective absorb pool on the target, if any. */
   targetAbsorb?: number;
-  /** Percentage mitigation already resolved on the target. */
-  targetPercentMitigation?: number;
-  targetFlatMitigation?: number;
   /** Existing stacks of the relevant stack type on the target. */
   existingStacks?: number;
   /** Sum of authored damage amplification on the target. */
   amplification?: number;
   /** Sunder-style AC reduction on the creature. */
   creatureAcReduction?: number;
-  /** Authored weapon die inputs for the actor's main hand. */
-  weaponDie?: number;
+  /** Installed weapon progression configuration, when known. */
+  weaponProgression?: WeaponProgressionConfig;
 }
 
 export interface MechanicOutcome {
@@ -98,36 +122,147 @@ export interface MechanicOutcome {
   missed?: boolean;
   /** How many stacks a finisher burned (`stack_consume`). */
   meta_stacks_consumed?: number;
-
+  /**
+   * Set when the mechanic could not be resolved from authoritative data
+   * (missing weapon contract, missing shield, absent target). The resolver
+   * turns this into an `action_rejected` event and applies nothing.
+   */
+  rejected?: string;
 }
 
 const emptyOutcome = (): MechanicOutcome => ({ effects: [], consumeEffectIds: [], events: [] });
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 
-function statOf(actor: SnapshotFighter, stat: AbilitySpec['scalingStat']): number {
-  return actor[stat];
+// ── Equipment ───────────────────────────────────────────────────
+
+export type WeaponDieResolution =
+  | { kind: 'unarmed'; die: number }
+  | { kind: 'weapon'; die: number }
+  | { kind: 'incomplete'; missing: string[] };
+
+/**
+ * Resolve the actor's main-hand damage die from the authoritative equipment
+ * projection.
+ *
+ * When a main hand IS equipped but the projection lacks the fields the retained
+ * weapon formula needs, this returns `incomplete` — the resolver then rejects
+ * the action instead of rolling an unjustifiable die.
+ */
+export function resolveMainHandDie(
+  equipment: readonly SnapshotEquipment[],
+  level: number,
+  unarmedOverride: number | null = null,
+  progression: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
+): WeaponDieResolution {
+  const main = equipment.find((row) => row.slot === 'main_hand');
+  if (!main) return { kind: 'unarmed', die: unarmedOverride ?? UNARMED_DIE };
+
+  const missing: string[] = [];
+  if (main.weapon_tag === undefined) missing.push('weapon_tag');
+  if (main.hands === undefined) missing.push('hands');
+  if (main.item_level === undefined && main.crafted_level === null) missing.push('item_level');
+  if (main.rarity === undefined) missing.push('rarity');
+  if (missing.length > 0) return { kind: 'incomplete', missing };
+
+  const hands = main.hands === 2 ? 2 : 1;
+  const itemLevel = main.item_level ?? main.crafted_level ?? 1;
+  return {
+    kind: 'weapon',
+    die: getWeaponDieForItem(main.weapon_tag ?? null, hands, itemLevel, progression, main.rarity ?? null),
+  };
 }
 
-/** Authored magnitude: base + perModifier * modifier(stat), optionally + weapon die. */
-export function resolveMagnitude(
+/** True when the authoritative projection shows a shield in the off hand. */
+export function hasShield(equipment: readonly SnapshotEquipment[]): boolean {
+  return equipment.some(
+    (row) => row.slot === 'off_hand' && (row.item_type ?? 'shield') === 'shield',
+  );
+}
+
+// ── Authored magnitude evaluation ───────────────────────────────
+
+function modsOf(actor: SnapshotFighter): Record<CalcStat, number> {
+  return {
+    str: getStatModifier(actor.str),
+    dex: getStatModifier(actor.dex),
+    con: getStatModifier(actor.con),
+    int: getStatModifier(actor.int),
+    wis: getStatModifier(actor.wis),
+    cha: getStatModifier(actor.cha),
+  };
+}
+
+function calcInputs(
   ctx: MechanicContext,
   spec: AbilitySpec,
   stream: string,
-): number {
-  const mod = getStatModifier(statOf(ctx.actor, spec.scalingStat));
-  let amount = spec.baseAmount + spec.perModifier * mod;
-  if (spec.weaponBased) {
-    const die = ctx.weaponDie ?? resolveWeaponDie(ctx.actor);
-    amount += ctx.rng.roll(stream, die, ctx.actor.character_id, spec.abilityKey);
-  }
-  return Math.max(0, Math.floor(amount));
+  weaponDie: number | null,
+  context?: Partial<Record<CalcContextKey, number>>,
+): CalcInputs {
+  let draw = 0;
+  return {
+    level: ctx.actor.level,
+    mods: modsOf(ctx.actor),
+    context,
+    weaponDie,
+    roll: (sides) =>
+      ctx.rng.roll(stream, sides, ctx.actor.character_id, spec.abilityKey, ctx.tick, draw++),
+    random: () =>
+      ctx.rng.sample(`${stream}:range`, ctx.actor.character_id, spec.abilityKey, ctx.tick, draw++),
+  };
 }
 
-export function resolveWeaponDie(actor: SnapshotFighter): number {
-  const main = actor.equipment.find((row) => row.slot === 'main_hand');
-  if (!main) return 4; // unarmed
-  return getWeaponDieForItem(null, 1, actor.level, undefined, null);
+/** Evaluate the authored `amount_calc`. Returns null when none is authored. */
+export function resolveAmount(
+  ctx: MechanicContext,
+  spec: AbilitySpec,
+  stream: string,
+  weaponDie: number | null,
+  context?: Partial<Record<CalcContextKey, number>>,
+): number | null {
+  if (!spec.amountCalc) return null;
+  return Math.max(0, Math.floor(evaluateCalc(spec.amountCalc, calcInputs(ctx, spec, stream, weaponDie, context))));
+}
+
+/** Evaluate the authored `duration_calc` in milliseconds. */
+export function resolveDurationMs(ctx: MechanicContext, spec: AbilitySpec): number | null {
+  if (!spec.durationCalc) return null;
+  return Math.max(
+    0,
+    Math.floor(evaluateCalc(spec.durationCalc, calcInputs(ctx, spec, 'duration', null))),
+  );
+}
+
+/** Evaluate one named mechanic calc. */
+export function resolveMechanicCalc(
+  ctx: MechanicContext,
+  spec: AbilitySpec,
+  name: string,
+  context?: Partial<Record<CalcContextKey, number>>,
+  weaponDie: number | null = null,
+): number | null {
+  const calc = spec.mechanicCalcs[name];
+  if (!calc) return null;
+  return evaluateCalc(calc, calcInputs(ctx, spec, `mechanic:${name}`, weaponDie, context));
+}
+
+/** Weapon die for this actor + spec, or a rejection when the contract is short. */
+function weaponDieFor(
+  ctx: MechanicContext,
+  spec: AbilitySpec,
+): { die: number | null } | { rejected: string } {
+  if (!spec.weaponBased) return { die: null };
+  const resolution = resolveMainHandDie(
+    ctx.actor.equipment,
+    ctx.actor.level,
+    spec.unarmedDie,
+    ctx.weaponProgression,
+  );
+  if (resolution.kind === 'incomplete') {
+    return { rejected: `equipment_contract_incomplete:${resolution.missing.join(',')}` };
+  }
+  return { die: resolution.die };
 }
 
 export interface AttackDecision {
@@ -146,6 +281,7 @@ export function decideAttack(
   spec: AbilitySpec,
   targetAc: number,
   stream: string,
+  critEdge = 0,
 ): AttackDecision {
   const accStat = spec.accuracyStat;
   const accValue = ctx.actor[accStat as keyof SnapshotFighter] as number;
@@ -156,7 +292,7 @@ export function decideAttack(
 
   const roll = ctx.rng.d20(stream, ctx.actor.character_id, spec.abilityKey, ctx.tick);
   const critRange =
-    getClassCritRange(ctx.actor.class ?? '') - getDexCritBonus(ctx.actor.dex);
+    getClassCritRange(ctx.actor.class ?? '') - getDexCritBonus(ctx.actor.dex) - critEdge;
   const total = roll + bonus;
   const effectiveAc = Math.max(0, targetAc - (ctx.creatureAcReduction ?? 0));
   const margin = total - effectiveAc;
@@ -174,18 +310,35 @@ function gradedCapFor(quality: string, margin: number): number | undefined {
 
 // ── Shared building blocks ──────────────────────────────────────
 
+interface OffensiveOptions {
+  /** Authored multiplier applied to the evaluated magnitude (per-stack riders). */
+  multiplier?: number;
+  /** Authored crit-range widening (`crit_edge`). */
+  critEdge?: number;
+  context?: Partial<Record<CalcContextKey, number>>;
+}
+
 function offensiveHit(
   ctx: MechanicContext,
   spec: AbilitySpec,
   stream: string,
-  magnitudeMult = 1,
+  options: OffensiveOptions = {},
 ): MechanicOutcome {
   const outcome = emptyOutcome();
   outcome.cpCost = spec.cpCost;
   const creature = ctx.creature;
-  if (!creature) return outcome;
+  if (!creature) {
+    outcome.rejected = 'no_target';
+    return outcome;
+  }
 
-  const decision = decideAttack(ctx, spec, creature.ac, `${stream}:hit`);
+  const weapon = weaponDieFor(ctx, spec);
+  if ('rejected' in weapon) {
+    outcome.rejected = weapon.rejected;
+    return outcome;
+  }
+
+  const decision = decideAttack(ctx, spec, creature.ac, `${stream}:hit`, options.critEdge ?? 0);
   if (!decision.hit) {
     outcome.missed = true;
     outcome.events.push({
@@ -200,7 +353,8 @@ function offensiveHit(
     return outcome;
   }
 
-  const base = resolveMagnitude(ctx, spec, `${stream}:dmg`) * magnitudeMult;
+  const authored = resolveAmount(ctx, spec, `${stream}:dmg`, weapon.die, options.context) ?? 0;
+  const base = authored * (options.multiplier ?? 1);
   const qualityMult = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
   const normal = Math.max(1, Math.floor(base * qualityMult));
   const critBonus = decision.isCrit ? Math.floor(normal * 0.5) : 0;
@@ -226,6 +380,7 @@ function offensiveHit(
       roll: decision.roll,
       total: decision.total,
       damageType: spec.damageType,
+      weaponDie: weapon.die,
     },
   });
   return outcome;
@@ -239,6 +394,8 @@ function buffEffect(
   magnitude: number,
   extraConfig: Record<string, unknown> = {},
 ): ProposedEffectInsert {
+  const durationMs = resolveDurationMs(ctx, spec);
+  const isStance = spec.activation === 'stance';
   return {
     kind,
     effect_type: spec.effectType ?? spec.abilityKey,
@@ -248,36 +405,49 @@ function buffEffect(
     stacks: 1,
     magnitude,
     config: { ...spec.config, ...extraConfig },
-    expires_at: spec.durationMs ? iso(ctx.nowMs + spec.durationMs) : null,
+    // A stance has no wall-clock expiry: its lifetime is the stance itself.
+    expires_at: isStance || !durationMs ? null : iso(ctx.nowMs + durationMs),
     next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
     interval_ms: spec.intervalMs,
     is_reservation: false,
   };
 }
 
-function selfBuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
+function characterBuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
   const outcome = emptyOutcome();
   outcome.cpCost = spec.cpCost;
-  const magnitude = resolveMagnitude(ctx, spec, `${kind}:mag`);
-  const target = ctx.ally?.character_id ?? ctx.actor.character_id;
-  outcome.effects.push(buffEffect(ctx, spec, kind, target, magnitude));
-  outcome.events.push({
-    kind: 'buff_applied',
-    abilityKey: spec.abilityKey,
-    actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
-    target: { type: 'character', id: target, name: ctx.ally?.name ?? ctx.actor.name },
-    amount: magnitude,
-    meta: { effectKind: kind, durationMs: spec.durationMs },
-  });
+  const magnitude = resolveAmount(ctx, spec, `${kind}:mag`, null) ?? 0;
+  const targets: SnapshotFighter[] =
+    spec.targetType === 'ally' && ctx.ally ? [ctx.ally] : [ctx.actor];
+  for (const target of targets) {
+    outcome.effects.push(buffEffect(ctx, spec, kind, target.character_id, magnitude));
+    outcome.events.push({
+      kind: 'buff_applied',
+      abilityKey: spec.abilityKey,
+      actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      target: { type: 'character', id: target.character_id, name: target.name },
+      amount: magnitude,
+      meta: { effectKind: kind, durationMs: resolveDurationMs(ctx, spec), stance: spec.activation === 'stance' },
+    });
+  }
   return outcome;
 }
 
-function debuffOnCreature(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
+function creatureDebuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
   const outcome = emptyOutcome();
   outcome.cpCost = spec.cpCost;
   const creature = ctx.creature;
-  if (!creature) return outcome;
-  const magnitude = resolveMagnitude(ctx, spec, `${kind}:mag`);
+  if (!creature) {
+    outcome.rejected = 'no_target';
+    return outcome;
+  }
+  const weapon = weaponDieFor(ctx, spec);
+  if ('rejected' in weapon) {
+    outcome.rejected = weapon.rejected;
+    return outcome;
+  }
+  const magnitude = resolveAmount(ctx, spec, `${kind}:mag`, weapon.die) ?? 0;
+  const durationMs = resolveDurationMs(ctx, spec);
   outcome.effects.push({
     kind,
     effect_type: spec.effectType ?? spec.abilityKey,
@@ -287,18 +457,18 @@ function debuffOnCreature(ctx: MechanicContext, spec: AbilitySpec, kind: string)
     stacks: 1,
     magnitude,
     config: spec.config,
-    expires_at: spec.durationMs ? iso(ctx.nowMs + spec.durationMs) : null,
+    expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
     next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
     interval_ms: spec.intervalMs,
     is_reservation: false,
   });
   outcome.events.push({
-    kind: 'debuff_applied',
+    kind: kind === 'dot' ? 'dot_applied' : 'debuff_applied',
     abilityKey: spec.abilityKey,
     actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
     target: { type: 'creature', id: creature.creature_id, name: creature.name },
     amount: magnitude,
-    meta: { effectKind: kind, durationMs: spec.durationMs },
+    meta: { effectKind: kind, durationMs, intervalMs: spec.intervalMs },
   });
   return outcome;
 }
@@ -315,26 +485,39 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   multi_attack: (ctx, spec) => {
     const merged = emptyOutcome();
     merged.cpCost = spec.cpCost;
+    // Authored attack count (Barrage: `arrow_count`), never a hard-coded number.
+    const count = Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'arrow_count') ?? 1));
     let total = 0;
-    const count = Math.max(1, spec.attackCount);
     for (let i = 0; i < count; i++) {
-      const single = offensiveHit({ ...ctx }, spec, `multi_attack:${i}`);
+      const single = offensiveHit(ctx, spec, `multi_attack:${i}`);
+      if (single.rejected) return single;
       total += single.creatureDamage ?? 0;
       merged.events.push(...single.events);
     }
     merged.creatureDamage = total;
+    merged.events.push({
+      kind: 'multi_attack_summary',
+      abilityKey: spec.abilityKey,
+      actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      amount: total,
+      meta: { attacks: count },
+    });
     return merged;
   },
 
-  burst_damage: (ctx, spec) => offensiveHit(ctx, spec, 'burst_damage', 1.5),
+  burst_damage: (ctx, spec) =>
+    offensiveHit(ctx, spec, 'burst_damage', {
+      // Authored crit widening (Grand Finale `crit_edge`).
+      critEdge: Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'crit_edge') ?? 0)),
+    }),
 
-  dot_debuff: (ctx, spec) => debuffOnCreature(ctx, spec, 'dot'),
+  dot_debuff: (ctx, spec) => creatureDebuff(ctx, spec, 'dot'),
 
   heal: (ctx, spec) => {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
-    const target = ctx.ally ?? ctx.actor;
-    const amount = resolveMagnitude(ctx, spec, 'heal');
+    const target = spec.targetType === 'ally' && ctx.ally ? ctx.ally : ctx.actor;
+    const amount = resolveAmount(ctx, spec, 'heal', null) ?? 0;
     outcome.healing = amount;
     outcome.events.push({
       kind: 'heal',
@@ -350,8 +533,19 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
     const target = ctx.ally;
-    if (!target) return outcome;
-    const amount = resolveMagnitude(ctx, spec, 'hp_transfer');
+    if (!target) {
+      outcome.rejected = 'no_target';
+      return outcome;
+    }
+    const requested = resolveAmount(ctx, spec, 'hp_transfer', null) ?? 0;
+    // Authored floor: the caster may never fall below the reserved HP.
+    const reserve = Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'reserve_hp') ?? 0));
+    const spendable = Math.max(0, ctx.actor.hp - reserve);
+    const amount = Math.min(requested, spendable);
+    if (amount <= 0) {
+      outcome.rejected = 'insufficient_hp';
+      return outcome;
+    }
     outcome.healing = amount;
     outcome.actorHpCost = amount;
     outcome.events.push({
@@ -360,26 +554,54 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
       target: { type: 'character', id: target.character_id, name: target.name },
       amount,
+      meta: { reserveHp: reserve },
     });
     return outcome;
   },
 
-  party_regen: (ctx, spec) => selfBuff(ctx, spec, 'party_regen'),
-  absorb_buff: (ctx, spec) => selfBuff(ctx, spec, 'absorb'),
-  block_buff: (ctx, spec) => selfBuff(ctx, spec, 'block'),
-  evasion_buff: (ctx, spec) => selfBuff(ctx, spec, 'evasion'),
-  offense_buff: (ctx, spec) => selfBuff(ctx, spec, 'offense'),
-  regen_buff: (ctx, spec) => selfBuff(ctx, spec, 'regen'),
-  stealth_buff: (ctx, spec) => selfBuff(ctx, spec, 'stealth'),
+  party_regen: (ctx, spec) => characterBuff(ctx, spec, 'party_regen'),
+  absorb_buff: (ctx, spec) => characterBuff(ctx, spec, 'absorb'),
+  evasion_buff: (ctx, spec) => characterBuff(ctx, spec, 'evasion'),
+  offense_buff: (ctx, spec) => characterBuff(ctx, spec, 'offense'),
+  regen_buff: (ctx, spec) => characterBuff(ctx, spec, 'regen'),
+  stealth_buff: (ctx, spec) => characterBuff(ctx, spec, 'stealth'),
+
+  block_buff: (ctx, spec) => {
+    const outcome = emptyOutcome();
+    outcome.cpCost = spec.cpCost;
+    if (spec.requiresShield && !hasShield(ctx.actor.equipment)) {
+      outcome.rejected = 'requires_shield';
+      return outcome;
+    }
+    const amount = Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'block_amount') ?? 0));
+    const chance = resolveMechanicCalc(ctx, spec, 'block_chance') ?? 0;
+    const cap = typeof spec.config.block_chance_cap === 'number'
+      ? (spec.config.block_chance_cap as number)
+      : 1;
+    outcome.effects.push(
+      buffEffect(ctx, spec, 'block', ctx.actor.character_id, amount, {
+        block_chance: Math.min(cap, Math.max(0, chance)),
+      }),
+    );
+    outcome.events.push({
+      kind: 'buff_applied',
+      abilityKey: spec.abilityKey,
+      actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      target: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      amount,
+      meta: { effectKind: 'block', blockChance: Math.min(cap, Math.max(0, chance)) },
+    });
+    return outcome;
+  },
 
   mitigation_buff: (ctx, spec) => {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
     const params = readMitigationParams(spec.config);
-    const magnitude = resolveMagnitude(ctx, spec, 'mitigation');
-    const target = ctx.ally?.character_id ?? ctx.actor.character_id;
+    const magnitude = resolveAmount(ctx, spec, 'mitigation', null) ?? 0;
+    const target = spec.targetType === 'ally' && ctx.ally ? ctx.ally : ctx.actor;
     outcome.effects.push(
-      buffEffect(ctx, spec, 'mitigation', target, magnitude, {
+      buffEffect(ctx, spec, 'mitigation', target.character_id, magnitude, {
         mitigation_mode: params.mode,
         shield_dr_bonus: params.shieldDrBonus,
         // Authored only: a missing magnitude means no softening, never a default.
@@ -394,30 +616,41 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       kind: 'buff_applied',
       abilityKey: spec.abilityKey,
       actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
-      target: { type: 'character', id: target, name: ctx.ally?.name ?? ctx.actor.name },
+      target: { type: 'character', id: target.character_id, name: target.name },
       amount: magnitude,
       meta: { effectKind: 'mitigation', mode: params.mode, isTaunt: params.isTaunt },
     });
     return outcome;
   },
 
-  control_debuff: (ctx, spec) => debuffOnCreature(ctx, spec, 'control'),
+  control_debuff: (ctx, spec) => creatureDebuff(ctx, spec, 'control'),
 
   stack_apply: (ctx, spec) => {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
     const creature = ctx.creature;
-    if (!creature) return outcome;
+    if (!creature) {
+      outcome.rejected = 'no_target';
+      return outcome;
+    }
+    const existing = Math.max(0, ctx.existingStacks ?? 0);
+    const maxStacks = Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'max_stacks') ?? 1));
+    if (existing >= maxStacks) {
+      outcome.rejected = 'max_stacks';
+      return outcome;
+    }
+    const durationMs = resolveDurationMs(ctx, spec)
+      ?? (typeof spec.config.dot_duration_ms === 'number' ? (spec.config.dot_duration_ms as number) : null);
     outcome.effects.push({
       kind: 'stack',
-      effect_type: spec.effectType ?? spec.abilityKey,
+      effect_type: spec.stackType ?? spec.effectType ?? spec.abilityKey,
       ability_key: spec.abilityKey,
       target_creature_id: creature.creature_id,
       source_character_id: ctx.actor.character_id,
       stacks: 1,
-      magnitude: resolveMagnitude(ctx, spec, 'stack_apply'),
+      magnitude: resolveAmount(ctx, spec, 'stack_apply', null) ?? 0,
       config: spec.config,
-      expires_at: spec.durationMs ? iso(ctx.nowMs + spec.durationMs) : null,
+      expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
       is_reservation: false,
     });
     outcome.events.push({
@@ -425,15 +658,25 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       abilityKey: spec.abilityKey,
       actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
       target: { type: 'creature', id: creature.creature_id, name: creature.name },
-      amount: (ctx.existingStacks ?? 0) + 1,
-      meta: { stacks: (ctx.existingStacks ?? 0) + 1 },
+      amount: existing + 1,
+      meta: { stacks: existing + 1, maxStacks, stackNoun: spec.config.stack_noun },
     });
     return outcome;
   },
 
   stack_consume: (ctx, spec) => {
     const stacks = Math.max(0, ctx.existingStacks ?? 0);
-    const outcome = offensiveHit(ctx, spec, 'stack_consume', 1 + stacks * 0.25);
+    // Authored per-stack rider, evaluated with the consumed stacks in context.
+    const multiplier = resolveMechanicCalc(
+      ctx,
+      spec,
+      'per_stack_multiplier',
+      { consumed_stacks: stacks, active_stacks: stacks },
+    ) ?? 1;
+    const outcome = offensiveHit(ctx, spec, 'stack_consume', {
+      multiplier: multiplier > 0 ? multiplier : 1,
+      context: { consumed_stacks: stacks, active_stacks: stacks },
+    });
     outcome.meta_stacks_consumed = stacks;
     return outcome;
   },
@@ -441,18 +684,20 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   aura_pulse: (ctx, spec) => {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
-    const creature = ctx.creature;
-    if (!creature) return outcome;
+    const durationMs = resolveDurationMs(ctx, spec);
+    const magnitude = resolveAmount(ctx, spec, 'aura_pulse', null) ?? 0;
+    // A node aura is anchored on its caster: the pulse resolves against whoever
+    // is present when it fires, so it is not bound to one creature target.
     outcome.effects.push({
       kind: 'aura',
       effect_type: spec.effectType ?? spec.abilityKey,
       ability_key: spec.abilityKey,
-      target_creature_id: creature.creature_id,
+      target_character_id: ctx.actor.character_id,
       source_character_id: ctx.actor.character_id,
       stacks: 1,
-      magnitude: resolveMagnitude(ctx, spec, 'aura_pulse'),
+      magnitude,
       config: spec.config,
-      expires_at: spec.durationMs ? iso(ctx.nowMs + spec.durationMs) : null,
+      expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
       next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
       interval_ms: spec.intervalMs,
       is_reservation: false,
@@ -461,10 +706,38 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       kind: 'aura_started',
       abilityKey: spec.abilityKey,
       actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
-      target: { type: 'creature', id: creature.creature_id, name: creature.name },
+      amount: magnitude,
+      meta: { durationMs, intervalMs: spec.intervalMs },
     });
     return outcome;
   },
 
-  reactive_damage: (ctx, spec) => selfBuff(ctx, spec, 'reactive'),
+  /**
+   * Reactive retaliation. The authored catalogue currently spells Holy Shield's
+   * mechanic `reactive_holy`, which is NOT in the closed key list, so the
+   * catalogue rejects it rather than assuming this handler. Resolving that
+   * spelling is a configuration decision, not a code guess.
+   */
+  reactive_damage: (ctx, spec) => {
+    const outcome = emptyOutcome();
+    outcome.cpCost = spec.cpCost;
+    const magnitude = Math.max(
+      0,
+      Math.floor(resolveMechanicCalc(ctx, spec, 'retaliation_damage') ?? 0),
+    );
+    outcome.effects.push(
+      buffEffect(ctx, spec, 'reactive', ctx.actor.character_id, magnitude, {
+        once_per_attacker_per_tick: spec.config.once_per_attacker_per_tick === true,
+      }),
+    );
+    outcome.events.push({
+      kind: 'buff_applied',
+      abilityKey: spec.abilityKey,
+      actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      target: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      amount: magnitude,
+      meta: { effectKind: 'reactive' },
+    });
+    return outcome;
+  },
 };
