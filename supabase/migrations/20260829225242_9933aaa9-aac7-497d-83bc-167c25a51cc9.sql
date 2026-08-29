@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.combat_intent_probe(uuid,uuid,text,text,text,uuid,uuid,uuid,integer);
