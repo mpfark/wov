@@ -206,9 +206,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         target.hp -= applied;
         target.damaged = true;
         target.dirty = true;
+        // A DoT tick is an interaction: it qualifies its source for this spawn
+        // even when the source has since left the node.
+        if (effect.source_character_id) qualify(target, effect.source_character_id, 'damage');
         if (target.hp === 0 && target.killedBy === null) {
           target.killedBy = effect.source_character_id;
         }
+
         emit({
           kind: 'effect_pulse',
           abilityKey: effect.ability_key ?? undefined,
