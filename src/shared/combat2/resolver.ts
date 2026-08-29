@@ -573,6 +573,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     applyCreatureDamage(creature, tank, null, 0);
   }
 
+  // Reactive retaliation bookkeeping: one reaction per reactive effect per
+  // attacking creature spawn per tick when the authored configuration says so.
+  const reactedThisTick = new Set<string>();
+
   function applyCreatureDamage(
     creature: WorkingCreature,
     targetFighter: SnapshotFighter,
@@ -667,6 +671,50 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         absorbed: breakdown.absorbed,
       },
     });
+
+    // ── reactive retaliation ────────────────────────────────────
+    // Authored trigger only: a landed attack against the effect's owner. The
+    // damage belongs to the effect's SOURCE character (who may be offscreen),
+    // uses the same creature-damage bookkeeping as any other source, and can
+    // never produce a second death: a creature already at zero HP is skipped,
+    // so no extra death, reward, XP or loot can follow from it.
+    for (const effect of effectsFor(snapshot.effects, targetFighter.character_id, 'reactive')) {
+      if (expiredIds.has(effect.id)) continue;
+      if (proposed.effects_delete.includes(effect.id)) continue;
+      if (creature.hp <= 0 || !creature.row.is_alive) continue;
+
+      const reactionKey = `${effect.id}:${creature.row.creature_id}:${creature.row.spawn_seq}`;
+      if (effect.config?.once_per_attacker_per_tick === true) {
+        if (reactedThisTick.has(reactionKey)) continue;
+        reactedThisTick.add(reactionKey);
+      }
+
+      const magnitude = Math.max(0, Math.floor(effect.magnitude ?? 0));
+      if (magnitude === 0) continue;
+
+      const dealt = Math.min(creature.hp, magnitude);
+      creature.hp -= dealt;
+      creature.damaged = true;
+      creature.dirty = true;
+      const source = effect.source_character_id;
+      if (source) qualify(creature, source, 'damage');
+      if (creature.hp === 0 && creature.killedBy === null) creature.killedBy = source;
+
+      emit({
+        kind: 'effect_pulse',
+        abilityKey: effect.ability_key ?? undefined,
+        actor: source
+          ? { type: 'character', id: source, name: chars.get(source)?.fighter.name ?? '' }
+          : undefined,
+        target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
+        amount: dealt,
+        meta: {
+          effectKind: 'reactive',
+          reactive: true,
+          damageType: (effect.config?.damage_type as string | undefined) ?? null,
+        },
+      });
+    }
   }
 
   // ── 4. deaths and rewards ─────────────────────────────────────
