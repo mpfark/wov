@@ -159,11 +159,14 @@ export function resolveMainHandDie(
   const main = equipment.find((row) => row.slot === 'main_hand');
   if (!main) return { kind: 'unarmed', die: unarmedOverride ?? UNARMED_DIE };
 
+  // A main hand IS equipped: every field the retained formula reads must be
+  // authored. A missing OR null value is incomplete, never defaulted.
   const missing: string[] = [];
-  if (main.weapon_tag === undefined) missing.push('weapon_tag');
-  if (main.hands === undefined) missing.push('hands');
-  if (main.item_level === undefined && main.crafted_level === null) missing.push('item_level');
-  if (main.rarity === undefined) missing.push('rarity');
+  if (!main.item_present) missing.push('item');
+  if (main.weapon_tag == null) missing.push('weapon_tag');
+  if (main.hands == null) missing.push('hands');
+  if (main.item_level == null && main.crafted_level == null) missing.push('item_level');
+  if (main.rarity == null) missing.push('rarity');
   if (missing.length > 0) return { kind: 'incomplete', missing };
 
   const hands = main.hands === 2 ? 2 : 1;
@@ -172,6 +175,7 @@ export function resolveMainHandDie(
     kind: 'weapon',
     die: getWeaponDieForItem(main.weapon_tag ?? null, hands, itemLevel, progression, main.rarity ?? null),
   };
+
 }
 
 /** True when the authoritative projection shows a shield in the off hand. */
