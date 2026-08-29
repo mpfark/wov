@@ -3164,6 +3164,7 @@ export type Database = {
           id: string
           intent_kind: string
           reject_reason: string | null
+          request_id: string | null
           seq: number
           stance_key: string | null
           status: string
@@ -3177,6 +3178,7 @@ export type Database = {
           id?: string
           intent_kind?: string
           reject_reason?: string | null
+          request_id?: string | null
           seq?: number
           stance_key?: string | null
           status?: string
@@ -3190,6 +3192,7 @@ export type Database = {
           id?: string
           intent_kind?: string
           reject_reason?: string | null
+          request_id?: string | null
           seq?: number
           stance_key?: string | null
           status?: string
@@ -3298,6 +3301,7 @@ export type Database = {
           id: string
           occurred_at: string
           payload: Json
+          request_id: string | null
           target_character_id: string | null
           target_creature_id: string | null
         }
@@ -3312,6 +3316,7 @@ export type Database = {
           id?: string
           occurred_at?: string
           payload?: Json
+          request_id?: string | null
           target_character_id?: string | null
           target_creature_id?: string | null
         }
@@ -3326,6 +3331,7 @@ export type Database = {
           id?: string
           occurred_at?: string
           payload?: Json
+          request_id?: string | null
           target_character_id?: string | null
           target_creature_id?: string | null
         }
@@ -4158,6 +4164,7 @@ export type Database = {
       ability_config_version: { Args: never; Returns: string }
       ability_damage_type_keys: { Args: never; Returns: string[] }
       ability_damaging_mechanics: { Args: never; Returns: string[] }
+      ability_key_is_stance: { Args: { _key: string }; Returns: boolean }
       ability_mechanic_params: { Args: never; Returns: Json }
       ability_roll_based_mechanics: { Args: never; Returns: string[] }
       accept_party_invite: {
@@ -4298,6 +4305,27 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
+      combat_flee: {
+        Args: {
+          _character_id: string
+          _encounter_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat_intent: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _encounter_id: string
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
+      combat_mode_is_open: { Args: never; Returns: boolean }
       combat_soak_access_check: {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
