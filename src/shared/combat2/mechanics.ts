@@ -60,6 +60,12 @@ export interface AbilitySpec {
   classAbilityKey: string;
   label: string;
   mechanic: MechanicKey;
+  /**
+   * The mechanic exactly as authored, before mechanic-level normalization onto
+   * the closed registry (see `MECHANIC_NORMALIZATION` in `catalog.ts`). Kept so
+   * a normalized mechanic is never silently indistinguishable from a native one.
+   */
+  authoredMechanic: string;
   targetType: AbilityTargetType;
   activation: AbilityActivation;
   damageType: string | null;
@@ -719,9 +725,11 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
 
   /**
    * Reactive retaliation. The authored catalogue currently spells Holy Shield's
-   * mechanic `reactive_holy`, which is NOT in the closed key list, so the
-   * catalogue rejects it rather than assuming this handler. Resolving that
-   * spelling is a configuration decision, not a code guess.
+   * The authored `reactive_holy` mechanic is normalized onto this key by
+   * `catalog.ts` at the MECHANIC level (same lifecycle, holy damage type), so
+   * Holy Shield resolves here with its authored damage type, magnitude
+   * (`retaliation_damage`), trigger configuration and source attribution intact.
+   * The effect is owned by, and attributed to, the character that activated it.
    */
   reactive_damage: (ctx, spec) => {
     const outcome = emptyOutcome();
@@ -733,6 +741,7 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     outcome.effects.push(
       buffEffect(ctx, spec, 'reactive', ctx.actor.character_id, magnitude, {
         once_per_attacker_per_tick: spec.config.once_per_attacker_per_tick === true,
+        damage_type: spec.damageType,
       }),
     );
     outcome.events.push({

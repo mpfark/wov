@@ -152,10 +152,14 @@ export function buildAbilitySpec(
     },
   });
 
-  if (!isMechanicKey(record.mechanic)) {
-    return reject('unsupported_mechanic', record.mechanic ?? 'null');
+  const authoredMechanic = record.mechanic;
+  const normalized =
+    typeof authoredMechanic === 'string' ? MECHANIC_NORMALIZATION[authoredMechanic] : undefined;
+  const resolvedMechanic = normalized ?? authoredMechanic;
+  if (!isMechanicKey(resolvedMechanic)) {
+    return reject('unsupported_mechanic', authoredMechanic ?? 'null');
   }
-  const mechanic: MechanicKey = record.mechanic;
+  const mechanic: MechanicKey = resolvedMechanic;
 
   const targetType = record.targetType as AbilityTargetType | null;
   if (!targetType || !TARGET_TYPES.includes(targetType)) {
@@ -210,6 +214,7 @@ export function buildAbilitySpec(
     classAbilityKey: record.classAbilityKey,
     label: record.label ?? record.abilityKey,
     mechanic,
+    authoredMechanic: authoredMechanic ?? mechanic,
     targetType,
     activation,
     damageType: record.damageType ?? null,
