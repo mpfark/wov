@@ -138,6 +138,6 @@ describe('equipment-derived weapon dice', () => {
       10,
     );
     expect(out.kind).toBe('weapon');
-    expect(out.die).toBeGreaterThan(0);
+    if (out.kind === 'weapon') expect(out.die).toBeGreaterThan(0);
   });
 });
