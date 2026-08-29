@@ -116,6 +116,52 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     });
   }
 
+  // ── durable reward qualification ──────────────────────────────
+  // A qualification is an explicit INTERACTION with one creature spawn. It is
+  // scoped by `spawn_seq`, so qualifying against an earlier spawn can never pay
+  // out for a respawn. Rows already present in the snapshot are not re-proposed
+  // unless this tick refreshes them.
+  const alreadyQualified = new Set(
+    (snapshot.participation ?? [])
+      .filter((p) => p.qualification === 'qualified')
+      .map((p) => `${p.creature_id}:${p.spawn_seq}:${p.character_id}`),
+  );
+  const proposedQualified = new Set<string>();
+  const qualify = (
+    creature: WorkingCreature,
+    characterId: string,
+    reason: ProposedParticipation['qualified_by'],
+  ): void => {
+    const key = `${creature.row.creature_id}:${creature.row.spawn_seq}:${characterId}`;
+    if (proposedQualified.has(key)) return;
+    proposedQualified.add(key);
+    proposed.participation.push({
+      creature_id: creature.row.creature_id,
+      spawn_seq: creature.row.spawn_seq,
+      character_id: characterId,
+      qualification: 'qualified',
+      qualified_by: reason,
+      party_id_at_qualification: chars.get(characterId)?.fighter.party_id ?? null,
+    });
+  };
+  const isQualified = (creature: WorkingCreature, characterId: string): boolean => {
+    const key = `${creature.row.creature_id}:${creature.row.spawn_seq}:${characterId}`;
+    return alreadyQualified.has(key) || proposedQualified.has(key);
+  };
+
+  // ── out-of-tick events ────────────────────────────────────────
+  // The commit folds these into THIS tick's batch and marks them consumed in the
+  // same transaction, so delivery is exactly once. The resolver only names them.
+  for (const pending of snapshot.pending_events ?? []) {
+    proposed.pending_event_ids.push(pending.id);
+  }
+
+  /** Class-scoped catalogue lookup; falls back to the bare ability key. */
+  const specFor = (classKey: string | null, abilityKey: string): AbilitySpec | undefined =>
+    deps.abilities.get(`${classKey ?? ''}:${abilityKey}`) ?? deps.abilities.get(abilityKey);
+
+
+
   const livingCharacters = (): Set<string> => {
     const set = new Set<string>();
     for (const [id, c] of chars) if (c.hp > 0) set.add(id);
