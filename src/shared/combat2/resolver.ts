@@ -253,19 +253,153 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   }
 
   // ── 2. player intents (exactly the ones inside the cutoff) ─────
+  //
+  // Every intent inside the cutoff is consumed exactly once, whether it
+  // resolves or is rejected — a rejected intent must never be retried silently
+  // on a later tick.
+  //
+  // Reserved CP is modelled as a `is_reservation` effect whose magnitude is the
+  // reserved amount. Only a committed tick may create or remove one; the
+  // browser may only queue the intent. Dropping never refunds the spent CP
+  // (see `mem://game/stance-lifecycle`).
+  const reservations = snapshot.effects.filter((e) => e.is_reservation);
+  const droppedReservationIds = new Set<string>();
+  const activatedStances = new Set<string>();
+
+  const reservedFor = (characterId: string): number =>
+    reservations
+      .filter((e) => e.target_character_id === characterId && !droppedReservationIds.has(e.id))
+      .reduce((sum, e) => sum + Math.max(0, e.magnitude ?? 0), 0);
+
   for (const intent of snapshot.intents) {
     proposed.intent_ids.push(intent.id);
+    const intentKey = intent.ability_key ?? intent.stance_key ?? undefined;
     const actor = chars.get(intent.character_id);
     if (!actor || actor.hp <= 0 || !actor.fighter.present) {
-      emit({ kind: 'action_rejected', outcomeReason: 'not_present_or_dead', abilityKey: intent.ability_key ?? undefined });
+      emit({ kind: 'action_rejected', outcomeReason: 'not_present_or_dead', abilityKey: intentKey });
       continue;
     }
-    const spec = intent.ability_key ? deps.abilities.get(intent.ability_key) : undefined;
+
+    const spec = intentKey ? specFor(actor.fighter.class, intentKey) : undefined;
     if (!spec) {
-      emit({ kind: 'action_rejected', outcomeReason: 'unknown_ability', abilityKey: intent.ability_key ?? undefined });
+      emit({ kind: 'action_rejected', outcomeReason: 'unknown_ability', abilityKey: intentKey });
       continue;
     }
-    if (actor.cp < spec.cpCost) {
+
+    // ── 2a. stance drop: authoritative, no refund ────────────────
+    if (intent.intent_kind === 'stance_drop') {
+      const owned = snapshot.effects.filter(
+        (e) =>
+          e.ability_key === spec.abilityKey &&
+          e.target_character_id === actor.fighter.character_id &&
+          !expiredIds.has(e.id),
+      );
+      if (owned.length === 0) {
+        emit({ kind: 'action_rejected', outcomeReason: 'stance_not_active', abilityKey: spec.abilityKey });
+        continue;
+      }
+      for (const effect of owned) {
+        proposed.effects_delete.push(effect.id);
+        if (effect.is_reservation) droppedReservationIds.add(effect.id);
+      }
+      emit({
+        kind: 'stance_dropped',
+        abilityKey: spec.abilityKey,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        meta: { refunded: false },
+      });
+      continue;
+    }
+
+    // ── 2b. stance activation ────────────────────────────────────
+    if (intent.intent_kind === 'stance_activate') {
+      if (spec.activation !== 'stance' || !spec.cpReservePct) {
+        emit({ kind: 'action_rejected', outcomeReason: 'not_a_stance', abilityKey: spec.abilityKey });
+        continue;
+      }
+      const alreadyActive = reservations.some(
+        (e) =>
+          e.ability_key === spec.abilityKey &&
+          e.target_character_id === actor.fighter.character_id &&
+          !droppedReservationIds.has(e.id),
+      );
+      if (alreadyActive || activatedStances.has(spec.abilityKey)) {
+        emit({ kind: 'action_rejected', outcomeReason: 'stance_already_active', abilityKey: spec.abilityKey });
+        continue;
+      }
+
+      // Authored mutual exclusion (Ignite / Envenom).
+      const exclusive = Array.isArray(spec.config.mutually_exclusive_with)
+        ? (spec.config.mutually_exclusive_with as unknown[]).filter((v): v is string => typeof v === 'string')
+        : [];
+      const conflict = reservations.find(
+        (e) =>
+          e.target_character_id === actor.fighter.character_id &&
+          !droppedReservationIds.has(e.id) &&
+          e.ability_key !== null &&
+          exclusive.includes(e.ability_key),
+      );
+      if (conflict) {
+        emit({
+          kind: 'action_rejected',
+          outcomeReason: 'stance_mutually_exclusive',
+          abilityKey: spec.abilityKey,
+          meta: { conflictsWith: conflict.ability_key },
+        });
+        continue;
+      }
+
+      const reserveAmount = Math.floor(actor.fighter.max_cp * spec.cpReservePct);
+      const availableCp = actor.cp - reservedFor(actor.fighter.character_id);
+      if (availableCp < spec.cpCost + reserveAmount) {
+        emit({ kind: 'action_rejected', outcomeReason: 'insufficient_cp', abilityKey: spec.abilityKey });
+        continue;
+      }
+
+      const ctx: MechanicContext = {
+        rng,
+        nowMs,
+        tick,
+        actor: actor.fighter,
+        weaponProgression: deps.weaponProgression,
+      };
+      const outcome = MECHANIC_HANDLERS[spec.mechanic](ctx, spec);
+      if (outcome.rejected) {
+        emit({ kind: 'action_rejected', outcomeReason: outcome.rejected, abilityKey: spec.abilityKey });
+        continue;
+      }
+
+      activatedStances.add(spec.abilityKey);
+      actor.cp = Math.max(0, actor.cp - spec.cpCost);
+      actor.dirty = true;
+      proposed.effects_insert.push({
+        kind: 'reservation',
+        effect_type: 'cp_reservation',
+        ability_key: spec.abilityKey,
+        target_character_id: actor.fighter.character_id,
+        source_character_id: actor.fighter.character_id,
+        stacks: 1,
+        magnitude: reserveAmount,
+        config: { reserve_pct: spec.cpReservePct },
+        expires_at: null,
+        is_reservation: true,
+      });
+      // The stance's own effect(s) carry no wall-clock expiry (see `buffEffect`).
+      for (const effect of outcome.effects) proposed.effects_insert.push(effect);
+      emit({
+        kind: 'stance_activated',
+        abilityKey: spec.abilityKey,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        amount: reserveAmount,
+        meta: { reservePct: spec.cpReservePct },
+      });
+      for (const event of outcome.events) emit(event);
+      continue;
+    }
+
+    // ── 2c. ordinary ability ─────────────────────────────────────
+    const availableCp = actor.cp - reservedFor(actor.fighter.character_id);
+    if (availableCp < spec.cpCost) {
       emit({ kind: 'action_rejected', outcomeReason: 'insufficient_cp', abilityKey: spec.abilityKey });
       continue;
     }
@@ -277,6 +411,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       emit({ kind: 'action_rejected', outcomeReason: 'target_dead', abilityKey: spec.abilityKey });
       continue;
     }
+    if (spec.targetType === 'enemy' && !targetCreature) {
+      emit({ kind: 'action_rejected', outcomeReason: 'no_target', abilityKey: spec.abilityKey });
+      continue;
+    }
 
     const stackEffects = targetCreature
       ? snapshot.effects.filter(
@@ -284,6 +422,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
             e.kind === 'stack' &&
             e.target_creature_id === targetCreature.row.creature_id &&
             e.source_character_id === actor.fighter.character_id &&
+            (spec.stackType === null || e.effect_type === spec.stackType) &&
             !expiredIds.has(e.id),
         )
       : [];
@@ -295,6 +434,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       actor: actor.fighter,
       creature: targetCreature?.row,
       targetAbsorb: 0,
+      weaponProgression: deps.weaponProgression,
       existingStacks: stackEffects.reduce((sum, e) => sum + Math.max(1, e.stacks), 0),
       creatureAcReduction: targetCreature
         ? snapshot.effects
@@ -310,6 +450,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     };
 
     const outcome: MechanicOutcome = MECHANIC_HANDLERS[spec.mechanic](ctx, spec);
+    if (outcome.rejected) {
+      emit({ kind: 'action_rejected', outcomeReason: outcome.rejected, abilityKey: spec.abilityKey });
+      continue;
+    }
 
     if (outcome.cpCost) {
       actor.cp = Math.max(0, actor.cp - outcome.cpCost);
@@ -318,6 +462,16 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     if (outcome.actorHpCost) {
       actor.hp = Math.max(1, actor.hp - outcome.actorHpCost);
       actor.dirty = true;
+    }
+    if (targetCreature) {
+      // Interaction-based qualification: an attempt that reached the creature
+      // qualifies, including a miss (it engaged that spawn) — but only when the
+      // mechanic actually addressed the creature.
+      if (outcome.creatureDamage !== undefined || outcome.missed) {
+        qualify(targetCreature, actor.fighter.character_id, 'damage');
+      } else if (outcome.effects.some((e) => e.target_creature_id)) {
+        qualify(targetCreature, actor.fighter.character_id, 'debuff');
+      }
     }
     if (outcome.creatureDamage && targetCreature) {
       const applied = Math.min(targetCreature.hp, outcome.creatureDamage);
@@ -343,6 +497,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     }
     for (const event of outcome.events) emit(event);
   }
+
 
   // ── 3. creature actions ───────────────────────────────────────
   for (const creature of creatures.values()) {
