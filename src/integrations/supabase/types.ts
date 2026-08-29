@@ -4305,6 +4305,10 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
+      combat_enter: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
       combat_flee: {
         Args: {
           _character_id: string
