@@ -70,6 +70,21 @@ export interface AbilityCatalog {
 const TARGET_TYPES: readonly AbilityTargetType[] = ['self', 'ally', 'party', 'enemy', 'node'];
 const ACTIVATIONS: readonly AbilityActivation[] = ['queued', 'instant', 'stance'];
 
+/**
+ * Mechanic-level normalization of authored mechanic spellings onto the closed
+ * registry. This is a MECHANIC decision, never an ability-identity branch: the
+ * authored `reactive_holy` mechanic is the reactive-retaliation lifecycle
+ * (a self-owned effect that retaliates against an attacker, magnitude from
+ * `retaliation_damage`, no independent pulse schedule) configured with a holy
+ * damage type. Its damage type, magnitude calculation, duration, trigger
+ * configuration and source attribution are all carried through unchanged from
+ * the authored record; only the registry key is normalized, and the authored
+ * spelling stays visible on the spec as `authoredMechanic`.
+ */
+const MECHANIC_NORMALIZATION: Readonly<Record<string, MechanicKey>> = {
+  reactive_holy: 'reactive_damage',
+};
+
 /** Mechanics whose magnitude comes from `amount_calc`. */
 const NEEDS_AMOUNT: readonly MechanicKey[] = [
   'weapon_attack', 'spell_attack', 'multi_attack', 'burst_damage', 'dot_debuff',
@@ -83,7 +98,9 @@ const NEEDS_MECHANIC_CALCS: Partial<Record<MechanicKey, readonly string[]>> = {
   multi_attack: ['arrow_count'],
   stack_consume: ['per_stack_multiplier'],
   block_buff: ['block_amount', 'block_chance'],
+  reactive_damage: ['retaliation_damage'],
 };
+
 
 /** Mechanics that pulse on an interval and are meaningless without one. */
 const NEEDS_INTERVAL: readonly MechanicKey[] = ['dot_debuff', 'party_regen', 'aura_pulse'];
