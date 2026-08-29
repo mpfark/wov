@@ -145,8 +145,8 @@ describe('installed claim contract', () => {
     const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
     (broken.fighters as Array<Record<string, unknown>>)[0].hp = '100';
     const out = decodeSnapshot(broken);
-    expect(out.ok).toBe(false);
-    if (!out.ok) expect(out.errors.join(';')).toContain('fighters[0].hp');
+    if (out.ok) throw new Error('expected the decode to fail closed');
+    expect(out.errors.join(';')).toContain('fighters[0].hp');
   });
 
   it('never invents equipment when the projection omits a field', () => {
@@ -156,8 +156,8 @@ describe('installed claim contract', () => {
     >;
     delete equipment[0].item_present;
     const out = decodeSnapshot(broken);
-    expect(out.ok).toBe(false);
-    if (!out.ok) expect(out.errors.join(';')).toContain('equipment[0].item_present');
+    if (out.ok) throw new Error('expected the decode to fail closed');
+    expect(out.errors.join(';')).toContain('equipment[0].item_present');
   });
 
   it('resolves the first-hit kill with the equipped weapon, proposing same-tick participation', () => {
