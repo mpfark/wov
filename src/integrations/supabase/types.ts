@@ -3162,8 +3162,10 @@ export type Database = {
           created_at: string
           encounter_id: string
           id: string
+          intent_kind: string
           reject_reason: string | null
           seq: number
+          stance_key: string | null
           status: string
           target_creature_id: string | null
         }
@@ -3173,8 +3175,10 @@ export type Database = {
           created_at?: string
           encounter_id: string
           id?: string
+          intent_kind?: string
           reject_reason?: string | null
           seq?: number
+          stance_key?: string | null
           status?: string
           target_creature_id?: string | null
         }
@@ -3184,8 +3188,10 @@ export type Database = {
           created_at?: string
           encounter_id?: string
           id?: string
+          intent_kind?: string
           reject_reason?: string | null
           seq?: number
+          stance_key?: string | null
           status?: string
           target_creature_id?: string | null
         }
@@ -3206,6 +3212,154 @@ export type Database = {
           },
           {
             foreignKeyName: "node_intent_target_creature_id_fkey"
+            columns: ["target_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_participation: {
+        Row: {
+          character_id: string
+          created_at: string
+          creature_id: string
+          encounter_id: string
+          first_at: string
+          id: string
+          last_at: string
+          party_id_at_qualification: string | null
+          qualification: string
+          qualified_by: string
+          spawn_seq: number
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          creature_id: string
+          encounter_id: string
+          first_at?: string
+          id?: string
+          last_at?: string
+          party_id_at_qualification?: string | null
+          qualification?: string
+          qualified_by: string
+          spawn_seq: number
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          creature_id?: string
+          encounter_id?: string
+          first_at?: string
+          id?: string
+          last_at?: string
+          party_id_at_qualification?: string | null
+          qualification?: string
+          qualified_by?: string
+          spawn_seq?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_participation_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_participation_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_participation_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      node_pending_event: {
+        Row: {
+          actor_character_id: string | null
+          actor_creature_id: string | null
+          consumed_at: string | null
+          consumed_tick: number | null
+          created_at: string
+          encounter_id: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          target_character_id: string | null
+          target_creature_id: string | null
+        }
+        Insert: {
+          actor_character_id?: string | null
+          actor_creature_id?: string | null
+          consumed_at?: string | null
+          consumed_tick?: number | null
+          created_at?: string
+          encounter_id: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          target_character_id?: string | null
+          target_creature_id?: string | null
+        }
+        Update: {
+          actor_character_id?: string | null
+          actor_creature_id?: string | null
+          consumed_at?: string | null
+          consumed_tick?: number | null
+          created_at?: string
+          encounter_id?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          target_character_id?: string | null
+          target_creature_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_pending_event_actor_character_id_fkey"
+            columns: ["actor_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_pending_event_actor_creature_id_fkey"
+            columns: ["actor_creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_pending_event_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_pending_event_target_character_id_fkey"
+            columns: ["target_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_pending_event_target_creature_id_fkey"
             columns: ["target_creature_id"]
             isOneToOne: false
             referencedRelation: "creatures"
@@ -4599,6 +4753,17 @@ export type Database = {
       node_encounter_bump_version: {
         Args: { _encounter_id: string }
         Returns: number
+      }
+      node_pending_event_record: {
+        Args: {
+          _actor_character_id?: string
+          _encounter_id: string
+          _event_type: string
+          _payload?: Json
+          _target_character_id?: string
+          _target_creature_id?: string
+        }
+        Returns: string
       }
       node_tick_claim: {
         Args: { _lease_ms?: number; _node_id: string }
