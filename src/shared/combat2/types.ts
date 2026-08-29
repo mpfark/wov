@@ -153,12 +153,39 @@ export interface SnapshotEffect {
   is_reservation: boolean;
 }
 
+/** Queued intent kinds, mirroring `node_intent_kind_chk`. */
+export type IntentKind = 'ability' | 'stance_activate' | 'stance_drop';
+
 export interface SnapshotIntent {
   id: string;
   seq: number;
   character_id: string;
+  intent_kind: IntentKind;
   ability_key: string | null;
+  stance_key: string | null;
   target_creature_id: string | null;
+}
+
+/** Durable per-spawn reward qualification (`node_participation`). */
+export interface SnapshotParticipation {
+  creature_id: string;
+  spawn_seq: number;
+  character_id: string;
+  qualification: 'qualified' | 'disqualified';
+  qualified_by: string;
+  party_id_at_qualification: string | null;
+}
+
+/** An authoritative event produced OUTSIDE a tick, awaiting delivery. */
+export interface SnapshotPendingEvent {
+  id: string;
+  event_type: string;
+  actor_character_id: string | null;
+  actor_creature_id: string | null;
+  target_character_id: string | null;
+  target_creature_id: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
 }
 
 export interface SnapshotBossAbility {
@@ -184,7 +211,12 @@ export interface NodeSnapshot {
   effects: SnapshotEffect[];
   intents: SnapshotIntent[];
   boss_abilities: SnapshotBossAbility[];
+  /** Durable qualification rows for the creature spawns of this encounter. */
+  participation?: SnapshotParticipation[];
+  /** Unconsumed out-of-tick events surfaced by the claim. */
+  pending_events?: SnapshotPendingEvent[];
 }
+
 
 // ── Proposed transition ─────────────────────────────────────────
 
