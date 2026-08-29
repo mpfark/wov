@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.combat_intent_probe(uuid,uuid,text,text,text,uuid,uuid,uuid,integer) TO sandbox_exec;
