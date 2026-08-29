@@ -215,12 +215,11 @@ function decodeIntent(r: Reader, path: string, raw: unknown): SnapshotIntent {
 function decodeParticipation(r: Reader, path: string, raw: unknown): SnapshotParticipation {
   const o = r.object(path, raw);
   return {
-    id: r.str(`${path}.id`, o.id),
     creature_id: r.str(`${path}.creature_id`, o.creature_id),
     spawn_seq: r.num(`${path}.spawn_seq`, o.spawn_seq),
     character_id: r.str(`${path}.character_id`, o.character_id),
     qualification: r.str(`${path}.qualification`, o.qualification) as SnapshotParticipation['qualification'],
-    qualified_by: r.strOrNull(`${path}.qualified_by`, o.qualified_by) as SnapshotParticipation['qualified_by'],
+    qualified_by: r.str(`${path}.qualified_by`, o.qualified_by),
     party_id_at_qualification: r.strOrNull(
       `${path}.party_id_at_qualification`,
       o.party_id_at_qualification,
