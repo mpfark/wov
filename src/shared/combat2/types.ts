@@ -295,6 +295,16 @@ export interface TickEvent {
   meta?: Record<string, unknown>;
 }
 
+/** A qualification upsert the commit may apply (`node_participation`). */
+export interface ProposedParticipation {
+  creature_id: string;
+  spawn_seq: number;
+  character_id: string;
+  qualification?: 'qualified' | 'disqualified';
+  qualified_by: 'damage' | 'heal' | 'absorb' | 'debuff' | 'buff' | 'summon' | 'revive';
+  party_id_at_qualification?: string | null;
+}
+
 export interface ProposedTick {
   tick: number;
   status?: 'active' | 'ended';
@@ -308,6 +318,10 @@ export interface ProposedTick {
   events: TickEvent[];
   /** Exact intent ids the commit may mark consumed. */
   intent_ids: string[];
+  /** Durable qualification upserts derived from this tick's interactions. */
+  participation: ProposedParticipation[];
+  /** Pending-event ids this tick folds into its committed batch, exactly once. */
+  pending_event_ids: string[];
 }
 
 export function emptyProposedTick(tick: number): ProposedTick {
@@ -322,5 +336,8 @@ export function emptyProposedTick(tick: number): ProposedTick {
     rewards: [],
     events: [],
     intent_ids: [],
+    participation: [],
+    pending_event_ids: [],
+
   };
 }
