@@ -56,6 +56,15 @@ export interface SnapshotEncounter {
   now: string;
 }
 
+/**
+ * One equipped item as projected by the authoritative claim.
+ *
+ * The weapon fields (`weapon_tag`, `hands`, `item_level`, `rarity`) are what the
+ * retained weapon formula needs. They are optional in the TYPE only because the
+ * installed claim projection does not emit them yet; when a main hand is present
+ * WITHOUT them the resolver refuses the action (`equipment_contract_incomplete`)
+ * rather than rolling a die it cannot justify.
+ */
 export interface SnapshotEquipment {
   slot: string;
   item_id: string;
@@ -64,7 +73,13 @@ export interface SnapshotEquipment {
   applied_gems: unknown;
   stat_override: unknown;
   crafted_level: number | null;
+  item_type?: string | null;
+  weapon_tag?: string | null;
+  hands?: number | null;
+  item_level?: number | null;
+  rarity?: string | null;
 }
+
 
 export interface SnapshotFighter {
   id: string;
