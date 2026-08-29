@@ -4325,6 +4325,20 @@ export type Database = {
         }
         Returns: Json
       }
+      combat_intent_probe: {
+        Args: {
+          _ability_key: string
+          _actor_user: string
+          _character_id: string
+          _encounter_id: string
+          _hold_ms?: number
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
       combat_mode_is_open: { Args: never; Returns: boolean }
       combat_soak_access_check: {
         Args: { _character_id: string; _node_id: string }
