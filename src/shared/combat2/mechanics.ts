@@ -60,6 +60,12 @@ export interface AbilitySpec {
   classAbilityKey: string;
   label: string;
   mechanic: MechanicKey;
+  /**
+   * The mechanic exactly as authored, before mechanic-level normalization onto
+   * the closed registry (see `MECHANIC_NORMALIZATION` in `catalog.ts`). Kept so
+   * a normalized mechanic is never silently indistinguishable from a native one.
+   */
+  authoredMechanic: string;
   targetType: AbilityTargetType;
   activation: AbilityActivation;
   damageType: string | null;
@@ -159,11 +165,14 @@ export function resolveMainHandDie(
   const main = equipment.find((row) => row.slot === 'main_hand');
   if (!main) return { kind: 'unarmed', die: unarmedOverride ?? UNARMED_DIE };
 
+  // A main hand IS equipped: every field the retained formula reads must be
+  // authored. A missing OR null value is incomplete, never defaulted.
   const missing: string[] = [];
-  if (main.weapon_tag === undefined) missing.push('weapon_tag');
-  if (main.hands === undefined) missing.push('hands');
-  if (main.item_level === undefined && main.crafted_level === null) missing.push('item_level');
-  if (main.rarity === undefined) missing.push('rarity');
+  if (!main.item_present) missing.push('item');
+  if (main.weapon_tag == null) missing.push('weapon_tag');
+  if (main.hands == null) missing.push('hands');
+  if (main.item_level == null && main.crafted_level == null) missing.push('item_level');
+  if (main.rarity == null) missing.push('rarity');
   if (missing.length > 0) return { kind: 'incomplete', missing };
 
   const hands = main.hands === 2 ? 2 : 1;
@@ -172,6 +181,7 @@ export function resolveMainHandDie(
     kind: 'weapon',
     die: getWeaponDieForItem(main.weapon_tag ?? null, hands, itemLevel, progression, main.rarity ?? null),
   };
+
 }
 
 /** True when the authoritative projection shows a shield in the off hand. */
@@ -715,9 +725,11 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
 
   /**
    * Reactive retaliation. The authored catalogue currently spells Holy Shield's
-   * mechanic `reactive_holy`, which is NOT in the closed key list, so the
-   * catalogue rejects it rather than assuming this handler. Resolving that
-   * spelling is a configuration decision, not a code guess.
+   * The authored `reactive_holy` mechanic is normalized onto this key by
+   * `catalog.ts` at the MECHANIC level (same lifecycle, holy damage type), so
+   * Holy Shield resolves here with its authored damage type, magnitude
+   * (`retaliation_damage`), trigger configuration and source attribution intact.
+   * The effect is owned by, and attributed to, the character that activated it.
    */
   reactive_damage: (ctx, spec) => {
     const outcome = emptyOutcome();
@@ -729,6 +741,7 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     outcome.effects.push(
       buffEffect(ctx, spec, 'reactive', ctx.actor.character_id, magnitude, {
         once_per_attacker_per_tick: spec.config.once_per_attacker_per_tick === true,
+        damage_type: spec.damageType,
       }),
     );
     outcome.events.push({
