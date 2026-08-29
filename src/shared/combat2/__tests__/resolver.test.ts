@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { resolveNodeTick, selectTank } from '../resolver';
+import { buildAbilitySpec } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
-import type { NodeSnapshot, SnapshotCreature, SnapshotFighter } from '../types';
+import type { NodeSnapshot, SnapshotCreature, SnapshotFighter, SnapshotIntent } from '../types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 const nowPlus = (msOffset: number): string => new Date(Date.parse(NOW) + msOffset).toISOString();
@@ -77,25 +78,57 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
   };
 }
 
-const weaponAttack: AbilitySpec = {
+/** An intent row exactly as `node_intent` shapes it. */
+function abilityIntent(
+  id: string,
+  seq: number,
+  characterId: string,
+  abilityKey: string,
+  targetCreatureId: string | null,
+): SnapshotIntent {
+  return {
+    id,
+    seq,
+    character_id: characterId,
+    intent_kind: 'ability',
+    ability_key: abilityKey,
+    stance_key: null,
+    target_creature_id: targetCreatureId,
+  };
+}
+
+/** Built through the real adapter from an authored record, never hand-shaped. */
+const built = buildAbilitySpec({
+  classKey: 'warrior',
+  classAbilityKey: 'power_strike',
   abilityKey: 'power_strike',
   label: 'Power Strike',
   mechanic: 'weapon_attack',
+  targetType: 'enemy',
+  activationMode: 'queued',
   damageType: 'physical',
-  accuracyStat: 'dex',
-  scalingStat: 'str',
   cpCost: 5,
-  baseAmount: 6,
-  perModifier: 2,
-  durationMs: null,
+  cpReservePct: null,
   intervalMs: null,
-  weaponBased: false,
-  attackCount: 1,
-  effectType: null,
-  config: {},
-};
+  amountCalc: {
+    version: 2,
+    base: 6,
+    terms: [{ source: 'stat', stat: 'str', mult: 2, role: 'primary' }],
+    rounding: 'floor',
+    unit: 'hp',
+  },
+  durationCalc: null,
+  mechanicCalcs: null,
+  effectConfig: { accuracy_stat: 'dex', stat: 'str' },
+});
+if (!('spec' in built)) throw new Error('fixture spec rejected');
+const weaponAttack: AbilitySpec = built.spec;
 
-const abilities = new Map<string, AbilitySpec>([[weaponAttack.abilityKey, weaponAttack]]);
+const abilities = new Map<string, AbilitySpec>([
+  [weaponAttack.abilityKey, weaponAttack],
+  [`warrior:${weaponAttack.abilityKey}`, weaponAttack],
+]);
+
 
 describe('combat2 resolver', () => {
   it('is deterministic for an identical snapshot and candidate tick', () => {
@@ -113,7 +146,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-1', seq: 7, character_id: 'ch-1', ability_key: 'power_strike', target_creature_id: 'cr-1' },
+          abilityIntent('i-1', 7, 'ch-1', 'power_strike', 'cr-1'),
         ],
       }),
       { abilities },
@@ -125,7 +158,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-9', seq: 8, character_id: 'ch-1', ability_key: 'not_a_real_ability', target_creature_id: 'cr-1' },
+          abilityIntent('i-9', 8, 'ch-1', 'not_a_real_ability', 'cr-1'),
         ],
       }),
       { abilities },
@@ -138,7 +171,7 @@ describe('combat2 resolver', () => {
     const out = resolveNodeTick(
       snapshot({
         intents: [
-          { id: 'i-2', seq: 9, character_id: 'ch-1', ability_key: 'power_strike', target_creature_id: 'cr-1' },
+          abilityIntent('i-2', 9, 'ch-1', 'power_strike', 'cr-1'),
         ],
       }),
       { abilities },
@@ -323,7 +356,7 @@ describe('combat2 resolver', () => {
     expect(out.characters.find((c) => c.id === 'ch-1')?.hp ?? 100).toBe(100);
   });
 
-  it('shares the reward with the killer party only, exactly once per character', () => {
+  it('pays only characters durably qualified for this spawn, exactly once each', () => {
     const out = resolveNodeTick(
       snapshot({
         creatures: [creature({ hp: 1 })],
@@ -345,7 +378,9 @@ describe('combat2 resolver', () => {
       }),
       { abilities },
     );
+    // ch-2 and ch-3 never interacted with this spawn: party membership alone is
+    // not qualification, so only the damage-over-time source is paid.
     const ids = out.rewards.map((r) => r.character_id).sort();
-    expect(ids).toEqual(['ch-1', 'ch-2']);
+    expect(ids).toEqual(['ch-1']);
   });
 });

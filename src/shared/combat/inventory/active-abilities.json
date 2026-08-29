@@ -97,6 +97,7 @@
         "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
+        "accuracy_stat": "dex",
         "weapon_scaled": true
       },
       "overrides": {},
@@ -383,6 +384,7 @@
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
         "weapon_based": true,
+        "accuracy_stat": "dex",
         "weapon_scaled": true,
         "per_stack_stat": "cha"
       },
@@ -598,7 +600,8 @@
       "mechanicCalcs": {},
       "effectConfig": {
         "stat": "cha",
-        "resolved_by": "combat-tick"
+        "resolved_by": "combat-tick",
+        "accuracy_stat": "cha"
       },
       "overrides": {},
       "triggerType": "none",
@@ -640,13 +643,13 @@
       "amountCalc": {
         "cap": null,
         "base": 0.25,
-        "note": "scaling stat = INT for bards",
+        "note": "CHA-scaled outgoing-damage reduction",
         "unit": "percent",
         "floor": null,
         "terms": [
           {
             "mult": 1,
-            "stat": "int",
+            "stat": "cha",
             "source": "stat",
             "transform": {
               "cap": 0.15,
@@ -673,7 +676,8 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "control_mode": "damage_reduction"
+        "control_mode": "damage_reduction",
+        "magnitude_stat": "cha"
       },
       "overrides": {},
       "triggerType": "none",
@@ -761,6 +765,7 @@
       "effectConfig": {
         "stat": "cha",
         "resolved_by": "combat-tick",
+        "accuracy_stat": "cha",
         "crit_edge_stat": "int",
         "crit_threshold_floor": 17
       },
@@ -1144,7 +1149,8 @@
       "mechanicCalcs": {},
       "effectConfig": {
         "stat": "wis",
-        "resolved_by": "combat-tick"
+        "resolved_by": "combat-tick",
+        "accuracy_stat": "wis"
       },
       "overrides": {},
       "triggerType": "none",
@@ -1316,6 +1322,7 @@
         "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
+        "accuracy_stat": "dex",
         "weapon_scaled": true
       },
       "overrides": {},
@@ -1415,6 +1422,7 @@
         "attack_stat": "dex",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
+        "accuracy_stat": "dex",
         "weapon_scaled": true,
         "arrow_count_calc": {
           "cap": 4,
@@ -1627,13 +1635,13 @@
       "amountCalc": {
         "cap": null,
         "base": 0.25,
-        "note": "WIS-scaled damage reduction (live formula uses the scaling stat)",
+        "note": "DEX-scaled outgoing-damage reduction",
         "unit": "percent",
         "floor": null,
         "terms": [
           {
             "mult": 1,
-            "stat": "wis",
+            "stat": "dex",
             "source": "stat",
             "transform": {
               "cap": 0.15,
@@ -1660,7 +1668,8 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "control_mode": "damage_reduction"
+        "control_mode": "damage_reduction",
+        "magnitude_stat": "dex"
       },
       "overrides": {},
       "triggerType": "none",
@@ -1821,7 +1830,6 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "is_taunt": true,
         "resolved_by": "combat-tick",
         "mitigation_mode": "flat"
       },
@@ -1983,7 +1991,8 @@
       "mechanicCalcs": {},
       "effectConfig": {
         "stat": "wis",
-        "resolved_by": "combat-tick"
+        "resolved_by": "combat-tick",
+        "accuracy_stat": "wis"
       },
       "overrides": {},
       "triggerType": "none",
@@ -2221,6 +2230,7 @@
         "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
+        "accuracy_stat": "dex",
         "weapon_scaled": true
       },
       "overrides": {},
@@ -2589,7 +2599,8 @@
         "stack_noun": "burn",
         "stack_type": "ignite",
         "resolved_by": "combat-tick",
-        "weapon_based": false
+        "weapon_based": false,
+        "accuracy_stat": "int"
       },
       "overrides": {},
       "triggerType": "none",
@@ -2660,7 +2671,8 @@
       "mechanicCalcs": {},
       "effectConfig": {
         "stat": "int",
-        "resolved_by": "combat-tick"
+        "resolved_by": "combat-tick",
+        "accuracy_stat": "int"
       },
       "overrides": {},
       "triggerType": "none",
@@ -2769,7 +2781,7 @@
       "cpCost": 10,
       "cpReservePct": null,
       "intervalMs": null,
-      "primaryAttribute": null,
+      "primaryAttribute": "int",
       "secondaryAttribute": null,
       "classScale": 1,
       "appliedStatus": "chilled",
@@ -2807,7 +2819,9 @@
       },
       "durationCalc": null,
       "mechanicCalcs": {},
-      "effectConfig": {},
+      "effectConfig": {
+        "accuracy_stat": "int"
+      },
       "overrides": {},
       "triggerType": "none",
       "capabilities": [
@@ -2840,9 +2854,9 @@
       "primaryAttribute": "int",
       "secondaryAttribute": "wis",
       "classScale": 1,
-      "appliedStatus": "scorched",
+      "appliedStatus": "ignite",
       "statusTrigger": "successful_pulse_hit",
-      "statusChancePct": 25,
+      "statusChancePct": null,
       "statusApplicationEnabled": true,
       "onHitEffect": null,
       "amountCalc": {

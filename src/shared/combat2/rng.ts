@@ -5,39 +5,35 @@
  * is reclaimed after a lease expiry re-resolves with the SAME candidate tick, so
  * an identical snapshot reproduces an identical result. `Math.random()` is
  * forbidden anywhere in `src/shared/combat2`.
+ *
+ * The hash itself is NOT reimplemented here: it delegates to the retained
+ * `tick-rng` primitives (`tickSample` / `tickRoll` / `tickPick`), which are the
+ * canonical owner of seeded tick randomness and are already mirrored to the edge
+ * runtime. Only `weightedPick` — which has no retained equivalent — lives here.
  */
+
+import { tickPick, tickRoll, tickSample, type TickRngContext } from '../combat/tick-rng';
 
 export interface TickSeed {
   encounterId: string;
   candidateTick: number;
 }
 
-function hashParts(parts: ReadonlyArray<string | number>): number {
-  const seed = parts.join('|');
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  h ^= h << 13; h >>>= 0;
-  h ^= h >>> 17;
-  h ^= h << 5; h >>>= 0;
-  return h >>> 0;
-}
-
 export class TickRandom {
-  constructor(private readonly seed: TickSeed) {}
+  private readonly ctx: TickRngContext;
+
+  constructor(seed: TickSeed) {
+    this.ctx = { encounterId: seed.encounterId, tickNumber: seed.candidateTick };
+  }
 
   /** Stable 0..1 sample for one identified decision inside this tick. */
   sample(stream: string, ...parts: Array<string | number>): number {
-    const h = hashParts([this.seed.encounterId, this.seed.candidateTick, stream, ...parts]);
-    return (h >>> 8) / 0x01000000;
+    return tickSample(this.ctx, stream, ...parts);
   }
 
   /** Stable die roll in 1..sides (0 for a nonsensical die). */
   roll(stream: string, sides: number, ...parts: Array<string | number>): number {
-    if (!Number.isFinite(sides) || sides < 1) return 0;
-    return 1 + Math.floor(this.sample(stream, ...parts) * sides);
+    return tickRoll(this.ctx, stream, sides, ...parts);
   }
 
   d20(stream: string, ...parts: Array<string | number>): number {
@@ -46,8 +42,7 @@ export class TickRandom {
 
   /** Stable uniform pick from an ordered list. */
   pick<T>(list: readonly T[], stream: string, ...parts: Array<string | number>): T | undefined {
-    if (list.length === 0) return undefined;
-    return list[Math.floor(this.sample(stream, ...parts) * list.length) % list.length];
+    return tickPick(this.ctx, stream, list, ...parts) ?? undefined;
   }
 
   /** Stable weighted pick; non-positive weights are ignored. */

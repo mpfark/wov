@@ -56,6 +56,15 @@ export interface SnapshotEncounter {
   now: string;
 }
 
+/**
+ * One equipped item as projected by the authoritative claim.
+ *
+ * The weapon fields (`weapon_tag`, `hands`, `item_level`, `rarity`) are what the
+ * retained weapon formula needs. They are optional in the TYPE only because the
+ * installed claim projection does not emit them yet; when a main hand is present
+ * WITHOUT them the resolver refuses the action (`equipment_contract_incomplete`)
+ * rather than rolling a die it cannot justify.
+ */
 export interface SnapshotEquipment {
   slot: string;
   item_id: string;
@@ -64,7 +73,13 @@ export interface SnapshotEquipment {
   applied_gems: unknown;
   stat_override: unknown;
   crafted_level: number | null;
+  item_type?: string | null;
+  weapon_tag?: string | null;
+  hands?: number | null;
+  item_level?: number | null;
+  rarity?: string | null;
 }
+
 
 export interface SnapshotFighter {
   id: string;
@@ -138,12 +153,39 @@ export interface SnapshotEffect {
   is_reservation: boolean;
 }
 
+/** Queued intent kinds, mirroring `node_intent_kind_chk`. */
+export type IntentKind = 'ability' | 'stance_activate' | 'stance_drop';
+
 export interface SnapshotIntent {
   id: string;
   seq: number;
   character_id: string;
+  intent_kind: IntentKind;
   ability_key: string | null;
+  stance_key: string | null;
   target_creature_id: string | null;
+}
+
+/** Durable per-spawn reward qualification (`node_participation`). */
+export interface SnapshotParticipation {
+  creature_id: string;
+  spawn_seq: number;
+  character_id: string;
+  qualification: 'qualified' | 'disqualified';
+  qualified_by: string;
+  party_id_at_qualification: string | null;
+}
+
+/** An authoritative event produced OUTSIDE a tick, awaiting delivery. */
+export interface SnapshotPendingEvent {
+  id: string;
+  event_type: string;
+  actor_character_id: string | null;
+  actor_creature_id: string | null;
+  target_character_id: string | null;
+  target_creature_id: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
 }
 
 export interface SnapshotBossAbility {
@@ -169,7 +211,12 @@ export interface NodeSnapshot {
   effects: SnapshotEffect[];
   intents: SnapshotIntent[];
   boss_abilities: SnapshotBossAbility[];
+  /** Durable qualification rows for the creature spawns of this encounter. */
+  participation?: SnapshotParticipation[];
+  /** Unconsumed out-of-tick events surfaced by the claim. */
+  pending_events?: SnapshotPendingEvent[];
 }
+
 
 // ── Proposed transition ─────────────────────────────────────────
 
@@ -248,6 +295,16 @@ export interface TickEvent {
   meta?: Record<string, unknown>;
 }
 
+/** A qualification upsert the commit may apply (`node_participation`). */
+export interface ProposedParticipation {
+  creature_id: string;
+  spawn_seq: number;
+  character_id: string;
+  qualification?: 'qualified' | 'disqualified';
+  qualified_by: 'damage' | 'heal' | 'absorb' | 'debuff' | 'buff' | 'summon' | 'revive';
+  party_id_at_qualification?: string | null;
+}
+
 export interface ProposedTick {
   tick: number;
   status?: 'active' | 'ended';
@@ -261,6 +318,10 @@ export interface ProposedTick {
   events: TickEvent[];
   /** Exact intent ids the commit may mark consumed. */
   intent_ids: string[];
+  /** Durable qualification upserts derived from this tick's interactions. */
+  participation: ProposedParticipation[];
+  /** Pending-event ids this tick folds into its committed batch, exactly once. */
+  pending_event_ids: string[];
 }
 
 export function emptyProposedTick(tick: number): ProposedTick {
@@ -275,5 +336,8 @@ export function emptyProposedTick(tick: number): ProposedTick {
     rewards: [],
     events: [],
     intent_ids: [],
+    participation: [],
+    pending_event_ids: [],
+
   };
 }
