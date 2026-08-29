@@ -56,12 +56,13 @@ describe('authored ability catalogue', () => {
   });
 
   it('resolves a class-scoped key in preference to the bare ability key', () => {
-    const { specs } = buildAbilityCatalog(records);
+    const catalog = buildAbilityCatalog(records);
+    const { specs } = catalog;
     const scoped = [...specs.keys()].find((k) => k.includes(':'));
     expect(scoped).toBeDefined();
     const [classKey, abilityKey] = scoped!.split(':');
-    expect(lookupSpec(specs, classKey, abilityKey)).toBe(specs.get(scoped!));
-    expect(lookupSpec(specs, 'no_such_class', abilityKey)).toBe(specs.get(abilityKey));
+    expect(lookupSpec(catalog, classKey, abilityKey)).toBe(specs.get(scoped!));
+    expect(lookupSpec(catalog, 'no_such_class', abilityKey)).toBe(specs.get(abilityKey));
   });
 });
 
