@@ -32,11 +32,34 @@ describe('authored ability catalogue', () => {
   });
 
   it('refuses a mechanic outside the closed registry instead of guessing one', () => {
-    const authored = records.find((r) => r.mechanic === 'reactive_holy');
-    if (!authored) return; // configuration already reconciled upstream
-    const out = buildAbilitySpec(authored);
+    const attack = records.find((r) => r.mechanic === 'weapon_attack');
+    expect(attack).toBeDefined();
+    const out = buildAbilitySpec({ ...attack!, mechanic: 'not_a_mechanic' });
     expect('rejection' in out).toBe(true);
     if ('rejection' in out) expect(out.rejection.reason).toBe('unsupported_mechanic');
+  });
+
+  it('normalizes the authored reactive_holy mechanic onto reactive_damage, keeping its authoring', () => {
+    const authored = records.find((r) => r.mechanic === 'reactive_holy');
+    expect(authored).toBeDefined();
+    const out = buildAbilitySpec(authored!);
+    expect('spec' in out).toBe(true);
+    if (!('spec' in out)) return;
+    expect(out.spec.mechanic).toBe('reactive_damage');
+    expect(out.spec.authoredMechanic).toBe('reactive_holy');
+    expect(out.spec.damageType).toBe(authored!.damageType);
+    expect(out.spec.activation).toBe('stance');
+    expect(out.spec.cpReservePct).toBe(authored!.cpReservePct);
+    expect(out.spec.mechanicCalcs.retaliation_damage).toBeDefined();
+    expect(out.spec.config.once_per_attacker_per_tick).toBe(true);
+  });
+
+  it('refuses a reactive record with no authored retaliation magnitude', () => {
+    const authored = records.find((r) => r.mechanic === 'reactive_holy');
+    expect(authored).toBeDefined();
+    const out = buildAbilitySpec({ ...authored!, mechanicCalcs: {} });
+    expect('rejection' in out).toBe(true);
+    if ('rejection' in out) expect(out.rejection.reason).toBe('missing_mechanic_calc');
   });
 
   it('refuses a record whose mechanic-specific calculation is missing', () => {
@@ -129,12 +152,37 @@ describe('equipment-derived weapon dice', () => {
   });
 
   it('fails closed when an equipped main hand lacks the fields the formula needs', () => {
-    expect(resolveMainHandDie(main({ item_type: 'weapon' }), 10).kind).toBe('incomplete');
+    expect(resolveMainHandDie(main({ item_present: true, item_type: 'weapon' }), 10).kind).toBe(
+      'incomplete',
+    );
+  });
+
+  it('fails closed when the equipped inventory row points at an item that is gone', () => {
+    const out = resolveMainHandDie(
+      main({
+        item_present: false,
+        item_type: 'weapon',
+        weapon_tag: 'sword',
+        hands: 1,
+        item_level: 10,
+        rarity: 'common',
+      }),
+      10,
+    );
+    expect(out.kind).toBe('incomplete');
+    if (out.kind === 'incomplete') expect(out.missing).toContain('item');
   });
 
   it('derives the die from the item when the projection is complete', () => {
     const out = resolveMainHandDie(
-      main({ item_type: 'weapon', weapon_tag: 'sword', hands: 1, item_level: 10, rarity: 'common' }),
+      main({
+        item_present: true,
+        item_type: 'weapon',
+        weapon_tag: 'sword',
+        hands: 1,
+        item_level: 10,
+        rarity: 'common',
+      }),
       10,
     );
     expect(out.kind).toBe('weapon');
