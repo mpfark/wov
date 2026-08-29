@@ -151,7 +151,8 @@ export type WeaponDieResolution =
  */
 export function resolveMainHandDie(
   equipment: readonly SnapshotEquipment[],
-  level: number,
+  /** Unused: the die scales with the ITEM level, never the wielder's level. */
+  _level: number,
   unarmedOverride: number | null = null,
   progression: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
 ): WeaponDieResolution {
