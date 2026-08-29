@@ -8,7 +8,7 @@
  */
 
 import { getCreatureXp, getXpPenalty } from '../formulas/xp';
-import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT } from '../formulas/combat';
+import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, type WeaponProgressionConfig } from '../formulas/combat';
 import { getStatModifier } from '../formulas/stats';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
@@ -21,6 +21,7 @@ import {
 import {
   emptyProposedTick,
   type NodeSnapshot,
+  type ProposedParticipation,
   type ProposedTick,
   type SnapshotCreature,
   type SnapshotEffect,
@@ -29,8 +30,14 @@ import {
 } from './types';
 
 export interface ResolveDeps {
-  /** Authored ability catalogue, keyed by ability key. Closed: misses are rejected. */
+  /**
+   * Authored ability catalogue. Keys are `"<classKey>:<abilityKey>"` and the
+   * bare ability key, exactly as `buildAbilityCatalog` produces them. Closed:
+   * a miss is rejected, never guessed.
+   */
   abilities: ReadonlyMap<string, AbilitySpec>;
+  /** Installed weapon progression configuration, when known. */
+  weaponProgression?: WeaponProgressionConfig;
 }
 
 interface WorkingCharacter {
@@ -66,6 +73,7 @@ export function selectTank(fighters: SnapshotFighter[], living: ReadonlySet<stri
     .sort((a, b) => b.entry_seq - a.entry_seq);
   return eligible[0] ?? null;
 }
+
 
 export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): ProposedTick {
   const { encounter } = snapshot;
