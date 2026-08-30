@@ -28,6 +28,15 @@ export type DecodeResult =
   | { ok: true; snapshot: NodeSnapshot }
   | { ok: false; errors: string[] };
 
+/**
+ * Result of decoding a full claim envelope. Kept as an explicit union (not
+ * `DecodeResult & { claimToken?: string }`) so `ok` remains a discriminant and
+ * `!result.ok` narrows to the error branch.
+ */
+export type ClaimDecodeResult =
+  | { ok: true; snapshot: NodeSnapshot; claimToken?: string }
+  | { ok: false; errors: string[]; claimToken?: string };
+
 class Reader {
   readonly errors: string[] = [];
 
