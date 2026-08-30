@@ -38,7 +38,6 @@ export interface OrchestrationDb {
   rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: any; error: any }>;
 }
 
-
 export interface OrchestrationRequest {
   /** Resolver role of the caller. Decides which claim modes are acceptable. */
   readonly role: 'live' | 'catchup';
