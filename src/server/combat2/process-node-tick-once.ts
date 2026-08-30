@@ -86,7 +86,7 @@ export async function processNodeTickOnce(
   }
 
   const decoded = decodeClaim(claim);
-  if (!decoded.ok) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
+  if (decoded.ok !== true) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
   if (decoded.snapshot.boss_configurations === undefined) {
     return { ok: false, kind: 'snapshot_rejected', errors: ['snapshot.boss_configurations: required by worker'] };
   }
