@@ -400,7 +400,7 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
  * Decode a whole claim envelope. A non-claim result (`not_due`, `no_claim`) is
  * returned as an error path, so a caller can never resolve a tick it did not win.
  */
-export function decodeClaim(raw: unknown): DecodeResult & { claimToken?: string } {
+export function decodeClaim(raw: unknown): ClaimDecodeResult {
   if (!raw || typeof raw !== 'object') return { ok: false, errors: ['claim: expected object'] };
   const o = raw as Record<string, unknown>;
   if (o.ok !== true || o.kind !== 'claimed') {

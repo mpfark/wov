@@ -36,7 +36,7 @@ export type NodeTickRunResult =
   | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string }
   | { ok: false; kind: 'malformed_claim' | 'malformed_commit'; diagnostic: string }
   | { ok: false; kind: 'snapshot_rejected'; errors: string[] }
-  | { ok: false; kind: 'player_catalog_rejected'; rejected: CatalogRejection[] }
+  | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
   | { ok: false; kind: 'boss_catalog_rejected'; rejected: BossCastRejection[] }
   | { ok: false; kind: 'resolver_failed'; diagnostic: string }
   | { ok: false; kind: 'stale_claim'; encounterId: string; reason: 'no_encounter' | null }
