@@ -391,7 +391,6 @@ export function decodeEffectsSection(
       damageType:
         damageType ?? (typeof params?.damageType === 'string' ? params.damageType : null),
 
-
       sourceCharacterId,
       isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
       ampPct: def?.ampPct ?? 0,
