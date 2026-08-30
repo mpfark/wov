@@ -35,8 +35,9 @@ import { parseCombatMode, COMBAT_MODE_KEY, COMBAT_MAINTENANCE_MESSAGE } from '..
 /** Minimal supabase-js surface the pipeline uses. */
 export interface OrchestrationDb {
   from: (table: string) => any;
-  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: any; error: any }>;
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: any; error: any }>;
 }
+
 
 export interface OrchestrationRequest {
   /** Resolver role of the caller. Decides which claim modes are acceptable. */

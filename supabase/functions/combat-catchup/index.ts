@@ -63,8 +63,9 @@ async function internalCaller(
   url: string,
   anonKey: string,
   srvKey: string,
-  db: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> },
+  db: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> },
 ): Promise<'internal' | 'not_internal' | 'anonymous'> {
+
   if (!authHeader?.toLowerCase().startsWith('bearer ')) return 'anonymous';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!token) return 'anonymous';
