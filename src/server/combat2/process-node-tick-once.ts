@@ -2,6 +2,7 @@
 import * as bossCatalog from '../../shared/combat2/boss-catalog.ts';
 import * as playerCatalog from '../../shared/combat2/catalog.ts';
 import { decodeClaim } from '../../shared/combat2/decode.ts';
+import type { ClaimDecodeResult } from '../../shared/combat2/decode.ts';
 import * as resolver from '../../shared/combat2/resolver.ts';
 import type { AuthoredAbilityRecord, CatalogRejection } from '../../shared/combat2/catalog.ts';
 import type { BossCastRejection } from '../../shared/combat2/boss-catalog.ts';
@@ -36,7 +37,7 @@ export type NodeTickRunResult =
   | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string }
   | { ok: false; kind: 'malformed_claim' | 'malformed_commit'; diagnostic: string }
   | { ok: false; kind: 'snapshot_rejected'; errors: string[] }
-  | { ok: false; kind: 'player_catalog_rejected'; rejected: CatalogRejection[] }
+  | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
   | { ok: false; kind: 'boss_catalog_rejected'; rejected: BossCastRejection[] }
   | { ok: false; kind: 'resolver_failed'; diagnostic: string }
   | { ok: false; kind: 'stale_claim'; encounterId: string; reason: 'no_encounter' | null }
@@ -47,6 +48,13 @@ function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+/** Explicit guard: discriminant narrowing on `ok` is unreliable under tsgo here. */
+function isDecodeFailure(
+  result: ClaimDecodeResult,
+): result is Extract<ClaimDecodeResult, { ok: false }> {
+  return result.ok === false;
 }
 
 function safeError(error: unknown): string {
@@ -86,7 +94,7 @@ export async function processNodeTickOnce(
   }
 
   const decoded = decodeClaim(claim);
-  if (!decoded.ok) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
+  if (isDecodeFailure(decoded)) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
   if (decoded.snapshot.boss_configurations === undefined) {
     return { ok: false, kind: 'snapshot_rejected', errors: ['snapshot.boss_configurations: required by worker'] };
   }

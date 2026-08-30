@@ -28,6 +28,15 @@ export type DecodeResult =
   | { ok: true; snapshot: NodeSnapshot }
   | { ok: false; errors: string[] };
 
+/**
+ * Result of decoding a full claim envelope. Kept as an explicit union (not
+ * `DecodeResult & { claimToken?: string }`) so `ok` remains a discriminant and
+ * `!result.ok` narrows to the error branch.
+ */
+export type ClaimDecodeResult =
+  | { ok: true; snapshot: NodeSnapshot; claimToken?: string }
+  | { ok: false; errors: string[]; claimToken?: string };
+
 class Reader {
   readonly errors: string[] = [];
 
@@ -391,7 +400,7 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
  * Decode a whole claim envelope. A non-claim result (`not_due`, `no_claim`) is
  * returned as an error path, so a caller can never resolve a tick it did not win.
  */
-export function decodeClaim(raw: unknown): DecodeResult & { claimToken?: string } {
+export function decodeClaim(raw: unknown): ClaimDecodeResult {
   if (!raw || typeof raw !== 'object') return { ok: false, errors: ['claim: expected object'] };
   const o = raw as Record<string, unknown>;
   if (o.ok !== true || o.kind !== 'claimed') {
