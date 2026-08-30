@@ -13,7 +13,7 @@ import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
 import { decodeClaim, decodeSnapshot } from '../decode';
 import { resolveNodeTick } from '../resolver';
 
-const CLAIM = {
+export const CLAIM = {
   ok: true,
   kind: 'claimed',
   encounter_id: 'aaaa0000-0000-4000-8000-000000000001',

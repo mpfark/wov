@@ -13,6 +13,7 @@
 import type {
   NodeSnapshot,
   SnapshotBossAbility,
+  SnapshotBossConfiguration,
   SnapshotCreature,
   SnapshotEffect,
   SnapshotEquipment,
@@ -21,6 +22,7 @@ import type {
   SnapshotParticipation,
   SnapshotPendingEvent,
 } from './types';
+import type { AuthoredBossCast } from './boss-catalog';
 
 export type DecodeResult =
   | { ok: true; snapshot: NodeSnapshot }
@@ -260,6 +262,67 @@ function decodeBossAbility(r: Reader, path: string, raw: unknown): SnapshotBossA
   };
 }
 
+function optionalBool(r: Reader, path: string, value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  return r.bool(path, value);
+}
+
+function optionalNumber(r: Reader, path: string, value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  return r.numOrNull(path, value);
+}
+
+function optionalString(r: Reader, path: string, value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  return r.strOrNull(path, value);
+}
+
+function decodeBossCast(r: Reader, path: string, raw: unknown): AuthoredBossCast | null {
+  if (raw === null || raw === undefined) return null;
+  const o = r.object(path, raw);
+  const accumulate = o.accumulate === null || o.accumulate === undefined
+    ? o.accumulate as null | undefined
+    : (() => {
+        const value = r.object(`${path}.accumulate`, o.accumulate);
+        return { enabled: optionalBool(r, `${path}.accumulate.enabled`, value.enabled) };
+      })();
+  let storedPower: Record<string, unknown> | null | undefined;
+  if (o.stored_power === null || o.stored_power === undefined) storedPower = o.stored_power as null | undefined;
+  else storedPower = r.object(`${path}.stored_power`, o.stored_power);
+  return {
+    enabled: optionalBool(r, `${path}.enabled`, o.enabled),
+    ability_key: optionalString(r, `${path}.ability_key`, o.ability_key),
+    label: optionalString(r, `${path}.label`, o.label),
+    cast_ms: optionalNumber(r, `${path}.cast_ms`, o.cast_ms),
+    lock_ms: optionalNumber(r, `${path}.lock_ms`, o.lock_ms),
+    cooldown_ms: optionalNumber(r, `${path}.cooldown_ms`, o.cooldown_ms),
+    chance: optionalNumber(r, `${path}.chance`, o.chance),
+    damage_type: optionalString(r, `${path}.damage_type`, o.damage_type),
+    amount: optionalNumber(r, `${path}.amount`, o.amount),
+    base_amount: optionalNumber(r, `${path}.base_amount`, o.base_amount),
+    base_aoe_amount: optionalNumber(r, `${path}.base_aoe_amount`, o.base_aoe_amount),
+    target_mode: optionalString(r, `${path}.target_mode`, o.target_mode),
+    cast_flavor: optionalString(r, `${path}.cast_flavor`, o.cast_flavor),
+    hit_flavor: optionalString(r, `${path}.hit_flavor`, o.hit_flavor),
+    accumulate,
+    stored_power: storedPower,
+  };
+}
+
+function decodeBossConfiguration(r: Reader, path: string, raw: unknown): SnapshotBossConfiguration {
+  const o = r.object(path, raw);
+  if (!Object.prototype.hasOwnProperty.call(o, 'boss_cast')) {
+    r.errors.push(`${path}.boss_cast: expected object or null`);
+  }
+  return {
+    encounter_id: r.str(`${path}.encounter_id`, o.encounter_id),
+    node_creature_id: r.str(`${path}.node_creature_id`, o.node_creature_id),
+    creature_id: r.str(`${path}.creature_id`, o.creature_id),
+    spawn_seq: r.num(`${path}.spawn_seq`, o.spawn_seq),
+    boss_cast: decodeBossCast(r, `${path}.boss_cast`, o.boss_cast),
+  };
+}
+
 /** Decode the `snapshot` object of a successful claim. Fail-closed. */
 export function decodeSnapshot(raw: unknown): DecodeResult {
   const r = new Reader();
@@ -287,9 +350,14 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
     intents: r
       .array('snapshot.intents', root.intents)
       .map((row, i) => decodeIntent(r, `snapshot.intents[${i}]`, row)),
-    boss_abilities: r
-      .array('snapshot.boss_abilities', root.boss_abilities)
-      .map((row, i) => decodeBossAbility(r, `snapshot.boss_abilities[${i}]`, row)),
+    boss_abilities: root.boss_configurations === undefined
+      ? r.array('snapshot.boss_abilities', root.boss_abilities)
+          .map((row, i) => decodeBossAbility(r, `snapshot.boss_abilities[${i}]`, row))
+      : [],
+    boss_configurations: root.boss_configurations === undefined
+      ? undefined
+      : r.array('snapshot.boss_configurations', root.boss_configurations)
+          .map((row, i) => decodeBossConfiguration(r, `snapshot.boss_configurations[${i}]`, row)),
     participation: r
       .array('snapshot.participation', root.participation)
       .map((row, i) => decodeParticipation(r, `snapshot.participation[${i}]`, row)),
@@ -298,6 +366,23 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       .map((row, i) => decodePendingEvent(r, `snapshot.pending_events[${i}]`, row)),
   };
 
+  for (const [i, config] of (snapshot.boss_configurations ?? []).entries()) {
+    const creature = snapshot.creatures.find((row) => row.id === config.node_creature_id);
+    if (!creature || creature.creature_id !== config.creature_id || creature.spawn_seq !== config.spawn_seq ||
+        snapshot.encounter.id !== config.encounter_id) {
+      r.errors.push(`snapshot.boss_configurations[${i}]: binding does not match claimed creature spawn`);
+    }
+  }
+  if (snapshot.boss_configurations !== undefined) {
+    for (const creature of snapshot.creatures) {
+      const matches = snapshot.boss_configurations.filter((config) =>
+        config.node_creature_id === creature.id && config.creature_id === creature.creature_id &&
+        config.spawn_seq === creature.spawn_seq);
+      if (matches.length !== 1) {
+        r.errors.push(`snapshot.boss_configurations: expected exactly one row for node creature ${creature.id}`);
+      }
+    }
+  }
   if (r.errors.length > 0) return { ok: false, errors: r.errors };
   return { ok: true, snapshot };
 }

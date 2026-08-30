@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "combat2:tick-once": "node scripts/combat2-tick-once.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

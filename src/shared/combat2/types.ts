@@ -198,6 +198,8 @@ export interface SnapshotPendingEvent {
 export interface SnapshotBossAbility {
   id: string;
   creature_id: string;
+  /** Present for claim-captured authored casts; fences the creature life. */
+  spawn_seq?: number;
   ability_key: string;
   label: string | null;
   weight: number;
@@ -211,13 +213,25 @@ export interface SnapshotBossAbility {
   resolution_text: string | null;
 }
 
+/** Authored boss configuration captured atomically by `node_tick_claim`. */
+export interface SnapshotBossConfiguration {
+  encounter_id: string;
+  node_creature_id: string;
+  creature_id: string;
+  spawn_seq: number;
+  boss_cast: import('./boss-catalog').AuthoredBossCast | null;
+}
+
 export interface NodeSnapshot {
   encounter: SnapshotEncounter;
   creatures: SnapshotCreature[];
   fighters: SnapshotFighter[];
   effects: SnapshotEffect[];
   intents: SnapshotIntent[];
+  /** Resolver-ready abilities produced only from `boss_configurations`. */
   boss_abilities: SnapshotBossAbility[];
+  /** Immutable-for-this-claim authored boss configuration. */
+  boss_configurations?: SnapshotBossConfiguration[];
   /** Durable qualification rows for the creature spawns of this encounter. */
   participation?: SnapshotParticipation[];
   /** Unconsumed out-of-tick events surfaced by the claim. */

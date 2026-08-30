@@ -15,7 +15,7 @@
  * instead of silently mis-simulated.
  */
 
-import type { SnapshotBossAbility } from './types';
+import type { NodeSnapshot, SnapshotBossAbility, SnapshotBossConfiguration } from './types';
 
 /** The authored document as stored on `creatures.boss_cast`. */
 export interface AuthoredBossCast {
@@ -45,6 +45,7 @@ export interface BossCastRejection {
     | 'missing_ability_key'
     | 'missing_cast_ms'
     | 'missing_amount'
+    | 'unsupported_target_mode'
     | 'stored_power_unsupported'
     | 'split_target_shares_unsupported';
 }
@@ -79,6 +80,10 @@ export function adaptBossCast(
 
   const amount = num(cast.base_amount) ?? num(cast.amount);
   if (amount === null || amount <= 0) return reject('missing_amount');
+
+  if (cast.target_mode != null && !['tank', 'aoe', 'random'].includes(cast.target_mode)) {
+    return reject('unsupported_target_mode');
+  }
 
   // Stored power turns the telegraph's magnitude into an accumulated pool. The
   // replacement contract has no field for it; adapting it would change balance.
@@ -127,4 +132,22 @@ export function buildBossCatalog(
     else abilities.push(result.ability);
   }
   return { abilities, rejected };
+}
+
+/** Adapt only the authored rows captured and identity-bound by the claim. */
+export function adaptClaimedBossCatalog(
+  snapshot: NodeSnapshot,
+): { snapshot: NodeSnapshot; rejected: BossCastRejection[] } {
+  const configs: readonly SnapshotBossConfiguration[] = snapshot.boss_configurations ?? [];
+  const abilities: SnapshotBossAbility[] = [];
+  const rejected: BossCastRejection[] = [];
+  for (const config of configs) {
+    const result = adaptBossCast(config.creature_id, config.boss_cast);
+    if ('rejection' in result) rejected.push(result.rejection);
+    else abilities.push({ ...result.ability, spawn_seq: config.spawn_seq });
+  }
+  return {
+    snapshot: { ...snapshot, boss_abilities: abilities },
+    rejected: rejected.filter((row) => row.reason !== 'disabled'),
+  };
 }

@@ -512,7 +512,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     if (creature.pendingAction) {
       if (creature.pendingAction.resolve_at_tick > tick) continue;
       const ability = snapshot.boss_abilities.find(
-        (b) => b.creature_id === creature.row.creature_id && b.ability_key === creature.pendingAction!.ability_key,
+        (b) => b.creature_id === creature.row.creature_id &&
+          (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq) &&
+          b.ability_key === creature.pendingAction!.ability_key,
       );
       creature.pendingAction = null;
       creature.dirty = true;
@@ -542,7 +544,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     }
 
     // 3b. select an ability; a wind-up writes a pending action and announces it.
-    const pool = snapshot.boss_abilities.filter((b) => b.creature_id === creature.row.creature_id);
+    const pool = snapshot.boss_abilities.filter((b) =>
+      b.creature_id === creature.row.creature_id &&
+      (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq));
     const chosen = rng.weightedPick(pool, (b) => b.weight, 'boss_select', creature.row.creature_id, tick);
     if (chosen && chosen.windup_ticks > 0) {
       creature.pendingAction = {
