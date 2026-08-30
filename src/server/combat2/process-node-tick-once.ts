@@ -2,6 +2,7 @@
 import * as bossCatalog from '../../shared/combat2/boss-catalog.ts';
 import * as playerCatalog from '../../shared/combat2/catalog.ts';
 import { decodeClaim } from '../../shared/combat2/decode.ts';
+import type { ClaimDecodeResult } from '../../shared/combat2/decode.ts';
 import * as resolver from '../../shared/combat2/resolver.ts';
 import type { AuthoredAbilityRecord, CatalogRejection } from '../../shared/combat2/catalog.ts';
 import type { BossCastRejection } from '../../shared/combat2/boss-catalog.ts';
@@ -49,6 +50,13 @@ function object(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/** Explicit guard: discriminant narrowing on `ok` is unreliable under tsgo here. */
+function isDecodeFailure(
+  result: ClaimDecodeResult,
+): result is Extract<ClaimDecodeResult, { ok: false }> {
+  return result.ok === false;
+}
+
 function safeError(error: unknown): string {
   return error instanceof Error ? error.message.slice(0, 300) : 'unknown error';
 }
@@ -86,7 +94,7 @@ export async function processNodeTickOnce(
   }
 
   const decoded = decodeClaim(claim);
-  if (decoded.ok !== true) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
+  if (isDecodeFailure(decoded)) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
   if (decoded.snapshot.boss_configurations === undefined) {
     return { ok: false, kind: 'snapshot_rejected', errors: ['snapshot.boss_configurations: required by worker'] };
   }
