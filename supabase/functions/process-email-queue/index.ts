@@ -1,7 +1,37 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+interface EmailPayload {
+  run_id?: string
+  to: string
+  from: string
+  sender_domain?: string
+  subject: string
+  html: string
+  text: string
+  purpose?: string
+  label?: string
+  idempotency_key?: string
+  unsubscribe_token?: string
+  message_id?: string
+  queued_at?: string
+}
+
+interface QueueMessage {
+  msg_id: number
+  message: EmailPayload
+  read_ct?: number
+  enqueued_at?: string
+}
+
+interface EmailSupabaseClient {
+
+  from: (table: string) => any
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: any; error: any }>
+}
+
 const MAX_RETRIES = 5
+
 const DEFAULT_BATCH_SIZE = 10
 const DEFAULT_SEND_DELAY_MS = 200
 const DEFAULT_AUTH_TTL_MINUTES = 15
@@ -54,9 +84,9 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
 
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: ReturnType<typeof createClient>,
+  supabase: EmailSupabaseClient,
   queue: string,
-  msg: { msg_id: number; message: Record<string, unknown> },
+  msg: QueueMessage,
   reason: string
 ): Promise<void> {
   const payload = msg.message
@@ -77,6 +107,7 @@ async function moveToDlq(
     console.error('Failed to move message to DLQ', { queue, msg_id: msg.msg_id, reason, error })
   }
 }
+
 
 Deno.serve(async (req) => {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
@@ -111,7 +142,8 @@ Deno.serve(async (req) => {
     )
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabase = createClient(supabaseUrl, supabaseServiceKey) as unknown as EmailSupabaseClient
+
 
   // 1. Check rate-limit cooldown and read queue config
   const { data: state } = await supabase
@@ -141,7 +173,8 @@ Deno.serve(async (req) => {
       queue_name: queue,
       batch_size: batchSize,
       vt: 30,
-    })
+    }) as { data: QueueMessage[] | null; error: any }
+
 
     if (readError) {
       console.error('Failed to read email batch', { queue, error: readError })

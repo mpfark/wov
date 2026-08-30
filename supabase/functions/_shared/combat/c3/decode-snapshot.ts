@@ -389,7 +389,7 @@ export function decodeEffectsSection(
       // column is a legacy mirror that the committer does not rewrite, so a row
       // re-persisted by a later tick keeps its typing only through params.
       damageType:
-        damageType ?? (typeof params?.damageType === 'string' ? params.damageType : undefined),
+        damageType ?? (typeof params?.damageType === 'string' ? params.damageType : null),
 
       sourceCharacterId,
       isPeriodic: def?.isPeriodic ?? (mechanic ? EFFECT_MECHANIC_REGISTRY[mechanic].periodic : false),
