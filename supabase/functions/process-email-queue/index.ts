@@ -1,14 +1,31 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+interface EmailPayload {
+  run_id?: string
+  to: string
+  from: string
+  sender_domain?: string
+  subject: string
+  html: string
+  text: string
+  purpose?: string
+  label?: string
+  idempotency_key?: string
+  unsubscribe_token?: string
+  message_id?: string
+  queued_at?: string
+}
+
 interface QueueMessage {
   msg_id: number
-  message: Record<string, unknown>
+  message: EmailPayload
   read_ct?: number
   enqueued_at?: string
 }
 
 interface EmailSupabaseClient {
+
   from: (table: string) => any
   rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: any; error: any }>
 }
