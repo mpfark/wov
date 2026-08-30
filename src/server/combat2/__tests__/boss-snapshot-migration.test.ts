@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const sql = readFileSync(
-  'supabase/migrations/20260830090000_claim_snapshot_authored_boss_cast.sql', 'utf8',
+  'supabase/migrations/20260830064542_10f5dc3d-4931-4a0d-8fd9-2c7faa7bb412.sql', 'utf8',
 );
 
 describe('boss claim migration contract (offline)', () => {
