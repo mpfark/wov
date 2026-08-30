@@ -156,7 +156,8 @@ Deno.serve(async (req) => {
       queue_name: queue,
       batch_size: batchSize,
       vt: 30,
-    })
+    }) as { data: QueueMessage[] | null; error: any }
+
 
     if (readError) {
       console.error('Failed to read email batch', { queue, error: readError })
