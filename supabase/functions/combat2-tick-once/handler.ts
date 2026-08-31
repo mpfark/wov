@@ -18,7 +18,7 @@ export interface RpcClient {
 }
 
 export interface Combat2TickHandlerDependencies {
-  env(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY"): string | undefined;
+  env(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY" | "COMBAT2_WORKER_SECRET"): string | undefined;
   createClient(url: string, serviceRoleKey: string): RpcClient;
   processNodeTickOnce(
     nodeId: string,
@@ -40,6 +40,25 @@ function bearerToken(header: string | null): string | null {
   if (!header?.toLowerCase().startsWith("bearer ")) return null;
   const token = header.slice(7).trim();
   return token || null;
+}
+
+async function constantTimeSecretEqual(supplied: string, expected: string): Promise<boolean> {
+  try {
+    const encode = new TextEncoder();
+    const [suppliedHash, expectedHash] = await Promise.all([
+      crypto.subtle.digest("SHA-256", encode.encode(supplied)),
+      crypto.subtle.digest("SHA-256", encode.encode(expected)),
+    ]);
+    const suppliedBytes = new Uint8Array(suppliedHash);
+    const expectedBytes = new Uint8Array(expectedHash);
+    let difference = 0;
+    for (let index = 0; index < suppliedBytes.length; index += 1) {
+      difference |= suppliedBytes[index] ^ expectedBytes[index];
+    }
+    return difference === 0;
+  } catch {
+    return false;
+  }
 }
 
 function outcomeStatus(result: NodeTickRunResult): number {
@@ -88,13 +107,17 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
 
     const url = deps.env("SUPABASE_URL");
     const serviceRoleKey = deps.env("SUPABASE_SERVICE_ROLE_KEY");
-    if (!url || !serviceRoleKey) {
+    const workerSecret = deps.env("COMBAT2_WORKER_SECRET");
+    if (!url || !serviceRoleKey || !workerSecret) {
       return failure("environment_failure", "required server environment is unavailable", 500);
+    }
+    if (await constantTimeSecretEqual(serviceRoleKey, workerSecret)) {
+      return failure("environment_failure", "worker authorization is misconfigured", 500);
     }
 
     const token = bearerToken(request.headers.get("Authorization"));
-    if (!token || token !== serviceRoleKey) {
-      return failure("unauthorized", "internal service-role authorization required", 401);
+    if (!token || !await constantTimeSecretEqual(token, workerSecret)) {
+      return failure("unauthorized", "worker authorization required", 401);
     }
 
     let body: unknown;
@@ -143,6 +166,6 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
     }
     const status = outcomeStatus(result);
     deps.log?.("[combat2-tick-once] completed", { nodeId, kind: result.kind, status });
-    return json(redact(result, [serviceRoleKey, token]), status);
+    return json(redact(result, [serviceRoleKey, workerSecret]), status);
   };
 }
