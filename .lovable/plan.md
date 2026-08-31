@@ -6,12 +6,14 @@ Scope of this plan: only the provisioning step. Vault-based scheduler design is 
 
 New `public.combat2_provision_worker_secret(_secret text) returns jsonb`.
 
-- `SECURITY DEFINER`, `search_path = public, vault`.
+- `SECURITY DEFINER` with the narrowest trusted search path: `SET search_path = pg_catalog, vault`. `public` is excluded unless implementation proves it is required, and every Vault object and function is schema-qualified (`vault.secrets`, `vault.create_secret`, `vault.update_secret`), as are built-ins used inside the body.
 - Vault entry name is hardcoded as `COMBAT2_WORKER_SECRET`; no caller can choose a name or target another entry.
 - Rejects a null/blank/short value with `{"ok":false,"classification":"invalid_secret"}`.
-- Advisory-locked, idempotent: creates the vault entry when absent (`created`), updates it in place when present (`updated`).
+- Advisory-locked, idempotent: creates the vault entry when absent (`created`), updates it in place when exactly one entry with that name exists (`updated`).
+- If more than one Vault entry already carries that name, it fails closed with a generic `ambiguous_secret_state` and touches nothing — no arbitrary choice, no update, no delete.
 - Any failure returns a generic `vault_write_failed` — never `SQLERRM`, never the value.
 - `REVOKE ALL` from `PUBLIC`, `anon`, `authenticated`; `GRANT EXECUTE` to `service_role` only.
+
 
 This is exactly what the already-installed `combat2_dispatch_scheduler_fire()` reads from (`vault.decrypted_secrets` by that name), so no scheduler change is needed.
 
