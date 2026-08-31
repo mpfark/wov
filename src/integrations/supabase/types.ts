@@ -1540,6 +1540,24 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_dispatch_schedule_state: {
+        Row: {
+          request_id: number | null
+          requested_at: string | null
+          singleton: boolean
+        }
+        Insert: {
+          request_id?: number | null
+          requested_at?: string | null
+          singleton?: boolean
+        }
+        Update: {
+          request_id?: number | null
+          requested_at?: string | null
+          singleton?: boolean
+        }
+        Relationships: []
+      }
       creatures: {
         Row: {
           ac: number
@@ -4334,6 +4352,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
       }
+      combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
+      combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
+      combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
+      combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
       commit_encounter_tick_v2: {
         Args: {
