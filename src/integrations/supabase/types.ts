@@ -4334,6 +4334,7 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
       }
+      combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
       commit_encounter_tick_v2: {
         Args: {
           _batch_id: string
