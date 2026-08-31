@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const PATH = 'supabase/migrations/20260831114000_combat2_due_nodes.sql';
+const PATH = 'supabase/migrations/20260831121505_bca8a198-a6ac-4881-827d-c61ef584905a.sql';
 const SQL = readFileSync(PATH, 'utf8');
 const NORMAL = SQL.replace(/\s+/g, ' ').toLowerCase();
 
