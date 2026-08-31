@@ -4357,6 +4357,10 @@ export type Database = {
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
+      combat2_provision_worker_secret: {
+        Args: { _secret: string }
+        Returns: Json
+      }
       commit_encounter_tick_v2: {
         Args: {
           _batch_id: string
