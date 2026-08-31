@@ -20,11 +20,11 @@ function walkTs(directory: string): string[] {
 }
 
 function toDeno(source: string): string {
-  return source.replace(/(from\s+')([.][^']*?)(')/g, (whole, before, specifier, after) =>
-    specifier.endsWith(".ts") || specifier.endsWith(".json")
-      ? whole
-      : `${before}${specifier}.ts${after}`,
-  );
+  const rewrite = (whole: string, before: string, specifier: string, after: string) =>
+    specifier.endsWith(".ts") || specifier.endsWith(".json") ? whole : `${before}${specifier}.ts${after}`;
+  return source
+    .replace(/(from\s+')([.][^']*?)(')/g, rewrite)
+    .replace(/(import\(\s*')([.][^']*?)('\s*\))/g, rewrite);
 }
 
 function importSpecifiers(path: string): string[] {

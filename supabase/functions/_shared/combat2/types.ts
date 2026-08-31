@@ -144,7 +144,7 @@ export interface SnapshotCreature {
 export interface SnapshotEffect {
   id: string;
   kind: string;
-  effect_type: string | null;
+  effect_type: string;
   ability_key: string | null;
   target_character_id: string | null;
   target_creature_id: string | null;

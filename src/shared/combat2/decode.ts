@@ -193,7 +193,7 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
   return {
     id: r.str(`${path}.id`, o.id),
     kind: r.str(`${path}.kind`, o.kind),
-    effect_type: r.strOrNull(`${path}.effect_type`, o.effect_type),
+    effect_type: r.str(`${path}.effect_type`, o.effect_type),
     ability_key: r.strOrNull(`${path}.ability_key`, o.ability_key),
     target_character_id: r.strOrNull(`${path}.target_character_id`, o.target_character_id),
     target_creature_id: r.strOrNull(`${path}.target_creature_id`, o.target_creature_id),

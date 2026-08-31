@@ -27,6 +27,7 @@ WORKER_SRC = ROOT / "src/server/combat2/process-node-tick-once.ts"
 INVENTORY_SRC = ROOT / "src/shared/combat/inventory/active-abilities.json"
 
 IMPORT_RE = re.compile(r"(from\s+')(\.[^']*?)(')")
+IMPORT_TYPE_RE = re.compile(r"(import\(\s*')(\.[^']*?)('\s*\))")
 
 
 def to_deno(text: str) -> str:
@@ -36,7 +37,7 @@ def to_deno(text: str) -> str:
             return m.group(0)
         return f"{m.group(1)}{spec}.ts{m.group(3)}"
 
-    return IMPORT_RE.sub(fix, text)
+    return IMPORT_TYPE_RE.sub(fix, IMPORT_RE.sub(fix, text))
 
 
 def read_source(path: Path) -> str:

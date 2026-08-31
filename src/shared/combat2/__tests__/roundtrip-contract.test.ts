@@ -149,6 +149,31 @@ describe('installed claim contract', () => {
     expect((out.errors ?? []).join(';')).toContain('fighters[0].hp');
   });
 
+  it('rejects a null effect_type because the claimed node_effect column is NOT NULL', () => {
+    const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    broken.effects = [{
+      id: 'aaaa0000-0000-4000-8000-000000000008',
+      kind: 'dot',
+      effect_type: null,
+      ability_key: null,
+      target_character_id: 'aaaa0000-0000-4000-8000-000000000002',
+      target_creature_id: null,
+      source_character_id: null,
+      source_creature_id: null,
+      stacks: 1,
+      magnitude: null,
+      config: {},
+      expires_at: null,
+      next_due_at: null,
+      interval_ms: null,
+      last_pulse_tick: null,
+      is_reservation: false,
+    }];
+    const out = decodeSnapshot(broken) as { ok: boolean; errors?: string[] };
+    expect(out.ok).toBe(false);
+    expect((out.errors ?? []).join(';')).toContain('effects[0].effect_type');
+  });
+
   it('never invents equipment when the projection omits a field', () => {
     const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
     const equipment = (broken.fighters as Array<Record<string, unknown>>)[0].equipment as Array<
