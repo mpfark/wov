@@ -19,6 +19,8 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.combat-catchup]
     verify_jwt = false
+  [functions.combat2-tick-once]
+    verify_jwt = false
 
 
 
