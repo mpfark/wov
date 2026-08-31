@@ -8,8 +8,12 @@ const FUNCTIONS = resolve(ROOT, "supabase/functions");
 const COMBAT2_SRC = resolve(ROOT, "src/shared/combat2");
 const COMBAT2_DST = resolve(FUNCTIONS, "_shared/combat2");
 const WORKER_SRC = resolve(ROOT, "src/server/combat2/process-node-tick-once.ts");
+const DISPATCHER_SRC = resolve(ROOT, "src/server/combat2/dispatch-node-ticks-once.ts");
 const INVENTORY_SRC = resolve(ROOT, "src/shared/combat/inventory/active-abilities.json");
-const ENTRY = resolve(FUNCTIONS, "combat2-tick-once/index.ts");
+const ENTRIES = [
+  resolve(FUNCTIONS, "combat2-tick-once/index.ts"),
+  resolve(FUNCTIONS, "combat2-dispatch-once/index.ts"),
+];
 
 function walkTs(directory: string): string[] {
   return readdirSync(directory).flatMap((entry) => {
@@ -56,12 +60,14 @@ describe("combat2 Edge packaging", () => {
     const workerMirror = resolve(COMBAT2_DST, "process-node-tick-once.ts");
     const expectedWorker = toDeno(readFileSync(WORKER_SRC, "utf8")).replaceAll("../../shared/combat2/", "./");
     expect(readFileSync(workerMirror, "utf8")).toBe(expectedWorker);
+    expect(readFileSync(resolve(COMBAT2_DST, "dispatch-node-ticks-once.ts"), "utf8"))
+      .toBe(toDeno(readFileSync(DISPATCHER_SRC, "utf8")));
     expect(readFileSync(resolve(COMBAT2_DST, "active-abilities.json")))
       .toEqual(readFileSync(INVENTORY_SRC));
   });
 
   it("keeps every transitive local Edge dependency inside supabase/functions", () => {
-    const pending = [ENTRY];
+    const pending = [...ENTRIES];
     const visited = new Set<string>();
 
     while (pending.length > 0) {

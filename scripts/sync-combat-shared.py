@@ -24,6 +24,7 @@ TREES = ("pure", "c2", "c3")
 COMBAT2_SRC = ROOT / "src/shared/combat2"
 COMBAT2_DST = ROOT / "supabase/functions/_shared/combat2"
 WORKER_SRC = ROOT / "src/server/combat2/process-node-tick-once.ts"
+DISPATCHER_SRC = ROOT / "src/server/combat2/dispatch-node-ticks-once.ts"
 INVENTORY_SRC = ROOT / "src/shared/combat/inventory/active-abilities.json"
 
 IMPORT_RE = re.compile(r"(from\s+')(\.[^']*?)(')")
@@ -89,6 +90,15 @@ def main() -> int:
     else:
         worker_dst.parent.mkdir(parents=True, exist_ok=True)
         write_source(worker_dst, worker_want)
+
+    dispatcher_dst = COMBAT2_DST / "dispatch-node-ticks-once.ts"
+    dispatcher_want = to_deno(read_source(DISPATCHER_SRC))
+    if check:
+        if not dispatcher_dst.exists() or read_source(dispatcher_dst) != dispatcher_want:
+            drift.append("combat2/dispatch-node-ticks-once.ts")
+    else:
+        dispatcher_dst.parent.mkdir(parents=True, exist_ok=True)
+        write_source(dispatcher_dst, dispatcher_want)
 
     inventory_dst = COMBAT2_DST / "active-abilities.json"
     if check:

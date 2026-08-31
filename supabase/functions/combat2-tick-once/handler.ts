@@ -4,6 +4,7 @@ import type {
   NodeTickRunResult,
   ProcessNodeTickDependencies,
 } from "../_shared/combat2/process-node-tick-once.ts";
+import { bearerToken, constantTimeSecretEqual, redact } from "../_shared/combat2-internal-edge-auth.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -36,31 +37,6 @@ function failure(kind: string, reason: string, status: number): Response {
   return json({ ok: false, kind, reason }, status);
 }
 
-function bearerToken(header: string | null): string | null {
-  if (!header?.toLowerCase().startsWith("bearer ")) return null;
-  const token = header.slice(7).trim();
-  return token || null;
-}
-
-async function constantTimeSecretEqual(supplied: string, expected: string): Promise<boolean> {
-  try {
-    const encode = new TextEncoder();
-    const [suppliedHash, expectedHash] = await Promise.all([
-      crypto.subtle.digest("SHA-256", encode.encode(supplied)),
-      crypto.subtle.digest("SHA-256", encode.encode(expected)),
-    ]);
-    const suppliedBytes = new Uint8Array(suppliedHash);
-    const expectedBytes = new Uint8Array(expectedHash);
-    let difference = 0;
-    for (let index = 0; index < suppliedBytes.length; index += 1) {
-      difference |= suppliedBytes[index] ^ expectedBytes[index];
-    }
-    return difference === 0;
-  } catch {
-    return false;
-  }
-}
-
 function outcomeStatus(result: NodeTickRunResult): number {
   if (result.ok) return 200;
   switch (result.kind) {
@@ -80,22 +56,6 @@ function outcomeStatus(result: NodeTickRunResult): number {
     case "resolver_failed":
       return 500;
   }
-}
-
-function redact(value: unknown, secrets: readonly string[]): unknown {
-  if (typeof value === "string") {
-    return secrets.reduce(
-      (text, secret) => secret ? text.replaceAll(secret, "[REDACTED]") : text,
-      value,
-    );
-  }
-  if (Array.isArray(value)) return value.map((item) => redact(item, secrets));
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, redact(item, secrets)]),
-    );
-  }
-  return value;
 }
 
 /** Thin HTTP boundary; all combat orchestration remains in processNodeTickOnce. */
