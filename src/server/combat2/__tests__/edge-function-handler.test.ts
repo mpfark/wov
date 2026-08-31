@@ -4,6 +4,10 @@ import {
   type Combat2TickHandlerDependencies,
   type RpcClient,
 } from "../../../../supabase/functions/combat2-tick-once/handler.ts";
+import type {
+  NodeTickRunResult,
+  ProcessNodeTickDependencies,
+} from "../process-node-tick-once.ts";
 
 const NODE = "11111111-1111-4111-8111-111111111111";
 const SERVICE_KEY = "server-only-secret";
@@ -20,7 +24,9 @@ function request(body: unknown = { node_id: NODE }, init: RequestInit = {}): Req
 
 function setup(result: unknown = { ok: true, kind: "committed", encounterId: NODE, tick: 2 }) {
   const rpc = vi.fn(async () => ({ data: null, error: null }));
-  const process = vi.fn(async () => result) as Combat2TickHandlerDependencies["processNodeTickOnce"];
+  const process = vi.fn(
+    async (_nodeId: string, _dependencies: ProcessNodeTickDependencies) => result as NodeTickRunResult,
+  );
   const log = vi.fn();
   const createClient = vi.fn(() => ({ rpc }) as RpcClient);
   const deps: Combat2TickHandlerDependencies = {
