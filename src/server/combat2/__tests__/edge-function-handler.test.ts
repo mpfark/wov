@@ -23,7 +23,7 @@ function request(body: unknown = { node_id: NODE }, init: RequestInit = {}): Req
 }
 
 function setup(result: unknown = { ok: true, kind: "committed", encounterId: NODE, tick: 2 }) {
-  const rpc = vi.fn(async () => ({ data: null, error: null }));
+  const rpc = vi.fn(async (_name: string, _args: Record<string, unknown>) => ({ data: null, error: null }));
   const process = vi.fn(
     async (_nodeId: string, _dependencies: ProcessNodeTickDependencies) => result as NodeTickRunResult,
   );
