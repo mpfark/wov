@@ -1,9 +1,9 @@
-import type { AuthoredAbilityRecord } from "../../../src/shared/combat2/catalog.ts";
+import type { AuthoredAbilityRecord } from "../_shared/combat2/catalog.ts";
 import type {
   CommitTickArgs,
   NodeTickRunResult,
   ProcessNodeTickDependencies,
-} from "../../../src/server/combat2/process-node-tick-once.ts";
+} from "../_shared/combat2/process-node-tick-once.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JSON_HEADERS = { "Content-Type": "application/json" };
