@@ -1558,6 +1558,42 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_tick_notification: {
+        Row: {
+          batch_id: string
+          created_at: string
+          encounter_id: string
+          tick: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          encounter_id: string
+          tick: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          encounter_id?: string
+          tick?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_tick_notification_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "node_tick_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_tick_notification_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creatures: {
         Row: {
           ac: number
@@ -4352,6 +4388,14 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
       }
+      combat2_delivery_authorized: {
+        Args: { _character_id: string; _encounter_id: string }
+        Returns: boolean
+      }
+      combat2_delivery_visible: {
+        Args: { _encounter_id: string }
+        Returns: boolean
+      }
       combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
@@ -4359,6 +4403,15 @@ export type Database = {
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
       combat2_provision_worker_secret: {
         Args: { _secret: string }
+        Returns: Json
+      }
+      combat2_sync: {
+        Args: {
+          _after_tick?: number
+          _character_id: string
+          _encounter_id: string
+          _limit?: number
+        }
         Returns: Json
       }
       commit_encounter_tick_v2: {
