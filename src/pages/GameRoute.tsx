@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
 import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { useCombat2DeliverySession } from '@/features/combat2/useCombat2DeliverySession';
+import { COMBAT2_DELIVERY_ENABLED } from '@/shared/config/feature-flags';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
@@ -18,6 +20,14 @@ export default function GameRoute() {
   // value, leaving the player with only "Welcome back" on the real mount.
   const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
   const syncStartedForRef = useRef<string | null>(null);
+
+  // Dormant delivery seam. A later combat_enter integration will provide the
+  // Combat2 encounter id; legacy encounter identity is deliberately excluded.
+  useCombat2DeliverySession({
+    enabled: COMBAT2_DELIVERY_ENABLED,
+    characterId: character?.id ?? null,
+    encounterId: null,
+  });
 
   // On world entry, recalculate gear-adjusted max_hp/max_cp/max_mp on the
   // server so the persisted row matches the gear baseline. Prevents the

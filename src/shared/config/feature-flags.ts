@@ -30,3 +30,12 @@ export const USE_CONFIG_ABILITIES = true;
  * Remove both once this pass is verified in production.
  */
 export const ABILITY_RESOLVER_MODE: 'v2' | 'sealed' = 'v2';
+
+/** Exact, frontend-only rollout gate for the dormant Combat2 delivery session. */
+export function combat2DeliveryEnabled(value: unknown): boolean {
+  return value === 'true';
+}
+
+export const COMBAT2_DELIVERY_ENABLED = combat2DeliveryEnabled(
+  import.meta.env.VITE_COMBAT2_DELIVERY_ENABLED,
+);

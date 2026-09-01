@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const path = 'supabase/migrations/20260831223000_combat2_client_delivery.sql';
+const path = 'supabase/migrations/20260901104835_d1bb417e-56d2-4c4b-b34b-afbad1c26d5e.sql';
 const sql = readFileSync(path, 'utf8');
 const normal = sql.toLowerCase().replace(/\s+/g, ' ');
 const syncBody = normal.split('create or replace function public.combat2_sync(')[1]

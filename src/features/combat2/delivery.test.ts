@@ -14,7 +14,7 @@ function result(ticks: number[], latest = ticks.at(-1) ?? 0, hasMore = false) {
   };
 }
 
-function harness(responses: ReturnType<typeof result>[]) {
+function harness(responses: unknown[]) {
   let notice: ((payload: { new?: unknown }) => void) | undefined;
   let status: ((value: string) => void) | undefined;
   const channel: Combat2RealtimeChannel = {
@@ -78,12 +78,24 @@ describe('Combat2DeliveryAdapter', () => {
 
   it('synchronizes again on reconnect', async () => {
     const h = harness([result([1], 1), result([2], 2)]);
-    const adapter = new Combat2DeliveryAdapter({ client: h.client, characterId: CHARACTER, encounterId: ENCOUNTER });
+    const statuses: string[] = [];
+    const adapter = new Combat2DeliveryAdapter({ client: h.client, characterId: CHARACTER, encounterId: ENCOUNTER, onStatus: (status) => statuses.push(status) });
     await adapter.start();
     h.reconnect();
     await Promise.resolve();
     h.reconnect();
     await vi.waitFor(() => expect(adapter.lastAppliedTick).toBe(2));
+    expect(statuses).toContain('reconnecting');
+    expect(statuses.at(-1)).toBe('live');
+  });
+
+  it('surfaces authorization refusal without retrying', async () => {
+    const h = harness([{ ok: false, kind: 'unauthorized' }]);
+    const onError = vi.fn();
+    const adapter = new Combat2DeliveryAdapter({ client: h.client, characterId: CHARACTER, encounterId: ENCOUNTER, onError });
+    await expect(adapter.start()).rejects.toMatchObject({ code: 'refused' });
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'refused' }));
+    expect(h.rpc).toHaveBeenCalledOnce();
   });
 
   it('removes the channel and performs no browser-driven mutation on stop', async () => {

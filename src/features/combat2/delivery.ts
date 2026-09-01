@@ -72,6 +72,17 @@ export interface Combat2DeliveryOptions {
   encounterId: string;
   pageSize?: number;
   onSync?: (result: Combat2SyncResult) => void;
+  onStatus?: (status: 'syncing' | 'live' | 'reconnecting') => void;
+  onError?: (error: Combat2DeliveryError) => void;
+}
+
+export type Combat2DeliveryErrorCode = 'refused' | 'gap' | 'error';
+
+export class Combat2DeliveryError extends Error {
+  constructor(readonly code: Combat2DeliveryErrorCode, message: string) {
+    super(message);
+    this.name = 'Combat2DeliveryError';
+  }
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -82,10 +93,16 @@ function record(value: unknown): Record<string, unknown> | null {
 
 function parseSync(value: unknown): Combat2SyncResult {
   const row = record(value);
+  if (row?.ok === false && row.kind === 'unauthorized') {
+    throw new Combat2DeliveryError('refused', 'combat2_sync refused this delivery session');
+  }
+  if (row?.ok === false && row.kind === 'gap_detected') {
+    throw new Combat2DeliveryError('gap', 'combat2_sync detected a durable tick gap');
+  }
   if (!row || row.ok !== true || row.kind !== 'sync' || !Array.isArray(row.batches) ||
       typeof row.latest_tick !== 'number' || typeof row.returned_through_tick !== 'number' ||
       typeof row.has_more !== 'boolean') {
-    throw new Error('combat2_sync returned an invalid or refused response');
+    throw new Combat2DeliveryError('error', 'combat2_sync returned an invalid response');
   }
   return row as unknown as Combat2SyncResult;
 }
@@ -121,14 +138,26 @@ export class Combat2DeliveryAdapter {
         const notice = record(value);
         if (!notice || notice.encounter_id !== this.options.encounterId ||
             typeof notice.tick !== 'number' || notice.tick <= this.cursor) return;
-        void this.requestSync().catch(() => undefined);
+        this.wake('syncing');
       })
       .subscribe((status) => {
-        if (status !== 'SUBSCRIBED') return;
-        if (this.subscribedOnce) void this.requestSync().catch(() => undefined);
-        this.subscribedOnce = true;
+        if (status === 'SUBSCRIBED') {
+          if (this.subscribedOnce) this.wake('reconnecting');
+          this.subscribedOnce = true;
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          this.options.onStatus?.('reconnecting');
+        }
       });
-    return this.requestSync();
+    this.options.onStatus?.('syncing');
+    try {
+      const result = await this.requestSync();
+      if (!this.disposed) this.options.onStatus?.('live');
+      return result;
+    } catch (error) {
+      const deliveryError = this.asDeliveryError(error);
+      if (!this.disposed) this.options.onError?.(deliveryError);
+      throw deliveryError;
+    }
   }
 
   requestSync(): Promise<Combat2SyncResult> {
@@ -169,21 +198,37 @@ export class Combat2DeliveryAdapter {
         _after_tick: this.cursor,
         _limit: this.pageSize,
       });
-      if (error) throw new Error(error.message ?? 'combat2_sync failed');
+      if (error) throw new Combat2DeliveryError('error', error.message ?? 'combat2_sync failed');
       page = parseSync(data);
-      if (page.returned_through_tick < this.cursor) throw new Error('combat2_sync cursor regressed');
+      if (page.returned_through_tick < this.cursor) throw new Combat2DeliveryError('gap', 'combat2_sync cursor regressed');
       for (const batch of page.batches) {
         if (batch.tick <= this.cursor) continue;
-        if (batch.tick !== this.cursor + 1) throw new Error('combat2_sync returned a tick gap');
+        if (batch.tick !== this.cursor + 1) throw new Combat2DeliveryError('gap', 'combat2_sync returned a tick gap');
         collected.push(batch);
         this.cursor = batch.tick;
       }
-      if (page.returned_through_tick !== this.cursor) throw new Error('combat2_sync cursor did not match batches');
-      if (page.has_more && this.cursor === beforePage) throw new Error('combat2_sync pagination made no progress');
+      if (page.returned_through_tick !== this.cursor) throw new Combat2DeliveryError('gap', 'combat2_sync cursor did not match batches');
+      if (page.has_more && this.cursor === beforePage) throw new Combat2DeliveryError('gap', 'combat2_sync pagination made no progress');
     } while (page.has_more);
 
     const result = { ...page, batches: collected, returned_through_tick: this.cursor };
     if (!this.disposed) this.options.onSync?.(result);
     return result;
+  }
+
+  private wake(status: 'syncing' | 'reconnecting'): void {
+    if (this.disposed) return;
+    this.options.onStatus?.(status);
+    void this.requestSync().then(() => {
+      if (!this.disposed) this.options.onStatus?.('live');
+    }).catch((error) => {
+      if (!this.disposed) this.options.onError?.(this.asDeliveryError(error));
+    });
+  }
+
+  private asDeliveryError(error: unknown): Combat2DeliveryError {
+    return error instanceof Combat2DeliveryError
+      ? error
+      : new Combat2DeliveryError('error', error instanceof Error ? error.message : 'combat2_sync failed');
   }
 }
