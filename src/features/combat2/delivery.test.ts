@@ -98,6 +98,14 @@ describe('Combat2DeliveryAdapter', () => {
     expect(h.rpc).toHaveBeenCalledOnce();
   });
 
+  it('stops on explicit gap_detected without advancing the cursor', async () => {
+    const h = harness([{ ok: false, kind: 'gap_detected', latest_tick: 3, returned_through_tick: 0, has_more: true, batches: [] }]);
+    const adapter = new Combat2DeliveryAdapter({ client: h.client, characterId: CHARACTER, encounterId: ENCOUNTER });
+    await expect(adapter.start()).rejects.toMatchObject({ code: 'gap' });
+    expect(adapter.lastAppliedTick).toBe(0);
+    expect(h.rpc).toHaveBeenCalledOnce();
+  });
+
   it('removes the channel and performs no browser-driven mutation on stop', async () => {
     const h = harness([result([])]);
     const adapter = new Combat2DeliveryAdapter({ client: h.client, characterId: CHARACTER, encounterId: ENCOUNTER });

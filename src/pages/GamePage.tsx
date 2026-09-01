@@ -79,6 +79,7 @@ import { GuideReader } from '@/features/guide/components/GuideReader';
 import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
 import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 import { routeCombat2Action } from '@/features/combat2/routeCombat2Action';
+import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -197,6 +198,18 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     nodeId: character.current_node_id,
     hasLivingCreatures: rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
   });
+  const activeCombat2Presentation = COMBAT2_CLIENT_ENABLED && combat2.sessionStatus === 'active'
+    ? combat2.presentation.model
+    : null;
+  const presentedCharacter = useMemo(() => selectCombat2Character(
+    COMBAT2_CLIENT_ENABLED, activeCombat2Presentation, character,
+  ), [activeCombat2Presentation, character]);
+  const presentedCreatures = useMemo(() => selectCombat2Creatures(
+    COMBAT2_CLIENT_ENABLED, activeCombat2Presentation, creatures,
+  ), [activeCombat2Presentation, creatures]);
+  const presentedCreatureHp = useMemo(() => activeCombat2Presentation
+    ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
+    : null, [activeCombat2Presentation]);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
@@ -1117,6 +1130,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!(isWideScreen && chatPanelOpen)) return eventLog;
     return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
+  const presentedEventLog = useMemo(() => {
+    return selectCombat2Events(COMBAT2_CLIENT_ENABLED, combat2.presentation.model, filteredEventLog);
+  }, [filteredEventLog, combat2.presentation.model]);
 
   // On-device archive: full personal log history with infinite scrollback.
   const logArchive = useLogArchive(character.id, eventLog);
@@ -1340,9 +1356,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               area={currentNode.area_id ? getNodeArea(currentNode) : undefined}
               allNodes={nodes}
               players={playersHere}
-              creatures={creatures}
+              creatures={presentedCreatures}
               npcs={npcs}
-              character={character}
+              character={presentedCharacter}
               eventLog={eventLog}
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onSelectTarget={(id) => setSelectedTargetId(id)}
@@ -1352,7 +1368,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
-              creatureHpOverrides={mergedCreatureHpOverrides}
+              creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
               classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
@@ -1406,7 +1422,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             />
           </div>
           <EventLogPanel
-            filteredEventLog={filteredEventLog}
+            filteredEventLog={presentedEventLog}
             display={eventLogDisplay}
             className="flex-[55]"
             olderEvents={filteredOlderEvents}

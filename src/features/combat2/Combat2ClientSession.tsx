@@ -3,6 +3,7 @@ import { useCombat2DeliverySession } from './useCombat2DeliverySession';
 import { useCombat2EntrySession } from './useCombat2EntrySession';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
+import { useCombat2Presentation } from './useCombat2Presentation';
 
 export interface Combat2ClientSessionProps {
   enabled: boolean;
@@ -43,11 +44,13 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     encounterId,
     onExited,
   });
+  const presentation = useCombat2Presentation(enteredSessionKey, delivery);
   return {
     entry,
     intents,
     flee,
     delivery,
+    presentation,
     encounterId,
     sessionStatus: encounterId ? 'active' as const : exitedSessionKey === enteredSessionKey && enteredSessionKey
       ? 'exited' as const
