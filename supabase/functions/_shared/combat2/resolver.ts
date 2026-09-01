@@ -66,7 +66,7 @@ function effectsFor(effects: SnapshotEffect[], characterId: string, kind: string
   return effects.filter((e) => e.target_character_id === characterId && e.kind === kind);
 }
 
-/** Newest present fighter tanks. Evaluated at resolution time, per creature. */
+/** Newest present fighter tanks. Evaluated when an action begins, per creature. */
 export function selectTank(fighters: SnapshotFighter[], living: ReadonlySet<string>): SnapshotFighter | null {
   const eligible = fighters
     .filter((f) => f.present && living.has(f.character_id))
@@ -501,7 +501,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
   // ── 3. creature actions ───────────────────────────────────────
   for (const creature of creatures.values()) {
-    if (creature.hp <= 0) continue;
+    if (creature.hp <= 0 || !creature.row.is_alive) {
+      if (creature.pendingAction) {
+        creature.pendingAction = null;
+        creature.dirty = true;
+      }
+      continue;
+    }
     const living = livingCharacters();
     const tank = selectTank(snapshot.fighters, living);
     creature.tankFighterId = tank?.id ?? null;
@@ -511,10 +517,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     //     nothing else this tick (one action per tick).
     if (creature.pendingAction) {
       if (creature.pendingAction.resolve_at_tick > tick) continue;
+      const pendingAction = creature.pendingAction;
       const ability = snapshot.boss_abilities.find(
         (b) => b.creature_id === creature.row.creature_id &&
           (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq) &&
-          b.ability_key === creature.pendingAction!.ability_key,
+          b.ability_key === pendingAction.ability_key,
       );
       creature.pendingAction = null;
       creature.dirty = true;
@@ -522,13 +529,17 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         emit({ kind: 'boss_cast_evaded', outcomeReason: 'ability_missing' });
         continue;
       }
-      const targets =
-        ability.targeting === 'aoe'
-          ? snapshot.fighters.filter((f) => f.present && living.has(f.character_id))
-          : tank
-            ? [tank]
-            : [];
-      if (targets.length === 0) {
+      const capturedFighter = snapshot.fighters.find(
+        (fighter) => fighter.id === pendingAction.target_fighter_id,
+      );
+      const capturedTarget = capturedFighter
+        && capturedFighter.character_id === pendingAction.target_character_id
+        && capturedFighter.entry_seq === pendingAction.target_entry_seq
+        && capturedFighter.present
+        && living.has(capturedFighter.character_id)
+        ? capturedFighter
+        : null;
+      if (!capturedTarget) {
         emit({
           kind: 'boss_cast_evaded',
           abilityKey: ability.ability_key,
@@ -537,9 +548,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         });
         continue;
       }
-      for (const target of targets) {
-        applyCreatureDamage(creature, target, ability.ability_key, Math.floor(ability.magnitude ?? 0));
-      }
+      applyCreatureDamage(creature, capturedTarget, ability.ability_key, Math.floor(ability.magnitude ?? 0));
       continue;
     }
 
@@ -549,15 +558,30 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq));
     const chosen = rng.weightedPick(pool, (b) => b.weight, 'boss_select', creature.row.creature_id, tick);
     if (chosen && chosen.windup_ticks > 0) {
+      if (!tank) {
+        emit({
+          kind: 'boss_cast_evaded',
+          abilityKey: chosen.ability_key,
+          actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
+          outcomeReason: 'no_target',
+        });
+        continue;
+      }
       creature.pendingAction = {
         ability_key: chosen.ability_key,
+        ability_label: chosen.label,
+        started_at_tick: tick,
         resolve_at_tick: tick + chosen.windup_ticks,
+        target_fighter_id: tank.id,
+        target_character_id: tank.character_id,
+        target_entry_seq: tank.entry_seq,
       };
       creature.dirty = true;
       emit({
         kind: 'boss_telegraph',
         abilityKey: chosen.ability_key,
         actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
+        target: { type: 'character', id: tank.character_id, name: tank.name },
         meta: { resolveAtTick: creature.pendingAction.resolve_at_tick, text: chosen.telegraph_text },
       });
       continue; // no autoattack during wind-up

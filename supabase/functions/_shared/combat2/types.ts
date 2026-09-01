@@ -117,7 +117,12 @@ export interface SnapshotFighter {
 
 export interface SnapshotPendingAction {
   ability_key: string;
+  ability_label: string | null;
+  started_at_tick: number;
   resolve_at_tick: number;
+  target_fighter_id: string;
+  target_character_id: string;
+  target_entry_seq: number;
 }
 
 export interface SnapshotCreature {

@@ -78,6 +78,29 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
   };
 }
 
+function pending(overrides: Partial<NonNullable<SnapshotCreature['pending_action']>> = {}): NonNullable<SnapshotCreature['pending_action']> {
+  return {
+    ability_key: 'granite_slam',
+    ability_label: 'Granite Slam',
+    started_at_tick: 9,
+    resolve_at_tick: 11,
+    target_fighter_id: 'f-ch-1',
+    target_character_id: 'ch-1',
+    target_entry_seq: 1,
+    ...overrides,
+  };
+}
+
+function bossAbility(overrides: Partial<NodeSnapshot['boss_abilities'][number]> = {}): NodeSnapshot['boss_abilities'][number] {
+  return {
+    id: 'ba-1', creature_id: 'cr-1', ability_key: 'granite_slam', label: 'Granite Slam',
+    weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
+    damage_type: 'physical', effect: null,
+    telegraph_text: 'gathers force', resolution_text: 'slams down',
+    ...overrides,
+  };
+}
+
 /** An intent row exactly as `node_intent` shapes it. */
 function abilityIntent(
   id: string,
@@ -301,59 +324,131 @@ describe('combat2 resolver', () => {
   it('writes a pending action for a telegraphed boss ability and skips the autoattack', () => {
     const out = resolveNodeTick(
       snapshot({
-        boss_abilities: [
-          {
-            id: 'ba-1', creature_id: 'cr-1', ability_key: 'granite_slam', label: 'Granite Slam',
-            weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
-            damage_type: 'physical', effect: null,
-            telegraph_text: 'gathers force', resolution_text: 'slams down',
-          },
-        ],
+        boss_abilities: [bossAbility()],
       }),
       { abilities },
     );
     expect(out.events.some((e) => e.kind === 'boss_telegraph')).toBe(true);
     expect(out.events.some((e) => e.kind === 'creature_attack')).toBe(false);
-    expect(out.creatures[0].pending_action).toEqual({ ability_key: 'granite_slam', resolve_at_tick: 13 });
+    expect(out.creatures[0].pending_action).toEqual({
+      ability_key: 'granite_slam', ability_label: 'Granite Slam',
+      started_at_tick: 11, resolve_at_tick: 13,
+      target_fighter_id: 'f-ch-1', target_character_id: 'ch-1', target_entry_seq: 1,
+    });
+    expect(out.events.find((event) => event.kind === 'boss_telegraph')?.target?.id).toBe('ch-1');
   });
 
-  it('resolves a due telegraph against the roster current at resolution', () => {
+  it('hits the unchanged captured fighter exactly once at resolution', () => {
     const out = resolveNodeTick(
       snapshot({
-        creatures: [creature({ pending_action: { ability_key: 'granite_slam', resolve_at_tick: 11 } })],
-        boss_abilities: [
-          {
-            id: 'ba-1', creature_id: 'cr-1', ability_key: 'granite_slam', label: 'Granite Slam',
-            weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
-            damage_type: 'physical', effect: null,
-            telegraph_text: 'gathers force', resolution_text: 'slams down',
-          },
-        ],
+        creatures: [creature({ pending_action: pending() })],
+        boss_abilities: [bossAbility()],
       }),
       { abilities },
     );
     expect(out.creatures[0].pending_action).toBeNull();
-    expect(out.events.some((e) => e.kind === 'creature_attack' && e.abilityKey === 'granite_slam')).toBe(true);
+    expect(out.events.filter((e) => e.kind === 'creature_attack' && e.abilityKey === 'granite_slam')).toHaveLength(1);
+    expect(out.events.filter((e) => e.kind === 'boss_cast_evaded')).toHaveLength(0);
   });
 
   it('gives the empty-ground result when nobody is present at resolution', () => {
     const out = resolveNodeTick(
       snapshot({
-        creatures: [creature({ pending_action: { ability_key: 'granite_slam', resolve_at_tick: 11 } })],
+        creatures: [creature({ pending_action: pending() })],
         fighters: [fighter({ character_id: 'ch-1', present: false })],
-        boss_abilities: [
-          {
-            id: 'ba-1', creature_id: 'cr-1', ability_key: 'granite_slam', label: 'Granite Slam',
-            weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
-            damage_type: 'physical', effect: null,
-            telegraph_text: 'gathers force', resolution_text: 'slams down',
-          },
-        ],
+        boss_abilities: [bossAbility()],
       }),
       { abilities },
     );
-    expect(out.events.some((e) => e.kind === 'boss_cast_evaded')).toBe(true);
+    expect(out.events.filter((e) => e.kind === 'boss_cast_evaded')).toHaveLength(1);
     expect(out.characters.find((c) => c.id === 'ch-1')?.hp ?? 100).toBe(100);
+  });
+
+  it('does not retarget when the captured fighter leaves and another fighter becomes tank', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ pending_action: pending() })],
+      fighters: [
+        fighter({ character_id: 'ch-1', present: false }),
+        fighter({ character_id: 'ch-2', entry_seq: 2 }),
+      ],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+    expect(out.characters.find((character) => character.id === 'ch-2')?.hp ?? 100).toBe(100);
+  });
+
+  it('does not retarget the original character after re-entry changes entry_seq', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ pending_action: pending() })],
+      fighters: [fighter({ character_id: 'ch-1', entry_seq: 2 })],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+  });
+
+  it('does not let a newly entered fighter inherit an absent target cast', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ pending_action: pending() })],
+      fighters: [fighter({ character_id: 'ch-2', entry_seq: 7 })],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+  });
+
+  it('allows a later new cast to capture the newly authoritative tank', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [
+        fighter({ character_id: 'ch-1', entry_seq: 1 }),
+        fighter({ character_id: 'ch-2', entry_seq: 7 }),
+      ],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.creatures[0].pending_action).toMatchObject({
+      target_fighter_id: 'f-ch-2', target_character_id: 'ch-2', target_entry_seq: 7,
+    });
+  });
+
+  it('does not create a future-acquiring cast without a valid start target', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', present: false })],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.creatures.find((state) => state.id === 'nc-1')?.pending_action).not.toBeDefined();
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'boss_telegraph')).toBe(false);
+  });
+
+  it('fences a pending cast from a different creature spawn', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ spawn_seq: 4, pending_action: pending() })],
+      boss_abilities: [bossAbility({ spawn_seq: 3 })],
+    }), { abilities });
+    expect(out.events).toEqual([expect.objectContaining({ kind: 'boss_cast_evaded', outcomeReason: 'ability_missing' })]);
+    expect(out.creatures[0].pending_action).toBeNull();
+  });
+
+  it('clears a dead boss pending cast without resolving damage', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ hp: 0, is_alive: false, pending_action: pending() })],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.creatures[0].pending_action).toBeNull();
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+  });
+
+  it('clears a wind-up when the boss dies earlier in the same tick', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ hp: 1, pending_action: pending({ resolve_at_tick: 12 }) })],
+      intents: [abilityIntent('kill-boss', 1, 'ch-1', 'power_strike', 'cr-1')],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(out.creatures[0]).toMatchObject({ hp: 0, is_alive: false, pending_action: null });
+    expect(out.events.filter((event) => event.kind === 'creature_died')).toHaveLength(1);
+    expect(out.rewards).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
   });
 
   it('pays only characters durably qualified for this spawn, exactly once each', () => {

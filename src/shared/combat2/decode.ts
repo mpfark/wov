@@ -160,11 +160,16 @@ function decodeCreature(r: Reader, path: string, raw: unknown): SnapshotCreature
   const o = r.object(path, raw);
   const pending = o.pending_action;
   let pendingAction: SnapshotCreature['pending_action'] = null;
-  if (pending && typeof pending === 'object') {
-    const p = pending as Record<string, unknown>;
+  if (pending !== null && pending !== undefined) {
+    const p = r.object(`${path}.pending_action`, pending);
     pendingAction = {
       ability_key: r.str(`${path}.pending_action.ability_key`, p.ability_key),
+      ability_label: r.strOrNull(`${path}.pending_action.ability_label`, p.ability_label),
+      started_at_tick: r.num(`${path}.pending_action.started_at_tick`, p.started_at_tick),
       resolve_at_tick: r.num(`${path}.pending_action.resolve_at_tick`, p.resolve_at_tick),
+      target_fighter_id: r.str(`${path}.pending_action.target_fighter_id`, p.target_fighter_id),
+      target_character_id: r.str(`${path}.pending_action.target_character_id`, p.target_character_id),
+      target_entry_seq: r.num(`${path}.pending_action.target_entry_seq`, p.target_entry_seq),
     };
   }
   return {

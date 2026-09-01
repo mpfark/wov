@@ -185,6 +185,33 @@ describe('installed claim contract', () => {
     expect((out.errors ?? []).join(';')).toContain('equipment[0].item_present');
   });
 
+  it.each(['started_at_tick', 'target_fighter_id', 'target_character_id', 'target_entry_seq'])(
+    'fails closed when a pending cast omits %s',
+    (field) => {
+      const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+      const creature = (broken.creatures as Array<Record<string, unknown>>)[0];
+      creature.pending_action = {
+        ability_key: 'granite_slam', ability_label: 'Granite Slam',
+        started_at_tick: 1, resolve_at_tick: 3,
+        target_fighter_id: CLAIM.snapshot.fighters[0].id,
+        target_character_id: CLAIM.snapshot.fighters[0].character_id,
+        target_entry_seq: CLAIM.snapshot.fighters[0].entry_seq,
+      };
+      delete (creature.pending_action as Record<string, unknown>)[field];
+      const out = decodeSnapshot(broken) as { ok: boolean; errors?: string[] };
+      expect(out.ok).toBe(false);
+      expect((out.errors ?? []).join(';')).toContain(`pending_action.${field}`);
+    },
+  );
+
+  it('fails closed when pending_action is not an object', () => {
+    const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    (broken.creatures as Array<Record<string, unknown>>)[0].pending_action = 'granite_slam';
+    const out = decodeSnapshot(broken) as { ok: boolean; errors?: string[] };
+    expect(out.ok).toBe(false);
+    expect((out.errors ?? []).join(';')).toContain('pending_action: expected object');
+  });
+
   it('resolves the first-hit kill with the equipped weapon, proposing same-tick participation', () => {
     const decoded = decodeClaim(CLAIM);
     expect(decoded.ok).toBe(true);
