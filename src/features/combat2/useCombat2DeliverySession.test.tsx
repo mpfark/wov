@@ -50,8 +50,8 @@ describe('useCombat2DeliverySession dormant integration', () => {
   it('accepts only the entry session authoritative encounter id at the application seam', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
     const bridge = readFileSync('src/features/combat2/Combat2ClientSession.tsx', 'utf8');
-    expect(page).toContain('<Combat2ClientSession');
-    expect(bridge).toMatch(/encounterId:\s*entry\.status === 'entered' \? entry\.encounterId : null/);
+    expect(page).toContain('useCombat2ClientSession({');
+    expect(bridge).toMatch(/const encounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
     expect(bridge).not.toContain('legacy');
   });
 

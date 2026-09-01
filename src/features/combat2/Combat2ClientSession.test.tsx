@@ -65,7 +65,7 @@ describe('Combat2ClientSession application bridge', () => {
     const entry = readFileSync('src/features/combat2/entry.ts', 'utf8');
     const session = readFileSync('src/features/combat2/useCombat2EntrySession.ts', 'utf8');
     const source = `${bridge}\n${entry}\n${session}`;
-    expect(bridge).toMatch(/encounterId:\s*entry\.status === 'entered' \? entry\.encounterId : null/);
+    expect(bridge).toMatch(/const encounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
     expect(source).not.toMatch(/combat_intent|combat_flee|node_tick_claim|node_tick_commit/);
     expect(source).not.toMatch(/setInterval|setTimeout/);
     expect(source).not.toMatch(/\.from\([^)]*\)\.(?:insert|update|delete|upsert)\(/);
@@ -73,9 +73,10 @@ describe('Combat2ClientSession application bridge', () => {
 
   it('mounts from the authoritative roster hint without changing visible gameplay', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
-    expect(page).toContain('enabled={COMBAT2_CLIENT_ENABLED}');
-    expect(page).toContain('characterId={character.id}');
-    expect(page).toContain('nodeId={character.current_node_id}');
-    expect(page).toMatch(/hasLivingCreatures=\{rosterActionable \? creatures\.some\(\(creature\) => creature\.is_alive\) : null\}/);
+    expect(page).toContain('useCombat2ClientSession({');
+    expect(page).toContain('enabled: COMBAT2_CLIENT_ENABLED');
+    expect(page).toContain('characterId: character.id');
+    expect(page).toContain('nodeId: character.current_node_id');
+    expect(page).toMatch(/hasLivingCreatures:\s*rosterActionable \? creatures\.some\(\(creature\) => creature\.is_alive\) : null/);
   });
 });

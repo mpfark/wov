@@ -76,8 +76,9 @@ import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/us
 import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
-import { Combat2ClientSession } from '@/features/combat2/Combat2ClientSession';
+import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
 import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
+import { routeCombat2Action } from '@/features/combat2/routeCombat2Action';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -190,6 +191,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
+  const combat2 = useCombat2ClientSession({
+    enabled: COMBAT2_CLIENT_ENABLED,
+    characterId: character.id,
+    nodeId: character.current_node_id,
+    hasLivingCreatures: rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
+  });
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
@@ -869,6 +876,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseConsumable } = consumableActions;
   const { handleUseAbility, handleAttack } = combatActions;
 
+  const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
+    const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
+    await routeCombat2Action({
+      enabled: COMBAT2_CLIENT_ENABLED,
+      sessionReady: combat2.entry.status === 'entered',
+      ability: ability ?? null,
+      targetId: targetId ?? null,
+      livingCreatureIds: rosterActionable
+        ? new Set(creatures.filter((creature) => creature.is_alive).map((creature) => creature.id))
+        : null,
+      reservedBuffs: (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
+      legacy: () => handleUseAbility(abilityIndex, targetId),
+      submit: combat2.intents.submit,
+      diagnose: (message) => addLocalLogEvent(buildErrorEvent(message)),
+    });
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures]);
+
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
   useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
@@ -882,8 +906,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
-    handleUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
-  }, [handleUseAbility, abilityTargetId, selectedTargetId]);
+    void handlePlayerUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
+  }, [handlePlayerUseAbility, abilityTargetId, selectedTargetId]);
 
   // Belt-potion hotkeys removed with the belt slot.
 
@@ -1271,12 +1295,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
-      <Combat2ClientSession
-        enabled={COMBAT2_CLIENT_ENABLED}
-        characterId={character.id}
-        nodeId={character.current_node_id}
-        hasLivingCreatures={rosterActionable ? creatures.some((creature) => creature.is_alive) : null}
-      />
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}
@@ -1326,7 +1344,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={mergedCreatureHpOverrides}
               classAbilities={CLASS_ABILITIES[character.class] || []}
-              onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
+              onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
               pendingAbilityIndex={pendingAbilityIndex ?? pendingAbility?.index ?? null}
               pendingAbilityStage={pendingAbilityStage ?? null}
