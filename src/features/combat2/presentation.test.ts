@@ -11,6 +11,15 @@ const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
 const CREATURE = 'cccccccc-0000-4000-8000-000000000001';
 
+function effect(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'effect-1', kind: 'mitigation', effectType: 'damage_reduction', abilityKey: 'divine_challenge',
+    sourceCharacterId: CHARACTER, sourceCreatureId: null, targetCharacterId: CHARACTER, targetCreatureId: null,
+    stacks: 1, magnitude: 6, expiresAt: '2026-09-01T00:00:30Z', nextDueAt: null,
+    intervalMs: null, lastPulseTick: null, isReservation: false, ...overrides,
+  };
+}
+
 function delivery(tick = 1): Combat2DeliverySessionState {
   const batches = Array.from({ length: tick }, (_, index) => ({
     id: `batch-${index + 1}`,
@@ -53,6 +62,41 @@ describe('Combat2 authoritative presentation model', () => {
     const after = buildCombat2Presentation(delivery(2));
     expect(after.character).toMatchObject({ hp: 15, cp: 6 });
     expect(after.creatures[0]).toMatchObject({ hp: 7, isAlive: false });
+  });
+
+  it('projects authoritative effects by explicit target and classifies known, stance, and unknown rows', () => {
+    const state = delivery();
+    state.snapshot!.effects = [
+      effect(),
+      effect({ id: 'reservation', kind: 'reservation', effectType: 'cp_reservation', abilityKey: 'battle_cry', magnitude: 3, isReservation: true }),
+      effect({ id: 'stance-effect', kind: 'mitigation', abilityKey: 'battle_cry' }),
+      effect({ id: 'dot', kind: 'dot', effectType: 'bleed', abilityKey: 'rend', targetCharacterId: null, targetCreatureId: CREATURE, sourceCharacterId: CHARACTER }),
+      effect({ id: 'future', kind: 'future_kind', effectType: null, abilityKey: null, targetCharacterId: null, targetCreatureId: CREATURE }),
+    ];
+    const model = buildCombat2Presentation(state);
+    expect(model.characterEffects.map(({ id, category }) => ({ id, category }))).toEqual([
+      { id: 'effect-1', category: 'beneficial' },
+      { id: 'reservation', category: 'stance' },
+      { id: 'stance-effect', category: 'stance' },
+    ]);
+    expect(model.creatureEffects[CREATURE].map(({ id, category }) => ({ id, category }))).toEqual([
+      { id: 'dot', category: 'harmful' },
+      { id: 'future', category: 'unknown' },
+    ]);
+  });
+
+  it('treats each sync effects array as the authoritative replacement without duplicates or local retention', () => {
+    const first = delivery();
+    first.snapshot!.effects = [effect()];
+    expect(buildCombat2Presentation(first).effects).toHaveLength(1);
+    expect(buildCombat2Presentation(first).effects).toHaveLength(1);
+
+    const updated = delivery();
+    updated.snapshot!.effects = [effect({ stacks: 2, magnitude: 9 })];
+    expect(buildCombat2Presentation(updated).effects[0]).toMatchObject({ id: 'effect-1', stacks: 2, magnitude: 9 });
+
+    const removed = delivery();
+    expect(buildCombat2Presentation(removed).effects).toEqual([]);
   });
 
   it('orders events by tick, gives stable identities, deduplicates at the UI seam, and handles unknown kinds', () => {
@@ -99,6 +143,8 @@ describe('Combat2 authoritative presentation model', () => {
     expect(page).toContain('character={presentedCharacter}');
     expect(page).toContain('creatures={presentedCreatures}');
     expect(page).toContain('creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}');
+    expect(page).toContain('authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}');
+    expect(page).toContain('authoritativeEffects: activeCombat2Presentation?.characterEffects');
     expect(page).toContain('filteredEventLog={presentedEventLog}');
     expect(page).toMatch(/useCombatActions\(\{\s*character,/);
     expect(page).toMatch(/useMovementActions\(\{\s*character,/);

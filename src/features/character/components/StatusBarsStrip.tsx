@@ -4,6 +4,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
+import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
+import type { Combat2PresentationEffect } from '@/features/combat2/presentation';
 
 
 // Duration constants for buff background calculation (in ms).
@@ -44,6 +46,8 @@ export interface StatusBarsStripProps {
   stanceReservedCp?: number;
   /** Active stance map keyed by stance key. Used to render stance pips. */
   reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
+  /** Defined only while Combat2 owns the active presentation session. */
+  authoritativeEffects?: readonly Combat2PresentationEffect[];
 }
 
 function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
@@ -202,6 +206,7 @@ export default function StatusBarsStrip({
   reservedCp = 0,
   stanceReservedCp = 0,
   reservedBuffs = null,
+  authoritativeEffects,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
@@ -424,7 +429,7 @@ export default function StatusBarsStrip({
 
       {/* Buffs (stances now render as active state on the ability buttons themselves) */}
       <div className="flex flex-wrap gap-1 justify-center items-center min-h-[22px]">
-        <ActiveBuffs
+        {authoritativeEffects !== undefined ? <Combat2EffectPills effects={authoritativeEffects} /> : <ActiveBuffs
           isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
           battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
           igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff}
@@ -432,7 +437,7 @@ export default function StatusBarsStrip({
           holyShieldBuff={holyShieldBuff}
           consecrateBuff={consecrateBuff} divineChallengeBuff={divineChallengeBuff}
           forceShieldStance={forceShieldStance}
-        />
+        />}
       </div>
     </div>
   );

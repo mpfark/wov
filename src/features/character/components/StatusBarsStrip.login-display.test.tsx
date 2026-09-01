@@ -96,4 +96,23 @@ describe('StatusBarsStrip — login display', () => {
     expect(() => renderBars(character, bonuses)).not.toThrow();
     expect(screen.getByText(`${character.hp}/${expectedMax}`)).toBeInTheDocument();
   });
+
+  it('preserves legacy effects unless an authoritative Combat2 collection owns the seam', () => {
+    const character = makeCithrawielLike();
+    character.hp = character.max_hp = getEffectiveMaxHp(character.class, character.con, character.level, {});
+    const legacy = render(
+      <TooltipProvider>
+        <StatusBarsStrip character={character} equipmentBonuses={{}} poisonBuff={{ expiresAt: Date.now() + 30_000 }} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText('Envenom')).toBeInTheDocument();
+    legacy.unmount();
+
+    render(
+      <TooltipProvider>
+        <StatusBarsStrip character={character} equipmentBonuses={{}} poisonBuff={{ expiresAt: Date.now() + 30_000 }} authoritativeEffects={[]} />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByText('Envenom')).not.toBeInTheDocument();
+  });
 });

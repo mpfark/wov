@@ -22,6 +22,27 @@ export interface Combat2PresentationCreature {
   pendingAction: { abilityKey: string | null; resolveAtTick: number } | null;
 }
 
+export type Combat2EffectCategory = 'beneficial' | 'harmful' | 'stance' | 'unknown';
+
+export interface Combat2PresentationEffect {
+  id: string;
+  kind: string;
+  effectType: string | null;
+  abilityKey: string | null;
+  sourceCharacterId: string | null;
+  sourceCreatureId: string | null;
+  targetCharacterId: string | null;
+  targetCreatureId: string | null;
+  magnitude: number | null;
+  stacks: number | null;
+  expiresAt: string | null;
+  nextDueAt: string | null;
+  intervalMs: number | null;
+  lastPulseTick: number | null;
+  isReservation: boolean;
+  category: Combat2EffectCategory;
+}
+
 export interface Combat2PresentationModel {
   encounterId: string;
   encounterTick: number;
@@ -29,6 +50,9 @@ export interface Combat2PresentationModel {
   encounterStatus: string;
   character: Combat2PresentationCharacter;
   creatures: readonly Combat2PresentationCreature[];
+  effects: readonly Combat2PresentationEffect[];
+  characterEffects: readonly Combat2PresentationEffect[];
+  creatureEffects: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
   events: readonly GameLogEvent[];
   lastAppliedTick: number;
 }
@@ -67,6 +91,89 @@ function integerField(row: Record<string, unknown>, key: string): number {
   const value = numberField(row, key);
   if (!Number.isSafeInteger(value) || value < 0) throw new Combat2PresentationError(`combat2_sync ${key} is invalid`);
   return value;
+}
+
+function optionalString(row: Record<string, unknown>, key: string): string | null {
+  const value = row[key];
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string' || value === '') throw new Combat2PresentationError(`combat2_sync ${key} is invalid`);
+  return value;
+}
+
+function optionalNumber(row: Record<string, unknown>, key: string): number | null {
+  const value = row[key];
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Combat2PresentationError(`combat2_sync ${key} is invalid`);
+  return value;
+}
+
+function optionalInteger(row: Record<string, unknown>, key: string): number | null {
+  const value = optionalNumber(row, key);
+  if (value === null) return null;
+  if (!Number.isSafeInteger(value) || value < 0) throw new Combat2PresentationError(`combat2_sync ${key} is invalid`);
+  return value;
+}
+
+function optionalTimestamp(row: Record<string, unknown>, key: string): string | null {
+  const value = optionalString(row, key);
+  if (value !== null && !Number.isFinite(Date.parse(value))) throw new Combat2PresentationError(`combat2_sync ${key} is invalid`);
+  return value;
+}
+
+const BENEFICIAL_KINDS = new Set(['absorb', 'aura', 'block', 'evasion', 'mitigation', 'offense', 'reactive', 'regen', 'stealth', 'party_regen']);
+const HARMFUL_KINDS = new Set(['control', 'dot', 'stack']);
+
+function parseEffects(values: unknown[], characterId: string): {
+  effects: Combat2PresentationEffect[];
+  characterEffects: Combat2PresentationEffect[];
+  creatureEffects: Record<string, Combat2PresentationEffect[]>;
+} {
+  const parsed = values.map((value) => {
+    const row = record(value);
+    if (!row || typeof row.isReservation !== 'boolean') throw new Combat2PresentationError('combat2_sync effect is malformed');
+    const targetCharacterId = optionalString(row, 'targetCharacterId');
+    const targetCreatureId = optionalString(row, 'targetCreatureId');
+    if ((targetCharacterId === null) === (targetCreatureId === null)) {
+      throw new Combat2PresentationError('combat2_sync effect target is ambiguous');
+    }
+    return {
+      id: stringField(row, 'id'),
+      kind: stringField(row, 'kind'),
+      effectType: optionalString(row, 'effectType'),
+      abilityKey: optionalString(row, 'abilityKey'),
+      sourceCharacterId: optionalString(row, 'sourceCharacterId'),
+      sourceCreatureId: optionalString(row, 'sourceCreatureId'),
+      targetCharacterId,
+      targetCreatureId,
+      magnitude: optionalNumber(row, 'magnitude'),
+      stacks: optionalInteger(row, 'stacks'),
+      expiresAt: optionalTimestamp(row, 'expiresAt'),
+      nextDueAt: optionalTimestamp(row, 'nextDueAt'),
+      intervalMs: optionalInteger(row, 'intervalMs'),
+      lastPulseTick: optionalInteger(row, 'lastPulseTick'),
+      isReservation: row.isReservation,
+      category: 'unknown' as Combat2EffectCategory,
+    };
+  });
+  const reservations = new Set(parsed.filter((effect) => effect.isReservation).map((effect) => `${effect.targetCharacterId}:${effect.abilityKey}`));
+  for (const effect of parsed) {
+    const pairedStance = effect.targetCharacterId !== null
+      && reservations.has(`${effect.targetCharacterId}:${effect.abilityKey}`);
+    effect.category = effect.isReservation || pairedStance
+      ? 'stance'
+      : BENEFICIAL_KINDS.has(effect.kind)
+        ? 'beneficial'
+        : HARMFUL_KINDS.has(effect.kind)
+          ? 'harmful'
+          : 'unknown';
+  }
+  const characterEffects = parsed.filter((effect) => effect.targetCharacterId === characterId);
+  const creatureEffects: Record<string, Combat2PresentationEffect[]> = {};
+  for (const effect of parsed) {
+    if (!effect.targetCreatureId) continue;
+    (creatureEffects[effect.targetCreatureId] ??= []).push(effect);
+  }
+  return { effects: parsed, characterEffects, creatureEffects };
 }
 
 function actor(value: unknown): LogActor | undefined {
@@ -127,7 +234,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
   if (!sync) throw new Combat2PresentationError('combat2_sync has no authoritative snapshot');
   const encounter = record(sync.encounter);
   const character = record(sync.character);
-  if (!encounter || !character || !Array.isArray(sync.creatures)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
+  if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
 
   const ordered = [...delivery.batches].sort((a, b) => a.tick - b.tick);
   if (ordered.length > 0 && ordered[0].tick !== 1) {
@@ -161,18 +268,21 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     };
   });
 
+  const characterId = stringField(character, 'id');
+  const effectGroups = parseEffects(sync.effects, characterId);
   return {
     encounterId: stringField(encounter, 'id'),
     encounterTick: integerField(encounter, 'tick'),
     stateVersion: integerField(encounter, 'stateVersion'),
     encounterStatus: stringField(encounter, 'status'),
     character: {
-      id: stringField(character, 'id'),
+      id: characterId,
       hp: numberField(character, 'hp'), maxHp: numberField(character, 'maxHp'),
       cp: numberField(character, 'cp'), maxCp: numberField(character, 'maxCp'),
       mp: numberField(character, 'mp'), maxMp: numberField(character, 'maxMp'),
     },
     creatures,
+    ...effectGroups,
     events: presentEvents(ordered),
     lastAppliedTick: delivery.lastAppliedTick,
   };

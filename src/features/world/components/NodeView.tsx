@@ -22,6 +22,8 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
+import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
+import type { Combat2PresentationEffect } from '@/features/combat2/presentation';
 
 import { describeAdjacentLandmarks } from '@/features/world/utils/adjacency-description';
 
@@ -47,6 +49,7 @@ interface Props {
   selectedTargetId?: string | null;
   engagedCreatureIds?: string[];
   creatureHpOverrides?: Record<string, number>;
+  authoritativeCreatureEffects?: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   abilityTargetId?: string | null;
@@ -78,7 +81,7 @@ interface Props {
 
 export default function NodeView({
   node, region, area, allNodes = [], players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
-  inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
+  inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId,
   pendingAbilityIndex = null,
   pendingAbilityStage = null,
   reservedBuffs = null,
@@ -279,13 +282,13 @@ export default function NodeView({
                     const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
                     const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
                     const creaturePoisonStacks = poisonStacks[c.id];
-                    const hasPoisonStacks = creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
+                    const hasPoisonStacks = authoritativeCreatureEffects === undefined && creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
                     const creatureIgniteStacks = igniteStacks[c.id];
-                    const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
+                    const hasIgniteStacks = authoritativeCreatureEffects === undefined && creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
                      const creatureSunder = sunderDebuff?.[c.id];
-                     const isSundered = creatureSunder && Date.now() < creatureSunder.expiresAt;
+                     const isSundered = authoritativeCreatureEffects === undefined && creatureSunder && Date.now() < creatureSunder.expiresAt;
                     const creatureBleed = bleedStacks[c.id];
-                    const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
+                    const isBleeding = authoritativeCreatureEffects === undefined && creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
                     const activeCast = bossCasts[c.id];
                     return (
@@ -357,7 +360,7 @@ export default function NodeView({
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {rootDebuff && rootDebuff.creatureId === c.id && Date.now() < rootDebuff.expiresAt && (
+                          {authoritativeCreatureEffects === undefined && rootDebuff && rootDebuff.creatureId === c.id && Date.now() < rootDebuff.expiresAt && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-[10px] text-elvish font-display animate-pulse">
@@ -368,6 +371,9 @@ export default function NodeView({
                                 Snared: damage reduced by {Math.round(rootDebuff.damageReduction * 100)}%
                               </TooltipContent>
                             </Tooltip>
+                          )}
+                          {authoritativeCreatureEffects !== undefined && (
+                            <Combat2EffectPills effects={authoritativeCreatureEffects[c.id] ?? []} />
                           )}
                           {/* Right: combat icon, HP bar, HP numbers, attack button */}
                           <div className="ml-auto flex items-center gap-1 shrink-0">

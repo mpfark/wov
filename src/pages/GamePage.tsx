@@ -1369,6 +1369,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
+              authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
               classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
@@ -1418,6 +1419,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                   return Object.values(rb).reduce((s, e) => s + (Number(e?.reserved) || 0), 0);
                 })(),
                 reservedBuffs: (character as any).reserved_buffs ?? null,
+                authoritativeEffects: activeCombat2Presentation?.characterEffects,
               }}
             />
           </div>
