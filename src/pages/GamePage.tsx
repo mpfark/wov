@@ -76,6 +76,8 @@ import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/us
 import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
+import { Combat2ClientSession } from '@/features/combat2/Combat2ClientSession';
+import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -1269,6 +1271,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
+      <Combat2ClientSession
+        enabled={COMBAT2_CLIENT_ENABLED}
+        characterId={character.id}
+        nodeId={character.current_node_id}
+        hasLivingCreatures={rosterActionable ? creatures.some((creature) => creature.is_alive) : null}
+      />
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}

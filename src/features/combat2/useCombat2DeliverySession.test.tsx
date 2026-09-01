@@ -47,12 +47,12 @@ describe('useCombat2DeliverySession dormant integration', () => {
     expect(c.factory).not.toHaveBeenCalled();
   });
 
-  it('is mounted by the application with no legacy-derived encounter id', () => {
-    const route = readFileSync('src/pages/GameRoute.tsx', 'utf8');
-    expect(route).toContain('useCombat2DeliverySession({');
-    expect(route).toMatch(/characterId:\s*character\?\.id \?\? null/);
-    expect(route).toMatch(/encounterId:\s*null/);
-    expect(route).not.toMatch(/\.rpc\(['"]combat_enter['"]/);
+  it('accepts only the entry session authoritative encounter id at the application seam', () => {
+    const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
+    const bridge = readFileSync('src/features/combat2/Combat2ClientSession.tsx', 'utf8');
+    expect(page).toContain('<Combat2ClientSession');
+    expect(bridge).toMatch(/encounterId:\s*entry\.status === 'entered' \? entry\.encounterId : null/);
+    expect(bridge).not.toContain('legacy');
   });
 
   it('contains no browser timer, write, worker, action, or legacy-combat call path', () => {
