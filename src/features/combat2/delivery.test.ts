@@ -21,7 +21,8 @@ function harness(responses: ReturnType<typeof result>[]) {
     on: vi.fn((_type, _filter, callback) => { notice = callback; return channel; }),
     subscribe: vi.fn((callback) => { status = callback; return channel; }),
   };
-  const rpc = vi.fn(async () => ({ data: responses.shift(), error: null }));
+  type SyncArgs = { _character_id: string; _encounter_id: string; _after_tick: number; _limit: number };
+  const rpc = vi.fn(async (_name: 'combat2_sync', _args: SyncArgs) => ({ data: responses.shift(), error: null }));
   const removeChannel = vi.fn();
   const client: Combat2DeliveryClient = { rpc, channel: vi.fn(() => channel), removeChannel };
   return { client, rpc, channel, removeChannel, notify: (tick: number) => notice?.({ new: { encounter_id: ENCOUNTER, tick, batch_id: `batch-${tick}` } }), reconnect: () => status?.('SUBSCRIBED') };
