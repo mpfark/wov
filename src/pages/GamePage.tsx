@@ -842,6 +842,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     buffState, buffSetters,
   });
 
+  const authorizeCombat2Flee = useCallback(async () => {
+    const result = await combat2.flee.flee();
+    if (result.status === 'fled') return true;
+    if (result.status === 'stale') return false;
+    const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
+    addLocalLogEvent(buildErrorEvent(`Combat2 flee refused${detail}`));
+    return false;
+  }, [combat2.flee, addLocalLogEvent]);
+
   const movementActions = useMovementActions({
     character, updateCharacter, addLogEvent,
     equipped, unequipped, equipmentBonuses,
@@ -857,6 +866,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
     onPlayerCombatMove: () => wimpNotifyRef.current?.(),
+    authorizeCombat2Flee: COMBAT2_CLIENT_ENABLED ? authorizeCombat2Flee : undefined,
   });
 
   const consumableActions = useConsumableActions({
@@ -880,7 +890,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
     await routeCombat2Action({
       enabled: COMBAT2_CLIENT_ENABLED,
-      sessionReady: combat2.entry.status === 'entered',
+      sessionReady: combat2.sessionStatus === 'active',
       ability: ability ?? null,
       targetId: targetId ?? null,
       livingCreatureIds: rosterActionable

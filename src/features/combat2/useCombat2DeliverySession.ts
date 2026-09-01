@@ -43,6 +43,8 @@ export interface UseCombat2DeliverySessionOptions {
   encounterId: string | null;
   client?: Combat2DeliveryClient;
   createController?: Combat2DeliveryControllerFactory;
+  /** Keep the last authoritative snapshot/batches available after detaching. */
+  preserveOnDetach?: boolean;
 }
 
 const EMPTY_BATCHES: readonly Combat2TickBatch[] = Object.freeze([]);
@@ -87,6 +89,7 @@ export function useCombat2DeliverySession({
   encounterId,
   client = defaultClient,
   createController = defaultFactory,
+  preserveOnDetach = false,
 }: UseCombat2DeliverySessionOptions): Combat2DeliverySessionState {
   const requestedKey = enabled && characterId && encounterId ? `${characterId}:${encounterId}` : null;
   const currentKeyRef = useRef<string | null>(requestedKey);
@@ -152,7 +155,11 @@ export function useCombat2DeliverySession({
 
   return useMemo(() => {
     if (!enabled) return DISABLED_STATE;
-    if (!characterId || !encounterId) return IDLE_STATE;
+    if (!characterId || !encounterId) {
+      return preserveOnDetach && active
+        ? { ...active, status: 'idle', error: null }
+        : IDLE_STATE;
+    }
     return active?.sessionKey === requestedKey ? active : SYNCING_STATE;
-  }, [enabled, characterId, encounterId, requestedKey, active]);
+  }, [enabled, characterId, encounterId, requestedKey, active, preserveOnDetach]);
 }

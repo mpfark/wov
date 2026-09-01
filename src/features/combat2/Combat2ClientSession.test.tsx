@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/integrations/supabase/client';
-import { Combat2ClientSession } from './Combat2ClientSession';
+import { Combat2ClientSession, useCombat2ClientSession } from './Combat2ClientSession';
 
 const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const NODE = 'eeeeeeee-0000-4000-8000-000000000001';
@@ -60,12 +60,44 @@ describe('Combat2ClientSession application bridge', () => {
     view.unmount();
   });
 
+  it('authoritative flee exits only that session, stops delivery, preserves batches, and blocks intents', async () => {
+    const eventId = 'cccccccc-0000-4000-8000-000000000001';
+    const rpc = vi.spyOn(supabase, 'rpc').mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      if (name === 'combat_enter') return { data: { ok: true, kind: 'entered', encounter_id: ENCOUNTER }, error: null };
+      if (name === 'combat2_sync') return { data: {
+        ok: true, kind: 'sync', latest_tick: 1, returned_through_tick: 1, has_more: false,
+        encounter: { id: ENCOUNTER, status: 'active', tick: 1, stateVersion: 1 },
+        character: {}, fighter: { present: true }, creatures: [], effects: [], rewardClaims: [],
+        batches: [{ id: 'batch-1', tick: 1, created_at: '2026-09-01T00:00:00Z', events: [] }],
+      }, error: null };
+      if (name === 'combat_flee') return { data: { ok: true, kind: 'already_fled', event_id: eventId }, error: null };
+      throw new Error(`unexpected RPC ${name}: ${JSON.stringify(args)}`);
+    }) as never);
+    const channel = { on: vi.fn(() => channel), subscribe: vi.fn(() => channel) };
+    vi.spyOn(supabase, 'channel').mockReturnValue(channel as never);
+    const remove = vi.spyOn(supabase, 'removeChannel').mockResolvedValue('ok');
+
+    const { result } = renderHook(() => useCombat2ClientSession({
+      enabled: true, characterId: CHARACTER, nodeId: NODE, hasLivingCreatures: true,
+    }));
+    await waitFor(() => expect(result.current.sessionStatus).toBe('active'));
+    await waitFor(() => expect(result.current.delivery.batches).toHaveLength(1));
+    await act(async () => { expect(await result.current.flee.flee()).toMatchObject({ status: 'fled', classification: 'already_fled' }); });
+    await waitFor(() => expect(result.current.sessionStatus).toBe('exited'));
+    expect(result.current.encounterId).toBeNull();
+    expect(remove).toHaveBeenCalledWith(channel);
+    expect(result.current.delivery.batches).toHaveLength(1);
+    await expect(result.current.intents.submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: null }))
+      .resolves.toMatchObject({ status: 'local_refusal', classification: 'no_session' });
+    expect(rpc.mock.calls.filter(([name]) => name === 'combat_intent')).toHaveLength(0);
+  });
+
   it('passes only authoritative entry identity and contains no prohibited call path', () => {
     const bridge = readFileSync('src/features/combat2/Combat2ClientSession.tsx', 'utf8');
     const entry = readFileSync('src/features/combat2/entry.ts', 'utf8');
     const session = readFileSync('src/features/combat2/useCombat2EntrySession.ts', 'utf8');
     const source = `${bridge}\n${entry}\n${session}`;
-    expect(bridge).toMatch(/const encounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
+    expect(bridge).toMatch(/const enteredEncounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
     expect(source).not.toMatch(/combat_intent|combat_flee|node_tick_claim|node_tick_commit/);
     expect(source).not.toMatch(/setInterval|setTimeout/);
     expect(source).not.toMatch(/\.from\([^)]*\)\.(?:insert|update|delete|upsert)\(/);

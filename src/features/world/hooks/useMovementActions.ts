@@ -22,6 +22,7 @@ import { preheatNode } from '@/features/creatures/hooks/useCreatures';
 import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers
@@ -220,6 +221,8 @@ export interface UseMovementActionsParams {
   onUnlockPath?: (direction: string, nodeId: string, expires: number) => void;
   /** Called when the player initiates a move while in combat (not wimp-flee). */
   onPlayerCombatMove?: () => void;
+  /** Default-off Combat2 gate: authorize departure before physical movement. */
+  authorizeCombat2Flee?: () => Promise<boolean>;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -302,6 +305,12 @@ export function useMovementActions(params: UseMovementActionsParams) {
     }
 
     // ── Flee from combat ──
+    let authoritativeFlee = false;
+    if (p.inCombat && p.authorizeCombat2Flee) {
+      authoritativeFlee = true;
+      const mayMove = await authorizeCombat2MovementFlee(p.authorizeCombat2Flee, p.fleeStopCombat);
+      if (!mayMove) return;
+    }
     if (p.inCombat) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
@@ -313,13 +322,13 @@ export function useMovementActions(params: UseMovementActionsParams) {
         // Player took manual action — suppress wimp for the rest of this combat.
         p.onPlayerCombatMove?.();
       }
-      p.fleeStopCombat();
+      if (!authoritativeFlee) void authorizeCombat2MovementFlee(undefined, p.fleeStopCombat);
     }
 
     // ── Opportunity attacks (delegated to pure helper) ──
     // Wimp-initiated flees are NOT special — they take full AoOs.
     // Mitigation comes from class abilities (Battle Cry, Disengage, Cloak, etc.).
-    {
+    if (!authoritativeFlee) {
       const oaResult = resolveOpportunityAttacks({
         character: p.character,
         creatures: p.creatures,
@@ -378,7 +387,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     } catch {
       p.addLogEvent(buildErrorEvent('Failed to move.'));
     }
-  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
+  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.authorizeCombat2Flee, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
   // ── Teleport ───────────────────────────────────────────────────
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {

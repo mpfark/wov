@@ -51,7 +51,7 @@ describe('useCombat2DeliverySession dormant integration', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
     const bridge = readFileSync('src/features/combat2/Combat2ClientSession.tsx', 'utf8');
     expect(page).toContain('useCombat2ClientSession({');
-    expect(bridge).toMatch(/const encounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
+    expect(bridge).toMatch(/const enteredEncounterId = entry\.status === 'entered' \? entry\.encounterId : null/);
     expect(bridge).not.toContain('legacy');
   });
 
