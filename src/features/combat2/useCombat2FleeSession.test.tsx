@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { Combat2FleeError, type Combat2FleeAdapter } from './flee';
+import { Combat2FleeError, type Combat2FleeAdapter, type Combat2FleeOutcome } from './flee';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
 
 const CHARACTER = '22222222-2222-4222-8222-222222222222';
@@ -59,7 +59,7 @@ describe('useCombat2FleeSession', () => {
     { characterId: CHARACTER, nodeId: NODE, encounterId: ENCOUNTER_2 },
   ])('discards late success after session identity changes: %#', async (next) => {
     let release!: (value: typeof fled) => void;
-    const adapter: Combat2FleeAdapter = { flee: vi.fn(() => new Promise((resolve) => { release = resolve; })) };
+    const adapter: Combat2FleeAdapter = { flee: vi.fn(() => new Promise<Combat2FleeOutcome>((resolve) => { release = resolve; })) };
     const onExited = vi.fn();
     const { result, rerender } = renderHook((props) => useCombat2FleeSession({
       enabled: true, ...props, adapter, generateRequestId: () => REQUEST_1, onExited,

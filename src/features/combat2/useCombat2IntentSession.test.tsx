@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { Combat2IntentError, type Combat2IntentAction, type Combat2IntentAdapter } from './intent';
+import { Combat2IntentError, type Combat2IntentAction, type Combat2IntentAdapter, type Combat2IntentOutcome } from './intent';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
 
 const CHARACTER = '22222222-2222-4222-8222-222222222222';
@@ -68,7 +68,7 @@ describe('useCombat2IntentSession', () => {
 
   it('discards a late response after node or session invalidation', async () => {
     let release!: (value: typeof accepted) => void;
-    const adapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise((resolve) => { release = resolve; })) };
+    const adapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise<Combat2IntentOutcome>((resolve) => { release = resolve; })) };
     const { result, rerender } = renderHook(({ nodeId, encounterId }) => useCombat2IntentSession({
       enabled: true, characterId: CHARACTER, nodeId, encounterId, adapter, generateRequestId: () => REQUEST_1,
     }), { initialProps: { nodeId: NODE, encounterId: ENCOUNTER as string | null } });

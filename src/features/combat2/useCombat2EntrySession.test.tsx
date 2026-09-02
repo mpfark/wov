@@ -78,7 +78,7 @@ describe('useCombat2EntrySession', () => {
   it.each(['maintenance', 'no_living_creatures', 'not_authorized'] as const)(
     'settles %s refusal without a loop',
     async (classification) => {
-      const adapter: Combat2EntryAdapter = { enter: vi.fn(async () => ({ status: 'refused', classification, reason: classification })) };
+      const adapter: Combat2EntryAdapter = { enter: vi.fn(async (): Promise<Combat2EntryOutcome> => ({ status: 'refused', classification, reason: classification })) };
       const { result, rerender } = renderHook(() => useCombat2EntrySession({ enabled: true, characterId: CHARACTER, nodeId: NODE, hasLivingCreatures: true, adapter, generateRequestId: () => 'request' }));
       await waitFor(() => expect(result.current.status).toBe('refused'));
       rerender();

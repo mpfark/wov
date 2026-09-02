@@ -1,5 +1,5 @@
 import type { ClassAbility } from '@/features/combat/utils/class-abilities';
-import { isStanceActive, resolveStanceForAbility } from '@/features/combat/utils/stances';
+import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import type { Combat2IntentAction } from './intent';
 import type { Combat2IntentResult } from './useCombat2IntentSession';
 
@@ -35,7 +35,7 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   let action: Combat2IntentAction;
   if (stance) {
     action = {
-      kind: isStanceActive(options.reservedBuffs, stance.key) ? 'stance_drop' : 'stance_activate',
+      kind: isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key) ? 'stance_drop' : 'stance_activate',
       abilityKey: null,
       stanceKey: stance.key,
       targetCreatureId: null,
