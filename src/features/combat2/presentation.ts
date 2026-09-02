@@ -4,12 +4,27 @@ import type { Combat2SafeEvent, Combat2TickBatch } from './delivery';
 
 export interface Combat2PresentationCharacter {
   id: string;
+  level: number;
+  xp: number;
+  gold: number;
   hp: number;
   maxHp: number;
   cp: number;
   maxCp: number;
   mp: number;
   maxMp: number;
+}
+
+export interface Combat2PresentationRewardClaim {
+  id: string;
+  encounterId: string;
+  characterId: string;
+  creatureId: string;
+  spawnSeq: number;
+  xpAwarded: number;
+  goldAwarded: number;
+  isKiller: boolean;
+  createdAt: string;
 }
 
 export interface Combat2PresentationCreature {
@@ -80,6 +95,7 @@ export interface Combat2PresentationModel {
   creatureEffects: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
   telegraphs: readonly Combat2PresentationTelegraph[];
   telegraphsByCreatureLife: Readonly<Record<string, Combat2PresentationTelegraph>>;
+  rewardClaims: readonly Combat2PresentationRewardClaim[];
   events: readonly GameLogEvent[];
   lastAppliedTick: number;
 }
@@ -264,12 +280,52 @@ function presentEvents(batches: readonly Combat2TickBatch[]): GameLogEvent[] {
   return [...events.values()];
 }
 
+function parseRewardClaims(
+  values: unknown[],
+  encounterId: string,
+  characterId: string,
+): Combat2PresentationRewardClaim[] {
+  const claims = new Map<string, Combat2PresentationRewardClaim>();
+  for (const value of values) {
+    const row = record(value);
+    if (!row || typeof row.isKiller !== 'boolean') {
+      throw new Combat2PresentationError('combat2_sync reward claim is malformed');
+    }
+    const creatureId = stringField(row, 'creatureId');
+    const spawnSeq = integerField(row, 'spawnSeq');
+    const id = JSON.stringify([encounterId, characterId, creatureId, spawnSeq]);
+    const createdAt = stringField(row, 'createdAt');
+    if (!Number.isFinite(Date.parse(createdAt))) {
+      throw new Combat2PresentationError('combat2_sync createdAt is invalid');
+    }
+    claims.set(id, {
+      id, encounterId, characterId, creatureId, spawnSeq,
+      xpAwarded: integerField(row, 'xpAwarded'),
+      goldAwarded: integerField(row, 'goldAwarded'),
+      isKiller: row.isKiller,
+      createdAt,
+    });
+  }
+  return [...claims.values()];
+}
+
+function presentRewardClaims(claims: readonly Combat2PresentationRewardClaim[]): GameLogEvent[] {
+  return claims.map((claim) => ({
+    v: 1,
+    id: `combat2-reward:${claim.id}`,
+    ts: Date.parse(claim.createdAt),
+    type: 'reward',
+    message: `${claim.isKiller ? 'Killing blow; ' : ''}combat reward: ${claim.xpAwarded} XP and ${claim.goldAwarded} gold.`,
+    source: { kind: 'world' },
+  }));
+}
+
 export function buildCombat2Presentation(delivery: Combat2DeliverySessionState): Combat2PresentationModel {
   const sync = delivery.snapshot;
   if (!sync) throw new Combat2PresentationError('combat2_sync has no authoritative snapshot');
   const encounter = record(sync.encounter);
   const character = record(sync.character);
-  if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
+  if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects) || !Array.isArray(sync.rewardClaims)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
 
   const encounterId = stringField(encounter, 'id');
   const encounterTick = integerField(encounter, 'tick');
@@ -346,6 +402,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
   });
 
   const effectGroups = parseEffects(sync.effects, characterId);
+  const rewardClaims = parseRewardClaims(sync.rewardClaims, encounterId, characterId);
   return {
     encounterId,
     encounterTick,
@@ -353,6 +410,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     encounterStatus: stringField(encounter, 'status'),
     character: {
       id: characterId,
+      level: integerField(character, 'level'), xp: integerField(character, 'xp'), gold: integerField(character, 'gold'),
       hp: numberField(character, 'hp'), maxHp: numberField(character, 'maxHp'),
       cp: numberField(character, 'cp'), maxCp: numberField(character, 'maxCp'),
       mp: numberField(character, 'mp'), maxMp: numberField(character, 'maxMp'),
@@ -361,7 +419,8 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     ...effectGroups,
     telegraphs,
     telegraphsByCreatureLife,
-    events: presentEvents(ordered),
+    rewardClaims,
+    events: [...presentEvents(ordered), ...presentRewardClaims(rewardClaims)],
     lastAppliedTick: delivery.lastAppliedTick,
   };
 }

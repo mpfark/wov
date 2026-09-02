@@ -11,6 +11,7 @@ export function selectCombat2Character(
   if (!enabled || !model || model.character.id !== legacy.id) return legacy;
   return {
     ...legacy,
+    level: model.character.level, xp: model.character.xp, gold: model.character.gold,
     hp: model.character.hp, max_hp: model.character.maxHp,
     cp: model.character.cp, max_cp: model.character.maxCp,
     mp: model.character.mp, max_mp: model.character.maxMp,
@@ -41,7 +42,10 @@ export function selectCombat2Events(
   legacy: readonly GameLogEvent[],
 ): GameLogEvent[] {
   if (!enabled || !model) return legacy as GameLogEvent[];
-  const byId = new Map(legacy.map((event) => [event.id, event]));
+  const authoritativeTypes = new Set(['reward', 'loot', 'kill', 'death']);
+  const byId = new Map(legacy
+    .filter((event) => !authoritativeTypes.has(event.type))
+    .map((event) => [event.id, event]));
   for (const event of model.events) byId.set(event.id, event);
   return [...byId.values()];
 }

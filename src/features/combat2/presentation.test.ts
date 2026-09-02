@@ -42,7 +42,7 @@ function delivery(tick = 1): Combat2DeliverySessionState {
     snapshot: {
       ok: true, kind: 'sync', latest_tick: tick, returned_through_tick: tick, has_more: false,
       encounter: { id: ENCOUNTER, status: 'active', tick, stateVersion: tick + 3 },
-      character: { id: CHARACTER, hp: 17 - tick, maxHp: 20, cp: 8 - tick, maxCp: 10, mp: 6, maxMp: 10 },
+      character: { id: CHARACTER, hp: 17 - tick, maxHp: 20, cp: 8 - tick, maxCp: 10, mp: 6, maxMp: 10, level: 3, xp: 120, gold: 45 },
       fighter: { id: FIGHTER, characterId: CHARACTER, entrySeq: 7, present: true }, effects: [], rewardClaims: [],
       creatures: [{
         id: 'node-creature-1', creatureId: CREATURE, spawnSeq: 4, name: 'Wolf', hp: 9 - tick,
@@ -58,10 +58,44 @@ describe('Combat2 authoritative presentation model', () => {
     const model = buildCombat2Presentation(delivery());
     expect(model).toMatchObject({
       encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 4, encounterStatus: 'active', lastAppliedTick: 1,
-      character: { id: CHARACTER, hp: 16, maxHp: 20, cp: 7, maxCp: 10, mp: 6, maxMp: 10 },
+      character: { id: CHARACTER, hp: 16, maxHp: 20, cp: 7, maxCp: 10, mp: 6, maxMp: 10, level: 3, xp: 120, gold: 45 },
     });
     expect(model.creatures[0]).toMatchObject({ creatureId: CREATURE, spawnSeq: 4, hp: 8, maxHp: 10, isAlive: true, pendingAction: { abilityKey: 'granite_slam', resolveAtTick: 3 } });
     expect(model.telegraphs).toHaveLength(1);
+  });
+
+  it('presents authoritative own reward claims once without changing snapshot totals or requiring presence', () => {
+    const state = delivery();
+    state.snapshot!.fighter = null;
+    state.snapshot!.rewardClaims = [{
+      creatureId: CREATURE, spawnSeq: 4, xpAwarded: 25, goldAwarded: 8,
+      isKiller: false, createdAt: '2026-09-01T00:00:02Z',
+    }, {
+      creatureId: CREATURE, spawnSeq: 4, xpAwarded: 25, goldAwarded: 8,
+      isKiller: false, createdAt: '2026-09-01T00:00:02Z',
+    }];
+    const model = buildCombat2Presentation(state);
+    expect(model.rewardClaims).toHaveLength(1);
+    expect(model.rewardClaims[0]).toMatchObject({
+      encounterId: ENCOUNTER, characterId: CHARACTER, creatureId: CREATURE,
+      spawnSeq: 4, xpAwarded: 25, goldAwarded: 8, isKiller: false,
+    });
+    expect(model.events.filter((event) => event.type === 'reward')).toHaveLength(1);
+    expect(model.character).toMatchObject({ level: 3, xp: 120, gold: 45 });
+  });
+
+  it('fences reward presentation by creature spawn and rejects malformed claims', () => {
+    const state = delivery();
+    state.snapshot!.rewardClaims = [
+      { creatureId: CREATURE, spawnSeq: 4, xpAwarded: 25, goldAwarded: 8, isKiller: true, createdAt: '2026-09-01T00:00:02Z' },
+      { creatureId: CREATURE, spawnSeq: 5, xpAwarded: 25, goldAwarded: 8, isKiller: false, createdAt: '2026-09-01T00:00:03Z' },
+    ];
+    const model = buildCombat2Presentation(state);
+    expect(new Set(model.rewardClaims.map((claim) => claim.id)).size).toBe(2);
+    expect(model.events.find((event) => event.id === `combat2-reward:${model.rewardClaims[0].id}`)?.message).toContain('Killing blow');
+    const malformed = delivery();
+    malformed.snapshot!.rewardClaims = [{ creatureId: CREATURE, spawnSeq: 4, xpAwarded: '25' }];
+    expect(() => buildCombat2Presentation(malformed)).toThrow(Combat2PresentationError);
   });
 
   it('changes visible resources only when a committed sync snapshot changes', () => {
@@ -231,14 +265,25 @@ describe('Combat2 authoritative presentation model', () => {
 
   it('preserves exact legacy references while disabled and overlays only projected fields while enabled', () => {
     const model = buildCombat2Presentation(delivery());
-    const character = { id: CHARACTER, hp: 99, cp: 99, mp: 99 } as Character;
+    const character = { id: CHARACTER, hp: 99, cp: 99, mp: 99, level: 99, xp: 999, gold: 999 } as Character;
     const creature = { id: CREATURE, hp: 99, max_hp: 99, is_alive: true } as Creature;
     const events: GameLogEvent[] = [];
     expect(selectCombat2Character(false, model, character)).toBe(character);
     expect(selectCombat2Creatures(false, model, [creature])[0]).toBe(creature);
     expect(selectCombat2Events(false, model, events)).toBe(events);
-    expect(selectCombat2Character(true, model, character)).toMatchObject({ hp: 16, cp: 7, mp: 6 });
+    expect(selectCombat2Character(true, model, character)).toMatchObject({ hp: 16, cp: 7, mp: 6, level: 3, xp: 120, gold: 45 });
     expect(selectCombat2Creatures(true, model, [creature])[0]).toMatchObject({ hp: 8, max_hp: 10, is_alive: true });
+  });
+
+  it('keeps legacy death and rewards exact while disabled and excludes them from an active authoritative session', () => {
+    const model = buildCombat2Presentation(delivery());
+    const legacy = [
+      { v: 1, id: 'legacy-reward', ts: 1, type: 'reward', message: 'legacy reward' },
+      { v: 1, id: 'legacy-death', ts: 2, type: 'kill', message: 'legacy death' },
+      { v: 1, id: 'chat', ts: 3, type: 'system', message: 'keep me' },
+    ] satisfies GameLogEvent[];
+    expect(selectCombat2Events(false, model, legacy)).toBe(legacy);
+    expect(selectCombat2Events(true, model, legacy).map((event) => event.id)).toEqual(['chat', 'batch-1:1']);
   });
 
   it('fails malformed sync without accepting partial state', () => {

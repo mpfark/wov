@@ -13,7 +13,7 @@ function state(hp: number, encounterId = ENCOUNTER, withTelegraph = false): Comb
     snapshot: {
       ok: true, kind: 'sync', latest_tick: 0, returned_through_tick: 0, has_more: false,
       encounter: { id: encounterId, status: 'active', tick: 0, stateVersion: 0 },
-      character: { id: CHARACTER, hp, maxHp: 10, cp: 5, maxCp: 10, mp: 7, maxMp: 10 },
+      character: { id: CHARACTER, hp, maxHp: 10, cp: 5, maxCp: 10, mp: 7, maxMp: 10, level: 2, xp: 20, gold: 4 },
       fighter: withTelegraph ? { id: 'fighter-1', characterId: CHARACTER, entrySeq: 3, present: true } : null,
       creatures: withTelegraph ? [{
         id: 'node-creature-1', creatureId: 'creature-1', spawnSeq: 2, name: 'Sentinel',

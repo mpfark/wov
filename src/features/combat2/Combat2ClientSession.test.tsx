@@ -67,7 +67,7 @@ describe('Combat2ClientSession application bridge', () => {
       if (name === 'combat2_sync') return { data: {
         ok: true, kind: 'sync', latest_tick: 1, returned_through_tick: 1, has_more: false,
         encounter: { id: ENCOUNTER, status: 'active', tick: 1, stateVersion: 1 },
-        character: { id: CHARACTER, hp: 9, maxHp: 10, cp: 4, maxCp: 8, mp: 7, maxMp: 10 },
+        character: { id: CHARACTER, hp: 9, maxHp: 10, cp: 4, maxCp: 8, mp: 7, maxMp: 10, level: 2, xp: 20, gold: 4 },
         fighter: { id: 'fighter-1', characterId: CHARACTER, entrySeq: 3, present: true },
         creatures: [{
           id: 'node-creature-1', creatureId: 'creature-1', spawnSeq: 2, name: 'Sentinel',
