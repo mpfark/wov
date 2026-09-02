@@ -9,7 +9,7 @@ export interface RouteCombat2ActionOptions {
   ability: ClassAbility | null;
   targetId: string | null;
   livingCreatureIds: ReadonlySet<string> | null;
-  reservedBuffs: Record<string, unknown>;
+  reservedBuffs: ReservedBuffsMap;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction): Promise<Combat2IntentResult>;
   diagnose(message: string): void;
