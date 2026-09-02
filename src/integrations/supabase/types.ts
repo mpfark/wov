@@ -4480,6 +4480,10 @@ export type Database = {
         Args: { _encounter_id: string }
         Returns: string
       }
+      combat2_seed_spawns: {
+        Args: { _encounter_id: string; _node_id: string }
+        Returns: undefined
+      }
       combat2_sync: {
         Args: {
           _after_tick?: number
