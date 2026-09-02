@@ -2879,12 +2879,61 @@ export type Database = {
         }
         Relationships: []
       }
+      node_arrival_group: {
+        Row: {
+          active: boolean
+          arrival_seq: number
+          created_at: string
+          deactivated_at: string | null
+          encounter_id: string
+          generation: number
+          id: string
+          party_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          arrival_seq?: number
+          created_at?: string
+          deactivated_at?: string | null
+          encounter_id: string
+          generation: number
+          id?: string
+          party_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          arrival_seq?: number
+          created_at?: string
+          deactivated_at?: string | null
+          encounter_id?: string
+          generation?: number
+          id?: string
+          party_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_arrival_group_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_arrival_group_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       node_creature: {
         Row: {
           created_at: string
           creature_id: string
           died_at: string | null
           encounter_id: string
+          engaged: boolean
           hp: number
           id: string
           is_alive: boolean
@@ -2899,6 +2948,7 @@ export type Database = {
           creature_id: string
           died_at?: string | null
           encounter_id: string
+          engaged?: boolean
           hp: number
           id?: string
           is_alive?: boolean
@@ -2913,6 +2963,7 @@ export type Database = {
           creature_id?: string
           died_at?: string | null
           encounter_id?: string
+          engaged?: boolean
           hp?: number
           id?: string
           is_alive?: boolean
@@ -3096,10 +3147,12 @@ export type Database = {
       }
       node_fighter: {
         Row: {
+          arrival_group_id: string | null
           character_id: string
           created_at: string
           encounter_id: string
           entry_seq: number
+          exit_request_id: string | null
           id: string
           joined_at: string
           left_at: string | null
@@ -3108,10 +3161,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrival_group_id?: string | null
           character_id: string
           created_at?: string
           encounter_id: string
           entry_seq?: number
+          exit_request_id?: string | null
           id?: string
           joined_at?: string
           left_at?: string | null
@@ -3120,10 +3175,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrival_group_id?: string | null
           character_id?: string
           created_at?: string
           encounter_id?: string
           entry_seq?: number
+          exit_request_id?: string | null
           id?: string
           joined_at?: string
           left_at?: string | null
@@ -3132,6 +3189,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "node_fighter_arrival_group_id_fkey"
+            columns: ["arrival_group_id"]
+            isOneToOne: false
+            referencedRelation: "node_arrival_group"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "node_fighter_character_id_fkey"
             columns: ["character_id"]
@@ -3144,6 +3208,13 @@ export type Database = {
             columns: ["encounter_id"]
             isOneToOne: false
             referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_fighter_exit_request_id_fkey"
+            columns: ["exit_request_id"]
+            isOneToOne: false
+            referencedRelation: "node_pending_event"
             referencedColumns: ["id"]
           },
         ]
@@ -4405,6 +4476,10 @@ export type Database = {
         Args: { _secret: string }
         Returns: Json
       }
+      combat2_refresh_tanks: {
+        Args: { _encounter_id: string }
+        Returns: string
+      }
       combat2_sync: {
         Args: {
           _after_tick?: number
@@ -4992,6 +5067,10 @@ export type Database = {
       set_character_combat_trace: {
         Args: { _character_id: string; _enabled: boolean }
         Returns: undefined
+      }
+      set_party_tank: {
+        Args: { _party_id: string; _tank_character_id: string }
+        Returns: Json
       }
       shutdown_world: { Args: never; Returns: undefined }
       sim_note_progress: { Args: never; Returns: undefined }
