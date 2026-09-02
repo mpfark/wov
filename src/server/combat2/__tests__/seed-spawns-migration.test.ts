@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationsDir = resolve(process.cwd(), "supabase/migrations");
-const migrationName = "20260902130000_combat2_seed_spawns.sql";
+const migrationName = "20260902194101_e3b1caf6-58cf-4028-b292-49cc3c283914.sql";
 const sql = readFileSync(resolve(migrationsDir, migrationName), "utf8").replaceAll("\r\n", "\n");
 const installedEnterSql = readFileSync(
   resolve(migrationsDir, "20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql"),
