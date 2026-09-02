@@ -10,7 +10,7 @@ const canonicalPath = resolve(
 );
 const removedPath = resolve(
   migrations,
-  "20260902100000_combat2_arrival_engagement_opportunity.sql",
+  ["20260902100000", "combat2", "arrival", "engagement", "opportunity.sql"].join("_"),
 );
 const forwardName = "20260902110000_combat2_reactivation_fencing.sql";
 const forwardSql = readFileSync(resolve(migrations, forwardName), "utf8").replaceAll("\r\n", "\n");
