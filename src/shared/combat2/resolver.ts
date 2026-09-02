@@ -58,6 +58,7 @@ interface WorkingCreature {
   dirty: boolean;
   pendingAction: SnapshotCreature['pending_action'];
   tankFighterId: string | null;
+  engaged: boolean;
 }
 
 const ms = (iso: string): number => Date.parse(iso);
@@ -65,15 +66,6 @@ const ms = (iso: string): number => Date.parse(iso);
 function effectsFor(effects: SnapshotEffect[], characterId: string, kind: string): SnapshotEffect[] {
   return effects.filter((e) => e.target_character_id === characterId && e.kind === kind);
 }
-
-/** Newest present fighter tanks. Evaluated when an action begins, per creature. */
-export function selectTank(fighters: SnapshotFighter[], living: ReadonlySet<string>): SnapshotFighter | null {
-  const eligible = fighters
-    .filter((f) => f.present && living.has(f.character_id))
-    .sort((a, b) => b.entry_seq - a.entry_seq);
-  return eligible[0] ?? null;
-}
-
 
 export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): ProposedTick {
   const { encounter } = snapshot;
@@ -113,6 +105,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       dirty: false,
       pendingAction: row.pending_action,
       tankFighterId: row.tank_fighter_id,
+      engaged: row.engaged,
     });
   }
 
@@ -127,6 +120,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       .map((p) => `${p.creature_id}:${p.spawn_seq}:${p.character_id}`),
   );
   const proposedQualified = new Set<string>();
+  const reactedThisTick = new Set<string>();
+  const skipOrdinaryThisTick = new Set<string>();
   const qualify = (
     creature: WorkingCreature,
     characterId: string,
@@ -245,6 +240,33 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           });
         }
       }
+    }
+  }
+
+  // Authoritative entry/exit transitions are claimed exactly once and use the
+  // same damage, mitigation and reactive pipeline as ordinary attacks.
+  for (const pending of snapshot.pending_events ?? []) {
+    if (pending.event_type !== 'fighter_entered' && pending.event_type !== 'fighter_exit_requested') continue;
+    const fighterId = typeof pending.payload.fighter_id === 'string' ? pending.payload.fighter_id : null;
+    const entrySeq = typeof pending.payload.entry_seq === 'number' ? pending.payload.entry_seq : null;
+    const target = fighterId === null ? undefined : snapshot.fighters.find((fighter) =>
+      fighter.id === fighterId && (entrySeq === null || fighter.entry_seq === entrySeq));
+    if (!target || !target.present || !livingCharacters().has(target.character_id)) continue;
+    const opportunityKind = pending.event_type === 'fighter_entered' ? 'entry' : 'exit';
+    for (const creature of [...creatures.values()].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
+      if (!creature.engaged || creature.hp <= 0 || !creature.row.is_alive) continue;
+      applyCreatureDamage(creature, target, null, 0, opportunityKind, pending.id);
+      if (!livingCharacters().has(target.character_id)) break;
+    }
+    if (pending.event_type === 'fighter_exit_requested') {
+      proposed.fighters.push({ id: target.id, present: false });
+      const died = chars.get(target.character_id)?.hp === 0;
+      emit({
+        kind: died ? 'fighter_exit_failed' : 'fighter_fled',
+        actor: { type: 'character', id: target.character_id, name: target.name },
+        outcomeReason: died ? 'dead' : undefined,
+        meta: { transitionEventId: pending.id, entrySeq: target.entry_seq },
+      });
     }
   }
 
@@ -412,6 +434,31 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       continue;
     }
 
+    // Enemy-targeted abilities are the only hostile intents. The first one
+    // engages this exact spawn and opens against every present fighter.
+    if (spec.targetType === 'enemy' && targetCreature && !targetCreature.engaged) {
+      targetCreature.engaged = true;
+      targetCreature.dirty = true;
+      skipOrdinaryThisTick.add(targetCreature.row.id);
+      qualify(targetCreature, actor.fighter.character_id, 'damage');
+      emit({
+        kind: 'creature_engaged',
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        target: { type: 'creature', id: targetCreature.row.creature_id, name: targetCreature.row.name },
+        meta: { nodeCreatureId: targetCreature.row.id, spawnSeq: targetCreature.row.spawn_seq },
+      });
+      for (const present of snapshot.fighters
+        .filter((fighter) => fighter.present && livingCharacters().has(fighter.character_id))
+        .sort((a, b) => a.id.localeCompare(b.id))) {
+        if (targetCreature.hp <= 0) break;
+        applyCreatureDamage(targetCreature, present, null, 0, 'engagement_opening', intent.id);
+      }
+      if (actor.hp <= 0) {
+        emit({ kind: 'action_rejected', outcomeReason: 'actor_died_during_engagement', abilityKey: spec.abilityKey });
+        continue;
+      }
+    }
+
     const stackEffects = targetCreature
       ? snapshot.effects.filter(
           (e) =>
@@ -495,10 +542,6 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   }
 
 
-  // Reactive retaliation bookkeeping: one reaction per reactive effect per
-  // attacking creature spawn per tick when the authored configuration says so.
-  const reactedThisTick = new Set<string>();
-
   // ── 3. creature actions ───────────────────────────────────────
   for (const creature of creatures.values()) {
     if (creature.hp <= 0 || !creature.row.is_alive) {
@@ -508,10 +551,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       }
       continue;
     }
+    if (!creature.engaged || skipOrdinaryThisTick.has(creature.row.id)) continue;
     const living = livingCharacters();
-    const tank = selectTank(snapshot.fighters, living);
-    creature.tankFighterId = tank?.id ?? null;
-    if (creature.tankFighterId !== creature.row.tank_fighter_id) creature.dirty = true;
+    const tank = snapshot.fighters.find((fighter) =>
+      fighter.id === creature.tankFighterId && fighter.present && living.has(fighter.character_id)) ?? null;
 
     // 3a. a telegraphed action that is due resolves now, and the creature does
     //     nothing else this tick (one action per tick).
@@ -610,11 +653,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     targetFighter: SnapshotFighter,
     abilityKey: string | null,
     flatMagnitude: number,
+    opportunityKind?: 'entry' | 'exit' | 'engagement_opening',
+    transitionEventId?: string,
   ): void {
     const target = chars.get(targetFighter.character_id);
     if (!target || target.hp <= 0) return;
 
-    const stream = `creature_attack:${creature.row.creature_id}:${abilityKey ?? 'auto'}`;
+    const stream = `creature_attack:${opportunityKind ?? 'ordinary'}:${transitionEventId ?? tick}:${creature.row.id}:${creature.row.spawn_seq}:${abilityKey ?? 'auto'}`;
     const roll = rng.d20(stream, targetFighter.character_id, tick);
     const bonus = getCreatureAttackBonus(creature.row.level);
     const total = roll + bonus;
@@ -629,6 +674,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         hitQuality: 'miss',
         amount: 0,
         outcomeReason: isNat1 ? 'critical_miss' : 'missed',
+        meta: opportunityKind ? { opportunityKind, transitionEventId, spawnSeq: creature.row.spawn_seq } : undefined,
       });
       return;
     }
@@ -690,6 +736,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       hitQuality: isCrit ? 'strong' : 'normal',
       amount: applied,
       meta: {
+        ...(opportunityKind ? { opportunityKind, transitionEventId, spawnSeq: creature.row.spawn_seq } : {}),
         isCrit,
         percentMitigated: breakdown.percentMitigated,
         shieldBonusApplied: breakdown.shieldBonusApplied,
@@ -811,6 +858,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       died: character.died,
     });
     if (character.died) {
+      if (!proposed.fighters.some((fighter) => fighter.id === character.fighter.id)) {
+        proposed.fighters.push({ id: character.fighter.id, present: false });
+      }
       emit({
         kind: 'character_died',
         target: { type: 'character', id: character.fighter.character_id, name: character.fighter.name },

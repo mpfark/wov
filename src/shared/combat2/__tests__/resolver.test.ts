@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveNodeTick, selectTank } from '../resolver';
+import { resolveNodeTick } from '../resolver';
 import { buildAbilitySpec } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
 import type { NodeSnapshot, SnapshotCreature, SnapshotFighter, SnapshotIntent } from '../types';
@@ -43,8 +43,9 @@ function creature(overrides: Partial<SnapshotCreature> = {}): SnapshotCreature {
     spawn_seq: 3,
     hp: 60,
     is_alive: true,
+    engaged: true,
     pending_action: null,
-    tank_fighter_id: null,
+    tank_fighter_id: 'f-ch-1',
     name: 'Granite Sentinel',
     level: 10,
     max_hp: 60,
@@ -201,19 +202,6 @@ describe('combat2 resolver', () => {
     );
     const actor = out.characters.find((c) => c.id === 'ch-1');
     expect(actor?.cp).toBe(45);
-  });
-
-  it('selects the newest present fighter as tank', () => {
-    const fighters = [
-      fighter({ character_id: 'a', entry_seq: 1 }),
-      fighter({ character_id: 'b', entry_seq: 2 }),
-      fighter({ character_id: 'c', entry_seq: 3 }),
-    ];
-    expect(selectTank(fighters, new Set(['a', 'b', 'c']))?.character_id).toBe('c');
-    fighters[2].present = false;
-    expect(selectTank(fighters, new Set(['a', 'b', 'c']))?.character_id).toBe('b');
-    fighters[2].present = true;
-    expect(selectTank(fighters, new Set(['a', 'b', 'c']))?.character_id).toBe('c');
   });
 
   it('removes an effect whose wall-clock lifetime lapsed without pulsing it', () => {
@@ -400,6 +388,7 @@ describe('combat2 resolver', () => {
 
   it('allows a later new cast to capture the newly authoritative tank', () => {
     const out = resolveNodeTick(snapshot({
+      creatures: [creature({ tank_fighter_id: 'f-ch-2' })],
       fighters: [
         fighter({ character_id: 'ch-1', entry_seq: 1 }),
         fighter({ character_id: 'ch-2', entry_seq: 7 }),
@@ -477,5 +466,43 @@ describe('combat2 resolver', () => {
     // not qualification, so only the damage-over-time source is paid.
     const ids = out.rewards.map((r) => r.character_id).sort();
     expect(ids).toEqual(['ch-1']);
+  });
+
+  it('keeps an unengaged non-aggressive creature idle on entry', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ engaged: false, is_aggressive: false })],
+      pending_events: [{
+        id: 'enter-1', event_type: 'fighter_entered', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'creature_attack')).toEqual([]);
+  });
+
+  it('resolves one entry opportunity per engaged creature through the attack pipeline', () => {
+    const out = resolveNodeTick(snapshot({
+      pending_events: [{
+        id: 'enter-1', event_type: 'fighter_entered', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    const attacks = out.events.filter((event) => event.kind === 'creature_attack');
+    expect(attacks).toHaveLength(2); // entry opportunity, then the ordinary tank action
+    expect(attacks[0].meta).toMatchObject({ opportunityKind: 'entry', transitionEventId: 'enter-1', spawnSeq: 3 });
+    expect(out.pending_event_ids).toEqual(['enter-1']);
+  });
+
+  it('first hostile intent engages once, opens against every present fighter, and skips the normal attack', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ engaged: false, is_aggressive: false })],
+      fighters: [fighter({ character_id: 'ch-1' }), fighter({ character_id: 'ch-2' })],
+      intents: [abilityIntent('intent-1', 1, 'ch-1', 'power_strike', 'cr-1')],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'creature_engaged')).toHaveLength(1);
+    const openings = out.events.filter((event) => event.meta?.opportunityKind === 'engagement_opening');
+    expect(openings).toHaveLength(2);
+    expect(out.participation).toContainEqual(expect.objectContaining({ creature_id: 'cr-1', spawn_seq: 3, character_id: 'ch-1' }));
   });
 });

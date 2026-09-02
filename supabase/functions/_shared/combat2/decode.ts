@@ -178,6 +178,7 @@ function decodeCreature(r: Reader, path: string, raw: unknown): SnapshotCreature
     spawn_seq: r.num(`${path}.spawn_seq`, o.spawn_seq),
     hp: r.num(`${path}.hp`, o.hp),
     is_alive: r.bool(`${path}.is_alive`, o.is_alive),
+    engaged: r.bool(`${path}.engaged`, o.engaged),
     pending_action: pendingAction,
     tank_fighter_id: r.strOrNull(`${path}.tank_fighter_id`, o.tank_fighter_id),
     name: r.str(`${path}.name`, o.name),

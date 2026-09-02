@@ -132,6 +132,8 @@ export interface SnapshotCreature {
   spawn_seq: number;
   hp: number;
   is_alive: boolean;
+  /** Hostility for this exact node-creature life; monotonic until death/reset. */
+  engaged: boolean;
   pending_action: SnapshotPendingAction | null;
   tank_fighter_id: string | null;
   name: string;

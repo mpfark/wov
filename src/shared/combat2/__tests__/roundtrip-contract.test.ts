@@ -34,6 +34,7 @@ export const CLAIM = {
         id: 'aaaa0000-0000-4000-8000-000000000004',
         is_aggressive: false,
         is_alive: true,
+        engaged: true,
         is_humanoid: false,
         level: 5,
         max_hp: 1,
