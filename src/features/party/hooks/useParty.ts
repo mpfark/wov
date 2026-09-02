@@ -301,7 +301,7 @@ export function useParty(characterId: string | null) {
 
   const setTank = useCallback(async (tankCharacterId: string | null) => {
     if (!party) return;
-    await supabase.from('parties').update({ tank_id: tankCharacterId }).eq('id', party.id);
+    await supabase.rpc('set_party_tank', { _party_id: party.id, _tank_character_id: tankCharacterId });
     fetchParty();
   }, [party, fetchParty]);
 
