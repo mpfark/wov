@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const sql = readFileSync('supabase/migrations/20260902100000_combat2_arrival_engagement_opportunity.sql', 'utf8')
+const sql = readFileSync('supabase/migrations/20260902093129_6e2ff6de-db65-4d4d-83e1-dadcfebaa70c.sql', 'utf8')
   .toLowerCase().replace(/\s+/g, ' ');
 
 describe('Combat2 arrival, tank, engagement and opportunity authority migration', () => {
