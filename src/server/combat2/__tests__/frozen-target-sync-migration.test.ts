@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const priorPath = 'supabase/migrations/20260901104835_d1bb417e-56d2-4c4b-b34b-afbad1c26d5e.sql';
-const migrationPath = 'supabase/migrations/20260902003000_combat2_frozen_boss_target_sync.sql';
+const migrationPath = 'supabase/migrations/20260902052308_e24cd7f0-db0b-4a88-85ac-f2908ed7fcad.sql';
 const prior = readFileSync(priorPath, 'utf8');
 const migration = readFileSync(migrationPath, 'utf8');
 const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
