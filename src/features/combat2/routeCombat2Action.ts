@@ -9,7 +9,7 @@ export interface RouteCombat2ActionOptions {
   ability: ClassAbility | null;
   targetId: string | null;
   livingCreatureIds: ReadonlySet<string> | null;
-  reservedBuffs: ReservedBuffsMap;
+  reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction): Promise<Combat2IntentResult>;
   diagnose(message: string): void;
@@ -35,7 +35,7 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   let action: Combat2IntentAction;
   if (stance) {
     action = {
-      kind: isStanceActive(options.reservedBuffs, stance.key) ? 'stance_drop' : 'stance_activate',
+      kind: isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key) ? 'stance_drop' : 'stance_activate',
       abilityKey: null,
       stanceKey: stance.key,
       targetCreatureId: null,
