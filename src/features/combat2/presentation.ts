@@ -15,11 +15,36 @@ export interface Combat2PresentationCharacter {
 export interface Combat2PresentationCreature {
   id: string;
   creatureId: string;
+  spawnSeq: number;
   name: string;
   hp: number;
   maxHp: number;
   isAlive: boolean;
-  pendingAction: { abilityKey: string | null; resolveAtTick: number } | null;
+  pendingAction: Combat2PresentationPendingAction | null;
+}
+
+export interface Combat2PresentationPendingAction {
+  abilityKey: string;
+  abilityLabel: string | null;
+  startedAtTick: number;
+  resolveAtTick: number;
+  targetFighterId: string;
+  targetCharacterId: string;
+  targetEntrySeq: number;
+}
+
+export interface Combat2PresentationTelegraph extends Combat2PresentationPendingAction {
+  id: string;
+  encounterId: string;
+  nodeCreatureId: string;
+  creatureId: string;
+  spawnSeq: number;
+  creatureName: string;
+  targetIsCurrentCharacter: boolean;
+}
+
+export function combat2CreatureLifeKey(creatureId: string, spawnSeq: number): string {
+  return `${creatureId}:${spawnSeq}`;
 }
 
 export type Combat2EffectCategory = 'beneficial' | 'harmful' | 'stance' | 'unknown';
@@ -53,6 +78,8 @@ export interface Combat2PresentationModel {
   effects: readonly Combat2PresentationEffect[];
   characterEffects: readonly Combat2PresentationEffect[];
   creatureEffects: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
+  telegraphs: readonly Combat2PresentationTelegraph[];
+  telegraphsByCreatureLife: Readonly<Record<string, Combat2PresentationTelegraph>>;
   events: readonly GameLogEvent[];
   lastAppliedTick: number;
 }
@@ -200,6 +227,14 @@ function eventMessage(event: Combat2SafeEvent): string {
   if (typeof text === 'string' && text.trim()) return text.trim();
   const actorName = event.actor?.name ?? (event.actor?.type === 'creature' ? 'Creature' : 'You');
   const targetName = event.target?.name;
+  const abilityLabel = typeof event.abilityKey === 'string'
+    ? event.abilityKey.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : 'cast';
+  if (event.kind === 'boss_cast_evaded') {
+    return event.outcomeReason === 'no_target'
+      ? `${actorName}'s ${abilityLabel} lands on empty ground.`
+      : `${actorName}'s ${abilityLabel} is evaded.`;
+  }
   const label = event.kind.replaceAll('_', ' ');
   return `${actorName}: ${label}${targetName ? ` → ${targetName}` : ''}${typeof event.amount === 'number' ? ` (${event.amount})` : ''}.`;
 }
@@ -236,6 +271,10 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
   const character = record(sync.character);
   if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
 
+  const encounterId = stringField(encounter, 'id');
+  const encounterTick = integerField(encounter, 'tick');
+  const characterId = stringField(character, 'id');
+  const fighter = record(sync.fighter);
   const ordered = [...delivery.batches].sort((a, b) => a.tick - b.tick);
   if (ordered.length > 0 && ordered[0].tick !== 1) {
     throw new Combat2PresentationError('combat2_sync presentation begins after a tick gap');
@@ -249,30 +288,67 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     throw new Combat2PresentationError('combat2_sync presentation cursor does not match batches');
   }
 
+  const telegraphs: Combat2PresentationTelegraph[] = [];
+  const telegraphsByCreatureLife: Record<string, Combat2PresentationTelegraph> = {};
   const creatures = sync.creatures.map((value) => {
     const row = record(value);
     if (!row || typeof row.isAlive !== 'boolean') throw new Combat2PresentationError('combat2_sync creature is malformed');
     const pending = row.pendingAction === null ? null : record(row.pendingAction);
     if (row.pendingAction !== null && !pending) throw new Combat2PresentationError('combat2_sync pending action is malformed');
+    const nodeCreatureId = stringField(row, 'id');
+    const creatureId = stringField(row, 'creatureId');
+    const spawnSeq = integerField(row, 'spawnSeq');
+    const creatureName = stringField(row, 'name');
+    const pendingAction: Combat2PresentationPendingAction | null = pending ? {
+      abilityKey: stringField(pending, 'abilityKey'),
+      abilityLabel: optionalString(pending, 'abilityLabel'),
+      startedAtTick: integerField(pending, 'startedAtTick'),
+      resolveAtTick: integerField(pending, 'resolveAtTick'),
+      targetFighterId: stringField(pending, 'targetFighterId'),
+      targetCharacterId: stringField(pending, 'targetCharacterId'),
+      targetEntrySeq: integerField(pending, 'targetEntrySeq'),
+    } : null;
+    if (pendingAction && pendingAction.resolveAtTick < pendingAction.startedAtTick) {
+      throw new Combat2PresentationError('combat2_sync pending action tick boundary is invalid');
+    }
+    const targetsCurrentCharacter = pendingAction?.targetCharacterId === characterId;
+    const currentGenerationMatches = !targetsCurrentCharacter || (
+      !!fighter
+      && fighter.id === pendingAction.targetFighterId
+      && fighter.characterId === characterId
+      && fighter.entrySeq === pendingAction.targetEntrySeq
+      && fighter.present === true
+    );
+    if (row.isAlive && pendingAction && currentGenerationMatches) {
+      const telegraph: Combat2PresentationTelegraph = {
+        ...pendingAction,
+        id: JSON.stringify([
+          encounterId, nodeCreatureId, creatureId, spawnSeq, pendingAction.abilityKey,
+          pendingAction.startedAtTick, pendingAction.resolveAtTick, pendingAction.targetFighterId,
+          pendingAction.targetCharacterId, pendingAction.targetEntrySeq,
+        ]),
+        encounterId, nodeCreatureId, creatureId, spawnSeq, creatureName,
+        targetIsCurrentCharacter: targetsCurrentCharacter,
+      };
+      telegraphs.push(telegraph);
+      telegraphsByCreatureLife[combat2CreatureLifeKey(creatureId, spawnSeq)] = telegraph;
+    }
     return {
-      id: stringField(row, 'id'),
-      creatureId: stringField(row, 'creatureId'),
-      name: stringField(row, 'name'),
+      id: nodeCreatureId,
+      creatureId,
+      spawnSeq,
+      name: creatureName,
       hp: numberField(row, 'hp'),
       maxHp: numberField(row, 'maxHp'),
       isAlive: row.isAlive,
-      pendingAction: pending ? {
-        abilityKey: typeof pending.abilityKey === 'string' ? pending.abilityKey : null,
-        resolveAtTick: integerField(pending, 'resolveAtTick'),
-      } : null,
+      pendingAction,
     };
   });
 
-  const characterId = stringField(character, 'id');
   const effectGroups = parseEffects(sync.effects, characterId);
   return {
-    encounterId: stringField(encounter, 'id'),
-    encounterTick: integerField(encounter, 'tick'),
+    encounterId,
+    encounterTick,
     stateVersion: integerField(encounter, 'stateVersion'),
     encounterStatus: stringField(encounter, 'status'),
     character: {
@@ -283,6 +359,8 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     },
     creatures,
     ...effectGroups,
+    telegraphs,
+    telegraphsByCreatureLife,
     events: presentEvents(ordered),
     lastAppliedTick: delivery.lastAppliedTick,
   };

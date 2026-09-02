@@ -68,7 +68,15 @@ describe('Combat2ClientSession application bridge', () => {
         ok: true, kind: 'sync', latest_tick: 1, returned_through_tick: 1, has_more: false,
         encounter: { id: ENCOUNTER, status: 'active', tick: 1, stateVersion: 1 },
         character: { id: CHARACTER, hp: 9, maxHp: 10, cp: 4, maxCp: 8, mp: 7, maxMp: 10 },
-        fighter: { present: true }, creatures: [], effects: [], rewardClaims: [],
+        fighter: { id: 'fighter-1', characterId: CHARACTER, entrySeq: 3, present: true },
+        creatures: [{
+          id: 'node-creature-1', creatureId: 'creature-1', spawnSeq: 2, name: 'Sentinel',
+          hp: 10, maxHp: 10, isAlive: true,
+          pendingAction: {
+            abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 1, resolveAtTick: 3,
+            targetFighterId: 'fighter-1', targetCharacterId: CHARACTER, targetEntrySeq: 3,
+          },
+        }], effects: [], rewardClaims: [],
         batches: [{ id: 'batch-1', tick: 1, createdAt: '2026-09-01T00:00:00Z', events: [{ seq: 1, kind: 'attack', amount: 2 }] }],
       }, error: null };
       if (name === 'combat_flee') return { data: { ok: true, kind: 'already_fled', event_id: eventId }, error: null };
@@ -85,12 +93,14 @@ describe('Combat2ClientSession application bridge', () => {
     await waitFor(() => expect(result.current.delivery.batches).toHaveLength(1));
     expect(result.current.presentation.model).toMatchObject({ character: { hp: 9, cp: 4, mp: 7 }, lastAppliedTick: 1 });
     expect(result.current.presentation.model?.events).toHaveLength(1);
+    expect(result.current.presentation.model?.telegraphs).toHaveLength(1);
     await act(async () => { expect(await result.current.flee.flee()).toMatchObject({ status: 'fled', classification: 'already_fled' }); });
     await waitFor(() => expect(result.current.sessionStatus).toBe('exited'));
     expect(result.current.encounterId).toBeNull();
     expect(remove).toHaveBeenCalledWith(channel);
     expect(result.current.delivery.batches).toHaveLength(1);
     expect(result.current.presentation.model?.events).toHaveLength(1);
+    expect(result.current.sessionStatus === 'active' ? result.current.presentation.model?.telegraphs : []).toEqual([]);
     await expect(result.current.intents.submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: null }))
       .resolves.toMatchObject({ status: 'local_refusal', classification: 'no_session' });
     expect(rpc.mock.calls.filter(([name]) => name === 'combat_intent')).toHaveLength(0);

@@ -10,6 +10,16 @@ import { decodeCombat2Intent } from './intent';
 const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
 const CREATURE = 'cccccccc-0000-4000-8000-000000000001';
+const FIGHTER = 'dddddddd-0000-4000-8000-000000000001';
+
+function pendingAction(overrides: Record<string, unknown> = {}) {
+  return {
+    abilityKey: 'granite_slam', abilityLabel: 'Granite Slam',
+    startedAtTick: 1, resolveAtTick: 3,
+    targetFighterId: FIGHTER, targetCharacterId: CHARACTER, targetEntrySeq: 7,
+    ...overrides,
+  };
+}
 
 function effect(overrides: Record<string, unknown> = {}) {
   return {
@@ -33,10 +43,10 @@ function delivery(tick = 1): Combat2DeliverySessionState {
       ok: true, kind: 'sync', latest_tick: tick, returned_through_tick: tick, has_more: false,
       encounter: { id: ENCOUNTER, status: 'active', tick, stateVersion: tick + 3 },
       character: { id: CHARACTER, hp: 17 - tick, maxHp: 20, cp: 8 - tick, maxCp: 10, mp: 6, maxMp: 10 },
-      fighter: { present: true }, effects: [], rewardClaims: [],
+      fighter: { id: FIGHTER, characterId: CHARACTER, entrySeq: 7, present: true }, effects: [], rewardClaims: [],
       creatures: [{
-        id: 'node-creature-1', creatureId: CREATURE, name: 'Wolf', hp: 9 - tick,
-        maxHp: 10, isAlive: tick < 2, pendingAction: { abilityKey: 'bite', resolveAtTick: tick + 1 },
+        id: 'node-creature-1', creatureId: CREATURE, spawnSeq: 4, name: 'Wolf', hp: 9 - tick,
+        maxHp: 10, isAlive: tick < 2, pendingAction: pendingAction(),
       }],
       batches,
     },
@@ -50,7 +60,8 @@ describe('Combat2 authoritative presentation model', () => {
       encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 4, encounterStatus: 'active', lastAppliedTick: 1,
       character: { id: CHARACTER, hp: 16, maxHp: 20, cp: 7, maxCp: 10, mp: 6, maxMp: 10 },
     });
-    expect(model.creatures[0]).toMatchObject({ creatureId: CREATURE, hp: 8, maxHp: 10, isAlive: true, pendingAction: { abilityKey: 'bite', resolveAtTick: 2 } });
+    expect(model.creatures[0]).toMatchObject({ creatureId: CREATURE, spawnSeq: 4, hp: 8, maxHp: 10, isAlive: true, pendingAction: { abilityKey: 'granite_slam', resolveAtTick: 3 } });
+    expect(model.telegraphs).toHaveLength(1);
   });
 
   it('changes visible resources only when a committed sync snapshot changes', () => {
@@ -62,6 +73,7 @@ describe('Combat2 authoritative presentation model', () => {
     const after = buildCombat2Presentation(delivery(2));
     expect(after.character).toMatchObject({ hp: 15, cp: 6 });
     expect(after.creatures[0]).toMatchObject({ hp: 7, isAlive: false });
+    expect(after.telegraphs).toEqual([]);
   });
 
   it('projects authoritative effects by explicit target and classifies known, stance, and unknown rows', () => {
@@ -97,6 +109,104 @@ describe('Combat2 authoritative presentation model', () => {
 
     const removed = delivery();
     expect(buildCombat2Presentation(removed).effects).toEqual([]);
+  });
+
+  it('retains every frozen telegraph identity field and uses a creature-life key', () => {
+    const model = buildCombat2Presentation(delivery());
+    expect(model.telegraphs[0]).toMatchObject({
+      encounterId: ENCOUNTER, nodeCreatureId: 'node-creature-1', creatureId: CREATURE, spawnSeq: 4,
+      abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 1, resolveAtTick: 3,
+      targetFighterId: FIGHTER, targetCharacterId: CHARACTER, targetEntrySeq: 7,
+      targetIsCurrentCharacter: true,
+    });
+    expect(model.telegraphsByCreatureLife[`${CREATURE}:4`]).toBe(model.telegraphs[0]);
+  });
+
+  it('replaces or clears pending telegraphs from each authoritative snapshot without duplication', () => {
+    const initial = delivery();
+    const first = buildCombat2Presentation(initial);
+    expect(first.telegraphs).toHaveLength(1);
+    expect(buildCombat2Presentation(initial).telegraphs).toHaveLength(1);
+
+    const replacement = delivery();
+    replacement.snapshot!.creatures[0].pendingAction = pendingAction({
+      abilityKey: 'falling_star', abilityLabel: null, startedAtTick: 2, resolveAtTick: 5,
+    });
+    const replaced = buildCombat2Presentation(replacement);
+    expect(replaced.telegraphs).toHaveLength(1);
+    expect(replaced.telegraphs[0]).toMatchObject({ abilityKey: 'falling_star', abilityLabel: null });
+    expect(replaced.telegraphs[0].id).not.toBe(first.telegraphs[0].id);
+
+    const cleared = delivery();
+    cleared.snapshot!.creatures[0].pendingAction = null;
+    expect(buildCombat2Presentation(cleared).telegraphs).toEqual([]);
+  });
+
+  it('does not reactivate a telegraph aimed at the current character under an old entry generation', () => {
+    const reentered = delivery();
+    reentered.snapshot!.fighter = { id: FIGHTER, characterId: CHARACTER, entrySeq: 8, present: true };
+    expect(buildCombat2Presentation(reentered).telegraphs).toEqual([]);
+  });
+
+  it('fences identical creature definitions by node-creature row and spawn generation', () => {
+    const state = delivery();
+    state.snapshot!.creatures = [
+      { ...state.snapshot!.creatures[0], isAlive: false, spawnSeq: 4 },
+      {
+        ...state.snapshot!.creatures[0], id: 'node-creature-2', spawnSeq: 5,
+        pendingAction: pendingAction({ startedAtTick: 2, resolveAtTick: 4 }),
+      },
+    ];
+    const model = buildCombat2Presentation(state);
+    expect(model.telegraphs).toHaveLength(1);
+    expect(model.telegraphs[0]).toMatchObject({ nodeCreatureId: 'node-creature-2', spawnSeq: 5 });
+    expect(model.telegraphsByCreatureLife[`${CREATURE}:4`]).toBeUndefined();
+    expect(model.telegraphsByCreatureLife[`${CREATURE}:5`]).toBe(model.telegraphs[0]);
+  });
+
+  it('retains another target identity without presenting it as the current character', () => {
+    const state = delivery();
+    state.snapshot!.creatures[0].pendingAction = pendingAction({
+      targetFighterId: 'fighter-other', targetCharacterId: 'character-other', targetEntrySeq: 20,
+    });
+    expect(buildCombat2Presentation(state).telegraphs[0]).toMatchObject({
+      targetFighterId: 'fighter-other', targetCharacterId: 'character-other', targetEntrySeq: 20,
+      targetIsCurrentCharacter: false,
+    });
+  });
+
+  it('uses approved committed events once for empty ground and ordered reactive death outcomes', () => {
+    const state = delivery();
+    state.snapshot!.creatures[0].pendingAction = null;
+    state.batches = [{
+      id: 'boss-batch', tick: 1, createdAt: '2026-09-01T00:00:01Z', events: [
+        { seq: 1, kind: 'boss_cast_evaded', abilityKey: 'granite_slam', actor: { type: 'creature', id: CREATURE, name: 'Wolf' }, outcomeReason: 'no_target' },
+        { seq: 2, kind: 'effect_pulse', amount: 5, meta: { reactive: true } },
+        { seq: 3, kind: 'creature_died', actor: { type: 'creature', id: CREATURE, name: 'Wolf' } },
+      ],
+    }];
+    const model = buildCombat2Presentation(state);
+    expect(model.telegraphs).toEqual([]);
+    expect(model.events.map((event) => event.id)).toEqual(['boss-batch:1', 'boss-batch:2', 'boss-batch:3']);
+    expect(model.events[0].message).toContain('empty ground');
+    expect(new Set(model.events.map((event) => event.id)).size).toBe(3);
+  });
+
+  it('reconciles a committed successful cast from the approved event after pending state clears', () => {
+    const state = delivery();
+    state.snapshot!.creatures[0].pendingAction = null;
+    state.batches = [{
+      id: 'resolved-batch', tick: 1, createdAt: '2026-09-01T00:00:01Z',
+      events: [{
+        seq: 1, kind: 'creature_attack', abilityKey: 'granite_slam', amount: 8,
+        actor: { type: 'creature', id: CREATURE, name: 'Wolf' },
+        target: { type: 'character', id: CHARACTER, name: 'Hero' },
+      }],
+    }];
+    const model = buildCombat2Presentation(state);
+    expect(model.telegraphs).toEqual([]);
+    expect(model.events).toHaveLength(1);
+    expect(model.events[0]).toMatchObject({ id: 'resolved-batch:1', type: 'attack', amount: 8, abilityKey: 'granite_slam' });
   });
 
   it('orders events by tick, gives stable identities, deduplicates at the UI seam, and handles unknown kinds', () => {
@@ -139,15 +249,20 @@ describe('Combat2 authoritative presentation model', () => {
 
   it('connects only the gated visible presentation seams, not gameplay hooks', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
+    const nodeView = readFileSync('src/features/world/components/NodeView.tsx', 'utf8');
+    const indicator = readFileSync('src/features/combat2/Combat2TelegraphIndicator.tsx', 'utf8');
     expect(page).toMatch(/COMBAT2_CLIENT_ENABLED && combat2\.sessionStatus === 'active'/);
     expect(page).toContain('character={presentedCharacter}');
     expect(page).toContain('creatures={presentedCreatures}');
     expect(page).toContain('creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}');
     expect(page).toContain('authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}');
     expect(page).toContain('authoritativeEffects: activeCombat2Presentation?.characterEffects');
+    expect(page).toContain('authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}');
     expect(page).toContain('filteredEventLog={presentedEventLog}');
     expect(page).toMatch(/useCombatActions\(\{\s*character,/);
     expect(page).toMatch(/useMovementActions\(\{\s*character,/);
+    expect(nodeView).toContain('authoritativeTelegraphs === undefined ? bossCasts[c.id] : undefined');
+    expect(indicator).not.toMatch(/supabase|\.rpc\(|\.from\(|combat_intent|damage\s*[+*=]|\bhp\s*[+*=]/);
   });
 });
 import { readFileSync } from 'node:fs';

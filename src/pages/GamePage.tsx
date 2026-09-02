@@ -1383,6 +1383,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               rootDebuff={rootDebuff}
               bleedStacks={bleedStacks}
               bossCasts={bossCasts}
+              authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}
+              authoritativeEncounterTick={activeCombat2Presentation?.encounterTick}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const picked = groundLoot.find(g => g.id === id);

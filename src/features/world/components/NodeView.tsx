@@ -23,7 +23,12 @@ import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
-import type { Combat2PresentationEffect } from '@/features/combat2/presentation';
+import { Combat2TelegraphIndicator } from '@/features/combat2/Combat2TelegraphIndicator';
+import {
+  combat2CreatureLifeKey,
+  type Combat2PresentationEffect,
+  type Combat2PresentationTelegraph,
+} from '@/features/combat2/presentation';
 
 import { describeAdjacentLandmarks } from '@/features/world/utils/adjacency-description';
 
@@ -66,6 +71,8 @@ interface Props {
   rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
   bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; startedAt: number; expiresAt: number; castMs: number; amount?: number; storedPower: number; visualMax: number }>;
+  authoritativeTelegraphs?: Readonly<Record<string, Combat2PresentationTelegraph>>;
+  authoritativeEncounterTick?: number;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -92,6 +99,8 @@ export default function NodeView({
   rootDebuff = null,
   bleedStacks = {},
   bossCasts = {},
+  authoritativeTelegraphs,
+  authoritativeEncounterTick = 0,
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
@@ -290,7 +299,11 @@ export default function NodeView({
                     const creatureBleed = bleedStacks[c.id];
                     const isBleeding = authoritativeCreatureEffects === undefined && creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
-                    const activeCast = bossCasts[c.id];
+                    const authoritativeTelegraph = authoritativeTelegraphs?.[
+                      combat2CreatureLifeKey(c.id, c.spawn_seq ?? 0)
+                    ];
+                    const activeCast = authoritativeTelegraphs === undefined ? bossCasts[c.id] : undefined;
+                    const hasActiveCast = !!activeCast || !!authoritativeTelegraph;
                     return (
                       <div
                         key={c.id}
@@ -375,6 +388,12 @@ export default function NodeView({
                           {authoritativeCreatureEffects !== undefined && (
                             <Combat2EffectPills effects={authoritativeCreatureEffects[c.id] ?? []} />
                           )}
+                          {authoritativeTelegraph && (
+                            <Combat2TelegraphIndicator
+                              telegraph={authoritativeTelegraph}
+                              encounterTick={authoritativeEncounterTick}
+                            />
+                          )}
                           {/* Right: combat icon, HP bar, HP numbers, attack button */}
                           <div className="ml-auto flex items-center gap-1 shrink-0">
                             {(isActiveTarget || isEngaged) && (
@@ -386,7 +405,7 @@ export default function NodeView({
                             <div className="flex flex-col items-stretch gap-[2px] w-[120px]">
                               <div
                                 className={`w-[120px] h-2 bg-background rounded-full overflow-hidden border ${
-                                  activeCast
+                                  hasActiveCast
                                     ? 'border-destructive ring-2 ring-destructive/70 shadow-[0_0_10px_hsl(var(--destructive)/0.7)] animate-pulse'
                                     : 'border-border'
                                 }`}
