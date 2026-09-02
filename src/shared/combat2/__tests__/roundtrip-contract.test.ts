@@ -113,6 +113,13 @@ export const CLAIM = {
     ],
     participation: [],
     pending_events: [],
+    tank_candidates: [
+      {
+        fighter_id: 'aaaa0000-0000-4000-8000-000000000005',
+        character_id: 'aaaa0000-0000-4000-8000-000000000002',
+        entry_seq: 1,
+      },
+    ],
   },
 };
 
@@ -184,6 +191,34 @@ describe('installed claim contract', () => {
     const out = decodeSnapshot(broken) as { ok: boolean; errors?: string[] };
     expect(out.ok).toBe(false);
     expect((out.errors ?? []).join(';')).toContain('equipment[0].item_present');
+  });
+
+  it('rejects malformed, duplicate, or foreign claimed tank candidates', () => {
+    const malformed = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    (malformed.tank_candidates as Array<Record<string, unknown>>)[0].entry_seq = '1';
+    expect(decodeSnapshot(malformed).ok).toBe(false);
+
+    const malformedId = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    (malformedId.tank_candidates as Array<Record<string, unknown>>)[0].fighter_id = 'not-a-uuid';
+    const malformedIdResult = decodeSnapshot(malformedId) as { ok: boolean; errors?: string[] };
+    expect(malformedIdResult.ok).toBe(false);
+    expect((malformedIdResult.errors ?? []).join(';')).toContain('expected UUID fighter and character ids');
+
+    const duplicate = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    duplicate.tank_candidates = [CLAIM.snapshot.tank_candidates[0], CLAIM.snapshot.tank_candidates[0]];
+    const duplicateResult = decodeSnapshot(duplicate) as { ok: boolean; errors?: string[] };
+    expect(duplicateResult.ok).toBe(false);
+    expect((duplicateResult.errors ?? []).join(';')).toContain('duplicate candidate');
+
+    const foreign = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
+    foreign.tank_candidates = [{
+      fighter_id: 'bbbb0000-0000-4000-8000-000000000001',
+      character_id: CLAIM.snapshot.fighters[0].character_id,
+      entry_seq: 1,
+    }];
+    const foreignResult = decodeSnapshot(foreign) as { ok: boolean; errors?: string[] };
+    expect(foreignResult.ok).toBe(false);
+    expect((foreignResult.errors ?? []).join(';')).toContain('binding does not match an eligible claimed fighter');
   });
 
   it.each(['started_at_tick', 'target_fighter_id', 'target_character_id', 'target_entry_seq'])(

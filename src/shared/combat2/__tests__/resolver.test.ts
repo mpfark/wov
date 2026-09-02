@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveNodeTick } from '../resolver';
 import { buildAbilitySpec } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
-import type { NodeSnapshot, SnapshotCreature, SnapshotFighter, SnapshotIntent } from '../types';
+import type { NodeSnapshot, SnapshotCreature, SnapshotEffect, SnapshotFighter, SnapshotIntent } from '../types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 const nowPlus = (msOffset: number): string => new Date(Date.parse(NOW) + msOffset).toISOString();
@@ -75,6 +75,7 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
     effects: [],
     intents: [],
     boss_abilities: [],
+    tank_candidates: [{ fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 1 }],
     ...overrides,
   };
 }
@@ -98,6 +99,17 @@ function bossAbility(overrides: Partial<NodeSnapshot['boss_abilities'][number]> 
     weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
     damage_type: 'physical', effect: null,
     telegraph_text: 'gathers force', resolution_text: 'slams down',
+    ...overrides,
+  };
+}
+
+function absorbEffect(id: string, characterId: string, magnitude: number, overrides: Partial<SnapshotEffect> = {}): SnapshotEffect {
+  return {
+    id, kind: 'absorb', effect_type: 'force_shield', ability_key: 'force_shield',
+    target_character_id: characterId, target_creature_id: null,
+    source_character_id: characterId, source_creature_id: null,
+    stacks: 1, magnitude, config: {}, expires_at: null, next_due_at: null,
+    interval_ms: null, last_pulse_tick: null, is_reservation: false,
     ...overrides,
   };
 }
@@ -393,6 +405,7 @@ describe('combat2 resolver', () => {
         fighter({ character_id: 'ch-1', entry_seq: 1 }),
         fighter({ character_id: 'ch-2', entry_seq: 7 }),
       ],
+      tank_candidates: [{ fighter_id: 'f-ch-2', character_id: 'ch-2', entry_seq: 7 }],
       boss_abilities: [bossAbility()],
     }), { abilities });
     expect(out.creatures[0].pending_action).toMatchObject({
@@ -405,7 +418,7 @@ describe('combat2 resolver', () => {
       fighters: [fighter({ character_id: 'ch-1', present: false })],
       boss_abilities: [bossAbility()],
     }), { abilities });
-    expect(out.creatures.find((state) => state.id === 'nc-1')?.pending_action).not.toBeDefined();
+    expect(out.creatures.find((state) => state.id === 'nc-1')?.pending_action).toBeNull();
     expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
     expect(out.events.some((event) => event.kind === 'boss_telegraph')).toBe(false);
   });
@@ -504,5 +517,176 @@ describe('combat2 resolver', () => {
     const openings = out.events.filter((event) => event.meta?.opportunityKind === 'engagement_opening');
     expect(openings).toHaveLength(2);
     expect(out.participation).toContainEqual(expect.objectContaining({ creature_id: 'cr-1', spawn_seq: 3, character_id: 'ch-1' }));
+  });
+
+  it('persists progressive absorb consumption across opportunity and ordinary attacks', () => {
+    const shield = absorbEffect('absorb-1', 'ch-1', 100);
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+      creatures: [creature({ id: 'nc-1', creature_id: 'cr-1' }), creature({ id: 'nc-2', creature_id: 'cr-2' })],
+      effects: [shield],
+      pending_events: [{
+        id: 'enter-1', event_type: 'fighter_entered', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    const absorbed = out.events
+      .filter((event) => event.kind === 'creature_attack')
+      .map((event) => Number(event.meta?.absorbed ?? 0));
+    const totalAbsorbed = absorbed.reduce((sum, value) => sum + value, 0);
+    expect(absorbed.length).toBe(4);
+    expect(totalAbsorbed).toBeGreaterThan(0);
+    expect(out.effects_update).toEqual([{ id: shield.id, magnitude: shield.magnitude! - totalAbsorbed }]);
+    expect(out.effects_delete).not.toContain(shield.id);
+  });
+
+  it('consumes multiple absorb effects in captured order and deletes only exhausted pools', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+      effects: [absorbEffect('first', 'ch-1', 2), absorbEffect('second', 'ch-1', 100)],
+    }), { abilities });
+    const absorbed = Number(out.events.find((event) => event.kind === 'creature_attack')?.meta?.absorbed ?? 0);
+    expect(absorbed).toBeGreaterThan(2);
+    expect(out.effects_delete).toContain('first');
+    expect(out.effects_update).toEqual([{ id: 'second', magnitude: 102 - absorbed }]);
+  });
+
+  it('does not consume absorb after a fully blocking effect', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+      effects: [
+        absorbEffect('shield', 'ch-1', 20),
+        { ...absorbEffect('block', 'ch-1', 999), kind: 'block', effect_type: 'block' },
+      ],
+    }), { abilities });
+    expect(out.events.find((event) => event.kind === 'creature_attack')?.meta?.absorbed).toBe(0);
+    expect(out.effects_update).toEqual([]);
+    expect(out.effects_delete).toEqual([]);
+  });
+
+  it('does not consume absorb on a missed attack', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: 10_000 })],
+      effects: [absorbEffect('shield', 'ch-1', 20)],
+    }), { abilities });
+    expect(out.events.find((event) => event.kind === 'creature_attack')?.hitQuality).toBe('miss');
+    expect(out.effects_update).toEqual([]);
+    expect(out.effects_delete).toEqual([]);
+  });
+
+  it('keeps absorb pools isolated by character and uses the reduced pool next tick', () => {
+    const first = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 }), fighter({ character_id: 'ch-2' })],
+      effects: [absorbEffect('shield-1', 'ch-1', 100), absorbEffect('shield-2', 'ch-2', 100)],
+    }), { abilities });
+    expect(first.effects_update).toHaveLength(1);
+    expect(first.effects_update[0].id).toBe('shield-1');
+    expect(first.effects_update[0].magnitude).toBeLessThan(100);
+
+    const second = resolveNodeTick(snapshot({
+      encounter: { ...snapshot().encounter, tick: 11, candidate_tick: 12 },
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+      effects: [absorbEffect('shield-1', 'ch-1', first.effects_update[0].magnitude!)],
+    }), { abilities });
+    const secondAbsorbed = Number(second.events.find((event) => event.kind === 'creature_attack')?.meta?.absorbed ?? 0);
+    expect(second.effects_update[0]?.magnitude ?? 0).toBe(first.effects_update[0].magnitude! - secondAbsorbed);
+  });
+
+  it('keeps a Force Shield reservation when its absorb pool is depleted', () => {
+    const reservation = {
+      ...absorbEffect('reservation', 'ch-1', 5),
+      kind: 'reservation', effect_type: 'cp_reservation', is_reservation: true,
+    };
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+      effects: [absorbEffect('shield', 'ch-1', 1), reservation],
+    }), { abilities });
+    expect(out.effects_delete).toContain('shield');
+    expect(out.effects_delete).not.toContain('reservation');
+  });
+
+  it('retargets ordinary attacks after a surviving flee using captured fallback order', () => {
+    const fighters = [
+      fighter({ character_id: 'ch-solo', id: 'f-solo', entry_seq: 3, hp: 500, max_hp: 500, ac: -100 }),
+      fighter({ character_id: 'ch-tank', id: 'f-tank', entry_seq: 2, hp: 500, max_hp: 500 }),
+      fighter({ character_id: 'ch-leader', id: 'f-leader', entry_seq: 1, hp: 500, max_hp: 500 }),
+    ];
+    const out = resolveNodeTick(snapshot({
+      fighters,
+      creatures: [creature({ tank_fighter_id: 'f-solo' })],
+      tank_candidates: [
+        { fighter_id: 'f-solo', character_id: 'ch-solo', entry_seq: 3 },
+        { fighter_id: 'f-tank', character_id: 'ch-tank', entry_seq: 2 },
+        { fighter_id: 'f-leader', character_id: 'ch-leader', entry_seq: 1 },
+      ],
+      pending_events: [{
+        id: 'exit-1', event_type: 'fighter_exit_requested', actor_character_id: 'ch-solo',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-solo', entry_seq: 3 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    const attacks = out.events.filter((event) => event.kind === 'creature_attack');
+    expect(attacks[0].target?.id).toBe('ch-solo');
+    expect(attacks.at(-1)?.target?.id).toBe('ch-tank');
+    expect(out.events.filter((event) => event.kind === 'fighter_fled')).toHaveLength(1);
+    expect(out.creatures).toContainEqual(expect.objectContaining({ id: 'nc-1', tank_fighter_id: 'f-tank' }));
+  });
+
+  it('uses the party leader only after the designated candidate becomes ineligible', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [
+        fighter({ character_id: 'ch-tank', id: 'f-tank', hp: 0 }),
+        fighter({ character_id: 'ch-leader', id: 'f-leader' }),
+      ],
+      tank_candidates: [
+        { fighter_id: 'f-tank', character_id: 'ch-tank', entry_seq: 1 },
+        { fighter_id: 'f-leader', character_id: 'ch-leader', entry_seq: 1 },
+      ],
+    }), { abilities });
+    expect(out.events.find((event) => event.kind === 'creature_attack')?.target?.id).toBe('ch-leader');
+  });
+
+  it('emits no ordinary attack when no captured candidate remains eligible', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', present: false })],
+      tank_candidates: [{ fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 1 }],
+    }), { abilities });
+    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+    expect(out.creatures).toContainEqual(expect.objectContaining({ tank_fighter_id: null }));
+  });
+
+  it('does not retarget a frozen telegraph after its captured target flees', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1' }), fighter({ character_id: 'ch-2' })],
+      tank_candidates: [
+        { fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 1 },
+        { fighter_id: 'f-ch-2', character_id: 'ch-2', entry_seq: 1 },
+      ],
+      creatures: [creature({ pending_action: pending() })],
+      boss_abilities: [bossAbility()],
+      pending_events: [{
+        id: 'exit-1', event_type: 'fighter_exit_requested', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'boss_cast_evaded', outcomeReason: 'no_target' }));
+    expect(out.events.some((event) => event.abilityKey === 'granite_slam' && event.target?.id === 'ch-2')).toBe(false);
+  });
+
+  it('fails a flee when exit opportunities kill the fighter and never attacks them afterward', () => {
+    const out = resolveNodeTick(snapshot({
+      fighters: [fighter({ character_id: 'ch-1', hp: 1, max_hp: 100, ac: -100 })],
+      pending_events: [{
+        id: 'exit-killed', event_type: 'fighter_exit_requested', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+      }],
+    }), { abilities });
+    expect(out.events.filter((event) => event.kind === 'fighter_exit_failed')).toHaveLength(1);
+    expect(out.events.some((event) => event.kind === 'fighter_fled')).toBe(false);
+    expect(out.events.filter((event) => event.kind === 'creature_attack')).toHaveLength(1);
+    expect(out.creatures).toContainEqual(expect.objectContaining({ tank_fighter_id: null }));
   });
 });

@@ -114,6 +114,7 @@ function snapshot(over: Partial<NodeSnapshot> = {}): NodeSnapshot {
     effects: [],
     intents: [],
     boss_abilities: [],
+    tank_candidates: [{ fighter_id: 'f-1', character_id: 'ch-1', entry_seq: 1 }],
     ...over,
   };
 }

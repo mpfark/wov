@@ -229,6 +229,13 @@ export interface SnapshotBossConfiguration {
   boss_cast: import('./boss-catalog.ts').AuthoredBossCast | null;
 }
 
+/** Authoritative tank fallbacks ordered by arrival-group priority at claim time. */
+export interface SnapshotTankCandidate {
+  fighter_id: string;
+  character_id: string;
+  entry_seq: number;
+}
+
 export interface NodeSnapshot {
   encounter: SnapshotEncounter;
   creatures: SnapshotCreature[];
@@ -243,6 +250,8 @@ export interface NodeSnapshot {
   participation?: SnapshotParticipation[];
   /** Unconsumed out-of-tick events surfaced by the claim. */
   pending_events?: SnapshotPendingEvent[];
+  /** Ordered representatives captured with this encounter version. */
+  tank_candidates: SnapshotTankCandidate[];
 }
 
 

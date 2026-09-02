@@ -338,6 +338,15 @@ function decodeBossConfiguration(r: Reader, path: string, raw: unknown): Snapsho
   };
 }
 
+function decodeTankCandidate(r: Reader, path: string, raw: unknown): NodeSnapshot['tank_candidates'][number] {
+  const o = r.object(path, raw);
+  return {
+    fighter_id: r.str(`${path}.fighter_id`, o.fighter_id),
+    character_id: r.str(`${path}.character_id`, o.character_id),
+    entry_seq: r.num(`${path}.entry_seq`, o.entry_seq),
+  };
+}
+
 /** Decode the `snapshot` object of a successful claim. Fail-closed. */
 export function decodeSnapshot(raw: unknown): DecodeResult {
   const r = new Reader();
@@ -379,7 +388,29 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
     pending_events: r
       .array('snapshot.pending_events', root.pending_events)
       .map((row, i) => decodePendingEvent(r, `snapshot.pending_events[${i}]`, row)),
+    tank_candidates: r
+      .array('snapshot.tank_candidates', root.tank_candidates)
+      .map((row, i) => decodeTankCandidate(r, `snapshot.tank_candidates[${i}]`, row)),
   };
+
+  const candidateFighterIds = new Set<string>();
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  for (const [i, candidate] of snapshot.tank_candidates.entries()) {
+    if (!uuidPattern.test(candidate.fighter_id) || !uuidPattern.test(candidate.character_id)) {
+      r.errors.push(`snapshot.tank_candidates[${i}]: expected UUID fighter and character ids`);
+      continue;
+    }
+    if (candidateFighterIds.has(candidate.fighter_id)) {
+      r.errors.push(`snapshot.tank_candidates[${i}].fighter_id: duplicate candidate`);
+      continue;
+    }
+    candidateFighterIds.add(candidate.fighter_id);
+    const fighter = snapshot.fighters.find((row) => row.id === candidate.fighter_id);
+    if (!fighter || fighter.character_id !== candidate.character_id ||
+        fighter.entry_seq !== candidate.entry_seq || !fighter.present || fighter.hp <= 0) {
+      r.errors.push(`snapshot.tank_candidates[${i}]: binding does not match an eligible claimed fighter`);
+    }
+  }
 
   for (const [i, config] of (snapshot.boss_configurations ?? []).entries()) {
     const creature = snapshot.creatures.find((row) => row.id === config.node_creature_id);

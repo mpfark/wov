@@ -45,7 +45,8 @@ interface WorkingCharacter {
   hp: number;
   cp: number;
   mp: number;
-  absorb: number;
+  present: boolean;
+  absorbEffects: Array<{ id: string; initial: number; remaining: number }>;
   dirty: boolean;
   died: boolean;
 }
@@ -77,19 +78,29 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const emit = (event: Omit<TickEvent, 'seq'>): void => {
     proposed.events.push({ ...event, seq: seq++ });
   };
+  const expiredIds = new Set(
+    snapshot.effects
+      .filter((effect) => !effect.is_reservation && effect.expires_at && ms(effect.expires_at) <= nowMs)
+      .map((effect) => effect.id),
+  );
 
   // ── working state ─────────────────────────────────────────────
   const chars = new Map<string, WorkingCharacter>();
   for (const fighter of snapshot.fighters) {
     if (chars.has(fighter.character_id)) continue;
-    const absorb = effectsFor(snapshot.effects, fighter.character_id, 'absorb')
-      .reduce((sum, e) => sum + (e.magnitude ?? 0), 0);
+    const absorbEffects = effectsFor(snapshot.effects, fighter.character_id, 'absorb')
+      .filter((effect) => !expiredIds.has(effect.id))
+      .map((effect) => {
+        const magnitude = Math.max(0, Math.floor(effect.magnitude ?? 0));
+        return { id: effect.id, initial: magnitude, remaining: magnitude };
+      });
     chars.set(fighter.character_id, {
       fighter,
       hp: fighter.hp,
       cp: fighter.cp,
       mp: fighter.mp,
-      absorb,
+      present: fighter.present,
+      absorbEffects,
       dirty: false,
       died: false,
     });
@@ -155,12 +166,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
   const livingCharacters = (): Set<string> => {
     const set = new Set<string>();
-    for (const [id, c] of chars) if (c.hp > 0) set.add(id);
+    for (const [id, c] of chars) if (c.present && c.hp > 0) set.add(id);
     return set;
   };
 
   // ── 1. effect lifetimes: expire first, then pulse at most once ─
-  const expiredIds = new Set<string>();
   for (const effect of snapshot.effects) {
     if (effect.is_reservation) continue; // lifetime owned by activation/drop/death
     if (effect.expires_at && ms(effect.expires_at) <= nowMs) {
@@ -261,6 +271,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     if (pending.event_type === 'fighter_exit_requested') {
       proposed.fighters.push({ id: target.id, present: false });
       const died = chars.get(target.character_id)?.hp === 0;
+      const workingTarget = chars.get(target.character_id);
+      if (workingTarget) workingTarget.present = false;
       emit({
         kind: died ? 'fighter_exit_failed' : 'fighter_fled',
         actor: { type: 'character', id: target.character_id, name: target.name },
@@ -293,7 +305,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     proposed.intent_ids.push(intent.id);
     const intentKey = intent.ability_key ?? intent.stance_key ?? undefined;
     const actor = chars.get(intent.character_id);
-    if (!actor || actor.hp <= 0 || !actor.fighter.present) {
+    if (!actor || actor.hp <= 0 || !actor.present) {
       emit({ kind: 'action_rejected', outcomeReason: 'not_present_or_dead', abilityKey: intentKey });
       continue;
     }
@@ -319,6 +331,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       for (const effect of owned) {
         proposed.effects_delete.push(effect.id);
         if (effect.is_reservation) droppedReservationIds.add(effect.id);
+        const absorbEffect = actor.absorbEffects.find((candidate) => candidate.id === effect.id);
+        if (absorbEffect) absorbEffect.remaining = 0;
       }
       emit({
         kind: 'stance_dropped',
@@ -448,7 +462,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         meta: { nodeCreatureId: targetCreature.row.id, spawnSeq: targetCreature.row.spawn_seq },
       });
       for (const present of snapshot.fighters
-        .filter((fighter) => fighter.present && livingCharacters().has(fighter.character_id))
+        .filter((fighter) => chars.get(fighter.character_id)?.present === true && livingCharacters().has(fighter.character_id))
         .sort((a, b) => a.id.localeCompare(b.id))) {
         if (targetCreature.hp <= 0) break;
         applyCreatureDamage(targetCreature, present, null, 0, 'engagement_opening', intent.id);
@@ -543,6 +557,16 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
 
   // ── 3. creature actions ───────────────────────────────────────
+  const currentTank = (): SnapshotFighter | null => {
+    for (const candidate of snapshot.tank_candidates) {
+      const fighter = snapshot.fighters.find((row) => row.id === candidate.fighter_id);
+      const character = chars.get(candidate.character_id);
+      if (fighter?.character_id === candidate.character_id && fighter.entry_seq === candidate.entry_seq &&
+          character?.present === true && character.hp > 0) return fighter;
+    }
+    return null;
+  };
+
   for (const creature of creatures.values()) {
     if (creature.hp <= 0 || !creature.row.is_alive) {
       if (creature.pendingAction) {
@@ -551,10 +575,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       }
       continue;
     }
-    if (!creature.engaged || skipOrdinaryThisTick.has(creature.row.id)) continue;
     const living = livingCharacters();
-    const tank = snapshot.fighters.find((fighter) =>
-      fighter.id === creature.tankFighterId && fighter.present && living.has(fighter.character_id)) ?? null;
+    const tank = currentTank();
+    if (creature.tankFighterId !== (tank?.id ?? null)) {
+      creature.tankFighterId = tank?.id ?? null;
+      creature.dirty = true;
+    }
+    if (!creature.engaged || skipOrdinaryThisTick.has(creature.row.id)) continue;
 
     // 3a. a telegraphed action that is due resolves now, and the creature does
     //     nothing else this tick (one action per tick).
@@ -719,10 +746,16 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       critSofteningPct,
       flatMitigation,
       blockAmount,
-      absorbPool: target.absorb,
+      absorbPool: target.absorbEffects.reduce((sum, effect) => sum + effect.remaining, 0),
     });
 
-    target.absorb = breakdown.absorbPoolAfter;
+    let absorbToConsume = breakdown.absorbed;
+    for (const effect of target.absorbEffects) {
+      if (absorbToConsume === 0) break;
+      const consumed = Math.min(effect.remaining, absorbToConsume);
+      effect.remaining -= consumed;
+      absorbToConsume -= consumed;
+    }
     const applied = Math.min(target.hp, breakdown.applied);
     target.hp -= applied;
     target.dirty = true;
@@ -845,6 +878,17 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         pending_action: creature.pendingAction ?? null,
         tank_fighter_id: creature.tankFighterId,
       });
+    }
+  }
+
+  for (const character of chars.values()) {
+    for (const effect of character.absorbEffects) {
+      if (effect.remaining === effect.initial) continue;
+      if (effect.remaining === 0) {
+        if (!proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
+      } else {
+        proposed.effects_update.push({ id: effect.id, magnitude: effect.remaining });
+      }
     }
   }
 
