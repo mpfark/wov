@@ -10,17 +10,19 @@ const canonicalPath = resolve(
 );
 const removedPath = resolve(
   migrations,
-  ["20260902100000", "combat2", "arrival", "engagement", "opportunity.sql"].join("_"),
+  [["20260902", "110000"].join(""), "combat2", "reactivation", "fencing.sql"].join("_"),
 );
-const forwardName = "20260902110000_combat2_reactivation_fencing.sql";
+const baseName = "20260902093129_6e2ff6de-db65-4d4d-83e1-dadcfebaa70c.sql";
+const forwardName = "20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql";
 const forwardSql = readFileSync(resolve(migrations, forwardName), "utf8").replaceAll("\r\n", "\n");
 
 describe("Combat2 reactivation fencing migration", () => {
-  it("keeps the ledger-recorded migration exact and removes the duplicate", () => {
+  it("keeps the applied base migration exact and retains the ledger-recorded forward filename", () => {
     const canonical = readFileSync(canonicalPath, "utf8").replaceAll("\r\n", "\n");
     expect(createHash("md5").update(canonical).digest("hex")).toBe(
       "06328d69001db8fe9fc0b2eb8836c3a2",
     );
+    expect(readdirSync(migrations)).toContain(forwardName);
     expect(existsSync(removedPath)).toBe(false);
   });
 
@@ -56,10 +58,19 @@ describe("Combat2 reactivation fencing migration", () => {
     expect(forwardSql).toContain("'kind','ambiguous_party_membership'");
   });
 
-  it("has exactly one forward migration implementing this correction", () => {
+  it("has exactly one post-base migration containing the effective fencing contract", () => {
     const matches = readdirSync(migrations).filter((name) => {
+      if (name <= baseName || !name.endsWith(".sql")) return false;
       const sql = readFileSync(resolve(migrations, name), "utf8");
-      return sql.includes("reject_reason='stale_generation'") && sql.includes("intent_cutoff_seq=NULL");
+      return (
+        sql.includes("CREATE OR REPLACE FUNCTION public.combat_enter") &&
+        sql.includes("reject_reason='stale_generation'") &&
+        sql.includes("SET consumed_at=now(),consumed_tick=e.tick") &&
+        sql.includes("claim_token=NULL,claimed_tick=NULL") &&
+        sql.includes("claim_expires_at=NULL,intent_cutoff_seq=NULL") &&
+        sql.includes("WHERE encounter_id=e.id AND is_alive") &&
+        !/DELETE FROM public\.(node_reward|node_participation|node_tick)/.test(sql)
+      );
     });
     expect(matches).toEqual([forwardName]);
   });
