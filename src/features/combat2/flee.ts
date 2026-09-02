@@ -72,13 +72,15 @@ export function decodeCombat2Flee(value: unknown): Combat2FleeOutcome {
     if (typeof row.event_id !== 'string' || !UUID_RE.test(row.event_id)) {
       throw new Combat2FleeError('error', 'combat_flee returned an invalid event id');
     }
-    return {
-      status: row.kind === 'queued' ? 'queued' : row.kind === 'dead' ? 'dead' : 'fled',
-      classification: row.kind,
+    const common = {
       eventId: row.event_id,
       fighterId: optionalUuid(row.fighter_id),
       stateVersion: optionalVersion(row.state_version),
     };
+    if (row.kind === 'queued') return { status: 'queued', classification: 'queued', ...common };
+    if (row.kind === 'dead') return { status: 'dead', classification: 'dead', ...common };
+    return { status: 'fled', classification: row.kind, ...common };
+
   }
   if (row.ok === false) {
     const known = new Set(['invalid_request', 'not_authorized', 'no_encounter', 'not_at_node', 'not_present', 'exit_pending']);
