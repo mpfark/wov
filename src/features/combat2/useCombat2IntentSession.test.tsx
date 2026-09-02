@@ -68,7 +68,7 @@ describe('useCombat2IntentSession', () => {
 
   it('discards a late response after node or session invalidation', async () => {
     let release!: (value: typeof accepted) => void;
-    const adapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise((resolve) => { release = resolve; })) };
+    const adapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise<Combat2IntentOutcome>((resolve) => { release = resolve; })) };
     const { result, rerender } = renderHook(({ nodeId, encounterId }) => useCombat2IntentSession({
       enabled: true, characterId: CHARACTER, nodeId, encounterId, adapter, generateRequestId: () => REQUEST_1,
     }), { initialProps: { nodeId: NODE, encounterId: ENCOUNTER as string | null } });
