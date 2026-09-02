@@ -856,13 +856,18 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const authorizeCombat2Flee = useCallback(async () => {
+    if (combat2.sessionStatus === 'exited') return true;
     const result = await combat2.flee.flee();
     if (result.status === 'fled') return true;
+    if (result.status === 'queued') {
+      addLocalLogEvent(buildSystemEvent('Combat2 escape queued; opportunity attacks must resolve before movement.'));
+      return false;
+    }
     if (result.status === 'stale') return false;
     const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
     addLocalLogEvent(buildErrorEvent(`Combat2 flee refused${detail}`));
     return false;
-  }, [combat2.flee, addLocalLogEvent]);
+  }, [combat2.flee, combat2.sessionStatus, addLocalLogEvent]);
 
   const movementActions = useMovementActions({
     character, updateCharacter, addLogEvent,
@@ -1385,6 +1390,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               bossCasts={bossCasts}
               authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}
               authoritativeEncounterTick={activeCombat2Presentation?.encounterTick}
+              authoritativeTankByCreatureLife={activeCombat2Presentation ? Object.fromEntries(
+                activeCombat2Presentation.creatures.map((creature) => [
+                  `${creature.creatureId}:${creature.spawnSeq}`,
+                  creature.isCurrentCharacterTank,
+                ]),
+              ) : undefined}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const picked = groundLoot.find(g => g.id === id);

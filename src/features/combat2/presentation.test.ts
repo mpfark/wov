@@ -46,7 +46,7 @@ function delivery(tick = 1): Combat2DeliverySessionState {
       fighter: { id: FIGHTER, characterId: CHARACTER, entrySeq: 7, present: true }, effects: [], rewardClaims: [],
       creatures: [{
         id: 'node-creature-1', creatureId: CREATURE, spawnSeq: 4, name: 'Wolf', hp: 9 - tick,
-        maxHp: 10, isAlive: tick < 2, pendingAction: pendingAction(),
+        maxHp: 10, isAlive: tick < 2, engaged: true, tankFighterId: FIGHTER, pendingAction: pendingAction(),
       }],
       batches,
     },
@@ -60,8 +60,19 @@ describe('Combat2 authoritative presentation model', () => {
       encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 4, encounterStatus: 'active', lastAppliedTick: 1,
       character: { id: CHARACTER, hp: 16, maxHp: 20, cp: 7, maxCp: 10, mp: 6, maxMp: 10, level: 3, xp: 120, gold: 45 },
     });
-    expect(model.creatures[0]).toMatchObject({ creatureId: CREATURE, spawnSeq: 4, hp: 8, maxHp: 10, isAlive: true, pendingAction: { abilityKey: 'granite_slam', resolveAtTick: 3 } });
+    expect(model.creatures[0]).toMatchObject({ creatureId: CREATURE, spawnSeq: 4, hp: 8, maxHp: 10, isAlive: true, engaged: true, tankFighterId: FIGHTER, isCurrentCharacterTank: true, pendingAction: { abilityKey: 'granite_slam', resolveAtTick: 3 } });
     expect(model.telegraphs).toHaveLength(1);
+  });
+
+  it('derives tank presentation only from the projected creature and own fighter ids', () => {
+    const another = delivery();
+    another.snapshot!.creatures[0].tankFighterId = 'fighter-other';
+    expect(buildCombat2Presentation(another).creatures[0].isCurrentCharacterTank).toBe(false);
+    another.snapshot!.creatures[0].tankFighterId = null;
+    expect(buildCombat2Presentation(another).creatures[0].isCurrentCharacterTank).toBe(false);
+    another.snapshot!.creatures[0].tankFighterId = FIGHTER;
+    another.snapshot!.creatures[0].isAlive = false;
+    expect(buildCombat2Presentation(another).creatures[0].isCurrentCharacterTank).toBe(false);
   });
 
   it('presents authoritative own reward claims once without changing snapshot totals or requiring presence', () => {

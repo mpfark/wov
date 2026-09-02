@@ -8,6 +8,12 @@ const EVENT = '44444444-4444-4444-8444-444444444444';
 const FIGHTER = '55555555-5555-4555-8555-555555555555';
 
 describe('Combat2 flee adapter', () => {
+  it('keeps a queued authoritative exit open and reports death without pretending escape succeeded', () => {
+    expect(decodeCombat2Flee({ ok: true, kind: 'queued', event_id: EVENT, fighter_id: FIGHTER, state_version: 10 }))
+      .toMatchObject({ status: 'queued', classification: 'queued', eventId: EVENT });
+    expect(decodeCombat2Flee({ ok: true, kind: 'dead', event_id: EVENT, fighter_id: FIGHTER }))
+      .toMatchObject({ status: 'dead', classification: 'dead', eventId: EVENT });
+  });
   it('calls the exact RPC and decodes fled', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: { ok: true, kind: 'fled', event_id: EVENT, fighter_id: FIGHTER, state_version: 9 }, error: null });
     const adapter = createCombat2FleeAdapter({ rpc });

@@ -16,6 +16,18 @@ const REQUEST_2 = '44444444-4444-4444-8444-444444444442';
 const fled = { status: 'fled' as const, classification: 'fled' as const, eventId: EVENT, fighterId: null, stateVersion: 2 };
 
 describe('useCombat2FleeSession', () => {
+  it('does not close the session when the authoritative exit is only queued', async () => {
+    const queued = { status: 'queued' as const, classification: 'queued' as const, eventId: EVENT, fighterId: null, stateVersion: 3 };
+    const adapter: Combat2FleeAdapter = { flee: vi.fn().mockResolvedValue(queued) };
+    const onExited = vi.fn();
+    const { result } = renderHook(() => useCombat2FleeSession({
+      enabled: true, characterId: CHARACTER, nodeId: NODE, encounterId: ENCOUNTER,
+      adapter, generateRequestId: () => REQUEST_1, onExited,
+    }));
+    await act(async () => { expect(await result.current.flee()).toMatchObject({ status: 'queued' }); });
+    expect(onExited).not.toHaveBeenCalled();
+  });
+
   it('one deliberate flee calls once; rerenders and Strict Mode do not duplicate it', async () => {
     const adapter: Combat2FleeAdapter = { flee: vi.fn().mockResolvedValue(fled) };
     const onExited = vi.fn();

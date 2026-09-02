@@ -73,6 +73,7 @@ interface Props {
   bossCasts?: Record<string, { castEventId: string; creatureId: string; label: string; startedAt: number; expiresAt: number; castMs: number; amount?: number; storedPower: number; visualMax: number }>;
   authoritativeTelegraphs?: Readonly<Record<string, Combat2PresentationTelegraph>>;
   authoritativeEncounterTick?: number;
+  authoritativeTankByCreatureLife?: Readonly<Record<string, boolean>>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -101,6 +102,7 @@ export default function NodeView({
   bossCasts = {},
   authoritativeTelegraphs,
   authoritativeEncounterTick = 0,
+  authoritativeTankByCreatureLife,
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
@@ -302,6 +304,9 @@ export default function NodeView({
                     const authoritativeTelegraph = authoritativeTelegraphs?.[
                       combat2CreatureLifeKey(c.id, c.spawn_seq ?? 0)
                     ];
+                    const isCurrentCharacterTank = authoritativeTankByCreatureLife?.[
+                      combat2CreatureLifeKey(c.id, c.spawn_seq ?? 0)
+                    ] === true;
                     const activeCast = authoritativeTelegraphs === undefined ? bossCasts[c.id] : undefined;
                     const hasActiveCast = !!activeCast || !!authoritativeTelegraph;
                     return (
@@ -325,6 +330,9 @@ export default function NodeView({
                           }`}>{c.name}</span>
                           {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive"> </span>}
                           <span className="text-[10px] text-muted-foreground">L{c.level}</span>
+                          {isCurrentCharacterTank && (
+                            <span className="text-[9px] text-chart-2 font-display" title="Authoritative Combat2 tank">Tanking</span>
+                          )}
                           {hasPoisonStacks && (
                             <Tooltip>
                               <TooltipTrigger asChild>

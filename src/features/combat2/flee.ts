@@ -1,6 +1,9 @@
 export type Combat2FleeClassification =
   | 'fled'
   | 'already_fled'
+  | 'queued'
+  | 'dead'
+  | 'exit_pending'
   | 'maintenance'
   | 'invalid_request'
   | 'not_authorized'
@@ -11,7 +14,9 @@ export type Combat2FleeClassification =
 
 export type Combat2FleeOutcome =
   | { status: 'fled'; classification: 'fled' | 'already_fled'; eventId: string; fighterId: string | null; stateVersion: number | null }
-  | { status: 'refused'; classification: Exclude<Combat2FleeClassification, 'fled' | 'already_fled'>; reason: string | null };
+  | { status: 'queued'; classification: 'queued'; eventId: string; fighterId: string | null; stateVersion: number | null }
+  | { status: 'dead'; classification: 'dead'; eventId: string; fighterId: string | null; stateVersion: number | null }
+  | { status: 'refused'; classification: Exclude<Combat2FleeClassification, 'fled' | 'already_fled' | 'queued' | 'dead'>; reason: string | null };
 
 interface FleeRpcResponse { data: unknown; error: { message?: string } | null }
 
@@ -63,12 +68,12 @@ export function decodeCombat2Flee(value: unknown): Combat2FleeOutcome {
   if (!row || typeof row.ok !== 'boolean' || typeof row.kind !== 'string') {
     throw new Combat2FleeError('error', 'combat_flee returned a malformed response');
   }
-  if (row.ok === true && (row.kind === 'fled' || row.kind === 'already_fled')) {
+  if (row.ok === true && (row.kind === 'fled' || row.kind === 'already_fled' || row.kind === 'queued' || row.kind === 'dead')) {
     if (typeof row.event_id !== 'string' || !UUID_RE.test(row.event_id)) {
       throw new Combat2FleeError('error', 'combat_flee returned an invalid event id');
     }
     return {
-      status: 'fled',
+      status: row.kind === 'queued' ? 'queued' : row.kind === 'dead' ? 'dead' : 'fled',
       classification: row.kind,
       eventId: row.event_id,
       fighterId: optionalUuid(row.fighter_id),
@@ -76,13 +81,13 @@ export function decodeCombat2Flee(value: unknown): Combat2FleeOutcome {
     };
   }
   if (row.ok === false) {
-    const known = new Set(['invalid_request', 'not_authorized', 'no_encounter', 'not_at_node', 'not_present']);
+    const known = new Set(['invalid_request', 'not_authorized', 'no_encounter', 'not_at_node', 'not_present', 'exit_pending']);
     const classification = row.kind === 'mode_refused' && row.reason === 'maintenance'
       ? 'maintenance'
       : known.has(row.kind) ? row.kind : 'refused';
     return {
       status: 'refused',
-      classification: classification as Exclude<Combat2FleeClassification, 'fled' | 'already_fled'>,
+      classification: classification as Exclude<Combat2FleeClassification, 'fled' | 'already_fled' | 'queued' | 'dead'>,
       reason: typeof row.reason === 'string' ? row.reason : null,
     };
   }

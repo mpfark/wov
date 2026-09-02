@@ -45,6 +45,11 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     onExited,
   });
   const presentation = useCombat2Presentation(enteredSessionKey, delivery);
+  useEffect(() => {
+    if (enteredSessionKey && presentation.model?.fighterExitState === 'exited') {
+      setExitedSessionKey(enteredSessionKey);
+    }
+  }, [enteredSessionKey, presentation.model?.fighterExitState]);
   return {
     entry,
     intents,

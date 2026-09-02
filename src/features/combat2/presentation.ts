@@ -35,6 +35,9 @@ export interface Combat2PresentationCreature {
   hp: number;
   maxHp: number;
   isAlive: boolean;
+  engaged: boolean;
+  tankFighterId: string | null;
+  isCurrentCharacterTank: boolean;
   pendingAction: Combat2PresentationPendingAction | null;
 }
 
@@ -88,6 +91,7 @@ export interface Combat2PresentationModel {
   encounterTick: number;
   stateVersion: number;
   encounterStatus: string;
+  fighterExitState: 'pending' | 'exited' | 'dead' | null;
   character: Combat2PresentationCharacter;
   creatures: readonly Combat2PresentationCreature[];
   effects: readonly Combat2PresentationEffect[];
@@ -331,6 +335,11 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
   const encounterTick = integerField(encounter, 'tick');
   const characterId = stringField(character, 'id');
   const fighter = record(sync.fighter);
+  const ownFighterId = fighter ? stringField(fighter, 'id') : null;
+  const rawExitState = fighter?.exitState;
+  if (rawExitState !== null && rawExitState !== undefined && rawExitState !== 'pending' && rawExitState !== 'exited' && rawExitState !== 'dead') {
+    throw new Combat2PresentationError('combat2_sync exitState is invalid');
+  }
   const ordered = [...delivery.batches].sort((a, b) => a.tick - b.tick);
   if (ordered.length > 0 && ordered[0].tick !== 1) {
     throw new Combat2PresentationError('combat2_sync presentation begins after a tick gap');
@@ -355,6 +364,8 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     const creatureId = stringField(row, 'creatureId');
     const spawnSeq = integerField(row, 'spawnSeq');
     const creatureName = stringField(row, 'name');
+    const tankFighterId = optionalString(row, 'tankFighterId');
+    if (typeof row.engaged !== 'boolean') throw new Combat2PresentationError('combat2_sync engaged is invalid');
     const pendingAction: Combat2PresentationPendingAction | null = pending ? {
       abilityKey: stringField(pending, 'abilityKey'),
       abilityLabel: optionalString(pending, 'abilityLabel'),
@@ -397,6 +408,9 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
       hp: numberField(row, 'hp'),
       maxHp: numberField(row, 'maxHp'),
       isAlive: row.isAlive,
+      engaged: row.engaged,
+      tankFighterId,
+      isCurrentCharacterTank: row.isAlive && tankFighterId !== null && tankFighterId === ownFighterId,
       pendingAction,
     };
   });
@@ -408,6 +422,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     encounterTick,
     stateVersion: integerField(encounter, 'stateVersion'),
     encounterStatus: stringField(encounter, 'status'),
+    fighterExitState: (rawExitState ?? null) as Combat2PresentationModel['fighterExitState'],
     character: {
       id: characterId,
       level: integerField(character, 'level'), xp: integerField(character, 'xp'), gold: integerField(character, 'gold'),

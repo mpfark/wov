@@ -71,7 +71,7 @@ describe('Combat2ClientSession application bridge', () => {
         fighter: { id: 'fighter-1', characterId: CHARACTER, entrySeq: 3, present: true },
         creatures: [{
           id: 'node-creature-1', creatureId: 'creature-1', spawnSeq: 2, name: 'Sentinel',
-          hp: 10, maxHp: 10, isAlive: true,
+          hp: 10, maxHp: 10, isAlive: true, engaged: true, tankFighterId: 'fighter-1',
           pendingAction: {
             abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 1, resolveAtTick: 3,
             targetFighterId: 'fighter-1', targetCharacterId: CHARACTER, targetEntrySeq: 3,
