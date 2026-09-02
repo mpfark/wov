@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { Combat2FleeError, type Combat2FleeAdapter } from './flee';
+import { Combat2FleeError, type Combat2FleeAdapter, type Combat2FleeOutcome } from './flee';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
 
 const CHARACTER = '22222222-2222-4222-8222-222222222222';
