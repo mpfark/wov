@@ -18,6 +18,7 @@ import { buildAggroEvent, type AggroKind } from '@/features/combat/events/threat
 // decides WHEN a creature takes the player as its target.
 
 export interface UseCombatAggroEffectsParams {
+  enabled?: boolean;
   creatures: Creature[];
   inCombat: boolean;
   isLeader: boolean;
@@ -63,7 +64,7 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
 
   // Re-engage aggressive creatures after combat stops
   useEffect(() => {
-    if (inCombat || !justStoppedRef.current || isDead) return;
+    if (params.enabled === false || inCombat || !justStoppedRef.current || isDead) return;
     if (party && !isLeader) return;
     if (creatures.length === 0) return;
     const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
@@ -82,7 +83,7 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
 
   // Mid-fight: aggressive creatures join
   useEffect(() => {
-    if (!inCombat) return;
+    if (params.enabled === false || !inCombat) return;
     if (party && !isLeader) return;
     for (const c of creatures) {
       if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id) && !aggroProcessedRef.current.has(c.id)) {
@@ -99,7 +100,7 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
 
   // Initial aggro on node entry
   useEffect(() => {
-    if (!pendingAggroRef.current || creatures.length === 0 || isDead || character.hp <= 0) return;
+    if (params.enabled === false || !pendingAggroRef.current || creatures.length === 0 || isDead || character.hp <= 0) return;
     if (party && !isLeader) return;
     pendingAggroRef.current = false;
     justStoppedRef.current = false;

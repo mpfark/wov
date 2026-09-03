@@ -7,6 +7,7 @@ import {
   type Combat2EntryClassification,
   type Combat2EntryClient,
   type Combat2EntryRefusal,
+  type Combat2EntryOutcome,
 } from './entry';
 
 export type Combat2EntrySessionStatus =
@@ -42,6 +43,8 @@ interface Attempt {
   requestId: string;
   inFlight: boolean;
   completed: boolean;
+  promise?: Promise<Combat2EntryOutcome>;
+  observerGeneration?: number;
 }
 
 interface InternalState extends Omit<Combat2EntrySessionState, 'retry'> { key: string | null }
@@ -71,12 +74,15 @@ export function useCombat2EntrySession({
   const [state, setState] = useState<InternalState>({ ...EMPTY, key: null });
 
   const runAttempt = useCallback((attempt: Attempt, generation: number) => {
-    if (!characterId || attempt.inFlight) return;
+    if (!characterId) return;
     attempt.inFlight = true;
+    attempt.observerGeneration = generation;
     setState({ ...EMPTY, key: attempt.key, status: 'entering' });
-    void adapter.enter(characterId, attempt.requestId).then((outcome) => {
+    attempt.promise ??= adapter.enter(characterId, attempt.requestId);
+    void attempt.promise.then((outcome) => {
       if (generationRef.current !== generation || currentKeyRef.current !== attempt.key) return;
       attempt.inFlight = false;
+      attempt.promise = undefined;
       attempt.completed = true;
       if (outcome.status === 'entered') {
         setState({
@@ -94,6 +100,7 @@ export function useCombat2EntrySession({
     }).catch((error) => {
       if (generationRef.current !== generation || currentKeyRef.current !== attempt.key) return;
       attempt.inFlight = false;
+      attempt.promise = undefined;
       const uncertain = error instanceof Combat2EntryError && error.code === 'uncertain';
       attempt.completed = !uncertain;
       setState({
@@ -107,17 +114,17 @@ export function useCombat2EntrySession({
 
   useEffect(() => {
     const generation = ++generationRef.current;
-    attemptRef.current = null;
+    if (attemptRef.current?.key !== sessionKey) attemptRef.current = null;
     setState({ ...EMPTY, key: sessionKey });
     return () => {
       if (generationRef.current === generation) generationRef.current += 1;
-      attemptRef.current = null;
     };
   }, [sessionKey]);
 
   useEffect(() => {
-    if (!sessionKey || !characterId || hasLivingCreatures !== true || attemptRef.current) return;
-    const attempt: Attempt = { key: sessionKey, requestId: generateRequestId(), inFlight: false, completed: false };
+    if (!sessionKey || !characterId || hasLivingCreatures !== true || attemptRef.current?.completed
+      || attemptRef.current?.observerGeneration === generationRef.current) return;
+    const attempt: Attempt = attemptRef.current ?? { key: sessionKey, requestId: generateRequestId(), inFlight: false, completed: false };
     attemptRef.current = attempt;
     runAttempt(attempt, generationRef.current);
   }, [sessionKey, characterId, hasLivingCreatures, generateRequestId, runAttempt]);

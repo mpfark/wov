@@ -22,7 +22,13 @@ export function useCombat2Presentation(
       if (candidate.character.id !== characterId || candidate.encounterId !== encounterId) {
         throw new Error('combat2_sync identity does not match the active session');
       }
-      retained.current.model = candidate;
+      const previous = retained.current.model;
+      // A terminal death is never undone by a delayed snapshot for this entry.
+      if (!previous || (candidate.lastAppliedTick >= previous.lastAppliedTick
+        && !((previous.character.hp <= 0 || previous.fighterExitState === 'dead')
+          && candidate.character.hp > 0 && candidate.fighterExitState !== 'dead'))) {
+        retained.current.model = candidate;
+      }
     } catch (error) {
       localError = error instanceof Error ? error.message : 'Combat2 presentation failed';
     }

@@ -57,6 +57,7 @@ interface Props {
   authoritativeCreatureEffects?: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
+  combatActionsReady?: boolean;
   abilityTargetId?: string | null;
   /** Index of an ability currently queued/pending cast — that button pulses until resolved. */
   pendingAbilityIndex?: number | null;
@@ -91,6 +92,7 @@ export default function NodeView({
   node, region, area, allNodes = [], players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId,
   pendingAbilityIndex = null,
+  combatActionsReady = true,
   pendingAbilityStage = null,
   reservedBuffs = null,
   actionBindings,
@@ -638,7 +640,7 @@ export default function NodeView({
                             variant="outline"
                             size="sm"
                             onClick={() => onUseAbility(idx, resolvedTarget)}
-                            disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
+                            disabled={!combatActionsReady || levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
                             className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
                           >
                             {ability.label}

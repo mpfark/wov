@@ -8,6 +8,7 @@
  * State classification: Action orchestration (no owned state beyond lastUsedAbilityCost)
  */
 import { useState, useCallback } from 'react';
+import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { Character } from '@/features/character';
 import {
   getStatModifier,
@@ -110,6 +111,7 @@ function resolveCreatureTarget(
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export interface UseCombatActionsParams {
+  enabled?: boolean;
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   /** State-only mirror — must be used for fields the server already persisted (e.g. reserved_buffs via stance RPCs) to avoid racing redundant DB writes. */
@@ -147,11 +149,14 @@ export interface UseCombatActionsParams {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function useCombatActions(params: UseCombatActionsParams) {
+  const execution = useExecutionFence(params.enabled !== false);
   const p = params;
   const [lastUsedAbilityCost, setLastUsedAbilityCost] = useState(0);
 
   // ── Equipment degradation ──────────────────────────────────────
   const degradeEquipment = useCallback(async () => {
+    const current = execution.capture();
+    if (!current()) return;
     if (p.equipped.length === 0) return;
     const shuffled = [...p.equipped].sort(() => Math.random() - 0.5);
     const toDamage = shuffled.slice(0, 1);
@@ -168,6 +173,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       } else {
         await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
       }
+      if (!current()) return;
     }
     p.fetchInventory();
   }, [p.equipped, p.addLogEvent, p.fetchInventory]);
@@ -183,6 +189,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
 
   // ── Use Ability ────────────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
+    const current = execution.capture();
+    if (!current()) return;
     if (p.isDead || p.character.hp <= 0) return;
     const allAbilities = CLASS_ABILITIES[p.character.class] || [];
     if (!allAbilities[abilityIndex]) return;
@@ -212,6 +220,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
           p_character_id: p.character.id,
           p_stance_key: stanceDef.key,
         });
+        if (!current()) return;
         if (error) {
           p.addLogEvent(buildErrorEvent(`Failed to drop ${stanceDef.label}: ${error.message}`));
           return;
@@ -242,6 +251,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p_stance_key: stanceDef.key,
         p_tier: stanceDef.tier,
       });
+      if (!current()) return;
       if (error) {
         p.addLogEvent(buildErrorEvent(`Failed to activate ${stanceDef.label}: ${error.message}`));
         return;
@@ -359,9 +369,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
       await p.updateCharacter({ hp: p.character.hp - actualTransfer });
+      if (!current()) return;
       const { data: restored, error } = await supabase.rpc('heal_party_member', {
         _healer_id: p.character.id, _target_id: targetId, _heal_amount: actualTransfer,
       });
+      if (!current()) return;
       if (error) { p.addLogEvent(buildErrorEvent(`Failed to transfer health: ${error.message}`)); return; }
       const targetMember = p.partyMembers.find(m => m.character_id === targetId);
       const targetName = targetMember?.character.name || 'ally';
@@ -395,7 +407,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const hitText = authored('self_text') ?? `You cast ${ability.label} and mend your wounds!`;
       const fullText = authored('self_full_text')
         ?? `You cast ${ability.label} but you're already at full health.`;
-      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); if (!current()) return; p.addLogEvent(buildHealEvent(`${hitText} [${restored}]`)); }
       else p.addLogEvent(buildHealEvent(fullText));
     } else if (ability.type === 'regen_buff') {
       // Consolidation Group I: ONE reusable additive HP/CP regen buff. The
@@ -774,11 +786,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
 
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
+    if (!current()) return;
     setLastUsedAbilityCost(finalCpCost);
   }, [p.isDead, p.character, p.updateCharacter, p.addLogEvent, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {
+    if (!execution.allowed()) return;
     if (p.isDead) return;
     p.startCombat(creatureId);
   }, [p.isDead, p.startCombat]);

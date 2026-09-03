@@ -77,7 +77,12 @@ import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
 import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
-import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
+import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID, COMBAT2_TEST_NODE_ID } from '@/shared/config/feature-flags';
+import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
+import { useExecutionFence } from '@/features/combat2/execution-fence';
+import { useControlledAction, isCombatMutation, MOVEMENT_UNAVAILABLE, refuseControlledBasicAttack } from '@/features/combat2/controlled-actions';
+import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
+import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
 
@@ -101,7 +106,30 @@ interface Props {
   resourcesSynced?: boolean;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, clearCharacterFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+export default function GamePage({ character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, clearCharacterFields: clearFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+  const ownership = useCombat2TestOwnership({
+    enabled: COMBAT2_CLIENT_ENABLED, characterId: character.id, nodeId: character.current_node_id,
+    characterSetting: COMBAT2_TEST_CHARACTER_ID, nodeSetting: COMBAT2_TEST_NODE_ID,
+  });
+  const combat2OwnsSession = ownership.combat2OwnsSession;
+  // Reservation suspends legacy execution even before solo preflight/entry resolves.
+  const combat2BlocksLegacy = ownership.blocksLegacy;
+  const legacyExecution = useExecutionFence(!combat2BlocksLegacy);
+  const [combat2Diagnostic, setCombat2Diagnostic] = useState<string | null>(null);
+  const updateCharacter = useCallback(async (updates: Partial<Character>) => {
+    if (!legacyExecution.allowed() && isCombatMutation(updates)) return;
+    await writeCharacter(updates);
+  }, [writeCharacter, legacyExecution]);
+  const guardedCharacterLocal = useCallback((updates: Partial<Character>, hold?: boolean) => {
+    if (!legacyExecution.allowed() && isCombatMutation(updates)) return;
+    writeCharacterLocal?.(updates, hold);
+  }, [writeCharacterLocal, legacyExecution]);
+  const updateCharacterLocal = writeCharacterLocal ? guardedCharacterLocal : undefined;
+  const guardedClearFields = useCallback((updates: Partial<Character>) => {
+    if (!legacyExecution.allowed() && isCombatMutation(updates)) return;
+    clearFields?.(updates);
+  }, [clearFields, legacyExecution]);
+  const clearCharacterFields = clearFields ? guardedClearFields : undefined;
 
   
   const bus = useCreateGameEventBus();
@@ -193,20 +221,41 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   const combat2 = useCombat2ClientSession({
-    enabled: COMBAT2_CLIENT_ENABLED,
-    characterId: character.id,
-    nodeId: character.current_node_id,
-    hasLivingCreatures: rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
+    enabled: combat2OwnsSession,
+    controlled: true,
+    inputLocked: ownership.locked,
+    characterId: ownership.origin.characterId,
+    nodeId: ownership.origin.nodeId,
+    hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
   });
-  const activeCombat2Presentation = COMBAT2_CLIENT_ENABLED && combat2.sessionStatus === 'active'
+  const activeCombat2Presentation = combat2OwnsSession
     ? combat2.presentation.model
     : null;
   const presentedCharacter = useMemo(() => selectCombat2Character(
-    COMBAT2_CLIENT_ENABLED, activeCombat2Presentation, character,
+    combat2BlocksLegacy, activeCombat2Presentation, character,
   ), [activeCombat2Presentation, character]);
   const presentedCreatures = useMemo(() => selectCombat2Creatures(
-    COMBAT2_CLIENT_ENABLED, activeCombat2Presentation, creatures,
-  ), [activeCombat2Presentation, creatures]);
+    combat2BlocksLegacy, activeCombat2Presentation, combat2BlocksLegacy
+      ? creatures.filter(c => activeCombat2Presentation?.creatures.some(a => a.creatureId === c.id)) : creatures,
+  ), [activeCombat2Presentation, creatures, combat2BlocksLegacy]);
+  const combat2Targets = useCombat2Targets(activeCombat2Presentation);
+  const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
+  const actionEpochRef = useRef(actionEpoch);
+  actionEpochRef.current = actionEpoch;
+  const combat2Status = ownership.locked ? 'Locked — unexpected relocation or party membership'
+    : ownership.preflight === 'refused' ? 'Refused — solo, idle entry could not be verified'
+    : ownership.preflight === 'checking' ? 'Checking solo eligibility'
+    : combat2.dead ? 'Dead — recovery unavailable in this controlled test'
+    : combat2.sessionStatus === 'exited' ? 'Exited — controlled session remains locked'
+    : combat2.pendingFlee ? 'Flee pending'
+    : combat2.entry.status === 'refused' ? 'Refused'
+    : combat2.entry.status === 'error' || combat2.entry.status === 'uncertain' ? 'Transport/decoding error'
+    : combat2.presentation.status === 'gap' ? 'Gap detected'
+    : combat2.presentation.status === 'refused' ? 'Refused'
+    : combat2.presentation.status === 'error' ? 'Transport/decoding error'
+    : combat2.actionsReady ? 'Ready'
+    : combat2.presentation.status === 'reconnecting' ? 'Reconnecting'
+    : combat2.entry.status === 'entered' ? 'Synchronizing' : 'Entering';
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
     ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
     : null, [activeCombat2Presentation]);
@@ -219,14 +268,27 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [openMapInvId, setOpenMapInvId] = useState<string | null>(null);
-  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
+  const [legacySelectedTargetId, setLegacySelectedTargetId] = useState<string | null>(null);
+  const selectedTargetId = combat2BlocksLegacy ? combat2Targets.selectedId : legacySelectedTargetId;
+  const setSelectedTargetId = combat2BlocksLegacy ? combat2Targets.select : setLegacySelectedTargetId;
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem: legacyEquipItem, unequipItem: legacyUnequipItem, dropItem, useConsumable: legacyUseConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
+  const equipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyEquipItem);
+  const unequipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUnequipItem);
+  const useConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUseConsumable);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
-    createParty, invitePlayer, acceptInvite, declineInvite,
-    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
+    createParty: legacyCreateParty, invitePlayer: legacyInvitePlayer, acceptInvite: legacyAcceptInvite, declineInvite,
+    leaveParty, kickMember, setTank, toggleFollow: legacyToggleFollow, fetchParty,
   } = useParty(character.id);
-  const { pendingSummons, acceptSummon, declineSummon } = useSummonRequests(character.id);
+  const createParty = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyCreateParty);
+  const invitePlayer = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyInvitePlayer);
+  const acceptInvite = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptInvite);
+  const toggleFollow = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyToggleFollow);
+  const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
+  const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
+  useEffect(() => {
+    if (combat2BlocksLegacy && (party || myMembership?.is_following)) ownership.lock();
+  }, [combat2BlocksLegacy, party, myMembership?.is_following]);
   const { addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
@@ -659,7 +721,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── useGameLoop: regen, death, buff state ────────────────
   const gameLoop = useGameLoop({
-    character, updateCharacter, updateCharacterLocal, equipped, equipmentBonuses, getNode, addLogEvent,
+    combatEnabled: !combat2BlocksLegacy,
+    character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, equipped, equipmentBonuses, getNode, addLogEvent,
     startingNodeId, creatures,
     party, partyMembers,
     bus,
@@ -670,10 +733,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { buffState, buffSetters } = gameLoop;
 
   const {
-    isDead,
+    isDead: legacyIsDead,
     regenTick, deathCountdown, itemHpRegen, baseRegen,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
+  const isDead = combat2BlocksLegacy ? combat2.dead : legacyIsDead;
 
   const {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
@@ -776,6 +840,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const bossCasts = bossCastFeed.casts;
 
   const combat = useCombatDriver({
+    enabled: !combat2BlocksLegacy,
     character, creatures,
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
@@ -843,6 +908,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
+    enabled: !combat2BlocksLegacy,
     character, updateCharacter, updateCharacterLocal, addLogEvent,
     equipped, equipmentBonuses,
     creatures, creatureHpOverrides,
@@ -856,6 +922,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const authorizeCombat2Flee = useCallback(async () => {
+    if (combat2BlocksLegacy) { setCombat2Diagnostic(MOVEMENT_UNAVAILABLE); return false; }
     if (combat2.sessionStatus === 'exited') return true;
     const result = await combat2.flee.flee();
     if (result.status === 'fled') return true;
@@ -870,6 +937,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [combat2.flee, combat2.sessionStatus, addLocalLogEvent]);
 
   const movementActions = useMovementActions({
+    movementBlocked: combat2BlocksLegacy,
     character, updateCharacter, addLogEvent,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
@@ -884,7 +952,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
     onPlayerCombatMove: () => wimpNotifyRef.current?.(),
-    authorizeCombat2Flee: COMBAT2_CLIENT_ENABLED ? authorizeCombat2Flee : undefined,
+    authorizeCombat2Flee: combat2BlocksLegacy ? authorizeCombat2Flee : undefined,
   });
 
   const consumableActions = useConsumableActions({
@@ -901,25 +969,31 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);
 
   const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen } = movementActions;
-  const { handleUseConsumable } = consumableActions;
+  const handleUseConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, consumableActions.handleUseConsumable);
   const { handleUseAbility, handleAttack } = combatActions;
 
   const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
+    if (combat2BlocksLegacy && actionEpochRef.current !== actionEpoch) return;
     const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
     await routeCombat2Action({
-      enabled: COMBAT2_CLIENT_ENABLED,
-      sessionReady: combat2.sessionStatus === 'active',
+      enabled: combat2BlocksLegacy,
+      sessionReady: combat2.actionsReady && !ownership.locked,
       ability: ability ?? null,
       targetId: targetId ?? null,
-      livingCreatureIds: rosterActionable
+      livingCreatureIds: combat2BlocksLegacy ? combat2Targets.livingIds : rosterActionable
         ? new Set(creatures.filter((creature) => creature.is_alive).map((creature) => creature.id))
         : null,
-      reservedBuffs: (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
+      reservedBuffs: combat2BlocksLegacy
+        ? Object.fromEntries((activeCombat2Presentation?.characterEffects ?? []).filter(e => e.isReservation).map(e => [e.abilityKey ?? e.kind, {}]))
+        : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
       legacy: () => handleUseAbility(abilityIndex, targetId),
       submit: combat2.intents.submit,
-      diagnose: (message) => addLocalLogEvent(buildErrorEvent(message)),
+      diagnose: (message) => {
+        if (combat2BlocksLegacy) setCombat2Diagnostic('Combat2 action unavailable or refused. No legacy action was executed.');
+        else addLocalLogEvent(buildErrorEvent(message));
+      },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures]);
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, ownership.locked, actionEpoch]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
@@ -927,10 +1001,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
-  const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
+  const { handleFullRespec: legacyFullRespec, handleBatchAllocateStats: legacyAllocateStats } = useStatAllocation({
     character, updateCharacter, addLogEvent,
     onResourcesSynced: refetchCharacters,
   });
+  const handleFullRespec = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyFullRespec);
+  const handleBatchAllocateStats = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAllocateStats);
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
@@ -964,6 +1040,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [addLogEvent, character.id, character.name]);
 
   const handleAttackFirst = useCallback(() => {
+    if (!legacyExecution.allowed()) {
+      refuseControlledBasicAttack(true, setCombat2Diagnostic, () => {});
+      return;
+    }
     if (isDead) return;
     if (selectedTargetId) {
       const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
@@ -982,6 +1062,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [isDead, inCombat, creatures, selectedTargetId, startCombat, emitEngage]);
 
   const handleCycleTarget = useCallback(() => {
+    if (combat2BlocksLegacy) { if (combat2.actionsReady) combat2Targets.cycle(); return; }
     if (isDead) return;
     const aliveCreatures = creatures.filter(c => c.is_alive);
     if (aliveCreatures.length === 0) return;
@@ -994,7 +1075,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (!next.is_aggressive) emitEngage(next);
       startCombat(next.id);
     }
-  }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat, emitEngage]);
+  }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat, emitEngage, combat2BlocksLegacy, combat2.actionsReady, combat2Targets]);
 
   // Clear selected target when changing nodes
   useEffect(() => {
@@ -1136,7 +1217,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
   const presentedEventLog = useMemo(() => {
-    return selectCombat2Events(COMBAT2_CLIENT_ENABLED, combat2.presentation.model, filteredEventLog);
+    return selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
   }, [filteredEventLog, combat2.presentation.model]);
 
   // On-device archive: full personal log history with infinite scrollback.
@@ -1326,6 +1407,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
+      {combat2BlocksLegacy && <Combat2TestStatus status={combat2Status}
+        stale={!combat2.actionsReady && !!activeCombat2Presentation}
+        diagnostic={combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}
@@ -1365,7 +1449,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               npcs={npcs}
               character={presentedCharacter}
               eventLog={eventLog}
-              onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
+              onAttack={(id) => refuseControlledBasicAttack(combat2BlocksLegacy, setCombat2Diagnostic, () => { setSelectedTargetId(id); handleAttack(id); })}
               onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
               inCombat={inCombat}
@@ -1377,6 +1461,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
               classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
+              combatActionsReady={!combat2BlocksLegacy || (combat2.actionsReady && !ownership.locked)}
               abilityTargetId={abilityTargetId}
               pendingAbilityIndex={pendingAbilityIndex ?? pendingAbility?.index ?? null}
               pendingAbilityStage={pendingAbilityStage ?? null}
@@ -1755,7 +1840,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       />
 
       {/* Death Overlay */}
-      {isDead && (
+      {isDead && !combat2BlocksLegacy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-polish-fade-in">
           <div className="text-center space-y-4">
             <p className="font-display text-5xl text-destructive animate-pulse"> </p>

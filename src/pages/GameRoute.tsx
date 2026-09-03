@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
 import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { isConfiguredCombat2Tester } from '@/features/combat2/test-config';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
@@ -18,34 +19,43 @@ export default function GameRoute() {
   // value, leaving the player with only "Welcome back" on the real mount.
   const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
   const syncStartedForRef = useRef<string | null>(null);
+  const restrictedTester = isConfiguredCombat2Tester(character?.id);
+  const restrictedRef = useRef(restrictedTester);
+  restrictedRef.current = restrictedTester;
 
   // On world entry, recalculate gear-adjusted max_hp/max_cp/max_mp on the
   // server so the persisted row matches the gear baseline. Prevents the
   // HP/CP/MP "snap-back" caused by the row's max_* lagging behind gear.
   useEffect(() => {
     if (!character?.id) return;
+    if (restrictedTester) { setSyncedCharId(character.id); return; }
     if (syncStartedForRef.current === character.id) return;
     syncStartedForRef.current = character.id;
     // Stances are only wiped on the FIRST entry of a browser session. A remount
     // of this route (or a tab reload) must not drop the player's active stances.
     const entryKey = `wov:entrySynced:${character.id}`;
     const firstEntryThisSession = sessionStorage.getItem(entryKey) !== '1';
+    // The existing once-per-character entry attempt must survive Strict Mode replay.
+    const current = () => !restrictedRef.current;
     (async () => {
       try {
+        if (!current()) return;
         if (firstEntryThisSession) {
           // Wipe leftover stance reservations from a previous session.
           await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
+          if (!current()) return;
         }
         await supabase.rpc('sync_character_resources' as any, { p_character_id: character.id });
+        if (!current()) return;
         sessionStorage.setItem(entryKey, '1');
         refetchCharacters();
       } catch (e) {
         console.error('Failed to sync character resources on entry:', e);
       } finally {
-        setSyncedCharId(character.id);
+        if (current()) setSyncedCharId(character.id);
       }
     })();
-  }, [character?.id, refetchCharacters]);
+  }, [character?.id, refetchCharacters, restrictedTester]);
 
 
   const isSyncedForCurrent = !!character?.id && syncedCharId === character.id;

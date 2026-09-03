@@ -13,6 +13,7 @@ import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';
 import { buildDeathEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { useExecutionFence } from '@/features/combat2/execution-fence';
 
 // ─── Buff / debuff types ──────────────────────────────────────────
 export interface RegenBuff { multiplier: number; expiresAt: number } // kept for type compat but unused
@@ -98,6 +99,7 @@ interface EquippedItem {
 
 // ─── Params ───────────────────────────────────────────────────────
 export interface UseGameLoopParams {
+  combatEnabled?: boolean;
   character: Character;
   updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
   equipped: EquippedItem[];
@@ -120,6 +122,10 @@ export interface UseGameLoopParams {
 
 // ─── Hook ─────────────────────────────────────────────────────────
 export function useGameLoop(params: UseGameLoopParams) {
+  const combatEnabled = params.combatEnabled !== false;
+  const execution = useExecutionFence(combatEnabled);
+  const combatAllowedRef = useRef(combatEnabled);
+  combatAllowedRef.current = combatEnabled;
   const {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLogEvent,
     startingNodeId, creatures, party, partyMembers, bus,
@@ -131,7 +137,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // Keep a ref so the long-lived interval below can read the latest value
   // without being re-created.
   const enabledRef = useRef(enabled);
-  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
+  enabledRef.current = enabled && combatEnabled;
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
@@ -181,6 +187,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.level, character.int, character.wis, character.cha]);
 
   useEffect(() => {
+    if (!combatEnabled) { pendingRegenFlushRef.current = null; return; }
     const interval = setInterval(() => {
       // Wait until the on-entry `sync_character_resources` RPC has resolved.
       // Writing before that means we may write against stale `max_*` and have
@@ -290,6 +297,8 @@ export function useGameLoop(params: UseGameLoopParams) {
     // Flush any pending local-only regen on tab hide / unload so the
     // persisted row catches up.
     const flushPending = () => {
+      // Preserve ordinary legacy unmount flushing; only ownership suspension discards it.
+      if (!combatAllowedRef.current) { pendingRegenFlushRef.current = null; return; }
       if (pendingRegenFlushRef.current && Object.keys(pendingRegenFlushRef.current).length > 0) {
         const eqB = equipmentBonusesRef.current;
         const caps = {
@@ -312,7 +321,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       window.removeEventListener('pagehide', flushPending);
       flushPending();
     };
-  }, []);
+  }, [combatEnabled, execution]);
 
 
   // ── Death detection & respawn ──────────────────────────────
@@ -332,6 +341,17 @@ export function useGameLoop(params: UseGameLoopParams) {
   const deathIntervalRef = useRef<number | null>(null);
   const deathTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
+    if (combatEnabled) return;
+    if (deathIntervalRef.current) clearInterval(deathIntervalRef.current);
+    if (deathTimeoutRef.current) clearTimeout(deathTimeoutRef.current);
+    deathIntervalRef.current = null;
+    deathTimeoutRef.current = null;
+    isDeadRef.current = false;
+    setIsDead(false);
+  }, [combatEnabled]);
+  useEffect(() => {
+    if (!execution.allowed()) return;
+    const current = execution.capture();
     if (character.hp > 0 || isDeadRef.current) return;
     isDeadRef.current = true;
     setIsDead(true);
@@ -340,6 +360,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     if (deathIntervalRef.current) clearInterval(deathIntervalRef.current);
     if (deathTimeoutRef.current) clearTimeout(deathTimeoutRef.current);
     deathIntervalRef.current = window.setInterval(() => {
+      if (!current()) return;
       setDeathCountdown(prev => {
         const next = Math.max(prev - 1, 0);
         if (next === 0 && deathIntervalRef.current) {
@@ -351,14 +372,17 @@ export function useGameLoop(params: UseGameLoopParams) {
     }, 1000);
     const goldLost = Math.floor(deathGoldRef.current * 0.1);
     deathTimeoutRef.current = window.setTimeout(async () => {
+      if (!current()) return;
       try {
         await updateCharRef.current({
           hp: 1,
           gold: deathGoldRef.current - goldLost,
           current_node_id: deathNodeRef.current,
         });
+        if (!current()) return;
         addLogEventRef.current(buildDeathEvent(`You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`, { amount: goldLost, amountKind: 'gold' }));
       } finally {
+        if (!current()) return;
         if (deathIntervalRef.current) { clearInterval(deathIntervalRef.current); deathIntervalRef.current = null; }
         deathTimeoutRef.current = null;
         isDeadRef.current = false;
@@ -367,16 +391,19 @@ export function useGameLoop(params: UseGameLoopParams) {
     }, 3000);
     // No cleanup: mid-countdown re-runs must not cancel the timers. Unmount
     // cleanup is handled below in its own effect.
-  }, [character.hp]);
+  }, [character.hp, combatEnabled, execution]);
 
   useEffect(() => () => {
     if (deathIntervalRef.current) clearInterval(deathIntervalRef.current);
     if (deathTimeoutRef.current) clearTimeout(deathTimeoutRef.current);
+    isDeadRef.current = false;
   }, []);
 
 
   // ── Crescendo / Purifying Light party regen ────────────────
   useEffect(() => {
+    if (!combatEnabled) return;
+    const current = execution.capture();
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
     const abilityLabel = partyRegenBuff.label ?? 'Regeneration';
     const tickLine = (who: string) =>
@@ -384,6 +411,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         .replace('{who}', who)
         .replace('{amount}', String(partyRegenBuff.healPerTick));
     const interval = setInterval(async () => {
+      if (!current()) return;
       if (Date.now() >= partyRegenBuff.expiresAt) {
         setPartyRegenBuff(null); clearInterval(interval); return;
       }
@@ -393,6 +421,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const selfNewHp = Math.min(partyEffectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
         await updateCharacter({ hp: selfNewHp });
+        if (!current()) return;
       }
       if (party) {
         const membersHere = partyMembers.filter(m => m.character_id !== character.id && m.character?.current_node_id === charState.current_node_id);
@@ -402,6 +431,7 @@ export function useGameLoop(params: UseGameLoopParams) {
             _target_id: m.character_id,
             _heal_amount: partyRegenBuff.healPerTick,
           });
+          if (!current()) return;
         }
         if (membersHere.length > 0) {
           addLogEvent(buildHealEvent(tickLine(`${membersHere.length + 1} allies`), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
@@ -413,7 +443,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [partyRegenBuff, party, partyMembers, character, addLogEvent, updateCharacter]);
+  }, [partyRegenBuff, party, partyMembers, character, addLogEvent, updateCharacter, combatEnabled, execution]);
 
   return {
     // Buff state (from useBuffState)

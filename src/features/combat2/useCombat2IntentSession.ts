@@ -24,6 +24,7 @@ interface Attempt {
 }
 
 export interface UseCombat2IntentSessionOptions {
+  canSubmit?: boolean;
   enabled: boolean;
   characterId: string | null;
   nodeId: string | null;
@@ -42,6 +43,7 @@ const defaultAdapter = createCombat2IntentAdapter({
 } satisfies Combat2IntentClient);
 
 export function useCombat2IntentSession({
+  canSubmit = true,
   enabled,
   characterId,
   nodeId,
@@ -54,6 +56,8 @@ export function useCombat2IntentSession({
     : null;
   const sessionKeyRef = useRef(sessionKey);
   sessionKeyRef.current = sessionKey;
+  const readyRef = useRef(canSubmit);
+  readyRef.current = canSubmit;
   const generationRef = useRef(0);
   const attemptRef = useRef<Attempt | null>(null);
 
@@ -64,9 +68,10 @@ export function useCombat2IntentSession({
       generationRef.current += 1;
       attemptRef.current = null;
     };
-  }, [sessionKey]);
+  }, [sessionKey, canSubmit]);
 
   const run = useCallback(async (attempt: Attempt): Promise<Combat2IntentResult> => {
+    if (!readyRef.current) return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 is not ready for input' };
     if (!sessionKey || !characterId || !encounterId || attempt.sessionKey !== sessionKey) {
       return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 session is not authoritative' };
     }
@@ -78,13 +83,13 @@ export function useCombat2IntentSession({
     const generation = generationRef.current;
     try {
       const outcome = await adapter.submit(encounterId, characterId, attempt.action, attempt.requestId);
-      if (generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
         return { status: 'stale' };
       }
       attempt.inFlight = false;
       return outcome;
     } catch (error) {
-      if (generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
         return { status: 'stale' };
       }
       attempt.inFlight = false;

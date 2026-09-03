@@ -303,11 +303,11 @@ describe('Combat2 authoritative presentation model', () => {
     expect(() => buildCombat2Presentation(state)).toThrow(Combat2PresentationError);
   });
 
-  it('connects only the gated visible presentation seams, not gameplay hooks', () => {
+  it('connects authoritative presentation and exclusive execution seams', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
     const nodeView = readFileSync('src/features/world/components/NodeView.tsx', 'utf8');
     const indicator = readFileSync('src/features/combat2/Combat2TelegraphIndicator.tsx', 'utf8');
-    expect(page).toMatch(/COMBAT2_CLIENT_ENABLED && combat2\.sessionStatus === 'active'/);
+    expect(page).toContain('const activeCombat2Presentation = combat2OwnsSession');
     expect(page).toContain('character={presentedCharacter}');
     expect(page).toContain('creatures={presentedCreatures}');
     expect(page).toContain('creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}');
@@ -315,8 +315,8 @@ describe('Combat2 authoritative presentation model', () => {
     expect(page).toContain('authoritativeEffects: activeCombat2Presentation?.characterEffects');
     expect(page).toContain('authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}');
     expect(page).toContain('filteredEventLog={presentedEventLog}');
-    expect(page).toMatch(/useCombatActions\(\{\s*character,/);
-    expect(page).toMatch(/useMovementActions\(\{\s*character,/);
+    expect(page).toMatch(/useCombatActions\(\{\s*enabled: !combat2BlocksLegacy,/);
+    expect(page).toMatch(/useMovementActions\(\{\s*movementBlocked: combat2BlocksLegacy,/);
     expect(nodeView).toContain('authoritativeTelegraphs === undefined ? bossCasts[c.id] : undefined');
     expect(indicator).not.toMatch(/supabase|\.rpc\(|\.from\(|combat_intent|damage\s*[+*=]|\bhp\s*[+*=]/);
   });

@@ -23,6 +23,8 @@ import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
+import { useExecutionFence } from '@/features/combat2/execution-fence';
+import { MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers
@@ -223,6 +225,7 @@ export interface UseMovementActionsParams {
   onPlayerCombatMove?: () => void;
   /** Default-off Combat2 gate: authorize departure before physical movement. */
   authorizeCombat2Flee?: () => Promise<boolean>;
+  movementBlocked?: boolean;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -230,12 +233,20 @@ export interface UseMovementActionsParams {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function useMovementActions(params: UseMovementActionsParams) {
+  const execution = useExecutionFence(!params.movementBlocked);
+  const begin = () => {
+    const current = execution.capture();
+    if (!current()) params.addLogEvent(buildErrorEvent(MOVEMENT_UNAVAILABLE));
+    return current;
+  };
   const p = params;
   const [waymarkNodeId, setWaymarkNodeId] = useState<string | null>(null);
   const [teleportOpen, setTeleportOpen] = useState(false);
 
   // ── Movement ───────────────────────────────────────────────────
   const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
+    const current = begin();
+    if (!current()) return;
     if (p.isDead) return;
 
     // ── Boss cast stagger lock ──
@@ -309,6 +320,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.inCombat && p.authorizeCombat2Flee) {
       authoritativeFlee = true;
       const mayMove = await authorizeCombat2MovementFlee(p.authorizeCombat2Flee, p.fleeStopCombat);
+      if (!current()) return;
       if (!mayMove) return;
     }
     if (p.inCombat) {
@@ -351,13 +363,16 @@ export function useMovementActions(params: UseMovementActionsParams) {
       for (const md of oaResult.memberDamages) {
         try {
           const { data: newHp } = await supabase.rpc('damage_party_member', { _character_id: md.characterId, _damage: md.damage });
+          if (!current()) return;
           if (newHp !== null) p.broadcastHp?.(md.characterId, newHp, md.maxHp, md.creatureName);
         } catch (e) { console.error('Failed to apply opportunity attack to party member:', e); }
       }
 
       if (oaResult.newHp < p.character.hp) {
         await p.updateCharacter({ hp: oaResult.newHp });
+        if (!current()) return;
         await p.degradeEquipment();
+        if (!current()) return;
       }
       if (oaResult.newHp <= 0) {
         p.addLogEvent(buildDeathEvent('You were struck down while retreating...'));
@@ -370,9 +385,11 @@ export function useMovementActions(params: UseMovementActionsParams) {
     try {
       if (p.party && !p.isLeader && p.myMembership?.is_following) {
         await p.toggleFollow(false);
+        if (!current()) return;
         p.addLogEvent(buildSystemEvent('You break away from the party leader.'));
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
+      if (!current()) return;
       p.broadcastMove(p.character.id, p.character.name, nodeId, p.character.current_node_id!);
       void markNodeVisited(p.character.id, nodeId);
       const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
@@ -391,6 +408,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Teleport ───────────────────────────────────────────────────
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
+    const current = begin();
+    if (!current()) return;
     if (p.isDead) return;
     if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to teleport.')); return; }
@@ -418,6 +437,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Return to Waymark ──────────────────────────────────────────
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
+    const current = begin();
+    if (!current()) return;
     if (!waymarkNodeId) return;
     const waymarkNode = p.getNode(waymarkNodeId);
     if (!waymarkNode) { p.addLogEvent(buildErrorEvent('Your waymark has faded.')); setWaymarkNodeId(null); return; }
@@ -441,6 +462,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
   // ── Search ─────────────────────────────────────────────────────
   const SEARCH_CP_COST = 5;
   const handleSearch = useCallback(async (keyword?: string) => {
+    const current = begin();
+    if (!current()) return;
     if (p.isDead) return;
     if (!p.currentNode) return;
     if (p.creatures && p.creatures.length > 0) {
@@ -453,6 +476,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     }
     const newCp = (p.character.cp ?? 0) - SEARCH_CP_COST;
     await supabase.from('characters').update({ cp: newCp }).eq('id', p.character.id);
+    if (!current()) return;
     p.updateCharacter({ cp: newCp });
     const roll = rollD20();
     const searchStat = p.character.class === 'wizard' ? p.character.int : p.character.wis;
@@ -501,6 +525,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
+        if (!current()) return;
         p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
       }
       revealHints();
@@ -510,11 +535,13 @@ export function useMovementActions(params: UseMovementActionsParams) {
       for (const entry of searchItems) {
         if (Math.random() <= (entry.chance || 0.5)) {
           const item = await getCachedItemAsync(entry.item_id);
+          if (!current()) return;
           if (item) {
             if (item.rarity === 'unique') {
               const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
                 p_character_id: p.character.id, p_item_id: entry.item_id,
               });
+              if (!current()) return;
               if (!acquired) {
                 p.addLogEvent(buildLootEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`));
                 revealHints();
@@ -524,6 +551,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
               const { error: grantErr } = await supabase.rpc('grant_searched_item' as any, {
                 p_character_id: p.character.id, p_item_id: entry.item_id,
               });
+              if (!current()) return;
               if (grantErr) {
                 console.error('grant_searched_item failed:', grantErr);
                 p.addLogEvent(buildLootEvent(`You spotted ${item.name}, but couldn't pick it up.`));
@@ -550,6 +578,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
+        if (!current()) return;
         p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
       }
     } else {

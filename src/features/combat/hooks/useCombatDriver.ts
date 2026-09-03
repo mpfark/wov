@@ -17,6 +17,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { useExecutionFence } from '@/features/combat2/execution-fence';
 
 import {
   maintenanceMessage,
@@ -115,6 +116,7 @@ export interface MemberBuffState {
 }
 
 export interface UseCombatDriverParams {
+  enabled?: boolean;
   character: Character;
   creatures: Creature[];
   party: Party | null;
@@ -161,6 +163,8 @@ export interface UseCombatDriverParams {
 }
 
 export function useCombatDriver(params: UseCombatDriverParams) {
+  const enabled = params.enabled !== false;
+  const execution = useExecutionFence(enabled);
   const ext = useRef(params);
   ext.current = params;
 
@@ -289,6 +293,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Helpers ────────────────────────────────────────────────────
 
   const updateCreatureHp = useCallback((creatureId: string, hp: number) => {
+    if (!execution.allowed()) return;
     setCreatureHpOverrides(prev => {
       const next = { ...prev, [creatureId]: hp };
       creatureHpOverridesRef.current = next;
@@ -319,7 +324,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     // the server-side roster stops treating us as a combatant, and cancel any
     // still-pending durable intent.
     const leavingCharacterId = ext.current?.character?.id;
-    if (leavingCharacterId) {
+    if (execution.allowed() && leavingCharacterId) {
       void supabase
         .rpc('leave_encounter_engagements', {
           _character_id: leavingCharacterId,
@@ -349,7 +354,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     setEncounterId(null);
     // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
     const fizzling = pendingAbilityRef.current;
-    if (fizzling) {
+    if (execution.allowed() && fizzling) {
       const p = ext.current;
       const fizzleEvent = buildPositioningEvent(
         'fizzle',
@@ -373,6 +378,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!enabled) stopCombat(); // Local reset only: the fence suppresses departure RPCs.
+  }, [enabled, stopCombat]);
+
   /**
    * The single pacing authority.
    *
@@ -384,6 +393,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * a third of all requests refused `not_due`.
    */
   const scheduleNextTick = useCallback((immediate = false) => {
+    if (!execution.allowed()) return;
     // A durable opener is pending work even out of combat (see opener-gates).
     const work = {
       inCombat: inCombatRef.current,
@@ -401,6 +411,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       ? 0
       : nextTickDelayMs({ cadence, receivedAtMs: receivedAt, nowMs: Date.now() });
     intervalRef.current = setWorkerTimeout(() => {
+      if (!execution.allowed()) return;
       intervalRef.current = null;
       doTickRef.current();
     }, delay);
@@ -421,6 +432,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * request that arrives while one is in flight is coalesced by `doTick`.
    */
   const requestTickNow = useCallback((cause: TickCause) => {
+    if (!execution.allowed()) return;
     if (maintenanceRef.current) return;
     const now = Date.now();
     tickCauseRef.current = cause;
@@ -470,7 +482,10 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   //    XP/gold/Renown awarded by the leader's tick that they may have
   //    missed if the realtime broadcast was dropped while suspended.
   useEffect(() => {
+    if (!enabled) return;
     const onVisible = async () => {
+      const current = execution.capture();
+      if (!current()) return;
       if (document.visibilityState !== 'visible') return;
       const p = ext.current;
       const solo = !p.party;
@@ -489,6 +504,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
           .select('xp, gold, level, bhp, rp_total_earned, unspent_stat_points, max_cp, max_mp, max_hp, respec_points')
           .eq('id', p.character.id)
           .single();
+        if (!current()) return;
         if (data && ext.current.updateCharacterLocal) {
           ext.current.updateCharacterLocal(data as Partial<Character>);
         }
@@ -498,7 +514,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  }, [enabled, execution]);
 
 
 
@@ -510,6 +526,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // dispatch happens now and the next cadence tick is a full interval later.
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
+    if (!execution.allowed()) return;
     const p = ext.current;
     const allAbilities = CLASS_ABILITIES[p.character.class] || [];
     const ability = allAbilities[index];
@@ -532,6 +549,8 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Aggro effects ──────────────────────────────────────────────
 
   const startCombatCore = useCallback((creatureId: string) => {
+    const current = execution.capture();
+    if (!current()) return;
     const p = ext.current;
     if (p.isDead || p.character.hp <= 0) return;
     // C0: combat is closed for maintenance — refuse to engage at all once the
@@ -551,6 +570,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         _creature_id: creatureId,
       })
       .then(({ error }) => {
+        if (!current()) return;
         if (!error) return;
         // A refused engagement must never leave an optimistic local combat
         // state (or a running worker) behind: the affordance has to come back.
@@ -594,6 +614,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   const {
     pendingAggroRef, aggroProcessedRef, recentlyKilledRef,
   } = useCombatAggroEffects({
+    enabled,
     creatures: params.creatures,
     inCombat,
     isLeader: params.isLeader,
@@ -656,6 +677,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     data: CombatTickResponse,
     meta?: { seq?: number; receivedAt?: number; source?: 'batch' | 'ack' },
   ) => {
+    if (!execution.allowed()) return;
     // Adopt the encounter this result belongs to so the shared batch stream can
     // be subscribed to (and recovered) for it.
     const incomingEncounterId = data.encounter_id ?? null;
@@ -1022,6 +1044,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
    * missing narration is simply marked as unavailable.
    */
   const applyResync = useCallback((snapshot: ResyncSnapshot, range: { fromTick: number; toTick: number }) => {
+    if (!execution.allowed()) return;
     const p = ext.current;
 
     if (snapshot.character && p.updateCharacterLocal) {
@@ -1077,7 +1100,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // once. Holes are fetched from `encounter_tick_batches` by the recovery
   // machine inside the hook.
   const { noteCommitted } = useEncounterBatches({
-    encounterId,
+    encounterId: enabled ? encounterId : null,
     characterId: params.character.id,
     baselines: () => ({
       [ext.current.character.id]: {
@@ -1107,6 +1130,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
   useEffect(() => {
     const partyId = params.party?.id;
+    if (!enabled) return;
     if (!partyId) { channelRef.current = null; return; }
 
     const channel = supabase.channel(`party-combat-${partyId}`);
@@ -1122,6 +1146,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         processTickResult(data);
       })
       .on('broadcast', { event: 'engage_request' }, (payload) => {
+        if (!execution.allowed()) return;
         if (!ext.current.isLeader) return;
         const { creature_id } = payload.payload as { creature_id: string; character_id: string };
         if (!creature_id) return;
@@ -1140,6 +1165,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
 
       })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
+        if (!execution.allowed()) return;
         if (!ext.current.isLeader) return;
         const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
         if (character_id && buffs) memberBuffsRef.current[character_id] = buffs;
@@ -1150,12 +1176,14 @@ export function useCombatDriver(params: UseCombatDriverParams) {
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [params.party?.id, processTickResult]);
+  }, [params.party?.id, processTickResult, enabled, execution]);
 
   // Non-leader: broadcast buff state periodically
   useEffect(() => {
+    if (!enabled) return;
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
+      if (!execution.allowed()) return;
       if (!channelRef.current) return;
       if (!inCombatRef.current) return;
       if (ext.current.gatherBuffs) {
@@ -1170,6 +1198,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     // the driver, and it measures staleness from the last acknowledgement (or
     // rendered tick) rather than from a timestamp only legacy payloads stamp.
     const wake = setInterval(() => {
+      if (!execution.allowed()) return;
       if (!inCombatRef.current) return;
       const last = Math.max(lastTickRef.current, ackAtRef.current);
       const since = last ? Date.now() - last : Infinity;
@@ -1177,11 +1206,13 @@ export function useCombatDriver(params: UseCombatDriverParams) {
     }, 2000);
 
     return () => { clearInterval(interval); clearInterval(wake); };
-  }, [params.party, params.isLeader]);
+  }, [params.party, params.isLeader, enabled, execution]);
 
   // ── Driver (solo or party leader): tick function ───────────────
 
   const doTick = useCallback(async () => {
+    const current = execution.capture();
+    if (!current()) return;
     if (tickBusyRef.current) {
       tickPendingRef.current = true;
       return;
@@ -1254,6 +1285,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
             {
               tracker: actionsRef.current,
               submit: async (a) => {
+                if (!current()) return { error: { message: 'Legacy execution suspended' } };
                 const { error } = await supabase.rpc('submit_combat_action', {
                   _id: a.actionId,
                   _character_id: a.characterId,
@@ -1266,6 +1298,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
               },
             },
           );
+          if (!current()) return;
           setPendingActionCount(actionsRef.current.pendingCount);
           // Continuous visual state: the queue entry has been consumed, so the
           // pulse now hangs off the durable tracker entry (or clears if the
@@ -1329,6 +1362,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
+            if (!current()) return;
           }
           // Non-server abilities debit CP synchronously via onAbilityExecute,
           // so the reservation (and its pending pulse) clears immediately.
@@ -1399,7 +1433,9 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         let data: any = null;
         let error: any = null;
         for (let attempt = 0; attempt < 3; attempt++) {
+          if (!current()) return;
           const res = await supabase.functions.invoke('combat-tick', { body });
+          if (!current()) return;
           data = res.data;
           error = res.error;
           if (!error) break;
@@ -1612,6 +1648,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
         idleCountRef.current = 0;
       }
     } finally {
+      if (!current()) return;
       tickBusyRef.current = false;
       // Coalesce overlapping wake-ups.
       //
@@ -1651,6 +1688,7 @@ export function useCombatDriver(params: UseCombatDriverParams) {
   // ── Lifecycle effects ──────────────────────────────────────────
 
   const { fleeStopCombat } = useCombatLifecycle({
+    enabled,
     characterId: params.character.id,
     currentNodeId: params.character.current_node_id,
 

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { clampResourceUpdates } from '../utils/clampResources';
 import { clearCharacter } from '@/features/combat/events/log-archive';
+import { isConfiguredCombat2Tester } from '@/features/combat2/test-config';
 
 export interface Character {
   id: string;
@@ -383,8 +384,9 @@ export function useCharacter(user: User | null) {
   // (combat-tick owns the value during fights), so this is safe to call
   // unconditionally on a slow cadence.
   const forceShieldActive = !!(selectedCharacter?.reserved_buffs && (selectedCharacter.reserved_buffs as any).force_shield);
+  const restrictedTester = isConfiguredCombat2Tester(selectedCharacterId);
   useEffect(() => {
-    if (!forceShieldActive || !selectedCharacterId) return;
+    if (restrictedTester || !forceShieldActive || !selectedCharacterId) return;
     let cancelled = false;
     const tick = async () => {
       try {
@@ -396,7 +398,7 @@ export function useCharacter(user: User | null) {
     tick();
     const id = setInterval(tick, 4000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [forceShieldActive, selectedCharacterId]);
+  }, [forceShieldActive, selectedCharacterId, restrictedTester]);
 
   return {
     characters,

@@ -21,6 +21,8 @@ interface Attempt {
 }
 
 export interface UseCombat2FleeSessionOptions {
+  canSubmit?: boolean;
+  onQueued?(): void;
   enabled: boolean;
   characterId: string | null;
   nodeId: string | null;
@@ -40,6 +42,8 @@ const defaultAdapter = createCombat2FleeAdapter({
 } satisfies Combat2FleeClient);
 
 export function useCombat2FleeSession({
+  canSubmit = true,
+  onQueued,
   enabled,
   characterId,
   nodeId,
@@ -53,6 +57,8 @@ export function useCombat2FleeSession({
     : null;
   const sessionKeyRef = useRef(sessionKey);
   sessionKeyRef.current = sessionKey;
+  const readyRef = useRef(canSubmit);
+  readyRef.current = canSubmit;
   const generationRef = useRef(0);
   const attemptRef = useRef<Attempt | null>(null);
 
@@ -63,9 +69,10 @@ export function useCombat2FleeSession({
       generationRef.current += 1;
       attemptRef.current = null;
     };
-  }, [sessionKey]);
+  }, [sessionKey, canSubmit]);
 
   const run = useCallback(async (attempt: Attempt): Promise<Combat2FleeResult> => {
+    if (!readyRef.current) return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 is not ready for input' };
     if (!sessionKey || !characterId || !encounterId || attempt.sessionKey !== sessionKey) {
       return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 session is not authoritative' };
     }
@@ -76,19 +83,20 @@ export function useCombat2FleeSession({
     const generation = generationRef.current;
     try {
       const outcome = await adapter.flee(encounterId, characterId, attempt.requestId);
-      if (generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) return { status: 'stale' };
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) return { status: 'stale' };
       attempt.inFlight = false;
       if (outcome.status === 'fled') onExited(attempt.sessionKey);
+      if (outcome.status === 'queued') onQueued?.();
       return outcome;
     } catch (error) {
-      if (generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) return { status: 'stale' };
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) return { status: 'stale' };
       attempt.inFlight = false;
       return {
         status: error instanceof Combat2FleeError && error.code === 'uncertain' ? 'uncertain' : 'error',
         reason: error instanceof Error ? error.message : 'combat_flee failed',
       };
     }
-  }, [adapter, characterId, encounterId, onExited, sessionKey]);
+  }, [adapter, characterId, encounterId, onExited, onQueued, sessionKey]);
 
   const flee = useCallback(() => {
     if (!enabled) return Promise.resolve<Combat2FleeResult>({ status: 'local_refusal', classification: 'disabled', reason: 'Combat2 is disabled' });

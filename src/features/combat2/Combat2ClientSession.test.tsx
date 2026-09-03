@@ -117,12 +117,12 @@ describe('Combat2ClientSession application bridge', () => {
     expect(source).not.toMatch(/\.from\([^)]*\)\.(?:insert|update|delete|upsert)\(/);
   });
 
-  it('mounts from the authoritative roster hint without changing visible gameplay', () => {
+  it('mounts from the authoritative roster hint under the restricted ownership gate', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
     expect(page).toContain('useCombat2ClientSession({');
     expect(page).toContain('enabled: COMBAT2_CLIENT_ENABLED');
     expect(page).toContain('characterId: character.id');
     expect(page).toContain('nodeId: character.current_node_id');
-    expect(page).toMatch(/hasLivingCreatures:\s*rosterActionable \? creatures\.some\(\(creature\) => creature\.is_alive\) : null/);
+    expect(page).toMatch(/hasLivingCreatures:\s*!ownership\.locked && rosterActionable \? creatures\.some\(\(creature\) => creature\.is_alive\) : null/);
   });
 });

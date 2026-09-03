@@ -12,6 +12,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { clearWorkerInterval } from '@/lib/worker-timer';
 
 export interface UseCombatLifecycleParams {
+  enabled?: boolean;
   /**
    * Identity only (logging / caller convenience). This hook performs NO
    * departure write: ending participation is server-authoritative.
@@ -93,7 +94,7 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
   // player just activated a stance. Mirror the wipe locally and clear the mask
   // so stance buttons reflect the dead state immediately.
   useEffect(() => {
-    if (isDead) {
+    if (params.enabled !== false && isDead) {
       stopCombat();
       setPoisonBuff?.(null);
       setIgniteBuff?.(null);
@@ -108,14 +109,14 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
   // own recovery attempt and dropped the follower out of a live fight. Give the
   // recovery one full wake cycle plus a round-trip before giving up.
   useEffect(() => {
-    if (!inCombat || isLeader || !party) return;
+    if (params.enabled === false || !inCombat || isLeader || !party) return;
     const check = setInterval(() => {
       if (Date.now() - lastTickRef.current > 12000) {
         stopCombat();
       }
     }, 2000);
     return () => clearInterval(check);
-  }, [inCombat, isLeader, party, stopCombat, lastTickRef]);
+  }, [inCombat, isLeader, party, stopCombat, lastTickRef, params.enabled]);
 
   // Unmount cleanup
   useEffect(() => {
