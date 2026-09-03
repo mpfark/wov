@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const sql = readFileSync(
-  "supabase/migrations/20260902203000_combat2_claim_tank_candidates.sql",
+  "supabase/migrations/20260903061136_4c6938e6-7905-44c5-8a1c-ab1a56a823e4.sql",
   "utf8",
 ).replaceAll("\r\n", "\n");
 
