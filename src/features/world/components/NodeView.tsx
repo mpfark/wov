@@ -58,6 +58,7 @@ interface Props {
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   combatActionsReady?: boolean;
+  authoritativeTargetSelection?: boolean;
   abilityTargetId?: string | null;
   /** Index of an ability currently queued/pending cast — that button pulses until resolved. */
   pendingAbilityIndex?: number | null;
@@ -93,6 +94,7 @@ export default function NodeView({
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId,
   pendingAbilityIndex = null,
   combatActionsReady = true,
+  authoritativeTargetSelection = false,
   pendingAbilityStage = null,
   reservedBuffs = null,
   actionBindings,
@@ -291,7 +293,7 @@ export default function NodeView({
                   {creatures.map(c => {
                     const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                     const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
-                    const isSelected = !isActiveTarget && !isEngaged && selectedTargetId === c.id;
+                    const isSelected = (authoritativeTargetSelection || (!isActiveTarget && !isEngaged)) && selectedTargetId === c.id;
                     const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
                     const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
                     const creaturePoisonStacks = poisonStacks[c.id];
@@ -409,8 +411,8 @@ export default function NodeView({
                             {(isActiveTarget || isEngaged) && (
                               <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}> </span>
                             )}
-                            {isSelected && !isActiveTarget && !isEngaged && (
-                              <span className="text-[10px] text-primary"> </span>
+                            {isSelected && (
+                              <span className="text-[10px] text-primary">{authoritativeTargetSelection ? 'Selected target' : ' '}</span>
                             )}
                             <div className="flex flex-col items-stretch gap-[2px] w-[120px]">
                               <div

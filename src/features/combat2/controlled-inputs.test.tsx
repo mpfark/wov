@@ -71,7 +71,9 @@ describe('controlled input and display boundary', () => {
   it('routes supported abilities and stance activate/drop through the installed adapter exactly once per action', async () => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options), { wrapper: StrictMode });
     const legacy = vi.fn();
-    const base = { enabled: true, sessionReady: result.current.actionsReady, targetId: T, livingCreatureIds: new Set([T]), reservedBuffs: {}, legacy, submit: result.current.intents.submit, diagnose: vi.fn() };
+    const base = { enabled: true, sessionReady: result.current.actionsReady,
+      resolveTarget: () => ({ ok: true as const, target: { encounterId: E, id: 'life-1', creatureId: T, spawnSeq: 1 } }),
+      reservedBuffs: {}, legacy, submit: result.current.intents.submit, diagnose: vi.fn() };
     await act(async () => {
       await routeCombat2Action({ ...base, ability });
       await routeCombat2Action({ ...base, ability: { ...ability, abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' } });

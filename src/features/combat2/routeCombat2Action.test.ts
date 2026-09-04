@@ -17,8 +17,9 @@ function harness(overrides: Partial<Parameters<typeof routeCombat2Action>[0]> = 
   return {
     legacy, submit, diagnose,
     options: {
-      enabled: true, sessionReady: true, ability: ability(), targetId: CREATURE,
-      livingCreatureIds: new Set([CREATURE]), reservedBuffs: {}, legacy, submit, diagnose,
+      enabled: true, sessionReady: true, ability: ability(),
+      resolveTarget: () => ({ ok: true as const, target: { encounterId: 'enc', id: 'spawn', creatureId: CREATURE, spawnSeq: 1 } }),
+      reservedBuffs: {}, legacy, submit, diagnose,
       ...overrides,
     },
   };
@@ -68,7 +69,7 @@ describe('Combat2 deliberate action routing', () => {
     expect(unsupported.submit).not.toHaveBeenCalled();
     expect(unsupported.legacy).not.toHaveBeenCalled();
 
-    const staleTarget = harness({ livingCreatureIds: new Set() });
+    const staleTarget = harness({ resolveTarget: () => ({ ok: false, reason: 'Target is stale' }) });
     await routeCombat2Action(staleTarget.options);
     expect(staleTarget.submit).not.toHaveBeenCalled();
     expect(staleTarget.legacy).not.toHaveBeenCalled();

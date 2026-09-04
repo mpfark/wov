@@ -54,7 +54,7 @@ describe('safe delivered Combat2 message wording', () => {
   it('shows explicit reductions without summing overlapping metadata or reconstructing raw damage', () => {
     const text = messages([{ kind: 'creature_attack', actor: wolf, target: self, amount: 3,
       meta: { percentMitigated: 2, shieldBonusApplied: 1, flatMitigated: 4, blocked: 5, absorbed: 6 } }]).events[0].message;
-    expect(text).toBe('Wolf deals 3 damage to you (2 percentage reduction; 4 flat reduction; 5 blocked; 6 absorbed).');
+    expect(text).toBe('Wolf deals 3 damage to you (2 prevented by percentage mitigation; 4 prevented by flat mitigation; 5 blocked; 6 absorbed).');
   });
 
   it('labels reservation and suppresses only the same actor/ability companion buff', () => {

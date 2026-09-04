@@ -2,13 +2,13 @@ import type { ClassAbility } from '@/features/combat/utils/class-abilities';
 import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import type { Combat2IntentAction } from './intent';
 import type { Combat2IntentResult } from './useCombat2IntentSession';
+import type { Combat2TargetResolution } from './target-resolution';
 
 export interface RouteCombat2ActionOptions {
   enabled: boolean;
   sessionReady: boolean;
   ability: ClassAbility | null;
-  targetId: string | null;
-  livingCreatureIds: ReadonlySet<string> | null;
+  resolveTarget(): Combat2TargetResolution;
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction): Promise<Combat2IntentResult>;
@@ -45,11 +45,14 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
       options.diagnose('This targeted action is not supported by the Combat2 intent contract.');
       return;
     }
-    const targetCreatureId = ability.targetType === 'enemy' ? options.targetId : null;
-    if (ability.targetType === 'enemy'
-      && (!targetCreatureId || !options.livingCreatureIds?.has(targetCreatureId))) {
-      options.diagnose(`Select a living creature before using ${ability.label}.`);
-      return;
+    let targetCreatureId: string | null = null;
+    if (ability.targetType === 'enemy') {
+      const resolved = options.resolveTarget();
+      if (resolved.ok === false) {
+        options.diagnose(resolved.reason);
+        return;
+      }
+      targetCreatureId = resolved.target.creatureId;
     }
     action = { kind: 'ability', abilityKey: ability.abilityKey, stanceKey: null, targetCreatureId };
   }

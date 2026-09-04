@@ -27,7 +27,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
   const meta = event.meta ?? {};
   const verb = (singular: string, plural: string) => own ? plural : singular;
   const positive = (key: string) => typeof meta[key] === 'number' && Number.isFinite(meta[key]) && (meta[key] as number) > 0;
-  const details = [['percentMitigated', 'percentage reduction'], ['flatMitigated', 'flat reduction'],
+  const details = [['percentMitigated', 'prevented by percentage mitigation'], ['flatMitigated', 'prevented by flat mitigation'],
     ['blocked', 'blocked'], ['absorbed', 'absorbed'], ['critSoftened', 'critical bonus reduced']]
     .filter(([key]) => positive(key)).map(([key, text]) => `${meta[key]} ${text}`);
   const damage = () => `${action} ${!event.abilityKey && own ? 'deal' : 'deals'} ${amount === null ? 'damage' : amount === 0 ? 'no damage' : `${amount} damage`} to ${target}${details.length ? ` (${details.join('; ')})` : ''}.`;

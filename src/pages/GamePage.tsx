@@ -240,7 +240,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     combat2BlocksLegacy, activeCombat2Presentation, combat2BlocksLegacy
       ? creatures.filter(c => activeCombat2Presentation?.creatures.some(a => a.creatureId === c.id)) : creatures,
   ), [activeCombat2Presentation, creatures, combat2BlocksLegacy]);
-  const combat2Targets = useCombat2Targets(activeCombat2Presentation);
+  const combat2Targets = useCombat2Targets(combat2.actionsReady && !ownership.locked ? activeCombat2Presentation : null);
   const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;
@@ -981,17 +981,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       enabled: combat2BlocksLegacy,
       sessionReady: combat2.actionsReady && !ownership.locked,
       ability: ability ?? null,
-      targetId: targetId ?? null,
-      livingCreatureIds: combat2BlocksLegacy ? combat2Targets.livingIds : rosterActionable
-        ? new Set(creatures.filter((creature) => creature.is_alive).map((creature) => creature.id))
-        : null,
+      resolveTarget: combat2Targets.resolve,
       reservedBuffs: combat2BlocksLegacy
         ? Object.fromEntries((activeCombat2Presentation?.characterEffects ?? []).filter(e => e.isReservation).map(e => [e.abilityKey ?? e.kind, {}]))
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
       legacy: () => handleUseAbility(abilityIndex, targetId),
       submit: combat2.intents.submit,
       diagnose: (message) => {
-        if (combat2BlocksLegacy) setCombat2Diagnostic('Combat2 action unavailable or refused. No legacy action was executed.');
+        if (combat2BlocksLegacy) setCombat2Diagnostic(message);
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
@@ -1463,6 +1460,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
+              authoritativeTargetSelection={combat2BlocksLegacy}
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
               authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
