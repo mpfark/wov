@@ -609,7 +609,12 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
     const params = readMitigationParams(spec.config);
-    const magnitude = resolveAmount(ctx, spec, 'mitigation', null) ?? 0;
+    // Percent effects store a fraction, not integer damage. Preserve the
+    // authored evaluator's precision until the incoming-damage pipeline rounds
+    // the reduction. Flat mitigation keeps its existing amount semantics.
+    const magnitude = params.mode === 'percent' && spec.amountCalc
+      ? Math.max(0, evaluateCalc(spec.amountCalc, calcInputs(ctx, spec, 'mitigation', null)))
+      : resolveAmount(ctx, spec, 'mitigation', null) ?? 0;
     const target = spec.targetType === 'ally' && ctx.ally ? ctx.ally : ctx.actor;
     outcome.effects.push(
       buffEffect(ctx, spec, 'mitigation', target.character_id, magnitude, {
