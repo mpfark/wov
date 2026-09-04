@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_COMBAT2_CLIENT_ENABLED?: string;
+  readonly VITE_COMBAT2_TEST_CHARACTER_ID?: string;
+  readonly VITE_COMBAT2_TEST_NODE_ID?: string;
 }
 
 interface ImportMeta {
