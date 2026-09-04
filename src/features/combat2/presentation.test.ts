@@ -6,11 +6,104 @@ import type { Combat2DeliverySessionState } from './useCombat2DeliverySession';
 import { buildCombat2Presentation, Combat2PresentationError } from './presentation';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from './presentation-selectors';
 import { decodeCombat2Intent } from './intent';
+import { combat2AbilityLabel, combat2FleeCommandRefusal } from './event-message';
+import type { Combat2SafeEvent } from './delivery';
+import { parseCommand } from '@/features/chat/utils/commandParser';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import EventLogLine from '@/features/combat/components/EventLogLine';
 
 const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
 const CREATURE = 'cccccccc-0000-4000-8000-000000000001';
 const FIGHTER = 'dddddddd-0000-4000-8000-000000000001';
+
+const self = { type: 'character' as const, id: CHARACTER, name: 'Hero' };
+const wolf = { type: 'creature' as const, id: CREATURE, name: 'Wolf' };
+
+function messages(events: Combat2SafeEvent[]) {
+  const state = delivery();
+  state.batches[0].events = events.map((event, i) => ({ seq: i + 1, ...event }));
+  return buildCombat2Presentation(state, 'warrior');
+}
+
+describe('safe delivered Combat2 message wording', () => {
+  it.each([
+    [{ kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, hitQuality: 'miss' }, 'Your Power Strike misses Wolf.'],
+    [{ kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, outcomeReason: 'critical_miss' }, 'Your Power Strike misses Wolf (critical miss).'],
+    [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0, hitQuality: 'miss' }, 'Wolf misses you.'],
+    [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0 }, 'Wolf deals no damage to you.'],
+    [{ kind: 'dot_applied', actor: self, target: wolf, abilityKey: 'rend', amount: 6 }, 'You apply Rend to Wolf.'],
+    [{ kind: 'effect_pulse', target: wolf, abilityKey: 'rend', amount: 6, meta: { effectKind: 'dot' } }, 'Rend deals 6 damage to Wolf.'],
+    [{ kind: 'effect_expired', abilityKey: 'rend' }, 'Rend expires.'],
+    [{ kind: 'effect_expired' }, 'Effect expires.'],
+    [{ kind: 'heal', actor: self, target: self, abilityKey: 'second_wind', amount: 32 }, 'You use Second Wind on yourself (up to 32 healing).'],
+    [{ kind: 'effect_pulse', target: self, abilityKey: 'second_wind', amount: 10, meta: { healing: true } }, 'Second Wind restores 10 HP to you.'],
+  ] as [Combat2SafeEvent, string][])('formats %j without inventing outcomes', (event, expected) => {
+    expect(messages([event]).events[0].message).toBe(expected);
+  });
+
+  it('uses ids rather than names for ownership and class-scoped static labels', () => {
+    expect(combat2AbilityLabel('battle_cry', 'warrior')).toBe('Battle Cry');
+    expect(combat2AbilityLabel('future_spell', 'warrior')).toBe('Future Spell');
+    expect(combat2AbilityLabel(CHARACTER)).toBe('Effect');
+    const event: Combat2SafeEvent = { kind: 'attack', actor: { ...self, id: 'other' }, target: wolf, abilityKey: 'power_strike', amount: 2 };
+    expect(messages([event]).events[0].message).toBe("Hero's Power Strike deals 2 damage to Wolf.");
+  });
+
+  it('shows explicit reductions without summing overlapping metadata or reconstructing raw damage', () => {
+    const text = messages([{ kind: 'creature_attack', actor: wolf, target: self, amount: 3,
+      meta: { percentMitigated: 2, shieldBonusApplied: 1, flatMitigated: 4, blocked: 5, absorbed: 6 } }]).events[0].message;
+    expect(text).toBe('Wolf deals 3 damage to you (2 percentage reduction; 4 flat reduction; 5 blocked; 6 absorbed).');
+  });
+
+  it('labels reservation and suppresses only the same actor/ability companion buff', () => {
+    const model = messages([
+      { kind: 'stance_activated', actor: self, abilityKey: 'battle_cry', amount: 60, meta: { reservePct: 0.15 } },
+      { kind: 'buff_applied', actor: self, abilityKey: 'battle_cry', amount: 0 },
+      { kind: 'buff_applied', actor: self, abilityKey: 'force_shield', amount: 26 },
+    ]);
+    expect(model.events.map(e => e.message)).toEqual(['You activate Battle Cry, reserving 60 CP.', 'You use Force Shield.']);
+    expect(model.events.map(e => e.id)).toEqual(['batch-1:1', 'batch-1:3']);
+  });
+
+  it('does not append bare amounts or internal identifiers in the actual log renderer', () => {
+    const model = messages([
+      { kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, hitQuality: 'miss' },
+      { kind: 'dot_applied', actor: self, target: wolf, abilityKey: 'rend', amount: 6 },
+      { kind: 'pending_event', actorCharacterId: CHARACTER, meta: { text: FIGHTER } },
+    ]);
+    const html = model.events.map(event => renderToStaticMarkup(createElement(EventLogLine, { event }))).join('');
+    expect(html).toContain('Your Power Strike misses Wolf.');
+    expect(html).toContain('You apply Rend to Wolf.');
+    expect(html).not.toMatch(/\[0\]|\[6\]|pending.event|aaaaaaaa|dddddddd/);
+  });
+
+  it('omits internal rows without a cursor gap and deduplicates repeated presentation', () => {
+    const model = messages([
+      { kind: 'pending_event', eventType: 'fighter_exit_requested', actorCharacterId: CHARACTER,
+        meta: { text: `pending_event ${FIGHTER}`, payload: { secret: 'internal' } } },
+      { kind: 'creature_attack', actor: wolf, target: self, amount: 0 },
+    ]);
+    expect(model.lastAppliedTick).toBe(1);
+    expect(model.events.map(e => e.id)).toEqual(['batch-1:2']);
+    expect(selectCombat2Events(true, model, model.events)).toHaveLength(1);
+    expect(model.events[0].message).not.toMatch(/pending_event|internal|payload|aaaa|dddd/);
+    expect(messages([{ kind: 'unrecognized_event', meta: { text: `payload ${CHARACTER}` } }]).events[0].message)
+      .toBe('Combat state updated.');
+  });
+
+  it('keeps typed flee refusal and committed completion distinct, with legacy parsing unchanged', () => {
+    expect(parseCommand('flee')).toBeNull(); // Prior input fell through to ordinary sendSay speech.
+    expect(combat2FleeCommandRefusal(false, 'flee')).toBeNull();
+    expect(combat2FleeCommandRefusal(true, 'flee')).toContain('No flee request was sent');
+    expect(combat2FleeCommandRefusal(true, '/say flee')).toBeNull();
+    expect(messages([{ kind: 'pending_event', eventType: 'fighter_exit_requested' }]).events).toEqual([]);
+    expect(messages([{ kind: 'fighter_exit_failed', actor: self, outcomeReason: 'dead' }]).events[0].message)
+      .toBe('You cannot flee: defeated before escape.');
+    expect(messages([{ kind: 'fighter_fled', actor: self }]).events[0].message).toBe('You flee.');
+  });
+});
 
 function pendingAction(overrides: Record<string, unknown> = {}) {
   return {

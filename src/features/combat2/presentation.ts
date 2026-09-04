@@ -1,6 +1,7 @@
 import type { GameLogEvent, LogActor, LogEventType } from '@/features/combat/events/log-event';
 import type { Combat2DeliverySessionState } from './useCombat2DeliverySession';
-import type { Combat2SafeEvent, Combat2TickBatch } from './delivery';
+import type { Combat2TickBatch } from './delivery';
+import { formatCombat2Event } from './event-message';
 
 export interface Combat2PresentationCharacter {
   id: string;
@@ -238,44 +239,38 @@ const EVENT_TYPES: Record<string, LogEventType> = {
   buff_applied: 'buff', aura: 'ability', aura_started: 'buff', reservation: 'buff',
   stance_activated: 'buff', stance_dropped: 'buff', stack: 'debuff', stack_applied: 'debuff',
   effect_pulse: 'dot_tick', effect_expired: 'debuff', action_rejected: 'error',
+  dot_applied: 'debuff', debuff_applied: 'debuff', fighter_fled: 'positioning', fighter_exit_failed: 'error',
   boss_telegraph: 'boss_telegraph', boss_cast_evaded: 'mitigation',
   creature_died: 'kill', character_died: 'death', multi_attack_summary: 'ability',
 };
 
-function eventMessage(event: Combat2SafeEvent): string {
-  const text = record(event.meta)?.text;
-  if (typeof text === 'string' && text.trim()) return text.trim();
-  const actorName = event.actor?.name ?? (event.actor?.type === 'creature' ? 'Creature' : 'You');
-  const targetName = event.target?.name;
-  const abilityLabel = typeof event.abilityKey === 'string'
-    ? event.abilityKey.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-    : 'cast';
-  if (event.kind === 'boss_cast_evaded') {
-    return event.outcomeReason === 'no_target'
-      ? `${actorName}'s ${abilityLabel} lands on empty ground.`
-      : `${actorName}'s ${abilityLabel} is evaded.`;
-  }
-  const label = event.kind.replaceAll('_', ' ');
-  return `${actorName}: ${label}${targetName ? ` → ${targetName}` : ''}${typeof event.amount === 'number' ? ` (${event.amount})` : ''}.`;
-}
-
-function presentEvents(batches: readonly Combat2TickBatch[]): GameLogEvent[] {
+function presentEvents(batches: readonly Combat2TickBatch[], characterId: string, classKey?: string): GameLogEvent[] {
   const events = new Map<string, GameLogEvent>();
   for (const batch of [...batches].sort((a, b) => a.tick - b.tick)) {
     batch.events.forEach((event, index) => {
       if (!event || typeof event.kind !== 'string' || !event.kind) return;
       const id = `${batch.id}:${typeof event.seq === 'number' ? event.seq : index}`;
       if (events.has(id)) return;
+      const message = formatCombat2Event(event, { characterId, classKey,
+        stanceActivated: batch.events.some(other => other.kind === 'stance_activated'
+          && other.abilityKey === event.abilityKey && !!event.actor?.id && other.actor?.id === event.actor.id),
+      });
+      if (message === null) return;
       const type = EVENT_TYPES[event.kind] ?? 'unknown';
       events.set(id, {
         v: 1,
         id,
         ts: Number.isFinite(Date.parse(batch.createdAt)) ? Date.parse(batch.createdAt) : batch.tick,
         type,
-        message: eventMessage(event),
+        message,
         source: actor(event.actor),
         target: actor(event.target),
-        ...(typeof event.amount === 'number' ? { amount: event.amount } : {}),
+        // The shared renderer appends any amount absent from the prose. Do not
+        // turn a miss/application-only message back into an unexplained [0]/[6].
+        ...(typeof event.amount === 'number' && event.amount > 0
+          && ['attack', 'creature_attack', 'effect_pulse', 'heal', 'hp_transfer', 'stance_activated'].includes(event.kind)
+          && event.hitQuality !== 'miss' && !['missed', 'critical_miss'].includes(event.outcomeReason ?? '')
+          ? { amount: event.amount } : {}),
         ...(typeof event.abilityKey === 'string' ? { abilityKey: event.abilityKey } : {}),
         ...(type === 'unknown' ? { severity: 'notable' as const } : {}),
       });
@@ -324,7 +319,7 @@ function presentRewardClaims(claims: readonly Combat2PresentationRewardClaim[]):
   }));
 }
 
-export function buildCombat2Presentation(delivery: Combat2DeliverySessionState): Combat2PresentationModel {
+export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, classKey?: string): Combat2PresentationModel {
   const sync = delivery.snapshot;
   if (!sync) throw new Combat2PresentationError('combat2_sync has no authoritative snapshot');
   const encounter = record(sync.encounter);
@@ -435,7 +430,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState):
     telegraphs,
     telegraphsByCreatureLife,
     rewardClaims,
-    events: [...presentEvents(ordered), ...presentRewardClaims(rewardClaims)],
+    events: [...presentEvents(ordered, characterId, classKey), ...presentRewardClaims(rewardClaims)],
     lastAppliedTick: delivery.lastAppliedTick,
   };
 }

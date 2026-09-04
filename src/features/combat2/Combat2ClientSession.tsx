@@ -10,6 +10,7 @@ export interface Combat2ClientSessionProps {
   inputLocked?: boolean;
   enabled: boolean;
   characterId: string | null;
+  classKey?: string;
   nodeId: string | null;
   hasLivingCreatures: boolean | null;
 }
@@ -33,7 +34,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     encounterId,
     preserveOnDetach: true,
   });
-  const presentation = useCombat2Presentation(enteredSessionKey, delivery);
+  const presentation = useCombat2Presentation(enteredSessionKey, delivery, props.classKey);
   const model = presentation.model;
   const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
   const pendingFlee = !!enteredSessionKey && (pendingFleeKey === enteredSessionKey || model?.fighterExitState === 'pending');

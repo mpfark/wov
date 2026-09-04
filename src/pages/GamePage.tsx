@@ -85,6 +85,7 @@ import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
+import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -225,6 +226,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     controlled: true,
     inputLocked: ownership.locked,
     characterId: ownership.origin.characterId,
+    classKey: character.class,
     nodeId: ownership.origin.nodeId,
     hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
   });
@@ -1126,6 +1128,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     }
 
     // MUD-style command parsing
+    const fleeRefusal = combat2FleeCommandRefusal(combat2BlocksLegacy, text);
+    if (fleeRefusal) {
+      addLocalLogEvent(buildErrorEvent(fleeRefusal));
+      return;
+    }
     const cmd = parseCommand(text);
     if (cmd) {
       switch (cmd.type) {
@@ -1191,7 +1198,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     // Fallthrough to chat
     const sayText = text.replace(/^\/say\s+/i, '');
     sendSay(sayText);
-  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea]);
+  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea, combat2BlocksLegacy]);
 
   const handleOpenChat = useCallback(() => {
     chatInputRef.current?.focus();

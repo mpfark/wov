@@ -10,6 +10,7 @@ import {
 export function useCombat2Presentation(
   sessionKey: string | null,
   delivery: Combat2DeliverySessionState,
+  classKey?: string,
 ): Combat2PresentationState {
   const retained = useRef<{ key: string | null; model: Combat2PresentationModel | null }>({ key: null, model: null });
   if (retained.current.key !== sessionKey) retained.current = { key: sessionKey, model: null };
@@ -17,7 +18,7 @@ export function useCombat2Presentation(
   let localError: string | null = null;
   if (sessionKey && delivery.snapshot) {
     try {
-      const candidate = buildCombat2Presentation(delivery);
+      const candidate = buildCombat2Presentation(delivery, classKey);
       const [characterId, , encounterId] = sessionKey.split(':');
       if (candidate.character.id !== characterId || candidate.encounterId !== encounterId) {
         throw new Error('combat2_sync identity does not match the active session');
