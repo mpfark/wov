@@ -64,10 +64,8 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   if (result.status === 'stale') return;
   if (result.status === 'local_refusal' && result.classification === 'in_flight') return;
   if (result.status === 'accepted') { options.diagnose(null); return; }
-  if (result.status !== 'accepted') {
-    const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
-    options.diagnose(`Combat2 refused ${ability.label}${detail}`);
-  }
+  const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
+  options.diagnose(`Combat2 refused ${ability.label}${detail}`);
 }
 
 export async function routeCombat2BasicAttack(options: Omit<RouteCombat2ActionOptions, 'ability' | 'reservedBuffs'>): Promise<void> {

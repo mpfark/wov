@@ -42,7 +42,7 @@ describe('controlled input and display boundary', () => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options), { wrapper: StrictMode });
     const legacy = vi.fn();
     const base = { enabled: true, sessionReady: result.current.actionsReady,
-      resolveTarget: () => ({ ok: true as const, target: { encounterId: E, id: 'life-1', creatureId: T, spawnSeq: 1 } }),
+      resolveTarget: () => ({ ok: true as const, target: { encounterId: E, id: 'life-1', creatureId: T, spawnSeq: 1, name: 'Test creature' } }),
       reservedBuffs: {}, legacy, submit: result.current.intents.submit, diagnose: vi.fn() };
     await act(async () => {
       await routeCombat2Action({ ...base, ability });
