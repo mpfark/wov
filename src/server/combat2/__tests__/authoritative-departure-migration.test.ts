@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SQL = readFileSync('supabase/migrations/20260905150000_combat2_authoritative_adjacent_departure.sql', 'utf8').replaceAll('\r\n', '\n');
+const SQL = readFileSync('supabase/migrations/20260905194227_fbe2e172-650d-43c2-a3d2-b6dff0c3210a.sql', 'utf8').replaceAll('\r\n', '\n');
 
 describe('authoritative adjacent departure migration contract', () => {
   it('installs the narrow authenticated security-definer RPC', () => {
