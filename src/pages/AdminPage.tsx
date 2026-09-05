@@ -35,6 +35,7 @@ import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
 import BatchNodeEditPanel from '@/components/admin/BatchNodeEditPanel';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import Combat2TestArenaPanel from '@/components/admin/Combat2TestArenaPanel';
 
 interface AdminPageProps {
   isValar: boolean;
@@ -424,6 +425,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         );
       case 'users':
         return <UserManager isValar={isValar} />;
+      case 'combat2-test-arena':
+        return <Combat2TestArenaPanel />;
       case 'issues':
         return <IssueReportManager />;
       case 'marketplace':

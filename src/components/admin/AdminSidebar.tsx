@@ -29,6 +29,7 @@ import {
   Store,
   Wrench,
   Flame,
+  ShieldCheck,
 } from 'lucide-react';
 
 
@@ -74,6 +75,7 @@ const NAV_GROUPS = [
   {
     label: 'Operations',
     items: [
+      { key: 'combat2-test-arena', label: 'Combat2 Test Arena', icon: ShieldCheck },
       { key: 'tools', label: 'Tools', icon: Wrench },
       { key: 'issues', label: 'Issues', icon: Bug },
       { key: 'marketplace', label: 'Marketplace', icon: Store },
