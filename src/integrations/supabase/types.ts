@@ -4454,6 +4454,18 @@ export type Database = {
         }
         Returns: Json
       }
+      combat_intent_without_basic_attack: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _encounter_id: string
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
       combat_mode_is_open: { Args: never; Returns: boolean }
       combat_soak_access_check: {
         Args: { _character_id: string; _node_id: string }
@@ -4485,6 +4497,15 @@ export type Database = {
         Returns: undefined
       }
       combat2_sync: {
+        Args: {
+          _after_tick?: number
+          _character_id: string
+          _encounter_id: string
+          _limit?: number
+        }
+        Returns: Json
+      }
+      combat2_sync_without_autoattack: {
         Args: {
           _after_tick?: number
           _character_id: string
