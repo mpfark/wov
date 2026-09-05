@@ -689,4 +689,68 @@ describe('combat2 resolver', () => {
     expect(out.events.filter((event) => event.kind === 'creature_attack')).toHaveLength(1);
     expect(out.creatures).toContainEqual(expect.objectContaining({ tank_fighter_id: null }));
   });
+
+  const autoattack = (characterId = 'ch-1', target = creature()): SnapshotEffect => ({
+    id: `auto-${characterId}`, kind: 'autoattack', effect_type: 'basic_attack', ability_key: null,
+    target_character_id: characterId, target_creature_id: target.creature_id,
+    source_character_id: characterId, source_creature_id: null, stacks: 1, magnitude: 0,
+    config: { node_creature_id: target.id, spawn_seq: target.spawn_seq }, expires_at: null,
+    next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: false,
+  });
+
+  it('resolves one persisted basic swing per eligible tick with zero CP cost', () => {
+    const input = snapshot({ effects: [autoattack()] });
+    const out = resolveNodeTick(input, { abilities });
+    expect(out.events.filter(e => e.kind === 'attack' && e.meta?.basicAttack === true)).toHaveLength(1);
+    expect(out.characters.find(c => c.id === 'ch-1')?.cp).toBe(50);
+  });
+
+  it('a queued ability, heal, or stance owns the slot and basic attack resumes without browser input', () => {
+    for (const intent of [abilityIntent('power', 1, 'ch-1', 'power_strike', 'cr-1'),
+      { ...abilityIntent('invalid', 1, 'ch-1', 'missing', 'cr-1') }]) {
+      const occupied = resolveNodeTick(snapshot({ effects: [autoattack()], intents: [intent] }), { abilities });
+      expect(occupied.events.filter(e => e.meta?.basicAttack === true)).toHaveLength(0);
+    }
+    const resumed = resolveNodeTick(snapshot({ effects: [autoattack()], intents: [] }), { abilities });
+    expect(resumed.events.filter(e => e.meta?.basicAttack === true)).toHaveLength(1);
+  });
+
+  it('a basic start engages an idle spawn and swings once, while old spawn binding is deleted', () => {
+    const idle = creature({ engaged: false });
+    const start: SnapshotIntent = { id: 'basic', seq: 1, character_id: 'ch-1', intent_kind: 'basic_attack',
+      ability_key: null, stance_key: null, target_creature_id: idle.creature_id };
+    const out = resolveNodeTick(snapshot({ creatures: [idle], effects: [autoattack('ch-1', idle)], intents: [start] }), { abilities });
+    expect(out.events.some(e => e.kind === 'creature_engaged')).toBe(true);
+    expect(out.events.filter(e => e.meta?.basicAttack === true)).toHaveLength(1);
+    const stale = autoattack('ch-1', idle); stale.config.spawn_seq = idle.spawn_seq - 1;
+    const refused = resolveNodeTick(snapshot({ creatures: [idle], effects: [stale] }), { abilities });
+    expect(refused.effects_delete).toContain(stale.id);
+    expect(refused.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+  });
+
+  it('two fighters swing independently in stable order and absent/dead fighters do not swing', () => {
+    const second = fighter({ id: 'f-ch-2', character_id: 'ch-2', name: 'Second' });
+    const out = resolveNodeTick(snapshot({ fighters: [second, fighter({ character_id: 'ch-1' })],
+      effects: [autoattack('ch-2'), autoattack('ch-1')],
+      tank_candidates: [{ fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 1 }] }), { abilities });
+    expect(out.events.filter(e => e.meta?.basicAttack === true).map(e => e.actor?.id)).toEqual(['ch-1', 'ch-2']);
+    const blocked = resolveNodeTick(snapshot({ fighters: [fighter({ character_id: 'ch-1', present: false })], effects: [autoattack()] }), { abilities });
+    expect(blocked.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+  });
+
+  it('a basic swing participates, kills, and proposes its exactly-once spawn reward', () => {
+    let out: ReturnType<typeof resolveNodeTick> | null = null;
+    for (let seed = 0; seed < 100 && !out?.rewards.length; seed++) {
+      const input = snapshot({ creatures: [creature({ hp: 1, max_hp: 1, ac: -100 })], effects: [autoattack()] });
+      input.encounter.id = `basic-kill-${seed}`;
+      const candidate = resolveNodeTick(input, { abilities });
+      if (candidate.rewards.length) out = candidate;
+    }
+    expect(out).not.toBeNull();
+    expect(out!.events.filter(e => e.kind === 'creature_died')).toHaveLength(1);
+    expect(out!.participation).toContainEqual(expect.objectContaining({ character_id: 'ch-1', spawn_seq: 3 }));
+    expect(out!.rewards).toHaveLength(1);
+    expect(out!.rewards[0]).toMatchObject({ character_id: 'ch-1', spawn_seq: 3, is_killer: true });
+    expect(out!.effects_delete).toContain('auto-ch-1');
+  });
 });

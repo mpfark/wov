@@ -168,7 +168,7 @@ export interface SnapshotEffect {
 }
 
 /** Queued intent kinds, mirroring `node_intent_kind_chk`. */
-export type IntentKind = 'ability' | 'stance_activate' | 'stance_drop';
+export type IntentKind = 'ability' | 'stance_activate' | 'stance_drop' | 'basic_attack';
 
 export interface SnapshotIntent {
   id: string;

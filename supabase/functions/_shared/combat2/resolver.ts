@@ -14,6 +14,7 @@ import { applyMitigationPipeline, readMitigationParams } from './mitigation.ts';
 import { TickRandom } from './rng.ts';
 import {
   MECHANIC_HANDLERS,
+  resolveBasicAttack,
   type AbilitySpec,
   type MechanicContext,
   type MechanicOutcome,
@@ -133,6 +134,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const proposedQualified = new Set<string>();
   const reactedThisTick = new Set<string>();
   const skipOrdinaryThisTick = new Set<string>();
+  const occupiedActionSlots = new Set(snapshot.intents.map(intent => intent.character_id));
   const qualify = (
     creature: WorkingCreature,
     characterId: string,
@@ -310,6 +312,39 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       continue;
     }
 
+    if (intent.intent_kind === 'basic_attack') {
+      const state = snapshot.effects.find(e => e.kind === 'autoattack' && e.target_character_id === actor.fighter.character_id);
+      const target = state?.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
+      if (!state || !target || target.hp <= 0 || state.config?.node_creature_id !== target.row.id
+          || state.config?.spawn_seq !== target.row.spawn_seq) {
+        emit({ kind: 'action_rejected', outcomeReason: 'invalid_basic_attack_target' });
+        if (state) proposed.effects_delete.push(state.id);
+        continue;
+      }
+      if (!target.engaged) {
+        target.engaged = true; target.dirty = true; skipOrdinaryThisTick.add(target.row.id);
+        emit({ kind: 'creature_engaged', actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+          target: { type: 'creature', id: target.row.creature_id, name: target.row.name }, meta: { nodeCreatureId: target.row.id, spawnSeq: target.row.spawn_seq } });
+        for (const present of snapshot.fighters
+          .filter(fighter => chars.get(fighter.character_id)?.present === true && livingCharacters().has(fighter.character_id))
+          .sort((a, b) => a.id.localeCompare(b.id))) {
+          if (target.hp <= 0) break;
+          applyCreatureDamage(target, present, null, 0, 'engagement_opening', intent.id);
+        }
+        if (actor.hp <= 0) {
+          emit({ kind: 'action_rejected', outcomeReason: 'actor_died_during_engagement' });
+          continue;
+        }
+      }
+      const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row, weaponProgression: deps.weaponProgression });
+      if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
+      else {
+        qualify(target, actor.fighter.character_id, 'damage');
+        if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+        for (const event of outcome.events) emit(event);
+      }
+      continue;
+    }
     const spec = intentKey ? specFor(actor.fighter.class, intentKey) : undefined;
     if (!spec) {
       emit({ kind: 'action_rejected', outcomeReason: 'unknown_ability', abilityKey: intentKey });
@@ -555,6 +590,24 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     for (const event of outcome.events) emit(event);
   }
 
+
+  // Server-owned continued attacks: exactly one slot, only when no accepted intent occupied it.
+  for (const actor of [...chars.values()].sort((a, b) => a.fighter.id.localeCompare(b.fighter.id))) {
+    if (occupiedActionSlots.has(actor.fighter.character_id) || !actor.present || actor.hp <= 0) continue;
+    const state = snapshot.effects.find(e => e.kind === 'autoattack' && e.target_character_id === actor.fighter.character_id);
+    if (!state) continue;
+    const target = state.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
+    if (!target || target.hp <= 0 || state.config?.node_creature_id !== target.row.id || state.config?.spawn_seq !== target.row.spawn_seq) {
+      proposed.effects_delete.push(state.id); continue;
+    }
+    const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row, weaponProgression: deps.weaponProgression });
+    if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
+    else {
+      qualify(target, actor.fighter.character_id, 'damage');
+      if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+      for (const event of outcome.events) emit(event);
+    }
+  }
 
   // ── 3. creature actions ───────────────────────────────────────
   const currentTank = (): SnapshotFighter | null => {
@@ -892,6 +945,15 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     }
   }
 
+  for (const state of snapshot.effects.filter(e => e.kind === 'autoattack')) {
+    const actor = state.target_character_id ? chars.get(state.target_character_id) : undefined;
+    const target = state.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
+    if (!actor || !actor.present || actor.hp <= 0 || !target || target.hp <= 0
+        || state.config?.node_creature_id !== target.row.id || state.config?.spawn_seq !== target.row.spawn_seq) {
+      if (!proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
+    }
+  }
+
   for (const character of chars.values()) {
     if (!character.dirty) continue;
     proposed.characters.push({
@@ -915,7 +977,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   // ── 5. encounter lifecycle ────────────────────────────────────
   const anythingPending =
     [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive) ||
-    snapshot.effects.some((e) => !expiredIds.has(e.id) && !e.is_reservation);
+    snapshot.effects.some((e) => e.kind !== 'autoattack' && !expiredIds.has(e.id) && !e.is_reservation);
   if (!anythingPending) proposed.status = 'ended';
 
   return proposed;

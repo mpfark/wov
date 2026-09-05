@@ -41,6 +41,7 @@ export interface Combat2SyncResult {
   creatures: Array<Record<string, unknown>>;
   effects: Array<Record<string, unknown>>;
   rewardClaims: Array<Record<string, unknown>>;
+  autoattack?: Record<string, unknown> | null;
   batches: Combat2TickBatch[];
 }
 

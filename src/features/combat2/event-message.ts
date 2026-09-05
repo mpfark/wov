@@ -21,7 +21,8 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
   const subject = own ? 'You' : event.actor?.name || (event.actor?.type === 'creature' ? 'The creature' : 'Someone');
   const target = ownTarget ? 'you' : event.target?.name || (event.target?.type === 'character' ? 'the character' : 'the creature');
   const label = combat2AbilityLabel(event.abilityKey ?? event.meta?.effectType, own ? context.classKey : undefined);
-  const action = event.abilityKey ? (own ? `Your ${label}` : event.actor ? `${subject}'s ${label}` : label)
+  const action = event.meta?.basicAttack === true ? subject
+    : event.abilityKey ? (own ? `Your ${label}` : event.actor ? `${subject}'s ${label}` : label)
     : !event.actor && event.kind === 'effect_pulse' ? 'An effect' : subject;
   const amount = typeof event.amount === 'number' && Number.isFinite(event.amount) ? event.amount : null;
   const meta = event.meta ?? {};

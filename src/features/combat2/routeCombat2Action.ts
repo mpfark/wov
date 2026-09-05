@@ -64,3 +64,15 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
     options.diagnose(`Combat2 refused ${ability.label}${detail}`);
   }
 }
+
+export async function routeCombat2BasicAttack(options: Omit<RouteCombat2ActionOptions, 'ability' | 'reservedBuffs'>): Promise<void> {
+  if (!options.enabled) { await options.legacy(); return; }
+  if (!options.sessionReady) { options.diagnose('Combat2 is not ready to accept an attack.'); return; }
+  const resolved = options.resolveTarget();
+  if (resolved.ok === false) { options.diagnose(resolved.reason); return; }
+  const result = await options.submit({ kind: 'basic_attack', abilityKey: null, stanceKey: null,
+    targetCreatureId: resolved.target.creatureId });
+  if (result.status === 'stale') return;
+  if (result.status === 'accepted') { options.diagnose('Basic attack active against the selected target.'); return; }
+  options.diagnose(`Combat2 attack refused${'reason' in result && result.reason ? `: ${result.reason}` : ''}`);
+}

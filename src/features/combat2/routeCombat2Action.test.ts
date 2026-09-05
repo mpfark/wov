@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ClassAbility } from '@/features/combat/utils/class-abilities';
-import { routeCombat2Action } from './routeCombat2Action';
+import { routeCombat2Action, routeCombat2BasicAttack } from './routeCombat2Action';
 
 const CREATURE = '33333333-3333-4333-8333-333333333333';
 const accepted = { status: 'accepted' as const, classification: 'queued' as const, intentId: 'id', seq: 1, intentStatus: null };
@@ -26,6 +26,12 @@ function harness(overrides: Partial<Parameters<typeof routeCombat2Action>[0]> = 
 }
 
 describe('Combat2 deliberate action routing', () => {
+  it('routes a native basic attack without an ability key or legacy fallback', async () => {
+    const h = harness();
+    await routeCombat2BasicAttack(h.options);
+    expect(h.submit).toHaveBeenCalledWith({ kind: 'basic_attack', abilityKey: null, stanceKey: null, targetCreatureId: CREATURE });
+    expect(h.legacy).not.toHaveBeenCalled();
+  });
   it('preserves the legacy path and performs no Combat2 submission when disabled', async () => {
     const h = harness({ enabled: false });
     await routeCombat2Action(h.options);

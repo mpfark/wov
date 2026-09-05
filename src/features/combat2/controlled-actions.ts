@@ -1,12 +1,6 @@
 import { useMemo } from 'react';
 
-export const BASIC_ATTACK_UNAVAILABLE = 'Basic attack is not connected to Combat2 yet.';
 export const MOVEMENT_UNAVAILABLE = 'Movement is disabled for this controlled Combat2 test.';
-
-export function refuseControlledBasicAttack(owned: boolean, diagnose: (message: string) => void, legacy: () => void) {
-  if (owned) diagnose(BASIC_ATTACK_UNAVAILABLE);
-  else legacy();
-}
 
 export const COMBAT_RESOURCE_FIELDS = new Set([
   'hp', 'cp', 'mp', 'max_hp', 'max_cp', 'max_mp', 'gold', 'xp', 'level', 'current_node_id',

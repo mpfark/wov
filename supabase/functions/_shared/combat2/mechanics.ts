@@ -13,7 +13,7 @@
  */
 
 import { getStatModifier } from '../formulas/stats.ts';
-import { getClassCritRange } from '../formulas/classes.ts';
+import { getClassCritRange, getWeaponAffinityBonus } from '../formulas/classes.ts';
 import {
   evaluateCalc,
   type AbilityCalc,
@@ -293,6 +293,7 @@ export function decideAttack(
   targetAc: number,
   stream: string,
   critEdge = 0,
+  extraHitBonus = 0,
 ): AttackDecision {
   const accStat = spec.accuracyStat;
   const accValue = ctx.actor[accStat as keyof SnapshotFighter] as number;
@@ -304,7 +305,7 @@ export function decideAttack(
   const roll = ctx.rng.d20(stream, ctx.actor.character_id, spec.abilityKey, ctx.tick);
   const critRange =
     getClassCritRange(ctx.actor.class ?? '') - getDexCritBonus(ctx.actor.dex) - critEdge;
-  const total = roll + bonus;
+  const total = roll + bonus + extraHitBonus;
   const effectiveAc = Math.max(0, targetAc - (ctx.creatureAcReduction ?? 0));
   const margin = total - effectiveAc;
   const isNat1 = roll === 1;
@@ -394,6 +395,43 @@ function offensiveHit(
       weaponDie: weapon.die,
     },
   });
+  return outcome;
+}
+
+/** Canonical zero-cost basic weapon swing; no authored ability identity. */
+export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
+  const outcome = emptyOutcome();
+  const creature = ctx.creature;
+  if (!creature) { outcome.rejected = 'no_target'; return outcome; }
+  const weapon = resolveMainHandDie(ctx.actor.equipment, ctx.actor.level, null, ctx.weaponProgression);
+  if (weapon.kind === 'incomplete') {
+    outcome.rejected = `equipment_contract_incomplete:${weapon.missing.join(',')}`;
+    return outcome;
+  }
+  const spec = {
+    abilityKey: 'basic_attack', accuracyStat: 'dex', classKey: '', classAbilityKey: '', label: 'Basic attack',
+  } as AbilitySpec;
+  const main = ctx.actor.equipment.find(row => row.slot === 'main_hand');
+  const affinity = getWeaponAffinityBonus(ctx.actor.class ?? '', main?.weapon_tag ?? null);
+  const decision = decideAttack(ctx, spec, creature.ac, 'basic_attack:hit', 0, affinity.hitBonus);
+  if (!decision.hit) {
+    outcome.missed = true;
+    outcome.events.push({ kind: 'attack', actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+      target: { type: 'creature', id: creature.creature_id, name: creature.name }, hitQuality: 'miss',
+      outcomeReason: decision.isNat1 ? 'critical_miss' : 'missed', amount: 0, meta: { basicAttack: true } });
+    return outcome;
+  }
+  const rolled = ctx.rng.roll('basic_attack:dmg', weapon.die, ctx.actor.character_id, creature.creature_id, ctx.tick);
+  const raw = Math.max(1, Math.floor((rolled + getStatModifier(ctx.actor.str)) * affinity.damageMult));
+  const quality = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
+  const normal = Math.max(1, Math.floor(raw * quality));
+  const critBonus = decision.isCrit ? Math.floor(normal * 0.5) : 0;
+  const breakdown = applyMitigationPipeline({ normalDamage: normal, critBonus,
+    amplification: ctx.amplification, gradedCap: gradedCapFor(decision.quality, decision.margin), minimumDamage: 1 });
+  outcome.creatureDamage = breakdown.applied;
+  outcome.events.push({ kind: 'attack', actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
+    target: { type: 'creature', id: creature.creature_id, name: creature.name }, hitQuality: decision.quality,
+    amount: breakdown.applied, meta: { basicAttack: true, isCrit: decision.isCrit, damageType: 'physical', weaponDie: weapon.die } });
   return outcome;
 }
 

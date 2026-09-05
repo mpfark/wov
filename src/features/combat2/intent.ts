@@ -1,4 +1,4 @@
-export type Combat2IntentKind = 'ability' | 'stance_activate' | 'stance_drop';
+export type Combat2IntentKind = 'ability' | 'stance_activate' | 'stance_drop' | 'basic_attack';
 
 export interface Combat2IntentAction {
   kind: Combat2IntentKind;

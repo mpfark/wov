@@ -80,10 +80,10 @@ import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession
 import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID, COMBAT2_TEST_NODE_ID } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
-import { useControlledAction, isCombatMutation, MOVEMENT_UNAVAILABLE, refuseControlledBasicAttack } from '@/features/combat2/controlled-actions';
+import { useControlledAction, isCombatMutation, MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
-import { routeCombat2Action } from '@/features/combat2/routeCombat2Action';
+import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 
@@ -1040,7 +1040,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const handleAttackFirst = useCallback(() => {
     if (!legacyExecution.allowed()) {
-      refuseControlledBasicAttack(true, setCombat2Diagnostic, () => {});
+      void routeCombat2BasicAttack({ enabled: true, sessionReady: combat2.actionsReady && !ownership.locked,
+        resolveTarget: combat2Targets.resolve, legacy: () => {}, submit: combat2.intents.submit,
+        diagnose: setCombat2Diagnostic });
       return;
     }
     if (isDead) return;
@@ -1058,7 +1060,15 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       if (!firstCreature.is_aggressive) emitEngage(firstCreature);
       startCombat(firstCreature.id);
     }
-  }, [isDead, inCombat, creatures, selectedTargetId, startCombat, emitEngage]);
+  }, [isDead, inCombat, creatures, selectedTargetId, startCombat, emitEngage, combat2, ownership.locked, combat2Targets]);
+
+  const handleSelectedBasicAttack = useCallback((id: string) => {
+    if (!combat2BlocksLegacy) { setSelectedTargetId(id); handleAttack(id); return; }
+    combat2Targets.select(id);
+    void routeCombat2BasicAttack({ enabled: true, sessionReady: combat2.actionsReady && !ownership.locked,
+      resolveTarget: () => combat2Targets.resolveId(id), legacy: () => {}, submit: combat2.intents.submit,
+      diagnose: setCombat2Diagnostic });
+  }, [combat2BlocksLegacy, combat2Targets, combat2, ownership.locked, handleAttack, setSelectedTargetId]);
 
   const handleCycleTarget = useCallback(() => {
     if (combat2BlocksLegacy) { if (combat2.actionsReady) combat2Targets.cycle(); return; }
@@ -1453,7 +1463,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               npcs={npcs}
               character={presentedCharacter}
               eventLog={eventLog}
-              onAttack={(id) => refuseControlledBasicAttack(combat2BlocksLegacy, setCombat2Diagnostic, () => { setSelectedTargetId(id); handleAttack(id); })}
+              onAttack={handleSelectedBasicAttack}
               onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
               inCombat={inCombat}

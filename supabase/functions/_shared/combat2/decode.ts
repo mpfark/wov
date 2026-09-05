@@ -218,11 +218,15 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
 
 function decodeIntent(r: Reader, path: string, raw: unknown): SnapshotIntent {
   const o = r.object(path, raw);
+  const kind = r.str(`${path}.intent_kind`, o.intent_kind);
+  if (!['ability', 'stance_activate', 'stance_drop', 'basic_attack'].includes(kind)) {
+    r.errors.push(`${path}.intent_kind: unsupported intent kind`);
+  }
   return {
     id: r.str(`${path}.id`, o.id),
     seq: r.num(`${path}.seq`, o.seq),
     character_id: r.str(`${path}.character_id`, o.character_id),
-    intent_kind: r.str(`${path}.intent_kind`, o.intent_kind) as SnapshotIntent['intent_kind'],
+    intent_kind: kind as SnapshotIntent['intent_kind'],
     ability_key: r.strOrNull(`${path}.ability_key`, o.ability_key),
     stance_key: r.strOrNull(`${path}.stance_key`, o.stance_key),
     target_creature_id: r.strOrNull(`${path}.target_creature_id`, o.target_creature_id),

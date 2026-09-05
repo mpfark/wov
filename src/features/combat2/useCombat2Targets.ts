@@ -16,6 +16,12 @@ export function useCombat2Targets(model: Combat2TargetRoster | null) {
     selectedId: resolved.ok ? resolved.target.creatureId : null,
     livingIds: new Set(living.map(c => c.creatureId)),
     resolve: () => resolveCombat2Target(latest.current.model, latest.current.explicit),
+    resolveId: (id: string) => {
+      const roster = latest.current.model;
+      const creature = roster?.creatures.find(c => c.creatureId === id && c.isAlive && c.hp > 0);
+      return creature && roster ? { ok: true as const, target: targetIdentity(roster.encounterId, creature) }
+        : { ok: false as const, reason: 'The selected Combat2 target is no longer valid.' };
+    },
     select: (id: string | null) => {
       const creature = living.find(c => c.creatureId === id);
       setSelected(creature && model ? targetIdentity(model.encounterId, creature) : null);

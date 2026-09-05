@@ -1,10 +1,8 @@
-import { StrictMode, useState } from 'react';
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/integrations/supabase/client';
-import { useKeyboardMovement } from '@/features/world/hooks/useKeyboardMovement';
 import { useCombat2ClientSession } from './Combat2ClientSession';
-import { BASIC_ATTACK_UNAVAILABLE, refuseControlledBasicAttack } from './controlled-actions';
 import { routeCombat2Action } from './routeCombat2Action';
 import { useCombat2Targets } from './useCombat2Targets';
 import { Combat2TestStatus } from './Combat2TestStatus';
@@ -40,34 +38,6 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('controlled input and display boundary', () => {
-  it('visibly refuses the basic button and real keyboard attack binding without either RPC or legacy combat', () => {
-    const legacy = vi.fn();
-    const diagnosed = vi.fn();
-    function Controls() {
-      const [message, setMessage] = useState<string | null>(null);
-      const basic = () => refuseControlledBasicAttack(true, value => { diagnosed(value); setMessage(value); }, legacy);
-      useKeyboardMovement({ currentNode: undefined, nodes: [], onMove: vi.fn(), disabled: false, onAttackFirst: basic });
-      return <><button onClick={basic}>Attack</button><Combat2TestStatus status="Ready" stale={false} diagnostic={message} /></>;
-    }
-    render(<StrictMode><Controls /></StrictMode>);
-    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
-    expect(diagnosed).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('alert')).toHaveTextContent(BASIC_ATTACK_UNAVAILABLE);
-    fireEvent.keyDown(document, { key: ' ' });
-    expect(diagnosed).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('alert')).toHaveTextContent(BASIC_ATTACK_UNAVAILABLE);
-    expect(legacy).not.toHaveBeenCalled();
-    expect(supabase.rpc).not.toHaveBeenCalled();
-  });
-
-  it('preserves legacy basic attack when off', () => {
-    const legacy = vi.fn();
-    const diagnose = vi.fn();
-    refuseControlledBasicAttack(false, diagnose, legacy);
-    expect(legacy).toHaveBeenCalledOnce();
-    expect(diagnose).not.toHaveBeenCalled();
-  });
-
   it('routes supported abilities and stance activate/drop through the installed adapter exactly once per action', async () => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options), { wrapper: StrictMode });
     const legacy = vi.fn();

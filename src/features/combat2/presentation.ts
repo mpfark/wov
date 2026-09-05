@@ -93,6 +93,7 @@ export interface Combat2PresentationModel {
   stateVersion: number;
   encounterStatus: string;
   fighterExitState: 'pending' | 'exited' | 'dead' | null;
+  autoattack: { targetCreatureId: string; nodeCreatureId: string; spawnSeq: number; active: boolean } | null;
   character: Combat2PresentationCharacter;
   creatures: readonly Combat2PresentationCreature[];
   effects: readonly Combat2PresentationEffect[];
@@ -412,12 +413,23 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
 
   const effectGroups = parseEffects(sync.effects, characterId);
   const rewardClaims = parseRewardClaims(sync.rewardClaims, encounterId, characterId);
+  const autoRow = sync.autoattack == null ? null : record(sync.autoattack);
+  if (sync.autoattack != null && (!autoRow || typeof autoRow.active !== 'boolean')) {
+    throw new Combat2PresentationError('combat2_sync autoattack state is malformed');
+  }
+  const autoattack = autoRow ? { targetCreatureId: stringField(autoRow, 'targetCreatureId'),
+    nodeCreatureId: stringField(autoRow, 'nodeCreatureId'), spawnSeq: integerField(autoRow, 'spawnSeq'), active: autoRow.active as boolean } : null;
+  if (autoattack && !creatures.some(c => c.id === autoattack.nodeCreatureId
+      && c.creatureId === autoattack.targetCreatureId && c.spawnSeq === autoattack.spawnSeq)) {
+    throw new Combat2PresentationError('combat2_sync autoattack target is outside the current creature life');
+  }
   return {
     encounterId,
     encounterTick,
     stateVersion: integerField(encounter, 'stateVersion'),
     encounterStatus: stringField(encounter, 'status'),
     fighterExitState: (rawExitState ?? null) as Combat2PresentationModel['fighterExitState'],
+    autoattack,
     character: {
       id: characterId,
       level: integerField(character, 'level'), xp: integerField(character, 'xp'), gold: integerField(character, 'gold'),
