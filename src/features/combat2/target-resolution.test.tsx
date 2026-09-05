@@ -1,9 +1,9 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClassAbility } from '@/features/combat/utils/class-abilities';
-import { resolveCombat2Target, targetIdentity, type Combat2TargetRoster } from './target-resolution';
+import { resolveCombat2ManualAttackTarget, resolveCombat2Target, targetIdentity, type Combat2TargetRoster } from './target-resolution';
 import { useCombat2Targets } from './useCombat2Targets';
-import { routeCombat2Action } from './routeCombat2Action';
+import { routeCombat2Action, routeCombat2BasicAttack } from './routeCombat2Action';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
 import { Combat2IntentError, type Combat2IntentAdapter } from './intent';
 
@@ -31,6 +31,25 @@ describe('authoritative Combat2 target resolution', () => {
     expect(resolveCombat2Target(model([creature('one'), creature('two')]), null))
       .toMatchObject({ ok: false, reason: expect.stringContaining('multiple') });
     expect(resolveCombat2Target(model([]), null)).toMatchObject({ ok: false });
+  });
+
+  it('manual Attack selects only a living idle creature and refuses when all are engaged', () => {
+    const idle = creature('idle', false);
+    expect(resolveCombat2ManualAttackTarget(model([creature('engaged'), idle]), null))
+      .toEqual({ ok: true, target: targetIdentity('enc', idle) });
+    expect(resolveCombat2ManualAttackTarget(model([creature('engaged')]), null))
+      .toMatchObject({ ok: false, reason: expect.stringContaining('automatically') });
+    expect(resolveCombat2ManualAttackTarget(model([creature('one', false), creature('two', false)]), null))
+      .toMatchObject({ ok: false, reason: expect.stringContaining('Choose') });
+  });
+
+  it('keyboard-style manual Attack refuses an already engaged encounter without submission', async () => {
+    const submit = vi.fn();
+    const diagnose = vi.fn();
+    await routeCombat2BasicAttack({ enabled: true, sessionReady: true,
+      resolveTarget: () => resolveCombat2ManualAttackTarget(model([creature('engaged')]), null),
+      legacy: vi.fn(), submit, diagnose });
+    expect(submit).not.toHaveBeenCalled();
   });
 
   it.each(['dead', 'encounter', 'spawn', 'definition', 'row'])('rejects a %s identity, without substituting another target', change => {

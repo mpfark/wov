@@ -24,6 +24,7 @@ import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
 import { Combat2TelegraphIndicator } from '@/features/combat2/Combat2TelegraphIndicator';
+import { shouldShowAttackControl } from '@/features/combat2/attack-control';
 import {
   combat2CreatureLifeKey,
   type Combat2PresentationEffect,
@@ -59,6 +60,7 @@ interface Props {
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   combatActionsReady?: boolean;
   authoritativeTargetSelection?: boolean;
+  pendingBasicAttackTargetId?: string | null;
   abilityTargetId?: string | null;
   /** Index of an ability currently queued/pending cast — that button pulses until resolved. */
   pendingAbilityIndex?: number | null;
@@ -95,6 +97,7 @@ export default function NodeView({
   pendingAbilityIndex = null,
   combatActionsReady = true,
   authoritativeTargetSelection = false,
+  pendingBasicAttackTargetId = null,
   pendingAbilityStage = null,
   reservedBuffs = null,
   actionBindings,
@@ -292,7 +295,9 @@ export default function NodeView({
                   )}
                   {creatures.map(c => {
                     const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
-                    const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
+                    const isEngaged = authoritativeTargetSelection
+                      ? engagedCreatureIds.includes(c.id)
+                      : !!inCombat && engagedCreatureIds.includes(c.id);
                     const isSelected = (authoritativeTargetSelection || (!isActiveTarget && !isEngaged)) && selectedTargetId === c.id;
                     const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
                     const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
@@ -459,7 +464,13 @@ export default function NodeView({
                             </div>
 
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
-                            {(authoritativeTargetSelection || (!isActiveTarget && !isEngaged && !isSelected)) && (
+                            {shouldShowAttackControl({
+                              authoritative: authoritativeTargetSelection,
+                              living: displayHp > 0,
+                              engaged: isEngaged,
+                              pending: pendingBasicAttackTargetId === c.id,
+                              legacyAvailable: !isActiveTarget && !isEngaged && !isSelected,
+                            }) && (
                               <Button
                                 size="sm"
                                 variant="destructive"

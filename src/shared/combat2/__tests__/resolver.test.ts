@@ -428,7 +428,7 @@ describe('combat2 resolver', () => {
       creatures: [creature({ spawn_seq: 4, pending_action: pending() })],
       boss_abilities: [bossAbility({ spawn_seq: 3 })],
     }), { abilities });
-    expect(out.events).toEqual([expect.objectContaining({ kind: 'boss_cast_evaded', outcomeReason: 'ability_missing' })]);
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'boss_cast_evaded', outcomeReason: 'ability_missing' }));
     expect(out.creatures[0].pending_action).toBeNull();
   });
 
@@ -705,6 +705,59 @@ describe('combat2 resolver', () => {
     expect(out.characters.find(c => c.id === 'ch-1')?.cp).toBe(50);
   });
 
+  it('automatically selects an engaged spawn and attacks without a basic intent', () => {
+    const out = resolveNodeTick(snapshot({ effects: [], intents: [] }), { abilities });
+    expect(out.events.filter(e => e.meta?.basicAttack === true)).toHaveLength(1);
+    expect(out.effects_insert).toContainEqual(expect.objectContaining({
+      kind: 'autoattack', target_character_id: 'ch-1', target_creature_id: 'cr-1',
+      config: { node_creature_id: 'nc-1', spawn_seq: 3 },
+    }));
+  });
+
+  it('does not automatically engage or attack an idle creature', () => {
+    const out = resolveNodeTick(snapshot({ creatures: [creature({ engaged: false })], effects: [], intents: [] }), { abilities });
+    expect(out.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+    expect(out.effects_insert.some(e => e.kind === 'autoattack')).toBe(false);
+  });
+
+  it('hostile ability engages an idle target, owns that tick, and arms the following automatic attack', () => {
+    const idle = creature({ engaged: false });
+    const first = resolveNodeTick(snapshot({ creatures: [idle], effects: [],
+      intents: [abilityIntent('power', 1, 'ch-1', 'power_strike', idle.creature_id)] }), { abilities });
+    expect(first.events.some(e => e.kind === 'creature_engaged')).toBe(true);
+    expect(first.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+    const armed = first.effects_insert.find(e => e.kind === 'autoattack')!;
+    expect(armed).toMatchObject({ target_creature_id: idle.creature_id });
+    const next = resolveNodeTick(snapshot({ creatures: [{ ...idle, engaged: true }], effects: [{
+      id: 'armed', ...armed, source_creature_id: null, expires_at: null, next_due_at: null,
+      interval_ms: null, last_pulse_tick: null,
+    } as SnapshotEffect], intents: [] }), { abilities });
+    expect(next.events.filter(e => e.meta?.basicAttack === true)).toHaveLength(1);
+  });
+
+  it('advances from a dead persisted target using stable runtime-row ordering', () => {
+    const dead = creature({ id: 'nc-a', creature_id: 'cr-a', hp: 0, is_alive: false });
+    const later = creature({ id: 'nc-c', creature_id: 'cr-c' });
+    const first = creature({ id: 'nc-b', creature_id: 'cr-b' });
+    const stale = autoattack('ch-1', dead);
+    const out = resolveNodeTick(snapshot({ creatures: [later, dead, first], effects: [stale] }), { abilities });
+    expect(out.effects_delete).toContain(stale.id);
+    expect(out.effects_insert).toContainEqual(expect.objectContaining({
+      kind: 'autoattack', target_creature_id: 'cr-b', config: { node_creature_id: 'nc-b', spawn_seq: 3 },
+    }));
+    expect(out.events.find(e => e.meta?.basicAttack === true)?.target?.id).toBe('cr-b');
+  });
+
+  it('re-evaluates working HP so a later fighter never attacks a target killed earlier that tick', () => {
+    const firstTarget = creature({ id: 'nc-a', creature_id: 'cr-a', hp: 1, max_hp: 1, ac: -100 });
+    const nextTarget = creature({ id: 'nc-b', creature_id: 'cr-b', ac: -100 });
+    const second = fighter({ id: 'f-ch-2', character_id: 'ch-2', name: 'Second' });
+    const out = resolveNodeTick(snapshot({ creatures: [firstTarget, nextTarget],
+      fighters: [fighter({ character_id: 'ch-1' }), second], effects: [autoattack('ch-1', firstTarget), autoattack('ch-2', firstTarget)] }), { abilities });
+    const attacks = out.events.filter(e => e.meta?.basicAttack === true);
+    expect(attacks.map(e => e.target?.id)).toEqual(['cr-a', 'cr-b']);
+  });
+
   it('a queued ability, heal, or stance owns the slot and basic attack resumes without browser input', () => {
     for (const intent of [abilityIntent('power', 1, 'ch-1', 'power_strike', 'cr-1'),
       { ...abilityIntent('invalid', 1, 'ch-1', 'missing', 'cr-1') }]) {
@@ -736,6 +789,22 @@ describe('combat2 resolver', () => {
     expect(out.events.filter(e => e.meta?.basicAttack === true).map(e => e.actor?.id)).toEqual(['ch-1', 'ch-2']);
     const blocked = resolveNodeTick(snapshot({ fighters: [fighter({ character_id: 'ch-1', present: false })], effects: [autoattack()] }), { abilities });
     expect(blocked.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+  });
+
+  it('death, absence, and a claimed exit request stop attacks and clear persisted targeting', () => {
+    const state = autoattack();
+    for (const row of [fighter({ character_id: 'ch-1', hp: 0 }), fighter({ character_id: 'ch-1', present: false })]) {
+      const out = resolveNodeTick(snapshot({ fighters: [row], effects: [state] }), { abilities });
+      expect(out.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+      expect(out.effects_delete).toContain(state.id);
+    }
+    const exiting = resolveNodeTick(snapshot({ effects: [state], pending_events: [{
+      id: 'exit', event_type: 'fighter_exit_requested', actor_character_id: 'ch-1', actor_creature_id: null,
+      target_character_id: null, target_creature_id: null,
+      payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
+    }] }), { abilities });
+    expect(exiting.events.some(e => e.meta?.basicAttack === true)).toBe(false);
+    expect(exiting.effects_delete).toContain(state.id);
   });
 
   it('a basic swing participates, kills, and proposes its exactly-once spawn reward', () => {

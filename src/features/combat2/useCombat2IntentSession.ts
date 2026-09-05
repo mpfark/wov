@@ -27,6 +27,7 @@ export interface Combat2PendingIntent {
   requestId: string;
   message: string;
   acceptedAtTick: number;
+  action: Combat2IntentAction;
 }
 
 export interface Combat2IntentFeedback { message: string }
@@ -121,6 +122,7 @@ export function useCombat2IntentSession({
           requestId: attempt.requestId,
           message: feedback.message,
           acceptedAtTick: tickRef.current ?? -1,
+          action: attempt.action,
         });
       }
       return outcome;

@@ -591,21 +591,59 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   }
 
 
-  // Server-owned continued attacks: exactly one slot, only when no accepted intent occupied it.
+  const autoattackInsert = (actor: WorkingCharacter, target: WorkingCreature): void => {
+    proposed.effects_insert.push({
+      kind: 'autoattack', effect_type: 'basic_attack', ability_key: null,
+      target_character_id: actor.fighter.character_id, target_creature_id: target.row.creature_id,
+      source_character_id: actor.fighter.character_id, stacks: 1, magnitude: 0,
+      config: { node_creature_id: target.row.id, spawn_seq: target.row.spawn_seq }, is_reservation: false,
+    });
+  };
+  const orderedEngagedTargets = (): WorkingCreature[] => [...creatures.values()]
+    .filter(candidate => candidate.hp > 0 && candidate.row.is_alive && candidate.engaged)
+    .sort((a, b) => a.row.id.localeCompare(b.row.id)
+      || a.row.spawn_seq - b.row.spawn_seq
+      || a.row.creature_id.localeCompare(b.row.creature_id));
+
+  // Server-owned continued attacks. A present living fighter defaults to the
+  // first living engaged spawn ordered by runtime row id, then spawn sequence,
+  // then creature definition id. Those fields are all claim-fenced authority;
+  // browser ordering, selection, clocks, and Realtime arrival never participate.
   for (const actor of [...chars.values()].sort((a, b) => a.fighter.id.localeCompare(b.fighter.id))) {
-    if (occupiedActionSlots.has(actor.fighter.character_id) || !actor.present || actor.hp <= 0) continue;
     const state = snapshot.effects.find(e => e.kind === 'autoattack' && e.target_character_id === actor.fighter.character_id);
-    if (!state) continue;
-    const target = state.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
-    if (!target || target.hp <= 0 || state.config?.node_creature_id !== target.row.id || state.config?.spawn_seq !== target.row.spawn_seq) {
-      proposed.effects_delete.push(state.id); continue;
+    if (!actor.present || actor.hp <= 0) {
+      if (state && !proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
+      continue;
     }
+    const persisted = state?.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
+    const validPersisted = persisted && persisted.hp > 0 && persisted.row.is_alive && persisted.engaged
+      && state?.config?.node_creature_id === persisted.row.id && state.config?.spawn_seq === persisted.row.spawn_seq
+      ? persisted : undefined;
+    const target = validPersisted ?? orderedEngagedTargets()[0];
+    if (!target) {
+      if (state && !proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
+      continue;
+    }
+    if (!validPersisted) {
+      if (state && !proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
+      autoattackInsert(actor, target);
+    }
+    // Any captured player intent owns this tick's single action slot. Target
+    // maintenance still occurs so automatic attacks resume on the next tick.
+    if (occupiedActionSlots.has(actor.fighter.character_id)) continue;
     const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row, weaponProgression: deps.weaponProgression });
     if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
     else {
       qualify(target, actor.fighter.character_id, 'damage');
       if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
       for (const event of outcome.events) emit(event);
+      if (target.hp <= 0) {
+        if (state && !proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
+        proposed.effects_insert = proposed.effects_insert.filter(effect =>
+          effect.kind !== 'autoattack' || effect.target_character_id !== actor.fighter.character_id);
+        const next = orderedEngagedTargets()[0];
+        if (next) autoattackInsert(actor, next);
+      }
     }
   }
 

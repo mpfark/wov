@@ -35,3 +35,21 @@ export function resolveCombat2Target(
     ? 'Choose a target: multiple living opponents are engaged.'
     : 'No living engaged target. Select a living creature explicitly to initiate engagement.' };
 }
+
+/** Manual Attack starts hostility only; engaged creatures attack automatically. */
+export function resolveCombat2ManualAttackTarget(
+  model: Combat2TargetRoster | null,
+  selected: Combat2TargetIdentity | null,
+): Combat2TargetResolution {
+  if (!model) return { ok: false, reason: 'Combat2 has no authoritative target roster.' };
+  const idle = model.creatures.filter(c => c.isAlive && c.hp > 0 && !c.engaged);
+  if (selected) {
+    const valid = selected.encounterId === model.encounterId && idle.find(c =>
+      c.id === selected.id && c.creatureId === selected.creatureId && c.spawnSeq === selected.spawnSeq);
+    if (valid) return { ok: true, target: targetIdentity(model.encounterId, valid) };
+  }
+  if (idle.length === 1) return { ok: true, target: targetIdentity(model.encounterId, idle[0]) };
+  return { ok: false, reason: idle.length > 1
+    ? 'Choose a non-engaged creature to attack.'
+    : 'All living creatures are already engaged; basic attacks continue automatically.' };
+}

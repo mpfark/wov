@@ -1042,7 +1042,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const handleAttackFirst = useCallback(() => {
     if (!legacyExecution.allowed()) {
       void routeCombat2BasicAttack({ enabled: true, sessionReady: combat2.actionsReady && !ownership.locked,
-        resolveTarget: combat2Targets.resolve, legacy: () => {}, submit: combat2.intents.submit,
+        resolveTarget: combat2Targets.resolveManualAttack, legacy: () => {}, submit: combat2.intents.submit,
         diagnose: setCombat2Diagnostic });
       return;
     }
@@ -1067,7 +1067,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     if (!combat2BlocksLegacy) { setSelectedTargetId(id); handleAttack(id); return; }
     combat2Targets.select(id);
     void routeCombat2BasicAttack({ enabled: true, sessionReady: combat2.actionsReady && !ownership.locked,
-      resolveTarget: () => combat2Targets.resolveId(id), legacy: () => {}, submit: combat2.intents.submit,
+      resolveTarget: () => combat2Targets.resolveManualAttackId(id), legacy: () => {}, submit: combat2.intents.submit,
       diagnose: setCombat2Diagnostic });
   }, [combat2BlocksLegacy, combat2Targets, combat2, ownership.locked, handleAttack, setSelectedTargetId]);
 
@@ -1472,7 +1472,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
               authoritativeTargetSelection={combat2BlocksLegacy}
-               engagedCreatureIds={engagedCreatureIds}
+              pendingBasicAttackTargetId={combat2.intents.pending?.action.kind === 'basic_attack'
+                ? combat2.intents.pending.action.targetCreatureId : null}
+               engagedCreatureIds={combat2BlocksLegacy
+                 ? activeCombat2Presentation?.creatures.filter(creature => creature.engaged).map(creature => creature.creatureId) ?? []
+                 : engagedCreatureIds}
               creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
               authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
               classAbilities={CLASS_ABILITIES[character.class] || []}
