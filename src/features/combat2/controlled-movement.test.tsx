@@ -13,7 +13,7 @@ function params() {
   const options = {
     character: { id: 'character', name: 'Tester', current_node_id: 'node', hp: 10, mp: 100, cp: 100, str: 10, level: 10 },
     updateCharacter: write, addLogEvent: log, equipped: [], unequipped: [], equipmentBonuses: {},
-    getNode: () => node, getRegion: () => ({ id: 'region' }), currentNode: node,
+    getNode: () => node, getRegion: () => ({ id: 'region' }), getNodeArea: () => null, currentNode: node,
     creatures: [], party: null, partyMembers: [], isLeader: false, inCombat: true, isDead: false,
     fleeStopCombat: vi.fn(), buffState: {}, buffSetters: {}, broadcastMove: vi.fn(),
   } as unknown as UseMovementActionsParams;
@@ -21,10 +21,11 @@ function params() {
 }
 
 describe('controlled test movement lock', () => {
-  it('blocks ordinary movement, teleport, waymark and search before any write', async () => {
+  it('routes ordinary movement authoritatively while teleport, waymark and search remain blocked', async () => {
     const { options, write, log } = params();
     const flee = vi.fn();
-    const { result } = renderHook(() => useMovementActions({ ...options, movementBlocked: true, authorizeCombat2Flee: flee }));
+    const depart = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useMovementActions({ ...options, movementBlocked: true, authorizeCombat2Flee: flee, authorizeCombat2Depart: depart }));
     await act(async () => {
       await result.current.handleMove('other');
       await result.current.handleTeleport('other', 1);
@@ -33,7 +34,8 @@ describe('controlled test movement lock', () => {
     });
     expect(write).not.toHaveBeenCalled();
     expect(flee).not.toHaveBeenCalled();
-    expect(log).toHaveBeenCalledTimes(4);
+    expect(depart).toHaveBeenCalledExactlyOnceWith('other', expect.any(String));
+    expect(log).toHaveBeenCalledTimes(3);
     expect(JSON.stringify(log.mock.calls)).toContain(MOVEMENT_UNAVAILABLE);
   });
 

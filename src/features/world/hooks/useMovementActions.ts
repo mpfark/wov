@@ -225,6 +225,8 @@ export interface UseMovementActionsParams {
   onPlayerCombatMove?: () => void;
   /** Default-off Combat2 gate: authorize departure before physical movement. */
   authorizeCombat2Flee?: () => Promise<boolean>;
+  /** Authoritative ordinary adjacent transition; when present no browser movement write follows. */
+  authorizeCombat2Depart?: (destinationNodeId: string, destinationName: string) => Promise<void>;
   movementBlocked?: boolean;
 }
 
@@ -245,6 +247,12 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Movement ───────────────────────────────────────────────────
   const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
+    if (p.movementBlocked && p.authorizeCombat2Depart) {
+      const target = p.getNode(nodeId);
+      if (!target) { p.addLogEvent(buildErrorEvent('Invalid movement destination.')); return; }
+      await p.authorizeCombat2Depart(nodeId, getNodeDisplayName(target, p.getNodeArea(target)));
+      return;
+    }
     const current = begin();
     if (!current()) return;
     if (p.isDead) return;
@@ -404,7 +412,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     } catch {
       p.addLogEvent(buildErrorEvent('Failed to move.'));
     }
-  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.authorizeCombat2Flee, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
+  }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.authorizeCombat2Flee, p.authorizeCombat2Depart, p.movementBlocked, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
   // ── Teleport ───────────────────────────────────────────────────
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {

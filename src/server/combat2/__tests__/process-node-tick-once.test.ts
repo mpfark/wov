@@ -62,6 +62,7 @@ describe('processNodeTickOnce', () => {
     const resolve = vi.fn((snapshot: any) => ({
       tick: snapshot.encounter.candidate_tick, characters: [], creatures: [], effects_insert: [],
       effects_update: [], effects_delete: [], fighters: [], rewards: [], events: [],
+      departures: [],
       intent_ids: [claim.snapshot.intents[0].id], participation: [],
       pending_event_ids: [claim.snapshot.pending_events[0].id],
     }));
@@ -115,7 +116,7 @@ describe('processNodeTickOnce', () => {
     const t = transport(successfulClaim(), commit);
     const resolve = vi.fn(() => ({ tick: 1, characters: [], creatures: [], effects_insert: [],
       effects_update: [], effects_delete: [], fighters: [], rewards: [], events: [], intent_ids: [],
-      participation: [], pending_event_ids: [] }));
+      participation: [], pending_event_ids: [], departures: [] }));
     expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, resolve })).kind).toBe(kind);
     expect(resolve).toHaveBeenCalledTimes(1);
     expect(t.calls.commits).toHaveLength(1);

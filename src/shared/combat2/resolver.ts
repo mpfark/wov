@@ -258,7 +258,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   // Authoritative entry/exit transitions are claimed exactly once and use the
   // same damage, mitigation and reactive pipeline as ordinary attacks.
   for (const pending of snapshot.pending_events ?? []) {
-    if (pending.event_type !== 'fighter_entered' && pending.event_type !== 'fighter_exit_requested') continue;
+    if (pending.event_type !== 'fighter_entered' && pending.event_type !== 'fighter_exit_requested'
+        && pending.event_type !== 'fighter_depart_requested') continue;
     const fighterId = typeof pending.payload.fighter_id === 'string' ? pending.payload.fighter_id : null;
     const entrySeq = typeof pending.payload.entry_seq === 'number' ? pending.payload.entry_seq : null;
     const target = fighterId === null ? undefined : snapshot.fighters.find((fighter) =>
@@ -270,16 +271,36 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       applyCreatureDamage(creature, target, null, 0, opportunityKind, pending.id);
       if (!livingCharacters().has(target.character_id)) break;
     }
-    if (pending.event_type === 'fighter_exit_requested') {
+    if (pending.event_type === 'fighter_exit_requested' || pending.event_type === 'fighter_depart_requested') {
       proposed.fighters.push({ id: target.id, present: false });
       const died = chars.get(target.character_id)?.hp === 0;
       const workingTarget = chars.get(target.character_id);
       if (workingTarget) workingTarget.present = false;
+      if (pending.event_type === 'fighter_depart_requested') {
+        const destination = typeof pending.payload.destination_node_id === 'string' ? pending.payload.destination_node_id : null;
+        const origin = typeof pending.payload.origin_node_id === 'string' ? pending.payload.origin_node_id : null;
+        const requestId = typeof pending.payload.departure_request_id === 'string' ? pending.payload.departure_request_id : null;
+        const cost = typeof pending.payload.cost === 'number' && Number.isSafeInteger(pending.payload.cost)
+          ? pending.payload.cost : null;
+        if (destination && origin && requestId && cost !== null) {
+          proposed.departures.push({
+            request_id: requestId,
+            origin_node_id: origin,
+            destination_node_id: destination,
+            fighter_id: target.id,
+            fighter_entry_seq: target.entry_seq,
+            cost,
+            outcome: died ? 'dead' : 'moved',
+          });
+        }
+      }
       emit({
-        kind: died ? 'fighter_exit_failed' : 'fighter_fled',
+        kind: died ? 'fighter_exit_failed' : pending.event_type === 'fighter_depart_requested' ? 'fighter_moved' : 'fighter_fled',
         actor: { type: 'character', id: target.character_id, name: target.name },
         outcomeReason: died ? 'dead' : undefined,
-        meta: { transitionEventId: pending.id, entrySeq: target.entry_seq },
+        meta: { transitionEventId: pending.id, entrySeq: target.entry_seq,
+          ...(pending.event_type === 'fighter_depart_requested' && typeof pending.payload.destination_node_id === 'string'
+            ? { destinationNodeId: pending.payload.destination_node_id } : {}) },
       });
     }
   }

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const FORWARD = readFileSync(
-  'supabase/migrations/20260905140000_combat2_autoattack_effect_target_contract.sql',
+  'supabase/migrations/20260905122354_fe51d6aa-fe6f-4ccb-93ca-51405314682e.sql',
   'utf8',
 ).replaceAll('\r\n', '\n');
 const COMMIT = readFileSync(

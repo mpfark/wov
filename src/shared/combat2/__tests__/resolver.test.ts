@@ -690,6 +690,42 @@ describe('combat2 resolver', () => {
     expect(out.creatures).toContainEqual(expect.objectContaining({ tank_fighter_id: null }));
   });
 
+  it('proposes one fenced movement after one opportunity when the departing fighter survives', () => {
+    const out = resolveNodeTick(snapshot({ pending_events: [{
+      id: 'depart-1', event_type: 'fighter_depart_requested', actor_character_id: 'ch-1',
+      actor_creature_id: null, target_character_id: null, target_creature_id: null,
+      payload: { departure_request_id: 'request-1', fighter_id: 'f-ch-1', entry_seq: 1,
+        origin_node_id: 'node-a', destination_node_id: 'node-b', cost: 5 }, occurred_at: NOW,
+    }] }), { abilities });
+    expect(out.events.filter(event => event.meta?.opportunityKind === 'exit')).toHaveLength(1);
+    expect(out.departures).toEqual([{ request_id: 'request-1', origin_node_id: 'node-a', destination_node_id: 'node-b',
+      fighter_id: 'f-ch-1', fighter_entry_seq: 1, cost: 5, outcome: 'moved' }]);
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'fighter_moved' }));
+    expect(out.fighters).toContainEqual({ id: 'f-ch-1', present: false });
+  });
+
+  it('three engaged creatures make exactly three exit opportunities', () => {
+    const creatures = [creature({ id: 'n1', creature_id: 'c1' }), creature({ id: 'n2', creature_id: 'c2' }), creature({ id: 'n3', creature_id: 'c3' })];
+    const out = resolveNodeTick(snapshot({ fighters: [fighter({ character_id: 'ch-1', hp: 100000, max_hp: 100000 })], creatures,
+      pending_events: [{ id: 'depart-dead', event_type: 'fighter_depart_requested', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { departure_request_id: 'request-dead', fighter_id: 'f-ch-1', entry_seq: 1,
+          origin_node_id: 'node-a', destination_node_id: 'node-b', cost: 5 }, occurred_at: NOW }] }), { abilities });
+    expect(out.events.filter(event => event.meta?.opportunityKind === 'exit')).toHaveLength(3);
+    expect(out.departures).toContainEqual(expect.objectContaining({ request_id: 'request-dead', outcome: 'moved' }));
+  });
+
+  it('records a dead departure outcome without proposing movement success', () => {
+    const out = resolveNodeTick(snapshot({ fighters: [fighter({ character_id: 'ch-1', hp: 1, ac: -100 })],
+      pending_events: [{ id: 'depart-lethal', event_type: 'fighter_depart_requested', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { departure_request_id: 'request-lethal', fighter_id: 'f-ch-1', entry_seq: 1,
+          origin_node_id: 'node-a', destination_node_id: 'node-b', cost: 5 }, occurred_at: NOW }] }), { abilities });
+    expect(out.departures).toEqual([expect.objectContaining({ request_id: 'request-lethal', outcome: 'dead' })]);
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'fighter_exit_failed', outcomeReason: 'dead' }));
+    expect(out.events.some(event => event.kind === 'fighter_moved')).toBe(false);
+  });
+
   const autoattack = (characterId = 'ch-1', target = creature()): SnapshotEffect => ({
     id: `auto-${characterId}`, kind: 'autoattack', effect_type: 'basic_attack', ability_key: null,
     target_character_id: characterId, target_creature_id: target.creature_id,

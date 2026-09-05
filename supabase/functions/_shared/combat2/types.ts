@@ -309,6 +309,17 @@ export interface ProposedFighterState {
   present: boolean;
 }
 
+/** Server-validated ordinary movement finalized by the same transaction as its exit tick. */
+export interface ProposedDeparture {
+  request_id: string;
+  origin_node_id: string;
+  destination_node_id: string;
+  fighter_id: string;
+  fighter_entry_seq: number;
+  cost: number;
+  outcome: 'moved' | 'dead';
+}
+
 export interface ProposedReward {
   creature_id: string;
   spawn_seq: number;
@@ -351,6 +362,7 @@ export interface ProposedTick {
   effects_update: ProposedEffectUpdate[];
   effects_delete: string[];
   fighters: ProposedFighterState[];
+  departures: ProposedDeparture[];
   rewards: ProposedReward[];
   events: TickEvent[];
   /** Exact intent ids the commit may mark consumed. */
@@ -370,6 +382,7 @@ export function emptyProposedTick(tick: number): ProposedTick {
     effects_update: [],
     effects_delete: [],
     fighters: [],
+    departures: [],
     rewards: [],
     events: [],
     intent_ids: [],

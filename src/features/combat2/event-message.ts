@@ -56,6 +56,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       // Expiry/pulse records may lack source identity. Never assume they are yours.
       return `${event.actor ? action : label} expires.`;
     case 'fighter_fled': return `${subject} ${verb('flees', 'flee')}.`;
+    case 'fighter_moved': return `${subject} ${verb('escapes', 'escape')} to the chosen destination.`;
     case 'fighter_exit_failed': return `${subject} ${verb('cannot', 'cannot')} flee${event.outcomeReason === 'dead' ? ': defeated before escape' : ''}.`;
     case 'action_rejected': {
       const reasons: Record<string, string> = { insufficient_cp: 'not enough CP', no_target: 'no valid target',

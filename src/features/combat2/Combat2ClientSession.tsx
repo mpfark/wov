@@ -4,6 +4,7 @@ import { useCombat2EntrySession } from './useCombat2EntrySession';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
 import { useCombat2Presentation } from './useCombat2Presentation';
+import { useCombat2DepartureSession } from './useCombat2DepartureSession';
 
 export interface Combat2ClientSessionProps {
   controlled?: boolean;
@@ -37,8 +38,16 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
   const presentation = useCombat2Presentation(enteredSessionKey, delivery, props.classKey);
   const model = presentation.model;
   const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
-  const pendingFlee = !!enteredSessionKey && (pendingFleeKey === enteredSessionKey || model?.fighterExitState === 'pending');
+  const pendingFleeFromServer = !!enteredSessionKey && (pendingFleeKey === enteredSessionKey || model?.fighterExitState === 'pending');
   const fighter = delivery.snapshot?.fighter as Record<string, unknown> | null | undefined;
+  const departure = useCombat2DepartureSession({
+    enabled: props.enabled,
+    canSubmit: props.controlled ? !props.inputLocked && !dead && !pendingFleeFromServer : true,
+    characterId: props.characterId,
+    nodeId: props.nodeId,
+    onQueued: () => setPendingFleeKey(enteredSessionKey),
+  });
+  const pendingFlee = pendingFleeFromServer || departure.pending;
   const actionsReady = !props.inputLocked && !!encounterId && presentation.status === 'live'
     && !!model && !dead && !pendingFlee && model.encounterStatus === 'active'
     && fighter?.present === true && fighter.characterId === props.characterId
@@ -72,6 +81,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     entry,
     intents,
     flee,
+    departure,
     delivery,
     presentation,
     actionsReady,

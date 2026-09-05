@@ -28,7 +28,8 @@ describe('Combat2 movement/flee authority switch', () => {
     const flee = readFileSync('src/features/combat2/flee.ts', 'utf8');
     const session = readFileSync('src/features/combat2/useCombat2FleeSession.ts', 'utf8');
     expect(page).toContain('movementBlocked: combat2BlocksLegacy');
-    expect(page).toContain('authorizeCombat2Flee: combat2BlocksLegacy ? authorizeCombat2Flee : undefined');
+    expect(page).toContain('authorizeCombat2Depart: combat2BlocksLegacy ? authorizeCombat2Depart : undefined');
+    expect(page).not.toContain('authorizeCombat2Flee: combat2BlocksLegacy');
     expect(movement).toMatch(/if \(!authoritativeFlee\) \{/);
     expect(`${flee}\n${session}`).not.toMatch(/\.from\([^)]*\)\.(?:insert|update|delete|upsert)\(/);
     expect(`${flee}\n${session}`).not.toMatch(/node_(?:fighter|encounter|participation|creature|pending_event)/);

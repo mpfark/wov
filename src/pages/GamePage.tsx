@@ -80,7 +80,7 @@ import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession
 import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID, COMBAT2_TEST_NODE_ID } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
-import { useControlledAction, isCombatMutation, MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
+import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
@@ -923,20 +923,17 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     buffState, buffSetters,
   });
 
-  const authorizeCombat2Flee = useCallback(async () => {
-    if (combat2BlocksLegacy) { setCombat2Diagnostic(MOVEMENT_UNAVAILABLE); return false; }
-    if (combat2.sessionStatus === 'exited') return true;
-    const result = await combat2.flee.flee();
-    if (result.status === 'fled') return true;
+  const authorizeCombat2Depart = useCallback(async (destinationNodeId: string, destinationName: string) => {
+    const result = await combat2.departure.move(destinationNodeId);
     if (result.status === 'queued') {
-      addLocalLogEvent(buildSystemEvent('Combat2 escape queued; opportunity attacks must resolve before movement.'));
-      return false;
+      addLocalLogEvent(buildSystemEvent(`You attempt to flee toward ${destinationName}.`));
+    } else if (result.status === 'moved') {
+      addLocalLogEvent(buildMovementEvent(`You travel to ${destinationName}.`));
+    } else if (result.status !== 'stale') {
+      const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
+      addLocalLogEvent(buildErrorEvent(`Combat2 movement refused${detail}`));
     }
-    if (result.status === 'stale') return false;
-    const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
-    addLocalLogEvent(buildErrorEvent(`Combat2 flee refused${detail}`));
-    return false;
-  }, [combat2.flee, combat2.sessionStatus, addLocalLogEvent]);
+  }, [combat2.departure, addLocalLogEvent]);
 
   const movementActions = useMovementActions({
     movementBlocked: combat2BlocksLegacy,
@@ -954,7 +951,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
     onPlayerCombatMove: () => wimpNotifyRef.current?.(),
-    authorizeCombat2Flee: combat2BlocksLegacy ? authorizeCombat2Flee : undefined,
+    authorizeCombat2Depart: combat2BlocksLegacy ? authorizeCombat2Depart : undefined,
   });
 
   const consumableActions = useConsumableActions({
