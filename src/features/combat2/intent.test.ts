@@ -34,6 +34,18 @@ describe('Combat2 intent adapter', () => {
     }));
   });
 
+  it('preserves the resolved target for a server-owned basic attack', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { ok: true, kind: 'queued', intent_id: INTENT, seq: 9 }, error: null });
+    const adapter = createCombat2IntentAdapter({ rpc });
+    await adapter.submit(ENCOUNTER, CHARACTER, {
+      kind: 'basic_attack', abilityKey: null, stanceKey: null, targetCreatureId: CREATURE,
+    }, REQUEST);
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('combat_intent', {
+      _encounter_id: ENCOUNTER, _character_id: CHARACTER, _intent_kind: 'basic_attack',
+      _ability_key: null, _stance_key: null, _target_creature_id: CREATURE, _request_id: REQUEST,
+    });
+  });
+
   it('preserves installed refusal classifications instead of trusting transport success', () => {
     expect(decodeCombat2Intent({ ok: false, kind: 'mode_refused', reason: 'maintenance' }))
       .toEqual({ status: 'refused', classification: 'maintenance', reason: 'maintenance' });

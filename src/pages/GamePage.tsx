@@ -988,6 +988,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       legacy: () => handleUseAbility(abilityIndex, targetId),
       submit: combat2.intents.submit,
       diagnose: (message) => {
+        if (message === null) { setCombat2Diagnostic(null); return; }
         if (combat2BlocksLegacy) setCombat2Diagnostic(message);
         else addLocalLogEvent(buildErrorEvent(message));
       },
@@ -1423,7 +1424,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     <div className="h-screen flex flex-col parchment-bg w-full relative">
       {combat2BlocksLegacy && <Combat2TestStatus status={combat2Status}
         stale={!combat2.actionsReady && !!activeCombat2Presentation}
-        diagnostic={combat2Diagnostic} />}
+        diagnostic={combat2.intents.pending?.message ?? combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}

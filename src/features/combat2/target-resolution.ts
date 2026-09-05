@@ -6,13 +6,14 @@ export interface Combat2TargetIdentity {
   id: string;
   creatureId: string;
   spawnSeq: number;
+  name: string;
 }
 export type Combat2TargetResolution =
   | { ok: true; target: Combat2TargetIdentity }
   | { ok: false; reason: string };
 
 export function targetIdentity(encounterId: string, creature: Combat2PresentationCreature): Combat2TargetIdentity {
-  return { encounterId, id: creature.id, creatureId: creature.creatureId, spawnSeq: creature.spawnSeq };
+  return { encounterId, id: creature.id, creatureId: creature.creatureId, spawnSeq: creature.spawnSeq, name: creature.name };
 }
 
 /** No server current-target field exists. Never infer one from tank or legacy state. */

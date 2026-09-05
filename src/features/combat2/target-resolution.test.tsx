@@ -111,6 +111,9 @@ describe('authoritative Combat2 target resolution', () => {
       ability: { ...ability, abilityKey: 'second_wind', targetType: 'self' }, resolveTarget,
       reservedBuffs: {}, legacy: vi.fn(), submit, diagnose: vi.fn() });
     expect(resolveTarget).not.toHaveBeenCalled();
-    expect(submit).toHaveBeenCalledWith({ kind: 'ability', abilityKey: 'second_wind', stanceKey: null, targetCreatureId: null });
+    expect(submit).toHaveBeenCalledWith(
+      { kind: 'ability', abilityKey: 'second_wind', stanceKey: null, targetCreatureId: null },
+      { message: 'You prepare Power Strike.' },
+    );
   });
 });

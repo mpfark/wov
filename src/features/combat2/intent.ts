@@ -105,7 +105,9 @@ export function createCombat2IntentAdapter(client: Combat2IntentClient): Combat2
           _intent_kind: action.kind,
           _ability_key: action.kind === 'ability' ? action.abilityKey : null,
           _stance_key: action.kind === 'ability' ? null : action.stanceKey,
-          _target_creature_id: action.kind === 'ability' ? action.targetCreatureId : null,
+          _target_creature_id: action.kind === 'ability' || action.kind === 'basic_attack'
+            ? action.targetCreatureId
+            : null,
           _request_id: requestId,
         });
       } catch (error) {

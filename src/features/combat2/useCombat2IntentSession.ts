@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Combat2IntentError,
@@ -23,6 +23,14 @@ interface Attempt {
   uncertain: boolean;
 }
 
+export interface Combat2PendingIntent {
+  requestId: string;
+  message: string;
+  acceptedAtTick: number;
+}
+
+export interface Combat2IntentFeedback { message: string }
+
 export interface UseCombat2IntentSessionOptions {
   canSubmit?: boolean;
   enabled: boolean;
@@ -31,11 +39,14 @@ export interface UseCombat2IntentSessionOptions {
   encounterId: string | null;
   adapter?: Combat2IntentAdapter;
   generateRequestId?: () => string;
+  authoritativeTick?: number | null;
+  deliveryStatus?: string;
 }
 
 export interface Combat2IntentSession {
-  submit(action: Combat2IntentAction): Promise<Combat2IntentResult>;
+  submit(action: Combat2IntentAction, feedback?: Combat2IntentFeedback): Promise<Combat2IntentResult>;
   retry(): Promise<Combat2IntentResult>;
+  pending: Combat2PendingIntent | null;
 }
 
 const defaultAdapter = createCombat2IntentAdapter({
@@ -50,6 +61,8 @@ export function useCombat2IntentSession({
   encounterId,
   adapter = defaultAdapter,
   generateRequestId = () => crypto.randomUUID(),
+  authoritativeTick = null,
+  deliveryStatus = 'live',
 }: UseCombat2IntentSessionOptions): Combat2IntentSession {
   const sessionKey = enabled && characterId && nodeId && encounterId
     ? `${characterId}:${nodeId}:${encounterId}`
@@ -60,15 +73,29 @@ export function useCombat2IntentSession({
   readyRef.current = canSubmit;
   const generationRef = useRef(0);
   const attemptRef = useRef<Attempt | null>(null);
+  const feedbackRef = useRef(new Map<string, Combat2IntentFeedback>());
+  const tickRef = useRef(authoritativeTick);
+  tickRef.current = authoritativeTick;
+  const [pending, setPending] = useState<Combat2PendingIntent | null>(null);
 
   useEffect(() => {
     generationRef.current += 1;
     attemptRef.current = null;
+    feedbackRef.current.clear();
+    setPending(null);
     return () => {
       generationRef.current += 1;
       attemptRef.current = null;
     };
   }, [sessionKey, canSubmit]);
+
+  useEffect(() => {
+    if (deliveryStatus !== 'live') setPending(null);
+  }, [deliveryStatus]);
+
+  useEffect(() => {
+    if (pending && authoritativeTick !== null && authoritativeTick > pending.acceptedAtTick) setPending(null);
+  }, [authoritativeTick, pending]);
 
   const run = useCallback(async (attempt: Attempt): Promise<Combat2IntentResult> => {
     if (!readyRef.current) return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 is not ready for input' };
@@ -83,13 +110,23 @@ export function useCombat2IntentSession({
     const generation = generationRef.current;
     try {
       const outcome = await adapter.submit(encounterId, characterId, attempt.action, attempt.requestId);
-      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey
+        || attemptRef.current !== attempt) {
         return { status: 'stale' };
       }
       attempt.inFlight = false;
+      if (outcome.status === 'accepted') {
+        const feedback = feedbackRef.current.get(attempt.requestId);
+        if (feedback) setPending(current => current?.requestId === attempt.requestId ? current : {
+          requestId: attempt.requestId,
+          message: feedback.message,
+          acceptedAtTick: tickRef.current ?? -1,
+        });
+      }
       return outcome;
     } catch (error) {
-      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey) {
+      if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey
+        || attemptRef.current !== attempt) {
         return { status: 'stale' };
       }
       attempt.inFlight = false;
@@ -101,15 +138,20 @@ export function useCombat2IntentSession({
     }
   }, [adapter, characterId, encounterId, sessionKey]);
 
-  const submit = useCallback((action: Combat2IntentAction) => {
+  const submit = useCallback((action: Combat2IntentAction, feedback?: Combat2IntentFeedback) => {
     if (!enabled) {
       return Promise.resolve<Combat2IntentResult>({ status: 'local_refusal', classification: 'disabled', reason: 'Combat2 is disabled' });
     }
     if (!sessionKey) {
       return Promise.resolve<Combat2IntentResult>({ status: 'local_refusal', classification: 'no_session', reason: 'Combat2 session is not authoritative' });
     }
+    const current = attemptRef.current;
+    if (current?.inFlight && JSON.stringify(current.action) === JSON.stringify(action)) {
+      return Promise.resolve<Combat2IntentResult>({ status: 'local_refusal', classification: 'in_flight', reason: 'Combat2 intent is already being submitted' });
+    }
     const attempt: Attempt = { action, requestId: generateRequestId(), sessionKey, inFlight: false, uncertain: false };
     attemptRef.current = attempt;
+    if (feedback) feedbackRef.current.set(attempt.requestId, feedback);
     return run(attempt);
   }, [enabled, generateRequestId, run, sessionKey]);
 
@@ -121,5 +163,5 @@ export function useCombat2IntentSession({
     return run(attempt);
   }, [run]);
 
-  return { submit, retry };
+  return { submit, retry, pending };
 }

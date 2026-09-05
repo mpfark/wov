@@ -18,7 +18,7 @@ function harness(overrides: Partial<Parameters<typeof routeCombat2Action>[0]> = 
     legacy, submit, diagnose,
     options: {
       enabled: true, sessionReady: true, ability: ability(),
-      resolveTarget: () => ({ ok: true as const, target: { encounterId: 'enc', id: 'spawn', creatureId: CREATURE, spawnSeq: 1 } }),
+      resolveTarget: () => ({ ok: true as const, target: { encounterId: 'enc', id: 'spawn', creatureId: CREATURE, spawnSeq: 1, name: 'Goblin' } }),
       reservedBuffs: {}, legacy, submit, diagnose,
       ...overrides,
     },
@@ -29,7 +29,10 @@ describe('Combat2 deliberate action routing', () => {
   it('routes a native basic attack without an ability key or legacy fallback', async () => {
     const h = harness();
     await routeCombat2BasicAttack(h.options);
-    expect(h.submit).toHaveBeenCalledWith({ kind: 'basic_attack', abilityKey: null, stanceKey: null, targetCreatureId: CREATURE });
+    expect(h.submit).toHaveBeenCalledWith(
+      { kind: 'basic_attack', abilityKey: null, stanceKey: null, targetCreatureId: CREATURE },
+      { message: 'You begin attacking Goblin.' },
+    );
     expect(h.legacy).not.toHaveBeenCalled();
   });
   it('preserves the legacy path and performs no Combat2 submission when disabled', async () => {
@@ -50,23 +53,30 @@ describe('Combat2 deliberate action routing', () => {
   it('maps one authored enemy ability and authoritative creature id exactly once', async () => {
     const h = harness();
     await routeCombat2Action(h.options);
-    expect(h.submit).toHaveBeenCalledExactlyOnceWith({
-      kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: CREATURE,
-    });
+    expect(h.submit).toHaveBeenCalledExactlyOnceWith(
+      { kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: CREATURE },
+      { message: 'You prepare Fireball.' },
+    );
     expect(h.legacy).not.toHaveBeenCalled();
   });
 
   it('routes stance activation and drop without an ability or creature target', async () => {
     const activate = harness({ ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }) });
     await routeCombat2Action(activate.options);
-    expect(activate.submit).toHaveBeenCalledWith({ kind: 'stance_activate', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null });
+    expect(activate.submit).toHaveBeenCalledWith(
+      { kind: 'stance_activate', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
+      { message: 'You prepare to activate Force Shield.' },
+    );
 
     const drop = harness({
       ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }),
       reservedBuffs: { force_shield: { reserved_cp: 10 } },
     });
     await routeCombat2Action(drop.options);
-    expect(drop.submit).toHaveBeenCalledWith({ kind: 'stance_drop', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null });
+    expect(drop.submit).toHaveBeenCalledWith(
+      { kind: 'stance_drop', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
+      { message: 'You prepare to drop Force Shield.' },
+    );
   });
 
   it('fails closed for unsupported and non-authoritative targets', async () => {

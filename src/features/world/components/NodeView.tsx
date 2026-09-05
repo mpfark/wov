@@ -459,7 +459,7 @@ export default function NodeView({
                             </div>
 
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
-                            {!isActiveTarget && !isEngaged && !isSelected && (
+                            {(authoritativeTargetSelection || (!isActiveTarget && !isEngaged && !isSelected)) && (
                               <Button
                                 size="sm"
                                 variant="destructive"

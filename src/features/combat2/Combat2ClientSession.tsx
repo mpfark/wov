@@ -50,6 +50,8 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     characterId: props.characterId,
     nodeId: props.nodeId,
     encounterId,
+    authoritativeTick: model?.encounterTick ?? null,
+    deliveryStatus: presentation.status,
   });
   const onExited = useCallback((sessionKey: string) => setExitedSessionKey(sessionKey), []);
   const flee = useCombat2FleeSession({

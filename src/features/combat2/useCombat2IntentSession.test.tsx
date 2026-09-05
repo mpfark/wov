@@ -79,4 +79,36 @@ describe('useCombat2IntentSession', () => {
     release(accepted);
     await expect(pending).resolves.toEqual({ status: 'stale' });
   });
+
+  it('suppresses an identical in-flight control and publishes acknowledgement only after acceptance', async () => {
+    let release!: (value: typeof accepted) => void;
+    const adapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise<Combat2IntentOutcome>((resolve) => { release = resolve; })) };
+    const { result } = renderHook(() => useCombat2IntentSession({
+      enabled: true, characterId: CHARACTER, nodeId: NODE, encounterId: ENCOUNTER,
+      authoritativeTick: 10, adapter, generateRequestId: () => REQUEST_1,
+    }));
+    let first!: ReturnType<typeof result.current.submit>;
+    act(() => { first = result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    expect(result.current.pending).toBeNull();
+    await expect(result.current.submit(action, { message: 'You prepare Fireball.' }))
+      .resolves.toMatchObject({ classification: 'in_flight' });
+    expect(adapter.submit).toHaveBeenCalledTimes(1);
+    await act(async () => { release(accepted); await first; });
+    expect(result.current.pending?.message).toBe('You prepare Fireball.');
+  });
+
+  it('clears pending acknowledgement on tick advance and delivery failure', async () => {
+    const adapter: Combat2IntentAdapter = { submit: vi.fn().mockResolvedValue(accepted) };
+    const { result, rerender } = renderHook(({ tick, status }) => useCombat2IntentSession({
+      enabled: true, characterId: CHARACTER, nodeId: NODE, encounterId: ENCOUNTER,
+      authoritativeTick: tick, deliveryStatus: status, adapter, generateRequestId: () => REQUEST_1,
+    }), { initialProps: { tick: 10, status: 'live' } });
+    await act(async () => { await result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    expect(result.current.pending).not.toBeNull();
+    rerender({ tick: 11, status: 'live' });
+    expect(result.current.pending).toBeNull();
+    await act(async () => { await result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    rerender({ tick: 11, status: 'gap' });
+    expect(result.current.pending).toBeNull();
+  });
 });
