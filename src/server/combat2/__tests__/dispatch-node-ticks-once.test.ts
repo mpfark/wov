@@ -88,9 +88,13 @@ describe('dispatchNodeTicksOnce', () => {
   it('sanitizes worker diagnostic details in per-node results', async () => {
     const out = await dispatchNodeTicksOnce({
       discoverDueNodes: async () => discovery([candidate(1)]),
-      processNode: async () => ({ ok: false, kind: 'claim_transport_error', diagnostic: 'raw error secret' }),
+      processNode: async () => ({
+        ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely', stage: 'commit', code: '23514',
+      }),
     });
-    expect(out.results[0]).toEqual({ nodeId: id(1), classification: 'claim_transport_error', reason: 'worker failed safely' });
-    expect(JSON.stringify(out)).not.toContain('raw error secret');
+    expect(out.results[0]).toEqual({
+      nodeId: id(1), classification: 'commit_transport_error', reason: 'worker failed safely', stage: 'commit', code: '23514',
+    });
+    expect(JSON.stringify(out)).not.toContain('diagnostic');
   });
 });

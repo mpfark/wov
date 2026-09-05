@@ -34,7 +34,7 @@ export type NodeTickRunResult =
   | { ok: true; kind: 'committed' | 'already_committed'; encounterId: string; tick: number }
   | { ok: true; kind: 'not_due'; nextDueAt: string | null }
   | { ok: true; kind: 'in_flight' | 'locked_or_absent' }
-  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string }
+  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string; stage: 'claim' | 'commit'; code?: string }
   | { ok: false; kind: 'malformed_claim' | 'malformed_commit'; diagnostic: string }
   | { ok: false; kind: 'snapshot_rejected'; errors: string[] }
   | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
@@ -61,6 +61,12 @@ function safeError(error: unknown): string {
   return error instanceof Error ? error.message.slice(0, 300) : 'unknown error';
 }
 
+function safeTransportFailure(error: unknown, stage: 'claim' | 'commit') {
+  const value = object(error);
+  const code = typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : undefined;
+  return { diagnostic: 'transport failed safely', stage, ...(code ? { code } : {}) };
+}
+
 /** Process at most one authoritative tick for one node. Never retries. */
 export async function processNodeTickOnce(
   nodeId: string,
@@ -70,7 +76,7 @@ export async function processNodeTickOnce(
   try {
     claimRaw = await dependencies.transport.claimNode(nodeId);
   } catch (error) {
-    return { ok: false, kind: 'claim_transport_error', diagnostic: safeError(error) };
+    return { ok: false, kind: 'claim_transport_error', ...safeTransportFailure(error, 'claim') };
   }
 
   const claim = object(claimRaw);
@@ -134,7 +140,7 @@ export async function processNodeTickOnce(
       _proposed: proposal,
     });
   } catch (error) {
-    return { ok: false, kind: 'commit_transport_error', diagnostic: safeError(error) };
+    return { ok: false, kind: 'commit_transport_error', ...safeTransportFailure(error, 'commit') };
   }
 
   const commit = object(commitRaw);

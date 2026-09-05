@@ -93,11 +93,12 @@ describe("combat2-tick-once Edge handler", () => {
       ok: false,
       kind: "claim_transport_error",
       diagnostic: `failure ${SERVICE_KEY} ${WORKER_SECRET}`,
+      stage: "claim",
     });
     const response = await handler(request());
     const responseText = await response.text();
     expect(responseText).toBe(
-      '{"ok":false,"kind":"claim_transport_error","diagnostic":"failure [REDACTED] [REDACTED]"}',
+      '{"ok":false,"kind":"claim_transport_error","diagnostic":"failure [REDACTED] [REDACTED]","stage":"claim"}',
     );
     const logs = JSON.stringify(log.mock.calls);
     expect(responseText).not.toContain(SERVICE_KEY);

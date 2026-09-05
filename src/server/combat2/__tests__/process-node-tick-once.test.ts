@@ -128,4 +128,50 @@ describe('processNodeTickOnce', () => {
     await processNodeTickOnce(NODE, { transport: b.value, abilityRecords: abilities });
     expect(JSON.stringify(a.calls.commits[0]._proposed)).toBe(JSON.stringify(b.calls.commits[0]._proposed));
   });
+
+  it('commits first autoattack state with its owner and exact creature target in one proposal', async () => {
+    const claim = successfulClaim();
+    claim.snapshot.intents = [];
+    claim.snapshot.pending_events = [];
+    claim.snapshot.creatures[0].hp = 100;
+    claim.snapshot.creatures[0].max_hp = 100;
+    const t = transport(claim);
+
+    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities });
+
+    expect(out.kind).toBe('committed');
+    expect(t.calls.commits).toHaveLength(1);
+    expect(t.calls.commits[0]._proposed.effects_insert).toContainEqual(expect.objectContaining({
+      kind: 'autoattack',
+      target_character_id: claim.snapshot.fighters[0].character_id,
+      target_creature_id: claim.snapshot.creatures[0].creature_id,
+    }));
+    expect(t.calls.commits[0]._proposed.events).toContainEqual(expect.objectContaining({
+      kind: 'attack',
+      actor: expect.objectContaining({ id: claim.snapshot.fighters[0].character_id }),
+      target: expect.objectContaining({ id: claim.snapshot.creatures[0].creature_id }),
+      meta: expect.objectContaining({ basicAttack: true }),
+    }));
+  });
+
+  it('reports a safe commit stage and PostgreSQL code without retrying, then permits a later reclaim', async () => {
+    const failed = transport(successfulClaim());
+    failed.value.commitTick = async (args) => {
+      failed.calls.commits.push(args);
+      throw Object.assign(new Error('constraint detail must not escape'), { code: '23514', detail: 'private row' });
+    };
+    const first = await processNodeTickOnce(NODE, { transport: failed.value, abilityRecords: abilities });
+    expect(first).toEqual({
+      ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely', stage: 'commit', code: '23514',
+    });
+    expect(failed.calls.commits).toHaveLength(1);
+    expect(JSON.stringify(first)).not.toContain('constraint detail');
+    expect(JSON.stringify(first)).not.toContain('private row');
+
+    const reclaimed = transport(successfulClaim());
+    const second = await processNodeTickOnce(NODE, { transport: reclaimed.value, abilityRecords: abilities });
+    expect(second.kind).toBe('committed');
+    expect(reclaimed.calls.nodeIds).toEqual([NODE]);
+    expect(reclaimed.calls.commits).toHaveLength(1);
+  });
 });

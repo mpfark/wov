@@ -111,12 +111,12 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
         transport: {
           async claimNode(id) {
             const { data, error } = await client.rpc("node_tick_claim", { _node_id: id });
-            if (error) throw new Error(`node_tick_claim failed: ${error.code ?? "database_error"}`);
+            if (error) throw Object.assign(new Error("database transport failed"), { code: error.code });
             return data;
           },
           async commitTick(args: CommitTickArgs) {
             const { data, error } = await client.rpc("node_tick_commit", args as unknown as Record<string, unknown>);
-            if (error) throw new Error(`node_tick_commit failed: ${error.code ?? "database_error"}`);
+            if (error) throw Object.assign(new Error("database transport failed"), { code: error.code });
             return data;
           },
         },
