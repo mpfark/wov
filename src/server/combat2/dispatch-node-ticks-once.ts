@@ -44,11 +44,13 @@ function safeWorkerResult(nodeId: string, result: NodeTickRunResult): DispatchNo
   if (!result.ok && result.kind === 'stale_claim' && result.reason) return { ...base, reason: result.reason };
   if (!result.ok && result.kind === 'foreign_reference' && result.relation) return { ...base, reason: result.relation.slice(0, 80) };
   if (!result.ok && result.kind.endsWith('_rejected')) return { ...base, reason: 'authoritative input rejected' };
-  if (!result.ok && (result.kind.endsWith('_transport_error') || result.kind.startsWith('malformed_') || result.kind === 'resolver_failed')) {
-    return result.kind.endsWith('_transport_error')
-      ? { ...base, reason: 'worker failed safely', stage: result.stage, ...(result.code ? { code: result.code } : {}) }
-      : { ...base, reason: 'worker failed safely' };
+  if (!result.ok && (result.kind === 'claim_transport_error' || result.kind === 'commit_transport_error')) {
+    return { ...base, reason: 'worker failed safely', stage: result.stage, ...(result.code ? { code: result.code } : {}) };
   }
+  if (!result.ok && (result.kind.startsWith('malformed_') || result.kind === 'resolver_failed')) {
+    return { ...base, reason: 'worker failed safely' };
+  }
+
   return base;
 }
 
