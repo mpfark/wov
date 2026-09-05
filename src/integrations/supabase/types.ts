@@ -1540,6 +1540,103 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_departure_request: {
+        Row: {
+          arrival_group_id: string | null
+          character_id: string
+          cost: number
+          created_at: string
+          destination_node_id: string
+          direction: string
+          encounter_id: string | null
+          fighter_entry_seq: number | null
+          fighter_id: string | null
+          origin_node_id: string
+          request_id: string
+          resolved_at: string | null
+          resolved_tick: number | null
+          resource_kind: string
+          status: string
+        }
+        Insert: {
+          arrival_group_id?: string | null
+          character_id: string
+          cost: number
+          created_at?: string
+          destination_node_id: string
+          direction: string
+          encounter_id?: string | null
+          fighter_entry_seq?: number | null
+          fighter_id?: string | null
+          origin_node_id: string
+          request_id: string
+          resolved_at?: string | null
+          resolved_tick?: number | null
+          resource_kind?: string
+          status: string
+        }
+        Update: {
+          arrival_group_id?: string | null
+          character_id?: string
+          cost?: number
+          created_at?: string
+          destination_node_id?: string
+          direction?: string
+          encounter_id?: string | null
+          fighter_entry_seq?: number | null
+          fighter_id?: string | null
+          origin_node_id?: string
+          request_id?: string
+          resolved_at?: string | null
+          resolved_tick?: number | null
+          resource_kind?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_departure_request_arrival_group_id_fkey"
+            columns: ["arrival_group_id"]
+            isOneToOne: false
+            referencedRelation: "node_arrival_group"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_departure_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_departure_request_destination_node_id_fkey"
+            columns: ["destination_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_departure_request_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_departure_request_fighter_id_fkey"
+            columns: ["fighter_id"]
+            isOneToOne: false
+            referencedRelation: "node_fighter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_departure_request_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_dispatch_schedule_state: {
         Row: {
           request_id: number | null
@@ -4478,6 +4575,14 @@ export type Database = {
       combat2_delivery_visible: {
         Args: { _encounter_id: string }
         Returns: boolean
+      }
+      combat2_depart: {
+        Args: {
+          _character_id: string
+          _destination_node_id: string
+          _request_id: string
+        }
+        Returns: Json
       }
       combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
