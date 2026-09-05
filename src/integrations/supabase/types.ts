@@ -1655,6 +1655,120 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_test_arena: {
+        Row: {
+          active: boolean
+          arena_key: string
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          arena_key: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          arena_key?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      combat2_test_arena_access: {
+        Row: {
+          active: boolean
+          arena_id: string
+          character_id: string
+          granted_at: string
+          granted_by: string | null
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          arena_id: string
+          character_id: string
+          granted_at?: string
+          granted_by?: string | null
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          arena_id?: string
+          character_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_arena_access_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_test_arena_access_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_test_arena_node: {
+        Row: {
+          active: boolean
+          arena_id: string
+          created_at: string
+          node_id: string
+          purpose: string
+        }
+        Insert: {
+          active?: boolean
+          arena_id: string
+          created_at?: string
+          node_id: string
+          purpose: string
+        }
+        Update: {
+          active?: boolean
+          arena_id?: string
+          created_at?: string
+          node_id?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_arena_node_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_test_arena_node_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: true
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_tick_notification: {
         Row: {
           batch_id: string
@@ -3201,6 +3315,7 @@ export type Database = {
           node_id: string
           state_version: number
           status: string
+          test_arena_id: string | null
           tick: number
           updated_at: string
         }
@@ -3215,6 +3330,7 @@ export type Database = {
           node_id: string
           state_version?: number
           status?: string
+          test_arena_id?: string | null
           tick?: number
           updated_at?: string
         }
@@ -3229,6 +3345,7 @@ export type Database = {
           node_id?: string
           state_version?: number
           status?: string
+          test_arena_id?: string | null
           tick?: number
           updated_at?: string
         }
@@ -3238,6 +3355,13 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: true
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_encounter_test_arena_id_fkey"
+            columns: ["test_arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
             referencedColumns: ["id"]
           },
         ]
@@ -4617,6 +4741,18 @@ export type Database = {
           _encounter_id: string
           _limit?: number
         }
+        Returns: Json
+      }
+      combat2_test_arena_access_allowed: {
+        Args: { _character_id: string; _node_id: string; _user_id: string }
+        Returns: boolean
+      }
+      combat2_test_node_visible: {
+        Args: { _node_id: string }
+        Returns: boolean
+      }
+      combat2_test_relocate: {
+        Args: { _character_id: string; _destination_node_id: string }
         Returns: Json
       }
       commit_encounter_tick_v2: {
