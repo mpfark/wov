@@ -69,6 +69,7 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
       candidate_tick: 11,
       state_version: 4,
       now: NOW,
+      test_arena_id: null,
     },
     creatures: [creature()],
     fighters: [fighter({ character_id: 'ch-1' })],
@@ -336,6 +337,24 @@ describe('combat2 resolver', () => {
       target_fighter_id: 'f-ch-1', target_character_id: 'ch-1', target_entry_seq: 1,
     });
     expect(out.events.find((event) => event.kind === 'boss_telegraph')?.target?.id).toBe('ch-1');
+  });
+
+  it('retains combat/death events but suppresses rewards for an authoritative test encounter', () => {
+    const base = snapshot({
+      encounter: { ...snapshot().encounter, test_arena_id: '22222222-2222-4222-8222-222222222222' },
+      creatures: [creature({ hp: 4 })],
+      fighters: [fighter({ character_id: 'ch-1', present: false })],
+      effects: [{
+        id: 'test-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend',
+        target_character_id: null, target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null,
+        stacks: 1, magnitude: 9, config: {}, expires_at: nowPlus(60_000), next_due_at: nowPlus(-1),
+        interval_ms: 2000, last_pulse_tick: 5, is_reservation: false,
+      }],
+    });
+    const out = resolveNodeTick(base, { abilities });
+    expect(out.events.some((event) => event.kind === 'creature_died')).toBe(true);
+    expect(out.creatures).toContainEqual(expect.objectContaining({ id: 'nc-1', hp: 0, is_alive: false }));
+    expect(out.rewards).toEqual([]);
   });
 
   it('hits the unchanged captured fighter exactly once at resolution', () => {

@@ -960,7 +960,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         if (Number(spawnSeq) !== creature.row.spawn_seq) continue;
         recipients.add(characterId);
       }
-      for (const characterId of [...recipients].sort()) {
+      for (const characterId of snapshot.encounter.test_arena_id == null ? [...recipients].sort() : []) {
         const level = levelOf.get(characterId);
         // XP scaling needs the recipient's level; an unknown level means the
         // fighter row is not in this snapshot, so the payout waits for a

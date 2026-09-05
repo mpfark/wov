@@ -53,6 +53,7 @@ export const CLAIM = {
       node_id: 'af512927-2a59-406d-8dbb-0442e1a485e5',
       now: '2026-08-29T14:02:06.813371+00:00',
       state_version: 1,
+      test_arena_id: null,
       tick: 0,
     },
     fighters: [

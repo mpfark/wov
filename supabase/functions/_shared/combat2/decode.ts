@@ -356,6 +356,9 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
   const r = new Reader();
   const root = r.object('snapshot', raw);
   const enc = r.object('snapshot.encounter', root.encounter);
+  if (!Object.prototype.hasOwnProperty.call(enc, 'test_arena_id')) {
+    r.errors.push('snapshot.encounter.test_arena_id: required');
+  }
 
   const snapshot: NodeSnapshot = {
     encounter: {
@@ -365,6 +368,7 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       candidate_tick: r.num('snapshot.encounter.candidate_tick', enc.candidate_tick),
       state_version: r.num('snapshot.encounter.state_version', enc.state_version),
       now: r.str('snapshot.encounter.now', enc.now),
+      test_arena_id: r.strOrNull('snapshot.encounter.test_arena_id', enc.test_arena_id),
     },
     creatures: r
       .array('snapshot.creatures', root.creatures)
@@ -399,6 +403,9 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
 
   const candidateFighterIds = new Set<string>();
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (snapshot.encounter.test_arena_id !== null && !uuidPattern.test(snapshot.encounter.test_arena_id)) {
+    r.errors.push('snapshot.encounter.test_arena_id: expected UUID or null');
+  }
   for (const [i, candidate] of snapshot.tank_candidates.entries()) {
     if (!uuidPattern.test(candidate.fighter_id) || !uuidPattern.test(candidate.character_id)) {
       r.errors.push(`snapshot.tank_candidates[${i}]: expected UUID fighter and character ids`);

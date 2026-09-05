@@ -54,6 +54,8 @@ export interface SnapshotEncounter {
   state_version: number;
   /** Authoritative wall clock captured at claim time (ISO string). */
   now: string;
+  /** Immutable server-derived arena identity; non-null suppresses persistent rewards. */
+  test_arena_id?: string | null;
 }
 
 /**
