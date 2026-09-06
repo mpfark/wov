@@ -5,7 +5,7 @@ import GameRoute from '@/pages/GameRoute';
 import { useCharacter } from '@/features/character/hooks/useCharacter';
 
 const mocks = vi.hoisted(() => ({ restricted: true, rpc: vi.fn(), refetch: vi.fn(), row: { id: 'test-character', reserved_buffs: { force_shield: {} } } }));
-vi.mock('./test-config', () => ({ isConfiguredCombat2Tester: () => mocks.restricted }));
+vi.mock('./test-config', () => ({ combat2ArenaReservesLegacy: () => mocks.restricted }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   rpc: mocks.rpc,
   from: () => ({ select: () => ({ eq: () => ({ order: async () => ({ data: [mocks.row], error: null }) }) }) }),

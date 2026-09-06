@@ -77,7 +77,7 @@ import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
 import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
-import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID } from '@/shared/config/feature-flags';
+import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
@@ -110,7 +110,6 @@ interface Props {
 export default function GamePage({ character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, clearCharacterFields: clearFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
   const ownership = useCombat2TestOwnership({
     enabled: COMBAT2_CLIENT_ENABLED, characterId: character.id, nodeId: character.current_node_id,
-    characterSetting: COMBAT2_TEST_CHARACTER_ID,
   });
   const combat2OwnsSession = ownership.combat2OwnsSession;
   // Reservation suspends legacy execution even before solo preflight/entry resolves.
@@ -244,7 +243,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;
-  const combat2Status = ownership.locked ? 'Locked — unexpected relocation or party membership'
+  const combat2Status = !ownership.rolloutEnabled ? 'Refused — Combat2 test-arena client is disabled'
+    : ownership.access === 'checking' ? 'Checking test-arena access'
+    : ownership.access === 'refused' ? 'Refused — test-arena access is not authorized for this character'
+    : ownership.access === 'error' ? 'Test-arena access check failed'
+    : ownership.locked ? 'Locked — unexpected party membership'
     : ownership.preflight === 'refused' ? 'Refused — solo, idle entry could not be verified'
     : ownership.preflight === 'checking' ? 'Checking solo eligibility'
     : combat2.dead ? 'Dead — recovery unavailable in this controlled test'
@@ -1420,6 +1423,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
       {combat2BlocksLegacy && <Combat2TestStatus status={combat2Status}
+        onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
         stale={!combat2.actionsReady && !!activeCombat2Presentation}
         diagnostic={combat2.intents.pending?.message ?? combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />

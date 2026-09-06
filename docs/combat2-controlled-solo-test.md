@@ -1,11 +1,11 @@
 # Controlled Combat2 frontend (Batch 1)
 
-Disabled by default. No identities are supplied in source. Build configuration requires
-`VITE_COMBAT2_CLIENT_ENABLED=true` and one valid `VITE_COMBAT2_TEST_CHARACTER_ID`.
-The configured character is eligible only while its authoritative location is one of
-the five permanent proving-ground nodes. A missing, malformed, wildcard or list-valued
-character setting enables nobody. This is a testing control, not authorization;
-database access registration and server ownership checks remain authoritative.
+Disabled by default. Build configuration requires only
+`VITE_COMBAT2_CLIENT_ENABLED=true`. A character is eligible only while its authoritative
+location is one of the five permanent proving-ground nodes and the self-access RPC
+confirms current ownership plus an active exact arena registration. Arena location
+reserves the legacy fence before that asynchronous decision. Frontend node metadata is
+a rollout control, not authorization; database registration remains authoritative.
 
 Start only from a fresh, idle browser page for that character in the proving ground, without
 another tab/session driving legacy combat. Authoritative relocation into any registered

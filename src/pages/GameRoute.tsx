@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
 import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { isConfiguredCombat2Tester } from '@/features/combat2/test-config';
+import { combat2ArenaReservesLegacy } from '@/features/combat2/test-config';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
@@ -19,7 +19,7 @@ export default function GameRoute() {
   // value, leaving the player with only "Welcome back" on the real mount.
   const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
   const syncStartedForRef = useRef<string | null>(null);
-  const restrictedTester = isConfiguredCombat2Tester(character?.id, character?.current_node_id);
+  const restrictedTester = combat2ArenaReservesLegacy(character?.current_node_id);
   const restrictedRef = useRef(restrictedTester);
   restrictedRef.current = restrictedTester;
 
