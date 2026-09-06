@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-const SQL=readFileSync('supabase/migrations/20260906140000_combat2_test_session_access.sql','utf8').replaceAll('\r\n','\n');
+const SQL=readFileSync('supabase/migrations/20260906131558_19f87cbf-1f77-4f69-b04d-d29fbf0edb7b.sql','utf8').replaceAll('\r\n','\n');
 describe('Combat2 test session self-access migration',()=>{
  it('defines exactly one stable, read-only, self-scoped overload',()=>{
   expect(SQL.match(/CREATE OR REPLACE FUNCTION public\.combat2_test_session_access/g)).toHaveLength(1);
