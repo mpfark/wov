@@ -5,6 +5,7 @@ export { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
 export const ARENA_RPC_NAMES = [
   'combat2_test_status', 'combat2_test_grant', 'combat2_test_revoke',
   'combat2_test_admin_relocate', 'combat2_test_stop', 'combat2_test_reset',
+  'combat2_test_environment_start', 'combat2_test_environment_close',
 ] as const;
 
 export type ArenaNode = { id: string; purpose: 'staging'|'low'|'equal'|'high_damage'|'boss'; label: string; active: boolean };
@@ -13,9 +14,14 @@ export type ArenaStatus = {
   ok: true; kind: 'status'; arenaId: string; arenaKey: string; label: string; active: boolean; stopped: boolean;
   resetEligible: boolean; nodeCount: number; creatureCount: number; testerCount: number; activeEncounterCount: number;
   claimedEncounterCount: number; pendingIntentCount: number; pendingEventCount: number; diagnosticHistoryExists: boolean;
+  combatMode: 'maintenance'|'open'; worldState: 'asleep'|'awake'; schedulerEnabled: boolean; cronJobCount: number;
+  locatedTesterCount: number; ordinaryEncounterCount: number; liveClaimCount: number; ordinaryLiveClaimCount: number;
+  recentOrdinaryPlayerCount: number;
   nodes: ArenaNode[]; access: ArenaAccess[]; lastOperation?: string;
+  lastStartClassification?: string; lastCloseClassification?: string;
 };
 export type ArenaResult = { ok: boolean; kind: string; counts: Record<string, number>; ids: Record<string, string> };
+export type EnvironmentResult = { ok: boolean; kind: 'started'|'already_started'|'closed'|'already_closed'|'arena_stopped_world_left_open'; combatMode?:'maintenance'|'open'; worldState?:'asleep'|'awake'; schedulerEnabled?:boolean; counts:Record<string,number>; ids:Record<string,string> };
 export type ArenaApiResult<T> = { value?: T; error?: string; uncertain?: boolean };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,9 +32,10 @@ const bool = (v: unknown): v is boolean => typeof v === 'boolean';
 export function decodeArenaStatus(v: unknown): ArenaStatus | null {
   if (!object(v) || v.ok !== true || v.kind !== 'status' || typeof v.arena_id !== 'string' || !UUID.test(v.arena_id) ||
       typeof v.arena_key !== 'string' || typeof v.label !== 'string') return null;
-  const booleanKeys = ['active','stopped','reset_eligible','diagnostic_history_exists'] as const;
-  const countKeys = ['node_count','creature_count','tester_count','active_encounter_count','claimed_encounter_count','pending_intent_count','pending_event_count'] as const;
+  const booleanKeys = ['active','stopped','reset_eligible','diagnostic_history_exists','scheduler_enabled'] as const;
+  const countKeys = ['node_count','creature_count','tester_count','located_tester_count','active_encounter_count','ordinary_encounter_count','claimed_encounter_count','live_claim_count','ordinary_live_claim_count','recent_ordinary_player_count','pending_intent_count','pending_event_count','cron_job_count'] as const;
   if (booleanKeys.some(k=>!bool(v[k])) || countKeys.some(k=>!count(v[k])) || !Array.isArray(v.nodes) || !Array.isArray(v.access)) return null;
+  if (!['maintenance','open'].includes(String(v.combat_mode)) || !['asleep','awake'].includes(String(v.world_state))) return null;
   const nodes: ArenaNode[] = [];
   for (const n of v.nodes) {
     if (!object(n) || typeof n.id !== 'string' || !UUID.test(n.id) || !['staging','low','equal','high_damage','boss'].includes(String(n.purpose)) || typeof n.label !== 'string' || !bool(n.active)) return null;
@@ -44,7 +51,23 @@ export function decodeArenaStatus(v: unknown): ArenaStatus | null {
     creatureCount:v.creature_count as number, testerCount:v.tester_count as number, activeEncounterCount:v.active_encounter_count as number,
     claimedEncounterCount:v.claimed_encounter_count as number, pendingIntentCount:v.pending_intent_count as number,
     pendingEventCount:v.pending_event_count as number, diagnosticHistoryExists:v.diagnostic_history_exists as boolean,
-    nodes, access, ...(typeof v.last_operation==='string'?{lastOperation:v.last_operation}:{}) };
+    combatMode:v.combat_mode as ArenaStatus['combatMode'],worldState:v.world_state as ArenaStatus['worldState'],schedulerEnabled:v.scheduler_enabled as boolean,
+    cronJobCount:v.cron_job_count as number,locatedTesterCount:v.located_tester_count as number,ordinaryEncounterCount:v.ordinary_encounter_count as number,
+    liveClaimCount:v.live_claim_count as number,ordinaryLiveClaimCount:v.ordinary_live_claim_count as number,recentOrdinaryPlayerCount:v.recent_ordinary_player_count as number,
+    nodes, access, ...(typeof v.last_operation==='string'?{lastOperation:v.last_operation}:{}),
+    ...(typeof v.last_start_classification==='string'?{lastStartClassification:v.last_start_classification}:{}),
+    ...(typeof v.last_close_classification==='string'?{lastCloseClassification:v.last_close_classification}:{}) };
+}
+
+export function decodeEnvironmentResult(v:unknown):EnvironmentResult|null {
+ const kinds=['started','already_started','closed','already_closed','arena_stopped_world_left_open'] as const;
+ if(!object(v)||v.ok!==true||!kinds.includes(v.kind as typeof kinds[number]))return null;
+ if(v.combatMode!==undefined&&!['maintenance','open'].includes(String(v.combatMode)))return null;
+ if(v.worldState!==undefined&&!['asleep','awake'].includes(String(v.worldState)))return null;
+ if(v.schedulerEnabled!==undefined&&!bool(v.schedulerEnabled))return null;
+ const counts:Record<string,number>={};
+ for(const [key,value] of Object.entries(v))if(key.endsWith('Count')){if(!count(value))return null;counts[key]=value;}
+ return {ok:true,kind:v.kind as EnvironmentResult['kind'],counts,ids:{},...(v.combatMode?{combatMode:v.combatMode as EnvironmentResult['combatMode']}:{}),...(v.worldState?{worldState:v.worldState as EnvironmentResult['worldState']}:{}),...(v.schedulerEnabled!==undefined?{schedulerEnabled:v.schedulerEnabled as boolean}:{})};
 }
 
 export function decodeArenaResult(v: unknown): ArenaResult | null {
@@ -72,5 +95,7 @@ export function createArenaAdminApi(rpc: Rpc = (name,args)=>supabase.rpc(name as
     relocate:(characterId:string,nodeId:string)=>call('combat2_test_admin_relocate',{_arena_id:COMBAT2_TEST_ARENA.id,_character_id:characterId,_destination_node_id:nodeId},decodeArenaResult),
     stop:(requestId:string)=>call('combat2_test_stop',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeArenaResult),
     reset:(requestId:string)=>call('combat2_test_reset',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId,_confirm_destroy_diagnostics:true},decodeArenaResult),
+    startEnvironment:(requestId:string)=>call('combat2_test_environment_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeEnvironmentResult),
+    closeEnvironment:(requestId:string)=>call('combat2_test_environment_close',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeEnvironmentResult),
   };
 }

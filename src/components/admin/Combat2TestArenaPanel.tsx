@@ -17,7 +17,7 @@ export default function Combat2TestArenaPanel() {
   const [users,setUsers]=useState<AdminUser[]>([]); const [userId,setUserId]=useState(''); const [characterId,setCharacterId]=useState('');
   const [nodeId,setNodeId]=useState(''); const [busy,setBusy]=useState<string|null>(null); const [result,setResult]=useState('');
   const [refreshedAt,setRefreshedAt]=useState<Date|null>(null); const [resetPhrase,setResetPhrase]=useState('');
-  const stopRequest=useRef<string|null>(null); const resetRequest=useRef<string|null>(null); const selection=useRef(''); const mounted=useRef(true); const busyRef=useRef(false);
+  const stopRequest=useRef<string|null>(null); const resetRequest=useRef<string|null>(null); const startRequest=useRef<string|null>(null); const closeRequest=useRef<string|null>(null); const selection=useRef(''); const mounted=useRef(true); const busyRef=useRef(false);
   const selectedUser=users.find(u=>u.id===userId); const characters=selectedUser?.characters ?? [];
   const selectedCharacter=characters.find(c=>c.id===characterId); const access=status?.access.find(a=>a.userId===userId&&a.characterId===characterId);
 
@@ -43,6 +43,18 @@ export default function Combat2TestArenaPanel() {
 
   return <div className="p-6 overflow-auto h-full space-y-4">
     <div><h1 className="font-display text-2xl text-primary">Combat2 Test Arena</h1><p className="text-sm text-muted-foreground">Administrative controls for {COMBAT2_TEST_ARENA.key}. Server classifications are authoritative.</p></div>
+    <Card><CardHeader><CardTitle>Test environment</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
+      {!status?<p>Authoritative environment status unavailable.</p>:<>
+        <p>Combat mode: <b>{status.combatMode}</b> · World: <b>{status.worldState}</b> · Combat2 scheduler: <b>{status.schedulerEnabled?'enabled':'disabled'}</b> ({status.cronJobCount} active jobs)</p>
+        <p>{status.testerCount} registered testers · {status.locatedTesterCount} currently in the arena · {status.activeEncounterCount} arena encounters</p>
+        <p>{status.ordinaryEncounterCount} ordinary encounters · {status.ordinaryLiveClaimCount} ordinary live claims · {status.recentOrdinaryPlayerCount} recently active ordinary players · {status.liveClaimCount} total live claims</p>
+        <p>Last start: {status.lastStartClassification??'unavailable'} · Last close: {status.lastCloseClassification??'unavailable'}</p>
+      </>}
+      <div className="flex flex-wrap gap-2">
+       <AlertDialog><AlertDialogTrigger asChild><Button disabled={!status||status.locatedTesterCount<1||!!busy}>Start test environment</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Start the Combat2 test environment?</AlertDialogTitle><AlertDialogDescription>This globally opens Combat2, wakes the world and starts the two-second dispatcher. Located testers: {status?.locatedTesterCount??0} of {status?.testerCount??0} registered.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={()=>mutate('start-environment',()=>api.startEnvironment(idFor(startRequest)),startRequest)}>Confirm start</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+       <AlertDialog><AlertDialogTrigger asChild><Button variant="outline" disabled={!status||!!busy}>Close test environment safely</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Close the Combat2 test environment safely?</AlertDialogTitle><AlertDialogDescription>Arena evidence is preserved. Global maintenance and sleep occur only when there is no ordinary activity; otherwise only the arena stops. Current ordinary activity: {(status?.ordinaryEncounterCount??0)+(status?.ordinaryLiveClaimCount??0)+(status?.recentOrdinaryPlayerCount??0)}.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={()=>mutate('close-environment',()=>api.closeEnvironment(idFor(closeRequest)),closeRequest)}>Confirm safe close</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      </div>
+    </CardContent></Card>
     <Card><CardHeader className="flex-row items-center justify-between"><CardTitle>Arena status</CardTitle><Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className="w-4 h-4 mr-1"/>Refresh</Button></CardHeader>
       <CardContent className="text-sm space-y-2">{loading&&<p>Loading authoritative status…</p>}{error&&<p role="alert" className="text-destructive">{error}</p>}{status&&<>
         <p><b>{status.label}</b> · {status.active?'active':'inactive'} · {status.stopped?'stopped':'running'}</p>

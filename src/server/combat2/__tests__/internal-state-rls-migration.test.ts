@@ -1,6 +1,6 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-const SQL=readFileSync('supabase/migrations/20260906150000_combat2_internal_state_rls.sql','utf8').replaceAll('\r\n','\n').toLowerCase();
+const SQL=readFileSync('supabase/migrations/20260906134803_7ca9b782-4f52-47e1-9691-8b286ca26c48.sql','utf8').replaceAll('\r\n','\n').toLowerCase();
 const allMigrations=(readFileSync('supabase/migrations/20260831133000_combat2_dispatch_scheduler_foundation.sql','utf8')+
  readFileSync('supabase/migrations/20260902093129_6e2ff6de-db65-4d4d-83e1-dadcfebaa70c.sql','utf8')+
  readFileSync('supabase/migrations/20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql','utf8')+
