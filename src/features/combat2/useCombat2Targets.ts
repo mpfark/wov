@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { resolveCombat2ManualAttackTarget, resolveCombat2Target, targetIdentity, type Combat2TargetIdentity, type Combat2TargetRoster } from './target-resolution';
 
 export function useCombat2Targets(model: Combat2TargetRoster | null) {
@@ -7,7 +7,7 @@ export function useCombat2Targets(model: Combat2TargetRoster | null) {
   const current = selected && model?.encounterId === selected.encounterId
     ? living.find(c => c.id === selected.id && c.creatureId === selected.creatureId && c.spawnSeq === selected.spawnSeq) : undefined;
   // Forget invalid selections, rather than letting an old identity reappear later.
-  if (selected && !current) setSelected(null);
+  useEffect(() => { if (selected && !current) setSelected(null); }, [selected, current]);
   const explicit = current ? selected : null;
   const resolved = resolveCombat2Target(model, explicit);
   const latest = useRef({ model, explicit });

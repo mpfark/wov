@@ -89,8 +89,9 @@ describe('safe delivered Combat2 message wording', () => {
     expect(model.events.map(e => e.id)).toEqual(['batch-1:2']);
     expect(selectCombat2Events(true, model, model.events)).toHaveLength(1);
     expect(model.events[0].message).not.toMatch(/pending_event|internal|payload|aaaa|dddd/);
-    expect(messages([{ kind: 'unrecognized_event', meta: { text: `payload ${CHARACTER}` } }]).events[0].message)
-      .toBe('Combat state updated.');
+    const internalOnly = messages([{ kind: 'unrecognized_event', meta: { text: `payload ${CHARACTER}` } }]);
+    expect(internalOnly.events).toEqual([]);
+    expect(internalOnly.lastAppliedTick).toBe(1);
   });
 
   it('keeps typed flee refusal and committed completion distinct, with legacy parsing unchanged', () => {
@@ -102,6 +103,13 @@ describe('safe delivered Combat2 message wording', () => {
     expect(messages([{ kind: 'fighter_exit_failed', actor: self, outcomeReason: 'dead' }]).events[0].message)
       .toBe('You cannot flee: defeated before escape.');
     expect(messages([{ kind: 'fighter_fled', actor: self }]).events[0].message).toBe('You flee.');
+  });
+
+  it('visibly separates the Death marker label from the authoritative death message', () => {
+    const death = messages([{ kind: 'creature_died', actor: self, target: wolf }]).events[0];
+    const html = renderToStaticMarkup(createElement(EventLogLine, { event: death }));
+    expect(html).toContain('Death — </span><span class="event-log-body">Wolf is defeated.');
+    expect(html).not.toContain('DeathWolf');
   });
 });
 
@@ -362,12 +370,12 @@ describe('Combat2 authoritative presentation model', () => {
     expect(model.events[0]).toMatchObject({ id: 'resolved-batch:1', type: 'attack', amount: 8, abilityKey: 'granite_slam' });
   });
 
-  it('orders events by tick, gives stable identities, deduplicates at the UI seam, and handles unknown kinds', () => {
+  it('orders visible events, deduplicates at the UI seam, and advances past unknown internal rows', () => {
     const model = buildCombat2Presentation(delivery(2));
-    expect(model.events.map((event) => event.id)).toEqual(['batch-1:1', 'batch-2:1']);
-    expect(model.events[1]).toMatchObject({ type: 'unknown', severity: 'notable' });
+    expect(model.events.map((event) => event.id)).toEqual(['batch-1:1']);
+    expect(model.lastAppliedTick).toBe(2);
     expect(selectCombat2Events(true, model, [model.events[0] as GameLogEvent]).map((event) => event.id))
-      .toEqual(['batch-1:1', 'batch-2:1']);
+      .toEqual(['batch-1:1']);
   });
 
   it('rejects duplicate/out-of-order ticks instead of skipping or reapplying them', () => {

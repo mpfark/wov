@@ -447,6 +447,11 @@
   stroke-width: 2;
   opacity: 0.9;
 }
+.event-log-marker-label {
+  margin-right: 0.2rem;
+  white-space: nowrap;
+  font-weight: 600;
+}
 
 /* Left-edge accents: the primary category indicator. Restrained on
    purpose — colour never carries meaning on its own. */

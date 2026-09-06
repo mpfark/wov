@@ -102,9 +102,13 @@ export default function EventLogLine({
       {Marker && (
         <Marker
           className="event-log-marker"
-          aria-label={MARKER_LABEL[pres.marker!]}
-          role="img"
+          aria-hidden={pres.marker === 'kill' ? true : undefined}
+          aria-label={pres.marker === 'kill' ? undefined : MARKER_LABEL[pres.marker!]}
+          role={pres.marker === 'kill' ? undefined : 'img'}
         />
+      )}
+      {!isChat && pres.marker === 'kill' && (
+        <span className="event-log-marker-label">{MARKER_LABEL.kill} — </span>
       )}
       <span className="event-log-body">{body}</span>
       {number && (

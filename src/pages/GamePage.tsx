@@ -240,7 +240,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     combat2BlocksLegacy, activeCombat2Presentation, combat2BlocksLegacy
       ? creatures.filter(c => activeCombat2Presentation?.creatures.some(a => a.creatureId === c.id)) : creatures,
   ), [activeCombat2Presentation, creatures, combat2BlocksLegacy]);
-  const combat2Targets = useCombat2Targets(combat2.actionsReady && !ownership.locked ? activeCombat2Presentation : null);
+  // Target presentation remains mounted through transient delivery/action locks;
+  // submission readiness is enforced independently by the action router.
+  const combat2Targets = useCombat2Targets(!ownership.locked ? activeCombat2Presentation : null);
   const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;

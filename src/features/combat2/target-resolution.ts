@@ -1,5 +1,5 @@
 import type { Combat2PresentationCreature, Combat2PresentationModel } from './presentation';
-export type Combat2TargetRoster = Pick<Combat2PresentationModel, 'encounterId' | 'creatures'>;
+export type Combat2TargetRoster = Pick<Combat2PresentationModel, 'encounterId' | 'creatures' | 'autoattack'>;
 
 export interface Combat2TargetIdentity {
   encounterId: string;
@@ -28,6 +28,12 @@ export function resolveCombat2Target(
       c.id === selected.id && c.creatureId === selected.creatureId && c.spawnSeq === selected.spawnSeq);
     return valid ? { ok: true, target: targetIdentity(model.encounterId, valid) }
       : { ok: false, reason: 'The selected Combat2 target is no longer valid. Select a living creature.' };
+  }
+  const autoattack = model.autoattack;
+  if (autoattack?.active) {
+    const valid = living.find(c => c.id === autoattack.nodeCreatureId
+      && c.creatureId === autoattack.targetCreatureId && c.spawnSeq === autoattack.spawnSeq);
+    if (valid) return { ok: true, target: targetIdentity(model.encounterId, valid) };
   }
   const engaged = living.filter(c => c.engaged);
   if (engaged.length === 1) return { ok: true, target: targetIdentity(model.encounterId, engaged[0]) };

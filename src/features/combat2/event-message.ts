@@ -70,7 +70,9 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       ? `${action} lands on empty ground.` : `${action} is evaded.`;
     case 'boss_telegraph': return typeof meta.text === 'string' && meta.text.trim()
       ? meta.text.trim() : `${subject} prepares ${label}.`;
-    default: return 'Combat state updated.';
+    // Unknown/internal rows remain cursor-bearing delivery evidence but have no
+    // invented player-facing combat meaning.
+    default: return null;
   }
 }
 

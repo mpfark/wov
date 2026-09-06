@@ -13,13 +13,14 @@ const creature = (id: string, engaged = true) => ({
 });
 // The target seam consumes only these projected fields; no legacy roster.
 const model = (creatures = [creature('one')], encounterId = 'enc'): Combat2TargetRoster =>
-  ({ creatures, encounterId });
+  ({ creatures, encounterId, autoattack: null });
 const ability = { abilityKey: 'power_strike', label: 'Power Strike', targetType: 'enemy' } as ClassAbility;
 const accepted = { status: 'accepted' as const, classification: 'queued' as const, intentId: 'intent', seq: 1, intentStatus: null };
 
 describe('authoritative Combat2 target resolution', () => {
   it('explicit living selection wins, including an idle target', () => {
     const roster = model([creature('one'), creature('idle', false)]);
+    roster.autoattack = { active: true, targetCreatureId: 'one', nodeCreatureId: 'spawn-one', spawnSeq: 1 };
     expect(resolveCombat2Target(roster, targetIdentity('enc', roster.creatures[1])))
       .toEqual({ ok: true, target: targetIdentity('enc', roster.creatures[1]) });
   });
@@ -31,6 +32,14 @@ describe('authoritative Combat2 target resolution', () => {
     expect(resolveCombat2Target(model([creature('one'), creature('two')]), null))
       .toMatchObject({ ok: false, reason: expect.stringContaining('multiple') });
     expect(resolveCombat2Target(model([]), null)).toMatchObject({ ok: false });
+  });
+
+  it('uses the valid authoritative autoattack target before an ambiguous engaged fallback', () => {
+    const roster = model([creature('one'), creature('two')]);
+    roster.autoattack = { active: true, targetCreatureId: 'two', nodeCreatureId: 'spawn-two', spawnSeq: 1 };
+    expect(resolveCombat2Target(roster, null)).toEqual({ ok: true, target: targetIdentity('enc', roster.creatures[1]) });
+    roster.autoattack = { ...roster.autoattack, spawnSeq: 2 };
+    expect(resolveCombat2Target(roster, null)).toMatchObject({ ok: false, reason: expect.stringContaining('multiple') });
   });
 
   it('manual Attack selects only a living idle creature and refuses when all are engaged', () => {
@@ -81,6 +90,20 @@ describe('authoritative Combat2 target resolution', () => {
     act(() => result.current.select('two'));
     rerender({ roster: model([creature('one'), creature('two')], 'new-enc') });
     expect(result.current.selectedId).toBeNull();
+  });
+
+  it('keeps a valid explicit target through ticks, then visibly adopts the fenced autoattack target after death', () => {
+    const first = creature('one');
+    const second = creature('two');
+    const { result, rerender } = renderHook(({ roster }) => useCombat2Targets(roster), {
+      initialProps: { roster: { ...model([first, second]), autoattack: { active: true, targetCreatureId: 'one', nodeCreatureId: 'spawn-one', spawnSeq: 1 } } },
+    });
+    act(() => result.current.select('one'));
+    rerender({ roster: { ...model([{ ...first, hp: 9 }, second]), autoattack: { active: true, targetCreatureId: 'one', nodeCreatureId: 'spawn-one', spawnSeq: 1 } } });
+    expect(result.current.selectedId).toBe('one');
+    rerender({ roster: { ...model([{ ...first, hp: 0, isAlive: false }, second]), autoattack: { active: true, targetCreatureId: 'two', nodeCreatureId: 'spawn-two', spawnSeq: 1 } } });
+    expect(result.current.selectedId).toBe('two');
+    expect(result.current.resolve()).toEqual({ ok: true, target: targetIdentity('enc', second) });
   });
 
   it('button and hotkey use the same target and indicator without automatic submissions', async () => {
