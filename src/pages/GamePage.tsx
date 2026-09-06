@@ -86,6 +86,7 @@ import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
+import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -1231,9 +1232,20 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     if (!(isWideScreen && chatPanelOpen)) return eventLog;
     return eventLog.filter(e => e.type !== 'speech' && e.type !== 'whisper');
   }, [eventLog, isWideScreen, chatPanelOpen]);
+  const combat2VisibleLog = useCombat2VisibleLog(
+    character.id,
+    combat2BlocksLegacy,
+    combat2.presentation.model,
+    combat2.intents.acknowledgements,
+  );
   const presentedEventLog = useMemo(() => {
-    return selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
-  }, [filteredEventLog, combat2.presentation.model]);
+    if (combat2VisibleLog.historical) return combat2VisibleLog.events as GameLogEvent[];
+    const selected = selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
+    if (!combat2BlocksLegacy) return selected;
+    const byId = new Map(selected.map(event => [event.id, event]));
+    for (const event of combat2VisibleLog.events) byId.set(event.id, event);
+    return [...byId.values()].sort((a, b) => a.ts - b.ts);
+  }, [filteredEventLog, combat2.presentation.model, combat2BlocksLegacy, combat2VisibleLog]);
 
   // On-device archive: full personal log history with infinite scrollback.
   const logArchive = useLogArchive(character.id, eventLog);
@@ -1422,10 +1434,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
-      {combat2BlocksLegacy && <Combat2TestStatus status={combat2Status}
+      {combat2BlocksLegacy && <Combat2TestStatus status={combat2VisibleLog.historical ? 'Historical' : combat2Status}
         onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
         stale={!combat2.actionsReady && !!activeCombat2Presentation}
-        diagnostic={combat2.intents.pending?.message ?? combat2Diagnostic} />}
+        diagnostic={combat2VisibleLog.historical
+          ? 'Combat2 test run stopped — showing the last received combat log.'
+          : combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}

@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Combat2IntentError, type Combat2IntentAction, type Combat2IntentAdapter, type Combat2IntentOutcome } from './intent';
-import { useCombat2IntentSession } from './useCombat2IntentSession';
+import { useCombat2IntentSession, type Combat2IntentResult } from './useCombat2IntentSession';
 
 const CHARACTER = '22222222-2222-4222-8222-222222222222';
 const NODE = '11111111-1111-4111-8111-111111111111';
@@ -97,7 +97,7 @@ describe('useCombat2IntentSession', () => {
     expect(result.current.pending?.message).toBe('You prepare Fireball.');
   });
 
-  it('clears pending acknowledgement on tick advance and delivery failure', async () => {
+  it('keeps one durable acknowledgement when pending control state clears on a fast tick', async () => {
     const adapter: Combat2IntentAdapter = { submit: vi.fn().mockResolvedValue(accepted) };
     const { result, rerender } = renderHook(({ tick, status }) => useCombat2IntentSession({
       enabled: true, characterId: CHARACTER, nodeId: NODE, encounterId: ENCOUNTER,
@@ -107,8 +107,35 @@ describe('useCombat2IntentSession', () => {
     expect(result.current.pending).not.toBeNull();
     rerender({ tick: 11, status: 'live' });
     expect(result.current.pending).toBeNull();
-    await act(async () => { await result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    expect(result.current.acknowledgements.map(line => line.message)).toEqual(['You prepare Fireball.']);
+    await act(async () => { await result.current.retry(); });
+    expect(result.current.acknowledgements.map(line => line.message)).toEqual(['You prepare Fireball.']);
     rerender({ tick: 11, status: 'gap' });
     expect(result.current.pending).toBeNull();
+    expect(result.current.acknowledgements.map(line => line.message)).toEqual(['You prepare Fireball.']);
+  });
+
+  it('does not acknowledge refused, failed, or late accepted submissions', async () => {
+    const refusedAdapter: Combat2IntentAdapter = { submit: vi.fn().mockResolvedValue({ status: 'refused', classification: 'invalid_target', reason: 'dead' }) };
+    const refused = renderHook(() => useCombat2IntentSession({ enabled: true, characterId: CHARACTER, nodeId: NODE,
+      encounterId: ENCOUNTER, adapter: refusedAdapter, generateRequestId: () => REQUEST_1 }));
+    await act(async () => { await refused.result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    expect(refused.result.current.acknowledgements).toEqual([]);
+
+    const failedAdapter: Combat2IntentAdapter = { submit: vi.fn().mockRejectedValue(new Error('broken')) };
+    const failed = renderHook(() => useCombat2IntentSession({ enabled: true, characterId: CHARACTER, nodeId: NODE,
+      encounterId: ENCOUNTER, adapter: failedAdapter, generateRequestId: () => REQUEST_1 }));
+    await act(async () => { await failed.result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    expect(failed.result.current.acknowledgements).toEqual([]);
+
+    let release!: (value: typeof accepted) => void;
+    const lateAdapter: Combat2IntentAdapter = { submit: vi.fn(() => new Promise<Combat2IntentOutcome>(resolve => { release = resolve; })) };
+    const late = renderHook(({ encounterId }) => useCombat2IntentSession({ enabled: true, characterId: CHARACTER, nodeId: NODE,
+      encounterId, adapter: lateAdapter, generateRequestId: () => REQUEST_1 }), { initialProps: { encounterId: ENCOUNTER as string | null } });
+    let resultPromise!: Promise<Combat2IntentResult>;
+    act(() => { resultPromise = late.result.current.submit(action, { message: 'You prepare Fireball.' }); });
+    late.rerender({ encounterId: null });
+    await act(async () => { release(accepted); await resultPromise; });
+    expect(late.result.current.acknowledgements).toEqual([]);
   });
 });

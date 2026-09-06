@@ -8,6 +8,8 @@ import {
   type Combat2IntentClient,
   type Combat2IntentOutcome,
 } from './intent';
+import { buildAbilityEvent, buildBuffEvent } from '@/features/combat/events/client-event-builder';
+import type { GameLogEvent } from '@/features/combat/events/log-event';
 
 export type Combat2IntentResult =
   | Combat2IntentOutcome
@@ -48,6 +50,7 @@ export interface Combat2IntentSession {
   submit(action: Combat2IntentAction, feedback?: Combat2IntentFeedback): Promise<Combat2IntentResult>;
   retry(): Promise<Combat2IntentResult>;
   pending: Combat2PendingIntent | null;
+  acknowledgements: readonly GameLogEvent[];
 }
 
 const defaultAdapter = createCombat2IntentAdapter({
@@ -78,12 +81,14 @@ export function useCombat2IntentSession({
   const tickRef = useRef(authoritativeTick);
   tickRef.current = authoritativeTick;
   const [pending, setPending] = useState<Combat2PendingIntent | null>(null);
+  const [acknowledgements, setAcknowledgements] = useState<GameLogEvent[]>([]);
 
   useEffect(() => {
     generationRef.current += 1;
     attemptRef.current = null;
     feedbackRef.current.clear();
     setPending(null);
+    setAcknowledgements([]);
     return () => {
       generationRef.current += 1;
       attemptRef.current = null;
@@ -118,12 +123,22 @@ export function useCombat2IntentSession({
       attempt.inFlight = false;
       if (outcome.status === 'accepted') {
         const feedback = feedbackRef.current.get(attempt.requestId);
-        if (feedback) setPending(current => current?.requestId === attempt.requestId ? current : {
-          requestId: attempt.requestId,
-          message: feedback.message,
-          acceptedAtTick: tickRef.current ?? -1,
-          action: attempt.action,
-        });
+        if (feedback) {
+          setPending(current => current?.requestId === attempt.requestId ? current : {
+            requestId: attempt.requestId,
+            message: feedback.message,
+            acceptedAtTick: tickRef.current ?? -1,
+            action: attempt.action,
+          });
+          setAcknowledgements(current => {
+            const id = `combat2-local-ack:${attempt.sessionKey}:${attempt.requestId}`;
+            if (current.some(line => line.id === id)) return current;
+            const line = attempt.action.kind === 'stance_activate' || attempt.action.kind === 'stance_drop'
+              ? buildBuffEvent(feedback.message)
+              : buildAbilityEvent(feedback.message);
+            return [...current, { ...line, id }];
+          });
+        }
       }
       return outcome;
     } catch (error) {
@@ -165,5 +180,5 @@ export function useCombat2IntentSession({
     return run(attempt);
   }, [run]);
 
-  return { submit, retry, pending };
+  return { submit, retry, pending, acknowledgements };
 }
