@@ -384,7 +384,7 @@ export function useCharacter(user: User | null) {
   // (combat-tick owns the value during fights), so this is safe to call
   // unconditionally on a slow cadence.
   const forceShieldActive = !!(selectedCharacter?.reserved_buffs && (selectedCharacter.reserved_buffs as any).force_shield);
-  const restrictedTester = isConfiguredCombat2Tester(selectedCharacterId);
+  const restrictedTester = isConfiguredCombat2Tester(selectedCharacterId, selectedCharacter?.current_node_id);
   useEffect(() => {
     if (restrictedTester || !forceShieldActive || !selectedCharacterId) return;
     let cancelled = false;

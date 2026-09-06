@@ -9,7 +9,7 @@ import { COMBAT2_TEST_ARENA, createArenaAdminApi, type ArenaResult, type ArenaSt
 import type { AdminUser } from '@/components/admin/users/constants';
 
 const api = createArenaAdminApi();
-const nodeLabels: Record<string,string> = { staging:'Staging Room',low:'Low-Level Arena',equal:'Equal-Level Arena',high_damage:'High-Damage Arena',boss:'Boss Chamber' };
+const nodeLabels: Record<string,string> = Object.fromEntries(COMBAT2_TEST_ARENA.nodes.map(node=>[node.purpose,node.label]));
 const resultText = (r: ArenaResult) => `${r.ok ? 'Accepted' : 'Refused'}: ${r.kind}${Object.keys(r.counts).length ? ` (${Object.entries(r.counts).map(([k,v])=>`${k}: ${v}`).join(', ')})` : ''}`;
 
 export default function Combat2TestArenaPanel() {

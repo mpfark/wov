@@ -77,7 +77,7 @@ import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 import { useGuide } from '@/features/guide/hooks/useGuide';
 import { GuideReader } from '@/features/guide/components/GuideReader';
 import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
-import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID, COMBAT2_TEST_NODE_ID } from '@/shared/config/feature-flags';
+import { COMBAT2_CLIENT_ENABLED, COMBAT2_TEST_CHARACTER_ID } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
@@ -110,7 +110,7 @@ interface Props {
 export default function GamePage({ character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, clearCharacterFields: clearFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
   const ownership = useCombat2TestOwnership({
     enabled: COMBAT2_CLIENT_ENABLED, characterId: character.id, nodeId: character.current_node_id,
-    characterSetting: COMBAT2_TEST_CHARACTER_ID, nodeSetting: COMBAT2_TEST_NODE_ID,
+    characterSetting: COMBAT2_TEST_CHARACTER_ID,
   });
   const combat2OwnsSession = ownership.combat2OwnsSession;
   // Reservation suspends legacy execution even before solo preflight/entry resolves.

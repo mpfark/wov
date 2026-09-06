@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SQL = readFileSync('supabase/migrations/20260905221000_combat2_test_arena_foundation.sql', 'utf8').replaceAll('\r\n', '\n');
+const SQL = readFileSync('supabase/migrations/20260905223641_ab9fdebc-0a3a-4b6a-a0a3-b99b944953a8.sql', 'utf8').replaceAll('\r\n', '\n');
 const RESOLVER = readFileSync('src/shared/combat2/resolver.ts', 'utf8');
 const DECODE = readFileSync('src/shared/combat2/decode.ts', 'utf8');
 const TYPES = readFileSync('src/shared/combat2/types.ts', 'utf8');

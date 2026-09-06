@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { adaptBossCast } from '@/shared/combat2/boss-catalog';
 
-const SQL = readFileSync('supabase/migrations/20260905230000_combat2_test_arena_content_lifecycle.sql','utf8').replaceAll('\r\n','\n');
+const SQL = readFileSync('supabase/migrations/20260906001238_8c52869c-2e3d-4602-aa5a-96ea750f63d6.sql','utf8').replaceAll('\r\n','\n');
 const ids = (prefix: string) => [...SQL.matchAll(new RegExp(`'(${prefix}[0-9a-f-]+)'`,'g'))].map(m=>m[1]);
 
 describe('permanent Combat2 proving-ground content and lifecycle', () => {

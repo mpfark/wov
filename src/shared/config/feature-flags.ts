@@ -42,4 +42,3 @@ export const COMBAT2_CLIENT_ENABLED = combat2ClientEnabled(
 
 /** Frontend test controls only, never authorization. No configured identity means nobody. */
 export const COMBAT2_TEST_CHARACTER_ID = import.meta.env.VITE_COMBAT2_TEST_CHARACTER_ID;
-export const COMBAT2_TEST_NODE_ID = import.meta.env.VITE_COMBAT2_TEST_NODE_ID;

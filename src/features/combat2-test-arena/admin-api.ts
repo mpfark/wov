@@ -1,11 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-
-export const COMBAT2_TEST_ARENA = {
-  id: 'ffff5000-0000-4000-8000-000000000002',
-  key: 'combat2_proving_ground',
-  regionId: 'ffff5000-0000-4000-8000-000000000001',
-  resetPhrase: 'RESET COMBAT2 TEST ARENA',
-} as const;
+import { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
+export { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
 
 export const ARENA_RPC_NAMES = [
   'combat2_test_status', 'combat2_test_grant', 'combat2_test_revoke',

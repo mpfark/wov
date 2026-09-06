@@ -19,7 +19,7 @@ export default function GameRoute() {
   // value, leaving the player with only "Welcome back" on the real mount.
   const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
   const syncStartedForRef = useRef<string | null>(null);
-  const restrictedTester = isConfiguredCombat2Tester(character?.id);
+  const restrictedTester = isConfiguredCombat2Tester(character?.id, character?.current_node_id);
   const restrictedRef = useRef(restrictedTester);
   restrictedRef.current = restrictedTester;
 
