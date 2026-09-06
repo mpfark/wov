@@ -180,14 +180,18 @@ function parseEffects(values: unknown[], characterId: string): {
   const parsed = values.map((value) => {
     const row = record(value);
     if (!row || typeof row.isReservation !== 'boolean') throw new Combat2PresentationError('combat2_sync effect is malformed');
+    const kind = stringField(row, 'kind');
     const targetCharacterId = optionalString(row, 'targetCharacterId');
     const targetCreatureId = optionalString(row, 'targetCreatureId');
-    if ((targetCharacterId === null) === (targetCreatureId === null)) {
+    const targetInvalid = kind === 'autoattack'
+      ? targetCharacterId === null || targetCreatureId === null
+      : (targetCharacterId === null) === (targetCreatureId === null);
+    if (targetInvalid) {
       throw new Combat2PresentationError('combat2_sync effect target is ambiguous');
     }
     return {
       id: stringField(row, 'id'),
-      kind: stringField(row, 'kind'),
+      kind,
       effectType: optionalString(row, 'effectType'),
       abilityKey: optionalString(row, 'abilityKey'),
       sourceCharacterId: optionalString(row, 'sourceCharacterId'),

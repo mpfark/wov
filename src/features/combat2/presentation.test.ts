@@ -157,6 +157,21 @@ describe('Combat2 authoritative presentation model', () => {
     expect(model.telegraphs).toHaveLength(1);
   });
 
+  it('accepts the installed autoattack effect dual-target contract while retaining XOR for other effects', () => {
+    const state = delivery(0);
+    state.snapshot!.effects = [effect({
+      kind: 'autoattack', effectType: 'basic_attack', abilityKey: null,
+      targetCharacterId: CHARACTER, targetCreatureId: CREATURE,
+    })];
+    expect(buildCombat2Presentation(state).effects[0]).toMatchObject({
+      kind: 'autoattack', targetCharacterId: CHARACTER, targetCreatureId: CREATURE,
+    });
+    state.snapshot!.effects = [effect({ targetCreatureId: CREATURE })];
+    expect(() => buildCombat2Presentation(state)).toThrow(Combat2PresentationError);
+    state.snapshot!.effects = [effect({ targetCharacterId: null, targetCreatureId: null })];
+    expect(() => buildCombat2Presentation(state)).toThrow(Combat2PresentationError);
+  });
+
   it('derives tank presentation only from the projected creature and own fighter ids', () => {
     const another = delivery();
     another.snapshot!.creatures[0].tankFighterId = 'fighter-other';

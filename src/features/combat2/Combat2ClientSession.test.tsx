@@ -60,6 +60,34 @@ describe('Combat2ClientSession application bridge', () => {
     view.unmount();
   });
 
+  it('orders entry before initial sync and accepts the installed autoattack effect projection', async () => {
+    const calls: string[] = [];
+    vi.spyOn(supabase, 'rpc').mockImplementation((async (name: string) => {
+      calls.push(name);
+      if (name === 'combat_enter') return { data: { ok: true, kind: 'entered', encounter_id: ENCOUNTER, fighter_id: 'dddddddd-0000-4000-8000-000000000001', entry_seq: 1 }, error: null };
+      if (name === 'combat2_sync') return { data: {
+        ok:true,kind:'sync',latest_tick:0,returned_through_tick:0,has_more:false,
+        encounter:{id:ENCOUNTER,status:'active',tick:0,stateVersion:1},
+        character:{id:CHARACTER,hp:20,maxHp:20,cp:10,maxCp:10,mp:10,maxMp:10,level:1,xp:0,gold:0},
+        fighter:{id:'dddddddd-0000-4000-8000-000000000001',characterId:CHARACTER,entrySeq:1,present:true,exitState:null},
+        creatures:[{id:'node-creature-1',creatureId:'cccccccc-0000-4000-8000-000000000001',spawnSeq:1,name:'Target',hp:20,maxHp:20,isAlive:true,engaged:true,tankFighterId:'dddddddd-0000-4000-8000-000000000001',pendingAction:null}],
+        effects:[{id:'effect-1',kind:'autoattack',effectType:'basic_attack',targetCharacterId:CHARACTER,targetCreatureId:'cccccccc-0000-4000-8000-000000000001',sourceCharacterId:CHARACTER,sourceCreatureId:null,stacks:1,magnitude:0,expiresAt:null,nextDueAt:null,intervalMs:null,lastPulseTick:null,isReservation:false}],
+        rewardClaims:[],autoattack:{targetCreatureId:'cccccccc-0000-4000-8000-000000000001',nodeCreatureId:'node-creature-1',spawnSeq:1,active:true},batches:[],
+      },error:null};
+      throw new Error(`unexpected RPC ${name}`);
+    }) as never);
+    const channel={on:vi.fn(()=>channel),subscribe:vi.fn(()=>channel)};
+    vi.spyOn(supabase,'channel').mockReturnValue(channel as never);
+    vi.spyOn(supabase,'removeChannel').mockResolvedValue('ok');
+    const view=renderHook(()=>useCombat2ClientSession({enabled:true,controlled:true,characterId:CHARACTER,nodeId:NODE,hasLivingCreatures:true}));
+    const {result}=view;
+    await waitFor(()=>expect(result.current.presentation.status).toBe('live'));
+    expect(calls.slice(0,2)).toEqual(['combat_enter','combat2_sync']);
+    expect(result.current.actionsReady).toBe(true);
+    expect(result.current.presentation.model?.effects[0]).toMatchObject({kind:'autoattack',targetCharacterId:CHARACTER});
+    view.unmount();
+  });
+
   it('authoritative flee exits only that session, stops delivery, preserves batches, and blocks intents', async () => {
     const eventId = 'cccccccc-0000-4000-8000-000000000001';
     const rpc = vi.spyOn(supabase, 'rpc').mockImplementation((async (name: string, args: Record<string, unknown>) => {
