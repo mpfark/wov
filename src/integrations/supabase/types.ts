@@ -4854,6 +4854,14 @@ export type Database = {
         Args: { _character_id: string; _node_id: string; _user_id: string }
         Returns: boolean
       }
+      combat2_test_environment_close: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_environment_start: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
       combat2_test_grant: {
         Args: { _arena_id: string; _character_id: string; _user_id: string }
         Returns: Json
