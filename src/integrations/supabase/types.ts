@@ -4842,6 +4842,14 @@ export type Database = {
         Returns: Json
       }
       combat2_test_admin_allowed: { Args: never; Returns: boolean }
+      combat2_test_admin_relocate: {
+        Args: {
+          _arena_id: string
+          _character_id: string
+          _destination_node_id: string
+        }
+        Returns: Json
+      }
       combat2_test_arena_access_allowed: {
         Args: { _character_id: string; _node_id: string; _user_id: string }
         Returns: boolean
