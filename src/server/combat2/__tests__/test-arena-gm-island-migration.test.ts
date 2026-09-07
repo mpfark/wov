@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-const SQL=readFileSync('supabase/migrations/20260907143100_combat2_test_arena_gm_island.sql','utf8');
+const SQL=readFileSync('supabase/migrations/20260907105500_fa9113ec-a477-4b9b-ba16-4ca58e6eb836.sql','utf8');
 describe('Combat2 Test Arena GM island migration',()=>{
  it('moves exactly the registered five-node plus to exact eastern coordinates',()=>{
   expect(SQL).toContain("arena_id='ffff5000-0000-4000-8000-000000000002'");

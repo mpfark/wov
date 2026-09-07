@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-const SQL=readFileSync('supabase/migrations/20260907143000_combat2_authoritative_respawn.sql','utf8');
+const SQL=readFileSync('supabase/migrations/20260907105429_656d5fe4-3405-40f5-8ece-66802dd61dd2.sql','utf8');
 
 describe('Combat2 authoritative respawn migration',()=>{
  it('installs server-owned exact configuration',()=>{

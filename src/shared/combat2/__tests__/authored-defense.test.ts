@@ -17,7 +17,7 @@ const FLAT = Math.round(6 + Math.min(18, Math.sqrt(4) * 1.8)); // WIS 18
 
 function snapshot(): NodeSnapshot {
   return {
-    encounter: { id: 'defense-0', node_id: 'node', tick: 0, candidate_tick: 1, state_version: 1, now: NOW },
+    encounter: { id: 'defense-0', node_id: 'node', tick: 0, candidate_tick: 1, state_version: 1, now: NOW, test_arena_id: null },
     fighters: [{
       id: FIGHTER, character_id: CHARACTER, entry_seq: 1, present: true,
       party_id: null, party_id_at_entry: null, name: 'Defender', class: 'warrior', race: 'human',
@@ -134,7 +134,9 @@ describe('real authored defensive activation → proposal → decoded next tick'
     const input = next(activate('battle_cry'));
     input.intents = [intent('battle_cry', 'stance_drop')];
     const dropped = resolveNodeTick(input, deps);
-    expect(dropped.effects_delete.sort()).toEqual(input.effects.map(e => e.id).sort());
+    expect(dropped.effects_delete.sort()).toEqual(
+      input.effects.filter(effect => effect.ability_key === 'battle_cry').map(effect => effect.id).sort(),
+    );
     expect(dropped.events.some(e => e.kind === 'stance_dropped')).toBe(true);
     expect(dropped.characters.find(c => c.id === CHARACTER)?.cp).toBe(375);
     input.effects = input.effects.filter(e => !dropped.effects_delete.includes(e.id));
@@ -145,14 +147,15 @@ describe('real authored defensive activation → proposal → decoded next tick'
 
   it('keeps Divine Challenge authored flat amount, CP cost and CON duration, then expires', () => {
     const proposal = activate('divine_challenge');
-    expect(proposal.effects_insert).toHaveLength(1);
-    expect(proposal.effects_insert[0]).toMatchObject({ magnitude: FLAT, config: { mitigation_mode: 'flat' }, expires_at: '2026-09-04T00:00:33.000Z' });
+    const mitigation = proposal.effects_insert.filter(effect => effect.kind === 'mitigation');
+    expect(mitigation).toHaveLength(1);
+    expect(mitigation[0]).toMatchObject({ magnitude: FLAT, config: { mitigation_mode: 'flat' }, expires_at: '2026-09-04T00:00:33.000Z' });
     expect(proposal.events.find(e => e.kind === 'buff_applied')?.amount).toBe(FLAT);
     expect(proposal.characters.find(c => c.id === CHARACTER)?.cp).toBe(340);
     const input = next(proposal);
     input.encounter.now = '2026-09-04T00:00:33.000Z';
     const { out } = seeded(input, out => attacks(out)[0]?.hitQuality === 'normal');
-    expect(out.effects_delete).toContain(input.effects[0].id);
+    expect(out.effects_delete).toContain(input.effects.find(effect => effect.kind === 'mitigation')!.id);
     expect(attacks(out)[0].meta?.flatMitigated).toBe(0);
   });
 

@@ -33,6 +33,7 @@ describe('safe delivered Combat2 message wording', () => {
     [{ kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, outcomeReason: 'critical_miss' }, 'Your Power Strike misses Wolf (critical miss).'],
     [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0, hitQuality: 'miss' }, 'Wolf misses you.'],
     [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0 }, 'Wolf deals no damage to you.'],
+    [{ kind: 'attack_evaded', abilityKey: 'disengage', actor: wolf, target: self, amount: 0 }, 'You evade Wolf with Disengage.'],
     [{ kind: 'dot_applied', actor: self, target: wolf, abilityKey: 'rend', amount: 6 }, 'You apply Rend to Wolf.'],
     [{ kind: 'effect_pulse', target: wolf, abilityKey: 'rend', amount: 6, meta: { effectKind: 'dot' } }, 'Rend deals 6 damage to Wolf.'],
     [{ kind: 'effect_expired', abilityKey: 'rend' }, 'Rend expires.'],

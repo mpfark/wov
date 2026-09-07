@@ -28,7 +28,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
   const meta = event.meta ?? {};
   const verb = (singular: string, plural: string) => own ? plural : singular;
   const positive = (key: string) => typeof meta[key] === 'number' && Number.isFinite(meta[key]) && (meta[key] as number) > 0;
-  const details = [['percentMitigated', 'prevented by percentage mitigation'], ['flatMitigated', 'prevented by flat mitigation'],
+  const details = [['outgoingReduced', 'prevented by outgoing-damage reduction'], ['percentMitigated', 'prevented by percentage mitigation'], ['flatMitigated', 'prevented by flat mitigation'],
     ['blocked', 'blocked'], ['absorbed', 'absorbed'], ['critSoftened', 'critical bonus reduced']]
     .filter(([key]) => positive(key)).map(([key, text]) => `${meta[key]} ${text}`);
   const damage = () => `${action} ${!event.abilityKey && own ? 'deal' : 'deals'} ${amount === null ? 'damage' : amount === 0 ? 'no damage' : `${amount} damage`} to ${target}${details.length ? ` (${details.join('; ')})` : ''}.`;
@@ -38,6 +38,8 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
         return `${action} ${!event.abilityKey && own ? 'miss' : 'misses'} ${target}${event.outcomeReason === 'critical_miss' ? ' (critical miss)' : ''}.`;
       }
       return damage();
+    case 'attack_evaded':
+      return ownTarget ? `You evade ${subject} with ${label}.` : `${target} evades ${subject} with ${label}.`;
     case 'effect_pulse':
       return meta.healing === true
         ? `${action} restores ${amount === null ? 'health' : `${amount} HP`} to ${target}.`
@@ -61,7 +63,8 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     case 'action_rejected': {
       const reasons: Record<string, string> = { insufficient_cp: 'not enough CP', no_target: 'no valid target',
         target_dead: 'target is dead', not_present_or_dead: 'not present or defeated',
-        stance_already_active: 'stance already active', unknown_ability: 'unsupported ability', requires_shield: 'a shield is required' };
+        stance_already_active: 'stance already active', unknown_ability: 'unsupported ability',
+        ability_unavailable: 'this ability is not yet available in Combat2', requires_shield: 'a shield is required' };
       return `${label} refused: ${reasons[event.outcomeReason ?? ''] ?? 'action unavailable'}.`;
     }
     case 'character_died': return `${target === 'you' ? 'You are' : `${event.target?.name || subject} is`} defeated.`;

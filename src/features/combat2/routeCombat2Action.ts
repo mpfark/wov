@@ -3,6 +3,7 @@ import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '
 import type { Combat2IntentAction } from './intent';
 import type { Combat2IntentResult } from './useCombat2IntentSession';
 import type { Combat2TargetResolution } from './target-resolution';
+import { combat2AbilitySupport } from '@/shared/combat2/ability-support';
 
 export interface RouteCombat2ActionOptions {
   enabled: boolean;
@@ -28,6 +29,11 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   const ability = options.ability;
   if (!ability?.abilityKey) {
     options.diagnose('This action is not mapped to an authored Combat2 ability.');
+    return;
+  }
+  const support = combat2AbilitySupport(ability.abilityKey);
+  if (!support.supported) {
+    options.diagnose(support.reason);
     return;
   }
 

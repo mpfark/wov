@@ -157,7 +157,10 @@ describe('authored reactive retaliation (Holy Shield)', () => {
     expect(pulses[0].amount).toBe(12);
     expect(pulses[0].meta?.damageType).toBe('holy');
     const creatureOut = out.creatures.find((c) => c.creature_id === 'cr-1');
-    expect(creatureOut?.hp).toBe(400 - 12);
+    const playerDamage = out.events
+      .filter(event => event.kind === 'attack' && event.meta?.basicAttack === true)
+      .reduce((sum, event) => sum + (event.amount ?? 0), 0);
+    expect(creatureOut?.hp).toBe(400 - 12 - playerDamage);
   });
 
   it('qualifies its source for exactly this creature spawn', () => {

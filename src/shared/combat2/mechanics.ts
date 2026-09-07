@@ -41,6 +41,7 @@ import type {
   ProposedEffectInsert,
   SnapshotCreature,
   SnapshotEquipment,
+  SnapshotEffect,
   SnapshotFighter,
   TickEvent,
 } from './types';
@@ -87,6 +88,8 @@ export interface AbilitySpec {
   effectType: string | null;
   stackType: string | null;
   config: Record<string, unknown>;
+  /** Canonical release decision; checked before any resolver resource change. */
+  support: { supported: boolean; reason: string | null };
 }
 
 export interface MechanicContext {
@@ -108,6 +111,8 @@ export interface MechanicContext {
   creatureAcReduction?: number;
   /** Installed weapon progression configuration, when known. */
   weaponProgression?: WeaponProgressionConfig;
+  /** Unexpired authoritative effects owned by the acting character. */
+  activeEffects?: readonly SnapshotEffect[];
 }
 
 export interface MechanicOutcome {
@@ -350,7 +355,11 @@ function offensiveHit(
     return outcome;
   }
 
-  const decision = decideAttack(ctx, spec, creature.ac, `${stream}:hit`, options.critEdge ?? 0);
+  const effects = ctx.activeEffects ?? [];
+  const critEdge = effects
+    .filter((effect) => effect.kind === 'offense' && effect.config?.offense_mode === 'crit_edge')
+    .reduce((best, effect) => Math.max(best, Math.max(0, Math.floor(effect.magnitude ?? 0))), 0);
+  const decision = decideAttack(ctx, spec, creature.ac, `${stream}:hit`, (options.critEdge ?? 0) + critEdge);
   if (!decision.hit) {
     outcome.missed = true;
     outcome.events.push({
@@ -366,7 +375,13 @@ function offensiveHit(
   }
 
   const authored = resolveAmount(ctx, spec, `${stream}:dmg`, weapon.die, options.context) ?? 0;
-  const base = authored * (options.multiplier ?? 1);
+  const offenseMultiplier = effects
+    .filter((effect) => effect.kind === 'offense' && effect.config?.offense_mode === 'damage_mult')
+    .reduce((best, effect) => Math.max(best, effect.magnitude ?? 1), 1);
+  const stealth = effects.find((effect) => effect.kind === 'stealth');
+  const stealthMultiplier = stealth ? Math.max(1, stealth.magnitude ?? 1) : 1;
+  const base = authored * (options.multiplier ?? 1) * offenseMultiplier * stealthMultiplier;
+  if (stealth) outcome.consumeEffectIds.push(stealth.id);
   const qualityMult = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
   const normal = Math.max(1, Math.floor(base * qualityMult));
   const critBonus = decision.isCrit ? Math.floor(normal * 0.5) : 0;
@@ -393,6 +408,9 @@ function offensiveHit(
       total: decision.total,
       damageType: spec.damageType,
       weaponDie: weapon.die,
+      ...(critEdge > 0 ? { criticalEdge: critEdge } : {}),
+      ...(offenseMultiplier > 1 ? { offenseMultiplier } : {}),
+      ...(stealth ? { ambushMultiplier: stealthMultiplier } : {}),
     },
   });
   return outcome;
@@ -413,7 +431,10 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
   } as AbilitySpec;
   const main = ctx.actor.equipment.find(row => row.slot === 'main_hand');
   const affinity = getWeaponAffinityBonus(ctx.actor.class ?? '', main?.weapon_tag ?? null);
-  const decision = decideAttack(ctx, spec, creature.ac, 'basic_attack:hit', 0, affinity.hitBonus);
+  const effects = ctx.activeEffects ?? [];
+  const critEdge = effects.filter(e => e.kind === 'offense' && e.config?.offense_mode === 'crit_edge')
+    .reduce((best, e) => Math.max(best, Math.max(0, Math.floor(e.magnitude ?? 0))), 0);
+  const decision = decideAttack(ctx, spec, creature.ac, 'basic_attack:hit', critEdge, affinity.hitBonus);
   if (!decision.hit) {
     outcome.missed = true;
     outcome.events.push({ kind: 'attack', actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
@@ -422,7 +443,13 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
     return outcome;
   }
   const rolled = ctx.rng.roll('basic_attack:dmg', weapon.die, ctx.actor.character_id, creature.creature_id, ctx.tick);
-  const raw = Math.max(1, Math.floor((rolled + getStatModifier(ctx.actor.str)) * affinity.damageMult));
+  const offenseMultiplier = effects.filter(e => e.kind === 'offense' && e.config?.offense_mode === 'damage_mult')
+    .reduce((best, e) => Math.max(best, e.magnitude ?? 1), 1);
+  const stealth = effects.find(e => e.kind === 'stealth');
+  const stealthMultiplier = stealth ? Math.max(1, stealth.magnitude ?? 1) : 1;
+  const raw = Math.max(1, Math.floor((rolled + getStatModifier(ctx.actor.str)) * affinity.damageMult
+    * offenseMultiplier * stealthMultiplier));
+  if (stealth) outcome.consumeEffectIds.push(stealth.id);
   const quality = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
   const normal = Math.max(1, Math.floor(raw * quality));
   const critBonus = decision.isCrit ? Math.floor(normal * 0.5) : 0;
@@ -431,7 +458,10 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
   outcome.creatureDamage = breakdown.applied;
   outcome.events.push({ kind: 'attack', actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
     target: { type: 'creature', id: creature.creature_id, name: creature.name }, hitQuality: decision.quality,
-    amount: breakdown.applied, meta: { basicAttack: true, isCrit: decision.isCrit, damageType: 'physical', weaponDie: weapon.die } });
+    amount: breakdown.applied, meta: { basicAttack: true, isCrit: decision.isCrit, damageType: 'physical', weaponDie: weapon.die,
+      ...(critEdge > 0 ? { criticalEdge: critEdge } : {}),
+      ...(offenseMultiplier > 1 ? { offenseMultiplier } : {}),
+      ...(stealth ? { ambushMultiplier: stealthMultiplier } : {}) } });
   return outcome;
 }
 

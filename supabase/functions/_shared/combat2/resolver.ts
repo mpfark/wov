@@ -171,6 +171,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     for (const [id, c] of chars) if (c.present && c.hp > 0) set.add(id);
     return set;
   };
+  const activeEffectsFor = (characterId: string): SnapshotEffect[] => snapshot.effects.filter(
+    (effect) => effect.target_character_id === characterId
+      && !expiredIds.has(effect.id)
+      && !proposed.effects_delete.includes(effect.id),
+  );
 
   // ── 1. effect lifetimes: expire first, then pulse at most once ─
   for (const effect of snapshot.effects) {
@@ -357,11 +362,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           continue;
         }
       }
-      const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row, weaponProgression: deps.weaponProgression });
+      const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row,
+        activeEffects: activeEffectsFor(actor.fighter.character_id), weaponProgression: deps.weaponProgression });
       if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
       else {
         qualify(target, actor.fighter.character_id, 'damage');
         if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+        for (const id of outcome.consumeEffectIds) if (!proposed.effects_delete.includes(id)) proposed.effects_delete.push(id);
         for (const event of outcome.events) emit(event);
       }
       continue;
@@ -396,6 +403,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
         meta: { refunded: false },
       });
+      continue;
+    }
+
+    // Existing unsupported stances may still be dropped safely, but no new
+    // activation or ordinary action may pass the release gate.
+    if (!spec.support.supported) {
+      emit({ kind: 'action_rejected', outcomeReason: 'ability_unavailable', abilityKey: spec.abilityKey });
       continue;
     }
 
@@ -503,7 +517,6 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       emit({ kind: 'action_rejected', outcomeReason: 'no_target', abilityKey: spec.abilityKey });
       continue;
     }
-
     // Enemy-targeted abilities are the only hostile intents. The first one
     // engages this exact spawn and opens against every present fighter.
     if (spec.targetType === 'enemy' && targetCreature && !targetCreature.engaged) {
@@ -560,6 +573,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
             )
             .reduce((sum, e) => sum + Number(e.config.ac_reduction), 0)
         : 0,
+      activeEffects: activeEffectsFor(actor.fighter.character_id),
     };
 
     const outcome: MechanicOutcome = MECHANIC_HANDLERS[spec.mechanic](ctx, spec);
@@ -652,11 +666,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     // Any captured player intent owns this tick's single action slot. Target
     // maintenance still occurs so automatic attacks resume on the next tick.
     if (occupiedActionSlots.has(actor.fighter.character_id)) continue;
-    const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row, weaponProgression: deps.weaponProgression });
+    const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row,
+      activeEffects: activeEffectsFor(actor.fighter.character_id), weaponProgression: deps.weaponProgression });
     if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
     else {
       qualify(target, actor.fighter.character_id, 'damage');
       if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+      for (const id of outcome.consumeEffectIds) if (!proposed.effects_delete.includes(id)) proposed.effects_delete.push(id);
       for (const event of outcome.events) emit(event);
       if (target.hp <= 0) {
         if (state && !proposed.effects_delete.includes(state.id)) proposed.effects_delete.push(state.id);
@@ -818,11 +834,42 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       return;
     }
 
+    // Only an otherwise-landed attack can exercise evasion. Natural/AC misses
+    // therefore never consume Disengage's guaranteed next-hit charge.
+    const evasion = effectsFor(snapshot.effects, targetFighter.character_id, 'evasion')
+      .filter(effect => !expiredIds.has(effect.id) && !proposed.effects_delete.includes(effect.id))
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .find(effect => {
+        const chance = effect.config?.dodge_chance === 1
+          ? 1
+          : Math.min(1, Math.max(0, effect.magnitude ?? 0));
+        return rng.sample(`${stream}:evasion`, effect.id, targetFighter.character_id, tick) < chance;
+      });
+    if (evasion) {
+      if (evasion.config?.evasion_source === 'disengage') proposed.effects_delete.push(evasion.id);
+      emit({
+        kind: 'attack_evaded', abilityKey: evasion.ability_key ?? undefined,
+        actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
+        target: { type: 'character', id: targetFighter.character_id, name: targetFighter.name },
+        hitQuality: 'miss', amount: 0,
+        meta: { effectKind: 'evasion', evasionSource: evasion.config?.evasion_source ?? null },
+      });
+      return;
+    }
+
     const die = getCreatureDamageDie(creature.row.level, creature.row.rarity ?? 'common');
     const strMod = getStatModifier(creature.row.stats?.str ?? 10);
-    const base = flatMagnitude > 0
+    const unreducedBase = flatMagnitude > 0
       ? flatMagnitude
       : Math.max(1, rng.roll(`${stream}:dmg`, die, targetFighter.character_id, tick) + strMod);
+    const outgoingReduction = snapshot.effects
+      .filter(effect => effect.kind === 'control'
+        && effect.target_creature_id === creature.row.creature_id
+        && !expiredIds.has(effect.id)
+        && effect.config?.control_mode === 'damage_reduction')
+      .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0);
+    const base = Math.max(0, Math.floor(unreducedBase * (1 - Math.min(1, outgoingReduction))));
+    const outgoingPrevented = unreducedBase - base;
     const critBonus = isCrit ? Math.floor(base * (CREATURE_CRIT_MULT - 1)) : 0;
 
     // Authored mitigation on the target (percent, flat, block, absorb, crit softening).
@@ -889,6 +936,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         flatMitigated: breakdown.flatMitigated,
         blocked: breakdown.blocked,
         absorbed: breakdown.absorbed,
+        ...(outgoingPrevented > 0 ? { outgoingReduced: outgoingPrevented } : {}),
       },
     });
 

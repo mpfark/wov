@@ -23,6 +23,7 @@ import { validateCalc, type AbilityCalc } from '../formulas/ability-calc';
 import { isAccuracyStat, type AccuracyStat } from '../formulas/combat';
 import { isMechanicKey, type MechanicKey } from './types';
 import type { AbilitySpec, AbilityActivation, AbilityTargetType } from './mechanics';
+import { combat2AbilitySupport } from './ability-support';
 
 /** One authored, active ability record. Field names mirror the inventory dump. */
 export interface AuthoredAbilityRecord {
@@ -153,6 +154,7 @@ export function buildAbilitySpec(
   });
 
   const authoredMechanic = record.mechanic;
+  const support = combat2AbilitySupport(record.abilityKey);
   const normalized =
     typeof authoredMechanic === 'string' ? MECHANIC_NORMALIZATION[authoredMechanic] : undefined;
   const resolvedMechanic = normalized ?? authoredMechanic;
@@ -232,6 +234,7 @@ export function buildAbilitySpec(
     effectType: typeof config.effect_type === 'string' ? config.effect_type : null,
     stackType: typeof config.stack_type === 'string' ? config.stack_type : null,
     config,
+    support,
   };
   return { spec };
 }

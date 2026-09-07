@@ -80,10 +80,11 @@ describe('Combat2 deliberate action routing', () => {
   });
 
   it('fails closed for unsupported and non-authoritative targets', async () => {
-    const unsupported = harness({ ability: ability({ targetType: 'ally' }) });
+    const unsupported = harness({ ability: ability({ abilityKey: 'divine_aegis', label: 'Divine Aegis', targetType: 'ally' }) });
     await routeCombat2Action(unsupported.options);
     expect(unsupported.submit).not.toHaveBeenCalled();
     expect(unsupported.legacy).not.toHaveBeenCalled();
+    expect(unsupported.diagnose).toHaveBeenCalledWith(expect.stringContaining('not yet available'));
 
     const staleTarget = harness({ resolveTarget: () => ({ ok: false, reason: 'Target is stale' }) });
     await routeCombat2Action(staleTarget.options);
