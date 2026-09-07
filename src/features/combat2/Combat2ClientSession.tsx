@@ -5,6 +5,7 @@ import { useCombat2FleeSession } from './useCombat2FleeSession';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
 import { useCombat2Presentation } from './useCombat2Presentation';
 import { useCombat2DepartureSession } from './useCombat2DepartureSession';
+import { useCombat2RespawnSession } from './useCombat2RespawnSession';
 
 export interface Combat2ClientSessionProps {
   controlled?: boolean;
@@ -38,6 +39,13 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
   const presentation = useCombat2Presentation(enteredSessionKey, delivery, props.classKey);
   const model = presentation.model;
   const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
+  const testArenaDeath = dead && delivery.snapshot?.encounter?.test_arena_id != null;
+  const respawn = useCombat2RespawnSession({
+    enabled: props.enabled,
+    canSubmit: props.controlled ? dead && !testArenaDeath && !props.inputLocked : dead,
+    characterId: props.characterId,
+    nodeId: props.nodeId,
+  });
   const pendingFleeFromServer = !!enteredSessionKey && (pendingFleeKey === enteredSessionKey || model?.fighterExitState === 'pending');
   const fighter = delivery.snapshot?.fighter as Record<string, unknown> | null | undefined;
   const departure = useCombat2DepartureSession({
@@ -82,10 +90,12 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     intents,
     flee,
     departure,
+    respawn,
     delivery,
     presentation,
     actionsReady,
     dead,
+    testArenaDeath,
     pendingFlee,
     encounterId,
     sessionStatus: encounterId ? 'active' as const : exitedSessionKey === enteredSessionKey && enteredSessionKey

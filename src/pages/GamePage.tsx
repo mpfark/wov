@@ -117,6 +117,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const combat2BlocksLegacy = ownership.blocksLegacy;
   const legacyExecution = useExecutionFence(!combat2BlocksLegacy);
   const [combat2Diagnostic, setCombat2Diagnostic] = useState<string | null>(null);
+  const [combat2RespawnAccepted, setCombat2RespawnAccepted] = useState<string | null>(null);
   const updateCharacter = useCallback(async (updates: Partial<Character>) => {
     if (!legacyExecution.allowed() && isCombatMutation(updates)) return;
     await writeCharacter(updates);
@@ -230,6 +231,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     nodeId: ownership.origin.nodeId,
     hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
   });
+  const handleCombat2Respawn = useCallback(async () => {
+    const result=await combat2.respawn.submit();
+    if(result.status==='respawned') {
+      setCombat2RespawnAccepted(`Respawn accepted: ${result.destinationName??'configured starting node'}, ${result.goldLost} gold lost.`);
+      refetchCharacters?.();
+    } else if(result.status==='not_ready') setCombat2Diagnostic(`Respawn is not ready until ${new Date(result.eligibleAt).toLocaleTimeString()}.`);
+    else if(result.status!=='stale') setCombat2Diagnostic(result.status==='refused'?`Respawn refused: ${result.classification}`:result.reason);
+  },[combat2.respawn,refetchCharacters]);
   const activeCombat2Presentation = combat2OwnsSession
     ? combat2.presentation.model
     : null;
@@ -253,7 +262,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     : ownership.locked ? 'Locked — unexpected party membership'
     : ownership.preflight === 'refused' ? 'Refused — solo, idle entry could not be verified'
     : ownership.preflight === 'checking' ? 'Checking solo eligibility'
-    : combat2.dead ? 'Dead — recovery unavailable in this controlled test'
+    : combat2.dead ? combat2.testArenaDeath ? 'Dead — Test Arena Reset required' : 'Dead — authoritative respawn available after 3 seconds'
     : combat2.sessionStatus === 'exited' ? 'Exited — controlled session remains locked'
     : combat2.pendingFlee ? 'Flee pending'
     : combat2.entry.status === 'refused' ? 'Refused'
@@ -1885,6 +1894,19 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
             <p className="font-display text-6xl text-destructive/80 tabular-nums">{deathCountdown}</p>
             <p className="text-sm text-muted-foreground">Respawning at the starting area...</p>
             <p className="text-xs text-muted-foreground">You lost {Math.floor(deathGoldRef.current * 0.1)} gold.</p>
+          </div>
+        </div>
+      )}
+      {isDead && combat2OwnsSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md">
+          <div className="text-center space-y-4 max-w-md">
+            <p className="font-display text-2xl text-destructive">You Have Fallen</p>
+            <p className="text-sm text-muted-foreground">Combat actions, regeneration, and movement are disabled.</p>
+            {combat2.testArenaDeath ? <p>Use the Test Arena Stop/Reset workflow to recover this character.</p> :
+              <Button type="button" disabled={combat2.respawn.pending} onClick={handleCombat2Respawn}>
+                {combat2.respawn.pending?'Requesting…':'Respawn'}
+              </Button>}
+            {combat2RespawnAccepted&&<p role="status">{combat2RespawnAccepted} Waiting for authoritative character state…</p>}
           </div>
         </div>
       )}
