@@ -5001,6 +5001,15 @@ export type Database = {
         Args: { _arena_id: string; _character_id: string; _user_id: string }
         Returns: Json
       }
+      combat2_test_run_report: {
+        Args: {
+          _after_seq?: number
+          _arena_id: string
+          _limit?: number
+          _run_id?: string
+        }
+        Returns: Json
+      }
       combat2_test_run_start: {
         Args: { _arena_id: string; _request_id: string }
         Returns: Json
