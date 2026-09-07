@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SQL=readFileSync('supabase/migrations/20260907090000_combat2_test_reset_tester_restore.sql','utf8').replaceAll('\r\n','\n');
+const SQL=readFileSync('supabase/migrations/20260907051948_f907b2a9-78e9-4e38-a179-68f04e0cbc7d.sql','utf8').replaceAll('\r\n','\n');
 const TYPES=readFileSync('src/integrations/supabase/types.ts','utf8').replaceAll('\r\n','\n');
 const CHARACTER_TYPES=TYPES.slice(TYPES.indexOf('      characters: {'),TYPES.indexOf('      class_ability_assignments: {'));
 

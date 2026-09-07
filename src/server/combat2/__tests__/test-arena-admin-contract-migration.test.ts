@@ -27,14 +27,14 @@ describe('Combat2 arena admin contract',()=>{
   expect(UI).not.toMatch(/\.from\(['"](?:combat2_test|characters|node_)/);
   expect(UI).not.toMatch(/service.role|service_role|current_node_id|worker/i);
   expect(IDENTITY).toContain("resetPhrase: 'RESET COMBAT2 TEST ARENA'");
-  expect(UI).toContain('Stop test run and preserve evidence');
+  expect(UI).toContain('Stop and generate report');
   expect(API).toContain('_confirm_destroy_diagnostics:true');
-  expect(UI).toContain('disabled={!status?.resetEligible||!!busy}');
+  expect(UI).toContain('disabled={recording||!status?.resetEligible||!!busy}');
   expect(UI).toContain('resetPhrase!==COMBAT2_TEST_ARENA.resetPhrase');
   expect(UI).toContain('crypto.randomUUID()');
   expect(UI).toContain('snapshot!==selection.current');
   expect(UI).not.toMatch(/setInterval|autoRetry|optimistic/i);
-  expect(API.match(/combat2_test_[a-z_]+/g)?.every(name=>['combat2_test_status','combat2_test_grant','combat2_test_revoke','combat2_test_admin_relocate','combat2_test_stop','combat2_test_reset','combat2_test_environment_start','combat2_test_environment_close'].includes(name))).toBe(true);
+  expect(API.match(/combat2_test_[a-z_]+/g)?.every(name=>['combat2_test_status','combat2_test_grant','combat2_test_revoke','combat2_test_admin_relocate','combat2_test_stop','combat2_test_reset','combat2_test_environment_start','combat2_test_environment_close','combat2_test_run_start','combat2_test_run_stop','combat2_test_run_report'].includes(name))).toBe(true);
   const route=readFileSync('src/pages/AdminRoute.tsx','utf8'); expect(route).toContain('!isAdmin'); expect(route).toContain('<AdminPage');
  });
 });

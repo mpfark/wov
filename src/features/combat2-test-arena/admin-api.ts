@@ -6,6 +6,7 @@ export const ARENA_RPC_NAMES = [
   'combat2_test_status', 'combat2_test_grant', 'combat2_test_revoke',
   'combat2_test_admin_relocate', 'combat2_test_stop', 'combat2_test_reset',
   'combat2_test_environment_start', 'combat2_test_environment_close',
+  'combat2_test_run_start', 'combat2_test_run_stop', 'combat2_test_run_report',
 ] as const;
 
 export type ArenaNode = { id: string; purpose: 'staging'|'low'|'equal'|'high_damage'|'boss'; label: string; active: boolean };
@@ -23,6 +24,9 @@ export type ArenaStatus = {
 export type ArenaResult = { ok: boolean; kind: string; counts: Record<string, number>; ids: Record<string, string>; stage?: 'cleanup'|'tester_restore'|'creature_restore'|'request_finalize'; code?: string };
 export type EnvironmentResult = { ok: boolean; kind: 'started'|'already_started'|'closed'|'already_closed'|'arena_stopped_world_left_open'; combatMode?:'maintenance'|'open'; worldState?:'asleep'|'awake'; schedulerEnabled?:boolean; counts:Record<string,number>; ids:Record<string,string> };
 export type ArenaApiResult<T> = { value?: T; error?: string; uncertain?: boolean };
+export type TestRunResult = { ok:true; kind:'started'|'already_recording'|'completed'|'already_completed'; runId:string; status:'recording'|'completed'; startedAt:string; completedAt?:string; environmentReady?:boolean; warning?:'environment_closed'; latestSeq?:number; summary?:Record<string,number> };
+export type TestRunBatch = { seq:number; batchId:string; encounterId:string; tick:number; committedAt:string; events:Array<Record<string,unknown>> };
+export type TestRunReport = { ok:true; kind:'report'; runId:string; status:'recording'|'completed'; startedAt:string; completedAt?:string; durationMs?:number; latestSeq:number; returnedThroughSeq:number; hasMore:boolean; summary:Record<string,number>; batches:TestRunBatch[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -83,6 +87,31 @@ export function decodeArenaResult(v: unknown): ArenaResult | null {
   return { ok:v.ok, kind:v.kind, counts, ids, ...(stage?{stage}:{}), ...(code?{code}:{}) };
 }
 
+const timestamp=(v:unknown):v is string=>typeof v==='string'&&!Number.isNaN(Date.parse(v));
+const numericRecord=(v:unknown):Record<string,number>|null=>{if(!object(v))return null;const out:Record<string,number>={};for(const [k,x] of Object.entries(v)){if(typeof x!=='number'||!Number.isFinite(x))return null;out[k]=x;}return out;};
+export function decodeTestRunResult(v:unknown):TestRunResult|null {
+ const kinds=['started','already_recording','completed','already_completed'] as const;
+ if(!object(v)||v.ok!==true||!kinds.includes(v.kind as typeof kinds[number])||typeof v.run_id!=='string'||!UUID.test(v.run_id)||!['recording','completed'].includes(String(v.status))||!timestamp(v.started_at))return null;
+ if(v.completed_at!==undefined&&v.completed_at!==null&&!timestamp(v.completed_at))return null;
+ if(v.environment_ready!==undefined&&!bool(v.environment_ready))return null;
+ if(v.warning!==undefined&&v.warning!==null&&v.warning!=='environment_closed')return null;
+ if(v.latest_seq!==undefined&&!count(v.latest_seq))return null;
+ const summary=v.summary===undefined||v.summary===null?undefined:numericRecord(v.summary);if(v.summary!==undefined&&v.summary!==null&&!summary)return null;
+ return {ok:true,kind:v.kind as TestRunResult['kind'],runId:v.run_id,status:v.status as TestRunResult['status'],startedAt:v.started_at,
+  ...(timestamp(v.completed_at)?{completedAt:v.completed_at}:{}),...(bool(v.environment_ready)?{environmentReady:v.environment_ready}:{}),
+  ...(v.warning==='environment_closed'?{warning:v.warning}:{}),...(count(v.latest_seq)?{latestSeq:v.latest_seq}:{}),...(summary?{summary}:{})};
+}
+
+export function decodeTestRunReport(v:unknown):TestRunReport|null {
+ if(!object(v)||v.ok!==true||v.kind!=='report'||typeof v.run_id!=='string'||!UUID.test(v.run_id)||!['recording','completed'].includes(String(v.status))||!timestamp(v.started_at)||
+  !count(v.latest_seq)||!count(v.returned_through_seq)||!bool(v.has_more)||!Array.isArray(v.batches))return null;
+ const summary=numericRecord(v.summary);if(!summary)return null;const batches:TestRunBatch[]=[];
+ for(const b of v.batches){if(!object(b)||!count(b.seq)||typeof b.batchId!=='string'||!UUID.test(b.batchId)||typeof b.encounterId!=='string'||!UUID.test(b.encounterId)||!count(b.tick)||!timestamp(b.committedAt)||!Array.isArray(b.events))return null;batches.push({seq:b.seq,batchId:b.batchId,encounterId:b.encounterId,tick:b.tick,committedAt:b.committedAt,events:b.events.filter(object)});}
+ if(batches.some((b,i)=>i>0&&b.seq<=batches[i-1].seq)||v.returned_through_seq>v.latest_seq)return null;
+ return {ok:true,kind:'report',runId:v.run_id,status:v.status as TestRunReport['status'],startedAt:v.started_at,
+  ...(timestamp(v.completed_at)?{completedAt:v.completed_at}:{}),...(count(v.duration_ms)?{durationMs:v.duration_ms}:{}),latestSeq:v.latest_seq,returnedThroughSeq:v.returned_through_seq,hasMore:v.has_more,summary,batches};
+}
+
 type Rpc = (name: string, args: Record<string, unknown>) => PromiseLike<{data:unknown;error:{message?:string}|null}>;
 export function createArenaAdminApi(rpc: Rpc = (name,args)=>supabase.rpc(name as never,args as never)) {
   const call = async <T>(name: typeof ARENA_RPC_NAMES[number], args: Record<string,unknown>, decode:(v:unknown)=>T|null): Promise<ArenaApiResult<T>> => {
@@ -100,5 +129,8 @@ export function createArenaAdminApi(rpc: Rpc = (name,args)=>supabase.rpc(name as
     reset:(requestId:string)=>call('combat2_test_reset',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId,_confirm_destroy_diagnostics:true},decodeArenaResult),
     startEnvironment:(requestId:string)=>call('combat2_test_environment_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeEnvironmentResult),
     closeEnvironment:(requestId:string)=>call('combat2_test_environment_close',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeEnvironmentResult),
+    startRun:(requestId:string)=>call('combat2_test_run_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
+    stopRun:(requestId:string)=>call('combat2_test_run_stop',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
+    report:(runId:string|null,afterSeq=0,limit=25)=>call('combat2_test_run_report',{_arena_id:COMBAT2_TEST_ARENA.id,_run_id:runId,_after_seq:afterSeq,_limit:limit},decodeTestRunReport),
   };
 }
