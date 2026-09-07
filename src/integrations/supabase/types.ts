@@ -1864,6 +1864,117 @@ export type Database = {
           },
         ]
       }
+      combat2_test_run: {
+        Row: {
+          arena_id: string
+          completed_at: string | null
+          final_seq: number | null
+          final_summary: Json | null
+          id: string
+          initiated_by: string | null
+          start_request_id: string
+          started_at: string
+          status: string
+          stop_request_id: string | null
+        }
+        Insert: {
+          arena_id: string
+          completed_at?: string | null
+          final_seq?: number | null
+          final_summary?: Json | null
+          id?: string
+          initiated_by?: string | null
+          start_request_id: string
+          started_at?: string
+          status: string
+          stop_request_id?: string | null
+        }
+        Update: {
+          arena_id?: string
+          completed_at?: string | null
+          final_seq?: number | null
+          final_summary?: Json | null
+          id?: string
+          initiated_by?: string | null
+          start_request_id?: string
+          started_at?: string
+          status?: string
+          stop_request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_run_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_test_run_batch: {
+        Row: {
+          batch_id: string
+          committed_at: string
+          encounter_id: string
+          run_id: string
+          seq: number
+          tick: number
+        }
+        Insert: {
+          batch_id: string
+          committed_at: string
+          encounter_id: string
+          run_id: string
+          seq: number
+          tick: number
+        }
+        Update: {
+          batch_id?: string
+          committed_at?: string
+          encounter_id?: string
+          run_id?: string
+          seq?: number
+          tick?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_run_batch_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_run"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_test_run_event: {
+        Row: {
+          batch_id: string
+          event: Json
+          event_seq: number
+          run_id: string
+        }
+        Insert: {
+          batch_id: string
+          event: Json
+          event_seq: number
+          run_id: string
+        }
+        Update: {
+          batch_id?: string
+          event?: Json
+          event_seq?: number
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_run_event_run_id_batch_id_fkey"
+            columns: ["run_id", "batch_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_run_batch"
+            referencedColumns: ["run_id", "batch_id"]
+          },
+        ]
+      }
       combat2_tick_notification: {
         Row: {
           batch_id: string
@@ -4890,6 +5001,24 @@ export type Database = {
         Args: { _arena_id: string; _character_id: string; _user_id: string }
         Returns: Json
       }
+      combat2_test_run_report: {
+        Args: {
+          _after_seq?: number
+          _arena_id: string
+          _limit?: number
+          _run_id?: string
+        }
+        Returns: Json
+      }
+      combat2_test_run_start: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_run_stop: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_safe_event: { Args: { _event: Json }; Returns: Json }
       combat2_test_session_access: {
         Args: { _character_id: string; _node_id: string }
         Returns: Json
