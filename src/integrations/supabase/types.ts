@@ -1655,6 +1655,96 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_respawn_config: {
+        Row: {
+          default_node_id: string
+          delay_ms: number
+          gold_loss_rate: number
+          restored_hp: number
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          default_node_id: string
+          delay_ms: number
+          gold_loss_rate: number
+          restored_hp: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          default_node_id?: string
+          delay_ms?: number
+          gold_loss_rate?: number
+          restored_hp?: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_respawn_config_default_node_id_fkey"
+            columns: ["default_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_respawn_request: {
+        Row: {
+          character_id: string
+          created_at: string
+          death_at: string
+          destination_node_id: string
+          gold_lost: number
+          origin_node_id: string
+          request_id: string
+          restored_hp: number
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          death_at: string
+          destination_node_id: string
+          gold_lost: number
+          origin_node_id: string
+          request_id: string
+          restored_hp: number
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          death_at?: string
+          destination_node_id?: string
+          gold_lost?: number
+          origin_node_id?: string
+          request_id?: string
+          restored_hp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_respawn_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_respawn_request_destination_node_id_fkey"
+            columns: ["destination_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_respawn_request_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_test_arena: {
         Row: {
           active: boolean
@@ -4929,6 +5019,10 @@ export type Database = {
       combat2_refresh_tanks: {
         Args: { _encounter_id: string }
         Returns: string
+      }
+      combat2_respawn: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
       }
       combat2_seed_spawns: {
         Args: { _encounter_id: string; _node_id: string }
