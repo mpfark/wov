@@ -38,6 +38,7 @@ export interface Combat2SyncResult {
   encounter: { id: string; status: string; tick: number; stateVersion: number };
   character: Record<string, unknown>;
   fighter: Record<string, unknown> | null;
+  allies?: Array<Record<string, unknown>>;
   creatures: Array<Record<string, unknown>>;
   effects: Array<Record<string, unknown>>;
   rewardClaims: Array<Record<string, unknown>>;

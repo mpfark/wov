@@ -16,6 +16,20 @@ export interface Combat2PresentationCharacter {
   maxMp: number;
 }
 
+export interface Combat2PresentationAlly {
+  characterId: string;
+  fighterId: string;
+  entrySeq: number;
+  name: string;
+  hp: number;
+  maxHp: number;
+  cp: number;
+  maxCp: number;
+  mp: number;
+  maxMp: number;
+  present: boolean;
+}
+
 export interface Combat2PresentationRewardClaim {
   id: string;
   encounterId: string;
@@ -95,6 +109,7 @@ export interface Combat2PresentationModel {
   fighterExitState: 'pending' | 'exited' | 'dead' | null;
   autoattack: { targetCreatureId: string; nodeCreatureId: string; spawnSeq: number; active: boolean } | null;
   character: Combat2PresentationCharacter;
+  allies: readonly Combat2PresentationAlly[];
   creatures: readonly Combat2PresentationCreature[];
   effects: readonly Combat2PresentationEffect[];
   characterEffects: readonly Combat2PresentationEffect[];
@@ -240,10 +255,11 @@ function actor(value: unknown): LogActor | undefined {
 }
 
 const EVENT_TYPES: Record<string, LogEventType> = {
-  attack: 'ability', creature_attack: 'attack', orb_attack: 'ability', attack_evaded: 'mitigation', heal: 'heal', hp_transfer: 'heal',
+  attack: 'ability', creature_attack: 'attack', orb_attack: 'ability', attack_evaded: 'mitigation', absorb: 'mitigation', heal: 'heal', hp_transfer: 'heal',
   buff_applied: 'buff', aura: 'ability', aura_started: 'buff', reservation: 'buff',
   stance_activated: 'buff', stance_dropped: 'buff', stack: 'debuff', stack_applied: 'debuff',
-  effect_pulse: 'dot_tick', effect_expired: 'debuff', action_rejected: 'error',
+  effect_pulse: 'dot_tick', party_restore: 'heal', consecrate_heal: 'heal', consecrate_pulse: 'ability',
+  effect_expired: 'debuff', action_rejected: 'error',
   dot_applied: 'debuff', debuff_applied: 'debuff', fighter_fled: 'positioning', fighter_exit_failed: 'error',
   boss_telegraph: 'boss_telegraph', boss_cast_evaded: 'mitigation',
   creature_died: 'kill', character_died: 'death', multi_attack_summary: 'ability',
@@ -329,7 +345,9 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
   if (!sync) throw new Combat2PresentationError('combat2_sync has no authoritative snapshot');
   const encounter = record(sync.encounter);
   const character = record(sync.character);
-  if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects) || !Array.isArray(sync.rewardClaims)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
+  if (!encounter || !character || !Array.isArray(sync.creatures) || !Array.isArray(sync.effects)
+      || !Array.isArray(sync.rewardClaims)) throw new Combat2PresentationError('combat2_sync snapshot is malformed');
+  const allies = Array.isArray(sync.allies) ? sync.allies : [];
 
   const encounterId = stringField(encounter, 'id');
   const encounterTick = integerField(encounter, 'tick');
@@ -441,6 +459,14 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
       cp: numberField(character, 'cp'), maxCp: numberField(character, 'maxCp'),
       mp: numberField(character, 'mp'), maxMp: numberField(character, 'maxMp'),
     },
+    allies: allies.map((value, index) => {
+      const ally = record(value);
+      if (!ally) throw new Combat2PresentationError(`combat2_sync allies[${index}] is invalid`);
+      return { characterId: stringField(ally, 'characterId'), fighterId: stringField(ally, 'fighterId'),
+        entrySeq: integerField(ally, 'entrySeq'), name: stringField(ally, 'name'), hp: numberField(ally, 'hp'),
+        maxHp: numberField(ally, 'maxHp'), cp: numberField(ally, 'cp'), maxCp: numberField(ally, 'maxCp'),
+        mp: numberField(ally, 'mp'), maxMp: numberField(ally, 'maxMp'), present: ally.present === true };
+    }),
     creatures,
     ...effectGroups,
     telegraphs,

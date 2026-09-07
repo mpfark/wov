@@ -12,6 +12,7 @@ import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, type 
 import { getStatModifier } from '../formulas/stats.ts';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation.ts';
 import { TickRandom } from './rng.ts';
+import { combat2PulseDue, combat2TickTiming, combat2TicksForMs, readCombat2TickTiming } from './time.ts';
 import {
   MECHANIC_HANDLERS,
   COMBAT2_HEARTBEAT_MS,
@@ -73,7 +74,9 @@ function effectsFor(effects: SnapshotEffect[], characterId: string, kind: string
 export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): ProposedTick {
   const { encounter } = snapshot;
   const tick = encounter.candidate_tick;
-  const nowMs = ms(encounter.now);
+  const nowMs = encounter.tick_origin
+    ? ms(encounter.tick_origin) + tick * COMBAT2_HEARTBEAT_MS
+    : ms(encounter.now);
   const rng = new TickRandom({ encounterId: encounter.id, candidateTick: tick });
   const proposed = emptyProposedTick(tick);
   let seq = 0;
@@ -82,7 +85,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   };
   const expiredIds = new Set(
     snapshot.effects
-      .filter((effect) => !effect.is_reservation && effect.expires_at && ms(effect.expires_at) <= nowMs)
+      .filter((effect) => {
+        if (effect.is_reservation) return false;
+        const timing = readCombat2TickTiming(effect.config);
+        return timing ? tick > timing.expires_after_tick : Boolean(effect.expires_at && ms(effect.expires_at) <= nowMs);
+      })
       .map((effect) => effect.id),
   );
 
@@ -91,7 +98,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   for (const fighter of snapshot.fighters) {
     if (chars.has(fighter.character_id)) continue;
     const absorbEffects = effectsFor(snapshot.effects, fighter.character_id, 'absorb')
-      .filter((effect) => !expiredIds.has(effect.id))
+      .filter((effect) => !expiredIds.has(effect.id)
+        && (effect.ability_key !== 'divine_aegis'
+          || (effect.config?.target_fighter_id === fighter.id && effect.config?.target_entry_seq === fighter.entry_seq)))
       .map((effect) => {
         const magnitude = Math.max(0, Math.floor(effect.magnitude ?? 0));
         return { id: effect.id, initial: magnitude, remaining: magnitude };
@@ -136,6 +145,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const reactedThisTick = new Set<string>();
   const skipOrdinaryThisTick = new Set<string>();
   const occupiedActionSlots = new Set(snapshot.intents.map(intent => intent.character_id));
+  const departingCharacters = new Set((snapshot.pending_events ?? [])
+    .filter(event => ['fighter_exit_requested', 'fighter_depart_requested', 'fighter_fled'].includes(event.event_type))
+    .map(event => event.actor_character_id).filter((id): id is string => id !== null));
   const qualify = (
     creature: WorkingCreature,
     characterId: string,
@@ -172,6 +184,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     for (const [id, c] of chars) if (c.present && c.hp > 0) set.add(id);
     return set;
   };
+  const eligibleParty = (source: WorkingCharacter): WorkingCharacter[] => [...chars.values()]
+    .filter(target => target.present && target.hp > 0
+      && (target.fighter.character_id === source.fighter.character_id
+        || (source.fighter.party_id !== null && target.fighter.party_id === source.fighter.party_id
+          && source.fighter.party_id === source.fighter.party_id_at_entry
+          && target.fighter.party_id === target.fighter.party_id_at_entry)))
+    .sort((a, b) => a.fighter.id.localeCompare(b.fighter.id));
   const activeEffectsFor = (characterId: string): SnapshotEffect[] => snapshot.effects.filter(
     (effect) => effect.target_character_id === characterId
       && !expiredIds.has(effect.id)
@@ -227,6 +246,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const cap = Math.max(1, Math.floor(Number(source.config?.max_stacks ?? 1)));
     const duration = Math.max(COMBAT2_HEARTBEAT_MS, Math.floor(Number(source.config?.stack_duration_ms ?? 0)));
     const interval = Math.max(COMBAT2_HEARTBEAT_MS, Math.floor(Number(source.config?.stack_interval_ms ?? COMBAT2_HEARTBEAT_MS)));
+    const timing = combat2TickTiming(tick, duration, interval);
     const key = `${actor.fighter.character_id}:${target.row.id}:${target.row.spawn_seq}:${effectType}:${source.ability_key}`;
     const current = stackState.get(key) ?? { effect: null, insert: null, stacks: 0 };
     const refreshedAtCap = current.stacks >= cap;
@@ -234,10 +254,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const expiresAt = new Date(nowMs + duration).toISOString();
     const nextDueAt = new Date(nowMs + interval).toISOString();
     if (current.effect) {
-      const existing = proposed.effects_update.find(update => update.id === current.effect!.id);
       const update = { id: current.effect.id, stacks: current.stacks,
         magnitude: Math.max(0, Math.floor(Number(source.config?.dot_per_tick ?? 0))),
-        expires_at: expiresAt, next_due_at: nextDueAt };
+        config: { ...current.effect.config, ...timing }, expires_at: expiresAt, next_due_at: nextDueAt };
+      const existing = proposed.effects_update.find(row => row.id === current.effect!.id);
       if (existing) Object.assign(existing, update); else proposed.effects_update.push(update);
     } else if (current.insert) {
       current.insert.stacks = current.stacks;
@@ -251,7 +271,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         config: { node_creature_id: target.row.id, creature_id: target.row.creature_id,
           spawn_seq: target.row.spawn_seq, source_fighter_id: actor.fighter.id,
           source_entry_seq: actor.fighter.entry_seq, max_stacks: cap,
-          damage_type: source.config?.damage_type ?? null },
+          damage_type: source.config?.damage_type ?? null, ...timing },
         expires_at: expiresAt, next_due_at: nextDueAt, interval_ms: interval,
         last_pulse_tick: null, is_reservation: false,
       };
@@ -269,7 +289,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   // ── 1. effect lifetimes: expire first, then pulse at most once ─
   for (const effect of snapshot.effects) {
     if (effect.is_reservation) continue; // lifetime owned by activation/drop/death
-    if (effect.expires_at && ms(effect.expires_at) <= nowMs) {
+    const timing = readCombat2TickTiming(effect.config);
+    if (timing ? tick > timing.expires_after_tick : Boolean(effect.expires_at && ms(effect.expires_at) <= nowMs)) {
       expiredIds.add(effect.id);
       proposed.effects_delete.push(effect.id);
       emit({
@@ -283,12 +304,14 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   for (const effect of snapshot.effects) {
     if (expiredIds.has(effect.id)) continue;
     if (!effect.interval_ms || !effect.next_due_at) continue;
-    const due = ms(effect.next_due_at) <= nowMs;
-    const alreadyPulsed = (effect.last_pulse_tick ?? -1) >= tick;
-    if (!due || alreadyPulsed) continue;
+    const timing = readCombat2TickTiming(effect.config);
+    const due = timing
+      ? combat2PulseDue(timing, tick, effect.last_pulse_tick)
+      : ms(effect.next_due_at) <= nowMs && (effect.last_pulse_tick ?? -1) < tick;
+    if (!due) continue;
 
     // skip-not-stack: missed pulses are discarded, never accumulated.
-    const nextDue = Math.max(nowMs, ms(effect.next_due_at)) + effect.interval_ms;
+    const nextDue = ms(effect.next_due_at) + combat2TicksForMs(effect.interval_ms) * COMBAT2_HEARTBEAT_MS;
     proposed.effects_update.push({
       id: effect.id,
       next_due_at: new Date(nextDue).toISOString(),
@@ -296,6 +319,45 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     });
 
     const magnitude = Math.max(0, Math.floor(effect.magnitude ?? 0));
+    if (effect.config?.presence_effect === true || effect.kind === 'aura' || effect.kind === 'party_regen') {
+      const source = effect.source_character_id ? chars.get(effect.source_character_id) : undefined;
+      if (!source || !source.present || source.hp <= 0
+          || departingCharacters.has(source.fighter.character_id)
+          || effect.config?.source_fighter_id !== source.fighter.id
+          || effect.config?.source_entry_seq !== source.fighter.entry_seq) {
+        if (!proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
+        continue;
+      }
+      if (effect.kind === 'party_regen' || effect.kind === 'aura') {
+        for (const target of eligibleParty(source)) {
+          const healed = Math.min(target.fighter.max_hp - target.hp, magnitude);
+          target.hp += healed;
+          if (healed > 0) target.dirty = true;
+          emit({ kind: effect.kind === 'aura' ? 'consecrate_heal' : 'party_restore',
+            abilityKey: effect.ability_key ?? undefined,
+            actor: { type: 'character', id: source.fighter.character_id, name: source.fighter.name },
+            target: { type: 'character', id: target.fighter.character_id, name: target.fighter.name },
+            amount: healed, meta: { requested: magnitude, applied: healed, wasted: magnitude - healed,
+              effectKind: effect.kind } });
+        }
+      }
+      if (effect.kind === 'aura') {
+        for (const target of [...creatures.values()].sort((a, b) => a.row.id.localeCompare(b.row.id)
+          || a.row.spawn_seq - b.row.spawn_seq)) {
+          if (target.hp <= 0 || !target.row.is_alive) continue;
+          const applied = Math.min(target.hp, magnitude);
+          target.hp -= applied; target.damaged = true; target.dirty = true;
+          qualify(target, source.fighter.character_id, 'damage');
+          if (target.hp === 0 && target.killedBy === null) target.killedBy = source.fighter.character_id;
+          emit({ kind: 'consecrate_pulse', abilityKey: effect.ability_key ?? undefined,
+            actor: { type: 'character', id: source.fighter.character_id, name: source.fighter.name },
+            target: { type: 'creature', id: target.row.creature_id, name: target.row.name }, amount: applied,
+            meta: { damageType: effect.config?.damage_type ?? 'holy', nodeCreatureId: target.row.id,
+              spawnSeq: target.row.spawn_seq } });
+        }
+      }
+      continue;
+    }
     if (effect.target_creature_id) {
       const target = creatures.get(effect.target_creature_id);
       if (target && target.hp > 0 && magnitude > 0) {
@@ -611,6 +673,26 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       emit({ kind: 'action_rejected', outcomeReason: 'no_target', abilityKey: spec.abilityKey });
       continue;
     }
+    const intentTargetCharacter = intent.target_character_id ?? null;
+    const ally = intentTargetCharacter ? chars.get(intentTargetCharacter) : undefined;
+    if (spec.targetType === 'ally') {
+      const sameParty = ally && actor.fighter.party_id !== null
+        && ally.fighter.party_id === actor.fighter.party_id
+        && actor.fighter.party_id === actor.fighter.party_id_at_entry
+        && ally.fighter.party_id === ally.fighter.party_id_at_entry;
+      const selfAllowed = spec.mechanic === 'absorb_buff'
+        && intentTargetCharacter === actor.fighter.character_id;
+      if (!ally || !ally.present || ally.hp <= 0 || (!sameParty && !selfAllowed)
+          || (spec.mechanic === 'hp_transfer' && ally === actor)
+          || intent.target_fighter_id !== ally.fighter.id
+          || intent.target_entry_seq !== ally.fighter.entry_seq) {
+        emit({ kind: 'action_rejected', outcomeReason: 'invalid_ally_target', abilityKey: spec.abilityKey });
+        continue;
+      }
+    } else if (intentTargetCharacter !== null) {
+      emit({ kind: 'action_rejected', outcomeReason: 'unexpected_ally_target', abilityKey: spec.abilityKey });
+      continue;
+    }
     // Enemy-targeted abilities are the only hostile intents. The first one
     // engages this exact spawn and opens against every present fighter.
     if (spec.targetType === 'enemy' && targetCreature && !targetCreature.engaged) {
@@ -656,6 +738,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       nowMs,
       tick,
       actor: actor.fighter,
+      ally: ally?.fighter,
       creature: targetCreature?.row,
       targetAbsorb: 0,
       weaponProgression: deps.weaponProgression,
@@ -685,7 +768,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       actor.dirty = true;
     }
     if (outcome.actorHpCost) {
-      actor.hp = Math.max(1, actor.hp - outcome.actorHpCost);
+      actor.hp = Math.max(0, actor.hp - outcome.actorHpCost);
       actor.dirty = true;
     }
     if (targetCreature) {
@@ -719,11 +802,44 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       const healTargetId = ctx.ally?.character_id ?? actor.fighter.character_id;
       const healTarget = chars.get(healTargetId);
       if (healTarget && healTarget.hp > 0) {
-        healTarget.hp = Math.min(healTarget.fighter.max_hp, healTarget.hp + outcome.healing);
+        const applied = Math.min(healTarget.fighter.max_hp - healTarget.hp, outcome.healing);
+        healTarget.hp += applied;
         healTarget.dirty = true;
+        const healingEvent = outcome.events.find(event => event.kind === 'heal' || event.kind === 'hp_transfer');
+        if (healingEvent) {
+          healingEvent.amount = applied;
+          healingEvent.meta = { ...(healingEvent.meta ?? {}), requested: outcome.healing,
+            applied, wasted: outcome.healing - applied, removedFromCaster: outcome.actorHpCost ?? 0 };
+        }
       }
     }
-    for (const effect of outcome.effects) proposed.effects_insert.push(effect);
+    if (outcome.partyRestoration) {
+      for (const target of eligibleParty(actor)) {
+        const hpApplied = Math.min(target.fighter.max_hp - target.hp, outcome.partyRestoration.hp);
+        const cpApplied = Math.min(target.fighter.max_cp - target.cp, outcome.partyRestoration.cp);
+        target.hp += hpApplied; target.cp += cpApplied;
+        if (hpApplied > 0 || cpApplied > 0) target.dirty = true;
+        emit({ kind: 'party_restore', abilityKey: spec.abilityKey,
+          actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+          target: { type: 'character', id: target.fighter.character_id, name: target.fighter.name },
+          amount: hpApplied, meta: { hpRequested: outcome.partyRestoration.hp, hpApplied,
+            hpWasted: outcome.partyRestoration.hp - hpApplied, cpRequested: outcome.partyRestoration.cp,
+            cpApplied, cpWasted: outcome.partyRestoration.cp - cpApplied } });
+      }
+    }
+    for (const effect of outcome.effects) {
+      const prior = snapshot.effects.filter(existing => existing.kind === effect.kind
+        && existing.ability_key === effect.ability_key
+        && existing.source_character_id === effect.source_character_id
+        && existing.target_character_id === effect.target_character_id
+        && !expiredIds.has(existing.id))
+        .sort((a, b) => a.id.localeCompare(b.id))[0];
+      if (prior) {
+        if (!proposed.effects_delete.includes(prior.id)) proposed.effects_delete.push(prior.id);
+        if (effect.kind === 'absorb') effect.magnitude = Math.max(effect.magnitude ?? 0, prior.magnitude ?? 0);
+      }
+      proposed.effects_insert.push(effect);
+    }
     for (const id of outcome.consumeEffectIds) proposed.effects_delete.push(id);
     if (spec.mechanic === 'stack_consume') {
       for (const e of stackEffects) proposed.effects_delete.push(e.id);
@@ -1045,6 +1161,12 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       const consumed = Math.min(effect.remaining, absorbToConsume);
       effect.remaining -= consumed;
       absorbToConsume -= consumed;
+      if (consumed > 0) {
+        const row = snapshot.effects.find(candidate => candidate.id === effect.id);
+        emit({ kind: 'absorb', abilityKey: row?.ability_key ?? undefined,
+          target: { type: 'character', id: targetFighter.character_id, name: targetFighter.name },
+          amount: consumed, meta: { remaining: effect.remaining, depleted: effect.remaining === 0 } });
+      }
     }
     const applied = Math.min(target.hp, breakdown.applied);
     target.hp -= applied;
@@ -1216,7 +1338,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const anythingPending =
     [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive) ||
     snapshot.effects.some((e) => !['autoattack', 'stack_source'].includes(e.kind)
-      && !expiredIds.has(e.id) && !e.is_reservation);
+      && e.config?.persistent_stance !== true && !expiredIds.has(e.id) && !e.is_reservation);
   if (!anythingPending) proposed.status = 'ended';
 
   return proposed;

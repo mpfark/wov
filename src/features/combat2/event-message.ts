@@ -57,11 +57,25 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     }
     case 'attack_evaded':
       return ownTarget ? `You evade ${subject} with ${label}.` : `${target} evades ${subject} with ${label}.`;
+    case 'absorb':
+      return `${label} absorbs ${amount ?? 0} damage for ${target}${meta.depleted === true ? ' and is depleted' : ` (${Number(meta.remaining ?? 0)} remaining)`}.`;
     case 'effect_pulse':
       return meta.healing === true
         ? `${action} restores ${amount === null ? 'health' : `${amount} HP`} to ${target}.`
         : damage();
-    case 'heal': case 'hp_transfer':
+    case 'party_restore': {
+      const hp = Number(meta.hpApplied ?? amount ?? 0);
+      const cp = Number(meta.cpApplied ?? 0);
+      const waste = Number(meta.hpWasted ?? 0) + Number(meta.cpWasted ?? 0);
+      return `${action} restores ${hp} HP${cp > 0 ? ` and ${cp} CP` : ''} to ${target}${waste > 0 ? ` (${waste} capped)` : ''}.`;
+    }
+    case 'consecrate_heal':
+      return `${action} restores ${amount ?? 0} HP to ${target}${positive('wasted') ? ` (${meta.wasted} overheal)` : ''}.`;
+    case 'consecrate_pulse':
+      return `${action} deals ${amount ?? 0} holy damage to ${target}.`;
+    case 'hp_transfer':
+      return `${subject} ${verb('transfers', 'transfer')} ${Number(meta.removedFromCaster ?? 0)} HP with ${label}, restoring ${amount ?? 0} HP to ${target}${positive('wasted') ? ` (${meta.wasted} capped)` : ''}.`;
+    case 'heal':
       return `${subject} ${verb('uses', 'use')} ${label}${event.target ? ` on ${own && ownTarget ? 'yourself' : target}` : ''}${amount === null ? '' : ` (up to ${amount} healing)`}.`;
     case 'dot_applied': case 'debuff_applied':
       return `${subject} ${verb('applies', 'apply')} ${label} to ${target}.`;
@@ -81,7 +95,9 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       const reasons: Record<string, string> = { insufficient_cp: 'not enough CP', no_target: 'no valid target',
         target_dead: 'target is dead', not_present_or_dead: 'not present or defeated',
         stance_already_active: 'stance already active', unknown_ability: 'unsupported ability',
-        ability_unavailable: 'this ability is not yet available in Combat2', requires_shield: 'a shield is required' };
+        ability_unavailable: 'this ability is not yet available in Combat2', requires_shield: 'a shield is required',
+        invalid_ally_target: 'select one living party member in this encounter',
+        unexpected_ally_target: 'this ability does not accept an ally target' };
       return `${label} refused: ${reasons[event.outcomeReason ?? ''] ?? 'action unavailable'}.`;
     }
     case 'character_died': return `${target === 'you' ? 'You are' : `${event.target?.name || subject} is`} defeated.`;

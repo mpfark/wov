@@ -10,7 +10,7 @@ const line = (id: string, message: string, ts: number): GameLogEvent => ({ v: 1,
 const model = (status: string, events: readonly GameLogEvent[]): Combat2PresentationModel => ({
   encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 1, encounterStatus: status, fighterExitState: null,
   autoattack: null, character: { id: CHARACTER, level: 1, xp: 0, gold: 0, hp: 10, maxHp: 10, cp: 10, maxCp: 10, mp: 10, maxMp: 10 },
-  creatures: [], effects: [], characterEffects: [], creatureEffects: {}, telegraphs: [], telegraphsByCreatureLife: {},
+  allies: [], creatures: [], effects: [], characterEffects: [], creatureEffects: {}, telegraphs: [], telegraphsByCreatureLife: {},
   rewardClaims: [], events, lastAppliedTick: 1,
 });
 

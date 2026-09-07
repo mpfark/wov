@@ -46,6 +46,7 @@ import type {
   TickEvent,
 } from './types.ts';
 import type { TickRandom } from './rng.ts';
+import { COMBAT2_TICK_MS, combat2TickTiming } from './time.ts';
 
 export type AbilityTargetType = 'self' | 'ally' | 'party' | 'enemy' | 'node';
 export type AbilityActivation = 'queued' | 'instant' | 'stance';
@@ -124,6 +125,8 @@ export interface MechanicOutcome {
   healing?: number;
   /** HP the actor sacrifices (`hp_transfer`). */
   actorHpCost?: number;
+  /** Immediate party-wide restoration, evaluated once from authored calculations. */
+  partyRestoration?: { hp: number; cp: number };
   /** CP the actor spends. */
   cpCost?: number;
   effects: ProposedEffectInsert[];
@@ -144,7 +147,7 @@ export interface MechanicOutcome {
 const emptyOutcome = (): MechanicOutcome => ({ effects: [], consumeEffectIds: [], events: [] });
 
 const iso = (ms: number): string => new Date(ms).toISOString();
-export const COMBAT2_HEARTBEAT_MS = 2000;
+export const COMBAT2_HEARTBEAT_MS = COMBAT2_TICK_MS;
 
 // ── Equipment ───────────────────────────────────────────────────
 
@@ -476,6 +479,9 @@ function buffEffect(
 ): ProposedEffectInsert {
   const durationMs = resolveDurationMs(ctx, spec);
   const isStance = spec.activation === 'stance';
+  const timing = !isStance && durationMs
+    ? combat2TickTiming(ctx.tick, durationMs, spec.intervalMs ?? COMBAT2_TICK_MS)
+    : null;
   return {
     kind,
     effect_type: spec.effectType ?? spec.abilityKey,
@@ -484,10 +490,10 @@ function buffEffect(
     source_character_id: ctx.actor.character_id,
     stacks: 1,
     magnitude,
-    config: { ...spec.config, ...extraConfig },
+    config: { ...spec.config, ...extraConfig, ...(timing ?? {}), ...(isStance ? { persistent_stance: true } : {}) },
     // A stance has no wall-clock expiry: its lifetime is the stance itself.
     expires_at: isStance || !durationMs ? null : iso(ctx.nowMs + durationMs),
-    next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
+    next_due_at: timing ? iso(ctx.nowMs + (spec.intervalMs ?? COMBAT2_TICK_MS)) : null,
     interval_ms: spec.intervalMs,
     is_reservation: false,
   };
@@ -513,6 +519,26 @@ function characterBuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): M
   return outcome;
 }
 
+function partyPresenceEffect(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
+  const outcome = emptyOutcome();
+  outcome.cpCost = spec.cpCost;
+  const magnitude = resolveAmount(ctx, spec, `${kind}:mag`, null) ?? 0;
+  const durationMs = resolveDurationMs(ctx, spec) ?? 0;
+  const timing = combat2TickTiming(ctx.tick, durationMs, COMBAT2_TICK_MS);
+  outcome.effects.push({
+    ...buffEffect(ctx, { ...spec, intervalMs: COMBAT2_TICK_MS }, kind, ctx.actor.character_id, magnitude, {
+      ...timing, presence_effect: true, source_fighter_id: ctx.actor.id,
+      source_entry_seq: ctx.actor.entry_seq,
+    }),
+    interval_ms: COMBAT2_TICK_MS,
+    next_due_at: iso(ctx.nowMs + COMBAT2_TICK_MS),
+  });
+  outcome.events.push({ kind: 'aura_started', abilityKey: spec.abilityKey,
+    actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name }, amount: magnitude,
+    meta: { effectKind: kind, durationMs, intervalMs: COMBAT2_TICK_MS } });
+  return outcome;
+}
+
 function creatureDebuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
   const outcome = emptyOutcome();
   outcome.cpCost = spec.cpCost;
@@ -528,6 +554,9 @@ function creatureDebuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): 
   }
   const magnitude = resolveAmount(ctx, spec, `${kind}:mag`, weapon.die) ?? 0;
   const durationMs = resolveDurationMs(ctx, spec);
+  const timing = durationMs
+    ? combat2TickTiming(ctx.tick, durationMs, spec.intervalMs ?? COMBAT2_TICK_MS)
+    : null;
   outcome.effects.push({
     kind,
     effect_type: spec.effectType ?? spec.abilityKey,
@@ -536,7 +565,7 @@ function creatureDebuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): 
     source_character_id: ctx.actor.character_id,
     stacks: 1,
     magnitude,
-    config: spec.config,
+    config: { ...spec.config, ...(timing ?? {}) },
     expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
     next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
     interval_ms: spec.intervalMs,
@@ -639,11 +668,26 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     return outcome;
   },
 
-  party_regen: (ctx, spec) => characterBuff(ctx, spec, 'party_regen'),
-  absorb_buff: (ctx, spec) => characterBuff(ctx, spec, 'absorb'),
+  party_regen: (ctx, spec) => partyPresenceEffect(ctx, spec, 'party_regen'),
+  absorb_buff: (ctx, spec) => {
+    const outcome = characterBuff(ctx, spec, 'absorb');
+    for (const effect of outcome.effects) effect.config = { ...(effect.config ?? {}),
+      target_fighter_id: ctx.ally?.id ?? ctx.actor.id,
+      target_entry_seq: ctx.ally?.entry_seq ?? ctx.actor.entry_seq };
+    return outcome;
+  },
   evasion_buff: (ctx, spec) => characterBuff(ctx, spec, 'evasion'),
   offense_buff: (ctx, spec) => characterBuff(ctx, spec, 'offense'),
-  regen_buff: (ctx, spec) => characterBuff(ctx, spec, 'regen'),
+  regen_buff: (ctx, spec) => {
+    if (spec.targetType !== 'party') return characterBuff(ctx, spec, 'regen');
+    const outcome = emptyOutcome();
+    outcome.cpCost = spec.cpCost;
+    outcome.partyRestoration = {
+      hp: resolveAmount(ctx, spec, 'regen:hp', null) ?? 0,
+      cp: Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'cp_per_tick') ?? 0)),
+    };
+    return outcome;
+  },
   stealth_buff: (ctx, spec) => characterBuff(ctx, spec, 'stealth'),
 
   block_buff: (ctx, spec) => {
@@ -806,6 +850,7 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     outcome.cpCost = spec.cpCost;
     const durationMs = resolveDurationMs(ctx, spec);
     const magnitude = resolveAmount(ctx, spec, 'aura_pulse', null) ?? 0;
+    const timing = durationMs ? combat2TickTiming(ctx.tick, durationMs, COMBAT2_TICK_MS) : null;
     // A node aura is anchored on its caster: the pulse resolves against whoever
     // is present when it fires, so it is not bound to one creature target.
     outcome.effects.push({
@@ -816,10 +861,11 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       source_character_id: ctx.actor.character_id,
       stacks: 1,
       magnitude,
-      config: spec.config,
+      config: { ...spec.config, ...(timing ?? {}), source_fighter_id: ctx.actor.id,
+        source_entry_seq: ctx.actor.entry_seq, damage_type: spec.damageType },
       expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
-      next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
-      interval_ms: spec.intervalMs,
+      next_due_at: timing ? iso(ctx.nowMs + COMBAT2_TICK_MS) : null,
+      interval_ms: timing ? COMBAT2_TICK_MS : null,
       is_reservation: false,
     });
     outcome.events.push({

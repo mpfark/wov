@@ -994,6 +994,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       sessionReady: combat2.actionsReady && !ownership.locked,
       ability: ability ?? null,
       resolveTarget: combat2Targets.resolve,
+      allyTargetId: targetId ?? abilityTargetId,
+      currentCharacterId: character.id,
+      authoritativeAllies: activeCombat2Presentation?.allies,
       reservedBuffs: combat2BlocksLegacy
         ? Object.fromEntries((activeCombat2Presentation?.characterEffects ?? []).filter(e => e.isReservation).map(e => [e.abilityKey ?? e.kind, {}]))
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
@@ -1354,7 +1357,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     currentRegionId: currentNode?.region_id ?? '',
     characterLevel: character.level,
     onNodeClick: handleMove,
-    partyMembers: mergedPartyMembers,
+    partyMembers: combat2BlocksLegacy
+      ? mergedPartyMembers.flatMap(member => {
+        const ally = activeCombat2Presentation?.allies.find(candidate =>
+          candidate.characterId === member.character_id && candidate.present && candidate.hp > 0);
+        return ally ? [{ ...member, character: { ...member.character, name: ally.name,
+          hp: ally.hp, max_hp: ally.maxHp, cp: ally.cp, max_cp: ally.maxCp, mp: ally.mp, max_mp: ally.maxMp } }] : [];
+      })
+      : mergedPartyMembers,
     myCharacterId: character.id,
     character,
     party,
@@ -1417,6 +1427,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     guideNeedsAttention: guide.needsAttention,
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
+    combat2BlocksLegacy, activeCombat2Presentation,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,

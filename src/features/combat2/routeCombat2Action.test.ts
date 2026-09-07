@@ -84,12 +84,29 @@ describe('Combat2 deliberate action routing', () => {
     await routeCombat2Action(unsupported.options);
     expect(unsupported.submit).not.toHaveBeenCalled();
     expect(unsupported.legacy).not.toHaveBeenCalled();
-    expect(unsupported.diagnose).toHaveBeenCalledWith(expect.stringContaining('not yet available'));
+    expect(unsupported.diagnose).toHaveBeenCalledWith(expect.stringContaining('Select one eligible'));
 
     const staleTarget = harness({ resolveTarget: () => ({ ok: false, reason: 'Target is stale' }) });
     await routeCombat2Action(staleTarget.options);
     expect(staleTarget.submit).not.toHaveBeenCalled();
     expect(staleTarget.legacy).not.toHaveBeenCalled();
+  });
+
+  it('routes exactly one authoritative ally identity and refuses missing or self Transfer Health locally', async () => {
+    const ally = { characterId: 'ally', name: 'Ally', present: true, hp: 10 };
+    const aegis = harness({ ability: ability({ abilityKey: 'divine_aegis', label: 'Divine Aegis',
+      targetType: 'ally', type: 'absorb_buff' }), allyTargetId: 'ally', currentCharacterId: 'self',
+      authoritativeAllies: [ally] });
+    await routeCombat2Action(aegis.options);
+    expect(aegis.submit).toHaveBeenCalledWith(expect.objectContaining({ targetCharacterId: 'ally',
+      targetCreatureId: null }), expect.anything());
+
+    const transfer = harness({ ability: ability({ abilityKey: 'transfer_health', label: 'Transfer Health',
+      targetType: 'ally', type: 'hp_transfer' }), allyTargetId: 'self', currentCharacterId: 'self',
+      authoritativeAllies: [{ ...ally, characterId: 'self' }] });
+    await routeCombat2Action(transfer.options);
+    expect(transfer.submit).not.toHaveBeenCalled();
+    expect(transfer.diagnose).toHaveBeenCalledWith(expect.stringContaining('another eligible'));
   });
 
   it('surfaces structured refusal without legacy fallback', async () => {

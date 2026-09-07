@@ -261,7 +261,7 @@ describe('combat2 resolver', () => {
           source_creature_id: null,
           stacks: 1,
           magnitude: 5,
-          config: {},
+          config: { activated_at_tick: 0, expires_after_tick: 30, interval_ticks: 1, next_pulse_tick: 1 },
           expires_at: nowPlus(60_000),
           next_due_at: nowPlus(-30_000),
           interval_ms: 2000,
@@ -276,7 +276,9 @@ describe('combat2 resolver', () => {
     expect(pulses[0].amount).toBe(5);
     const update = out.effects_update.find((u) => u.id === 'e-2');
     expect(update?.last_pulse_tick).toBe(11);
-    expect(Date.parse(update!.next_due_at!)).toBe(Date.parse(NOW) + 2000);
+    // Compatibility timestamps advance one cadence only; overdue wall time can
+    // never create a catch-up burst inside this committed encounter tick.
+    expect(Date.parse(update!.next_due_at!)).toBe(Date.parse(NOW) - 28_000);
   });
 
   it('never pulses the same effect twice for the same tick', () => {

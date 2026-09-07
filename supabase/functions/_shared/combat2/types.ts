@@ -54,6 +54,8 @@ export interface SnapshotEncounter {
   state_version: number;
   /** Authoritative wall clock captured at claim time (ISO string). */
   now: string;
+  /** Immutable display-time anchor; candidate_tick remains resolution authority. */
+  tick_origin?: string;
   /** Immutable server-derived arena identity; non-null suppresses persistent rewards. */
   test_arena_id?: string | null;
 }
@@ -180,6 +182,9 @@ export interface SnapshotIntent {
   ability_key: string | null;
   stance_key: string | null;
   target_creature_id: string | null;
+  target_character_id?: string | null;
+  target_fighter_id?: string | null;
+  target_entry_seq?: number | null;
 }
 
 /** Durable per-spawn reward qualification (`node_participation`). */
@@ -299,6 +304,7 @@ export interface ProposedEffectInsert {
 
 export interface ProposedEffectUpdate {
   id: string;
+  config?: Record<string, unknown>;
   stacks?: number;
   magnitude?: number | null;
   expires_at?: string | null;

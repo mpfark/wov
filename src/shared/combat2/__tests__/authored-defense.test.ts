@@ -154,6 +154,7 @@ describe('real authored defensive activation → proposal → decoded next tick'
     expect(proposal.characters.find(c => c.id === CHARACTER)?.cp).toBe(340);
     const input = next(proposal);
     input.encounter.now = '2026-09-04T00:00:33.000Z';
+    input.encounter.candidate_tick = Number(mitigation[0].config?.expires_after_tick) + 1;
     const { out } = seeded(input, out => attacks(out)[0]?.hitQuality === 'normal');
     expect(out.effects_delete).toContain(input.effects.find(effect => effect.kind === 'mitigation')!.id);
     expect(attacks(out)[0].meta?.flatMitigated).toBe(0);

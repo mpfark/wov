@@ -21,6 +21,7 @@ describe('Combat2 intent adapter', () => {
       _ability_key: 'fireball',
       _stance_key: null,
       _target_creature_id: CREATURE,
+      _target_character_id: null,
       _request_id: REQUEST,
     });
   });
@@ -42,7 +43,7 @@ describe('Combat2 intent adapter', () => {
     }, REQUEST);
     expect(rpc).toHaveBeenCalledExactlyOnceWith('combat_intent', {
       _encounter_id: ENCOUNTER, _character_id: CHARACTER, _intent_kind: 'basic_attack',
-      _ability_key: null, _stance_key: null, _target_creature_id: CREATURE, _request_id: REQUEST,
+      _ability_key: null, _stance_key: null, _target_creature_id: CREATURE, _target_character_id: null, _request_id: REQUEST,
     });
   });
 

@@ -36,27 +36,24 @@ function snapshot(extra: SnapshotEffect[]): NodeSnapshot {
 }
 
 describe('authored Combat2 effect consumers', () => {
-  it('refuses an unsupported authored ability before spending resources or creating effects', () => {
+  it('creates the authored Divine Aegis absorb through the common effect contract', () => {
     const input = snapshot([]);
     input.intents = [{ id: 'intent', seq: 1, character_id: 'character', intent_kind: 'ability',
-      ability_key: 'divine_aegis', stance_key: null, target_creature_id: null }];
+      ability_key: 'divine_aegis', stance_key: null, target_creature_id: null,
+      target_character_id: 'character', target_fighter_id: 'fighter', target_entry_seq: 1 }];
     const out = resolveNodeTick(input, deps);
-    expect(out.events).toContainEqual(expect.objectContaining({
-      kind: 'action_rejected', abilityKey: 'divine_aegis', outcomeReason: 'ability_unavailable',
-    }));
-    expect(out.characters.find(row => row.id === 'character')?.cp ?? 500).toBe(500);
-    expect(out.effects_insert.filter(row => row.ability_key === 'divine_aegis')).toEqual([]);
+    expect(out.events.some(event => event.kind === 'action_rejected')).toBe(false);
+    expect(out.characters.find(row => row.id === 'character')?.cp).toBe(440);
+    expect(out.effects_insert).toContainEqual(expect.objectContaining({ kind: 'absorb', ability_key: 'divine_aegis' }));
   });
 
-  it('continues to refuse a remaining unsupported ability before charging CP or creating effects', () => {
+  it('resolves Inspire as immediate authored restoration rather than a timed effect', () => {
     const input = snapshot([]);
     input.intents = [{ id: 'intent', seq: 1, character_id: 'character', intent_kind: 'ability',
       ability_key: 'inspire', stance_key: null, target_creature_id: null }];
     const out = resolveNodeTick(input, deps);
-    expect(out.events).toContainEqual(expect.objectContaining({
-      kind: 'action_rejected', abilityKey: 'inspire', outcomeReason: 'ability_unavailable',
-    }));
-    expect(out.characters.find(row => row.id === 'character')?.cp ?? 500).toBe(500);
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'party_restore', abilityKey: 'inspire' }));
+    expect(out.characters.find(row => row.id === 'character')?.cp).toBe(488);
     expect(out.effects_insert.some(row => row.ability_key === 'inspire')).toBe(false);
   });
 

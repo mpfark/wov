@@ -15,10 +15,8 @@ describe('Combat2 ability semantic release gate', () => {
       if (decision.supported) expect(decision.reason).toBeNull();
       else expect(decision.reason).toContain('not yet available');
     }
-    expect(records.filter(record => combat2AbilitySupport(record.abilityKey).supported)).toHaveLength(30);
-    expect(Object.keys(COMBAT2_UNSUPPORTED_ABILITIES).sort()).toEqual([
-      'consecrate', 'crescendo', 'divine_aegis', 'inspire', 'purifying_light', 'transfer_health',
-    ]);
+    expect(records.filter(record => combat2AbilitySupport(record.abilityKey).supported)).toHaveLength(36);
+    expect(Object.keys(COMBAT2_UNSUPPORTED_ABILITIES)).toEqual([]);
   });
 
   it('carries the canonical support decision into every catalogue spec', () => {
@@ -31,17 +29,14 @@ describe('Combat2 ability semantic release gate', () => {
 
   it('keeps the pre-queue SQL guard at exact parity with the canonical registry', () => {
     const sql = readFileSync(
-      'supabase/migrations/20260907170000_combat2_stack_ability_support_gate.sql',
+      'supabase/migrations/20260907200000_combat2_final_ability_closure.sql',
       'utf8',
     );
     const guarded = [...sql.matchAll(/'([a-z][a-z0-9_]*)'/g)]
       .map(match => match[1])
       .filter(value => value in COMBAT2_UNSUPPORTED_ABILITIES);
     expect([...new Set(guarded)].sort()).toEqual(Object.keys(COMBAT2_UNSUPPORTED_ABILITIES).sort());
-    expect(sql).toContain("'kind', 'ability_unavailable'");
-    expect(sql.lastIndexOf('ability_unavailable')).toBeLessThan(
-      sql.lastIndexOf('combat_intent_without_ability_support_gate('),
-    );
+    expect(sql).toContain('combat_intent_without_ability_support_gate(');
   });
 
   it('retains the ledger-recorded original gate and advances it only through the forward migration', () => {

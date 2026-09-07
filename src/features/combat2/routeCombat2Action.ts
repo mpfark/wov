@@ -10,6 +10,9 @@ export interface RouteCombat2ActionOptions {
   sessionReady: boolean;
   ability: ClassAbility | null;
   resolveTarget(): Combat2TargetResolution;
+  allyTargetId?: string | null;
+  currentCharacterId?: string;
+  authoritativeAllies?: readonly { characterId: string; name: string; present: boolean; hp: number }[];
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction, feedback?: { message: string }): Promise<Combat2IntentResult>;
@@ -48,8 +51,16 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
     };
   } else {
     if (ability.targetType === 'ally') {
-      options.diagnose('This targeted action is not supported by the Combat2 intent contract.');
-      return;
+      const matches = (options.authoritativeAllies ?? []).filter(ally => ally.characterId === options.allyTargetId
+        && ally.present && ally.hp > 0);
+      if (matches.length !== 1) {
+        options.diagnose('Select one eligible Combat2 ally before using this ability.');
+        return;
+      }
+      if (ability.type === 'hp_transfer' && options.allyTargetId === options.currentCharacterId) {
+        options.diagnose('Transfer Health requires another eligible Combat2 party member.');
+        return;
+      }
     }
     let targetCreatureId: string | null = null;
     if (ability.targetType === 'enemy') {
@@ -60,7 +71,8 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
       }
       targetCreatureId = resolved.target.creatureId;
     }
-    action = { kind: 'ability', abilityKey: ability.abilityKey, stanceKey: null, targetCreatureId };
+    action = { kind: 'ability', abilityKey: ability.abilityKey, stanceKey: null, targetCreatureId,
+      ...(ability.targetType === 'ally' ? { targetCharacterId: options.allyTargetId ?? null } : {}) };
   }
 
   const message = stance

@@ -5,6 +5,7 @@ export interface Combat2IntentAction {
   abilityKey: string | null;
   stanceKey: string | null;
   targetCreatureId: string | null;
+  targetCharacterId?: string | null;
 }
 
 export type Combat2IntentClassification =
@@ -36,6 +37,7 @@ export interface Combat2IntentClient {
     _ability_key: string | null;
     _stance_key: string | null;
     _target_creature_id: string | null;
+    _target_character_id: string | null;
     _request_id: string;
   }): PromiseLike<IntentRpcResponse>;
 }
@@ -108,6 +110,7 @@ export function createCombat2IntentAdapter(client: Combat2IntentClient): Combat2
           _target_creature_id: action.kind === 'ability' || action.kind === 'basic_attack'
             ? action.targetCreatureId
             : null,
+          _target_character_id: action.kind === 'ability' ? action.targetCharacterId ?? null : null,
           _request_id: requestId,
         });
       } catch (error) {

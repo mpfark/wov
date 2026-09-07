@@ -22,6 +22,7 @@ import type {
   SnapshotParticipation,
   SnapshotPendingEvent,
 } from './types';
+import { readCombat2TickTiming } from './time';
 import type { AuthoredBossCast } from './boss-catalog';
 
 export type DecodeResult =
@@ -222,6 +223,9 @@ function decodeIntent(r: Reader, path: string, raw: unknown): SnapshotIntent {
   if (!['ability', 'stance_activate', 'stance_drop', 'basic_attack'].includes(kind)) {
     r.errors.push(`${path}.intent_kind: unsupported intent kind`);
   }
+  if (o.target_character_id != null && o.target_creature_id != null) {
+    r.errors.push(`${path}: character and creature targets are mutually exclusive`);
+  }
   return {
     id: r.str(`${path}.id`, o.id),
     seq: r.num(`${path}.seq`, o.seq),
@@ -230,6 +234,9 @@ function decodeIntent(r: Reader, path: string, raw: unknown): SnapshotIntent {
     ability_key: r.strOrNull(`${path}.ability_key`, o.ability_key),
     stance_key: r.strOrNull(`${path}.stance_key`, o.stance_key),
     target_creature_id: r.strOrNull(`${path}.target_creature_id`, o.target_creature_id),
+    target_character_id: r.strOrNull(`${path}.target_character_id`, o.target_character_id),
+    target_fighter_id: r.strOrNull(`${path}.target_fighter_id`, o.target_fighter_id),
+    target_entry_seq: r.numOrNull(`${path}.target_entry_seq`, o.target_entry_seq),
   };
 }
 
@@ -368,6 +375,7 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       candidate_tick: r.num('snapshot.encounter.candidate_tick', enc.candidate_tick),
       state_version: r.num('snapshot.encounter.state_version', enc.state_version),
       now: r.str('snapshot.encounter.now', enc.now),
+      tick_origin: enc.tick_origin === undefined ? undefined : r.str('snapshot.encounter.tick_origin', enc.tick_origin),
       test_arena_id: r.strOrNull('snapshot.encounter.test_arena_id', enc.test_arena_id),
     },
     creatures: r
@@ -442,7 +450,28 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
     }
   }
   const stackIdentities = new Set<string>();
+  const presenceIdentities = new Set<string>();
   for (const [i, effect] of snapshot.effects.entries()) {
+    if (effect.interval_ms !== null && !readCombat2TickTiming(effect.config)) {
+      r.errors.push(`snapshot.effects[${i}]: periodic tick timing is malformed`);
+    }
+    if (effect.config.presence_effect === true || effect.kind === 'party_regen' || effect.kind === 'aura') {
+      const source = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
+      if (!source || effect.target_character_id !== source.character_id
+          || effect.config.source_fighter_id !== source.id || effect.config.source_entry_seq !== source.entry_seq) {
+        r.errors.push(`snapshot.effects[${i}]: presence source binding is stale or malformed`);
+      }
+      const identity = `${effect.kind}:${effect.ability_key}:${effect.source_character_id}:${effect.config.source_entry_seq}`;
+      if (presenceIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate presence effect`);
+      presenceIdentities.add(identity);
+    }
+    if (effect.kind === 'absorb' && effect.ability_key === 'divine_aegis') {
+      const target = snapshot.fighters.find(row => row.character_id === effect.target_character_id);
+      if (!target || effect.config.target_fighter_id !== target.id
+          || effect.config.target_entry_seq !== target.entry_seq) {
+        r.errors.push(`snapshot.effects[${i}]: ally absorb binding is stale or malformed`);
+      }
+    }
     if (effect.kind === 'stack_source') {
       const fighter = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
       if (!fighter || effect.target_character_id !== fighter.character_id

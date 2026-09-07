@@ -6,14 +6,7 @@
  * the Edge mirror is generated from this file and the SQL intent guard is
  * contract-tested against it.
  */
-export const COMBAT2_UNSUPPORTED_ABILITIES = {
-  consecrate: 'The node aura requires a safe multi-target effect representation.',
-  crescendo: 'Party-wide periodic healing is not yet implemented.',
-  divine_aegis: 'Authoritative ally targeting is not yet installed.',
-  inspire: 'The authored record does not define a regeneration interval.',
-  purifying_light: 'Party-wide periodic healing is not yet implemented.',
-  transfer_health: 'Authoritative ally targeting is not yet installed.',
-} as const;
+export const COMBAT2_UNSUPPORTED_ABILITIES = {} as const;
 
 export type Combat2UnsupportedAbilityKey = keyof typeof COMBAT2_UNSUPPORTED_ABILITIES;
 
