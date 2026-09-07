@@ -2,11 +2,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const UI=readFileSync('src/components/admin/Combat2TestArenaPanel.tsx','utf8');
+const ADMIN=readFileSync('src/pages/AdminPage.tsx','utf8');
 
 describe('Combat2 Test Arena page-local run workflow',()=>{
- it('uses a bounded responsive two-column composition with status first on small screens',()=>{
-  expect(UI).toContain('max-w-7xl');expect(UI).toContain('lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]');
-  expect(UI).toContain('order-1 space-y-4 lg:sticky');expect(UI).toContain('order-2 space-y-4 lg:order-1');
+ it('uses the available admin width and equal shrinkable desktop columns',()=>{
+  expect(UI).not.toMatch(/mx-auto|max-w-/);expect(UI).toContain('grid grid-cols-1 items-start gap-4 lg:grid-cols-2');
+  expect(UI).toContain('order-1 min-w-0 space-y-4 lg:sticky');expect(UI).toContain('order-2 min-w-0 space-y-4 lg:order-1');
+  expect(ADMIN).toContain('return <Combat2TestArenaPanel />');expect(ADMIN).toContain('<AdminLayout');
  });
  it('keeps recording controls separate from collapsed global controls',()=>{
   expect(UI).toContain('Start recording');expect(UI).toContain('Stop and generate report');
@@ -17,5 +19,10 @@ describe('Combat2 Test Arena page-local run workflow',()=>{
   expect(UI).toContain("const recording=report?.status==='recording'");expect(UI).toContain('disabled={recording||!status?.resetEligible||!!busy}');
   expect(UI).toContain('Ordered combat report');expect(UI).toContain('Load more');expect(UI).toContain('loadReport(report.runId,report.returnedThroughSeq,true)');
   expect(UI).not.toMatch(/setInterval|setTimeout|\.from\(['"]combat2_test_run/);
+ });
+ it('keeps controls left, status/report right, and report content locally contained',()=>{
+  expect(UI.indexOf('<main')).toBeLessThan(UI.indexOf('Diagnostic recording'));expect(UI.indexOf('Advanced environment controls')).toBeLessThan(UI.indexOf('</main>'));
+  expect(UI.indexOf('<aside')).toBeLessThan(UI.indexOf('Arena status'));expect(UI.indexOf('<CardTitle>Test Report')).toBeGreaterThan(UI.indexOf('<aside'));
+  expect(UI).toContain('min-w-0 overflow-hidden');expect(UI).toContain('min-w-0 break-words border-l-2');
  });
 });
