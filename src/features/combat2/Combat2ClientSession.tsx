@@ -39,7 +39,8 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
   const presentation = useCombat2Presentation(enteredSessionKey, delivery, props.classKey);
   const model = presentation.model;
   const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
-  const testArenaDeath = dead && delivery.snapshot?.encounter?.test_arena_id != null;
+  const testArenaDeath = dead
+    && (delivery.snapshot?.encounter as Record<string, unknown> | null | undefined)?.test_arena_id != null;
   const respawn = useCombat2RespawnSession({
     enabled: props.enabled,
     canSubmit: props.controlled ? dead && !testArenaDeath && !props.inputLocked : dead,
