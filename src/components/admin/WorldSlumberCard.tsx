@@ -51,9 +51,9 @@ export function WorldSlumberCard() {
             </div>
             <div className="text-xs text-muted-foreground">
               {asleep ? (
-                <>No players active. Cron jobs are short-circuiting. Last awake {formatAgo(lastChangeAt)}.</>
+                <>Authoritative world state is asleep. Last changed {formatAgo(lastChangeAt)}.</>
               ) : (
-                <>{awakeNow} player{awakeNow === 1 ? '' : 's'} online in the last 5 min. Awake since {formatAgo(lastChangeAt)}.</>
+                <>Authoritative world state is awake. Recent activity: {awakeNow} player{awakeNow === 1 ? '' : 's'}. Changed {formatAgo(lastChangeAt)}.</>
               )}
             </div>
           </div>

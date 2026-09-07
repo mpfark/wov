@@ -16,11 +16,11 @@ export interface WorldSlumberState {
   loading: boolean;
 }
 
-/**
- * Polls the world's awake/asleep state (5-min activity window) and
- * recent transitions from world_slumber_log. Admin/overlord only —
- * the log table's RLS blocks other users.
- */
+export function decodeAuthoritativeWorldState(value: unknown): 'awake' | 'asleep' {
+  return value === 'awake' ? 'awake' : 'asleep';
+}
+
+/** Reads the singleton state written by wake_world()/shutdown_world(). */
 export function useWorldSlumberState(enabled: boolean, intervalMs = 30_000): WorldSlumberState {
   const [state, setState] = useState<WorldSlumberState>({
     currentState: null,
@@ -35,8 +35,8 @@ export function useWorldSlumberState(enabled: boolean, intervalMs = 30_000): Wor
     let cancelled = false;
 
     const load = async () => {
-      const [awakeRes, logRes] = await Promise.all([
-        supabase.rpc('world_is_awake' as any),
+      const [stateRes, logRes] = await Promise.all([
+        supabase.from('world_state').select('state, changed_at').eq('id', 1).maybeSingle(),
         supabase
           .from('world_slumber_log')
           .select('id, state, awake_characters, changed_at')
@@ -47,11 +47,9 @@ export function useWorldSlumberState(enabled: boolean, intervalMs = 30_000): Wor
       if (cancelled) return;
 
       const recent = (logRes.data ?? []) as SlumberLogRow[];
-      const isAwake = awakeRes.data === true;
-      const currentState: 'awake' | 'asleep' = isAwake ? 'awake' : 'asleep';
-      // awake_characters count from most recent log entry when awake, else 0
-      const awakeNow = isAwake ? (recent.find((r) => r.state === 'awake')?.awake_characters ?? 0) : 0;
-      const lastChangeAt = recent[0]?.changed_at ?? null;
+      const currentState = decodeAuthoritativeWorldState(stateRes.data?.state);
+      const awakeNow = currentState === 'awake' ? (recent.find((r) => r.state === 'awake')?.awake_characters ?? 0) : 0;
+      const lastChangeAt = stateRes.data?.changed_at ?? recent[0]?.changed_at ?? null;
 
       setState({ currentState, awakeNow, lastChangeAt, recent, loading: false });
     };
