@@ -4974,6 +4974,18 @@ export type Database = {
         }
         Returns: Json
       }
+      combat_intent_without_ability_support_gate: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _encounter_id: string
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
       combat_intent_without_basic_attack: {
         Args: {
           _ability_key: string
