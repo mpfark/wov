@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { COMBAT2_TEST_ARENA, createArenaAdminApi, decodeArenaStatus } from './admin-api';
+import { COMBAT2_TEST_ARENA, createArenaAdminApi, decodeArenaResult, decodeArenaStatus } from './admin-api';
 
 const status = { ok:true,kind:'status',arena_id:COMBAT2_TEST_ARENA.id,arena_key:COMBAT2_TEST_ARENA.key,label:'Arena',active:true,stopped:true,reset_eligible:true,
  node_count:5,creature_count:6,tester_count:0,active_encounter_count:0,claimed_encounter_count:0,pending_intent_count:0,pending_event_count:0,
@@ -35,5 +35,10 @@ describe('Combat2 test arena admin adapter',()=>{
   expect((await malformed.status()).error).toMatch(/malformed/);
   const transport=createArenaAdminApi(vi.fn().mockResolvedValue({data:null,error:{message:'secret internals'}}));
   expect(await transport.status()).toEqual({error:'Arena request failed.',uncertain:true});
+ });
+ it('accepts allowlisted reset diagnostics while remaining compatible with a plain reset failure',()=>{
+  expect(decodeArenaResult({ok:false,kind:'reset_failed'})).toEqual({ok:false,kind:'reset_failed',counts:{},ids:{}});
+  expect(decodeArenaResult({ok:false,kind:'reset_failed',stage:'tester_restore',code:'42703'})).toEqual({ok:false,kind:'reset_failed',counts:{},ids:{},stage:'tester_restore',code:'42703'});
+  expect(decodeArenaResult({ok:false,kind:'reset_failed',stage:'raw database detail',code:'too-long',message:'secret'})).toEqual({ok:false,kind:'reset_failed',counts:{},ids:{}});
  });
 });

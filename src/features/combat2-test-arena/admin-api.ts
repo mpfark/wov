@@ -20,7 +20,7 @@ export type ArenaStatus = {
   nodes: ArenaNode[]; access: ArenaAccess[]; lastOperation?: string;
   lastStartClassification?: string; lastCloseClassification?: string;
 };
-export type ArenaResult = { ok: boolean; kind: string; counts: Record<string, number>; ids: Record<string, string> };
+export type ArenaResult = { ok: boolean; kind: string; counts: Record<string, number>; ids: Record<string, string>; stage?: 'cleanup'|'tester_restore'|'creature_restore'|'request_finalize'; code?: string };
 export type EnvironmentResult = { ok: boolean; kind: 'started'|'already_started'|'closed'|'already_closed'|'arena_stopped_world_left_open'; combatMode?:'maintenance'|'open'; worldState?:'asleep'|'awake'; schedulerEnabled?:boolean; counts:Record<string,number>; ids:Record<string,string> };
 export type ArenaApiResult<T> = { value?: T; error?: string; uncertain?: boolean };
 
@@ -73,11 +73,14 @@ export function decodeEnvironmentResult(v:unknown):EnvironmentResult|null {
 export function decodeArenaResult(v: unknown): ArenaResult | null {
   if (!object(v) || !bool(v.ok) || typeof v.kind !== 'string' || !/^[a-z][a-z0-9_]*$/.test(v.kind)) return null;
   const counts: Record<string,number> = {}; const ids: Record<string,string> = {};
+  const stages=['cleanup','tester_restore','creature_restore','request_finalize'] as const;
+  const stage=v.kind==='reset_failed'&&stages.includes(v.stage as typeof stages[number])?v.stage as typeof stages[number]:undefined;
+  const code=v.kind==='reset_failed'&&typeof v.code==='string'&&/^[a-z0-9]{5}$/i.test(v.code)?v.code:undefined;
   for (const [k,x] of Object.entries(v)) {
-    if (k==='ok'||k==='kind') continue;
+    if (k==='ok'||k==='kind'||k==='stage'||k==='code') continue;
     if (count(x)) counts[k]=x; else if (typeof x==='string' && UUID.test(x)) ids[k]=x;
   }
-  return { ok:v.ok, kind:v.kind, counts, ids };
+  return { ok:v.ok, kind:v.kind, counts, ids, ...(stage?{stage}:{}), ...(code?{code}:{}) };
 }
 
 type Rpc = (name: string, args: Record<string, unknown>) => PromiseLike<{data:unknown;error:{message?:string}|null}>;
