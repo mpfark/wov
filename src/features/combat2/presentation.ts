@@ -240,7 +240,7 @@ function actor(value: unknown): LogActor | undefined {
 }
 
 const EVENT_TYPES: Record<string, LogEventType> = {
-  attack: 'ability', creature_attack: 'attack', attack_evaded: 'mitigation', heal: 'heal', hp_transfer: 'heal',
+  attack: 'ability', creature_attack: 'attack', orb_attack: 'ability', attack_evaded: 'mitigation', heal: 'heal', hp_transfer: 'heal',
   buff_applied: 'buff', aura: 'ability', aura_started: 'buff', reservation: 'buff',
   stance_activated: 'buff', stance_dropped: 'buff', stack: 'debuff', stack_applied: 'debuff',
   effect_pulse: 'dot_tick', effect_expired: 'debuff', action_rejected: 'error',

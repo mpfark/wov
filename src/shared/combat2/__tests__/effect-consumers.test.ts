@@ -48,16 +48,16 @@ describe('authored Combat2 effect consumers', () => {
     expect(out.effects_insert.filter(row => row.ability_key === 'divine_aegis')).toEqual([]);
   });
 
-  it('refuses an unsupported stance before charging CP or creating a reservation', () => {
+  it('continues to refuse a remaining unsupported ability before charging CP or creating effects', () => {
     const input = snapshot([]);
-    input.intents = [{ id: 'intent', seq: 1, character_id: 'character', intent_kind: 'stance_activate',
-      ability_key: null, stance_key: 'ignite', target_creature_id: null }];
+    input.intents = [{ id: 'intent', seq: 1, character_id: 'character', intent_kind: 'ability',
+      ability_key: 'inspire', stance_key: null, target_creature_id: null }];
     const out = resolveNodeTick(input, deps);
     expect(out.events).toContainEqual(expect.objectContaining({
-      kind: 'action_rejected', abilityKey: 'ignite', outcomeReason: 'ability_unavailable',
+      kind: 'action_rejected', abilityKey: 'inspire', outcomeReason: 'ability_unavailable',
     }));
     expect(out.characters.find(row => row.id === 'character')?.cp ?? 500).toBe(500);
-    expect(out.effects_insert.some(row => row.ability_key === 'ignite')).toBe(false);
+    expect(out.effects_insert.some(row => row.ability_key === 'inspire')).toBe(false);
   });
 
   it('consumes a guaranteed Disengage dodge only for an otherwise-landed attack', () => {

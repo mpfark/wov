@@ -144,6 +144,7 @@ export interface MechanicOutcome {
 const emptyOutcome = (): MechanicOutcome => ({ effects: [], consumeEffectIds: [], events: [] });
 
 const iso = (ms: number): string => new Date(ms).toISOString();
+export const COMBAT2_HEARTBEAT_MS = 2000;
 
 // ── Equipment ───────────────────────────────────────────────────
 
@@ -713,6 +714,38 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     const outcome = emptyOutcome();
     outcome.cpCost = spec.cpCost;
     const creature = ctx.creature;
+    if (!creature && spec.activation === 'stance' && spec.targetType === 'self') {
+      const trigger = spec.config.trigger === 'pulse' ? 'successful_pulse_hit' : 'weapon_hit';
+      const stat = (key: unknown): number => typeof key === 'string' && key in ctx.actor
+        ? getStatModifier(Number(ctx.actor[key as keyof SnapshotFighter])) : 0;
+      const dotStat = stat(spec.config.dot_stat);
+      const dotPerTick = Math.max(0, Math.floor(
+        dotStat * Number(spec.config.dot_stat_mult ?? 0) * Number(spec.config.dot_global_mult ?? 1),
+      ));
+      const durationBase = Math.max(0, Number(spec.config.dot_duration_ms ?? 0));
+      const durationExtra = Math.max(0, stat(spec.config.dot_duration_stat))
+        * Math.max(0, Number(spec.config.dot_duration_per_point_ms ?? 0));
+      const durationCap = Math.max(durationBase, Number(spec.config.dot_duration_cap_ms ?? durationBase + durationExtra));
+      const stackDurationMs = Math.min(durationCap, durationBase + durationExtra);
+      const maxStacks = Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'max_stacks') ?? 1));
+      const pulseDamage = trigger === 'successful_pulse_hit'
+        ? Math.max(1, Math.floor(Number(spec.config.pulse_damage_base ?? 0) + stat(spec.config.pulse_damage_stat)))
+        : 0;
+      const magnitude = Math.min(1, Math.max(0, spec.amountCalc
+        ? evaluateCalc(spec.amountCalc, calcInputs(ctx, spec, 'stack_source:chance', null)) : 0));
+      outcome.effects.push(buffEffect(ctx, spec, 'stack_source', ctx.actor.character_id, magnitude, {
+        stack_trigger: trigger,
+        stack_effect_type: spec.effectType ?? spec.abilityKey,
+        stack_duration_ms: stackDurationMs,
+        stack_interval_ms: COMBAT2_HEARTBEAT_MS,
+        dot_per_tick: dotPerTick,
+        max_stacks: maxStacks,
+        pulse_damage: pulseDamage,
+        source_fighter_id: ctx.actor.id,
+        source_entry_seq: ctx.actor.entry_seq,
+      }));
+      return outcome;
+    }
     if (!creature) {
       outcome.rejected = 'no_target';
       return outcome;
@@ -751,17 +784,20 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   stack_consume: (ctx, spec) => {
     const stacks = Math.max(0, ctx.existingStacks ?? 0);
     // Authored per-stack rider, evaluated with the consumed stacks in context.
-    const multiplier = resolveMechanicCalc(
+    const perStack = resolveMechanicCalc(
       ctx,
       spec,
       'per_stack_multiplier',
       { consumed_stacks: stacks, active_stacks: stacks },
-    ) ?? 1;
+    ) ?? 0;
     const outcome = offensiveHit(ctx, spec, 'stack_consume', {
-      multiplier: multiplier > 0 ? multiplier : 1,
+      multiplier: 1 + Math.max(0, perStack) * stacks,
       context: { consumed_stacks: stacks, active_stacks: stacks },
     });
     outcome.meta_stacks_consumed = stacks;
+    const attack = outcome.events.find(event => event.kind === 'attack');
+    if (attack) attack.meta = { ...(attack.meta ?? {}), stacksConsumed: stacks,
+      stackNoun: spec.config.stack_noun ?? 'stack' };
     return outcome;
   },
 

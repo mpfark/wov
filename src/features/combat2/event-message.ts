@@ -35,9 +35,26 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
   switch (event.kind) {
     case 'attack': case 'creature_attack':
       if (event.hitQuality === 'miss' || event.outcomeReason === 'missed' || event.outcomeReason === 'critical_miss') {
-        return `${action} ${!event.abilityKey && own ? 'miss' : 'misses'} ${target}${event.outcomeReason === 'critical_miss' ? ' (critical miss)' : ''}.`;
+        const wasted = typeof meta.stacksConsumed === 'number'
+          ? `; ${meta.stacksConsumed} ${String(meta.stackNoun ?? 'stack')} stack${meta.stacksConsumed === 1 ? '' : 's'} consumed`
+          : '';
+        return `${action} ${!event.abilityKey && own ? 'miss' : 'misses'} ${target}${event.outcomeReason === 'critical_miss' ? ' (critical miss)' : ''}${wasted}.`;
+      }
+      if (typeof meta.stacksConsumed === 'number') {
+        const noun = String(meta.stackNoun ?? 'stack');
+        return `${action} consumes ${meta.stacksConsumed} ${noun} stack${meta.stacksConsumed === 1 ? '' : 's'} and deals ${amount ?? 0} damage to ${target}.`;
       }
       return damage();
+    case 'orb_attack':
+      return event.hitQuality === 'miss'
+        ? `An orb from ${label} misses ${target}.`
+        : `An orb from ${label} strikes ${target} for ${amount ?? 0} damage.`;
+    case 'stack_applied': {
+      const stacks = typeof meta.stacks === 'number' ? meta.stacks : amount;
+      const noun = String(meta.stackNoun ?? 'effect');
+      return `${subject} ${verb('applies', 'apply')} ${label} to ${target}${stacks === null ? ''
+        : ` (${stacks} ${noun} stack${stacks === 1 ? '' : 's'})`}.`;
+    }
     case 'attack_evaded':
       return ownTarget ? `You evade ${subject} with ${label}.` : `${target} evades ${subject} with ${label}.`;
     case 'effect_pulse':

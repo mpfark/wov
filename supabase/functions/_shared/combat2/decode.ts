@@ -441,6 +441,38 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       }
     }
   }
+  const stackIdentities = new Set<string>();
+  for (const [i, effect] of snapshot.effects.entries()) {
+    if (effect.kind === 'stack_source') {
+      const fighter = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
+      if (!fighter || effect.target_character_id !== fighter.character_id
+          || effect.config.source_fighter_id !== fighter.id
+          || effect.config.source_entry_seq !== fighter.entry_seq
+          || !['weapon_hit', 'successful_pulse_hit'].includes(String(effect.config.stack_trigger))) {
+        r.errors.push(`snapshot.effects[${i}]: stack source binding is stale or malformed`);
+      }
+      continue;
+    }
+    if (effect.kind !== 'stack') continue;
+    const creature = snapshot.creatures.find(row => row.id === effect.config.node_creature_id);
+    const fighter = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
+    const maxStacks = effect.config.max_stacks;
+    if (!creature || creature.creature_id !== effect.target_creature_id
+        || creature.creature_id !== effect.config.creature_id
+        || creature.spawn_seq !== effect.config.spawn_seq
+        || !fighter || fighter.id !== effect.config.source_fighter_id
+        || fighter.entry_seq !== effect.config.source_entry_seq
+        || !effect.ability_key || !Number.isSafeInteger(effect.stacks) || effect.stacks < 1
+        || typeof maxStacks !== 'number' || !Number.isSafeInteger(maxStacks)
+        || effect.stacks > maxStacks || !effect.expires_at
+        || effect.interval_ms !== 2000 || !effect.next_due_at) {
+      r.errors.push(`snapshot.effects[${i}]: stack identity is stale or malformed`);
+      continue;
+    }
+    const identity = `${creature.id}:${creature.spawn_seq}:${effect.effect_type}:${fighter.id}:${fighter.entry_seq}:${effect.ability_key}`;
+    if (stackIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate stack identity`);
+    stackIdentities.add(identity);
+  }
   if (r.errors.length > 0) return { ok: false, errors: r.errors };
   return { ok: true, snapshot };
 }

@@ -14,6 +14,7 @@ import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
 import {
   MECHANIC_HANDLERS,
+  COMBAT2_HEARTBEAT_MS,
   resolveBasicAttack,
   type AbilitySpec,
   type MechanicContext,
@@ -176,6 +177,94 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       && !expiredIds.has(effect.id)
       && !proposed.effects_delete.includes(effect.id),
   );
+  type StackState = { effect: SnapshotEffect | null; insert: ProposedTick['effects_insert'][number] | null; stacks: number };
+  const stackState = new Map<string, StackState>();
+  for (const effect of snapshot.effects) {
+    if (effect.kind !== 'stack' || expiredIds.has(effect.id) || !effect.source_character_id
+        || !effect.target_creature_id || !effect.ability_key) continue;
+    const creature = creatures.get(effect.target_creature_id);
+    if (!creature || effect.config?.node_creature_id !== creature.row.id
+        || effect.config?.spawn_seq !== creature.row.spawn_seq) continue;
+    stackState.set(`${effect.source_character_id}:${creature.row.id}:${creature.row.spawn_seq}:${effect.effect_type}:${effect.ability_key}`,
+      { effect, insert: null, stacks: Math.max(0, Math.floor(effect.stacks)) });
+  }
+
+  const applyStackSource = (
+    source: SnapshotEffect,
+    target: WorkingCreature,
+    trigger: 'weapon_hit' | 'successful_pulse_hit',
+    ordinal: number,
+  ): void => {
+    if (source.config?.stack_trigger !== trigger || target.hp <= 0 || !target.row.is_alive
+        || !source.source_character_id || !source.ability_key) return;
+    const actor = chars.get(source.source_character_id);
+    if (!actor || !actor.present || actor.hp <= 0
+        || source.config?.source_fighter_id !== actor.fighter.id
+        || source.config?.source_entry_seq !== actor.fighter.entry_seq) return;
+    const chance = Math.min(1, Math.max(0, source.magnitude ?? 0));
+    const landed = chance >= 1 || rng.sample('stack_apply_chance', source.ability_key,
+      source.source_character_id, target.row.id, target.row.spawn_seq, tick, ordinal) < chance;
+    if (!landed) {
+      if (trigger === 'successful_pulse_hit') emit({ kind: 'orb_attack', abilityKey: source.ability_key,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
+        hitQuality: 'miss', amount: 0 });
+      return;
+    }
+    if (trigger === 'successful_pulse_hit') {
+      const attempted = Math.max(1, Math.floor(Number(source.config?.pulse_damage ?? 0)));
+      const applied = Math.min(target.hp, attempted);
+      target.hp -= applied; target.damaged = true; target.dirty = true;
+      qualify(target, actor.fighter.character_id, 'damage');
+      if (target.hp === 0 && target.killedBy === null) target.killedBy = actor.fighter.character_id;
+      emit({ kind: 'orb_attack', abilityKey: source.ability_key,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
+        hitQuality: 'normal', amount: applied, meta: { damageType: source.config?.damage_type ?? 'fire' } });
+      if (target.hp <= 0) return;
+    }
+    const effectType = String(source.config?.stack_effect_type ?? source.effect_type);
+    const cap = Math.max(1, Math.floor(Number(source.config?.max_stacks ?? 1)));
+    const duration = Math.max(COMBAT2_HEARTBEAT_MS, Math.floor(Number(source.config?.stack_duration_ms ?? 0)));
+    const interval = Math.max(COMBAT2_HEARTBEAT_MS, Math.floor(Number(source.config?.stack_interval_ms ?? COMBAT2_HEARTBEAT_MS)));
+    const key = `${actor.fighter.character_id}:${target.row.id}:${target.row.spawn_seq}:${effectType}:${source.ability_key}`;
+    const current = stackState.get(key) ?? { effect: null, insert: null, stacks: 0 };
+    const refreshedAtCap = current.stacks >= cap;
+    current.stacks = Math.min(cap, current.stacks + 1);
+    const expiresAt = new Date(nowMs + duration).toISOString();
+    const nextDueAt = new Date(nowMs + interval).toISOString();
+    if (current.effect) {
+      const existing = proposed.effects_update.find(update => update.id === current.effect!.id);
+      const update = { id: current.effect.id, stacks: current.stacks,
+        magnitude: Math.max(0, Math.floor(Number(source.config?.dot_per_tick ?? 0))),
+        expires_at: expiresAt, next_due_at: nextDueAt };
+      if (existing) Object.assign(existing, update); else proposed.effects_update.push(update);
+    } else if (current.insert) {
+      current.insert.stacks = current.stacks;
+      current.insert.expires_at = expiresAt;
+      current.insert.next_due_at = nextDueAt;
+    } else {
+      current.insert = {
+        kind: 'stack', effect_type: effectType, ability_key: source.ability_key,
+        target_creature_id: target.row.creature_id, source_character_id: actor.fighter.character_id,
+        stacks: current.stacks, magnitude: Math.max(0, Math.floor(Number(source.config?.dot_per_tick ?? 0))),
+        config: { node_creature_id: target.row.id, creature_id: target.row.creature_id,
+          spawn_seq: target.row.spawn_seq, source_fighter_id: actor.fighter.id,
+          source_entry_seq: actor.fighter.entry_seq, max_stacks: cap,
+          damage_type: source.config?.damage_type ?? null },
+        expires_at: expiresAt, next_due_at: nextDueAt, interval_ms: interval,
+        last_pulse_tick: null, is_reservation: false,
+      };
+      proposed.effects_insert.push(current.insert);
+    }
+    stackState.set(key, current);
+    qualify(target, actor.fighter.character_id, 'debuff');
+    emit({ kind: 'stack_applied', abilityKey: source.ability_key,
+      actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+      target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
+      amount: current.stacks, meta: { stacks: current.stacks, maxStacks: cap,
+        stackNoun: source.config?.stack_noun ?? effectType, refreshed: refreshedAtCap } });
+  };
 
   // ── 1. effect lifetimes: expire first, then pulse at most once ─
   for (const effect of snapshot.effects) {
@@ -368,6 +457,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       else {
         qualify(target, actor.fighter.character_id, 'damage');
         if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+        if (!outcome.missed && target.hp > 0) {
+          for (const source of activeEffectsFor(actor.fighter.character_id).filter(effect => effect.kind === 'stack_source')) {
+            applyStackSource(source, target, 'weapon_hit', 0);
+          }
+        }
         for (const id of outcome.consumeEffectIds) if (!proposed.effects_delete.includes(id)) proposed.effects_delete.push(id);
         for (const event of outcome.events) emit(event);
       }
@@ -549,6 +643,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
             e.target_creature_id === targetCreature.row.creature_id &&
             e.source_character_id === actor.fighter.character_id &&
             (spec.stackType === null || e.effect_type === spec.stackType) &&
+            e.config?.node_creature_id === targetCreature.row.id &&
+            e.config?.spawn_seq === targetCreature.row.spawn_seq &&
+            e.config?.source_fighter_id === actor.fighter.id &&
+            e.config?.source_entry_seq === actor.fighter.entry_seq &&
             !expiredIds.has(e.id),
         )
       : [];
@@ -608,6 +706,14 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       if (targetCreature.hp === 0 && targetCreature.killedBy === null) {
         targetCreature.killedBy = actor.fighter.character_id;
       }
+    }
+    if (targetCreature && targetCreature.hp > 0 && spec.mechanic !== 'stack_consume' && spec.weaponBased) {
+      outcome.events.forEach((event, index) => {
+        if (event.kind !== 'attack' || event.hitQuality === 'miss') return;
+        for (const source of activeEffectsFor(actor.fighter.character_id).filter(effect => effect.kind === 'stack_source')) {
+          applyStackSource(source, targetCreature, 'weapon_hit', index);
+        }
+      });
     }
     if (outcome.healing) {
       const healTargetId = ctx.ally?.character_id ?? actor.fighter.character_id;
@@ -672,6 +778,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     else {
       qualify(target, actor.fighter.character_id, 'damage');
       if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+      if (!outcome.missed && target.hp > 0) {
+        for (const source of activeEffectsFor(actor.fighter.character_id).filter(effect => effect.kind === 'stack_source')) {
+          applyStackSource(source, target, 'weapon_hit', 0);
+        }
+      }
       for (const id of outcome.consumeEffectIds) if (!proposed.effects_delete.includes(id)) proposed.effects_delete.push(id);
       for (const event of outcome.events) emit(event);
       if (target.hp <= 0) {
@@ -682,6 +793,26 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         if (next) autoattackInsert(actor, next);
       }
     }
+  }
+
+  // Ignite is an independent stance-owned heartbeat, not another player action
+  // and not a rider on ordinary attacks. It resolves after the player's action
+  // slot and before creature actions, using only spawn-fenced server state.
+  for (const actor of [...chars.values()].sort((a, b) => a.fighter.id.localeCompare(b.fighter.id))) {
+    if (!actor.present || actor.hp <= 0) continue;
+    const sources = activeEffectsFor(actor.fighter.character_id)
+      .filter(effect => effect.kind === 'stack_source'
+        && effect.config?.stack_trigger === 'successful_pulse_hit')
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (sources.length === 0) continue;
+    const state = snapshot.effects.find(effect => effect.kind === 'autoattack'
+      && effect.target_character_id === actor.fighter.character_id);
+    const persisted = state?.target_creature_id ? creatures.get(state.target_creature_id) : undefined;
+    const target = persisted && persisted.hp > 0 && persisted.row.is_alive && persisted.engaged
+      && state?.config?.node_creature_id === persisted.row.id && state.config?.spawn_seq === persisted.row.spawn_seq
+      ? persisted : orderedEngagedTargets()[0];
+    if (!target) continue;
+    sources.forEach((source, index) => applyStackSource(source, target, 'successful_pulse_hit', index));
   }
 
   // ── 3. creature actions ───────────────────────────────────────
@@ -1084,7 +1215,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   // ── 5. encounter lifecycle ────────────────────────────────────
   const anythingPending =
     [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive) ||
-    snapshot.effects.some((e) => e.kind !== 'autoattack' && !expiredIds.has(e.id) && !e.is_reservation);
+    snapshot.effects.some((e) => !['autoattack', 'stack_source'].includes(e.kind)
+      && !expiredIds.has(e.id) && !e.is_reservation);
   if (!anythingPending) proposed.status = 'ended';
 
   return proposed;

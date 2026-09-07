@@ -7,13 +7,9 @@
  * contract-tested against it.
  */
 export const COMBAT2_UNSUPPORTED_ABILITIES = {
-  conflagrate: 'Authored burn-stack consumption is not yet implemented.',
   consecrate: 'The node aura requires a safe multi-target effect representation.',
   crescendo: 'Party-wide periodic healing is not yet implemented.',
   divine_aegis: 'Authoritative ally targeting is not yet installed.',
-  envenom: 'Authored on-hit poison stack application is not yet implemented.',
-  eviscerate: 'Authored poison-stack consumption is not yet implemented.',
-  ignite: 'Authored orb pulse attacks are not yet implemented.',
   inspire: 'The authored record does not define a regeneration interval.',
   purifying_light: 'Party-wide periodic healing is not yet implemented.',
   transfer_health: 'Authoritative ally targeting is not yet installed.',
