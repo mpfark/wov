@@ -403,7 +403,8 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
 
   const candidateFighterIds = new Set<string>();
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (snapshot.encounter.test_arena_id !== null && !uuidPattern.test(snapshot.encounter.test_arena_id)) {
+  const decodedTestArenaId = snapshot.encounter.test_arena_id ?? null;
+  if (decodedTestArenaId !== null && !uuidPattern.test(decodedTestArenaId)) {
     r.errors.push('snapshot.encounter.test_arena_id: expected UUID or null');
   }
   for (const [i, candidate] of snapshot.tank_candidates.entries()) {
