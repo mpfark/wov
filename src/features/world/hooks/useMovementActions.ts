@@ -17,11 +17,11 @@ import {
 import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
 
-import { getCachedItemAsync } from '@/features/inventory';
+
 import { preheatNode } from '@/features/creatures/hooks/useCreatures';
 import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
-import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
+import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
