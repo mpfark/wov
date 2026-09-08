@@ -294,14 +294,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const unequipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUnequipItem);
   const useConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUseConsumable);
   const {
-    party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
-    createParty: legacyCreateParty, invitePlayer: legacyInvitePlayer, acceptInvite: legacyAcceptInvite, declineInvite,
-    leaveParty, kickMember, setTank, toggleFollow: legacyToggleFollow, fetchParty,
+    party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
+    createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite,
+    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
-  const createParty = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyCreateParty);
-  const invitePlayer = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyInvitePlayer);
-  const acceptInvite = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptInvite);
-  const toggleFollow = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyToggleFollow);
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
   useEffect(() => {
@@ -1373,6 +1369,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     character,
     party,
     pendingInvites,
+    outgoingInvites,
+    partyOperationMessage,
     isLeader,
     isTank,
     myMembership,
@@ -1381,6 +1379,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     onInvite: invitePlayer,
     onAcceptInvite: acceptInvite,
     onDeclineInvite: declineInvite,
+    onCancelInvite: cancelInvite,
     onLeaveParty: leaveParty,
     onKick: kickMember,
     onSetTank: setTank,
@@ -1432,8 +1431,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     combat2BlocksLegacy, activeCombat2Presentation,
-    party, pendingInvites, isLeader, isTank, myMembership, playersHere,
-    createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
+    party, pendingInvites, outgoingInvites, partyOperationMessage, isLeader, isTank, myMembership, playersHere,
+    createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLogEvent, setTeleportOpen,
     creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,

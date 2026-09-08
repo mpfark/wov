@@ -27,10 +27,10 @@ export async function checkCombat2SessionAccess(characterId:string,nodeId:string
   }catch{return {status:'error',classification:'transport_error'};}
 }
 
-type PreflightClient={rpc(name:'combat2_test_session_preflight',args:{_character_id:string;_node_id:string}):PromiseLike<{data:unknown;error:{message?:string}|null}>};
+type PreflightClient={rpc(name:'combat2_party_preflight',args:{_character_id:string;_node_id:string}):PromiseLike<{data:unknown;error:{message?:string}|null}>};
 export async function checkCombat2SessionPreflight(characterId:string,nodeId:string,client:PreflightClient={rpc:(name,args)=>supabase.rpc(name as never,args as never)}):Promise<boolean>{
   try {
-    const {data,error}=await client.rpc('combat2_test_session_preflight',{_character_id:characterId,_node_id:nodeId});
+    const {data,error}=await client.rpc('combat2_party_preflight',{_character_id:characterId,_node_id:nodeId});
     return !error&&object(data)&&data.ok===true&&data.kind==='eligible';
   } catch { return false; }
 }

@@ -21,8 +21,11 @@ describe('Combat2 arrival, tank, engagement and opportunity authority migration'
     expect(sql).toContain('nf.entry_seq desc');
     expect(sql).toContain('create trigger combat2_party_tank_changed');
     const partyHook = readFileSync('src/features/party/hooks/useParty.ts', 'utf8');
-    expect(partyHook).toContain("supabase.rpc('set_party_tank'");
+    const partyApi = readFileSync('src/features/party/party-api.ts', 'utf8');
+    expect(partyHook).toContain("'set_tank'");
+    expect(partyApi).toContain("rpc('party_mutate'");
     expect(partyHook).not.toContain("from('parties').update({ tank_id:");
+    expect(partyHook).not.toContain("rpc('set_party_tank'");
   });
 
   it('queues flee, rejects ordinary pending intents, and leaves presence for tick resolution', () => {

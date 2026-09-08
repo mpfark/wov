@@ -20,14 +20,12 @@ describe('Combat2 test arena admin adapter',()=>{
   await api.reset('33333333-3333-4333-8333-333333333333');
   await api.startEnvironment('44444444-4444-4444-8444-444444444444');
   await api.closeEnvironment('55555555-5555-4555-8555-555555555555');
-  await api.prepareParty('22222222-2222-4222-8222-222222222222','66666666-6666-4666-8666-666666666666','77777777-7777-4777-8777-777777777777',true);
  expect(rpc.mock.calls).toEqual([
    ['combat2_test_grant',{_arena_id:COMBAT2_TEST_ARENA.id,_user_id:'11111111-1111-4111-8111-111111111111',_character_id:'22222222-2222-4222-8222-222222222222'}],
    ['combat2_test_admin_relocate',{_arena_id:COMBAT2_TEST_ARENA.id,_character_id:'22222222-2222-4222-8222-222222222222',_destination_node_id:'ffff5010-0000-4000-8000-000000000001'}],
    ['combat2_test_reset',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:'33333333-3333-4333-8333-333333333333',_confirm_destroy_diagnostics:true}],
    ['combat2_test_environment_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:'44444444-4444-4444-8444-444444444444'}],
    ['combat2_test_environment_close',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:'55555555-5555-4555-8555-555555555555'}],
-   ['combat2_test_party_prepare',{_arena_id:COMBAT2_TEST_ARENA.id,_character_a_id:'22222222-2222-4222-8222-222222222222',_character_b_id:'66666666-6666-4666-8666-666666666666',_request_id:'77777777-7777-4777-8777-777777777777',_replace_existing:true}],
   ]);
  });
  it('uses separate run and environment RPC contracts',async()=>{

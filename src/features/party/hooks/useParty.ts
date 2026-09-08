@@ -1,344 +1,39 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { createPartyApi, createPartyMutationCoordinator, type PartyOperation, type PartyState } from '../party-api';
 
-export interface PartyMember {
-  id: string;
-  character_id: string;
-  status: string;
-  is_following: boolean;
-  character: {
-    id: string;
-    name: string;
-    gender: 'male' | 'female';
-    race: string;
-    class: string;
-    level: number;
-    hp: number;
-    max_hp: number;
-    current_node_id: string | null;
-    dex: number;
-  };
-}
+export interface PartyMember { id:string;character_id:string;status:string;is_following:boolean;character:{id:string;name:string;family_name?:string;gender:'male'|'female';race:string;class:string;level:number;hp:number;max_hp:number;current_node_id:string|null;dex:number}; }
+export interface Party { id:string;leader_id:string;tank_id:string|null;created_at:string; }
 
-export interface Party {
-  id: string;
-  leader_id: string;
-  tank_id: string | null;
-  created_at: string;
-}
+const api=createPartyApi();
+const resultMessage=(ok:boolean,kind:string)=>`${ok?'Party updated':'Party refused'}: ${kind.replaceAll('_',' ')}.`;
 
-export function useParty(characterId: string | null) {
-  const [party, setParty] = useState<Party | null>(null);
-  const [members, setMembers] = useState<PartyMember[]>([]);
-  const [pendingInvites, setPendingInvites] = useState<{ party_id: string; id: string; leader_name: string }[]>([]);
+export function useParty(characterId:string|null) {
+  const [state,setState]=useState<PartyState>({party:null,members:[],incomingInvitations:[],outgoingInvitations:[]});
+  const [operationMessage,setOperationMessage]=useState('');
+  const mounted=useRef(true);const characterRef=useRef(characterId);const partyVersion=useRef(0);const previousPartyId=useRef<string|null>(null);
+  const coordinator=useMemo(()=>createPartyMutationCoordinator(input=>api.mutate(input)),[]);
+  characterRef.current=characterId;
 
-  const fetchParty = useCallback(async () => {
-    if (!characterId) return;
+  const fetchParty=useCallback(async()=>{const requested=characterId;if(!requested){setState({party:null,members:[],incomingInvitations:[],outgoingInvitations:[]});return;}const response=await api.state(requested);if(!mounted.current||characterRef.current!==requested)return;if(response.value){const next=response.value.party?.id??null;if(next!==previousPartyId.current){previousPartyId.current=next;partyVersion.current++;}setState(response.value);}else setOperationMessage(response.error??'Party refresh failed.');},[characterId]);
+  useEffect(()=>{mounted.current=true;coordinator.setActor(characterId);void fetchParty();return()=>{mounted.current=false;coordinator.setActor(null);};},[characterId,coordinator,fetchParty]);
 
-    // Find party where this character is an accepted member
-    const { data: memberRows } = await supabase
-      .from('party_members')
-      .select('party_id')
-      .eq('character_id', characterId)
-      .eq('status', 'accepted');
+  useEffect(()=>{if(!characterId)return;let cancelled=false,attempt=0;let timer:ReturnType<typeof setTimeout>|null=null;let channel:ReturnType<typeof supabase.channel>|null=null;
+    const connect=()=>{if(cancelled)return;const current=supabase.channel(`party-state-${characterId}-${crypto.randomUUID()}`).on('postgres_changes',{event:'*',schema:'public',table:'party_members',filter:`character_id=eq.${characterId}`},()=>void fetchParty()).on('postgres_changes',{event:'*',schema:'public',table:'parties'},()=>void fetchParty());if(state.party?.id)current.on('postgres_changes',{event:'*',schema:'public',table:'party_members',filter:`party_id=eq.${state.party.id}`},()=>void fetchParty());channel=current;current.subscribe(status=>{if(cancelled||channel!==current)return;if(status==='SUBSCRIBED'){attempt=0;void fetchParty();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){channel=null;timer=setTimeout(connect,Math.min(30_000,1000*2**attempt++));}});};
+    const reconnect=()=>{if(timer)clearTimeout(timer);timer=null;if(channel)void supabase.removeChannel(channel);channel=null;attempt=0;connect();};const visible=()=>{if(document.visibilityState==='visible')reconnect();};window.addEventListener('online',reconnect);document.addEventListener('visibilitychange',visible);connect();return()=>{cancelled=true;if(timer)clearTimeout(timer);if(channel)void supabase.removeChannel(channel);window.removeEventListener('online',reconnect);document.removeEventListener('visibilitychange',visible);};
+  },[characterId,state.party?.id,fetchParty]);
 
-    if (!memberRows || memberRows.length === 0) {
-      setParty(null);
-      setMembers([]);
-    } else {
-      const partyId = memberRows[0].party_id;
-      const { data: partyData } = await supabase
-        .from('parties')
-        .select('*')
-        .eq('id', partyId)
-        .single();
-
-      if (partyData) {
-        setParty(partyData as Party);
-        // Fetch all accepted members with character info
-        const { data: membersData } = await supabase
-          .from('party_members')
-           .select('id, character_id, status, is_following, character:characters(id, name, family_name, gender, race, class, level, hp, max_hp, current_node_id, dex)')
-          .eq('party_id', partyId)
-          .eq('status', 'accepted');
-        if (membersData) setMembers(membersData as unknown as PartyMember[]);
-      }
-    }
-
-    // Fetch pending invites for this character
-    const { data: pending } = await supabase
-      .from('party_members')
-      .select('id, party_id, party:parties(leader_id)')
-      .eq('character_id', characterId)
-      .eq('status', 'pending');
-
-    if (pending && pending.length > 0) {
-      // Get leader names
-      const invites = [];
-      for (const inv of pending) {
-        const leaderId = (inv as any).party?.leader_id;
-        if (leaderId) {
-          const { data: leaderName } = await supabase
-            .rpc('get_character_name', { _character_id: leaderId });
-          invites.push({ party_id: inv.party_id, id: inv.id, leader_name: (leaderName as string) || 'Unknown' });
-        }
-      }
-      setPendingInvites(invites);
-    } else {
-      setPendingInvites([]);
-    }
-  }, [characterId]);
-
-  // Lightweight function that only refreshes member character data (HP, level, node, etc.)
-  const partyRef = useRef(party);
-  useEffect(() => { partyRef.current = party; }, [party]);
-
-  // Debounced fetchMemberStats — prevents redundant concurrent DB queries
-  const fetchMemberStatsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fetchMemberStatsCore = useCallback(async () => {
-    const currentParty = partyRef.current;
-    if (!currentParty) return;
-    const { data } = await supabase
-      .from('party_members')
-      .select('id, character_id, status, is_following, character:characters(id, name, family_name, gender, race, class, level, hp, max_hp, current_node_id, dex)')
-      .eq('party_id', currentParty.id)
-      .eq('status', 'accepted');
-    if (data) setMembers(data as unknown as PartyMember[]);
-  }, []);
-
-  // Debounced member stats fetch (currently unused but kept for future use)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  void useCallback(() => {
-    if (fetchMemberStatsTimer.current) return;
-    fetchMemberStatsTimer.current = setTimeout(() => {
-      fetchMemberStatsTimer.current = null;
-      fetchMemberStatsCore();
-    }, 500);
-  }, [fetchMemberStatsCore]);
-
-  // Helper: create a self-healing realtime channel. Re-subscribes with
-  // exponential backoff on CHANNEL_ERROR/TIMED_OUT/CLOSED, and runs
-  // `onResync` on every successful (re)subscribe to catch up on missed events.
-  const useResilientChannel = (
-    enabled: boolean,
-    build: (instanceId: string) => ReturnType<typeof supabase.channel>,
-    onResync: () => void,
-    deps: unknown[],
-  ) => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-      if (!enabled) return;
-      let cancelled = false;
-      let attempt = 0;
-      let retryTimer: ReturnType<typeof setTimeout> | null = null;
-      let currentChannel: ReturnType<typeof supabase.channel> | null = null;
-      let intentionallyClosing = false;
-
-      const scheduleReconnect = () => {
-        if (cancelled || retryTimer) return;
-        const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
-        attempt += 1;
-        retryTimer = setTimeout(() => {
-          retryTimer = null;
-          connect();
-        }, delay);
-      };
-
-      const connect = () => {
-        if (cancelled) return;
-        const ch = build(`${Date.now()}-${attempt}-${Math.random().toString(36).slice(2)}`);
-        currentChannel = ch;
-        ch.subscribe((status) => {
-          if (cancelled || intentionallyClosing) return;
-          if (status === 'SUBSCRIBED') {
-            attempt = 0;
-            onResync();
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            if (currentChannel === ch) currentChannel = null;
-            scheduleReconnect();
-          }
-        });
-      };
-
-      const forceReconnect = () => {
-        if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
-        attempt = 0;
-        if (currentChannel) {
-          intentionallyClosing = true;
-          const channelToRemove = currentChannel;
-          currentChannel = null;
-          supabase.removeChannel(channelToRemove).finally(() => {
-            intentionallyClosing = false;
-            if (!cancelled) connect();
-          });
-          return;
-        }
-        connect();
-      };
-
-      const onOnline = () => forceReconnect();
-      const onVisible = () => {
-        if (document.visibilityState === 'visible') forceReconnect();
-      };
-      window.addEventListener('online', onOnline);
-      document.addEventListener('visibilitychange', onVisible);
-
-      connect();
-
-      return () => {
-        cancelled = true;
-        if (retryTimer) clearTimeout(retryTimer);
-        if (currentChannel) supabase.removeChannel(currentChannel);
-        window.removeEventListener('online', onOnline);
-        document.removeEventListener('visibilitychange', onVisible);
-      };
-    }, deps);
-  };
-
-  // Per-character channel: invites + parties structure changes
-  useResilientChannel(
-    !!characterId,
-    (instanceId) => supabase
-      .channel(`party-${characterId}-${instanceId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'party_members',
-        filter: `character_id=eq.${characterId}`,
-      }, () => fetchParty())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty()),
-    () => fetchParty(),
-    [characterId, fetchParty],
-  );
-
-  // Per-party roster channel: refreshes member list on any party_members change
-  // within this party (accepts, leaves, kicks, follow-toggles). Member HP &
-  // current_node_id flow through usePartyBroadcast — not polled here. 60s
-  // safety-net interval remains as final backstop.
-  useResilientChannel(
-    !!party?.id,
-    (instanceId) => supabase
-      .channel(`party-roster-${party!.id}-${instanceId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'party_members',
-        filter: `party_id=eq.${party!.id}`,
-      }, () => fetchMemberStatsCore()),
-    () => fetchMemberStatsCore(),
-    [party?.id, fetchMemberStatsCore],
-  );
-
-  useEffect(() => {
-    if (!party?.id) return;
-    const safetyInterval = setInterval(fetchMemberStatsCore, 60_000);
-    return () => clearInterval(safetyInterval);
-  }, [party?.id, fetchMemberStatsCore]);
-
-
-  const createParty = useCallback(async () => {
-    if (!characterId || party) return;
-    const { data, error } = await supabase
-      .from('parties')
-      .insert({ leader_id: characterId })
-      .select()
-      .single();
-    if (error) return;
-    // Add self as accepted member
-    await supabase.from('party_members').insert({
-      party_id: data.id,
-      character_id: characterId,
-      status: 'accepted',
-    });
-    fetchParty();
-  }, [characterId, party, fetchParty]);
-
-  const invitePlayer = useCallback(async (targetCharacterId: string) => {
-    if (!party) return;
-    // Max 4 members (accepted + pending)
-    const { count } = await supabase
-      .from('party_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('party_id', party.id);
-    if ((count ?? 0) >= 4) return;
-    const { error } = await supabase.from('party_members').insert({
-      party_id: party.id,
-      character_id: targetCharacterId,
-      status: 'pending',
-    });
-    if (error) return;
-  }, [party]);
-
-  const acceptInvite = useCallback(async (membershipId: string): Promise<string | null> => {
-    const { error } = await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
-    if (error) return error.message;
-    fetchParty();
-    return null;
-  }, [fetchParty]);
-
-  const declineInvite = useCallback(async (membershipId: string) => {
-    await supabase.from('party_members').delete().eq('id', membershipId);
-    fetchParty();
-  }, [fetchParty]);
-
-  const leaveParty = useCallback(async () => {
-    if (!party || !characterId) return;
-    if (party.leader_id === characterId) {
-      // Disband party
-      await supabase.from('party_members').delete().eq('party_id', party.id);
-      await supabase.from('parties').delete().eq('id', party.id);
-    } else {
-      await supabase.from('party_members').delete()
-        .eq('party_id', party.id)
-        .eq('character_id', characterId);
-    }
-    fetchParty();
-  }, [party, characterId, fetchParty]);
-
-  const kickMember = useCallback(async (targetCharacterId: string) => {
-    if (!party) return;
-    await supabase.from('party_members').delete()
-      .eq('party_id', party.id)
-      .eq('character_id', targetCharacterId);
-    fetchParty();
-  }, [party, fetchParty]);
-
-  const setTank = useCallback(async (tankCharacterId: string | null) => {
-    if (!party) return;
-    await supabase.rpc('set_party_tank', { _party_id: party.id, _tank_character_id: tankCharacterId });
-    fetchParty();
-  }, [party, fetchParty]);
-
-  const toggleFollow = useCallback(async (following: boolean) => {
-    if (!party || !characterId) return;
-
-    // If enabling follow, verify same node against fresh DB state — the local
-    // `members` cache can go stale (e.g. leader died and returned) and would
-    // silently block the toggle until a page refresh.
-    if (following) {
-      const { data: fresh } = await supabase
-        .from('characters')
-        .select('id, current_node_id')
-        .in('id', [party.leader_id, characterId]);
-      const leaderNode = fresh?.find(c => c.id === party.leader_id)?.current_node_id ?? null;
-      const myNode = fresh?.find(c => c.id === characterId)?.current_node_id ?? null;
-      if (leaderNode && myNode && leaderNode !== myNode) {
-        // Refresh member stats so UI reflects real positions, then bail.
-        fetchMemberStatsCore();
-        return;
-      }
-    }
-
-    await supabase.from('party_members').update({ is_following: following })
-      .eq('party_id', party.id)
-      .eq('character_id', characterId);
-    fetchParty();
-  }, [party, characterId, fetchParty, fetchMemberStatsCore]);
-
-  const isLeader = party?.leader_id === characterId;
-  const effectiveTankId = party ? (party.tank_id ?? party.leader_id) : null;
-  const isTank = effectiveTankId === characterId;
-  const myMembership = members.find(m => m.character_id === characterId);
-
-  return {
-    party, members, pendingInvites, isLeader, isTank, myMembership,
-    createParty, invitePlayer, acceptInvite, declineInvite,
-    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
-  };
+  const run=useCallback(async(key:string,operation:PartyOperation,partyId:string|null,targetCharacterId:string|null,membershipId:string|null)=>{setOperationMessage('');const version=partyVersion.current;const response=await coordinator.submit(key,{operation,partyId,targetCharacterId,membershipId});if(response.stale||version!==partyVersion.current)return;if(response.value)setOperationMessage(resultMessage(response.value.ok,response.value.kind));else setOperationMessage(response.error??'Party request failed.');if(!response.uncertain)await fetchParty();return response.value;},[coordinator,fetchParty]);
+  const party=state.party;const members=state.members as PartyMember[];
+  const createParty=useCallback(()=>run('create','create',null,null,null),[run]);
+  const invitePlayer=useCallback((target:string)=>run(`invite:${party?.id}:${target}`,'invite',party?.id??null,target,null),[run,party?.id]);
+  const acceptInvite=useCallback(async(id:string)=>{const value=await run(`accept:${id}`,'accept',null,null,id);return value?.ok?null:value?.kind??'Party request failed.';},[run]);
+  const declineInvite=useCallback((id:string)=>run(`decline:${id}`,'decline',null,null,id),[run]);
+  const cancelInvite=useCallback((id:string)=>run(`cancel:${party?.id}:${id}`,'cancel',party?.id??null,null,id),[run,party?.id]);
+  const leaveParty=useCallback(()=>party&&run(`${party.leader_id===characterId?'disband':'leave'}:${party.id}`,party.leader_id===characterId?'disband':'leave',party.id,null,null),[run,party,characterId]);
+  const kickMember=useCallback((target:string)=>run(`kick:${party?.id}:${target}`,'kick',party?.id??null,target,null),[run,party?.id]);
+  const setTank=useCallback((target:string|null)=>run(`set_tank:${party?.id}:${target??'none'}`,'set_tank',party?.id??null,target,null),[run,party?.id]);
+  const toggleFollow=useCallback(async(_following:boolean)=>{setOperationMessage('Party follow is not connected to the authoritative party system yet.');},[]);
+  const isLeader=party?.leader_id===characterId;const isTank=(party?.tank_id??party?.leader_id)===characterId;const myMembership=members.find(member=>member.character_id===characterId);
+  return {party,members,pendingInvites:state.incomingInvitations,outgoingInvites:state.outgoingInvitations,isLeader,isTank,myMembership,operationMessage,createParty,invitePlayer,acceptInvite,declineInvite,cancelInvite,leaveParty,kickMember,setTank,toggleFollow,fetchParty};
 }

@@ -53,6 +53,8 @@ interface Props {
   character: Character;
   party: Party | null;
   pendingInvites: { party_id: string; id: string; leader_name: string }[];
+  outgoingInvites: { party_id: string; id: string; character_id: string; character_name: string }[];
+  partyOperationMessage: string;
   isLeader: boolean;
   isTank: boolean;
   myMembership: PartyMember | undefined;
@@ -61,6 +63,7 @@ interface Props {
   onInvite: (charId: string) => void;
   onAcceptInvite: (membershipId: string) => void;
   onDeclineInvite: (membershipId: string) => void;
+  onCancelInvite: (membershipId: string) => void;
   onLeaveParty: () => void;
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
@@ -126,8 +129,8 @@ const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'
 
 export default function MapPanel({
   regions, nodes, areas, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
-  character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
-  onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
+  character, party, pendingInvites, outgoingInvites, partyOperationMessage, isLeader, isTank, myMembership, playersHere,
+  onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onCancelInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenJewelcrafter, onOpenStonebinder, onOpenTeleport, onOpenGuide, guideNeedsAttention, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
   unlockedConnections, onMapTeleport,
@@ -663,6 +666,8 @@ export default function MapPanel({
           party={party}
           members={partyMembers || []}
           pendingInvites={pendingInvites}
+          outgoingInvites={outgoingInvites}
+          operationMessage={partyOperationMessage}
           isLeader={isLeader}
           isTank={isTank}
           myMembership={myMembership}
@@ -671,6 +676,7 @@ export default function MapPanel({
           onInvite={onInvite}
           onAcceptInvite={onAcceptInvite}
           onDeclineInvite={onDeclineInvite}
+          onCancelInvite={onCancelInvite}
           onLeave={onLeaveParty}
           onKick={onKick}
           onSetTank={onSetTank}

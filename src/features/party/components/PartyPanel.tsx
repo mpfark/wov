@@ -12,6 +12,8 @@ interface Props {
   party: Party | null;
   members: PartyMember[];
   pendingInvites: { party_id: string; id: string; leader_name: string }[];
+  outgoingInvites: { party_id: string; id: string; character_id: string; character_name: string }[];
+  operationMessage: string;
   isLeader: boolean;
   isTank: boolean;
   myMembership: PartyMember | undefined;
@@ -20,6 +22,7 @@ interface Props {
   onInvite: (charId: string) => void;
   onAcceptInvite: (membershipId: string) => void;
   onDeclineInvite: (membershipId: string) => void;
+  onCancelInvite: (membershipId: string) => void;
   onLeave: () => void;
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
@@ -34,8 +37,8 @@ interface Props {
 }
 
 export default function PartyPanel({
-  character, party, members, pendingInvites, isLeader, isTank: _isTank, myMembership,
-  playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
+  character, party, members, pendingInvites, outgoingInvites, operationMessage, isLeader, isTank: _isTank, myMembership,
+  playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onCancelInvite,
   onLeave, onKick, onSetTank, onToggleFollow, onSummonMember, canSummon, currentNodeId, activeBuffs,
   abilityTargetId, onSetAbilityTarget, showTargetSelector,
 }: Props) {
@@ -74,6 +77,13 @@ export default function PartyPanel({
           </div>
         </div>
       ))}
+      {isLeader && outgoingInvites.map(inv => (
+        <div key={inv.id} className="flex items-center justify-between rounded border p-2 text-xs">
+          <span>Invitation pending for <b>{inv.character_name}</b></span>
+          <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => onCancelInvite(inv.id)}>Cancel</Button>
+        </div>
+      ))}
+      {operationMessage && <p role="status" className="text-xs text-muted-foreground">{operationMessage}</p>}
 
       {!party ? (
         <Button size="sm" variant="outline" className="w-full text-xs font-display" onClick={onCreateParty}>
