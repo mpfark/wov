@@ -4414,6 +4414,42 @@ export type Database = {
           },
         ]
       }
+      party_operation_request: {
+        Row: {
+          actor_character_id: string
+          caller_id: string
+          created_at: string
+          membership_id: string | null
+          operation: string
+          party_id: string | null
+          request_id: string
+          result: Json | null
+          target_character_id: string | null
+        }
+        Insert: {
+          actor_character_id: string
+          caller_id: string
+          created_at?: string
+          membership_id?: string | null
+          operation: string
+          party_id?: string | null
+          request_id: string
+          result?: Json | null
+          target_character_id?: string | null
+        }
+        Update: {
+          actor_character_id?: string
+          caller_id?: string
+          created_at?: string
+          membership_id?: string | null
+          operation?: string
+          party_id?: string | null
+          request_id?: string
+          result?: Json | null
+          target_character_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -5048,6 +5084,10 @@ export type Database = {
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
+      combat2_party_preflight: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: Json
+      }
       combat2_provision_worker_secret: {
         Args: { _secret: string }
         Returns: Json
@@ -5647,6 +5687,27 @@ export type Database = {
         Returns: Json
       }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
+      party_can_view: { Args: { _party_id: string }; Returns: boolean }
+      party_combat_mutation_blocked: {
+        Args: { _extra_character_id?: string; _party_id: string }
+        Returns: boolean
+      }
+      party_mutate: {
+        Args: {
+          _actor_character_id: string
+          _membership_id: string
+          _operation: string
+          _party_id: string
+          _request_id: string
+          _target_character_id: string
+        }
+        Returns: Json
+      }
+      party_operation_finish: {
+        Args: { _request_id: string; _result: Json }
+        Returns: Json
+      }
+      party_state: { Args: { _character_id: string }; Returns: Json }
       pickup_ground_loot: {
         Args: { p_character_id: string; p_loot_id: string }
         Returns: boolean
