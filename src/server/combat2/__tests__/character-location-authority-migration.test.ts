@@ -27,7 +27,8 @@ describe('character location authority security boundary', () => {
   expect(SQL).toContain('NEW.summoner_node_id FROM public.characters');
   expect(SQL).toContain('c.current_node_id=_req.summoner_node_id');
   expect(MOVEMENT).toContain("rpc('character_special_travel'");
-  expect(MOVEMENT).toContain('Search and hidden-path discovery require an authoritative server contract.');
+  expect(MOVEMENT).toContain("rpc('hidden_path_search'");
+  expect(MOVEMENT).not.toMatch(/from\('characters'\)[\s\S]{0,100}update\(\{\s*(?:cp|current_node_id)/);
  });
  it('denies dead anchors while preserving intended live same-node encounter visibility',()=>{
   expect(SQL).toMatch(/c\.user_id=auth\.uid\(\) AND c\.hp>0 AND c\.current_node_id=node_encounter\.node_id/);

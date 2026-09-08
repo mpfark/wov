@@ -8,7 +8,7 @@
  */
 import { buildPositioningEvent, type PositioningKind } from '@/features/combat/events/threat-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import {
   rollD20, getStatModifier, rollDamage, getMoveCost, getCarryCapacity, getBagWeight,
@@ -209,6 +209,36 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const p = params;
   const [waymarkNodeId, setWaymarkNodeId] = useState<string | null>(null);
   const [teleportOpen, setTeleportOpen] = useState(false);
+  const [openHiddenConnections, setOpenHiddenConnections] = useState<Array<{
+    destination_node_id: string; direction: string; opened_until: string;
+  }>>([]);
+  const searchGeneration = useRef(0);
+  const searchPending = useRef(false);
+  const searchRequestId = useRef<string | null>(null);
+
+  const refreshHiddenConnections = useCallback(async () => {
+    const nodeId = p.character.current_node_id;
+    const generation = searchGeneration.current;
+    const { data, error } = await supabase.rpc('hidden_path_openings' as never, {
+      _character_id: p.character.id,
+    } as never);
+    if (generation !== searchGeneration.current || nodeId !== p.character.current_node_id) return;
+    const result = data as { ok?: boolean; connections?: Array<{ destination_node_id: string; direction: string; opened_until: string }> } | null;
+    if (!error && result?.ok) setOpenHiddenConnections(result.connections ?? []);
+  }, [p.character.id, p.character.current_node_id]);
+
+  useEffect(() => {
+    searchGeneration.current += 1;
+    searchPending.current = false;
+    searchRequestId.current = null;
+    setOpenHiddenConnections([]);
+    void refreshHiddenConnections();
+    const timer = window.setInterval(() => {
+      setOpenHiddenConnections(current => current.filter(connection => Date.parse(connection.opened_until) > Date.now()));
+      void refreshHiddenConnections();
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [refreshHiddenConnections]);
 
   // ── Movement ───────────────────────────────────────────────────
   const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
@@ -436,11 +466,39 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Search ─────────────────────────────────────────────────────
   const handleSearch = useCallback(async (_keyword?: string) => {
-    p.addLogEvent(buildErrorEvent('Search and hidden-path discovery require an authoritative server contract.'));
-  }, [p.addLogEvent]);
+    if (searchPending.current) return;
+    searchPending.current = true;
+    const requestId = searchRequestId.current ?? crypto.randomUUID();
+    searchRequestId.current = requestId;
+    const generation = searchGeneration.current;
+    const nodeId = p.character.current_node_id;
+    try {
+      const { data, error } = await supabase.rpc('hidden_path_search' as never, {
+        _character_id: p.character.id,
+        _request_id: requestId,
+      } as never);
+      if (generation !== searchGeneration.current || nodeId !== p.character.current_node_id) return;
+      const result = data as { ok?: boolean; kind?: string; direction?: string; focus?: number } | null;
+      if (error || !result?.ok) {
+        p.addLogEvent(buildErrorEvent(`Search refused: ${result?.kind ?? 'transport_error'}.`));
+        if (!error && result?.kind !== 'request_pending') searchRequestId.current = null;
+        return;
+      }
+      searchRequestId.current = null;
+      if (result.focus != null) p.updateCharacterLocal?.({ cp: result.focus });
+      if (result.kind === 'found') {
+        p.addLogEvent(buildSystemEvent(`You reveal the hidden path ${result.direction ?? ''} for 5 minutes.`));
+        await refreshHiddenConnections();
+      } else {
+        p.addLogEvent(buildSystemEvent('You search carefully, but find nothing.'));
+      }
+    } finally {
+      if (generation === searchGeneration.current) searchPending.current = false;
+    }
+  }, [p.character.id, p.character.current_node_id, p.addLogEvent, p.updateCharacterLocal, refreshHiddenConnections]);
 
   return {
     handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
-    waymarkNodeId, teleportOpen, setTeleportOpen,
+    waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections,
   };
 }

@@ -24,6 +24,7 @@ export interface GameNode {
   name: string;
   description: string;
   connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }>;
+  has_hidden_connections?: boolean;
   searchable_items: string[];
   is_vendor: boolean;
   is_inn: boolean;
@@ -80,7 +81,7 @@ export function useNodes(isAuthenticated: boolean = false) {
     const fetchAll = async () => {
       const [regRes, nodeRes, areaRes] = await Promise.all([
         supabase.from('regions').select('*'),
-        supabase.from('nodes').select('*'),
+        supabase.rpc('player_world_nodes' as never),
         supabase.from('areas').select('*'),
       ]);
       if (regRes.data) setRegions(regRes.data as Region[]);

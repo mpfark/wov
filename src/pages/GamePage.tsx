@@ -942,7 +942,19 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // Wire ability executor ref (updated synchronously to avoid stale closures)
   executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);
 
-  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen } = movementActions;
+  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections } = movementActions;
+  const movementCurrentNode = useMemo(() => currentNode ? ({
+    ...currentNode,
+    connections: [
+      ...currentNode.connections.map(connection => openHiddenConnections.some(open =>
+        open.destination_node_id === connection.node_id && open.direction === connection.direction)
+        ? { ...connection, hidden: false, temporarily_open: true }
+        : connection),
+      ...openHiddenConnections.filter(open => !currentNode.connections.some(connection =>
+        connection.node_id === open.destination_node_id && connection.direction === open.direction))
+        .map(open => ({ node_id: open.destination_node_id, direction: open.direction, hidden: false, temporarily_open: true })),
+    ],
+  }) : currentNode, [currentNode, openHiddenConnections]);
   const handleUseConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, consumableActions.handleUseConsumable);
   const { handleUseAbility, handleAttack } = combatActions;
 
@@ -1162,7 +1174,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
             addLocalLogEvent(buildSystemEvent(name, { effectType: 'look' }));
             if (desc) addLocalLogEvent(buildSystemEvent(desc, { effectType: 'look' }));
             // List exits
-            const exits = currentNode.connections
+            const exits = movementCurrentNode?.connections
               ?.filter((c: any) => !c.hidden)
               .map((c: any) => c.direction)
               .join(', ');
@@ -1181,14 +1193,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     // Fallthrough to chat
     const sayText = text.replace(/^\/say\s+/i, '');
     sendSay(sayText);
-  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea, combat2BlocksLegacy]);
+  }, [chatInput, sendSay, sendWhisper, currentNode, movementCurrentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea, combat2BlocksLegacy]);
 
   const handleOpenChat = useCallback(() => {
     chatInputRef.current?.focus();
   }, []);
 
   const keyboardMovement = useKeyboardMovement({
-    currentNode, nodes,
+    currentNode: movementCurrentNode, nodes,
     onMove: handleMove, disabled: isDead,
     onAttackFirst: handleAttackFirst, onSearch: handleSearch,
     onUseAbility: handleAbilityKey,
@@ -1361,7 +1373,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       setTeleportOpen(true);
     } : undefined,
     searchDisabled: character.cp < 5 || creatures.length > 0,
-    hasDiscoverable: !!(currentNode?.connections?.some((c: any) => c.hidden) || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
+    hasDiscoverable: !!(currentNode?.has_hidden_connections || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
     unlockedConnections,
     onMapTeleport: handleTeleport,
     onlinePlayers,
@@ -1455,7 +1467,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col" style={{ maxWidth: centerMaxWidth }}>
           <div className="flex-[45] min-h-0">
             <NodeView
-              node={currentNode}
+              node={movementCurrentNode}
               region={currentRegion}
               area={currentNode.area_id ? getNodeArea(currentNode) : undefined}
               allNodes={nodes}
@@ -1892,7 +1904,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       {isAdmin && <CombatTimingPanel />}
 
       {/* Movement Pad — tablet only */}
-      {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
+      {isTablet && <MovementPad currentNode={movementCurrentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
 
       {/* First-time hint pointing at the keyboard shortcuts button */}
       {!isMobile && !isTablet && character && (
