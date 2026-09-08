@@ -770,6 +770,44 @@ export type Database = {
           },
         ]
       }
+      character_inventory_action_request: {
+        Row: {
+          action: string
+          arguments: Json
+          character_id: string
+          created_at: string
+          inventory_id: string | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          action: string
+          arguments: Json
+          character_id: string
+          created_at?: string
+          inventory_id?: string | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          action?: string
+          arguments?: Json
+          character_id?: string
+          created_at?: string
+          inventory_id?: string | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_inventory_action_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_materials: {
         Row: {
           character_id: string
@@ -5306,6 +5344,25 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      character_inventory_action: {
+        Args: {
+          _action: string
+          _character_id: string
+          _inventory_id: string
+          _request_id: string
+          _slot: string
+        }
+        Returns: Json
+      }
+      character_repair: {
+        Args: {
+          _character_id: string
+          _inventory_id: string
+          _provider: string
+          _request_id: string
+        }
+        Returns: Json
       }
       character_special_travel: {
         Args: {
