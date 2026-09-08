@@ -140,42 +140,6 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
   return { newHp: currentHp, logs, clearStealth: false, clearEvasion: false, newAbsorbHp: newAbsorbHp as number | null, memberDamages };
 }
 
-/** Move followers to a node (shared by handleMove, handleTeleport, handleReturnToWaymark) */
-async function moveFollowers(
-  partyMembers: any[],
-  characterId: string,
-  currentNodeId: string,
-  targetNodeId: string,
-  isLeader: boolean,
-  filterFollowingOnly: boolean,
-  addLogEvent: (event: GameLogEvent) => void,
-  fetchParty: () => void,
-  broadcastMove?: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void,
-): Promise<void> {
-  if (!isLeader) return;
-  const coLocated = partyMembers.filter(m =>
-    m.character_id !== characterId && m.status === 'accepted' &&
-    m.character.current_node_id === currentNodeId
-  );
-  const toMove = filterFollowingOnly ? coLocated.filter(m => m.is_following) : coLocated;
-  if (toMove.length > 0) {
-    await Promise.all(toMove.map(f =>
-      supabase.rpc('move_follower', { _character_id: f.character_id, _node_id: targetNodeId })
-    ));
-    // Record node discovery for followers so their world maps update
-    await Promise.all(toMove.map(f =>
-      markNodeVisited(f.character_id, targetNodeId)
-    ));
-    if (broadcastMove) {
-      for (const f of toMove) {
-        broadcastMove(f.character_id, f.character.name, targetNodeId, currentNodeId);
-      }
-    }
-    addLogEvent(buildMovementEvent('Your party follows you.', { effectType: 'party_follow' }));
-    fetchParty();
-  }
-}
-
 /** Positioning outcomes are structured events. */
 function emitPositioning(
   p: { addLogEvent: (e: GameLogEvent) => void; character: { id: string; name: string } },
@@ -247,7 +211,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Movement ───────────────────────────────────────────────────
   const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
-    if (p.movementBlocked && p.authorizeCombat2Depart) {
+    if (p.authorizeCombat2Depart) {
       const target = p.getNode(nodeId);
       if (!target) { p.addLogEvent(buildErrorEvent('Invalid movement destination.')); return; }
       await p.authorizeCombat2Depart(nodeId, getNodeDisplayName(target, p.getNodeArea(target)));
@@ -407,8 +371,6 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLogEvent(buildMovementEvent(`You travel ${dirLabel || moveName}.`));
       
 
-      // Move followers (parallel with leader move already committed above)
-      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLogEvent, p.fetchParty, p.broadcastMove);
     } catch {
       p.addLogEvent(buildErrorEvent('Failed to move.'));
     }
@@ -419,6 +381,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const current = begin();
     if (!current()) return;
     if (p.isDead) return;
+    if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
+      p.addLogEvent(buildErrorEvent('Party following does not support teleport travel.'));
+      return;
+    }
     if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to teleport.')); return; }
     const targetNode = p.getNode(nodeId);
@@ -437,10 +403,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     
     setTeleportOpen(false);
 
-    // Move co-located party members in parallel with leader DB write
-    const filterFollowingOnly = p.character.level < 22;
-    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLogEvent, p.fetchParty, p.broadcastMove);
-    await Promise.all([leaderMove, followerMove]);
+    await leaderMove;
   }, [p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Return to Waymark ──────────────────────────────────────────
@@ -451,6 +414,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const waymarkNode = p.getNode(waymarkNodeId);
     if (!waymarkNode) { p.addLogEvent(buildErrorEvent('Your waymark has faded.')); setWaymarkNodeId(null); return; }
     if (p.isDead) return;
+    if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
+      p.addLogEvent(buildErrorEvent('Party following does not support waymark travel.'));
+      return;
+    }
     if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to return to waymark.')); return; }
     preheatNode(waymarkNodeId);
@@ -463,8 +430,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     setWaymarkNodeId(null);
     setTeleportOpen(false);
 
-    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLogEvent, p.fetchParty, p.broadcastMove);
-    await Promise.all([leaderMove, followerMove]);
+    await leaderMove;
   }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Search ─────────────────────────────────────────────────────

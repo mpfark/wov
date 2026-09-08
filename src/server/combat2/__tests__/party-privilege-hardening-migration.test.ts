@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe,expect,it } from 'vitest';
 
-const SQL=readFileSync('supabase/migrations/20260908130000_party_privilege_hardening.sql','utf8');
+const SQL=readFileSync('supabase/migrations/20260908112320_21e93e42-d887-4725-83f3-95379c287b76.sql','utf8');
 const LIFECYCLE=readFileSync('supabase/migrations/20260908101012_50a06710-aefe-4487-a7ed-f0c2e5858ab2.sql','utf8');
 
 describe('authoritative party privilege hardening',()=>{

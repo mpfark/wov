@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export const PARTY_OPERATIONS = ['create','invite','accept','decline','cancel','leave','kick','disband','set_tank'] as const;
+export const PARTY_OPERATIONS = ['create','invite','accept','decline','cancel','leave','kick','disband','set_tank','follow','stop_following'] as const;
 export type PartyOperation = typeof PARTY_OPERATIONS[number];
 export type PartyMutationInput = {
   actorCharacterId:string; operation:PartyOperation; partyId:string|null;
@@ -18,7 +18,7 @@ export type PartyState = {
 type Rpc=(name:string,args:Record<string,unknown>)=>PromiseLike<{data:unknown;error:{message?:string}|null}>;
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const OUTCOMES=new Set(['not_authorized','request_id_conflict','request_in_progress','actor_dead','unknown_operation','invalid_shape','already_in_party','party_created','invitation_not_active','combat_active','invitation_accepted','invitation_already_closed','invitation_declined','party_not_found','leader_required','target_not_available','target_already_in_party','already_invited','party_full','invited','invitation_cancelled','leader_must_disband','already_left','party_left','invalid_target','member_already_absent','member_kicked','invalid_tank','tank_changed','party_already_disbanded','party_disbanded','party_operation_failed']);
+const OUTCOMES=new Set(['not_authorized','request_id_conflict','request_in_progress','actor_dead','unknown_operation','invalid_shape','already_in_party','party_created','invitation_not_active','combat_active','invitation_accepted','invitation_already_closed','invitation_declined','party_not_found','leader_required','target_not_available','target_already_in_party','already_invited','party_full','invited','invitation_cancelled','leader_must_disband','already_left','party_left','invalid_target','member_already_absent','member_kicked','invalid_tank','tank_changed','following','not_following','leader_cannot_follow','party_already_disbanded','party_disbanded','party_operation_failed']);
 
 export function decodePartyMutation(value:unknown):PartyMutationResult|null {
   if(!object(value)||typeof value.ok!=='boolean'||typeof value.kind!=='string'||!OUTCOMES.has(value.kind))return null;

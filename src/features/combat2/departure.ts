@@ -1,7 +1,8 @@
+export type Combat2DepartureMemberOutcome = { characterId:string; displayName:string; order:number; status:'waiting'|'queued'|'moved'|'dead'|'remaining'; cost:number };
 export type Combat2DepartureOutcome =
-  | { status: 'moved'; classification: 'moved' | 'already_moved'; originNodeId: string; destinationNodeId: string; cost: number }
-  | { status: 'queued'; classification: 'queued' | 'already_queued'; originNodeId: string; destinationNodeId: string; cost: number }
-  | { status: 'dead'; classification: 'dead'; originNodeId: string; destinationNodeId: string; cost: number }
+  | { status: 'moved'; classification: 'moved' | 'already_moved'; originNodeId: string; destinationNodeId: string; cost: number; members?:Combat2DepartureMemberOutcome[] }
+  | { status: 'queued'; classification: 'queued' | 'already_queued'; originNodeId: string; destinationNodeId: string; cost: number; members?:Combat2DepartureMemberOutcome[] }
+  | { status: 'dead'; classification: 'dead'; originNodeId: string; destinationNodeId: string; cost: number; members?:Combat2DepartureMemberOutcome[] }
   | { status: 'refused'; classification: string; reason: string | null };
 
 export interface Combat2DepartureAdapter {

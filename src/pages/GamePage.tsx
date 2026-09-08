@@ -88,6 +88,8 @@ import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
+import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
+import { createPartyAwareDepartureAdapter } from '@/features/combat2/party-departure';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -298,6 +300,18 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
+  const coordinatedDeparture = useMemo(() => createPartyAwareDepartureAdapter({
+    rpc: (name, args) => supabase.rpc(name as never, args as never),
+  }, () => !!party && isLeader && partyMembers.some(member => member.character_id !== character.id
+    && member.status === 'accepted' && member.is_following && member.character.hp > 0
+    && member.character.current_node_id === character.current_node_id)), [party, isLeader, partyMembers, character.id, character.current_node_id]);
+  const authoritativeDeparture = useCombat2DepartureSession({
+    enabled: true,
+    canSubmit: character.hp > 0 && !ownership.locked,
+    characterId: character.id,
+    nodeId: character.current_node_id,
+    adapter: coordinatedDeparture,
+  });
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
   useEffect(() => {
@@ -345,55 +359,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     });
   }, [partyMembers, partyHpOverrides, partyMoveEvents]);
 
-  // ── Follower: grace-window based local node sync via broadcast ──
-  const FOLLOW_GRACE_MS = 1000;
-  const missedFollowCountRef = useRef(0);
-  const lastFollowMoveTimestampRef = useRef(0);
-
-  useEffect(() => {
-    if (!character || !partyMoveEvents.length) return;
-    const myMove = partyMoveEvents.find(e => e.character_id === character.id);
-    if (!myMove) return;
-
-    // Only process follow-moves for followers that are actually following
-    const isFollowing = myMembership?.is_following && !isLeader;
-    if (!isFollowing) {
-      // Non-following members still get the instant node snap (server already moved them)
-      if (myMove.node_id !== character.current_node_id) {
-        updateCharacterLocal?.({ current_node_id: myMove.node_id });
-      }
-      return;
-    }
-
-    // Discard stale events (only process the newest)
-    if (myMove.timestamp <= lastFollowMoveTimestampRef.current) return;
-
-    const age = Date.now() - myMove.timestamp;
-    const atOrigin = character.current_node_id === myMove.from_node_id;
-
-    if (atOrigin && age <= FOLLOW_GRACE_MS) {
-      // Successful follow within grace window
-      lastFollowMoveTimestampRef.current = myMove.timestamp;
-      missedFollowCountRef.current = 0;
-      updateCharacterLocal?.({ current_node_id: myMove.node_id });
-
-      // Resolve leader name for feedback
-      const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
-      if (leaderName) {
-        bus.emit('log', { event: buildMovementEvent(`You hurry after ${leaderName}.`, { effectType: 'party_follow' }) });
-      }
-    } else {
-      // Mismatch or grace expired — tolerate one miss before breaking
-      lastFollowMoveTimestampRef.current = myMove.timestamp;
-      missedFollowCountRef.current += 1;
-      if (missedFollowCountRef.current >= 2) {
-        missedFollowCountRef.current = 0;
-        toggleFollow(false);
-        const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
-        bus.emit('log', { event: buildSystemEvent(`You lose track of ${leaderName ?? 'your leader'} and stop following.`, { effectType: 'party_follow' }) });
-      }
-    }
-  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
 
   const [eventLog, setEventLog] = useState<GameLogEvent[]>([]);
   const [vendorOpen, setVendorOpen] = useState(false);
@@ -911,14 +876,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
-  // Sync follower's local character when leader moves them
-  useEffect(() => {
-    if (!myMembership?.character?.current_node_id) return;
-    if (myMembership.character.current_node_id !== character.current_node_id) {
-      updateCharacter({ current_node_id: myMembership.character.current_node_id });
-    }
-  }, [myMembership?.character?.current_node_id]);
-
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
   
@@ -939,16 +896,19 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   });
 
   const authorizeCombat2Depart = useCallback(async (destinationNodeId: string, destinationName: string) => {
-    const result = await combat2.departure.move(destinationNodeId);
+    const result = await authoritativeDeparture.move(destinationNodeId);
     if (result.status === 'queued') {
-      addLocalLogEvent(buildSystemEvent(`You attempt to flee toward ${destinationName}.`));
+      addLocalLogEvent(buildSystemEvent(result.members?.length && result.members.length>1
+        ? `Party movement toward ${destinationName} is queued; followers resolve before the leader.`
+        : `You attempt to flee toward ${destinationName}.`));
     } else if (result.status === 'moved') {
-      addLocalLogEvent(buildMovementEvent(`You travel to ${destinationName}.`));
+      const summary=result.members?.map(member=>`${member.displayName}: ${member.status}`).join(', ');
+      addLocalLogEvent(buildMovementEvent(summary?`Party movement completed (${summary}).`:`You travel to ${destinationName}.`));
     } else if (result.status !== 'stale') {
       const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
       addLocalLogEvent(buildErrorEvent(`Combat2 movement refused${detail}`));
     }
-  }, [combat2.departure, addLocalLogEvent]);
+  }, [authoritativeDeparture, addLocalLogEvent]);
 
   const movementActions = useMovementActions({
     movementBlocked: combat2BlocksLegacy,
@@ -966,7 +926,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
     onPlayerCombatMove: () => wimpNotifyRef.current?.(),
-    authorizeCombat2Depart: combat2BlocksLegacy ? authorizeCombat2Depart : undefined,
+    authorizeCombat2Depart,
   });
 
   const consumableActions = useConsumableActions({

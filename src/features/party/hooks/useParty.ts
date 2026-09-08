@@ -33,7 +33,7 @@ export function useParty(characterId:string|null) {
   const leaveParty=useCallback(()=>party&&run(`${party.leader_id===characterId?'disband':'leave'}:${party.id}`,party.leader_id===characterId?'disband':'leave',party.id,null,null),[run,party,characterId]);
   const kickMember=useCallback((target:string)=>run(`kick:${party?.id}:${target}`,'kick',party?.id??null,target,null),[run,party?.id]);
   const setTank=useCallback((target:string|null)=>run(`set_tank:${party?.id}:${target??'none'}`,'set_tank',party?.id??null,target,null),[run,party?.id]);
-  const toggleFollow=useCallback(async(_following:boolean)=>{setOperationMessage('Party follow is not connected to the authoritative party system yet.');},[]);
+  const toggleFollow=useCallback(async(following:boolean)=>{if(party)await run(`${following?'follow':'stop_following'}:${party.id}`,following?'follow':'stop_following',party.id,null,null);},[run,party]);
   const isLeader=party?.leader_id===characterId;const isTank=(party?.tank_id??party?.leader_id)===characterId;const myMembership=members.find(member=>member.character_id===characterId);
   return {party,members,pendingInvites:state.incomingInvitations,outgoingInvites:state.outgoingInvitations,isLeader,isTank,myMembership,operationMessage,createParty,invitePlayer,acceptInvite,declineInvite,cancelInvite,leaveParty,kickMember,setTank,toggleFollow,fetchParty};
 }
