@@ -157,26 +157,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
   const degradeEquipment = useCallback(async () => {
     const current = execution.capture();
     if (!current()) return;
-    if (p.equipped.length === 0) return;
-    const shuffled = [...p.equipped].sort(() => Math.random() - 0.5);
-    const toDamage = shuffled.slice(0, 1);
-    for (const item of toDamage) {
-      const newDur = item.current_durability - 1;
-      if (newDur <= 0) {
-        if (item.item.rarity === 'unique') {
-          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} shatters and its essence returns to its origin...`));
-          await supabase.from('character_inventory').delete().eq('id', item.id);
-        } else {
-          p.addLogEvent(buildAbilityEvent(`Your ${item.item.name} has broken! Visit a blacksmith to repair it.`));
-          await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null } as any).eq('id', item.id);
-        }
-      } else {
-        await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
-      }
-      if (!current()) return;
-    }
+    // Durability is committed by the authoritative combat tick. This legacy
+    // callback only refreshes the resulting inventory projection.
     p.fetchInventory();
-  }, [p.equipped, p.addLogEvent, p.fetchInventory]);
+  }, [p.fetchInventory]);
 
   // NOTE: `rollLoot` removed — server (`combat-tick` → `processLootDrops`) is
   // the sole authority for ground-loot drops on kill.

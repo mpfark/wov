@@ -105,53 +105,55 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
       targetSlot = !ring1Taken ? 'ring' : !ring2Taken ? 'ring_2' : 'ring';
     }
 
-    if (itemToEquip && targetSlot === 'main_hand' && itemToEquip.item.hands === 2) {
-      const offHand = inventory.find(i => i.equipped_slot === 'off_hand');
-      if (offHand) {
-        await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', offHand.id);
-      }
-    }
     if (targetSlot === 'off_hand') {
       const mainHand = inventory.find(i => i.equipped_slot === 'main_hand');
       if (mainHand && mainHand.item.hands === 2) return;
     }
-    const existing = inventory.find(i => i.equipped_slot === targetSlot);
-    if (existing) {
-      await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', existing.id);
-    }
-    await supabase.from('character_inventory').update({ equipped_slot: targetSlot as any }).eq('id', inventoryId);
+    const { data } = await supabase.rpc('character_inventory_action' as never, {
+      _character_id: characterId, _action: 'equip', _inventory_id: inventoryId,
+      _slot: targetSlot, _request_id: crypto.randomUUID(),
+    } as never);
+    if (!(data as { ok?: boolean } | null)?.ok) return;
     await syncResources();
     fetchInventory();
   }, [characterId, inventory, fetchInventory, syncResources]);
 
   const unequipItem = useCallback(async (inventoryId: string) => {
-    await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', inventoryId);
+    if (!characterId) return;
+    const { data } = await supabase.rpc('character_inventory_action' as never, {
+      _character_id: characterId, _action: 'unequip', _inventory_id: inventoryId,
+      _slot: null, _request_id: crypto.randomUUID(),
+    } as never);
+    if (!(data as { ok?: boolean } | null)?.ok) return;
     await syncResources();
     fetchInventory();
-  }, [fetchInventory, syncResources]);
+  }, [characterId, fetchInventory, syncResources]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
+    if (!characterId) return;
     const item = inventory.find(i => i.id === inventoryId);
     if (item?.item.is_soulbound) return;
-    await supabase.from('character_inventory').delete().eq('id', inventoryId);
+    const { data } = await supabase.rpc('character_inventory_action' as never, {
+      _character_id: characterId, _action: 'drop', _inventory_id: inventoryId,
+      _slot: null, _request_id: crypto.randomUUID(),
+    } as never);
+    if (!(data as { ok?: boolean } | null)?.ok) return;
     fetchInventory();
-  }, [inventory, fetchInventory]);
+  }, [characterId, inventory, fetchInventory]);
 
-  const useConsumable = useCallback(async (inventoryId: string, _characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
+  const useConsumable = useCallback(async (inventoryId: string, _characterId: string, _currentHp: number, _maxHp: number, _updateCharacter: (updates: { hp: number }) => Promise<void>) => {
+    if (!characterId) return null;
     const inv = inventory.find(i => i.id === inventoryId);
     if (!inv || inv.item.item_type !== 'consumable') return null;
-    const eff = getEffectiveStats(inv);
-    const hpRestore = (eff.hp as number) || 0;
-    const hpRegen = (eff.hp_regen as number) || 0;
-    if (hpRestore <= 0 && hpRegen <= 0) return null;
-    if (hpRestore > 0) {
-      const newHp = Math.min(currentHp + hpRestore, maxHp);
-      await updateCharacter({ hp: newHp });
-    }
-    await supabase.from('character_inventory').delete().eq('id', inventoryId);
+    const { data } = await supabase.rpc('character_inventory_action' as never, {
+      _character_id: characterId, _action: 'consume', _inventory_id: inventoryId,
+      _slot: null, _request_id: crypto.randomUUID(),
+    } as never);
+    const result = data as { ok?: boolean; restored?: number; item_name?: string; hp_regen?: number } | null;
+    if (!result?.ok) return null;
     fetchInventory();
-    return { restored: hpRestore > 0 ? Math.min(hpRestore, maxHp - currentHp) : 0, itemName: inv.item.name, hpRegen, isPotion: hpRestore > 0 };
-  }, [inventory, fetchInventory]);
+    return { restored: result.restored ?? 0, itemName: result.item_name ?? inv.item.name, hpRegen: result.hp_regen ?? 0, isPotion: (result.restored ?? 0) > 0 };
+  }, [characterId, inventory, fetchInventory]);
 
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
@@ -168,11 +170,16 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   }, {} as Record<string, number>);
 
   const togglePin = useCallback(async (inventoryId: string) => {
+    if (!characterId) return;
     const item = inventory.find(i => i.id === inventoryId);
     if (!item) return;
-    await supabase.from('character_inventory').update({ is_pinned: !item.is_pinned }).eq('id', inventoryId);
+    const { data } = await supabase.rpc('character_inventory_action' as never, {
+      _character_id: characterId, _action: 'pin', _inventory_id: inventoryId,
+      _slot: null, _request_id: crypto.randomUUID(),
+    } as never);
+    if (!(data as { ok?: boolean } | null)?.ok) return;
     fetchInventory();
-  }, [inventory, fetchInventory]);
+  }, [characterId, inventory, fetchInventory]);
 
   return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin };
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SQL = readFileSync('supabase/migrations/20260908150000_character_location_authority.sql', 'utf8').replaceAll('\r\n', '\n');
+const SQL = readFileSync('supabase/migrations/20260908175256_2e41c1c0-9b14-40a2-9627-68f6cf7dbc2b.sql', 'utf8').replaceAll('\r\n', '\n');
 const MOVEMENT = readFileSync('src/features/world/hooks/useMovementActions.ts', 'utf8');
 const CHARACTER = readFileSync('src/features/character/hooks/useCharacter.ts', 'utf8');
 
@@ -27,7 +27,7 @@ describe('character location authority security boundary', () => {
   expect(SQL).toContain('NEW.summoner_node_id FROM public.characters');
   expect(SQL).toContain('c.current_node_id=_req.summoner_node_id');
   expect(MOVEMENT).toContain("rpc('character_special_travel'");
-  expect(MOVEMENT).toContain('Hidden-path travel is not connected to an authoritative movement contract.');
+  expect(MOVEMENT).toContain('Search and hidden-path discovery require an authoritative server contract.');
  });
  it('denies dead anchors while preserving intended live same-node encounter visibility',()=>{
   expect(SQL).toMatch(/c\.user_id=auth\.uid\(\) AND c\.hp>0 AND c\.current_node_id=node_encounter\.node_id/);

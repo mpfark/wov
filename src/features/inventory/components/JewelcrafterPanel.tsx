@@ -76,12 +76,15 @@ export default function JewelcrafterPanel({
     const cost = calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
     if (gold < cost) { addEvent(buildErrorEvent('Not enough gold!')); return; }
     setRepairing(true);
-    await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
-    const newGold = gold - cost;
-    await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
-    onGoldChange(newGold);
+    const { data, error } = await supabase.rpc('character_repair' as never, {
+      _character_id: characterId, _provider: 'jewelcrafter', _inventory_id: inv.id,
+      _request_id: crypto.randomUUID(),
+    } as never);
+    const result = data as { ok?: boolean; kind?: string; cost?: number; gold?: number } | null;
+    if (error || !result?.ok) { addEvent(buildErrorEvent(`Refurbish refused: ${result?.kind ?? 'transport_error'}.`)); setRepairing(false); return; }
+    if (result.gold != null) onGoldChange(result.gold);
     onInventoryChange();
-    addEvent(buildSystemEvent(`Refurbished ${inv.item.name} for ${cost} gold.`));
+    addEvent(buildSystemEvent(`Refurbished ${inv.item.name} for ${result.cost ?? cost} gold.`));
     setRepairing(false);
   };
 
@@ -91,14 +94,15 @@ export default function JewelcrafterPanel({
       s + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
     if (gold < totalCost) { addEvent(buildErrorEvent('Not enough gold to refurbish all!')); return; }
     setRepairing(true);
-    for (const inv of items) {
-      await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
-    }
-    const newGold = gold - totalCost;
-    await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
-    onGoldChange(newGold);
+    const { data, error } = await supabase.rpc('character_repair' as never, {
+      _character_id: characterId, _provider: 'jewelcrafter', _inventory_id: null,
+      _request_id: crypto.randomUUID(),
+    } as never);
+    const result = data as { ok?: boolean; kind?: string; cost?: number; gold?: number; repaired_count?: number } | null;
+    if (error || !result?.ok) { addEvent(buildErrorEvent(`Refurbish refused: ${result?.kind ?? 'transport_error'}.`)); setRepairing(false); return; }
+    if (result.gold != null) onGoldChange(result.gold);
     onInventoryChange();
-    addEvent(buildSystemEvent(`Refurbished ${items.length} items for ${totalCost} gold.`));
+    addEvent(buildSystemEvent(`Refurbished ${result.repaired_count ?? items.length} items for ${result.cost ?? totalCost} gold.`));
     setRepairing(false);
   };
 
