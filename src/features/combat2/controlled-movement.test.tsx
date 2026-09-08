@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useMovementActions, type UseMovementActionsParams } from '@/features/world/hooks/useMovementActions';
 import { guardControlledAction, MOVEMENT_UNAVAILABLE } from './controlled-actions';
+import fs from 'node:fs';
 
 vi.mock('@/features/creatures/hooks/useCreatures', () => ({ preheatNode: vi.fn() }));
 vi.mock('@/features/world/utils/visitedNodesCache', () => ({ markNodeVisited: vi.fn() }));
@@ -21,6 +22,12 @@ function params() {
 }
 
 describe('controlled test movement lock', () => {
+  it('revalidates a visible party against server authority instead of trusting the legacy roster',()=>{
+    const page=fs.readFileSync('src/pages/GamePage.tsx','utf8');
+    expect(page).toContain('checkCombat2SessionPreflight(character.id,character.current_node_id)');
+    expect(page).toContain('if(current&&!allowed)ownership.lock()');
+    expect(page).not.toContain('if (combat2BlocksLegacy && (party || myMembership?.is_following)) ownership.lock()');
+  });
   it('routes ordinary movement authoritatively while teleport, waymark and search remain blocked', async () => {
     const { options, write, log } = params();
     const flee = vi.fn();

@@ -7,6 +7,7 @@ export const ARENA_RPC_NAMES = [
   'combat2_test_admin_relocate', 'combat2_test_stop', 'combat2_test_reset',
   'combat2_test_environment_start', 'combat2_test_environment_close',
   'combat2_test_run_start', 'combat2_test_run_stop', 'combat2_test_run_report',
+  'combat2_test_party_prepare',
 ] as const;
 
 export type ArenaNode = { id: string; purpose: 'staging'|'low'|'equal'|'high_damage'|'boss'; label: string; active: boolean };
@@ -132,5 +133,8 @@ export function createArenaAdminApi(rpc: Rpc = (name,args)=>supabase.rpc(name as
     startRun:(requestId:string)=>call('combat2_test_run_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
     stopRun:(requestId:string)=>call('combat2_test_run_stop',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
     report:(runId:string|null,afterSeq=0,limit=25)=>call('combat2_test_run_report',{_arena_id:COMBAT2_TEST_ARENA.id,_run_id:runId,_after_seq:afterSeq,_limit:limit},decodeTestRunReport),
+    prepareParty:(characterAId:string,characterBId:string,requestId:string,replaceExisting:boolean)=>call('combat2_test_party_prepare',{
+      _arena_id:COMBAT2_TEST_ARENA.id,_character_a_id:characterAId,_character_b_id:characterBId,_request_id:requestId,_replace_existing:replaceExisting,
+    },decodeArenaResult),
   };
 }

@@ -81,6 +81,7 @@ import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
+import { checkCombat2SessionPreflight } from '@/features/combat2/session-access';
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
@@ -260,8 +261,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     : ownership.access === 'refused' ? 'Refused — test-arena access is not authorized for this character'
     : ownership.access === 'error' ? 'Test-arena access check failed'
     : ownership.locked ? 'Locked — unexpected party membership'
-    : ownership.preflight === 'refused' ? 'Refused — solo, idle entry could not be verified'
-    : ownership.preflight === 'checking' ? 'Checking solo eligibility'
+    : ownership.preflight === 'refused' ? 'Refused — arena entry eligibility could not be verified'
+    : ownership.preflight === 'checking' ? 'Checking arena entry eligibility'
     : combat2.dead ? combat2.testArenaDeath ? 'Dead — Test Arena Reset required' : 'Dead — authoritative respawn available after 3 seconds'
     : combat2.sessionStatus === 'exited' ? 'Exited — controlled session remains locked'
     : combat2.pendingFlee ? 'Flee pending'
@@ -304,8 +305,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
   useEffect(() => {
-    if (combat2BlocksLegacy && (party || myMembership?.is_following)) ownership.lock();
-  }, [combat2BlocksLegacy, party, myMembership?.is_following]);
+    if (!combat2BlocksLegacy || !character.current_node_id || (!party && !myMembership?.is_following)) return;
+    let current=true;
+    void checkCombat2SessionPreflight(character.id,character.current_node_id).then(allowed=>{if(current&&!allowed)ownership.lock();});
+    return()=>{current=false;};
+  }, [combat2BlocksLegacy, character.id, character.current_node_id, party, myMembership?.is_following]);
   const { addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,

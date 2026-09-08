@@ -1,36 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { combat2ArenaAccessCheckEnabled, combat2ArenaReservesLegacy } from './test-config';
-import { checkCombat2SessionAccess, type SessionAccessResult } from './session-access';
-
-export async function checkSoloColdEntry(characterId: string): Promise<boolean> {
-  // Read-only browser preflight, not an authorization boundary. Any ambiguity denies entry.
-  const [members, ledParties, sessions] = await Promise.all([
-    supabase.from('party_members').select('id').eq('character_id', characterId).eq('status', 'accepted'),
-    supabase.from('parties').select('id').eq('leader_id', characterId),
-    supabase.from('combat_sessions').select('id').eq('character_id', characterId),
-  ]);
-  return !members.error && !ledParties.error && !sessions.error
-    && Array.isArray(members.data) && members.data.length === 0
-    && Array.isArray(ledParties.data) && ledParties.data.length === 0
-    && Array.isArray(sessions.data) && sessions.data.length === 0;
-}
+import { checkCombat2SessionAccess, checkCombat2SessionPreflight, type SessionAccessResult } from './session-access';
 
 export function useCombat2TestOwnership(options: {
   enabled: boolean; characterId: string; nodeId: string | null;
-  check?: (id: string) => Promise<boolean>;
+  check?: (id: string,nodeId:string) => Promise<boolean>;
   accessCheck?: (characterId:string,nodeId:string)=>Promise<SessionAccessResult>;
 }) {
-  const { characterId, nodeId, check = checkSoloColdEntry, accessCheck=checkCombat2SessionAccess } = options;
+  const { characterId, nodeId, check = checkCombat2SessionPreflight, accessCheck=checkCombat2SessionAccess } = options;
   const reserved = combat2ArenaReservesLegacy(nodeId);
   const accessEnabled = combat2ArenaAccessCheckEnabled(options.enabled,nodeId);
   const origin = { characterId, nodeId, reserved };
   const accessKey=`${characterId}:${nodeId??''}`;
   const [accessResult,setAccessResult]=useState<{key:string;status:'allowed'|'refused'|'error'}|null>(null);
   const access:'checking'|'allowed'|'refused'|'error'=!accessEnabled?'refused':accessResult?.key===accessKey?accessResult.status:'checking';
-  const [preflight, setPreflight] = useState<'checking' | 'allowed' | 'refused'>('checking');
+  const [preflightResult,setPreflightResult]=useState<{key:string;status:'allowed'|'refused'}|null>(null);
+  const preflight:'checking'|'allowed'|'refused'=preflightResult?.key===accessKey?preflightResult.status:'checking';
   const [locked, setLocked] = useState(false);
-  const request = useRef<{characterId:string;promise:Promise<boolean>} | null>(null);
+  const request = useRef<{key:string;promise:Promise<boolean>} | null>(null);
   const accessRequest=useRef<{key:string;epoch:number;promise:Promise<SessionAccessResult>}|null>(null);
   const [retryEpoch,setRetryEpoch]=useState(0);
   useEffect(()=>{
@@ -45,13 +32,16 @@ export function useCombat2TestOwnership(options: {
   useEffect(() => {
     if (access!=='allowed') return;
     // Reuse this read-only attempt during Strict Mode effect replay.
-    if(request.current?.characterId!==characterId)request.current={characterId,promise:check(characterId)};
+    if(!nodeId)return;
+    const key=`${characterId}:${nodeId}`;
+    if(request.current?.key!==key)request.current={key,promise:check(characterId,nodeId)};
     let active = true;
-    void request.current.promise.then(ok => { if (active) setPreflight(ok ? 'allowed' : 'refused'); })
-      .catch(() => { if (active) setPreflight('refused'); });
+    const settle=(status:'allowed'|'refused')=>setPreflightResult(previous=>previous?.key===key&&previous.status===status?previous:{key,status});
+    void request.current.promise.then(ok => { if (active) settle(ok?'allowed':'refused'); })
+      .catch(() => { if (active) settle('refused'); });
     return () => { active = false; };
   }, [access, characterId, check]);
-  useEffect(() => { if (!reserved) { request.current=null; setPreflight('checking'); setLocked(false); } }, [reserved, characterId]);
+  useEffect(() => { if (!reserved) { request.current=null; setPreflightResult(null); setLocked(false); } }, [reserved, characterId]);
   const blocksLegacy = reserved;
   const combat2OwnsSession = blocksLegacy && access==='allowed' && preflight === 'allowed';
   return {

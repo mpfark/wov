@@ -34,7 +34,7 @@ describe('Combat2 arena admin contract',()=>{
   expect(UI).toContain('crypto.randomUUID()');
   expect(UI).toContain('snapshot!==selection.current');
   expect(UI).not.toMatch(/setInterval|autoRetry|optimistic/i);
-  expect(API.match(/combat2_test_[a-z_]+/g)?.every(name=>['combat2_test_status','combat2_test_grant','combat2_test_revoke','combat2_test_admin_relocate','combat2_test_stop','combat2_test_reset','combat2_test_environment_start','combat2_test_environment_close','combat2_test_run_start','combat2_test_run_stop','combat2_test_run_report'].includes(name))).toBe(true);
+  expect(API.match(/combat2_test_[a-z_]+/g)?.every(name=>['combat2_test_status','combat2_test_grant','combat2_test_revoke','combat2_test_admin_relocate','combat2_test_stop','combat2_test_reset','combat2_test_environment_start','combat2_test_environment_close','combat2_test_run_start','combat2_test_run_stop','combat2_test_run_report','combat2_test_party_prepare'].includes(name))).toBe(true);
   const route=readFileSync('src/pages/AdminRoute.tsx','utf8'); expect(route).toContain('!isAdmin'); expect(route).toContain('<AdminPage');
  });
 });
