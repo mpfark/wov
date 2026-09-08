@@ -156,6 +156,7 @@ function emitPositioning(
 export interface UseMovementActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   /** Stage 9 — structured emitter for positioning-dependent outcomes. */
   addLogEvent: (event: GameLogEvent) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
@@ -353,27 +354,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
     }
 
 
-    // ── Execute move ──
-    try {
-      if (p.party && !p.isLeader && p.myMembership?.is_following) {
-        await p.toggleFollow(false);
-        if (!current()) return;
-        p.addLogEvent(buildSystemEvent('You break away from the party leader.'));
-      }
-      await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
-      if (!current()) return;
-      p.broadcastMove(p.character.id, p.character.name, nodeId, p.character.current_node_id!);
-      void markNodeVisited(p.character.id, nodeId);
-      const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
-      const dirLabel = direction ? (dirNames[direction] || direction) : null;
-      const targetArea = p.getNodeArea(targetNode);
-      const moveName = getNodeDisplayName(targetNode, targetArea);
-      p.addLogEvent(buildMovementEvent(`You travel ${dirLabel || moveName}.`));
-      
-
-    } catch {
-      p.addLogEvent(buildErrorEvent('Failed to move.'));
-    }
+    // No browser-authoritative fallback remains. GamePage always supplies the
+    // reviewed adjacent-departure adapter; other consumers fail closed.
+    p.addLogEvent(buildErrorEvent('Movement requires the authoritative server contract.'));
   }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.authorizeCombat2Flee, p.authorizeCombat2Depart, p.movementBlocked, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
   // ── Teleport ───────────────────────────────────────────────────
@@ -395,16 +378,25 @@ export function useMovementActions(params: UseMovementActionsParams) {
       setWaymarkNodeId(p.character.current_node_id!);
       p.addLogEvent(buildMovementEvent(`You leave a hidden waymark at ${currentNodeObj.name}.`));
     }
-    const prevNodeId = p.character.current_node_id!;
-    const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - cpCost });
-    p.broadcastMove(p.character.id, p.character.name, nodeId, prevNodeId);
-    void markNodeVisited(p.character.id, nodeId);
-    p.addLogEvent(buildMovementEvent(`You teleport to ${targetNode.name} for ${cpCost} CP.`));
-    
+    const { data, error } = await supabase.rpc('character_special_travel' as never, {
+      _character_id: p.character.id,
+      _kind: 'teleport',
+      _destination_node_id: nodeId,
+      _request_id: crypto.randomUUID(),
+    } as never);
+    const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
+    if (error || !result?.ok || !result.destination_node_id) {
+      p.addLogEvent(buildErrorEvent(`Teleport refused: ${result?.kind ?? 'transport_error'}.`));
+      return;
+    }
+    p.updateCharacterLocal?.({
+      current_node_id: result.destination_node_id,
+      cp: Math.max((p.character.cp ?? 0) - (result.cp_cost ?? cpCost), 0),
+    });
+    void markNodeVisited(p.character.id, result.destination_node_id);
+    p.addLogEvent(buildMovementEvent(`You teleport to ${targetNode.name} for ${result.cp_cost ?? cpCost} CP.`));
     setTeleportOpen(false);
-
-    await leaderMove;
-  }, [p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
+  }, [p.character, p.getNode, p.updateCharacterLocal, p.addLogEvent, p.isDead, p.inCombat]);
 
   // ── Return to Waymark ──────────────────────────────────────────
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
@@ -421,17 +413,26 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to return to waymark.')); return; }
     preheatNode(waymarkNodeId);
-    const prevNodeId = p.character.current_node_id!;
-    const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
-    p.broadcastMove(p.character.id, p.character.name, waymarkNodeId, prevNodeId);
-    void markNodeVisited(p.character.id, waymarkNodeId);
-    p.addLogEvent(buildMovementEvent(`You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`));
-    
+    const { data, error } = await supabase.rpc('character_special_travel' as never, {
+      _character_id: p.character.id,
+      _kind: 'waymark',
+      _destination_node_id: waymarkNodeId,
+      _request_id: crypto.randomUUID(),
+    } as never);
+    const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
+    if (error || !result?.ok || !result.destination_node_id) {
+      p.addLogEvent(buildErrorEvent(`Waymark travel refused: ${result?.kind ?? 'transport_error'}.`));
+      return;
+    }
+    p.updateCharacterLocal?.({
+      current_node_id: result.destination_node_id,
+      cp: Math.max((p.character.cp ?? 0) - (result.cp_cost ?? cpCost), 0),
+    });
+    void markNodeVisited(p.character.id, result.destination_node_id);
+    p.addLogEvent(buildMovementEvent(`You return to your waymark at ${waymarkNode.name} for ${result.cp_cost ?? cpCost} CP.`));
     setWaymarkNodeId(null);
     setTeleportOpen(false);
-
-    await leaderMove;
-  }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLogEvent, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
+  }, [waymarkNodeId, p.character, p.getNode, p.updateCharacterLocal, p.addLogEvent, p.isDead, p.inCombat]);
 
   // ── Search ─────────────────────────────────────────────────────
   const SEARCH_CP_COST = 5;
@@ -498,9 +499,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const targetName = targetNode?.name || 'an unknown place';
       p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
-        await p.updateCharacter({ current_node_id: discovered.node_id });
-        if (!current()) return;
-        p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
+        p.addLogEvent(buildErrorEvent('Hidden-path travel is not connected to an authoritative movement contract.'));
       }
       revealHints();
       return;
@@ -551,9 +550,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const targetName = targetNode?.name || 'an unknown place';
       p.addLogEvent(buildSystemEvent(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`));
       if (targetNode) {
-        await p.updateCharacter({ current_node_id: discovered.node_id });
-        if (!current()) return;
-        p.addLogEvent(buildMovementEvent(`You travel through the hidden path to ${targetName}.`));
+        p.addLogEvent(buildErrorEvent('Hidden-path travel is not connected to an authoritative movement contract.'));
       }
     } else {
       const noneMsg = hintsToReveal.length > 0

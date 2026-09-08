@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SQL=readFileSync('supabase/migrations/20260908140000_authoritative_party_movement.sql','utf8').replaceAll('\r\n','\n');
+const SQL=readFileSync('supabase/migrations/20260908122530_e728cbda-72d0-415c-96bf-a8758fe327ac.sql','utf8').replaceAll('\r\n','\n');
 const MOVEMENT=readFileSync('src/features/world/hooks/useMovementActions.ts','utf8');
 const PAGE=readFileSync('src/pages/GamePage.tsx','utf8');
 

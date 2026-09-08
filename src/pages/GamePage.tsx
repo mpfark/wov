@@ -912,7 +912,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const movementActions = useMovementActions({
     movementBlocked: combat2BlocksLegacy,
-    character, updateCharacter, addLogEvent,
+    character, updateCharacter, updateCharacterLocal, addLogEvent,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
     creatures,

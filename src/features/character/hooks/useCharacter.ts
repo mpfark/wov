@@ -237,27 +237,28 @@ export function useCharacter(user: User | null) {
   }, [user]);
 
   const createCharacter = async (charData: {
-    name: string; race: string; class: string;
+    name: string; race: string; class: string; gender?: string;
     str: number; dex: number; con: number; int: number; wis: number; cha: number;
     hp: number; max_hp: number; ac: number; current_node_id: string;
     is_classless?: boolean;
   }) => {
     if (!user) return null;
-    const { data, error } = await supabase
-      .from('characters')
-      .insert({
-        name: charData.name,
-        race: charData.race as any,
-        class: charData.class as any,
-        str: charData.str, dex: charData.dex, con: charData.con,
-        int: charData.int, wis: charData.wis, cha: charData.cha,
-        hp: charData.hp, max_hp: charData.max_hp, ac: charData.ac,
-        current_node_id: charData.current_node_id,
-        user_id: user.id,
-        is_classless: charData.is_classless ?? false,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('character_create' as never, {
+      _name: charData.name,
+      _race: charData.race,
+      _class: charData.class,
+      _gender: charData.gender ?? 'male',
+      _str: charData.str,
+      _dex: charData.dex,
+      _con: charData.con,
+      _int: charData.int,
+      _wis: charData.wis,
+      _cha: charData.cha,
+      _hp: charData.hp,
+      _max_hp: charData.max_hp,
+      _ac: charData.ac,
+      _is_classless: charData.is_classless ?? false,
+    } as never);
     if (error) throw error;
     const char = data as Character;
     setCharacters(prev => [...prev, char]);
