@@ -3813,7 +3813,10 @@ export type Database = {
           seq: number
           stance_key: string | null
           status: string
+          target_character_id: string | null
           target_creature_id: string | null
+          target_entry_seq: number | null
+          target_fighter_id: string | null
         }
         Insert: {
           ability_key?: string | null
@@ -3827,7 +3830,10 @@ export type Database = {
           seq?: number
           stance_key?: string | null
           status?: string
+          target_character_id?: string | null
           target_creature_id?: string | null
+          target_entry_seq?: number | null
+          target_fighter_id?: string | null
         }
         Update: {
           ability_key?: string | null
@@ -3841,7 +3847,10 @@ export type Database = {
           seq?: number
           stance_key?: string | null
           status?: string
+          target_character_id?: string | null
           target_creature_id?: string | null
+          target_entry_seq?: number | null
+          target_fighter_id?: string | null
         }
         Relationships: [
           {
@@ -3859,10 +3868,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "node_intent_target_character_id_fkey"
+            columns: ["target_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "node_intent_target_creature_id_fkey"
             columns: ["target_creature_id"]
             isOneToOne: false
             referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_intent_target_fighter_id_fkey"
+            columns: ["target_fighter_id"]
+            isOneToOne: false
+            referencedRelation: "node_fighter"
             referencedColumns: ["id"]
           },
         ]
@@ -4970,6 +4993,7 @@ export type Database = {
           _intent_kind: string
           _request_id: string
           _stance_key: string
+          _target_character_id: string
           _target_creature_id: string
         }
         Returns: Json
@@ -5041,6 +5065,15 @@ export type Database = {
         Returns: undefined
       }
       combat2_sync: {
+        Args: {
+          _after_tick?: number
+          _character_id: string
+          _encounter_id: string
+          _limit?: number
+        }
+        Returns: Json
+      }
+      combat2_sync_without_allies: {
         Args: {
           _after_tick?: number
           _character_id: string
