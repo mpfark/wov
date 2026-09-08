@@ -1655,6 +1655,161 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_party_departure_member: {
+        Row: {
+          arrival_group_id: string | null
+          character_id: string
+          cost: number
+          departure_request_id: string
+          display_name: string
+          encounter_id: string | null
+          fighter_entry_seq: number | null
+          fighter_id: string | null
+          movement_order: number
+          request_id: string
+          resolved_at: string | null
+          resolved_tick: number | null
+          status: string
+        }
+        Insert: {
+          arrival_group_id?: string | null
+          character_id: string
+          cost: number
+          departure_request_id: string
+          display_name: string
+          encounter_id?: string | null
+          fighter_entry_seq?: number | null
+          fighter_id?: string | null
+          movement_order: number
+          request_id: string
+          resolved_at?: string | null
+          resolved_tick?: number | null
+          status: string
+        }
+        Update: {
+          arrival_group_id?: string | null
+          character_id?: string
+          cost?: number
+          departure_request_id?: string
+          display_name?: string
+          encounter_id?: string | null
+          fighter_entry_seq?: number | null
+          fighter_id?: string | null
+          movement_order?: number
+          request_id?: string
+          resolved_at?: string | null
+          resolved_tick?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_party_departure_member_arrival_group_id_fkey"
+            columns: ["arrival_group_id"]
+            isOneToOne: false
+            referencedRelation: "node_arrival_group"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_member_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_member_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_member_fighter_id_fkey"
+            columns: ["fighter_id"]
+            isOneToOne: false
+            referencedRelation: "node_fighter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_member_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_party_departure_request"
+            referencedColumns: ["request_id"]
+          },
+        ]
+      }
+      combat2_party_departure_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          destination_node_id: string
+          direction: string
+          leader_character_id: string
+          origin_node_id: string
+          party_id: string
+          request_id: string
+          resolved_at: string | null
+          result: Json | null
+          status: string
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          destination_node_id: string
+          direction: string
+          leader_character_id: string
+          origin_node_id: string
+          party_id: string
+          request_id: string
+          resolved_at?: string | null
+          result?: Json | null
+          status: string
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          destination_node_id?: string
+          direction?: string
+          leader_character_id?: string
+          origin_node_id?: string
+          party_id?: string
+          request_id?: string
+          resolved_at?: string | null
+          result?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_party_departure_request_destination_node_id_fkey"
+            columns: ["destination_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_request_leader_character_id_fkey"
+            columns: ["leader_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_request_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_party_departure_request_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_respawn_config: {
         Row: {
           default_node_id: string
@@ -5084,6 +5239,22 @@ export type Database = {
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
+      combat2_party_depart: {
+        Args: {
+          _destination_node_id: string
+          _leader_character_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat2_party_departure_result: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      combat2_party_departure_state: {
+        Args: { _character_id: string }
+        Returns: Json
+      }
       combat2_party_preflight: {
         Args: { _character_id: string; _node_id: string }
         Returns: Json
