@@ -845,6 +845,58 @@ export type Database = {
           },
         ]
       }
+      character_special_travel_request: {
+        Row: {
+          character_id: string
+          cp_cost: number
+          created_at: string
+          destination_node_id: string
+          kind: string
+          origin_node_id: string
+          request_id: string
+        }
+        Insert: {
+          character_id: string
+          cp_cost: number
+          created_at?: string
+          destination_node_id: string
+          kind: string
+          origin_node_id: string
+          request_id: string
+        }
+        Update: {
+          character_id?: string
+          cp_cost?: number
+          created_at?: string
+          destination_node_id?: string
+          kind?: string
+          origin_node_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_special_travel_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_special_travel_request_destination_node_id_fkey"
+            columns: ["destination_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_special_travel_request_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_visited_nodes: {
         Row: {
           character_id: string
@@ -874,6 +926,39 @@ export type Database = {
           },
           {
             foreignKeyName: "character_visited_nodes_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_waymark: {
+        Row: {
+          character_id: string
+          node_id: string
+          set_at: string
+        }
+        Insert: {
+          character_id: string
+          node_id: string
+          set_at?: string
+        }
+        Update: {
+          character_id?: string
+          node_id?: string
+          set_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_waymark_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_waymark_node_id_fkey"
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
@@ -5142,6 +5227,94 @@ export type Database = {
       character_can_use_ability: {
         Args: { _ability_key: string; _character_id: string }
         Returns: boolean
+      }
+      character_create: {
+        Args: {
+          _ac: number
+          _cha: number
+          _class: string
+          _con: number
+          _dex: number
+          _gender: string
+          _hp: number
+          _int: number
+          _is_classless?: boolean
+          _max_hp: number
+          _name: string
+          _race: string
+          _str: number
+          _wis: number
+        }
+        Returns: {
+          ac: number
+          active_contract: Json | null
+          bhp: number
+          bhp_trained: Json
+          cha: number
+          class: string
+          combat_trace_enabled: boolean
+          con: number
+          contracts_completed: number
+          cp: number
+          created_at: string
+          crown_item_created: boolean
+          current_node_id: string | null
+          dex: number
+          family_changed_after_creation: boolean
+          family_id: string | null
+          family_name: string | null
+          gender: Database["public"]["Enums"]["character_gender"]
+          gold: number
+          hp: number
+          id: string
+          int: number
+          is_classless: boolean
+          king_slayer_at: string | null
+          last_death_at: string | null
+          last_death_log: Json | null
+          last_online: string
+          level: number
+          max_cp: number
+          max_hp: number
+          max_mp: number
+          movement_locked_until: string | null
+          mp: number
+          name: string
+          portrait_generated_at: string | null
+          portrait_metadata: Json
+          portrait_url: string
+          race: string
+          reserved_buffs: Json
+          respec_points: number
+          rp_total_earned: number
+          soulforged_item_created: boolean
+          soulring_inventory_id: string | null
+          soulring_tier: number
+          stance_state: Json
+          str: number
+          unspent_stat_points: number
+          updated_at: string
+          user_id: string
+          wimp_direction: string | null
+          wimp_hp_threshold: number
+          wis: number
+          xp: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      character_special_travel: {
+        Args: {
+          _character_id: string
+          _destination_node_id: string
+          _kind: string
+          _request_id: string
+        }
+        Returns: Json
       }
       check_family_name: { Args: { _display: string }; Returns: Json }
       claim_encounter_tick: {
