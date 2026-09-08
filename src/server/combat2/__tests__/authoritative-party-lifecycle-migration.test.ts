@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
-const SQL=readFileSync(resolve('supabase/migrations/20260908110000_authoritative_party_lifecycle.sql'),'utf8');
+const SQL=readFileSync(resolve('supabase/migrations/20260908101012_50a06710-aefe-4487-a7ed-f0c2e5858ab2.sql'),'utf8');
 const HOOK=readFileSync(resolve('src/features/party/hooks/useParty.ts'),'utf8');
 const ARENA=readFileSync(resolve('src/components/admin/Combat2TestArenaPanel.tsx'),'utf8');
 describe('authoritative real-party lifecycle migration',()=>{
