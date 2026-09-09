@@ -264,6 +264,7 @@ const EVENT_TYPES: Record<string, LogEventType> = {
   boss_telegraph: 'boss_telegraph', boss_cast_evaded: 'mitigation',
   creature_died: 'kill', character_died: 'death', multi_attack_summary: 'ability',
   xp_reward: 'reward', gold_reward: 'reward', loot_drop: 'loot', loot_result: 'loot',
+  item_proc_heal: 'heal', item_proc_damage: 'ability', durability_lost: 'system', equipment_broken: 'system',
 };
 
 function presentEvents(batches: readonly Combat2TickBatch[], characterId: string, classKey?: string): GameLogEvent[] {

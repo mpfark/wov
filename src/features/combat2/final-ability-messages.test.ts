@@ -46,4 +46,14 @@ describe('final Combat2 ability presentation', () => {
     expect(formatCombat2Event({ ...event('loot_drop', '', 0), target: creature }, context)).toBe('Loot drops from Wraith.');
     expect(formatCombat2Event({ ...event('loot_result', '', 0), target: creature, outcomeReason: 'no_drop' }, context)).toBe('No item drops from Wraith.');
   });
+
+  it('renders committed item procs and durability without deriving either client-side', () => {
+    const creature = { type: 'creature' as const, id: 'creature', name: 'Wraith' };
+    expect(formatCombat2Event({ ...event('item_proc_damage', '', 7, { damageType: 'fire' }), target: creature }, context))
+      .toBe('Your equipped item deals 7 damage to Wraith.');
+    expect(formatCombat2Event(event('durability_lost', '', 1, { slot: 'main_hand', durabilityAfter: 99 }), context))
+      .toBe('Your equipped main hand loses 1 durability.');
+    expect(formatCombat2Event(event('equipment_broken', '', 1, { slot: 'off_hand', durabilityAfter: 0 }), context))
+      .toBe('Your equipped off hand breaks.');
+  });
 });

@@ -10,8 +10,10 @@
 import { getCreatureXp, getXpPenalty } from '../formulas/xp';
 import { getChaGoldMultiplier } from '../formulas/economy';
 import { getPartyXpBonus } from '../combat/pure/party-xp';
-import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, type WeaponProgressionConfig } from '../formulas/combat';
+import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat';
 import { getStatModifier } from '../formulas/stats';
+import { effectiveItemStats } from '../formulas/items';
+import { getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp } from '../formulas/resources';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
 import { combat2PulseDue, combat2TickTiming, combat2TicksForMs, readCombat2TickTiming } from './time';
@@ -75,6 +77,33 @@ function effectsFor(effects: SnapshotEffect[], characterId: string, kind: string
 }
 
 export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): ProposedTick {
+  const claimedEquipment = snapshot.fighters.flatMap(fighter => fighter.equipment.map(item => ({
+    ...item, fighter_id: fighter.id, entry_seq: fighter.entry_seq,
+  }))).sort((a, b) => a.inventory_id.localeCompare(b.inventory_id));
+  // Character columns are the persisted/base boundary. Equipment is applied
+  // exactly once here from the immutable claimed instances; broken gear grants
+  // no stats, shield tag, weapon die, or proc.
+  snapshot = { ...snapshot, fighters: snapshot.fighters.map((fighter) => {
+    // Persisted maxima/AC are authoritative for an unequipped fighter and are
+    // already maintained by sync_character_resources. Re-derive only when an
+    // equipment loadout is actually present, avoiding a second base-stat path.
+    if (fighter.equipment.length === 0) return fighter;
+    const usable = fighter.equipment.filter(item => (item.durability ?? 0) > 0);
+    const bonuses: Record<string, number> = {};
+    for (const item of usable) for (const [key, value] of Object.entries(effectiveItemStats({
+      baseStats: item.base_stats, statOverride: item.stat_override, appliedGems: item.applied_gems,
+    }))) bonuses[key] = (bonuses[key] ?? 0) + value;
+    const hasShield = usable.some(item => item.slot === 'off_hand' && item.weapon_tag === 'shield');
+    return { ...fighter, equipment: usable,
+      str: fighter.str + (bonuses.str ?? 0), dex: fighter.dex + (bonuses.dex ?? 0),
+      con: fighter.con + (bonuses.con ?? 0), int: fighter.int + (bonuses.int ?? 0),
+      wis: fighter.wis + (bonuses.wis ?? 0), cha: fighter.cha + (bonuses.cha ?? 0),
+      ac: getEffectiveAC(fighter.class ?? '', fighter.dex, bonuses, hasShield),
+      max_hp: getEffectiveMaxHp(fighter.class ?? '', fighter.con, fighter.level, bonuses),
+      max_cp: getEffectiveMaxCp(fighter.level, fighter.wis, bonuses),
+      max_mp: getEffectiveMaxMp(fighter.level, fighter.dex, bonuses),
+    };
+  }) };
   const { encounter } = snapshot;
   const tick = encounter.candidate_tick;
   const nowMs = encounter.tick_origin
@@ -82,6 +111,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     : ms(encounter.now);
   const rng = new TickRandom({ encounterId: encounter.id, candidateTick: tick });
   const proposed = emptyProposedTick(tick);
+  proposed.equipment_fence.push(...claimedEquipment);
   let seq = 0;
   const emit = (event: Omit<TickEvent, 'seq'>): void => {
     proposed.events.push({ ...event, seq: seq++ });
@@ -148,6 +178,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const reactedThisTick = new Set<string>();
   const skipOrdinaryThisTick = new Set<string>();
   const occupiedActionSlots = new Set(snapshot.intents.map(intent => intent.character_id));
+  const weaponHitCharacters = new Set<string>();
   const departingCharacters = new Set((snapshot.pending_events ?? [])
     .filter(event => ['fighter_exit_requested', 'fighter_depart_requested', 'fighter_fled'].includes(event.event_type))
     .map(event => event.actor_character_id).filter((id): id is string => id !== null));
@@ -186,6 +217,29 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const set = new Set<string>();
     for (const [id, c] of chars) if (c.present && c.hp > 0) set.add(id);
     return set;
+  };
+
+  const applyItemProc = (actor: WorkingCharacter, target: WorkingCreature, ordinal: number): void => {
+    weaponHitCharacters.add(actor.fighter.character_id);
+    const choices = actor.fighter.equipment.flatMap(item => item.procs.map((proc, index) => ({ item, proc, index })))
+      .sort((a, b) => a.item.inventory_id.localeCompare(b.item.inventory_id) || a.index - b.index);
+    const selected = rng.weightedPick(choices, row => row.proc.weight, 'item_proc_select', actor.fighter.id, target.row.id, ordinal);
+    if (!selected || rng.sample('item_proc_chance', selected.item.inventory_id, selected.index, target.row.id, ordinal) >= selected.proc.chance) return;
+    if (selected.proc.type === 'lifesteal') {
+      const healed = Math.min(actor.fighter.max_hp - actor.hp, Math.floor(selected.proc.value));
+      actor.hp += healed; if (healed > 0) actor.dirty = true;
+      emit({ kind: 'item_proc_heal', actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        amount: healed, meta: { inventoryId: selected.item.inventory_id, itemId: selected.item.item_id, text: selected.proc.text } });
+    } else if (target.hp > 0) {
+      const dealt = Math.min(target.hp, Math.floor(selected.proc.value));
+      target.hp -= dealt; target.damaged = true; target.dirty = true;
+      if (target.hp === 0 && target.killedBy === null) target.killedBy = actor.fighter.character_id;
+      qualify(target, actor.fighter.character_id, 'damage');
+      emit({ kind: 'item_proc_damage', actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        target: { type: 'creature', id: target.row.creature_id, name: target.row.name }, amount: dealt,
+        meta: { inventoryId: selected.item.inventory_id, itemId: selected.item.item_id,
+          damageType: selected.proc.damage_type, text: selected.proc.text, nodeCreatureId: target.row.id, spawnSeq: target.row.spawn_seq } });
+    }
   };
 
   type AmplifiedSource = 'weapon' | 'ability' | 'stance' | 'dot' | 'proc';
@@ -658,6 +712,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       else {
         qualify(target, actor.fighter.character_id, 'damage');
         if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+        if (!outcome.missed) {
+          applyItemProc(actor, target, 0);
+        }
         if (!outcome.missed && target.hp > 0) {
           for (const source of activeEffectsFor(actor.fighter.character_id).filter(effect => effect.kind === 'stack_source')) {
             applyStackSource(source, target, 'weapon_hit', 0);
@@ -940,6 +997,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         }
       });
     }
+    const isWeaponAction = spec.weaponBased || spec.mechanic === 'weapon_attack' || spec.mechanic === 'multi_attack';
+    const landedWeaponEvents = isWeaponAction
+      ? outcome.events.filter(event => event.kind === 'attack' && event.hitQuality !== 'miss')
+      : [];
+    if (targetCreature) landedWeaponEvents.forEach((_, ordinal) => applyItemProc(actor, targetCreature, ordinal));
     if (targetCreature && (outcome.landedHits ?? 0) > 0) {
       for (let ordinal = 0; ordinal < (outcome.landedHits ?? 0); ordinal++) {
         applyLandedAbilityStatus(actor, targetCreature, spec, ordinal, outcome);
@@ -1056,6 +1118,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     else {
       qualify(target, actor.fighter.character_id, 'damage');
       if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
+      if (!outcome.missed) {
+        applyItemProc(actor, target, 0);
+      }
       if (!outcome.missed && target.hp > 0) {
         for (const source of activeEffectsFor(actor.fighter.character_id).filter(effect => effect.kind === 'stack_source')) {
           applyStackSource(source, target, 'weapon_hit', 0);
@@ -1550,6 +1615,25 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         proposed.effects_update.push({ id: effect.id, magnitude: effect.remaining });
       }
     }
+  }
+
+  // Legacy timing: once per participant that landed at least one weapon hit in
+  // this tick, choose one currently usable equipped instance and wear it by 1.
+  // The commit validates every frozen field before applying this proposal.
+  for (const characterId of snapshot.encounter.test_arena_id == null ? [...weaponHitCharacters].sort() : []) {
+    const character = chars.get(characterId);
+    if (!character) continue;
+    const candidates = [...character.fighter.equipment].sort((a, b) => a.inventory_id.localeCompare(b.inventory_id));
+    const item = rng.pick(candidates, 'durability_slot', character.fighter.id);
+    if (!item || item.durability === null || item.durability <= 0) continue;
+    proposed.durability.push({ inventory_id: item.inventory_id, character_id: characterId,
+      fighter_id: character.fighter.id, entry_seq: character.fighter.entry_seq,
+      item_id: item.item_id, rarity: item.rarity ?? '', slot: item.slot, durability_before: item.durability,
+      durability_after: Math.max(0, item.durability - 1), broke: item.durability === 1 });
+    emit({ kind: item.durability === 1 ? 'equipment_broken' : 'durability_lost',
+      actor: { type: 'character', id: characterId, name: character.fighter.name }, amount: 1,
+      meta: { inventoryId: item.inventory_id, itemId: item.item_id, slot: item.slot,
+        durabilityAfter: Math.max(0, item.durability - 1) } });
   }
 
   for (const state of snapshot.effects.filter(e => e.kind === 'autoattack')) {

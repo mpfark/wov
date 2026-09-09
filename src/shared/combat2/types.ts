@@ -79,8 +79,8 @@ export interface SnapshotEquipment {
   /** Owner of the inventory row. Always the fighter this equipment belongs to. */
   character_id: string;
   durability: number | null;
-  applied_gems: unknown;
-  stat_override: unknown;
+  applied_gems: Record<string, number>;
+  stat_override: Record<string, number> | null;
   crafted_level: number | null;
   item_present: boolean;
   item_type: string | null;
@@ -88,6 +88,19 @@ export interface SnapshotEquipment {
   hands: number | null;
   item_level: number | null;
   rarity: string | null;
+  max_durability: number | null;
+  base_stats: Record<string, number>;
+  procs: SnapshotItemProc[];
+}
+
+export interface SnapshotItemProc {
+  type: 'lifesteal' | 'burst_damage';
+  chance: number;
+  value: number;
+  weight: number;
+  damage_type: string | null;
+  text: string | null;
+  trigger: 'on_hit';
 }
 
 
@@ -395,6 +408,24 @@ export interface ProposedLoot {
   outcome: 'dropped' | 'no_drop' | 'unique_rejected' | 'no_eligible_item';
 }
 
+export interface ProposedDurability {
+  inventory_id: string;
+  character_id: string;
+  fighter_id: string;
+  entry_seq: number;
+  item_id: string;
+  rarity: string;
+  slot: string;
+  durability_before: number;
+  durability_after: number;
+  broke: boolean;
+}
+
+export interface ProposedEquipmentFence extends SnapshotEquipment {
+  fighter_id: string;
+  entry_seq: number;
+}
+
 /** Ordered, structured presentation event. No prose is assembled here. */
 export interface TickEvent {
   /** Ordering index inside the tick; assigned by the resolver. */
@@ -431,6 +462,8 @@ export interface ProposedTick {
   departures: ProposedDeparture[];
   rewards: ProposedReward[];
   loot: ProposedLoot[];
+  durability: ProposedDurability[];
+  equipment_fence: ProposedEquipmentFence[];
   events: TickEvent[];
   /** Exact intent ids the commit may mark consumed. */
   intent_ids: string[];
@@ -452,6 +485,8 @@ export function emptyProposedTick(tick: number): ProposedTick {
     departures: [],
     rewards: [],
     loot: [],
+    durability: [],
+    equipment_fence: [],
     events: [],
     intent_ids: [],
     participation: [],

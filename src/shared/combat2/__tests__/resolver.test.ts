@@ -172,8 +172,38 @@ const abilities = new Map<string, AbilitySpec>([
   [`warrior:${weaponAttack.abilityKey}`, weaponAttack],
 ]);
 
+const equipped = (overrides: Record<string, unknown> = {}) => ({
+  slot: 'main_hand', item_id: 'item-1', inventory_id: 'inv-1', character_id: 'ch-1',
+  durability: 2, max_durability: 100, applied_gems: { garnet: 1 }, stat_override: null,
+  base_stats: { str: 2 }, crafted_level: null, item_present: true, item_type: 'equipment',
+  weapon_tag: 'dagger', hands: 1, item_level: 1, rarity: 'common', procs: [], ...overrides,
+}) as SnapshotFighter['equipment'][number];
+
 
 describe('combat2 resolver', () => {
+  it('derives equipped stats once and proposes one deterministic durability loss for a landed weapon hit', () => {
+    const row = fighter({ character_id: 'ch-1', equipment: [equipped()] });
+    const input = snapshot({ fighters: [row], creatures: [creature({ ac: 1 })],
+      intents: [abilityIntent('intent-gear', 1, 'ch-1', 'power_strike', 'cr-1')] });
+    const result = Array.from({ length: 20 }, (_, index) => resolveNodeTick({ ...input,
+      encounter: { ...input.encounter, candidate_tick: index + 1 } }, { abilities }))
+      .find(row => row.events.some(event => event.kind === 'attack' && event.actor?.id === 'ch-1' && event.hitQuality !== 'miss'))!;
+    expect(result.durability).toEqual([expect.objectContaining({ inventory_id: 'inv-1', durability_before: 2, durability_after: 1, broke: false })]);
+    expect(result.events.filter(event => event.kind === 'durability_lost')).toHaveLength(1);
+  });
+
+  it('supports only deterministic authored lifesteal/burst procs without recursion and broken gear grants nothing', () => {
+    const proc = { type: 'burst_damage' as const, chance: 1, value: 7, weight: 1, damage_type: 'fire', text: null, trigger: 'on_hit' as const };
+    const live = snapshot({ fighters: [fighter({ character_id: 'ch-1', equipment: [equipped({ procs: [proc] })] })],
+      creatures: [creature({ ac: 1, hp: 100, max_hp: 100 })], intents: [abilityIntent('intent-proc', 1, 'ch-1', 'power_strike', 'cr-1')] });
+    const result = Array.from({ length: 20 }, (_, index) => resolveNodeTick({ ...live,
+      encounter: { ...live.encounter, candidate_tick: index + 1 } }, { abilities }))
+      .find(row => row.events.some(event => event.kind === 'item_proc_damage'))!;
+    expect(result.events.filter(event => event.kind === 'item_proc_damage')).toHaveLength(1);
+    const broken = resolveNodeTick({ ...live, fighters: [fighter({ character_id: 'ch-1', equipment: [equipped({ durability: 0 })] })] }, { abilities });
+    expect(broken.events.some(event => event.kind.startsWith('item_proc'))).toBe(false);
+    expect(broken.durability).toHaveLength(0);
+  });
   it('is deterministic for an identical snapshot and candidate tick', () => {
     const a = resolveNodeTick(snapshot(), { abilities });
     const b = resolveNodeTick(snapshot(), { abilities });
@@ -629,7 +659,7 @@ describe('combat2 resolver', () => {
   it('does not consume absorb after a fully blocking effect', () => {
     const input = snapshot({
       fighters: [fighter({ character_id: 'ch-1', ac: -100, equipment: [
-        { slot: 'off_hand', weapon_tag: 'shield' } as SnapshotFighter['equipment'][number],
+        equipped({ slot: 'off_hand', weapon_tag: 'shield', inventory_id: 'shield-inv', item_id: 'shield-item', hands: null }),
       ] })],
       effects: [
         absorbEffect('shield', 'ch-1', 20),
@@ -649,7 +679,8 @@ describe('combat2 resolver', () => {
 
   it('does not consume absorb on a missed attack', () => {
     const out = resolveNodeTick(snapshot({
-      fighters: [fighter({ character_id: 'ch-1', ac: 10_000 })],
+      fighters: [fighter({ character_id: 'ch-1', equipment: [equipped({ slot: 'head', inventory_id: 'helm-inv', item_id: 'helm-item',
+        weapon_tag: null, hands: null, base_stats: { ac: 10_000 }, applied_gems: {} })] })],
       effects: [absorbEffect('shield', 'ch-1', 20)],
     }), { abilities });
     expect(out.events.find((event) => event.kind === 'creature_attack')?.hitQuality).toBe('miss');

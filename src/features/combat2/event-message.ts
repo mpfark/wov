@@ -119,6 +119,12 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       if (event.outcomeReason === 'no_drop' || event.outcomeReason === 'no_eligible_item') return `No item drops from ${event.target?.name || 'the creature'}.`;
       if (event.outcomeReason === 'unique_rejected') return `A unique drop was withheld by the authoritative loot boundary.`;
       return null;
+    case 'item_proc_heal':
+      return typeof meta.text === 'string' && meta.text.trim() ? meta.text.trim() : `Your equipped item restores ${amount ?? 0} HP.`;
+    case 'item_proc_damage':
+      return typeof meta.text === 'string' && meta.text.trim() ? meta.text.trim() : `Your equipped item deals ${amount ?? 0} damage to ${target}.`;
+    case 'durability_lost': return `Your equipped ${String(meta.slot ?? 'item').replaceAll('_', ' ')} loses 1 durability.`;
+    case 'equipment_broken': return `Your equipped ${String(meta.slot ?? 'item').replaceAll('_', ' ')} breaks.`;
     case 'boss_cast_evaded': return event.outcomeReason === 'no_target'
       ? `${action} lands on empty ground.` : `${action} is evaded.`;
     case 'boss_telegraph': return typeof meta.text === 'string' && meta.text.trim()

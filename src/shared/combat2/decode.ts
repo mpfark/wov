@@ -22,6 +22,7 @@ import type {
   SnapshotParticipation,
   SnapshotPendingEvent,
   SnapshotLootEntry,
+  SnapshotItemProc,
 } from './types';
 import { readCombat2TickTiming } from './time';
 import type { AuthoredBossCast } from './boss-catalog';
@@ -108,14 +109,42 @@ class Reader {
 
 function decodeEquipment(r: Reader, path: string, raw: unknown): SnapshotEquipment {
   const o = r.object(path, raw);
+  const numericRecord = (field: string, value: unknown, nullable: boolean): Record<string, number> | null => {
+    if (nullable && (value === null || value === undefined)) return null;
+    const source = r.object(`${path}.${field}`, value);
+    const result: Record<string, number> = {};
+    for (const [key, entry] of Object.entries(source)) result[key] = r.num(`${path}.${field}.${key}`, entry);
+    return result;
+  };
+  const stats = r.object(`${path}.base_stats`, o.base_stats);
+  const base_stats: Record<string, number> = {};
+  for (const [key, value] of Object.entries(stats)) base_stats[key] = r.num(`${path}.base_stats.${key}`, value);
+  const procs = r.array(`${path}.procs`, o.procs).map((rawProc, index): SnapshotItemProc => {
+    const proc = r.object(`${path}.procs[${index}]`, rawProc);
+    const type = r.str(`${path}.procs[${index}].type`, proc.type);
+    if (type !== 'lifesteal' && type !== 'burst_damage') r.errors.push(`${path}.procs[${index}].type: unsupported item proc`);
+    return {
+      type: type as SnapshotItemProc['type'],
+      chance: r.num(`${path}.procs[${index}].chance`, proc.chance),
+      value: r.num(`${path}.procs[${index}].value`, proc.value),
+      weight: proc.weight == null ? 1 : r.num(`${path}.procs[${index}].weight`, proc.weight),
+      damage_type: r.strOrNull(`${path}.procs[${index}].damage_type`, proc.damage_type),
+      text: r.strOrNull(`${path}.procs[${index}].text`, proc.text),
+      trigger: (() => {
+        const trigger = r.strOrNull(`${path}.procs[${index}].trigger`, proc.trigger) ?? 'on_hit';
+        if (trigger !== 'on_hit') r.errors.push(`${path}.procs[${index}].trigger: unsupported item proc trigger`);
+        return 'on_hit' as const;
+      })(),
+    };
+  });
   return {
     slot: r.str(`${path}.slot`, o.slot),
     item_id: r.str(`${path}.item_id`, o.item_id),
     inventory_id: r.str(`${path}.inventory_id`, o.inventory_id),
     character_id: r.str(`${path}.character_id`, o.character_id),
     durability: r.numOrNull(`${path}.durability`, o.durability),
-    applied_gems: o.applied_gems ?? null,
-    stat_override: o.stat_override ?? null,
+    applied_gems: numericRecord('applied_gems', o.applied_gems, false) ?? {},
+    stat_override: numericRecord('stat_override', o.stat_override, true),
     crafted_level: r.numOrNull(`${path}.crafted_level`, o.crafted_level),
     item_present: r.bool(`${path}.item_present`, o.item_present),
     item_type: r.strOrNull(`${path}.item_type`, o.item_type),
@@ -123,6 +152,9 @@ function decodeEquipment(r: Reader, path: string, raw: unknown): SnapshotEquipme
     hands: r.numOrNull(`${path}.hands`, o.hands),
     item_level: r.numOrNull(`${path}.item_level`, o.item_level),
     rarity: r.strOrNull(`${path}.rarity`, o.rarity),
+    max_durability: r.numOrNull(`${path}.max_durability`, o.max_durability),
+    base_stats,
+    procs,
   };
 }
 
@@ -490,6 +522,36 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
         r.errors.push(`snapshot.boss_configurations: expected exactly one row for node creature ${creature.id}`);
       }
     }
+  }
+  const validSlots = new Set(['head','chest','gloves','pants','main_hand','off_hand','ring','ring_2','trinket']);
+  for (const [fighterIndex, fighter] of snapshot.fighters.entries()) {
+    const ids = new Set<string>();
+    const slots = new Set<string>();
+    for (const [equipmentIndex, item] of fighter.equipment.entries()) {
+      const path = `snapshot.fighters[${fighterIndex}].equipment[${equipmentIndex}]`;
+      if (item.character_id !== fighter.character_id) r.errors.push(`${path}: cross-character equipment`);
+      if (!uuidPattern.test(item.inventory_id) || !uuidPattern.test(item.item_id)) r.errors.push(`${path}: expected UUID inventory and item ids`);
+      if (ids.has(item.inventory_id)) r.errors.push(`${path}.inventory_id: duplicate equipped instance`);
+      if (slots.has(item.slot)) r.errors.push(`${path}.slot: duplicate equipped slot`);
+      if (!validSlots.has(item.slot)) r.errors.push(`${path}.slot: invalid equipped slot`);
+      ids.add(item.inventory_id); slots.add(item.slot);
+      if (!item.item_present || item.item_type !== 'equipment') r.errors.push(`${path}: equipped item is missing or not equipment`);
+      const statKeys = new Set(['str','dex','con','int','wis','cha','ac','hp','hp_regen']);
+      const gemKeys = new Set(['garnet','topaz','emerald','sapphire','pearl','amethyst']);
+      for (const [key, value] of Object.entries(item.base_stats)) if (!statKeys.has(key) || value < 0) r.errors.push(`${path}.base_stats.${key}: unsupported stat`);
+      for (const [key, value] of Object.entries(item.stat_override ?? {})) if (!statKeys.has(key) || value < 0) r.errors.push(`${path}.stat_override.${key}: unsupported stat`);
+      for (const [key, value] of Object.entries(item.applied_gems)) if (!gemKeys.has(key) || !Number.isSafeInteger(value) || value < 0) r.errors.push(`${path}.applied_gems.${key}: unsupported gem`);
+      if (item.durability === null || item.max_durability === null || !Number.isSafeInteger(item.durability)
+          || !Number.isSafeInteger(item.max_durability) || item.max_durability < 1
+          || item.durability < 0 || item.durability > item.max_durability) r.errors.push(`${path}: invalid durability`);
+      for (const [procIndex, proc] of item.procs.entries()) {
+        if (proc.chance <= 0 || proc.chance > 1 || proc.value <= 0 || proc.weight <= 0) {
+          r.errors.push(`${path}.procs[${procIndex}]: invalid proc configuration`);
+        }
+      }
+    }
+    const main = fighter.equipment.find(item => item.slot === 'main_hand');
+    if (main?.hands === 2 && slots.has('off_hand')) r.errors.push(`snapshot.fighters[${fighterIndex}].equipment: two-handed/off-hand conflict`);
   }
   const stackIdentities = new Set<string>();
   const presenceIdentities = new Set<string>();

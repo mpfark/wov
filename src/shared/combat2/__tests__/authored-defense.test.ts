@@ -181,8 +181,14 @@ describe('real authored defensive activation → proposal → decoded next tick'
 });
 
 describe('Shield Wall authored equipment and block-chance contract', () => {
-  const shield = { slot: 'off_hand', weapon_tag: 'shield', item_present: true } as SnapshotEquipment;
-  const tome = { slot: 'off_hand', weapon_tag: 'tome', item_present: true } as SnapshotEquipment;
+  const offhand = (weapon_tag: string, inventory_id: string): SnapshotEquipment => ({
+    slot: 'off_hand', weapon_tag, inventory_id, item_id: `${inventory_id}-item`, character_id: CHARACTER,
+    durability: 100, max_durability: 100, applied_gems: {}, stat_override: null, base_stats: {},
+    crafted_level: null, item_present: true, item_type: 'equipment', hands: 1, item_level: 1,
+    rarity: 'common', procs: [],
+  });
+  const shield = offhand('shield', 'shield-inventory');
+  const tome = offhand('tome', 'tome-inventory');
 
   function shieldWallActivation(equipment: SnapshotEquipment[]) {
     const input = snapshot();

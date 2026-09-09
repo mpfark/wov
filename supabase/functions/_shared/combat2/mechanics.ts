@@ -204,7 +204,7 @@ export function resolveMainHandDie(
   if (missing.length > 0) return { kind: 'incomplete', missing };
 
   const hands = main.hands === 2 ? 2 : 1;
-  const itemLevel = main.item_level ?? main.crafted_level ?? 1;
+  const itemLevel = main.crafted_level ?? main.item_level ?? 1;
   return {
     kind: 'weapon',
     die: getWeaponDieForItem(main.weapon_tag ?? null, hands, itemLevel, progression, main.rarity ?? null),

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCombat2DeliverySession } from './useCombat2DeliverySession';
 import { useCombat2EntrySession } from './useCombat2EntrySession';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
@@ -37,6 +37,18 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     preserveOnDetach: true,
   });
   const presentation = useCombat2Presentation(enteredSessionKey, delivery, props.classKey);
+  const inventoryRefreshCursor = useRef<{ key: string | null; tick: number }>({ key: null, tick: 0 });
+  useEffect(() => {
+    if (inventoryRefreshCursor.current.key !== enteredSessionKey) {
+      inventoryRefreshCursor.current = { key: enteredSessionKey, tick: 0 };
+    }
+    if (!enteredSessionKey || delivery.lastAppliedTick <= inventoryRefreshCursor.current.tick) return;
+    const durabilityCommitted = delivery.batches.some(batch => batch.tick > inventoryRefreshCursor.current.tick
+      && batch.tick <= delivery.lastAppliedTick
+      && batch.events.some(event => event.kind === 'durability_lost' || event.kind === 'equipment_broken'));
+    inventoryRefreshCursor.current.tick = delivery.lastAppliedTick;
+    if (durabilityCommitted) window.dispatchEvent(new Event('inventory:changed'));
+  }, [delivery.batches, delivery.lastAppliedTick, enteredSessionKey]);
   const model = presentation.model;
   const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
   const testArenaDeath = dead
