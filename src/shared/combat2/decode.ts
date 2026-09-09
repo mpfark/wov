@@ -21,6 +21,7 @@ import type {
   SnapshotIntent,
   SnapshotParticipation,
   SnapshotPendingEvent,
+  SnapshotLootEntry,
 } from './types';
 import { readCombat2TickTiming } from './time';
 import type { AuthoredBossCast } from './boss-catalog';
@@ -192,6 +193,19 @@ function decodeCreature(r: Reader, path: string, raw: unknown): SnapshotCreature
     is_aggressive: r.bool(`${path}.is_aggressive`, o.is_aggressive),
     boss_crit_flavors: (o.boss_crit_flavors ?? null) as SnapshotCreature['boss_crit_flavors'],
     boss_death_cry: r.strOrNull(`${path}.boss_death_cry`, o.boss_death_cry),
+    loot_mode: r.str(`${path}.loot_mode`, o.loot_mode) as SnapshotCreature['loot_mode'],
+    loot_table_id: r.strOrNull(`${path}.loot_table_id`, o.loot_table_id),
+    drop_chance: r.numOrNull(`${path}.drop_chance`, o.drop_chance),
+    loot_table: r.array(`${path}.loot_table`, o.loot_table).map((rawEntry, i) => {
+      const entry = r.object(`${path}.loot_table[${i}]`, rawEntry);
+      return {
+        type: r.str(`${path}.loot_table[${i}].type`, entry.type),
+        item_id: r.strOrNull(`${path}.loot_table[${i}].item_id`, entry.item_id),
+        chance: r.numOrNull(`${path}.loot_table[${i}].chance`, entry.chance),
+        min: r.numOrNull(`${path}.loot_table[${i}].min`, entry.min),
+        max: r.numOrNull(`${path}.loot_table[${i}].max`, entry.max),
+      } satisfies SnapshotLootEntry;
+    }),
   };
 }
 
@@ -407,6 +421,34 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
     tank_candidates: r
       .array('snapshot.tank_candidates', root.tank_candidates)
       .map((row, i) => decodeTankCandidate(r, `snapshot.tank_candidates[${i}]`, row)),
+    reward_config: (() => {
+      const o = r.object('snapshot.reward_config', root.reward_config);
+      return {
+        xp_boost_multiplier: r.num('snapshot.reward_config.xp_boost_multiplier', o.xp_boost_multiplier),
+        drop_chance_regular: r.num('snapshot.reward_config.drop_chance_regular', o.drop_chance_regular),
+        drop_chance_rare: r.num('snapshot.reward_config.drop_chance_rare', o.drop_chance_rare),
+        drop_chance_boss: r.num('snapshot.reward_config.drop_chance_boss', o.drop_chance_boss),
+        equip_level_min_offset: r.num('snapshot.reward_config.equip_level_min_offset', o.equip_level_min_offset),
+        equip_level_max_offset: r.num('snapshot.reward_config.equip_level_max_offset', o.equip_level_max_offset),
+        common_pct: r.num('snapshot.reward_config.common_pct', o.common_pct),
+        uncommon_pct: r.num('snapshot.reward_config.uncommon_pct', o.uncommon_pct),
+        consumable_drop_chance: r.num('snapshot.reward_config.consumable_drop_chance', o.consumable_drop_chance),
+        consumable_level_min_offset: r.num('snapshot.reward_config.consumable_level_min_offset', o.consumable_level_min_offset),
+        consumable_level_max_offset: r.num('snapshot.reward_config.consumable_level_max_offset', o.consumable_level_max_offset),
+      };
+    })(),
+    loot_items: r.array('snapshot.loot_items', root.loot_items).map((rawItem, i) => {
+      const o = r.object(`snapshot.loot_items[${i}]`, rawItem);
+      return { id: r.str(`snapshot.loot_items[${i}].id`, o.id), name: r.str(`snapshot.loot_items[${i}].name`, o.name),
+        level: r.num(`snapshot.loot_items[${i}].level`, o.level), rarity: r.str(`snapshot.loot_items[${i}].rarity`, o.rarity),
+        item_type: r.str(`snapshot.loot_items[${i}].item_type`, o.item_type), world_drop: r.bool(`snapshot.loot_items[${i}].world_drop`, o.world_drop),
+        is_soulbound: r.bool(`snapshot.loot_items[${i}].is_soulbound`, o.is_soulbound), drop_weight: r.num(`snapshot.loot_items[${i}].drop_weight`, o.drop_weight) };
+    }),
+    loot_table_entries: r.array('snapshot.loot_table_entries', root.loot_table_entries).map((rawEntry, i) => {
+      const o = r.object(`snapshot.loot_table_entries[${i}]`, rawEntry);
+      return { loot_table_id: r.str(`snapshot.loot_table_entries[${i}].loot_table_id`, o.loot_table_id),
+        item_id: r.str(`snapshot.loot_table_entries[${i}].item_id`, o.item_id), weight: r.num(`snapshot.loot_table_entries[${i}].weight`, o.weight) };
+    }),
   };
 
   const candidateFighterIds = new Set<string>();

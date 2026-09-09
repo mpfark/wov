@@ -33,17 +33,20 @@ function snap(classKey: string, abilityKey: string, target = false): NodeSnapsho
       { id: 'spawn-b', creature_id: 'creature-b', spawn_seq: 2, hp: 100, max_hp: 100,
         is_alive: true, engaged: true, pending_action: null, tank_fighter_id: 'ally-f', name: 'B',
         level: 1, ac: 1, stats: { str: 1 }, rarity: 'common', is_humanoid: false,
-        is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null },
+        is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null,
+        loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [] },
       { id: 'spawn-a', creature_id: 'creature-a', spawn_seq: 3, hp: 100, max_hp: 100,
         is_alive: true, engaged: true, pending_action: null, tank_fighter_id: 'ally-f', name: 'A',
         level: 1, ac: 1, stats: { str: 1 }, rarity: 'common', is_humanoid: false,
-        is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null },
+        is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null,
+        loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [] },
     ], effects: [], intents: [{ id: 'intent', seq: 1, character_id: 'caster', intent_kind: 'ability',
       ability_key: abilityKey, stance_key: null, target_creature_id: null,
       target_character_id: target ? 'ally' : null, target_fighter_id: target ? 'ally-f' : null,
       target_entry_seq: target ? 8 : null }], boss_abilities: [], boss_configurations: [],
     participation: [], pending_events: [],
     tank_candidates: [{ fighter_id: 'ally-f', character_id: 'ally', entry_seq: 8 }],
+    reward_config: { xp_boost_multiplier: 1, drop_chance_regular: .35, drop_chance_rare: .6, drop_chance_boss: 1, equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: .15, consumable_level_min_offset: -5, consumable_level_max_offset: 0 }, loot_items: [], loot_table_entries: [],
   };
 }
 

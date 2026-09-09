@@ -56,6 +56,7 @@ function creature(overrides: Partial<SnapshotCreature> = {}): SnapshotCreature {
     is_aggressive: true,
     boss_crit_flavors: null,
     boss_death_cry: null,
+    loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
     ...overrides,
   };
 }
@@ -77,6 +78,11 @@ function snapshot(overrides: Partial<NodeSnapshot> = {}): NodeSnapshot {
     intents: [],
     boss_abilities: [],
     tank_candidates: [{ fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 1 }],
+    reward_config: { xp_boost_multiplier: 1, drop_chance_regular: 0.5, drop_chance_rare: 0.75,
+      drop_chance_boss: 1, equip_level_min_offset: -3, equip_level_max_offset: 0,
+      common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15,
+      consumable_level_min_offset: -5, consumable_level_max_offset: 0 },
+    loot_items: [], loot_table_entries: [],
     ...overrides,
   };
 }
@@ -500,6 +506,53 @@ describe('combat2 resolver', () => {
     // not qualification, so only the damage-over-time source is paid.
     const ids = out.rewards.map((r) => r.character_id).sort();
     expect(ids).toEqual(['ch-1']);
+  });
+
+  it('preserves party-size XP, humanoid CHA gold splitting, and final-hit attribution', () => {
+    const participants = [
+      { creature_id: 'cr-1', spawn_seq: 3, character_id: 'ch-1', qualification: 'qualified' as const, qualified_by: 'damage', party_id_at_qualification: 'p-1' },
+      { creature_id: 'cr-1', spawn_seq: 3, character_id: 'ch-2', qualification: 'qualified' as const, qualified_by: 'damage', party_id_at_qualification: 'p-1' },
+    ];
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ hp: 1, is_humanoid: true, loot_table: [{ type: 'gold', item_id: null, chance: 1, min: 20, max: 20 }] })],
+      fighters: [fighter({ character_id: 'ch-1', party_id: 'p-1', cha: 10 }), fighter({ character_id: 'ch-2', party_id: 'p-1', cha: 20 })],
+      participation: participants,
+      effects: [{ id: 'gold-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend', target_character_id: null,
+        target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null, stacks: 1, magnitude: 9,
+        config: {}, expires_at: nowPlus(60_000), next_due_at: nowPlus(-1), interval_ms: 2000, last_pulse_tick: 5, is_reservation: false }],
+    }), { abilities });
+    expect(out.rewards).toHaveLength(2);
+    expect(out.rewards.every((reward) => reward.xp_awarded === 57)).toBe(true);
+    expect(out.rewards.every((reward) => reward.gold_awarded === 11)).toBe(true);
+    expect(out.rewards.find((reward) => reward.character_id === 'ch-1')?.is_killer).toBe(true);
+    expect(out.rewards.find((reward) => reward.character_id === 'ch-2')?.is_killer).toBe(false);
+  });
+
+  it('resolves item-pool loot deterministically and fences it to the creature life', () => {
+    const base = snapshot({
+      creatures: [creature({ hp: 1, loot_mode: 'item_pool', drop_chance: 1 })],
+      loot_items: [{ id: 'item-1', name: 'Iron Blade', level: 10, rarity: 'common', item_type: 'equipment', world_drop: true, is_soulbound: false, drop_weight: 10 }],
+      effects: [{ id: 'loot-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend', target_character_id: null,
+        target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null, stacks: 1, magnitude: 9,
+        config: {}, expires_at: nowPlus(60_000), next_due_at: nowPlus(-1), interval_ms: 2000, last_pulse_tick: 5, is_reservation: false }],
+    });
+    const a = resolveNodeTick(base, { abilities });
+    const b = resolveNodeTick(base, { abilities });
+    expect(a.loot).toEqual(b.loot);
+    expect(a.loot).toContainEqual(expect.objectContaining({ node_creature_id: 'nc-1', creature_id: 'cr-1', spawn_seq: 3, item_id: 'item-1', outcome: 'dropped' }));
+  });
+
+  it('records no-drop and fails closed for unique table loot', () => {
+    const kill = (c: SnapshotCreature, items: NodeSnapshot['loot_items'] = [], entries: NodeSnapshot['loot_table_entries'] = []) => resolveNodeTick(snapshot({
+      creatures: [c], loot_items: items, loot_table_entries: entries,
+      effects: [{ id: 'table-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend', target_character_id: null,
+        target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null, stacks: 1, magnitude: 9,
+        config: {}, expires_at: nowPlus(60_000), next_due_at: nowPlus(-1), interval_ms: 2000, last_pulse_tick: 5, is_reservation: false }],
+    }), { abilities });
+    expect(kill(creature({ hp: 1, loot_mode: 'item_pool', drop_chance: 0 })).loot).toContainEqual(expect.objectContaining({ outcome: 'no_drop' }));
+    const unique = { id: 'unique-1', name: 'Crown', level: 10, rarity: 'unique', item_type: 'equipment', world_drop: false, is_soulbound: false, drop_weight: 10 };
+    expect(kill(creature({ hp: 1, loot_mode: 'legacy_table', loot_table_id: 'table-1', drop_chance: 1 }), [unique],
+      [{ loot_table_id: 'table-1', item_id: 'unique-1', weight: 10 }]).loot).toContainEqual(expect.objectContaining({ outcome: 'unique_rejected', item_id: null }));
   });
 
   it('keeps an unengaged non-aggressive creature idle on entry', () => {

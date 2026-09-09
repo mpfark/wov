@@ -44,6 +44,7 @@ export const CLAIM = {
         spawn_seq: 7,
         stats: { str: 10 },
         tank_fighter_id: null,
+        loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
       },
     ],
     effects: [],
@@ -114,6 +115,11 @@ export const CLAIM = {
     ],
     participation: [],
     pending_events: [],
+    reward_config: { xp_boost_multiplier: 1, drop_chance_regular: 0.35, drop_chance_rare: 0.6,
+      drop_chance_boss: 1, equip_level_min_offset: -3, equip_level_max_offset: 0,
+      common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15,
+      consumable_level_min_offset: -5, consumable_level_max_offset: 0 },
+    loot_items: [], loot_table_entries: [],
     tank_candidates: [
       {
         fighter_id: 'aaaa0000-0000-4000-8000-000000000005',
@@ -272,6 +278,7 @@ describe('installed claim contract', () => {
     ]);
     expect(out.rewards).toEqual([
       {
+        node_creature_id: 'aaaa0000-0000-4000-8000-000000000004',
         creature_id: 'aaaa0000-0000-4000-8000-000000000003',
         spawn_seq: 7,
         character_id: 'aaaa0000-0000-4000-8000-000000000002',

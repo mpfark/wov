@@ -31,11 +31,13 @@ function snapshot(abilityKey = 'frostbolt', classKey = 'wizard'): NodeSnapshot {
     creatures: [{ id: 'spawn', creature_id: 'creature', spawn_seq: 4, hp: 1000, max_hp: 1000,
       is_alive: true, engaged: true, pending_action: null, tank_fighter_id: 'fighter', name: 'Target',
       level: 1, ac: 1, stats: { str: 1 }, rarity: 'common', is_humanoid: false,
-      is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null }],
+      is_aggressive: true, boss_crit_flavors: null, boss_death_cry: null,
+      loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [] }],
     effects: [], intents: [{ id: 'intent', seq: 1, character_id: 'caster', intent_kind: 'ability',
       ability_key: abilityKey, stance_key: null, target_creature_id: 'creature' }],
     boss_abilities: [], boss_configurations: [], participation: [], pending_events: [],
     tank_candidates: [{ fighter_id: 'fighter', character_id: 'caster', entry_seq: 7 }],
+    reward_config: { xp_boost_multiplier: 1, drop_chance_regular: .35, drop_chance_rare: .6, drop_chance_boss: 1, equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: .15, consumable_level_min_offset: -5, consumable_level_max_offset: 0 }, loot_items: [], loot_table_entries: [],
   };
 }
 

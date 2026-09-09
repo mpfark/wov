@@ -112,6 +112,13 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     }
     case 'character_died': return `${target === 'you' ? 'You are' : `${event.target?.name || subject} is`} defeated.`;
     case 'creature_died': return `${event.target?.name || subject} is defeated.`;
+    case 'xp_reward': return `${subject} ${verb('gains', 'gain')} ${amount ?? 0} experience.`;
+    case 'gold_reward': return `${subject} ${verb('loots', 'loot')} ${amount ?? 0} gold.`;
+    case 'loot_drop': return `Loot drops from ${event.target?.name || 'the creature'}.`;
+    case 'loot_result':
+      if (event.outcomeReason === 'no_drop' || event.outcomeReason === 'no_eligible_item') return `No item drops from ${event.target?.name || 'the creature'}.`;
+      if (event.outcomeReason === 'unique_rejected') return `A unique drop was withheld by the authoritative loot boundary.`;
+      return null;
     case 'boss_cast_evaded': return event.outcomeReason === 'no_target'
       ? `${action} lands on empty ground.` : `${action} is evaded.`;
     case 'boss_telegraph': return typeof meta.text === 'string' && meta.text.trim()

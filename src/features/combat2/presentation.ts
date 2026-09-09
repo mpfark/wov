@@ -263,6 +263,7 @@ const EVENT_TYPES: Record<string, LogEventType> = {
   dot_applied: 'debuff', debuff_applied: 'debuff', fighter_fled: 'positioning', fighter_exit_failed: 'error',
   boss_telegraph: 'boss_telegraph', boss_cast_evaded: 'mitigation',
   creature_died: 'kill', character_died: 'death', multi_attack_summary: 'ability',
+  xp_reward: 'reward', gold_reward: 'reward', loot_drop: 'loot', loot_result: 'loot',
 };
 
 function presentEvents(batches: readonly Combat2TickBatch[], characterId: string, classKey?: string): GameLogEvent[] {

@@ -38,4 +38,12 @@ describe('final Combat2 ability presentation', () => {
       { characterId: 'caster', classKey: 'wizard' }))
       .toBe('Your Fireball does not apply Scorched to Wraith.');
   });
+
+  it('renders authoritative XP, gold, loot and no-drop outcomes without calculating them', () => {
+    const creature = { type: 'creature' as const, id: 'creature', name: 'Wraith' };
+    expect(formatCombat2Event({ ...event('xp_reward', '', 25), target: creature }, context)).toBe('You gain 25 experience.');
+    expect(formatCombat2Event({ ...event('gold_reward', '', 8), target: creature }, context)).toBe('You loot 8 gold.');
+    expect(formatCombat2Event({ ...event('loot_drop', '', 0), target: creature }, context)).toBe('Loot drops from Wraith.');
+    expect(formatCombat2Event({ ...event('loot_result', '', 0), target: creature, outcomeReason: 'no_drop' }, context)).toBe('No item drops from Wraith.');
+  });
 });

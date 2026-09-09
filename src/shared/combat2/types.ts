@@ -150,6 +150,49 @@ export interface SnapshotCreature {
   is_aggressive: boolean | null;
   boss_crit_flavors: unknown;
   boss_death_cry: string | null;
+  loot_mode: 'legacy_table' | 'item_pool' | 'salvage_only';
+  loot_table_id: string | null;
+  drop_chance: number | null;
+  loot_table: SnapshotLootEntry[];
+}
+
+export interface SnapshotLootEntry {
+  type: string;
+  item_id: string | null;
+  chance: number | null;
+  min: number | null;
+  max: number | null;
+}
+
+export interface SnapshotLootItem {
+  id: string;
+  name: string;
+  level: number;
+  rarity: string;
+  item_type: string;
+  world_drop: boolean;
+  is_soulbound: boolean;
+  drop_weight: number;
+}
+
+export interface SnapshotLootTableEntry {
+  loot_table_id: string;
+  item_id: string;
+  weight: number;
+}
+
+export interface SnapshotRewardConfig {
+  xp_boost_multiplier: number;
+  drop_chance_regular: number;
+  drop_chance_rare: number;
+  drop_chance_boss: number;
+  equip_level_min_offset: number;
+  equip_level_max_offset: number;
+  common_pct: number;
+  uncommon_pct: number;
+  consumable_drop_chance: number;
+  consumable_level_min_offset: number;
+  consumable_level_max_offset: number;
 }
 
 export interface SnapshotEffect {
@@ -259,6 +302,9 @@ export interface NodeSnapshot {
   pending_events?: SnapshotPendingEvent[];
   /** Ordered representatives captured with this encounter version. */
   tank_candidates: SnapshotTankCandidate[];
+  reward_config: SnapshotRewardConfig;
+  loot_items: SnapshotLootItem[];
+  loot_table_entries: SnapshotLootTableEntry[];
 }
 
 
@@ -329,12 +375,24 @@ export interface ProposedDeparture {
 }
 
 export interface ProposedReward {
+  node_creature_id: string;
   creature_id: string;
   spawn_seq: number;
   character_id: string;
   xp_awarded: number;
   gold_awarded: number;
   is_killer: boolean;
+}
+
+export interface ProposedLoot {
+  node_creature_id: string;
+  creature_id: string;
+  spawn_seq: number;
+  loot_key: string;
+  item_id: string | null;
+  creature_name: string;
+  mode: 'item_pool' | 'legacy_table' | 'inline' | 'salvage_only';
+  outcome: 'dropped' | 'no_drop' | 'unique_rejected' | 'no_eligible_item';
 }
 
 /** Ordered, structured presentation event. No prose is assembled here. */
@@ -372,6 +430,7 @@ export interface ProposedTick {
   fighters: ProposedFighterState[];
   departures: ProposedDeparture[];
   rewards: ProposedReward[];
+  loot: ProposedLoot[];
   events: TickEvent[];
   /** Exact intent ids the commit may mark consumed. */
   intent_ids: string[];
@@ -392,6 +451,7 @@ export function emptyProposedTick(tick: number): ProposedTick {
     fighters: [],
     departures: [],
     rewards: [],
+    loot: [],
     events: [],
     intent_ids: [],
     participation: [],

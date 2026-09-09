@@ -83,7 +83,9 @@ def main() -> int:
             write_source(dst, want)
 
     worker_dst = COMBAT2_DST / "process-node-tick-once.ts"
-    worker_want = to_deno(read_source(WORKER_SRC)).replace("../../shared/combat2/", "./")
+    worker_want = (to_deno(read_source(WORKER_SRC))
+        .replace("../../shared/combat2/", "./")
+        .replace("../../shared/config/", "../config/"))
     if check:
         if not worker_dst.exists() or read_source(worker_dst) != worker_want:
             drift.append("combat2/process-node-tick-once.ts")

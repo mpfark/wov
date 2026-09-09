@@ -73,6 +73,7 @@ function creature(over: Partial<SnapshotCreature> = {}): SnapshotCreature {
     is_aggressive: true,
     boss_crit_flavors: null,
     boss_death_cry: null,
+    loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
     ...over,
   };
 }
@@ -115,6 +116,11 @@ function snapshot(over: Partial<NodeSnapshot> = {}): NodeSnapshot {
     intents: [],
     boss_abilities: [],
     tank_candidates: [{ fighter_id: 'f-1', character_id: 'ch-1', entry_seq: 1 }],
+    reward_config: { xp_boost_multiplier: 1, drop_chance_regular: 0.5, drop_chance_rare: 0.75,
+      drop_chance_boss: 1, equip_level_min_offset: -3, equip_level_max_offset: 0,
+      common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15,
+      consumable_level_min_offset: -5, consumable_level_max_offset: 0 },
+    loot_items: [], loot_table_entries: [],
     ...over,
   };
 }

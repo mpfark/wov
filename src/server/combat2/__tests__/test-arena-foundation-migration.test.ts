@@ -55,6 +55,7 @@ describe('Combat2 test-arena foundation migration', () => {
     expect(DECODE).toContain('snapshot.encounter.test_arena_id: required');
     expect(RESOLVER).toContain("snapshot.encounter.test_arena_id == null ? [...recipients].sort() : []");
     const proposal = TYPES.slice(TYPES.indexOf('export interface ProposedTick'), TYPES.indexOf('export function emptyProposedTick'));
-    expect(proposal).not.toMatch(/loot|durability|achievement|progression/);
+    expect(proposal).toContain('loot: ProposedLoot[]');
+    expect(proposal).not.toMatch(/durability|achievement|progression/);
   });
 });
