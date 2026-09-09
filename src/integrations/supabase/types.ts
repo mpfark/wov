@@ -3319,6 +3319,84 @@ export type Database = {
         }
         Relationships: []
       }
+      hidden_connection_opening: {
+        Row: {
+          destination_node_id: string
+          direction: string
+          opened_at: string
+          opened_until: string
+          origin_node_id: string
+        }
+        Insert: {
+          destination_node_id: string
+          direction: string
+          opened_at?: string
+          opened_until: string
+          origin_node_id: string
+        }
+        Update: {
+          destination_node_id?: string
+          direction?: string
+          opened_at?: string
+          opened_until?: string
+          origin_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hidden_connection_opening_destination_node_id_fkey"
+            columns: ["destination_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hidden_connection_opening_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hidden_path_search_request: {
+        Row: {
+          character_id: string
+          created_at: string
+          origin_node_id: string
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          origin_node_id: string
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          origin_node_id?: string
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hidden_path_search_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hidden_path_search_request_origin_node_id_fkey"
+            columns: ["origin_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issue_reports: {
         Row: {
           character_id: string | null
@@ -5997,6 +6075,19 @@ export type Database = {
             }
             Returns: number
           }
+      hidden_connection_is_open: {
+        Args: {
+          _destination_node_id: string
+          _direction: string
+          _origin_node_id: string
+        }
+        Returns: boolean
+      }
+      hidden_path_openings: { Args: { _character_id: string }; Returns: Json }
+      hidden_path_search: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
       idle_shutdown_check: { Args: never; Returns: undefined }
       inspect_character_equipment: {
         Args: { _character_id: string }
@@ -6113,6 +6204,7 @@ export type Database = {
         Args: { p_character_id: string; p_loot_id: string }
         Returns: boolean
       }
+      player_world_nodes: { Args: never; Returns: Json }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
       prune_effects_catchup_log: { Args: { _keep?: number }; Returns: number }
