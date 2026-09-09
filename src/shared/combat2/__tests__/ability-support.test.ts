@@ -2,9 +2,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
 import { combat2AbilitySupport, COMBAT2_UNSUPPORTED_ABILITIES } from '../ability-support';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 
-const records = (inventory as { abilities: AuthoredAbilityRecord[] }).abilities;
+const authored = inventory as AuthoredAbilityInventory;
+const records = authored.abilities;
 
 describe('Combat2 ability semantic release gate', () => {
   it('gives every one of the 36 active authored abilities an explicit support result', () => {
@@ -20,7 +21,7 @@ describe('Combat2 ability semantic release gate', () => {
   });
 
   it('carries the canonical support decision into every catalogue spec', () => {
-    const catalog = buildAbilityCatalog(records);
+    const catalog = buildAbilityCatalog(records, authored.statuses);
     expect(catalog.rejected).toEqual([]);
     for (const key of Object.keys(COMBAT2_UNSUPPORTED_ABILITIES)) {
       expect(catalog.specs.get(key)?.support).toMatchObject({ supported: false });

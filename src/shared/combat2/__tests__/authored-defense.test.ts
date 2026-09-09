@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { decodeSnapshot } from '../decode';
 import { resolveNodeTick } from '../resolver';
-import type { NodeSnapshot, ProposedTick, SnapshotEffect, SnapshotIntent } from '../types';
+import type { NodeSnapshot, ProposedTick, SnapshotEffect, SnapshotEquipment, SnapshotIntent } from '../types';
 
-const records = (inventory as { abilities: AuthoredAbilityRecord[] }).abilities;
-const catalog = buildAbilityCatalog(records);
+const authored = inventory as AuthoredAbilityInventory;
+const records = authored.abilities;
+const catalog = buildAbilityCatalog(records, authored.statuses);
 const deps = { abilities: catalog.specs };
 const NOW = '2026-09-04T00:00:00.000Z';
 const CHARACTER = 'aaaa0000-0000-4000-8000-000000000001';
@@ -170,5 +171,58 @@ describe('real authored defensive activation → proposal → decoded next tick'
     for (const hit of attacks(out)) expect(hit.meta?.percentMitigated).toBeGreaterThan(0);
     expect(out.characters.find(c => c.id === CHARACTER)?.hp).toBe(1000 - attacks(out).reduce((sum, e) => sum + e.amount!, 0));
     expect(out.pending_event_ids).toEqual(['entry']);
+  });
+});
+
+describe('Shield Wall authored equipment and block-chance contract', () => {
+  const shield = { slot: 'off_hand', weapon_tag: 'shield', item_present: true } as SnapshotEquipment;
+  const tome = { slot: 'off_hand', weapon_tag: 'tome', item_present: true } as SnapshotEquipment;
+
+  function shieldWallActivation(equipment: SnapshotEquipment[]) {
+    const input = snapshot();
+    input.fighters[0].class = 'templar';
+    input.fighters[0].equipment = equipment;
+    input.intents = [intent('shield_wall', 'stance_activate')];
+    return resolveNodeTick(input, deps);
+  }
+
+  it('requires the authored off-hand shield tag rather than any off-hand item', () => {
+    expect(shieldWallActivation([tome]).events).toContainEqual(expect.objectContaining({
+      kind: 'action_rejected', abilityKey: 'shield_wall', outcomeReason: 'requires_shield',
+    }));
+    expect(shieldWallActivation([shield]).events.some(event => event.kind === 'action_rejected')).toBe(false);
+  });
+
+  it('applies block only when the deterministic authored chance succeeds', () => {
+    const input = snapshot();
+    input.fighters[0].equipment = [shield];
+    input.effects = [{
+      id: 'shield-wall', kind: 'block', effect_type: 'block', ability_key: 'shield_wall',
+      target_character_id: CHARACTER, target_creature_id: null, source_character_id: CHARACTER,
+      source_creature_id: null, stacks: 1, magnitude: 9, config: { block_chance: 0 },
+      expires_at: null, next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: false,
+    }];
+    const noBlock = seeded(input, out => attacks(out)[0]?.hitQuality === 'normal').out;
+    expect(attacks(noBlock)[0].meta).toMatchObject({ blocked: 0 });
+    expect(attacks(noBlock)[0].meta?.blockAbilityKey).toBeUndefined();
+
+    input.effects[0].config = { block_chance: 0.95 };
+    const blocked = seeded(input, out => attacks(out)[0]?.hitQuality === 'normal'
+      && Number(attacks(out)[0].meta?.blocked ?? 0) > 0).out;
+    expect(attacks(blocked)[0].meta).toMatchObject({ blocked: 9, blockAbilityKey: 'shield_wall' });
+  });
+
+  it('does not block after the shield is no longer equipped', () => {
+    const input = snapshot();
+    input.fighters[0].equipment = [tome];
+    input.effects = [{
+      id: 'shield-wall', kind: 'block', effect_type: 'block', ability_key: 'shield_wall',
+      target_character_id: CHARACTER, target_creature_id: null, source_character_id: CHARACTER,
+      source_creature_id: null, stacks: 1, magnitude: 9, config: { block_chance: 0.95 },
+      expires_at: null, next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: false,
+    }];
+    const out = seeded(input, proposal => attacks(proposal)[0]?.hitQuality === 'normal').out;
+    expect(attacks(out)[0].meta).toMatchObject({ blocked: 0 });
+    expect(attacks(out)[0].meta?.blockAbilityKey).toBeUndefined();
   });
 });

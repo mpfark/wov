@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { decodeSnapshot } from '../decode';
 import { resolveNodeTick } from '../resolver';
 import type { NodeSnapshot, ProposedTick, SnapshotEffect, SnapshotIntent } from '../types';
 
-const catalog = buildAbilityCatalog((inventory as { abilities: AuthoredAbilityRecord[] }).abilities);
+const authored = inventory as AuthoredAbilityInventory;
+const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
 const deps = { abilities: catalog.specs };
 const NOW = Date.parse('2026-09-07T12:00:00.000Z');
 

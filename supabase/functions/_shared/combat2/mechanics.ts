@@ -51,6 +51,21 @@ import { COMBAT2_TICK_MS, combat2TickTiming } from './time.ts';
 export type AbilityTargetType = 'self' | 'ally' | 'party' | 'enemy' | 'node';
 export type AbilityActivation = 'queued' | 'instant' | 'stance';
 
+export interface AbilityStatusSpec {
+  key: string;
+  effectType: string;
+  classification: 'dot' | 'damage_amp';
+  stackNoun: string;
+  tickIntervalMs: number | null;
+  magnitude: Record<string, unknown>;
+  duration: Record<string, unknown>;
+  stacks: Record<string, unknown>;
+  modifier: Record<string, unknown>;
+  damageType: string | null;
+  trigger: 'weapon_hit' | 'ability_hit' | 'pulse' | 'successful_pulse_hit' | 'on_hit';
+  chancePct: number | null;
+}
+
 /**
  * Authored ability definition, flattened from `abilities` + `base_abilities` +
  * the class assignment. Built ONLY by `catalog.ts`; never hand-written in
@@ -89,6 +104,8 @@ export interface AbilitySpec {
   effectType: string | null;
   stackType: string | null;
   config: Record<string, unknown>;
+  /** Strictly authored reusable status applied by this ability, when enabled. */
+  appliedStatus: AbilityStatusSpec | null;
   /** Canonical release decision; checked before any resolver resource change. */
   support: { supported: boolean; reason: string | null };
 }
@@ -134,6 +151,8 @@ export interface MechanicOutcome {
   consumeEffectIds: string[];
   events: Array<Omit<TickEvent, 'seq'>>;
   missed?: boolean;
+  /** Number of qualifying landed ability hits, in deterministic event order. */
+  landedHits?: number;
   /** How many stacks a finisher burned (`stack_consume`). */
   meta_stacks_consumed?: number;
   /**
@@ -196,7 +215,7 @@ export function resolveMainHandDie(
 /** True when the authoritative projection shows a shield in the off hand. */
 export function hasShield(equipment: readonly SnapshotEquipment[]): boolean {
   return equipment.some(
-    (row) => row.slot === 'off_hand' && (row.item_type ?? 'shield') === 'shield',
+    (row) => row.slot === 'off_hand' && row.weapon_tag === 'shield',
   );
 }
 
@@ -399,6 +418,7 @@ function offensiveHit(
   });
 
   outcome.creatureDamage = breakdown.applied;
+  outcome.landedHits = 1;
   outcome.events.push({
     kind: 'attack',
     abilityKey: spec.abilityKey,
@@ -460,6 +480,7 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
   const breakdown = applyMitigationPipeline({ normalDamage: normal, critBonus,
     amplification: ctx.amplification, gradedCap: gradedCapFor(decision.quality, decision.margin), minimumDamage: 1 });
   outcome.creatureDamage = breakdown.applied;
+  outcome.landedHits = 1;
   outcome.events.push({ kind: 'attack', actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name },
     target: { type: 'creature', id: creature.creature_id, name: creature.name }, hitQuality: decision.quality,
     amount: breakdown.applied, meta: { basicAttack: true, isCrit: decision.isCrit, damageType: 'physical', weaponDie: weapon.die,
@@ -479,6 +500,8 @@ function buffEffect(
 ): ProposedEffectInsert {
   const durationMs = resolveDurationMs(ctx, spec);
   const isStance = spec.activation === 'stance';
+  const target = targetCharacterId === ctx.actor.character_id ? ctx.actor
+    : ctx.ally?.character_id === targetCharacterId ? ctx.ally : null;
   const timing = !isStance && durationMs
     ? combat2TickTiming(ctx.tick, durationMs, spec.intervalMs ?? COMBAT2_TICK_MS)
     : null;
@@ -490,7 +513,9 @@ function buffEffect(
     source_character_id: ctx.actor.character_id,
     stacks: 1,
     magnitude,
-    config: { ...spec.config, ...extraConfig, ...(timing ?? {}), ...(isStance ? { persistent_stance: true } : {}) },
+    config: { ...spec.config, ...extraConfig, ...(timing ?? {}),
+      ...(target ? { target_fighter_id: target.id, target_entry_seq: target.entry_seq } : {}),
+      ...(isStance ? { persistent_stance: true } : {}) },
     // A stance has no wall-clock expiry: its lifetime is the stance itself.
     expires_at: isStance || !durationMs ? null : iso(ctx.nowMs + durationMs),
     next_due_at: timing ? iso(ctx.nowMs + (spec.intervalMs ?? COMBAT2_TICK_MS)) : null,
@@ -519,7 +544,12 @@ function characterBuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): M
   return outcome;
 }
 
-function partyPresenceEffect(ctx: MechanicContext, spec: AbilitySpec, kind: string): MechanicOutcome {
+function partyPresenceEffect(
+  ctx: MechanicContext,
+  spec: AbilitySpec,
+  kind: string,
+  cpPerTick = 0,
+): MechanicOutcome {
   const outcome = emptyOutcome();
   outcome.cpCost = spec.cpCost;
   const magnitude = resolveAmount(ctx, spec, `${kind}:mag`, null) ?? 0;
@@ -528,14 +558,15 @@ function partyPresenceEffect(ctx: MechanicContext, spec: AbilitySpec, kind: stri
   outcome.effects.push({
     ...buffEffect(ctx, { ...spec, intervalMs: COMBAT2_TICK_MS }, kind, ctx.actor.character_id, magnitude, {
       ...timing, presence_effect: true, source_fighter_id: ctx.actor.id,
-      source_entry_seq: ctx.actor.entry_seq,
+      source_entry_seq: ctx.actor.entry_seq, cp_per_tick: Math.max(0, Math.floor(cpPerTick)),
     }),
     interval_ms: COMBAT2_TICK_MS,
     next_due_at: iso(ctx.nowMs + COMBAT2_TICK_MS),
   });
   outcome.events.push({ kind: 'aura_started', abilityKey: spec.abilityKey,
     actor: { type: 'character', id: ctx.actor.character_id, name: ctx.actor.name }, amount: magnitude,
-    meta: { effectKind: kind, durationMs, intervalMs: COMBAT2_TICK_MS } });
+    meta: { effectKind: kind, durationMs, intervalMs: COMBAT2_TICK_MS,
+      cpPerTick: Math.max(0, Math.floor(cpPerTick)) } });
   return outcome;
 }
 
@@ -557,15 +588,22 @@ function creatureDebuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): 
   const timing = durationMs
     ? combat2TickTiming(ctx.tick, durationMs, spec.intervalMs ?? COMBAT2_TICK_MS)
     : null;
+  const status = spec.appliedStatus;
+  const maxStacks = Math.max(1, Math.floor(Number(
+    (status?.stacks.max_stacks_calc as Record<string, unknown> | undefined)?.base ?? spec.config.max_stacks ?? 1,
+  )));
   outcome.effects.push({
     kind,
-    effect_type: spec.effectType ?? spec.abilityKey,
+    effect_type: status?.effectType ?? spec.effectType ?? spec.abilityKey,
     ability_key: spec.abilityKey,
     target_creature_id: creature.creature_id,
     source_character_id: ctx.actor.character_id,
     stacks: 1,
     magnitude,
-    config: { ...spec.config, ...(timing ?? {}) },
+    config: { ...spec.config, ...(timing ?? {}), node_creature_id: creature.id,
+      spawn_seq: creature.spawn_seq, source_fighter_id: ctx.actor.id,
+      source_entry_seq: ctx.actor.entry_seq, max_stacks: maxStacks,
+      damage_type: status?.damageType ?? spec.damageType },
     expires_at: durationMs ? iso(ctx.nowMs + durationMs) : null,
     next_due_at: spec.intervalMs ? iso(ctx.nowMs + spec.intervalMs) : null,
     interval_ms: spec.intervalMs,
@@ -601,6 +639,7 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       const single = offensiveHit(ctx, spec, `multi_attack:${i}`);
       if (single.rejected) return single;
       total += single.creatureDamage ?? 0;
+      merged.landedHits = (merged.landedHits ?? 0) + (single.landedHits ?? 0);
       merged.events.push(...single.events);
     }
     merged.creatureDamage = total;
@@ -650,7 +689,8 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     // Authored floor: the caster may never fall below the reserved HP.
     const reserve = Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'reserve_hp') ?? 0));
     const spendable = Math.max(0, ctx.actor.hp - reserve);
-    const amount = Math.min(requested, spendable);
+    const receivable = Math.max(0, target.max_hp - target.hp);
+    const amount = Math.min(requested, spendable, receivable);
     if (amount <= 0) {
       outcome.rejected = 'insufficient_hp';
       return outcome;
@@ -680,13 +720,12 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   offense_buff: (ctx, spec) => characterBuff(ctx, spec, 'offense'),
   regen_buff: (ctx, spec) => {
     if (spec.targetType !== 'party') return characterBuff(ctx, spec, 'regen');
-    const outcome = emptyOutcome();
-    outcome.cpCost = spec.cpCost;
-    outcome.partyRestoration = {
-      hp: resolveAmount(ctx, spec, 'regen:hp', null) ?? 0,
-      cp: Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'cp_per_tick') ?? 0)),
-    };
-    return outcome;
+    return partyPresenceEffect(
+      ctx,
+      spec,
+      'party_regen',
+      resolveMechanicCalc(ctx, spec, 'cp_per_tick') ?? 0,
+    );
   },
   stealth_buff: (ctx, spec) => characterBuff(ctx, spec, 'stealth'),
 

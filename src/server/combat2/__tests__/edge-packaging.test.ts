@@ -58,7 +58,9 @@ describe("combat2 Edge packaging", () => {
     }
 
     const workerMirror = resolve(COMBAT2_DST, "process-node-tick-once.ts");
-    const expectedWorker = toDeno(readFileSync(WORKER_SRC, "utf8")).replaceAll("../../shared/combat2/", "./");
+    const expectedWorker = toDeno(readFileSync(WORKER_SRC, "utf8"))
+      .replaceAll("../../shared/combat2/", "./")
+      .replaceAll("../../shared/config/", "../config/");
     expect(readFileSync(workerMirror, "utf8")).toBe(expectedWorker);
     expect(readFileSync(resolve(COMBAT2_DST, "dispatch-node-ticks-once.ts"), "utf8"))
       .toBe(toDeno(readFileSync(DISPATCHER_SRC, "utf8")));

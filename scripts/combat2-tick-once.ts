@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import inventory from '../src/shared/combat/inventory/active-abilities.json' with { type: 'json' };
 import type { AuthoredAbilityRecord } from '../src/shared/combat2/catalog.ts';
+import type { AppliedStatusRow } from '../src/shared/config/status-contract.ts';
 import {
   processNodeTickOnce,
   type CommitTickArgs,
@@ -34,6 +35,7 @@ const transport: NodeTickTransport = {
 const result = await processNodeTickOnce(nodeId, {
   transport,
   abilityRecords: (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
+  statusRecords: (inventory as { statuses: AppliedStatusRow[] }).statuses,
 });
 console.log(JSON.stringify(result, null, 2));
 if (!result.ok) process.exitCode = 1;

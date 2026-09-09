@@ -4,13 +4,14 @@ import {
   buildAbilityCatalog,
   buildAbilitySpec,
   lookupSpec,
-  type AuthoredAbilityRecord,
+  type AuthoredAbilityInventory,
 } from '../catalog';
 import { adaptBossCast, buildBossCatalog, type AuthoredBossCast } from '../boss-catalog';
-import { resolveMainHandDie } from '../mechanics';
+import { hasShield, resolveMainHandDie } from '../mechanics';
 import type { SnapshotEquipment } from '../types';
 
-const records = (inventory as { abilities: AuthoredAbilityRecord[] }).abilities;
+const authored = inventory as AuthoredAbilityInventory;
+const records = authored.abilities;
 
 describe('authored ability catalogue', () => {
   it('reads the real active inventory, not a hand-written fixture', () => {
@@ -18,7 +19,7 @@ describe('authored ability catalogue', () => {
   });
 
   it('accounts for every authored record exactly once: adapted or explicitly refused', () => {
-    const { specs, rejected } = buildAbilityCatalog(records);
+    const { specs, rejected } = buildAbilityCatalog(records, authored.statuses);
     const refused = new Set(rejected.map((r) => `${r.classKey}:${r.abilityKey}`));
     let adapted = 0;
     for (const record of records) {
@@ -79,7 +80,7 @@ describe('authored ability catalogue', () => {
   });
 
   it('resolves a class-scoped key in preference to the bare ability key', () => {
-    const catalog = buildAbilityCatalog(records);
+    const catalog = buildAbilityCatalog(records, authored.statuses);
     const { specs } = catalog;
     const scoped = [...specs.keys()].find((k) => k.includes(':'));
     expect(scoped).toBeDefined();
@@ -187,5 +188,11 @@ describe('equipment-derived weapon dice', () => {
     );
     expect(out.kind).toBe('weapon');
     if (out.kind === 'weapon') expect(out.die).toBeGreaterThan(0);
+  });
+
+  it('distinguishes an authored shield tag from another off-hand item', () => {
+    expect(hasShield([{ slot: 'off_hand', weapon_tag: 'shield' } as SnapshotEquipment])).toBe(true);
+    expect(hasShield([{ slot: 'off_hand', weapon_tag: null, item_type: 'equipment' } as SnapshotEquipment])).toBe(false);
+    expect(hasShield([{ slot: 'off_hand', weapon_tag: 'wand', item_type: 'equipment' } as SnapshotEquipment])).toBe(false);
   });
 });

@@ -79,6 +79,16 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       return `${subject} ${verb('uses', 'use')} ${label}${event.target ? ` on ${own && ownTarget ? 'yourself' : target}` : ''}${amount === null ? '' : ` (up to ${amount} healing)`}.`;
     case 'dot_applied': case 'debuff_applied':
       return `${subject} ${verb('applies', 'apply')} ${label} to ${target}.`;
+    case 'status_applied': {
+      const status = combat2AbilityLabel(meta.status);
+      return `${action} applies ${status} to ${target}.`;
+    }
+    case 'status_missed': {
+      const status = combat2AbilityLabel(meta.status);
+      return `${action} does not apply ${status} to ${target}.`;
+    }
+    case 'effect_invalidated':
+      return `${combat2AbilityLabel(meta.effectType)} ends because its target is no longer valid.`;
     case 'stance_activated':
       return `${subject} ${verb('activates', 'activate')} ${label}${amount === null ? '' : `, reserving ${amount} CP`}.`;
     case 'stance_dropped': return `${subject} ${verb('drops', 'drop')} ${label}.`;

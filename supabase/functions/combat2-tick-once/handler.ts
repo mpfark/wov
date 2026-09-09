@@ -1,4 +1,5 @@
 import type { AuthoredAbilityRecord } from "../_shared/combat2/catalog.ts";
+import type { AppliedStatusRow } from "../_shared/config/status-contract.ts";
 import type {
   CommitTickArgs,
   NodeTickRunResult,
@@ -26,6 +27,7 @@ export interface Combat2TickHandlerDependencies {
     dependencies: ProcessNodeTickDependencies,
   ): Promise<NodeTickRunResult>;
   abilityRecords: readonly AuthoredAbilityRecord[];
+  statusRecords?: readonly AppliedStatusRow[];
   log?: (message: string, detail: Record<string, unknown>) => void;
 }
 
@@ -108,6 +110,7 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
     try {
       result = await deps.processNodeTickOnce(nodeId, {
         abilityRecords: deps.abilityRecords,
+        statusRecords: deps.statusRecords,
         transport: {
           async claimNode(id) {
             const { data, error } = await client.rpc("node_tick_claim", { _node_id: id });

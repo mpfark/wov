@@ -27,7 +27,9 @@ for (const source of files(sourceRoot)) {
 
 const workerSource = join(root, 'src/server/combat2/process-node-tick-once.ts');
 writeFileSync(join(destinationRoot, 'process-node-tick-once.ts'),
-  toDeno(readFileSync(workerSource, 'utf8')).replaceAll('../../shared/combat2/', './'));
+  toDeno(readFileSync(workerSource, 'utf8'))
+    .replaceAll('../../shared/combat2/', './')
+    .replaceAll('../../shared/config/', '../config/'));
 const dispatcherSource = join(root, 'src/server/combat2/dispatch-node-ticks-once.ts');
 writeFileSync(join(destinationRoot, 'dispatch-node-ticks-once.ts'), toDeno(readFileSync(dispatcherSource, 'utf8')));
 cpSync(join(root, 'src/shared/combat/inventory/active-abilities.json'), join(destinationRoot, 'active-abilities.json'));

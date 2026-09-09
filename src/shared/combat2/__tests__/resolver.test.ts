@@ -574,13 +574,21 @@ describe('combat2 resolver', () => {
   });
 
   it('does not consume absorb after a fully blocking effect', () => {
-    const out = resolveNodeTick(snapshot({
-      fighters: [fighter({ character_id: 'ch-1', ac: -100 })],
+    const input = snapshot({
+      fighters: [fighter({ character_id: 'ch-1', ac: -100, equipment: [
+        { slot: 'off_hand', weapon_tag: 'shield' } as SnapshotFighter['equipment'][number],
+      ] })],
       effects: [
         absorbEffect('shield', 'ch-1', 20),
-        { ...absorbEffect('block', 'ch-1', 999), kind: 'block', effect_type: 'block' },
+        { ...absorbEffect('block', 'ch-1', 999), kind: 'block', effect_type: 'block',
+          ability_key: 'shield_wall', config: { block_chance: 0.95 } },
       ],
-    }), { abilities });
+    });
+    let out = resolveNodeTick(input, { abilities });
+    for (let seed = 2; Number(out.events.find(event => event.kind === 'creature_attack')?.meta?.blocked ?? 0) === 0; seed++) {
+      input.encounter.id = `enc-${seed}`;
+      out = resolveNodeTick(input, { abilities });
+    }
     expect(out.events.find((event) => event.kind === 'creature_attack')?.meta?.absorbed).toBe(0);
     expect(out.effects_update).toEqual([]);
     expect(out.effects_delete).toEqual([]);

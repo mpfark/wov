@@ -25,7 +25,17 @@ describe('final Combat2 ability presentation', () => {
     expect(formatCombat2Event(event('absorb', 'divine_aegis', 8, { remaining: 0, depleted: true }), context))
       .toContain('Divine Aegis absorbs 8 damage');
     expect(formatCombat2Event(event('hp_transfer', 'transfer_health', 5,
-      { removedFromCaster: 12, wasted: 7 }), context))
-      .toBe('You transfer 12 HP with Transfer Health, restoring 5 HP to Ally (7 capped).');
+      { removedFromCaster: 5, wasted: 0 }), context))
+      .toBe('You transfer 5 HP with Transfer Health, restoring 5 HP to Ally.');
+  });
+
+  it('reports authored status application and failed proc rolls', () => {
+    const target = { type: 'creature' as const, id: 'creature', name: 'Wraith' };
+    expect(formatCombat2Event({ ...event('status_applied', 'fireball', 1, { status: 'scorched' }), target },
+      { characterId: 'caster', classKey: 'wizard' }))
+      .toBe('Your Fireball applies Scorched to Wraith.');
+    expect(formatCombat2Event({ ...event('status_missed', 'fireball', 0, { status: 'scorched' }), target },
+      { characterId: 'caster', classKey: 'wizard' }))
+      .toBe('Your Fireball does not apply Scorched to Wraith.');
   });
 });

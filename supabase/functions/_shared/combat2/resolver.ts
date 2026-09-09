@@ -18,6 +18,7 @@ import {
   COMBAT2_HEARTBEAT_MS,
   resolveBasicAttack,
   type AbilitySpec,
+  type AbilityStatusSpec,
   type MechanicContext,
   type MechanicOutcome,
 } from './mechanics.ts';
@@ -184,6 +185,107 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     for (const [id, c] of chars) if (c.present && c.hp > 0) set.add(id);
     return set;
   };
+
+  type AmplifiedSource = 'weapon' | 'ability' | 'stance' | 'dot' | 'proc';
+  const effectAppliesToSpawn = (
+    effect: { target_creature_id?: string | null; config?: Record<string, unknown> },
+    target: WorkingCreature,
+  ): boolean => {
+    if (effect.target_creature_id !== target.row.creature_id) return false;
+    const nodeCreatureId = effect.config?.node_creature_id;
+    const spawnSeq = effect.config?.spawn_seq;
+    // Compatibility for effects captured before the fencing fields existed.
+    // Every newly accepted player ability writes both fields below.
+    if (nodeCreatureId === undefined && spawnSeq === undefined) return true;
+    return nodeCreatureId === target.row.id && spawnSeq === target.row.spawn_seq;
+  };
+  const amplificationFor = (target: WorkingCreature, source: AmplifiedSource): number => {
+    const strongest = new Map<string, number>();
+    const rows = [
+      ...snapshot.effects.filter(effect => !expiredIds.has(effect.id)
+        && !proposed.effects_delete.includes(effect.id)),
+      ...proposed.effects_insert,
+    ];
+    for (const effect of rows) {
+      if (effect.kind !== 'amplification' || !effectAppliesToSpawn(effect, target)) continue;
+      const eligible = effect.config?.eligible_sources;
+      if (!Array.isArray(eligible) || !eligible.includes(source)) continue;
+      const pct = Number(effect.config?.damage_taken_pct ?? 0);
+      if (!Number.isFinite(pct) || pct <= 0) continue;
+      strongest.set(effect.effect_type, Math.max(strongest.get(effect.effect_type) ?? 0, pct));
+    }
+    return 1 + [...strongest.values()].reduce((sum, pct) => sum + pct, 0) / 100;
+  };
+  const statusDurationMs = (status: AbilityStatusSpec): number => {
+    const baseMs = Number(status.duration.base_ms ?? 0);
+    if (Number.isFinite(baseMs) && baseMs > 0) return Math.floor(baseMs);
+    const ticks = Number(status.duration.duration_ticks ?? 0);
+    return Number.isFinite(ticks) && ticks > 0
+      ? Math.floor(ticks) * COMBAT2_HEARTBEAT_MS
+      : 0;
+  };
+  const statusMaxStacks = (status: AbilityStatusSpec): number => {
+    const calc = status.stacks.max_stacks_calc;
+    const base = calc && typeof calc === 'object' && !Array.isArray(calc)
+      ? Number((calc as Record<string, unknown>).base ?? 1)
+      : 1;
+    return Number.isFinite(base) ? Math.max(1, Math.floor(base)) : 1;
+  };
+  const applyLandedAbilityStatus = (
+    actor: WorkingCharacter,
+    target: WorkingCreature,
+    spec: AbilitySpec,
+    ordinal: number,
+    outcome: MechanicOutcome,
+  ): void => {
+    const status = spec.appliedStatus;
+    if (!status || target.hp <= 0 || status.trigger !== 'ability_hit'
+        || spec.mechanic === 'dot_debuff' || spec.mechanic === 'stack_apply') return;
+    const chance = Math.min(100, Math.max(0, status.chancePct ?? 0)) / 100;
+    const landed = chance >= 1 || rng.sample('ability_status_chance', actor.fighter.character_id,
+      spec.abilityKey, target.row.id, target.row.spawn_seq, tick, ordinal) < chance;
+    if (!landed) {
+      outcome.events.push({ kind: 'status_missed', abilityKey: spec.abilityKey,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
+        amount: 0, meta: { status: status.key, chancePct: status.chancePct } });
+      return;
+    }
+    const durationMs = statusDurationMs(status);
+    const intervalMs = status.classification === 'dot' ? status.tickIntervalMs : null;
+    const timing = combat2TickTiming(tick, durationMs, intervalMs ?? COMBAT2_HEARTBEAT_MS);
+    const magnitude = status.classification === 'dot' ? Number(status.magnitude.flat ?? 0) : 0;
+    const modifierPct = Number(status.modifier.value ?? 0);
+    const eligibleSources = Array.isArray(status.modifier.eligible_sources)
+      ? status.modifier.eligible_sources.filter((value): value is string => typeof value === 'string')
+      : [];
+    outcome.effects.push({
+      kind: status.classification === 'dot' ? 'dot' : 'amplification',
+      effect_type: status.effectType,
+      ability_key: spec.abilityKey,
+      target_creature_id: target.row.creature_id,
+      source_character_id: actor.fighter.character_id,
+      stacks: 1,
+      magnitude,
+      config: { node_creature_id: target.row.id, spawn_seq: target.row.spawn_seq,
+        source_fighter_id: actor.fighter.id, source_entry_seq: actor.fighter.entry_seq,
+        max_stacks: statusMaxStacks(status), damage_type: status.damageType,
+        ...timing, ...(status.classification === 'damage_amp'
+          ? { modifier_kind: status.modifier.kind, damage_taken_pct: modifierPct,
+            eligible_sources: eligibleSources }
+          : {}) },
+      expires_at: new Date(nowMs + durationMs).toISOString(),
+      next_due_at: intervalMs ? new Date(nowMs + intervalMs).toISOString() : null,
+      interval_ms: intervalMs,
+      last_pulse_tick: null,
+      is_reservation: false,
+    });
+    outcome.events.push({ kind: 'status_applied', abilityKey: spec.abilityKey,
+      actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+      target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
+      amount: 1, meta: { status: status.key, stacks: 1, maxStacks: statusMaxStacks(status),
+        durationMs, chancePct: status.chancePct } });
+  };
   const eligibleParty = (source: WorkingCharacter): WorkingCharacter[] => [...chars.values()]
     .filter(target => target.present && target.hp > 0
       && (target.fighter.character_id === source.fighter.character_id
@@ -231,7 +333,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       return;
     }
     if (trigger === 'successful_pulse_hit') {
-      const attempted = Math.max(1, Math.floor(Number(source.config?.pulse_damage ?? 0)));
+      const rawAttempted = Math.max(1, Math.floor(Number(source.config?.pulse_damage ?? 0)));
+      const attempted = Math.max(1, Math.floor(rawAttempted * amplificationFor(target, 'proc')));
       const applied = Math.min(target.hp, attempted);
       target.hp -= applied; target.damaged = true; target.dirty = true;
       qualify(target, actor.fighter.character_id, 'damage');
@@ -288,7 +391,30 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
   // ── 1. effect lifetimes: expire first, then pulse at most once ─
   for (const effect of snapshot.effects) {
+    if (effect.kind !== 'autoattack' && effect.target_character_id && effect.source_character_id
+        && (effect.config?.target_fighter_id !== undefined || effect.config?.target_entry_seq !== undefined)) {
+      const target = chars.get(effect.target_character_id);
+      if (!target || !target.present || target.hp <= 0
+          || effect.config?.target_fighter_id !== target.fighter.id
+          || effect.config?.target_entry_seq !== target.fighter.entry_seq) {
+        expiredIds.add(effect.id);
+        proposed.effects_delete.push(effect.id);
+        emit({ kind: 'effect_invalidated', abilityKey: effect.ability_key ?? undefined,
+          meta: { effectKind: effect.kind, effectType: effect.effect_type, reason: 'stale_fighter' } });
+        continue;
+      }
+    }
     if (effect.is_reservation) continue; // lifetime owned by activation/drop/death
+    if ((effect.kind === 'dot' || effect.kind === 'amplification') && effect.target_creature_id) {
+      const target = creatures.get(effect.target_creature_id);
+      if (!target || !effectAppliesToSpawn(effect, target)) {
+        expiredIds.add(effect.id);
+        proposed.effects_delete.push(effect.id);
+        emit({ kind: 'effect_invalidated', abilityKey: effect.ability_key ?? undefined,
+          meta: { effectKind: effect.kind, effectType: effect.effect_type, reason: 'stale_spawn' } });
+        continue;
+      }
+    }
     const timing = readCombat2TickTiming(effect.config);
     if (timing ? tick > timing.expires_after_tick : Boolean(effect.expires_at && ms(effect.expires_at) <= nowMs)) {
       expiredIds.add(effect.id);
@@ -331,13 +457,17 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       if (effect.kind === 'party_regen' || effect.kind === 'aura') {
         for (const target of eligibleParty(source)) {
           const healed = Math.min(target.fighter.max_hp - target.hp, magnitude);
+          const cpRequested = Math.max(0, Math.floor(Number(effect.config?.cp_per_tick ?? 0)));
+          const cpRestored = Math.min(target.fighter.max_cp - target.cp, cpRequested);
           target.hp += healed;
-          if (healed > 0) target.dirty = true;
+          target.cp += cpRestored;
+          if (healed > 0 || cpRestored > 0) target.dirty = true;
           emit({ kind: effect.kind === 'aura' ? 'consecrate_heal' : 'party_restore',
             abilityKey: effect.ability_key ?? undefined,
             actor: { type: 'character', id: source.fighter.character_id, name: source.fighter.name },
             target: { type: 'character', id: target.fighter.character_id, name: target.fighter.name },
             amount: healed, meta: { requested: magnitude, applied: healed, wasted: magnitude - healed,
+              cpRequested, cpApplied: cpRestored, cpWasted: cpRequested - cpRestored,
               effectKind: effect.kind } });
         }
       }
@@ -345,7 +475,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         for (const target of [...creatures.values()].sort((a, b) => a.row.id.localeCompare(b.row.id)
           || a.row.spawn_seq - b.row.spawn_seq)) {
           if (target.hp <= 0 || !target.row.is_alive) continue;
-          const applied = Math.min(target.hp, magnitude);
+          const attempted = Math.max(0, Math.floor(magnitude * amplificationFor(target, 'stance')));
+          const applied = Math.min(target.hp, attempted);
           target.hp -= applied; target.damaged = true; target.dirty = true;
           qualify(target, source.fighter.character_id, 'damage');
           if (target.hp === 0 && target.killedBy === null) target.killedBy = source.fighter.character_id;
@@ -360,8 +491,14 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     }
     if (effect.target_creature_id) {
       const target = creatures.get(effect.target_creature_id);
+      if (target && !effectAppliesToSpawn(effect, target)) {
+        if (!proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
+        continue;
+      }
       if (target && target.hp > 0 && magnitude > 0) {
-        const applied = Math.min(target.hp, magnitude * Math.max(1, effect.stacks));
+        const attempted = Math.max(0, Math.floor(magnitude * Math.max(1, effect.stacks)
+          * amplificationFor(target, 'dot')));
+        const applied = Math.min(target.hp, attempted);
         target.hp -= applied;
         target.damaged = true;
         target.dirty = true;
@@ -638,7 +775,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         source_character_id: actor.fighter.character_id,
         stacks: 1,
         magnitude: reserveAmount,
-        config: { reserve_pct: spec.cpReservePct },
+        config: { reserve_pct: spec.cpReservePct, target_fighter_id: actor.fighter.id,
+          target_entry_seq: actor.fighter.entry_seq },
         expires_at: null,
         is_reservation: true,
       });
@@ -743,16 +881,18 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       targetAbsorb: 0,
       weaponProgression: deps.weaponProgression,
       existingStacks: stackEffects.reduce((sum, e) => sum + Math.max(1, e.stacks), 0),
+      amplification: targetCreature ? amplificationFor(targetCreature, 'ability') : 0,
       creatureAcReduction: targetCreature
         ? snapshot.effects
             .filter(
               (e) =>
                 e.kind === 'control' &&
                 e.target_creature_id === targetCreature.row.creature_id &&
+                effectAppliesToSpawn(e, targetCreature) &&
                 !expiredIds.has(e.id) &&
-                typeof e.config?.ac_reduction === 'number',
+                e.config?.control_mode === 'ac_reduction',
             )
-            .reduce((sum, e) => sum + Number(e.config.ac_reduction), 0)
+            .reduce((sum, e) => sum + Math.max(0, e.magnitude ?? 0), 0)
         : 0,
       activeEffects: activeEffectsFor(actor.fighter.character_id),
     };
@@ -798,6 +938,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         }
       });
     }
+    if (targetCreature && (outcome.landedHits ?? 0) > 0) {
+      for (let ordinal = 0; ordinal < (outcome.landedHits ?? 0); ordinal++) {
+        applyLandedAbilityStatus(actor, targetCreature, spec, ordinal, outcome);
+      }
+    }
     if (outcome.healing) {
       const healTargetId = ctx.ally?.character_id ?? actor.fighter.character_id;
       const healTarget = chars.get(healTargetId);
@@ -831,12 +976,26 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       const prior = snapshot.effects.filter(existing => existing.kind === effect.kind
         && existing.ability_key === effect.ability_key
         && existing.source_character_id === effect.source_character_id
-        && existing.target_character_id === effect.target_character_id
+        && (existing.target_character_id ?? null) === (effect.target_character_id ?? null)
+        && (existing.target_creature_id ?? null) === (effect.target_creature_id ?? null)
+        && (effect.target_creature_id == null
+          || (existing.config?.node_creature_id === effect.config?.node_creature_id
+            && existing.config?.spawn_seq === effect.config?.spawn_seq))
         && !expiredIds.has(existing.id))
         .sort((a, b) => a.id.localeCompare(b.id))[0];
       if (prior) {
         if (!proposed.effects_delete.includes(prior.id)) proposed.effects_delete.push(prior.id);
         if (effect.kind === 'absorb') effect.magnitude = Math.max(effect.magnitude ?? 0, prior.magnitude ?? 0);
+        if (effect.kind === 'party_regen' && effect.config?.refresh_policy === 'best_of') {
+          effect.magnitude = Math.max(effect.magnitude ?? 0, prior.magnitude ?? 0);
+          effect.config = { ...(effect.config ?? {}), cp_per_tick: Math.max(
+            Number(effect.config?.cp_per_tick ?? 0), Number(prior.config?.cp_per_tick ?? 0),
+          ) };
+        }
+        if (effect.kind === 'dot') {
+          const cap = Math.max(1, Math.floor(Number(effect.config?.max_stacks ?? 1)));
+          effect.stacks = Math.min(cap, Math.max(1, prior.stacks) + Math.max(1, effect.stacks ?? 1));
+        }
       }
       proposed.effects_insert.push(effect);
     }
@@ -889,6 +1048,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     // maintenance still occurs so automatic attacks resume on the next tick.
     if (occupiedActionSlots.has(actor.fighter.character_id)) continue;
     const outcome = resolveBasicAttack({ rng, nowMs, tick, actor: actor.fighter, creature: target.row,
+      amplification: amplificationFor(target, 'weapon'),
       activeEffects: activeEffectsFor(actor.fighter.character_id), weaponProgression: deps.weaponProgression });
     if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
     else {
@@ -1112,6 +1272,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const outgoingReduction = snapshot.effects
       .filter(effect => effect.kind === 'control'
         && effect.target_creature_id === creature.row.creature_id
+        && effectAppliesToSpawn(effect, creature)
         && !expiredIds.has(effect.id)
         && effect.config?.control_mode === 'damage_reduction')
       .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0);
@@ -1138,16 +1299,26 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         mitigationCeilingPct = params.mitigationCeilingPct;
       }
     }
-    const blockAmount = effectsFor(snapshot.effects, targetFighter.character_id, 'block')
-      .filter((e) => !expiredIds.has(e.id))
-      .reduce((sum, e) => sum + (e.magnitude ?? 0), 0);
+    const shieldEquipped = targetFighter.equipment.some(
+      (row) => row.slot === 'off_hand' && row.weapon_tag === 'shield',
+    );
+    const block = shieldEquipped
+      ? effectsFor(snapshot.effects, targetFighter.character_id, 'block')
+          .filter((effect) => !expiredIds.has(effect.id) && !proposed.effects_delete.includes(effect.id))
+          .sort((a, b) => a.id.localeCompare(b.id))
+          .find((effect) => {
+            const chance = Math.min(0.95, Math.max(0, Number(effect.config?.block_chance ?? 0)));
+            return chance >= 1 || rng.sample(`${stream}:block`, effect.id, targetFighter.character_id, tick) < chance;
+          })
+      : undefined;
+    const blockAmount = block?.magnitude ?? 0;
 
     const breakdown = applyMitigationPipeline({
       normalDamage: base,
       critBonus,
       percentMitigation,
       shieldDrBonus,
-      shieldEquipped: targetFighter.equipment.some((row) => row.slot === 'off_hand'),
+      shieldEquipped,
       mitigationCeilingPct,
       critSofteningPct,
       flatMitigation,
@@ -1188,6 +1359,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         critSoftened: breakdown.critSoftened,
         flatMitigated: breakdown.flatMitigated,
         blocked: breakdown.blocked,
+        ...(block ? { blockAbilityKey: block.ability_key } : {}),
         absorbed: breakdown.absorbed,
         ...(outgoingPrevented > 0 ? { outgoingReduced: outgoingPrevented } : {}),
       },
@@ -1213,7 +1385,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       const magnitude = Math.max(0, Math.floor(effect.magnitude ?? 0));
       if (magnitude === 0) continue;
 
-      const dealt = Math.min(creature.hp, magnitude);
+      const dealt = Math.min(creature.hp, Math.max(0, Math.floor(magnitude
+        * amplificationFor(creature, 'proc'))));
       creature.hp -= dealt;
       creature.damaged = true;
       creature.dirty = true;
@@ -1324,6 +1497,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       died: character.died,
     });
     if (character.died) {
+      for (const effect of snapshot.effects) {
+        if (effect.target_character_id === character.fighter.character_id
+            && effect.source_character_id !== null
+            && !proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
+      }
       if (!proposed.fighters.some((fighter) => fighter.id === character.fighter.id)) {
         proposed.fighters.push({ id: character.fighter.id, present: false });
       }

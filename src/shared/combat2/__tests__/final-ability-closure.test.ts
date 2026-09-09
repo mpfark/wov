@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { resolveNodeTick } from '../resolver';
 import { decodeSnapshot } from '../decode';
 import { combat2PulseDue, combat2TickTiming, combat2TicksForMs } from '../time';
 import type { NodeSnapshot, ProposedTick, SnapshotEffect } from '../types';
 
-const catalog = buildAbilityCatalog((inventory as { abilities: AuthoredAbilityRecord[] }).abilities);
+const authored = inventory as AuthoredAbilityInventory;
+const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
 const deps = { abilities: catalog.specs };
 const NOW = Date.parse('2026-09-07T12:00:00Z');
 
@@ -69,13 +70,18 @@ describe('final Combat2 authored ability closure', () => {
       .toEqual([6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
   });
 
-  it('Inspire immediately restores authored HP and CP once to eligible party members only', () => {
-    const out = resolveNodeTick(snap('bard', 'inspire'), deps);
-    const rows = out.events.filter(e => e.kind === 'party_restore');
+  it('Inspire creates authored timed HP/CP regeneration for eligible party members only', () => {
+    const input = snap('bard', 'inspire');
+    const cast = resolveNodeTick(input, deps);
+    expect(cast.events.some(e => e.kind === 'party_restore')).toBe(false);
+    expect(cast.effects_insert).toContainEqual(expect.objectContaining({ kind: 'party_regen',
+      ability_key: 'inspire', interval_ms: 2000,
+      config: expect.objectContaining({ presence_effect: true, cp_per_tick: expect.any(Number) }) }));
+    const pulse = resolveNodeTick(next(input, cast), deps);
+    const rows = pulse.events.filter(e => e.kind === 'party_restore');
     expect(rows.map(e => e.target?.id)).toEqual(['ally', 'caster']);
     expect(rows.every(e => Number(e.meta?.cpApplied) > 0)).toBe(true);
     expect(rows.some(e => e.target?.id === 'foreign')).toBe(false);
-    expect(out.effects_insert.some(e => e.ability_key === 'inspire')).toBe(false);
   });
 
   it.each([['bard', 'crescendo'], ['healer', 'purifying_light']] as const)(
@@ -155,10 +161,10 @@ describe('final Combat2 authored ability closure', () => {
     const caster = out.characters.find(c => c.id === 'caster');
     const ally = out.characters.find(c => c.id === 'ally');
     const event = out.events.find(e => e.kind === 'hp_transfer');
-    expect(caster?.hp).toBeGreaterThanOrEqual(1);
+    expect(caster?.hp).toBe(75);
     expect(ally?.hp).toBeGreaterThan(95); // the later creature phase may damage the healed ally
     expect(event?.amount).toBe(5);
-    expect(event?.meta).toMatchObject({ applied: 5, removedFromCaster: expect.any(Number) });
+    expect(event?.meta).toMatchObject({ applied: 5, removedFromCaster: 5 });
   });
 
   it('refuses a stale, foreign, absent or dead explicit ally before spending CP', () => {

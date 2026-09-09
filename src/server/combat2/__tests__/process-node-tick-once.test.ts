@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import inventory from '../../../shared/combat/inventory/active-abilities.json';
-import type { AuthoredAbilityRecord } from '../../../shared/combat2/catalog';
+import type { AuthoredAbilityInventory, AuthoredAbilityRecord } from '../../../shared/combat2/catalog';
 import { CLAIM } from '../../../shared/combat2/__tests__/roundtrip-contract.test';
 import { processNodeTickOnce, type NodeTickTransport } from '../process-node-tick-once';
 
 const NODE = CLAIM.snapshot.encounter.node_id;
 const abilities = (inventory as { abilities: AuthoredAbilityRecord[] }).abilities;
+const statuses = (inventory as AuthoredAbilityInventory).statuses;
 
 function successfulClaim() {
   const claim = structuredClone(CLAIM) as any;
@@ -42,7 +43,7 @@ describe('processNodeTickOnce', () => {
   ] as const)('returns for refused claim %# without resolution or commit', async (claim, kind) => {
     const t = transport(claim);
     const resolve = vi.fn();
-    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, resolve });
+    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses, resolve });
     expect(out.kind).toBe(kind);
     expect(resolve).not.toHaveBeenCalled();
     expect(t.calls.commits).toHaveLength(0);
@@ -51,7 +52,7 @@ describe('processNodeTickOnce', () => {
   it('fails closed on malformed claim', async () => {
     const t = transport({ ok: true, kind: 'claimed' });
     const resolve = vi.fn();
-    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, resolve })).ok).toBe(false);
+    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses, resolve })).ok).toBe(false);
     expect(resolve).not.toHaveBeenCalled();
     expect(t.calls.commits).toHaveLength(0);
   });
@@ -66,7 +67,7 @@ describe('processNodeTickOnce', () => {
       intent_ids: [claim.snapshot.intents[0].id], participation: [],
       pending_event_ids: [claim.snapshot.pending_events[0].id],
     }));
-    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, resolve });
+    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses, resolve });
     expect(out.kind).toBe('committed');
     expect(t.calls.nodeIds).toEqual([NODE]);
     expect(resolve).toHaveBeenCalledTimes(1);
@@ -92,7 +93,7 @@ describe('processNodeTickOnce', () => {
       stored_power: { amount: 1 },
     };
     t = transport(claim);
-    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities })).kind)
+    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses })).kind)
       .toBe('boss_catalog_rejected');
     expect(t.calls.commits).toHaveLength(0);
   });
@@ -100,7 +101,7 @@ describe('processNodeTickOnce', () => {
   it('contains resolver exceptions and does not commit', async () => {
     const t = transport(successfulClaim());
     const out = await processNodeTickOnce(NODE, {
-      transport: t.value, abilityRecords: abilities, resolve: () => { throw new Error('safe failure'); },
+      transport: t.value, abilityRecords: abilities, statusRecords: statuses, resolve: () => { throw new Error('safe failure'); },
     });
     expect(out).toMatchObject({ ok: false, kind: 'resolver_failed', diagnostic: 'safe failure' });
     expect(t.calls.commits).toHaveLength(0);
@@ -117,7 +118,7 @@ describe('processNodeTickOnce', () => {
     const resolve = vi.fn(() => ({ tick: 1, characters: [], creatures: [], effects_insert: [],
       effects_update: [], effects_delete: [], fighters: [], rewards: [], events: [], intent_ids: [],
       participation: [], pending_event_ids: [], departures: [] }));
-    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, resolve })).kind).toBe(kind);
+    expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses, resolve })).kind).toBe(kind);
     expect(resolve).toHaveBeenCalledTimes(1);
     expect(t.calls.commits).toHaveLength(1);
   });
@@ -125,8 +126,8 @@ describe('processNodeTickOnce', () => {
   it('produces an identical proposal for an identical captured claim', async () => {
     const a = transport(successfulClaim());
     const b = transport(successfulClaim());
-    await processNodeTickOnce(NODE, { transport: a.value, abilityRecords: abilities });
-    await processNodeTickOnce(NODE, { transport: b.value, abilityRecords: abilities });
+    await processNodeTickOnce(NODE, { transport: a.value, abilityRecords: abilities, statusRecords: statuses });
+    await processNodeTickOnce(NODE, { transport: b.value, abilityRecords: abilities, statusRecords: statuses });
     expect(JSON.stringify(a.calls.commits[0]._proposed)).toBe(JSON.stringify(b.calls.commits[0]._proposed));
   });
 
@@ -138,7 +139,7 @@ describe('processNodeTickOnce', () => {
     claim.snapshot.creatures[0].max_hp = 100;
     const t = transport(claim);
 
-    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities });
+    const out = await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses });
 
     expect(out.kind).toBe('committed');
     expect(t.calls.commits).toHaveLength(1);
@@ -161,7 +162,7 @@ describe('processNodeTickOnce', () => {
       failed.calls.commits.push(args);
       throw Object.assign(new Error('constraint detail must not escape'), { code: '23514', detail: 'private row' });
     };
-    const first = await processNodeTickOnce(NODE, { transport: failed.value, abilityRecords: abilities });
+    const first = await processNodeTickOnce(NODE, { transport: failed.value, abilityRecords: abilities, statusRecords: statuses });
     expect(first).toEqual({
       ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely', stage: 'commit', code: '23514',
     });
@@ -170,7 +171,7 @@ describe('processNodeTickOnce', () => {
     expect(JSON.stringify(first)).not.toContain('private row');
 
     const reclaimed = transport(successfulClaim());
-    const second = await processNodeTickOnce(NODE, { transport: reclaimed.value, abilityRecords: abilities });
+    const second = await processNodeTickOnce(NODE, { transport: reclaimed.value, abilityRecords: abilities, statusRecords: statuses });
     expect(second.kind).toBe('committed');
     expect(reclaimed.calls.nodeIds).toEqual([NODE]);
     expect(reclaimed.calls.commits).toHaveLength(1);

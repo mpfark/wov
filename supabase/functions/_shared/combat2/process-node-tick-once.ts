@@ -7,6 +7,7 @@ import * as resolver from './resolver.ts';
 import type { AuthoredAbilityRecord, CatalogRejection } from './catalog.ts';
 import type { BossCastRejection } from './boss-catalog.ts';
 import type { ProposedTick } from './types.ts';
+import type { AppliedStatusRow } from '../config/status-contract.ts';
 
 export interface CommitTickArgs {
   _encounter_id: string;
@@ -26,6 +27,7 @@ export interface NodeTickTransport {
 export interface ProcessNodeTickDependencies {
   transport: NodeTickTransport;
   abilityRecords: readonly AuthoredAbilityRecord[];
+  statusRecords?: readonly AppliedStatusRow[];
   /** Test seam for the pure resolver; production callers omit it. */
   resolve?: typeof resolver.resolveNodeTick;
 }
@@ -112,7 +114,7 @@ export async function processNodeTickOnce(
     return { ok: false, kind: 'malformed_claim', diagnostic: 'claim authority fields disagree with snapshot' };
   }
 
-  const abilities = playerCatalog.buildAbilityCatalog(dependencies.abilityRecords);
+  const abilities = playerCatalog.buildAbilityCatalog(dependencies.abilityRecords, dependencies.statusRecords);
   if (abilities.rejected.length > 0) {
     return { ok: false, kind: 'player_catalog_rejected', rejected: abilities.rejected };
   }

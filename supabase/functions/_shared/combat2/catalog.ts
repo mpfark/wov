@@ -22,8 +22,14 @@
 import { validateCalc, type AbilityCalc } from '../formulas/ability-calc.ts';
 import { isAccuracyStat, type AccuracyStat } from '../formulas/combat.ts';
 import { isMechanicKey, type MechanicKey } from './types.ts';
-import type { AbilitySpec, AbilityActivation, AbilityTargetType } from './mechanics.ts';
+import type { AbilitySpec, AbilityActivation, AbilityStatusSpec, AbilityTargetType } from './mechanics.ts';
 import { combat2AbilitySupport } from './ability-support.ts';
+import {
+  REQUIRED_STATUS_CONTRACTS,
+  indexStatusRows,
+  validateStatusDefinition,
+  type AppliedStatusRow,
+} from '../config/status-contract.ts';
 
 /** One authored, active ability record. Field names mirror the inventory dump. */
 export interface AuthoredAbilityRecord {
@@ -43,6 +49,18 @@ export interface AuthoredAbilityRecord {
   durationCalc: unknown;
   mechanicCalcs: Record<string, unknown> | null;
   effectConfig: Record<string, unknown> | null;
+  primaryAttribute?: string | null;
+  secondaryAttribute?: string | null;
+  appliedStatus?: string | null;
+  statusTrigger?: string | null;
+  statusChancePct?: number | null;
+  statusApplicationEnabled?: boolean | null;
+  onHitEffect?: Record<string, unknown> | null;
+}
+
+export interface AuthoredAbilityInventory {
+  abilities: AuthoredAbilityRecord[];
+  statuses: AppliedStatusRow[];
 }
 
 export interface CatalogRejection {
@@ -58,6 +76,9 @@ export interface CatalogRejection {
     | 'missing_duration_calc'
     | 'missing_interval'
     | 'missing_cp_reserve'
+    | 'missing_status_definition'
+    | 'invalid_status_definition'
+    | 'unsupported_on_hit_effect'
     | 'invalid_calc';
   detail?: string;
 }
@@ -139,6 +160,7 @@ function readBool(config: Record<string, unknown>, key: string): boolean {
 /** Build one spec, or explain precisely why the record is unusable. */
 export function buildAbilitySpec(
   record: AuthoredAbilityRecord,
+  statusRows: Readonly<Record<string, AppliedStatusRow>> = {},
 ): { spec: AbilitySpec } | { rejection: CatalogRejection } {
   const reject = (
     reason: CatalogRejection['reason'],
@@ -210,6 +232,43 @@ export function buildAbilitySpec(
     if (problems.length > 0) return reject('invalid_calc', `${label}: ${problems.join('; ')}`);
   }
 
+  if (record.onHitEffect && Object.keys(record.onHitEffect).length > 0) {
+    return reject('unsupported_on_hit_effect', 'legacy optional on_hit_effect is not implemented');
+  }
+
+  let appliedStatus: AbilitySpec['appliedStatus'] = null;
+  if (record.appliedStatus && record.statusApplicationEnabled !== false) {
+    const row = statusRows[record.appliedStatus];
+    if (!row) return reject('missing_status_definition', record.appliedStatus);
+    const problems = validateStatusDefinition(
+      row,
+      REQUIRED_STATUS_CONTRACTS.find((contract) => contract.key === record.appliedStatus),
+    );
+    if (problems.length > 0) return reject('invalid_status_definition', problems.join('; '));
+    const trigger = record.statusTrigger;
+    if (!trigger || !['weapon_hit', 'ability_hit', 'pulse', 'successful_pulse_hit', 'on_hit'].includes(trigger)) {
+      return reject('invalid_status_definition', `invalid status trigger: ${String(trigger)}`);
+    }
+    if (resolvedMechanic !== 'stack_apply'
+        && (typeof record.statusChancePct !== 'number' || record.statusChancePct <= 0 || record.statusChancePct > 100)) {
+      return reject('invalid_status_definition', `invalid status chance: ${String(record.statusChancePct)}`);
+    }
+    appliedStatus = {
+      key: record.appliedStatus,
+      effectType: row.effect_type!,
+      classification: row.classification as 'dot' | 'damage_amp',
+      stackNoun: row.stack_noun ?? record.appliedStatus,
+      tickIntervalMs: row.tick_interval_ms ?? null,
+      magnitude: row.magnitude ?? {},
+      duration: row.duration ?? {},
+      stacks: row.stacks ?? {},
+      modifier: row.modifier ?? {},
+      damageType: row.default_damage_type ?? null,
+      trigger: trigger as AbilityStatusSpec['trigger'],
+      chancePct: record.statusChancePct ?? null,
+    };
+  }
+
   const spec: AbilitySpec = {
     abilityKey: record.abilityKey,
     classKey: record.classKey,
@@ -234,17 +293,22 @@ export function buildAbilitySpec(
     effectType: typeof config.effect_type === 'string' ? config.effect_type : null,
     stackType: typeof config.stack_type === 'string' ? config.stack_type : null,
     config,
+    appliedStatus,
     support,
   };
   return { spec };
 }
 
 /** Build the whole catalogue. Unusable records are reported, never mapped. */
-export function buildAbilityCatalog(records: readonly AuthoredAbilityRecord[]): AbilityCatalog {
+export function buildAbilityCatalog(
+  records: readonly AuthoredAbilityRecord[],
+  statuses: readonly AppliedStatusRow[] = [],
+): AbilityCatalog {
   const specs = new Map<string, AbilitySpec>();
   const rejected: CatalogRejection[] = [];
+  const statusRows = indexStatusRows(statuses);
   for (const record of records) {
-    const result = buildAbilitySpec(record);
+    const result = buildAbilitySpec(record, statusRows);
     if ('rejection' in result) {
       rejected.push(result.rejection);
       continue;

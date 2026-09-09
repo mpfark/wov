@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { resolveNodeTick } from '../resolver';
 import type { NodeSnapshot, SnapshotEffect } from '../types';
 
-const catalog = buildAbilityCatalog(
-  (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
-);
+const authored = inventory as AuthoredAbilityInventory;
+const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
 const deps = { abilities: catalog.specs };
 
 function effect(patch: Partial<SnapshotEffect>): SnapshotEffect {
@@ -47,14 +46,15 @@ describe('authored Combat2 effect consumers', () => {
     expect(out.effects_insert).toContainEqual(expect.objectContaining({ kind: 'absorb', ability_key: 'divine_aegis' }));
   });
 
-  it('resolves Inspire as immediate authored restoration rather than a timed effect', () => {
+  it('resolves Inspire as an authored timed HP/CP party presence effect', () => {
     const input = snapshot([]);
     input.intents = [{ id: 'intent', seq: 1, character_id: 'character', intent_kind: 'ability',
       ability_key: 'inspire', stance_key: null, target_creature_id: null }];
     const out = resolveNodeTick(input, deps);
-    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'party_restore', abilityKey: 'inspire' }));
-    expect(out.characters.find(row => row.id === 'character')?.cp).toBe(488);
-    expect(out.effects_insert.some(row => row.ability_key === 'inspire')).toBe(false);
+    expect(out.events.some(event => event.kind === 'party_restore')).toBe(false);
+    expect(out.characters.find(row => row.id === 'character')?.cp).toBe(485);
+    expect(out.effects_insert).toContainEqual(expect.objectContaining({ kind: 'party_regen',
+      ability_key: 'inspire', config: expect.objectContaining({ cp_per_tick: expect.any(Number) }) }));
   });
 
   it('consumes a guaranteed Disengage dodge only for an otherwise-landed attack', () => {

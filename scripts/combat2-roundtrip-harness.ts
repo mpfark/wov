@@ -15,7 +15,7 @@
  */
 
 import inventory from '../src/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../src/shared/combat2/catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../src/shared/combat2/catalog';
 import { decodeClaim } from '../src/shared/combat2/decode';
 import { resolveNodeTick } from '../src/shared/combat2/resolver';
 
@@ -35,7 +35,8 @@ if (!decoded.ok) {
 }
 
 const { specs, rejected } = buildAbilityCatalog(
-  (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
+  (inventory as AuthoredAbilityInventory).abilities,
+  (inventory as AuthoredAbilityInventory).statuses,
 );
 
 const proposed = resolveNodeTick(decoded.snapshot, { abilities: specs });

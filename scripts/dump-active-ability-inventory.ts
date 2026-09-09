@@ -22,10 +22,11 @@ async function rest(path: string): Promise<any[]> {
   return res.json();
 }
 
-const [assignments, abilities, bases] = await Promise.all([
+const [assignments, abilities, bases, statuses] = await Promise.all([
   rest('class_ability_assignments?select=*&status=eq.active&order=class_key,unlock_level'),
   rest('abilities?select=*'),
   rest('base_abilities?select=*'),
+  rest('applied_statuses?select=*&order=key'),
 ]);
 
 const abilityById = new Map(abilities.map((a) => [a.id, a]));
@@ -81,12 +82,27 @@ const rows = assignments
   );
 
 const mechanics = [...new Set(rows.map((r: any) => r.mechanic))].sort();
+const statusRows = statuses.map((status) => ({
+  key: status.key,
+  effect_type: status.effect_type,
+  classification: status.classification,
+  stack_noun: status.stack_noun,
+  is_periodic: status.is_periodic,
+  tick_interval_ms: status.tick_interval_ms,
+  magnitude: status.magnitude,
+  duration: status.duration,
+  stacks: status.stacks,
+  modifier: status.modifier,
+  default_damage_type: status.default_damage_type,
+}));
 
 const out = {
   generatedBy: 'scripts/dump-active-ability-inventory.ts',
-  source: 'class_ability_assignments x abilities x base_abilities (status=active)',
+  source: 'class_ability_assignments x abilities x base_abilities (status=active) + applied_statuses',
   abilityCount: rows.length,
+  statusCount: statusRows.length,
   mechanics,
+  statuses: statusRows,
   abilities: rows,
 };
 

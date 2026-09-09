@@ -1,7 +1,8 @@
 {
   "generatedBy": "scripts/dump-active-ability-inventory.ts",
-  "source": "class_ability_assignments x abilities x base_abilities (status=active)",
+  "source": "class_ability_assignments x abilities x base_abilities (status=active) + applied_statuses",
   "abilityCount": 36,
+  "statusCount": 5,
   "mechanics": [
     "absorb_buff",
     "aura_pulse",
@@ -23,6 +24,73 @@
     "stack_consume",
     "stealth_buff",
     "weapon_attack"
+  ],
+  "statuses": [
+    {
+      "key": "bleed",
+      "effect_type": "bleed",
+      "classification": "dot",
+      "stack_noun": "bleed",
+      "is_periodic": true,
+      "tick_interval_ms": 2000,
+      "magnitude": { "stat_mult": 1, "global_mult": 0.67, "role": "primary" },
+      "duration": { "base_ms": 20000 },
+      "stacks": { "max_stacks_calc": { "base": 5, "terms": [], "unit": "count" } },
+      "modifier": null,
+      "default_damage_type": "physical"
+    },
+    {
+      "key": "chilled",
+      "effect_type": "chilled",
+      "classification": "damage_amp",
+      "stack_noun": "chill",
+      "is_periodic": false,
+      "tick_interval_ms": null,
+      "magnitude": {},
+      "duration": { "duration_ticks": 3, "role": null },
+      "stacks": { "max_stacks_calc": { "base": 1, "terms": [], "unit": "count" } },
+      "modifier": { "kind": "damage_taken_pct", "value": 10, "eligible_sources": ["weapon", "ability", "stance", "dot", "proc"] },
+      "default_damage_type": null
+    },
+    {
+      "key": "ignite",
+      "effect_type": "ignite",
+      "classification": "dot",
+      "stack_noun": "burn",
+      "is_periodic": true,
+      "tick_interval_ms": 2000,
+      "magnitude": { "stat_mult": 0.7, "global_mult": 0.67, "role": "secondary" },
+      "duration": { "base_ms": 30000, "per_point_ms": 1000, "cap_ms": 45000, "role": "secondary" },
+      "stacks": { "max_stacks_calc": { "base": 5, "terms": [], "unit": "count" } },
+      "modifier": null,
+      "default_damage_type": "fire"
+    },
+    {
+      "key": "poison",
+      "effect_type": "poison",
+      "classification": "dot",
+      "stack_noun": "poison",
+      "is_periodic": true,
+      "tick_interval_ms": 2000,
+      "magnitude": { "stat_mult": 1.2, "global_mult": 0.67, "role": "primary" },
+      "duration": { "base_ms": 25000, "role": null },
+      "stacks": { "max_stacks_calc": { "base": 3, "terms": [{ "source": "stat", "stat": "cha", "role": "secondary", "clampAtZero": true, "transform": { "kind": "diminishing", "cap": 4 } }], "unit": "count" }, "role": "secondary" },
+      "modifier": null,
+      "default_damage_type": "poison"
+    },
+    {
+      "key": "scorched",
+      "effect_type": "scorched",
+      "classification": "dot",
+      "stack_noun": "scorch",
+      "is_periodic": true,
+      "tick_interval_ms": 2000,
+      "magnitude": { "flat": 3 },
+      "duration": { "base_ms": 6000 },
+      "stacks": { "max_stacks_calc": { "base": 3, "terms": [], "unit": "count" } },
+      "modifier": null,
+      "default_damage_type": "fire"
+    }
   ],
   "abilities": [
     {

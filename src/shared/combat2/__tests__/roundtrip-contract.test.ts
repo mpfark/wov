@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import inventory from '@/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, type AuthoredAbilityRecord } from '../catalog';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { decodeClaim, decodeSnapshot } from '../decode';
 import { resolveNodeTick } from '../resolver';
 
@@ -125,7 +125,8 @@ export const CLAIM = {
 };
 
 const { specs } = buildAbilityCatalog(
-  (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
+  (inventory as AuthoredAbilityInventory).abilities,
+  (inventory as AuthoredAbilityInventory).statuses,
 );
 
 describe('installed claim contract', () => {

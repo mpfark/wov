@@ -1,4 +1,5 @@
 import type { AuthoredAbilityRecord } from '../_shared/combat2/catalog.ts';
+import type { AppliedStatusRow } from '../_shared/config/status-contract.ts';
 import { dispatchNodeTicksOnce, DISPATCH_LIMIT, type DispatchRunResult } from '../_shared/combat2/dispatch-node-ticks-once.ts';
 import type { CommitTickArgs, NodeTickRunResult, ProcessNodeTickDependencies } from '../_shared/combat2/process-node-tick-once.ts';
 import { bearerToken, constantTimeSecretEqual, redact } from '../_shared/combat2-internal-edge-auth.ts';
@@ -15,6 +16,7 @@ export interface Combat2DispatchHandlerDependencies {
   createClient(url: string, serviceRoleKey: string): DispatchRpcClient;
   processNodeTickOnce(nodeId: string, dependencies: ProcessNodeTickDependencies): Promise<NodeTickRunResult>;
   abilityRecords: readonly AuthoredAbilityRecord[];
+  statusRecords?: readonly AppliedStatusRow[];
   log?: (message: string, detail: Record<string, unknown>) => void;
 }
 
@@ -71,6 +73,7 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
       },
       processNode: (nodeId) => deps.processNodeTickOnce(nodeId, {
         abilityRecords: deps.abilityRecords,
+        statusRecords: deps.statusRecords,
         transport: {
           async claimNode(id) {
             const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });

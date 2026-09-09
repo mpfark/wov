@@ -10,10 +10,13 @@
  */
 
 import inventory from '../src/shared/combat/inventory/active-abilities.json';
-import { buildAbilityCatalog, buildAbilitySpec, type AuthoredAbilityRecord } from '../src/shared/combat2/catalog';
+import { buildAbilityCatalog, buildAbilitySpec, type AuthoredAbilityInventory } from '../src/shared/combat2/catalog';
+import { indexStatusRows } from '../src/shared/config/status-contract';
 
-const records = (inventory as { abilities: AuthoredAbilityRecord[] }).abilities;
-const { rejected } = buildAbilityCatalog(records);
+const authored = inventory as AuthoredAbilityInventory;
+const records = authored.abilities;
+const { rejected } = buildAbilityCatalog(records, authored.statuses);
+const statusRows = indexStatusRows(authored.statuses);
 const refusals = new Map(rejected.map((r) => [`${r.classKey}:${r.abilityKey}`, r]));
 
 const rows = records
@@ -30,7 +33,7 @@ const rows = records
         reason: `${refusal.reason}${refusal.detail ? ` (${refusal.detail})` : ''}`,
       };
     }
-    const built = buildAbilitySpec(record);
+    const built = buildAbilitySpec(record, statusRows);
     const spec = 'spec' in built ? built.spec : null;
     return {
       class: record.classKey,

@@ -8,6 +8,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import inventory from "../_shared/combat2/active-abilities.json" with { type: "json" };
 import type { AuthoredAbilityRecord } from "../_shared/combat2/catalog.ts";
+import type { AppliedStatusRow } from "../_shared/config/status-contract.ts";
 import { processNodeTickOnce } from "../_shared/combat2/process-node-tick-once.ts";
 import { createCombat2TickHandler } from "./handler.ts";
 
@@ -18,6 +19,7 @@ const handler = createCombat2TickHandler({
   }),
   processNodeTickOnce,
   abilityRecords: (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
+  statusRecords: (inventory as { statuses: AppliedStatusRow[] }).statuses,
   log: (message, detail) => console.log(message, detail),
 });
 
