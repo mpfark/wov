@@ -1663,6 +1663,38 @@ export type Database = {
         }
         Relationships: []
       }
+      combat2_canary_node: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          expires_at: string
+          node_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          expires_at: string
+          node_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          expires_at?: string
+          node_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_canary_node_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: true
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_departure_request: {
         Row: {
           arrival_group_id: string | null
@@ -5574,6 +5606,10 @@ export type Database = {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
       }
+      combat_enter_without_canary_gate: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
       combat_flee: {
         Args: {
           _character_id: string
@@ -5640,12 +5676,36 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_depart_without_canary_gate: {
+        Args: {
+          _character_id: string
+          _destination_node_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
+      combat2_due_nodes_without_canary_gate: {
+        Args: { _limit?: number }
+        Returns: Json
+      }
+      combat2_node_runtime_eligible: {
+        Args: { _node_id: string }
+        Returns: boolean
+      }
       combat2_party_depart: {
+        Args: {
+          _destination_node_id: string
+          _leader_character_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat2_party_depart_without_canary_gate: {
         Args: {
           _destination_node_id: string
           _leader_character_id: string
@@ -5677,9 +5737,17 @@ export type Database = {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
       }
+      combat2_respawn_without_canary_gate: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
       combat2_seed_spawns: {
         Args: { _encounter_id: string; _node_id: string }
         Returns: undefined
+      }
+      combat2_session_access: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: Json
       }
       combat2_sync: {
         Args: {
@@ -6261,6 +6329,10 @@ export type Database = {
         Returns: string
       }
       node_tick_claim: {
+        Args: { _lease_ms?: number; _node_id: string }
+        Returns: Json
+      }
+      node_tick_claim_without_canary_gate: {
         Args: { _lease_ms?: number; _node_id: string }
         Returns: Json
       }
