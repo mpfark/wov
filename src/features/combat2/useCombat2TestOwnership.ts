@@ -8,7 +8,8 @@ export function useCombat2TestOwnership(options: {
   accessCheck?: (characterId:string,nodeId:string)=>Promise<SessionAccessResult>;
 }) {
   const { characterId, nodeId, check = checkCombat2SessionPreflight, accessCheck=checkCombat2SessionAccess } = options;
-  const reserved = combat2ArenaReservesLegacy(nodeId);
+  const arenaReserved = combat2ArenaReservesLegacy(nodeId);
+  const reserved = arenaReserved || (options.enabled && !!nodeId);
   const accessEnabled = combat2ArenaAccessCheckEnabled(options.enabled,nodeId);
   const origin = { characterId, nodeId, reserved };
   const accessKey=`${characterId}:${nodeId??''}`;
@@ -42,7 +43,10 @@ export function useCombat2TestOwnership(options: {
     return () => { active = false; };
   }, [access, characterId, check]);
   useEffect(() => { if (!reserved) { request.current=null; setPreflightResult(null); setLocked(false); } }, [reserved, characterId]);
-  const blocksLegacy = reserved;
+  // Arena nodes are always reserved. For ordinary nodes, hold legacy while the
+  // authoritative check is pending/uncertain, own allowed canaries, and release
+  // only after an explicit server refusal.
+  const blocksLegacy = arenaReserved || (reserved && access !== 'refused');
   const combat2OwnsSession = blocksLegacy && access==='allowed' && preflight === 'allowed';
   return {
     blocksLegacy, combat2OwnsSession, preflight, access, rolloutEnabled:accessEnabled,
