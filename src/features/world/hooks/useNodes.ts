@@ -81,11 +81,12 @@ export function useNodes(isAuthenticated: boolean = false) {
     const fetchAll = async () => {
       const [regRes, nodeRes, areaRes] = await Promise.all([
         supabase.from('regions').select('*'),
-        supabase.rpc('player_world_nodes' as never),
+        supabase.rpc('player_world_nodes') as unknown as Promise<{ data: unknown }>,
         supabase.from('areas').select('*'),
       ]);
       if (regRes.data) setRegions(regRes.data as Region[]);
       if (nodeRes.data) setNodes(nodeRes.data as unknown as GameNode[]);
+
       if (areaRes.data) setAreas(areaRes.data as unknown as Area[]);
       setLoading(false);
     };
