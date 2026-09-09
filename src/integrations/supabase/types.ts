@@ -3853,6 +3853,84 @@ export type Database = {
           },
         ]
       }
+      node_death_loot: {
+        Row: {
+          created_at: string
+          creature_id: string
+          encounter_id: string
+          ground_loot_id: string | null
+          id: string
+          item_id: string | null
+          loot_key: string
+          mode: string
+          node_creature_id: string
+          outcome: string
+          spawn_seq: number
+        }
+        Insert: {
+          created_at?: string
+          creature_id: string
+          encounter_id: string
+          ground_loot_id?: string | null
+          id?: string
+          item_id?: string | null
+          loot_key: string
+          mode: string
+          node_creature_id: string
+          outcome: string
+          spawn_seq: number
+        }
+        Update: {
+          created_at?: string
+          creature_id?: string
+          encounter_id?: string
+          ground_loot_id?: string | null
+          id?: string
+          item_id?: string | null
+          loot_key?: string
+          mode?: string
+          node_creature_id?: string
+          outcome?: string
+          spawn_seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_death_loot_creature_id_fkey"
+            columns: ["creature_id"]
+            isOneToOne: false
+            referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_death_loot_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_death_loot_ground_loot_id_fkey"
+            columns: ["ground_loot_id"]
+            isOneToOne: false
+            referencedRelation: "node_ground_loot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_death_loot_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_death_loot_node_creature_id_fkey"
+            columns: ["node_creature_id"]
+            isOneToOne: false
+            referencedRelation: "node_creature"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       node_effect: {
         Row: {
           ability_key: string | null
@@ -4402,9 +4480,11 @@ export type Database = {
           character_id: string
           created_at: string
           creature_id: string
+          encounter_id: string | null
           gold_awarded: number
           id: string
           is_killer: boolean
+          node_creature_id: string | null
           spawn_seq: number
           xp_awarded: number
         }
@@ -4412,9 +4492,11 @@ export type Database = {
           character_id: string
           created_at?: string
           creature_id: string
+          encounter_id?: string | null
           gold_awarded?: number
           id?: string
           is_killer?: boolean
+          node_creature_id?: string | null
           spawn_seq: number
           xp_awarded?: number
         }
@@ -4422,9 +4504,11 @@ export type Database = {
           character_id?: string
           created_at?: string
           creature_id?: string
+          encounter_id?: string | null
           gold_awarded?: number
           id?: string
           is_killer?: boolean
+          node_creature_id?: string | null
           spawn_seq?: number
           xp_awarded?: number
         }
@@ -4441,6 +4525,20 @@ export type Database = {
             columns: ["creature_id"]
             isOneToOne: false
             referencedRelation: "creatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_reward_claim_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_reward_claim_node_creature_id_fkey"
+            columns: ["node_creature_id"]
+            isOneToOne: false
+            referencedRelation: "node_creature"
             referencedColumns: ["id"]
           },
         ]
