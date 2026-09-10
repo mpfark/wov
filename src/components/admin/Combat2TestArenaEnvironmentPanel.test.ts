@@ -18,6 +18,12 @@ describe('Combat2 test environment admin panel contract',()=>{
   expect(UI).toContain('api.startEnvironment(idFor(environmentStartRequest))'); expect(UI).toContain('api.closeEnvironment(idFor(environmentCloseRequest))');
   expect(UI).toContain('if(stable&&!response.uncertain)stable.current=null');
   expect(UI).toContain("snapshot!==selection.current");
+  expect(UI).toContain('finally{busyRef.current=false;if(mounted.current)setBusy(null);}');
+ });
+ it('keeps emergency stop available during recording and independently structured',()=>{
+  expect(UI).toContain("api.stop(idFor(emergencyStopRequest))");
+  expect(UI).toContain('<Button variant="outline" disabled={!status||!!busy}');
+  expect(UI).not.toContain('disabled={recording||!!busy} onClick={()=>mutate(\'emergency-stop\'');
  });
  it('retains existing arena controls',()=>{
   for(const text of ['Grant exact access','Revoke exact access','Relocate tester','Start recording','Stop and generate report','Reset arena'])expect(UI).toContain(text);

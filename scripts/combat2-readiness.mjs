@@ -14,6 +14,7 @@ const gates=[
     'src/shared/combat2/__tests__/boss-claim-contract.test.ts',
     'src/shared/combat2/__tests__/final-ability-closure.test.ts',
     'src/server/combat2/__tests__/canary-control-migration.test.ts',
+    'src/server/combat2/__tests__/test-arena-lifecycle-repair-migration.test.ts',
     'src/server/combat2/__tests__/readiness-command.test.ts',
     'src/server/combat2/__tests__/edge-packaging.test.ts',
     'src/server/combat2/__tests__/dispatch-node-ticks-once.test.ts',
