@@ -5693,6 +5693,10 @@ export type Database = {
         Args: { _limit?: number }
         Returns: Json
       }
+      combat2_movement_scope_eligible: {
+        Args: { _destination: string; _origin: string }
+        Returns: boolean
+      }
       combat2_node_runtime_eligible: {
         Args: { _node_id: string }
         Returns: boolean
@@ -5797,6 +5801,10 @@ export type Database = {
         Args: { _arena_id: string; _request_id: string }
         Returns: Json
       }
+      combat2_test_finalize_pending_events: {
+        Args: { _arena_id: string }
+        Returns: number
+      }
       combat2_test_grant: {
         Args: { _arena_id: string; _character_id: string; _user_id: string }
         Returns: Json
@@ -5849,6 +5857,10 @@ export type Database = {
       }
       combat2_test_status: { Args: { _arena_id: string }; Returns: Json }
       combat2_test_stop: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_stop_without_event_finalization: {
         Args: { _arena_id: string; _request_id: string }
         Returns: Json
       }
