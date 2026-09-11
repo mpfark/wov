@@ -111,7 +111,10 @@ describe('processNodeTickOnce', () => {
     [{ ok: false, kind: 'stale_claim' }, 'stale_claim'],
     [{ ok: false, kind: 'stale_claim', reason: 'no_encounter' }, 'stale_claim'],
     [{ ok: false, kind: 'stale_snapshot' }, 'stale_snapshot'],
+    [{ ok: false, kind: 'stale_equipment' }, 'stale_equipment'],
     [{ ok: false, kind: 'foreign_reference', relation: 'intents' }, 'foreign_reference'],
+    [{ ok: false, kind: 'invalid_proposal', reason: 'equipment_fence' }, 'validation_refused'],
+    [{ ok: false, kind: 'internal_failure', code: '23514' }, 'commit_internal_failure'],
     [{ ok: true, kind: 'already_committed', tick: 1 }, 'already_committed'],
   ] as const)('classifies commit %# without retry', async (commit, kind) => {
     const t = transport(successfulClaim(), commit);

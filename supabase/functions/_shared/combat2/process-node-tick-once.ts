@@ -44,7 +44,10 @@ export type NodeTickRunResult =
   | { ok: false; kind: 'resolver_failed'; diagnostic: string }
   | { ok: false; kind: 'stale_claim'; encounterId: string; reason: 'no_encounter' | null }
   | { ok: false; kind: 'stale_snapshot'; encounterId: string }
-  | { ok: false; kind: 'foreign_reference'; encounterId: string; relation: string | null };
+  | { ok: false; kind: 'stale_equipment'; encounterId: string }
+  | { ok: false; kind: 'foreign_reference'; encounterId: string; relation: string | null }
+  | { ok: false; kind: 'validation_refused'; encounterId: string; reason: string | null }
+  | { ok: false; kind: 'commit_internal_failure'; encounterId: string; code?: string };
 
 function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -160,6 +163,9 @@ export async function processNodeTickOnce(
   if (commit.ok === false && commit.kind === 'stale_snapshot') {
     return { ok: false, kind: 'stale_snapshot', encounterId };
   }
+  if (commit.ok === false && commit.kind === 'stale_equipment') {
+    return { ok: false, kind: 'stale_equipment', encounterId };
+  }
   if (commit.ok === false && commit.kind === 'foreign_reference') {
     return {
       ok: false,
@@ -167,6 +173,14 @@ export async function processNodeTickOnce(
       encounterId,
       relation: typeof commit.relation === 'string' ? commit.relation : null,
     };
+  }
+  if (commit.ok === false && commit.kind === 'invalid_proposal') {
+    return { ok: false, kind: 'validation_refused', encounterId,
+      reason: typeof commit.reason === 'string' ? commit.reason.slice(0, 80) : null };
+  }
+  if (commit.ok === false && commit.kind === 'internal_failure') {
+    const code=typeof commit.code==='string'&&/^[A-Z0-9]{5}$/i.test(commit.code)?commit.code:undefined;
+    return { ok: false, kind: 'commit_internal_failure', encounterId, ...(code?{code}:{}) };
   }
   return { ok: false, kind: 'malformed_commit', diagnostic: 'unknown commit outcome' };
 }

@@ -4,7 +4,7 @@ import { COMBAT2_TEST_ARENA, createArenaAdminApi, decodeArenaResult, decodeArena
 const status = { ok:true,kind:'status',arena_id:COMBAT2_TEST_ARENA.id,arena_key:COMBAT2_TEST_ARENA.key,label:'Arena',active:true,stopped:true,reset_eligible:true,
  node_count:5,creature_count:6,tester_count:0,active_encounter_count:0,claimed_encounter_count:0,pending_intent_count:0,pending_event_count:0,
  combat_mode:'maintenance',world_state:'asleep',scheduler_enabled:false,cron_job_count:0,located_tester_count:0,ordinary_encounter_count:0,live_claim_count:0,ordinary_live_claim_count:0,recent_ordinary_player_count:0,
- arena_live_claim_count:0,recording_status:'none',
+ arena_live_claim_count:0,active_presence_count:0,recording_status:'none',
  diagnostic_history_exists:false,nodes:[{id:'ffff5010-0000-4000-8000-000000000001',purpose:'staging',label:'Staging',active:true}],access:[] };
 
 describe('Combat2 test arena admin adapter',()=>{

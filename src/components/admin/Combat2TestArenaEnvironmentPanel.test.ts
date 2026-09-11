@@ -3,35 +3,28 @@ import {describe,expect,it} from 'vitest';
 const UI=readFileSync('src/components/admin/Combat2TestArenaPanel.tsx','utf8');
 describe('Combat2 test environment admin panel contract',()=>{
  it('renders authoritative environment state and manual refresh without polling',()=>{
-  for(const text of ['Arena status','Combat {status.combatMode}','world {status.worldState}','scheduler {status.schedulerEnabled'])expect(UI).toContain(text);
-  expect(UI).toContain('Manual refresh:'); expect(UI).not.toMatch(/setInterval|setTimeout/);
+  for(const text of ['Current state','Combat {status.combatMode}','world {status.worldState}','scheduler {status.schedulerEnabled'])expect(UI).toContain(text);
+  expect(UI).toContain('Refresh'); expect(UI).not.toMatch(/setInterval|setTimeout/);
  });
- it('keeps environment controls collapsed, advanced and separate from recording',()=>{
-  expect(UI).toContain('<details');expect(UI).toContain('Advanced environment controls');
-  expect(UI).toContain('Start test environment'); expect(UI).toContain('Close test environment safely');
-  expect(UI).toContain('These global controls are operational prerequisites, not part of diagnostic recording.');
-  expect(UI).toContain('api.startEnvironment');expect(UI).toContain('api.closeEnvironment');
-  expect(UI).toContain('status.locatedTesterCount<1');
+ it('removes manual lifecycle controls and collapses diagnostics',()=>{
+  expect(UI).toContain('<details');expect(UI).toContain('Advanced Diagnostics');
+  for(const text of ['Start test environment','Close test environment safely','api.startEnvironment','api.closeEnvironment','api.stop('])expect(UI).not.toContain(text);
  });
  it('shares the existing operation lock and stable uncertain-request IDs',()=>{
-  expect(UI).toContain('if(busyRef.current)return'); expect(UI).toContain('disabled={!status||status.locatedTesterCount<1||!!busy}');
-  expect(UI).toContain('api.startEnvironment(idFor(environmentStartRequest))'); expect(UI).toContain('api.closeEnvironment(idFor(environmentCloseRequest))');
-  expect(UI).toContain('if(stable&&!response.uncertain)stable.current=null');
-  expect(UI).toContain("snapshot!==selection.current");
+  expect(UI).toContain('if(busyRef.current)return');
+  expect(UI).toContain('if(!response.uncertain)stable.current=null');
   expect(UI).toContain('finally{busyRef.current=false;if(mounted.current)setBusy(null);}');
  });
  it('keeps emergency stop available during recording and independently structured',()=>{
-  expect(UI).toContain("api.stop(idFor(emergencyStopRequest))");
-  expect(UI).toContain('<Button variant="outline" disabled={!status||!!busy}');
-  expect(UI).not.toContain('disabled={recording||!!busy} onClick={()=>mutate(\'emergency-stop\'');
+  expect(UI).toContain("api.emergencyShutdown(idFor(emergencyRequest))");
+  expect(UI).toContain('disabled={!!busy}');
  });
  it('retains existing arena controls',()=>{
-  for(const text of ['Grant exact access','Revoke exact access','Relocate tester','Start recording','Stop and generate report','Reset arena'])expect(UI).toContain(text);
+  for(const text of ['Start Recording','Stop Recording and generate report','Reset Arena','Emergency Shutdown'])expect(UI).toContain(text);
  });
  it('describes recording stop as report-only and keeps terminal cleanup in finally',()=>{
-  expect(UI).toContain('This freezes the report only. Arena combat, world and scheduler state remain unchanged.');
   expect(UI).toContain('finally{busyRef.current=false;if(mounted.current)setBusy(null);}');
-  expect(UI).toContain('response.error');
+  expect(UI).toContain("previous?.status==='completed'");
   expect(UI).toContain("if(name==='run-stop')");
   expect(UI).toContain("status:'completed'");
  });

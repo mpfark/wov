@@ -8,7 +8,7 @@ const HOOK=readFileSync('src/hooks/useWorldSlumberState.ts','utf8');
 const base={ok:true,kind:'status',arena_id:COMBAT2_TEST_ARENA.id,arena_key:COMBAT2_TEST_ARENA.key,label:'Arena',active:true,stopped:true,reset_eligible:true,
  node_count:5,creature_count:6,tester_count:1,located_tester_count:1,active_encounter_count:0,ordinary_encounter_count:0,claimed_encounter_count:0,live_claim_count:0,ordinary_live_claim_count:0,recent_ordinary_player_count:0,pending_intent_count:0,pending_event_count:0,
  diagnostic_history_exists:true,combat_mode:'maintenance',scheduler_enabled:false,cron_job_count:0,nodes:[],access:[]};
-Object.assign(base,{arena_live_claim_count:0,recording_status:'none'});
+Object.assign(base,{arena_live_claim_count:0,active_presence_count:0,recording_status:'none'});
 
 describe('admin authoritative world-state consistency',()=>{
  it.each([['awake','awake'],['asleep','asleep']] as const)('maps authoritative %s consistently on both admin surfaces',(raw,expected)=>{

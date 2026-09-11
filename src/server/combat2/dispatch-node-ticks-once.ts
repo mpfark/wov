@@ -43,6 +43,9 @@ function safeWorkerResult(nodeId: string, result: NodeTickRunResult): DispatchNo
   if (result.ok && (result.kind === 'committed' || result.kind === 'already_committed')) return { ...base, tick: result.tick };
   if (!result.ok && result.kind === 'stale_claim' && result.reason) return { ...base, reason: result.reason };
   if (!result.ok && result.kind === 'foreign_reference' && result.relation) return { ...base, reason: result.relation.slice(0, 80) };
+  if (!result.ok && result.kind === 'stale_equipment') return { ...base, reason: 'claimed equipment changed' };
+  if (!result.ok && result.kind === 'validation_refused') return { ...base, reason: result.reason ?? 'proposal refused' };
+  if (!result.ok && result.kind === 'commit_internal_failure') return { ...base, reason: 'worker failed safely', stage: 'commit', ...(result.code?{code:result.code}:{}) };
   if (!result.ok && result.kind.endsWith('_rejected')) return { ...base, reason: 'authoritative input rejected' };
   if (!result.ok && (result.kind === 'claim_transport_error' || result.kind === 'commit_transport_error')) {
     return { ...base, reason: 'worker failed safely', stage: result.stage, ...(result.code ? { code: result.code } : {}) };

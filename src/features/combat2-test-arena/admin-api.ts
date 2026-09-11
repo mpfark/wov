@@ -6,7 +6,7 @@ export const ARENA_RPC_NAMES = [
   'combat2_test_runtime_status', 'combat2_test_grant', 'combat2_test_revoke',
   'combat2_test_admin_relocate', 'combat2_test_stop', 'combat2_test_reset',
   'combat2_test_environment_start', 'combat2_test_environment_close',
-  'combat2_test_run_start', 'combat2_test_run_stop', 'combat2_test_run_report',
+  'combat2_test_run_start', 'combat2_test_run_stop', 'combat2_test_run_report', 'combat2_test_emergency_shutdown',
 ] as const;
 
 export type ArenaNode = { id: string; purpose: 'staging'|'low'|'equal'|'high_damage'|'boss'; label: string; active: boolean };
@@ -20,6 +20,7 @@ export type ArenaStatus = {
   recentOrdinaryPlayerCount: number;
   lastDispatcherAt?: string; lastSuccessfulDispatcherAt?: string; lastDispatcherClassification?: string; lastDispatcherHttpStatus?: number; lastDispatcherErrorCode?: string;
   lastArenaTick?: number; lastArenaTickAt?: string; arenaLiveClaimCount: number; recordingStatus: 'none'|'recording'|'completed';
+  activePresenceCount: number;
   nodes: ArenaNode[]; access: ArenaAccess[]; lastOperation?: string;
   lastStartClassification?: string; lastCloseClassification?: string;
 };
@@ -39,7 +40,7 @@ export function decodeArenaStatus(v: unknown): ArenaStatus | null {
   if (!object(v) || v.ok !== true || v.kind !== 'status' || typeof v.arena_id !== 'string' || !UUID.test(v.arena_id) ||
       typeof v.arena_key !== 'string' || typeof v.label !== 'string') return null;
   const booleanKeys = ['active','stopped','reset_eligible','diagnostic_history_exists','scheduler_enabled'] as const;
-  const countKeys = ['node_count','creature_count','tester_count','located_tester_count','active_encounter_count','ordinary_encounter_count','claimed_encounter_count','live_claim_count','ordinary_live_claim_count','recent_ordinary_player_count','pending_intent_count','pending_event_count','cron_job_count','arena_live_claim_count'] as const;
+  const countKeys = ['node_count','creature_count','tester_count','located_tester_count','active_encounter_count','ordinary_encounter_count','claimed_encounter_count','live_claim_count','ordinary_live_claim_count','recent_ordinary_player_count','pending_intent_count','pending_event_count','cron_job_count','arena_live_claim_count','active_presence_count'] as const;
   if (booleanKeys.some(k=>!bool(v[k])) || countKeys.some(k=>!count(v[k])) || !Array.isArray(v.nodes) || !Array.isArray(v.access)) return null;
   if (!['maintenance','open'].includes(String(v.combat_mode)) || !['asleep','awake'].includes(String(v.world_state))) return null;
   const nodes: ArenaNode[] = [];
@@ -60,7 +61,7 @@ export function decodeArenaStatus(v: unknown): ArenaStatus | null {
     combatMode:v.combat_mode as ArenaStatus['combatMode'],worldState:v.world_state as ArenaStatus['worldState'],schedulerEnabled:v.scheduler_enabled as boolean,
     cronJobCount:v.cron_job_count as number,locatedTesterCount:v.located_tester_count as number,ordinaryEncounterCount:v.ordinary_encounter_count as number,
     liveClaimCount:v.live_claim_count as number,ordinaryLiveClaimCount:v.ordinary_live_claim_count as number,recentOrdinaryPlayerCount:v.recent_ordinary_player_count as number,
-    arenaLiveClaimCount:v.arena_live_claim_count as number,recordingStatus:['recording','completed'].includes(String(v.recording_status))?v.recording_status as 'recording'|'completed':'none',
+    arenaLiveClaimCount:v.arena_live_claim_count as number,activePresenceCount:v.active_presence_count as number,recordingStatus:['recording','completed'].includes(String(v.recording_status))?v.recording_status as 'recording'|'completed':'none',
     ...(timestamp(v.last_dispatcher_at)?{lastDispatcherAt:v.last_dispatcher_at}:{}),
     ...(timestamp(v.last_successful_dispatcher_at)?{lastSuccessfulDispatcherAt:v.last_successful_dispatcher_at}:{}),
     ...(typeof v.last_dispatcher_classification==='string'?{lastDispatcherClassification:v.last_dispatcher_classification}:{}),
@@ -146,5 +147,6 @@ export function createArenaAdminApi(rpc: Rpc = (name,args)=>supabase.rpc(name as
     startRun:(requestId:string)=>call('combat2_test_run_start',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
     stopRun:(requestId:string)=>call('combat2_test_run_stop',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeTestRunResult),
     report:(runId:string|null,afterSeq=0,limit=25)=>call('combat2_test_run_report',{_arena_id:COMBAT2_TEST_ARENA.id,_run_id:runId,_after_seq:afterSeq,_limit:limit},decodeTestRunReport),
+    emergencyShutdown:(requestId:string)=>call('combat2_test_emergency_shutdown',{_arena_id:COMBAT2_TEST_ARENA.id,_request_id:requestId},decodeArenaResult),
   };
 }

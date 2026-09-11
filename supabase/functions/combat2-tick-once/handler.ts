@@ -44,11 +44,13 @@ function outcomeStatus(result: NodeTickRunResult): number {
   switch (result.kind) {
     case "stale_claim":
     case "stale_snapshot":
+    case "stale_equipment":
       return 409;
     case "snapshot_rejected":
     case "player_catalog_rejected":
     case "boss_catalog_rejected":
     case "foreign_reference":
+    case "validation_refused":
       return 422;
     case "claim_transport_error":
     case "commit_transport_error":
@@ -56,6 +58,7 @@ function outcomeStatus(result: NodeTickRunResult): number {
     case "malformed_commit":
       return 502;
     case "resolver_failed":
+    case "commit_internal_failure":
       return 500;
   }
 }
