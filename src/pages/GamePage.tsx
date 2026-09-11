@@ -79,9 +79,10 @@ import { GuideReader } from '@/features/guide/components/GuideReader';
 import { useCombat2ClientSession } from '@/features/combat2/Combat2ClientSession';
 import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwnership';
+import { checkCombat2SessionPreflight, heartbeatCombat2TestPresence } from '@/features/combat2/session-access';
+import { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
-import { checkCombat2SessionPreflight } from '@/features/combat2/session-access';
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
@@ -116,6 +117,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     enabled: COMBAT2_CLIENT_ENABLED, characterId: character.id, nodeId: character.current_node_id,
   });
   const combat2OwnsSession = ownership.combat2OwnsSession;
+  useEffect(()=>{
+    if(!combat2OwnsSession||!character.current_node_id||!COMBAT2_TEST_ARENA.nodes.some(node=>node.id===character.current_node_id))return;
+    let active=true;
+    const heartbeat=()=>{if(active)void heartbeatCombat2TestPresence(COMBAT2_TEST_ARENA.id,character.id);};
+    heartbeat();
+    const timer=setInterval(heartbeat,60_000);
+    return()=>{active=false;clearInterval(timer);};
+  },[combat2OwnsSession,character.id,character.current_node_id]);
   // Reservation suspends legacy execution even before solo preflight/entry resolves.
   const combat2BlocksLegacy = ownership.blocksLegacy;
   const legacyExecution = useExecutionFence(!combat2BlocksLegacy);

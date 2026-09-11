@@ -31,3 +31,11 @@ export async function checkCombat2SessionPreflight(characterId:string,nodeId:str
     return !error&&object(data)&&data.ok===true&&data.kind==='eligible';
   } catch { return false; }
 }
+
+type PresenceClient={rpc(name:'combat2_test_presence_heartbeat',args:{_arena_id:string;_character_id:string}):PromiseLike<{data:unknown;error:{message?:string}|null}>};
+export async function heartbeatCombat2TestPresence(arenaId:string,characterId:string,client:PresenceClient={rpc:(name,args)=>supabase.rpc(name as never,args as never)}):Promise<boolean>{
+  try {
+    const {data,error}=await client.rpc('combat2_test_presence_heartbeat',{_arena_id:arenaId,_character_id:characterId});
+    return !error&&object(data)&&data.ok===true&&data.kind==='present';
+  } catch { return false; }
+}

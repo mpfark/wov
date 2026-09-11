@@ -4,6 +4,7 @@ import { COMBAT2_TEST_ARENA, createArenaAdminApi, decodeArenaResult, decodeArena
 const status = { ok:true,kind:'status',arena_id:COMBAT2_TEST_ARENA.id,arena_key:COMBAT2_TEST_ARENA.key,label:'Arena',active:true,stopped:true,reset_eligible:true,
  node_count:5,creature_count:6,tester_count:0,active_encounter_count:0,claimed_encounter_count:0,pending_intent_count:0,pending_event_count:0,
  combat_mode:'maintenance',world_state:'asleep',scheduler_enabled:false,cron_job_count:0,located_tester_count:0,ordinary_encounter_count:0,live_claim_count:0,ordinary_live_claim_count:0,recent_ordinary_player_count:0,
+ arena_live_claim_count:0,recording_status:'none',
  diagnostic_history_exists:false,nodes:[{id:'ffff5010-0000-4000-8000-000000000001',purpose:'staging',label:'Staging',active:true}],access:[] };
 
 describe('Combat2 test arena admin adapter',()=>{
@@ -12,6 +13,7 @@ describe('Combat2 test arena admin adapter',()=>{
   expect(decodeArenaStatus({...status,node_count:-1})).toBeNull();
   expect(decodeArenaStatus({...status,nodes:[{...status.nodes[0],id:'arbitrary'}]})).toBeNull();
   expect(decodeArenaStatus({...status,secret:'hidden'})?.arenaKey).toBe(COMBAT2_TEST_ARENA.key);
+  expect(decodeArenaStatus({...status,last_dispatcher_at:'2026-09-11T10:00:00Z',last_dispatcher_classification:'dispatched',last_dispatcher_http_status:200,last_arena_tick:7,last_arena_tick_at:'2026-09-11T10:00:00Z'})?.lastArenaTick).toBe(7);
  });
  it('uses only exact RPCs and arguments, including confirmed reset',async()=>{
   const rpc=vi.fn().mockResolvedValue({data:{ok:true,kind:'granted'},error:null}); const api=createArenaAdminApi(rpc);
@@ -41,6 +43,8 @@ describe('Combat2 test arena admin adapter',()=>{
   expect((await malformed.status()).error).toMatch(/malformed/);
   const transport=createArenaAdminApi(vi.fn().mockResolvedValue({data:null,error:{message:'secret internals'}}));
   expect(await transport.status()).toEqual({error:'Arena request failed.',uncertain:true});
+  const diagnosed=createArenaAdminApi(vi.fn().mockResolvedValue({data:{ok:false,kind:'run_stop_failed',stage:'summarize',code:'22023',detail:'private'},error:null}));
+  expect(await diagnosed.stopRun('33333333-3333-4333-8333-333333333333')).toEqual({error:'Arena refused: run_stop_failed at summarize (22023).',failure:{kind:'run_stop_failed',stage:'summarize',code:'22023'}});
  });
  it('accepts allowlisted reset diagnostics while remaining compatible with a plain reset failure',()=>{
   expect(decodeArenaResult({ok:false,kind:'reset_failed'})).toEqual({ok:false,kind:'reset_failed',counts:{},ids:{}});

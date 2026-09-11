@@ -17,6 +17,10 @@ describe('Combat2 Test Arena page-local run workflow',()=>{
  });
  it('uses authoritative run state for controls and retains explicit report pagination',()=>{
   expect(UI).toContain("const recording=report?.status==='recording'");expect(UI).toContain('disabled={recording||!status?.resetEligible||!!busy}');
+  expect(UI).toContain("status.lastDispatcherClassification??'no response'");
+  expect(UI).toContain('Last successful dispatcher activity:');
+  expect(UI).toContain("status.lastArenaTick??'none'");
+  expect(UI).toContain('status.arenaLiveClaimCount');
   expect(UI).toContain('Ordered combat report');expect(UI).toContain('Load more');expect(UI).toContain('loadReport(report.runId,report.returnedThroughSeq,true)');
   expect(UI).not.toMatch(/setInterval|setTimeout|\.from\(['"]combat2_test_run/);
  });

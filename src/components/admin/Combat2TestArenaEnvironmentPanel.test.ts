@@ -28,4 +28,11 @@ describe('Combat2 test environment admin panel contract',()=>{
  it('retains existing arena controls',()=>{
   for(const text of ['Grant exact access','Revoke exact access','Relocate tester','Start recording','Stop and generate report','Reset arena'])expect(UI).toContain(text);
  });
+ it('describes recording stop as report-only and keeps terminal cleanup in finally',()=>{
+  expect(UI).toContain('This freezes the report only. Arena combat, world and scheduler state remain unchanged.');
+  expect(UI).toContain('finally{busyRef.current=false;if(mounted.current)setBusy(null);}');
+  expect(UI).toContain('response.error');
+  expect(UI).toContain("if(name==='run-stop')");
+  expect(UI).toContain("status:'completed'");
+ });
 });
