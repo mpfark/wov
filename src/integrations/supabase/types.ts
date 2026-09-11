@@ -1794,16 +1794,31 @@ export type Database = {
       }
       combat2_dispatch_schedule_state: {
         Row: {
+          last_classification: string | null
+          last_error_code: string | null
+          last_http_status: number | null
+          last_response_at: string | null
+          last_success_at: string | null
           request_id: number | null
           requested_at: string | null
           singleton: boolean
         }
         Insert: {
+          last_classification?: string | null
+          last_error_code?: string | null
+          last_http_status?: number | null
+          last_response_at?: string | null
+          last_success_at?: string | null
           request_id?: number | null
           requested_at?: string | null
           singleton?: boolean
         }
         Update: {
+          last_classification?: string | null
+          last_error_code?: string | null
+          last_http_status?: number | null
+          last_response_at?: string | null
+          last_success_at?: string | null
           request_id?: number | null
           requested_at?: string | null
           singleton?: boolean
@@ -2260,6 +2275,42 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_test_presence: {
+        Row: {
+          arena_id: string
+          character_id: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          arena_id: string
+          character_id: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          arena_id?: string
+          character_id?: string
+          seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_presence_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_test_presence_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
@@ -5813,6 +5864,10 @@ export type Database = {
         Args: { _node_id: string }
         Returns: boolean
       }
+      combat2_test_presence_heartbeat: {
+        Args: { _arena_id: string; _character_id: string }
+        Returns: Json
+      }
       combat2_test_region_visible: {
         Args: { _region_id: string }
         Returns: boolean
@@ -5848,6 +5903,10 @@ export type Database = {
       }
       combat2_test_run_stop: {
         Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_runtime_status: {
+        Args: { _arena_id: string }
         Returns: Json
       }
       combat2_test_safe_event: { Args: { _event: Json }; Returns: Json }
