@@ -12,7 +12,7 @@ export function createPartyAwareDepartureAdapter(client: {
   rpc(name: string, args: Record<string, string>): PromiseLike<{ data: unknown; error: { message?: string } | null }>;
 }, coordinated: () => boolean): Combat2DepartureAdapter {
   const solo = createCombat2DepartureAdapter(client as never);
-  return { async depart(characterId, destinationNodeId, requestId) {
+  return { state:characterId=>solo.state(characterId), async depart(characterId, destinationNodeId, requestId) {
     if (!coordinated()) return solo.depart(characterId, destinationNodeId, requestId);
     let response;
     try {

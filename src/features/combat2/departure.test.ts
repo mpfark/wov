@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Combat2DepartureError, createCombat2DepartureAdapter, decodeCombat2Departure } from './departure';
+import { Combat2DepartureError, createCombat2DepartureAdapter, decodeCombat2Departure,decodeCombat2DepartureState } from './departure';
 
 const C = 'aaaaaaaa-0000-4000-8000-000000000001';
 const A = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -17,5 +17,10 @@ describe('Combat2 departure adapter', () => {
     const rpc = vi.fn().mockResolvedValue({ data: { ok: true, kind: 'moved', origin_node_id: A, destination_node_id: B, cost: 5 }, error: null });
     await createCombat2DepartureAdapter({ rpc }).depart(C, B, R);
     expect(rpc).toHaveBeenCalledExactlyOnceWith('combat2_depart', { _character_id: C, _destination_node_id: B, _request_id: R });
+  });
+  it('decodes only the bounded own-departure projection',()=>{
+    expect(decodeCombat2DepartureState({ok:true,kind:'departure_state',status:'queued',request_id:R,origin_node_id:A,destination_node_id:B})).toEqual({status:'queued',requestId:R,originNodeId:A,destinationNodeId:B});
+    expect(decodeCombat2DepartureState({ok:true,kind:'departure_state',status:'none'})).toEqual({status:'none'});
+    expect(()=>decodeCombat2DepartureState({ok:true,kind:'departure_state',status:'queued'})).toThrow();
   });
 });

@@ -7,7 +7,10 @@ export type Combat2DepartureOutcome =
 
 export interface Combat2DepartureAdapter {
   depart(characterId: string, destinationNodeId: string, requestId: string): Promise<Combat2DepartureOutcome>;
+  state(characterId: string): Promise<Combat2DepartureState>;
 }
+
+export type Combat2DepartureState = { status:'none'|'queued'|'moved'|'dead'; requestId?:string; originNodeId?:string; destinationNodeId?:string };
 
 export class Combat2DepartureError extends Error {
   constructor(readonly code: 'uncertain' | 'error', message: string) { super(message); this.name = 'Combat2DepartureError'; }
@@ -34,12 +37,28 @@ export function decodeCombat2Departure(value: unknown): Combat2DepartureOutcome 
   return { status: 'refused', classification: row.kind, reason: typeof row.reason === 'string' ? row.reason : null };
 }
 
-export function createCombat2DepartureAdapter(client: { rpc(name: 'combat2_depart', args: Record<string, string>): PromiseLike<{ data: unknown; error: { message?: string } | null }> }): Combat2DepartureAdapter {
+export function decodeCombat2DepartureState(value:unknown):Combat2DepartureState {
+  const row=record(value);
+  if(!row||row.ok!==true||row.kind!=='departure_state'||!['none','queued','moved','dead'].includes(String(row.status)))
+    throw new Combat2DepartureError('error','combat2_departure_state returned a malformed response');
+  if(row.status==='none')return {status:'none'};
+  if(!UUID.test(String(row.request_id))||!UUID.test(String(row.origin_node_id))||!UUID.test(String(row.destination_node_id)))
+    throw new Combat2DepartureError('error','combat2_departure_state returned an invalid response');
+  return {status:row.status as 'queued'|'moved'|'dead',requestId:String(row.request_id),originNodeId:String(row.origin_node_id),destinationNodeId:String(row.destination_node_id)};
+}
+
+export function createCombat2DepartureAdapter(client: { rpc(name: string, args: Record<string, string>): PromiseLike<{ data: unknown; error: { message?: string } | null }> }): Combat2DepartureAdapter {
   return { async depart(characterId, destinationNodeId, requestId) {
     let response;
     try { response = await client.rpc('combat2_depart', { _character_id: characterId, _destination_node_id: destinationNodeId, _request_id: requestId }); }
     catch (error) { throw new Combat2DepartureError('uncertain', error instanceof Error ? error.message : 'combat2_depart transport failed'); }
     if (response.error) throw new Combat2DepartureError('uncertain', response.error.message ?? 'combat2_depart transport failed');
     return decodeCombat2Departure(response.data);
+  },async state(characterId){
+    let response;
+    try{response=await client.rpc('combat2_departure_state',{_character_id:characterId});}
+    catch{throw new Combat2DepartureError('uncertain','combat2_departure_state transport failed');}
+    if(response.error)throw new Combat2DepartureError('uncertain',response.error.message??'combat2_departure_state transport failed');
+    return decodeCombat2DepartureState(response.data);
   }};
 }

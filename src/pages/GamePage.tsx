@@ -913,7 +913,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     } else if (result.status === 'moved') {
       const summary=result.members?.map(member=>`${member.displayName}: ${member.status}`).join(', ');
       addLocalLogEvent(buildMovementEvent(summary?`Party movement completed (${summary}).`:`You travel to ${destinationName}.`));
-    } else if (result.status !== 'stale') {
+    } else if (result.status !== 'stale' && !(result.status==='local_refusal'&&result.classification==='exit_pending')) {
       const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
       addLocalLogEvent(buildErrorEvent(`Combat2 movement refused${detail}`));
     }

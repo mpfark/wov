@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, render, renderHook, screen,waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabase } from '@/integrations/supabase/client';
 import { useCombat2ClientSession } from './Combat2ClientSession';
@@ -33,13 +33,16 @@ const ability = { abilityKey: 'fireball', label: 'Fireball', type: 'spell_attack
 beforeEach(() => {
   delivery = fixture();
   localStorage.clear();
-  vi.spyOn(supabase, 'rpc').mockResolvedValue({ error: null, data: { ok: true, kind: 'queued', intent_id: E, seq: 1 } } as never);
+  vi.spyOn(supabase, 'rpc').mockImplementation((async(name:string)=>name==='combat2_departure_state'
+    ? {error:null,data:{ok:true,kind:'departure_state',status:'none'}}
+    : {error:null,data:{ok:true,kind:'queued',intent_id:E,seq:1}}) as never);
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe('controlled input and display boundary', () => {
   it('routes supported abilities and stance activate/drop through the installed adapter exactly once per action', async () => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options), { wrapper: StrictMode });
+    await waitFor(()=>expect(result.current.actionsReady).toBe(true));
     const legacy = vi.fn();
     const base = { enabled: true, sessionReady: result.current.actionsReady,
       resolveTarget: () => ({ ok: true as const, target: { encounterId: E, id: 'life-1', creatureId: T, spawnSeq: 1, name: 'Test creature' } }),
@@ -50,7 +53,7 @@ describe('controlled input and display boundary', () => {
       await routeCombat2Action({ ...base, reservedBuffs: { force_shield: {} }, ability: { ...ability, abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' } });
     });
     rerender();
-    const args = vi.mocked(supabase.rpc).mock.calls.map(([, args]) => args as Record<string, unknown>);
+    const args = vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent').map(([, args]) => args as Record<string, unknown>);
     expect(args.map(a => a._intent_kind)).toEqual(['ability', 'stance_activate', 'stance_drop']);
     expect(args.map(a => a._target_creature_id)).toEqual([T, null, null]);
     expect(new Set(args.map(a => a._request_id)).size).toBe(3);
@@ -64,7 +67,7 @@ describe('controlled input and display boundary', () => {
     rerender();
     expect(result.current.actionsReady).toBe(false);
     await act(async () => { await submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: T }); });
-    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent')).toHaveLength(0);
     render(<Combat2TestStatus status={status} stale diagnostic="Combat2 synchronization unavailable." />);
     expect(screen.getByRole('status')).toHaveTextContent('Stale display; actions disabled');
     expect(screen.getByRole('alert')).not.toHaveTextContent('untrusted internal payload');
@@ -81,17 +84,20 @@ describe('controlled input and display boundary', () => {
     rerender();
     expect(result.current.dead).toBe(true);
     expect(result.current.presentation.model?.character.hp).toBe(0);
-    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent')).toHaveLength(0);
   });
 
   it('flee pending disables further actions and exit never invokes a movement continuation', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValue({ data: { ok: true, kind: 'queued', event_id: E }, error: null } as never);
+    vi.mocked(supabase.rpc).mockImplementation((async(name:string)=>name==='combat2_departure_state'
+      ? {data:{ok:true,kind:'departure_state',status:'none'},error:null}
+      : {data:{ok:true,kind:'queued',event_id:E},error:null}) as never);
     const { result } = renderHook(() => useCombat2ClientSession(options));
+    await waitFor(()=>expect(result.current.actionsReady).toBe(true));
     await act(async () => { await result.current.flee.flee(); });
     expect(result.current.pendingFlee).toBe(true);
     expect(result.current.actionsReady).toBe(false);
     await act(async () => { await result.current.intents.submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: T }); });
-    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_flee')).toHaveLength(1);
   });
 
   it('invalidates selection on death, disappearance, new spawn and new encounter', () => {

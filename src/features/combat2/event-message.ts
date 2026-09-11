@@ -25,6 +25,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     : event.abilityKey ? (own ? `Your ${label}` : event.actor ? `${subject}'s ${label}` : label)
     : !event.actor && event.kind === 'effect_pulse' ? 'An effect' : subject;
   const amount = typeof event.amount === 'number' && Number.isFinite(event.amount) ? event.amount : null;
+  const healingMagnitude = amount === null ? null : Math.abs(amount);
   const meta = event.meta ?? {};
   const verb = (singular: string, plural: string) => own ? plural : singular;
   const positive = (key: string) => typeof meta[key] === 'number' && Number.isFinite(meta[key]) && (meta[key] as number) > 0;
@@ -61,7 +62,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
       return `${label} absorbs ${amount ?? 0} damage for ${target}${meta.depleted === true ? ' and is depleted' : ` (${Number(meta.remaining ?? 0)} remaining)`}.`;
     case 'effect_pulse':
       return meta.healing === true
-        ? `${action} restores ${amount === null ? 'health' : `${amount} HP`} to ${target}.`
+        ? `${action} restores ${healingMagnitude === null ? 'health' : `${healingMagnitude} HP`} to ${target}.`
         : damage();
     case 'party_restore': {
       const hp = Number(meta.hpApplied ?? amount ?? 0);
@@ -76,7 +77,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     case 'hp_transfer':
       return `${subject} ${verb('transfers', 'transfer')} ${Number(meta.removedFromCaster ?? 0)} HP with ${label}, restoring ${amount ?? 0} HP to ${target}${positive('wasted') ? ` (${meta.wasted} capped)` : ''}.`;
     case 'heal':
-      return `${subject} ${verb('uses', 'use')} ${label}${event.target ? ` on ${own && ownTarget ? 'yourself' : target}` : ''}${amount === null ? '' : ` (up to ${amount} healing)`}.`;
+      return `${subject} ${verb('uses', 'use')} ${label}${event.target ? ` on ${own && ownTarget ? 'yourself' : target}` : ''}${healingMagnitude === null ? '' : ` (up to ${healingMagnitude} healing)`}.`;
     case 'dot_applied': case 'debuff_applied':
       return `${subject} ${verb('applies', 'apply')} ${label} to ${target}.`;
     case 'status_applied': {

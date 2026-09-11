@@ -11,8 +11,9 @@ const queued = { status: 'queued', classification: 'queued', originNodeId: A, de
 
 describe('useCombat2DepartureSession', () => {
   it('queues once and blocks duplicate movement', async () => {
-    const adapter: Combat2DepartureAdapter = { depart: vi.fn().mockResolvedValue(queued) };
+    const adapter: Combat2DepartureAdapter = { depart: vi.fn().mockResolvedValue(queued),state:vi.fn().mockResolvedValue({status:'none'}) };
     const { result } = renderHook(() => useCombat2DepartureSession({ enabled: true, canSubmit: true, characterId: C, nodeId: A, adapter, generateRequestId: () => R }));
+    await act(async()=>{await Promise.resolve();});
     await act(async () => { expect(await result.current.move(B)).toMatchObject({ status: 'queued' }); });
     await expect(result.current.move(B)).resolves.toMatchObject({ status: 'local_refusal', classification: 'exit_pending' });
     expect(adapter.depart).toHaveBeenCalledOnce();
@@ -20,10 +21,11 @@ describe('useCombat2DepartureSession', () => {
 
   it('retries an uncertain response with the same request id and drops stale responses', async () => {
     let release!: (value: typeof queued) => void;
-    const adapter: Combat2DepartureAdapter = { depart: vi.fn()
+    const adapter: Combat2DepartureAdapter = { state:vi.fn().mockResolvedValue({status:'none'}),depart: vi.fn()
       .mockRejectedValueOnce(new Combat2DepartureError('uncertain', 'offline'))
       .mockImplementationOnce(() => new Promise(resolve => { release = resolve; })) };
     const { result, rerender } = renderHook(({ nodeId }) => useCombat2DepartureSession({ enabled: true, canSubmit: true, characterId: C, nodeId, adapter, generateRequestId: () => R }), { initialProps: { nodeId: A } });
+    await act(async()=>{await Promise.resolve();});
     await act(async () => { expect(await result.current.move(B)).toMatchObject({ status: 'uncertain' }); });
     let retried!: Promise<unknown>;
     act(() => { retried = result.current.retry(); });
@@ -31,5 +33,15 @@ describe('useCombat2DepartureSession', () => {
     await act(async () => { release(queued); expect(await retried).toMatchObject({ status: 'stale' }); });
     expect(adapter.depart).toHaveBeenNthCalledWith(1, C, B, R);
     expect(adapter.depart).toHaveBeenNthCalledWith(2, C, B, R);
+  });
+
+  it('reconstructs a queued departure on refresh and clears only after authoritative terminal state',async()=>{
+    vi.useFakeTimers();
+    const state=vi.fn().mockResolvedValueOnce({status:'queued',requestId:R,originNodeId:A,destinationNodeId:B}).mockResolvedValueOnce({status:'moved',requestId:R,originNodeId:A,destinationNodeId:B});
+    const adapter:Combat2DepartureAdapter={state,depart:vi.fn()};
+    const {result}=renderHook(()=>useCombat2DepartureSession({enabled:true,canSubmit:true,characterId:C,nodeId:A,adapter}));
+    await act(async()=>{await Promise.resolve();});expect(result.current.pending).toBe(true);
+    await act(async()=>{vi.advanceTimersByTime(2000);await Promise.resolve();});expect(result.current.pending).toBe(false);
+    expect(adapter.depart).not.toHaveBeenCalled();vi.useRealTimers();
   });
 });

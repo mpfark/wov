@@ -65,6 +65,7 @@ describe('Combat2ClientSession application bridge', () => {
     vi.spyOn(supabase, 'rpc').mockImplementation((async (name: string) => {
       calls.push(name);
       if (name === 'combat_enter') return { data: { ok: true, kind: 'entered', encounter_id: ENCOUNTER, fighter_id: 'dddddddd-0000-4000-8000-000000000001', entry_seq: 1 }, error: null };
+      if (name === 'combat2_departure_state') return {data:{ok:true,kind:'departure_state',status:'none'},error:null};
       if (name === 'combat2_sync') return { data: {
         ok:true,kind:'sync',latest_tick:0,returned_through_tick:0,has_more:false,
         encounter:{id:ENCOUNTER,status:'active',tick:0,stateVersion:1},
@@ -82,7 +83,7 @@ describe('Combat2ClientSession application bridge', () => {
     const view=renderHook(()=>useCombat2ClientSession({enabled:true,controlled:true,characterId:CHARACTER,nodeId:NODE,hasLivingCreatures:true}));
     const {result}=view;
     await waitFor(()=>expect(result.current.presentation.status).toBe('live'));
-    expect(calls.slice(0,2)).toEqual(['combat_enter','combat2_sync']);
+    expect(calls.filter(name=>name==='combat_enter'||name==='combat2_sync').slice(0,2)).toEqual(['combat_enter','combat2_sync']);
     expect(result.current.actionsReady).toBe(true);
     expect(result.current.presentation.model?.effects[0]).toMatchObject({kind:'autoattack',targetCharacterId:CHARACTER});
     view.unmount();

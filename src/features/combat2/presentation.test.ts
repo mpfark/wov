@@ -46,6 +46,7 @@ describe('safe delivered Combat2 message wording', () => {
     [{ kind: 'effect_expired', abilityKey: 'rend' }, 'Rend expires.'],
     [{ kind: 'effect_expired' }, 'Effect expires.'],
     [{ kind: 'heal', actor: self, target: self, abilityKey: 'second_wind', amount: 32 }, 'You use Second Wind on yourself (up to 32 healing).'],
+    [{ kind: 'heal', actor: self, target: self, abilityKey: 'second_wind', amount: -48 }, 'You use Second Wind on yourself (up to 48 healing).'],
     [{ kind: 'effect_pulse', target: self, abilityKey: 'second_wind', amount: 10, meta: { healing: true } }, 'Second Wind restores 10 HP to you.'],
   ] as [Combat2SafeEvent, string][])('formats %j without inventing outcomes', (event, expected) => {
     expect(messages([event]).events[0].message).toBe(expected);

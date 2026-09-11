@@ -1,0 +1,3 @@
+import {readFileSync} from 'node:fs';import {describe,expect,it} from 'vitest';
+const sql=readFileSync('supabase/migrations/20260912140000_combat2_departure_state_projection.sql','utf8').toLowerCase().replace(/\s+/g,' ');
+describe('Combat2 departure reconnect projection',()=>{it('returns only the caller-owned latest bounded state',()=>{expect(sql).toContain('public.owns_character(_character_id)');expect(sql).toContain("'kind','departure_state'");expect(sql).toContain('order by d.created_at desc,d.request_id desc limit 1');expect(sql).not.toContain('grant execute on function public.combat2_departure_state(uuid) to anon');});});
