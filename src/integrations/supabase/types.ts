@@ -5844,6 +5844,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string; _user_id: string }
         Returns: boolean
       }
+      combat2_test_emergency_shutdown: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
       combat2_test_environment_close: {
         Args: { _arena_id: string; _request_id: string }
         Returns: Json
@@ -5877,6 +5881,14 @@ export type Database = {
         Returns: Json
       }
       combat2_test_reset: {
+        Args: {
+          _arena_id: string
+          _confirm_destroy_diagnostics: boolean
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat2_test_reset_without_presence_gate: {
         Args: {
           _arena_id: string
           _confirm_destroy_diagnostics: boolean
@@ -6408,6 +6420,18 @@ export type Database = {
         Returns: Json
       }
       node_tick_commit: {
+        Args: {
+          _candidate_tick: number
+          _claim_token: string
+          _encounter_id: string
+          _expected_last_tick: number
+          _expected_state_version: number
+          _intent_ids: string[]
+          _proposed: Json
+        }
+        Returns: Json
+      }
+      node_tick_commit_without_bounded_failure: {
         Args: {
           _candidate_tick: number
           _claim_token: string
