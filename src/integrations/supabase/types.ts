@@ -1980,6 +1980,32 @@ export type Database = {
           },
         ]
       }
+      combat2_player_presence: {
+        Row: {
+          character_id: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_player_presence_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_respawn_config: {
         Row: {
           default_node_id: string
@@ -5782,6 +5808,10 @@ export type Database = {
       }
       combat2_party_preflight: {
         Args: { _character_id: string; _node_id: string }
+        Returns: Json
+      }
+      combat2_presence_heartbeat: {
+        Args: { _character_id: string }
         Returns: Json
       }
       combat2_provision_worker_secret: {
