@@ -43,10 +43,9 @@ export function useCombat2TestOwnership(options: {
     return () => { active = false; };
   }, [access, characterId, check]);
   useEffect(() => { if (!reserved) { request.current=null; setPreflightResult(null); setLocked(false); } }, [reserved, characterId]);
-  // Arena nodes are always reserved. For ordinary nodes, hold legacy while the
-  // authoritative check is pending/uncertain, own allowed canaries, and release
-  // only after an explicit server refusal.
-  const blocksLegacy = arenaReserved || (reserved && access !== 'refused');
+  // Once the production cutover is enabled, every gameplay node reserves the
+  // Combat2 engine even when access is refused. Never fall back to Legacy.
+  const blocksLegacy = arenaReserved || reserved;
   const combat2OwnsSession = blocksLegacy && access==='allowed' && preflight === 'allowed';
   return {
     blocksLegacy, combat2OwnsSession, preflight, access, rolloutEnabled:accessEnabled,

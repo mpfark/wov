@@ -52,12 +52,13 @@ describe('restricted cold-entry ownership', () => {
     expect(legacy).not.toHaveBeenCalled();
   });
 
-  it('reserves immediately after authoritative relocation into staging', async () => {
+  it('retains the global legacy fence during relocation into the arena', async () => {
     const check = vi.fn().mockResolvedValue(true);
     const accessCheck=vi.fn(async(_character:string,node:string):Promise<SessionAccessResult>=>node===ordinaryNode
       ? {status:'refused',classification:'not_enabled'} : {status:'allowed',scope:'test_arena',nodeId:node});
     const { result, rerender } = renderHook(({ node }) => useCombat2TestOwnership({ ...config, nodeId: node, check,accessCheck }), { initialProps: { node: ordinaryNode } });
-    await waitFor(()=>expect(result.current.blocksLegacy).toBe(false));
+    await waitFor(()=>expect(result.current.access).toBe('refused'));
+    expect(result.current.blocksLegacy).toBe(true);
     rerender({ node: nodeId });
     expect(result.current.blocksLegacy).toBe(true);
     await waitFor(()=>expect(result.current.combat2OwnsSession).toBe(true));
@@ -73,12 +74,12 @@ describe('restricted cold-entry ownership', () => {
     expect(accessCheck).not.toHaveBeenCalled();
   });
 
-  it('releases an ordinary node to legacy only after authoritative refusal', async () => {
+  it('keeps an ordinary node fenced after authoritative refusal', async () => {
     const accessCheck=vi.fn().mockResolvedValue({status:'refused',classification:'not_enabled'});
     const {result}=renderHook(()=>useCombat2TestOwnership({...config,nodeId:ordinaryNode,accessCheck}));
     expect(result.current.blocksLegacy).toBe(true);
     await waitFor(()=>expect(result.current.access).toBe('refused'));
-    expect(result.current.blocksLegacy).toBe(false);
+    expect(result.current.blocksLegacy).toBe(true);
     expect(accessCheck).toHaveBeenCalledOnce();
   });
 
@@ -97,9 +98,9 @@ describe('restricted cold-entry ownership', () => {
     expect(result.current.combat2OwnsSession).toBe(false);
   });
 
-  it('retains ownership across arena nodes and releases it outside', async () => {
+  it('retains ownership across arena nodes and ordinary-world nodes', async () => {
     const accessCheck=async(_character:string,node:string):Promise<SessionAccessResult>=>node===ordinaryNode
-      ? {status:'refused',classification:'not_enabled'} : {status:'allowed',scope:'test_arena',nodeId:node};
+      ? {status:'allowed',scope:'ordinary_world',nodeId:node} : {status:'allowed',scope:'test_arena',nodeId:node};
     const { result, rerender } = renderHook(({ node }) => useCombat2TestOwnership({ ...config, nodeId: node, check: async () => true,accessCheck }), { initialProps: { node: nodeId } });
     await waitFor(() => expect(result.current.combat2OwnsSession).toBe(true));
     for (const node of COMBAT2_TEST_ARENA.nodes.slice(1)) {
@@ -109,8 +110,8 @@ describe('restricted cold-entry ownership', () => {
       await waitFor(()=>expect(result.current.combat2OwnsSession).toBe(true));
     }
     rerender({ node: ordinaryNode });
-    await waitFor(()=>expect(result.current.blocksLegacy).toBe(false));
-    expect(result.current.combat2OwnsSession).toBe(false);
+    await waitFor(()=>expect(result.current.combat2OwnsSession).toBe(true));
+    expect(result.current.blocksLegacy).toBe(true);
   });
 
   it('discards a late access response for a previous character and node',async()=>{
@@ -129,18 +130,21 @@ describe('restricted cold-entry ownership', () => {
     expect(accessCheck).toHaveBeenNthCalledWith(2,secondCharacter,secondNode);
   });
 
-  it('does not let a late preflight result reclaim ownership after leaving the arena', async () => {
-    let finish!: (ok:boolean)=>void;
-    const check=vi.fn(()=>new Promise<boolean>(resolve=>{finish=resolve;}));
+  it('does not let a late arena preflight override ordinary-world ownership', async () => {
+    const finishes:((ok:boolean)=>void)[]=[];
+    const check=vi.fn(()=>new Promise<boolean>(resolve=>{finishes.push(resolve);}));
     const accessCheck=async(_character:string,node:string):Promise<SessionAccessResult>=>node===ordinaryNode
-      ? {status:'refused',classification:'not_enabled'} : {status:'allowed',scope:'test_arena',nodeId:node};
+      ? {status:'allowed',scope:'ordinary_world',nodeId:node} : {status:'allowed',scope:'test_arena',nodeId:node};
     const {result,rerender}=renderHook(({node})=>useCombat2TestOwnership({...config,nodeId:node,check,accessCheck}),{initialProps:{node:nodeId}});
     expect(result.current.blocksLegacy).toBe(true);
     await waitFor(()=>expect(check).toHaveBeenCalledOnce());
     rerender({node:ordinaryNode});
-    await waitFor(()=>expect(result.current.blocksLegacy).toBe(false));
-    await act(async()=>finish(true));
-    expect(result.current.combat2OwnsSession).toBe(false);
+    await waitFor(()=>expect(check).toHaveBeenCalledTimes(2));
+    await act(async()=>finishes[1](true));
+    await waitFor(()=>expect(result.current.combat2OwnsSession).toBe(true));
+    await act(async()=>finishes[0](true));
+    expect(result.current.combat2OwnsSession).toBe(true);
+    expect(result.current.blocksLegacy).toBe(true);
   });
 
   it('replays the entry effect without a second RPC', async () => {

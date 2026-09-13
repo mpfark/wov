@@ -47,6 +47,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'OPTIONS') return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'legacy_retired' })), {
+    status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

@@ -7,6 +7,7 @@ describe('Combat2 self-access adapter',()=>{
  it('accepts only a recognized scope for the requested node',()=>{
   expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'test_arena',node_id:node},node).status).toBe('allowed');
   expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'canary',node_id:node},node).status).toBe('allowed');
+  expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'ordinary_world',node_id:node},node).status).toBe('allowed');
   expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'other',node_id:node},node).status).toBe('error');
   expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'test_arena',node_id:COMBAT2_TEST_ARENA.nodes[1].id},node).status).toBe('error');
   expect(decodeSessionAccess({ok:true,kind:'allowed',scope:'test_arena',node_id:'bad'},node).status).toBe('error');

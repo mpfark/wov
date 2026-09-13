@@ -31,11 +31,10 @@ export const USE_CONFIG_ABILITIES = true;
  */
 export const ABILITY_RESOLVER_MODE: 'v2' | 'sealed' = 'v2';
 
-/** Exact, frontend-only rollout gate for the dormant Combat2 client path. */
+/** Historical parser retained for tests/rollback tooling. */
 export function combat2ClientEnabled(value: unknown): boolean {
   return value === 'true';
 }
 
-export const COMBAT2_CLIENT_ENABLED = combat2ClientEnabled(
-  import.meta.env.VITE_COMBAT2_CLIENT_ENABLED,
-);
+/** Production cutover: every normal game session reserves Combat2 authority. */
+export const COMBAT2_CLIENT_ENABLED = true;
