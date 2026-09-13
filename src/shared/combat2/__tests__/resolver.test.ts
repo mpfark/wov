@@ -396,15 +396,16 @@ describe('combat2 resolver', () => {
   });
 
   it('hits the unchanged captured fighter exactly once at resolution', () => {
-    const out = resolveNodeTick(
-      snapshot({
+    const input = snapshot({
         creatures: [creature({ pending_action: pending() })],
-        boss_abilities: [bossAbility()],
-      }),
-      { abilities },
-    );
+        boss_abilities: [bossAbility({ damage_type: 'fire' })],
+      });
+    const out = resolveNodeTick(input, { abilities });
+    expect(resolveNodeTick(input, { abilities })).toEqual(out);
     expect(out.creatures[0].pending_action).toBeNull();
     expect(out.events.filter((e) => e.kind === 'creature_attack' && e.abilityKey === 'granite_slam')).toHaveLength(1);
+    expect(out.events.find((e) => e.kind === 'creature_attack' && e.abilityKey === 'granite_slam')?.meta)
+      .toMatchObject({ damageType: 'fire' });
     expect(out.events.filter((e) => e.kind === 'boss_cast_evaded')).toHaveLength(0);
   });
 

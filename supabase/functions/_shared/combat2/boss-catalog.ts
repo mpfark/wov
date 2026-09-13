@@ -9,10 +9,9 @@
  *     carries a stored-power accumulation model plus split primary/AoE shares.
  *     The replacement contract is tick-based and single-target-mode.
  *
- * Only unambiguous fields are translated. Anything that would require inventing
- * semantics (stored-power accumulation, a simultaneous primary + AoE split, a
- * missing stable `ability_key`) is REJECTED with a reason so the gap is visible
- * instead of silently mis-simulated.
+ * Production normalization deliberately uses the authored primary release
+ * damage as one deterministic supported hit. Historical stored-power buildup
+ * and secondary split damage are not replayed by Combat2.
  */
 
 import type { NodeSnapshot, SnapshotBossAbility, SnapshotBossConfiguration } from './types.ts';
@@ -58,6 +57,12 @@ export interface BossCatalog {
 /** The authoritative cadence: one tick every two seconds. */
 export const TICK_MS = 2000;
 
+/** Established C3 identity convention, anchored to the immutable creature id. */
+export function deriveBossAbilityKey(label: string, creatureId: string): string {
+  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'cataclysm';
+  return `${slug}__${creatureId.replaceAll('-', '').slice(0, 8)}`;
+}
+
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -73,7 +78,8 @@ export function adaptBossCast(
   });
 
   if (!cast || cast.enabled === false) return reject('disabled');
-  if (!cast.ability_key) return reject('missing_ability_key');
+  const abilityKey = cast.ability_key?.trim() || (label?.trim() ? deriveBossAbilityKey(label, creatureId) : null);
+  if (!abilityKey) return reject('missing_ability_key');
 
   const castMs = num(cast.cast_ms);
   if (castMs === null || castMs <= 0) return reject('missing_cast_ms');
@@ -81,29 +87,18 @@ export function adaptBossCast(
   const amount = num(cast.base_amount) ?? num(cast.amount);
   if (amount === null || amount <= 0) return reject('missing_amount');
 
-  if (cast.target_mode != null && !['tank', 'aoe', 'random'].includes(cast.target_mode)) {
+  if (cast.target_mode != null && !['tank', 'aoe', 'random', 'tank_preferred', 'tank_strict', 'random_alive'].includes(cast.target_mode)) {
     return reject('unsupported_target_mode');
   }
 
-  // Stored power turns the telegraph's magnitude into an accumulated pool. The
-  // replacement contract has no field for it; adapting it would change balance.
-  if (cast.accumulate?.enabled === true || (cast.stored_power && Object.keys(cast.stored_power).length > 0)) {
-    return reject('stored_power_unsupported');
-  }
-
-  // A cast that hits the primary target AND everyone else for a different amount
-  // is two effects; `targeting` can only express one.
-  const aoeAmount = num(cast.base_aoe_amount) ?? 0;
-  if (aoeAmount > 0) return reject('split_target_shares_unsupported');
-
   const targeting: SnapshotBossAbility['targeting'] =
-    cast.target_mode === 'aoe' ? 'aoe' : cast.target_mode === 'random' ? 'random' : 'tank';
+    cast.target_mode === 'aoe' ? 'aoe' : ['random', 'random_alive'].includes(cast.target_mode ?? '') ? 'random' : 'tank';
 
   return {
     ability: {
-      id: `${creatureId}:${cast.ability_key}`,
+      id: `${creatureId}:${abilityKey}`,
       creature_id: creatureId,
-      ability_key: cast.ability_key,
+      ability_key: abilityKey,
       label,
       // `chance` is the authored per-opportunity probability; it is the only
       // authored selection weight there is.

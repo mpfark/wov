@@ -58,12 +58,15 @@ describe('claimed authored boss configuration', () => {
     }
   });
 
-  it('rejects malformed and explicitly unsupported authored configurations', () => {
+  it('rejects malformed configuration but accepts normalized stored power as primary damage', () => {
     const malformed = claimedBoss({ cast_ms: 'slow' });
     expect(decodeClaim(malformed).ok).toBe(false);
     const decoded = decodeClaim(claimedBoss({ stored_power: { amount: 5 } }));
     if (decoded.ok !== true) throw new Error(decoded.errors.join('; '));
-    expect(adaptClaimedBossCatalog(decoded.snapshot).rejected[0].reason).toBe('stored_power_unsupported');
+    expect(adaptClaimedBossCatalog(decoded.snapshot)).toMatchObject({
+      snapshot: { boss_abilities: [{ ability_key: 'tidal_crash', magnitude: 17, targeting: 'tank' }] },
+      rejected: [],
+    });
   });
 
   it('keeps an already captured snapshot deterministic when a later source value changes', () => {

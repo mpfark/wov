@@ -617,7 +617,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const opportunityKind = pending.event_type === 'fighter_entered' ? 'entry' : 'exit';
     for (const creature of [...creatures.values()].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
       if (!creature.engaged || creature.hp <= 0 || !creature.row.is_alive) continue;
-      applyCreatureDamage(creature, target, null, 0, opportunityKind, pending.id);
+      applyCreatureDamage(creature, target, null, 0, null, opportunityKind, pending.id);
       if (!livingCharacters().has(target.character_id)) break;
     }
     if (pending.event_type === 'fighter_exit_requested' || pending.event_type === 'fighter_depart_requested') {
@@ -699,7 +699,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           .filter(fighter => chars.get(fighter.character_id)?.present === true && livingCharacters().has(fighter.character_id))
           .sort((a, b) => a.id.localeCompare(b.id))) {
           if (target.hp <= 0) break;
-          applyCreatureDamage(target, present, null, 0, 'engagement_opening', intent.id);
+          applyCreatureDamage(target, present, null, 0, null, 'engagement_opening', intent.id);
         }
         if (actor.hp <= 0) {
           emit({ kind: 'action_rejected', outcomeReason: 'actor_died_during_engagement' });
@@ -907,7 +907,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         .filter((fighter) => chars.get(fighter.character_id)?.present === true && livingCharacters().has(fighter.character_id))
         .sort((a, b) => a.id.localeCompare(b.id))) {
         if (targetCreature.hp <= 0) break;
-        applyCreatureDamage(targetCreature, present, null, 0, 'engagement_opening', intent.id);
+        applyCreatureDamage(targetCreature, present, null, 0, null, 'engagement_opening', intent.id);
       }
       if (actor.hp <= 0) {
         emit({ kind: 'action_rejected', outcomeReason: 'actor_died_during_engagement', abilityKey: spec.abilityKey });
@@ -1220,7 +1220,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         });
         continue;
       }
-      applyCreatureDamage(creature, capturedTarget, ability.ability_key, Math.floor(ability.magnitude ?? 0));
+      applyCreatureDamage(creature, capturedTarget, ability.ability_key, Math.floor(ability.magnitude ?? 0), ability.damage_type);
       continue;
     }
 
@@ -1267,14 +1267,14 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
             ? [tank]
             : [];
       for (const target of targets) {
-        applyCreatureDamage(creature, target, chosen.ability_key, Math.floor(chosen.magnitude ?? 0));
+        applyCreatureDamage(creature, target, chosen.ability_key, Math.floor(chosen.magnitude ?? 0), chosen.damage_type);
       }
       if (targets.length > 0) continue;
     }
 
     // 3c. ordinary autoattack against the current tank.
     if (!tank) continue;
-    applyCreatureDamage(creature, tank, null, 0);
+    applyCreatureDamage(creature, tank, null, 0, null);
   }
 
   function applyCreatureDamage(
@@ -1282,6 +1282,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     targetFighter: SnapshotFighter,
     abilityKey: string | null,
     flatMagnitude: number,
+    damageType: string | null,
     opportunityKind?: 'entry' | 'exit' | 'engagement_opening',
     transitionEventId?: string,
   ): void {
@@ -1420,6 +1421,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       amount: applied,
       meta: {
         ...(opportunityKind ? { opportunityKind, transitionEventId, spawnSeq: creature.row.spawn_seq } : {}),
+        ...(damageType ? { damageType } : {}),
         isCrit,
         percentMitigated: breakdown.percentMitigated,
         shieldBonusApplied: breakdown.shieldBonusApplied,

@@ -90,7 +90,7 @@ describe('processNodeTickOnce', () => {
     const claim = successfulClaim();
     claim.snapshot.boss_configurations[0].boss_cast = {
       enabled: true, ability_key: 'bad', cast_ms: 2000, base_amount: 10,
-      stored_power: { amount: 1 },
+      target_mode: 'browser_selected',
     };
     t = transport(claim);
     expect((await processNodeTickOnce(NODE, { transport: t.value, abilityRecords: abilities, statusRecords: statuses })).kind)

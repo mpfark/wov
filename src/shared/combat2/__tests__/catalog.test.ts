@@ -114,7 +114,7 @@ describe('authored boss casts', () => {
 
   it('refuses a cast with no identity, no amount, or no timing', () => {
     const cases: Array<[AuthoredBossCast, string]> = [
-      [{ ...cast, ability_key: null }, 'missing_ability_key'],
+      [{ ...cast, ability_key: null, label: null }, 'missing_ability_key'],
       [{ ...cast, base_amount: null }, 'missing_amount'],
       [{ ...cast, cast_ms: null }, 'missing_cast_ms'],
     ];
@@ -125,11 +125,11 @@ describe('authored boss casts', () => {
     }
   });
 
-  it('refuses stored-power and split primary/area semantics rather than inventing them', () => {
+  it('normalizes stored-power and split casts to one authored primary hit', () => {
     const stored = adaptBossCast('cr-1', { ...cast, accumulate: { enabled: true } });
-    expect('rejection' in stored && stored.rejection.reason).toBe('stored_power_unsupported');
+    expect('ability' in stored && stored.ability.magnitude).toBe(30);
     const split = adaptBossCast('cr-1', { ...cast, base_aoe_amount: 10 });
-    expect('rejection' in split && split.rejection.reason).toBe('split_target_shares_unsupported');
+    expect('ability' in split && split.ability).toMatchObject({ magnitude: 30, targeting: 'tank' });
   });
 
   it('reports each creature separately so one bad cast cannot silence another boss', () => {
