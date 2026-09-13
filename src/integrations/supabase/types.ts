@@ -5735,6 +5735,10 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_departure_state: {
+        Args: { _character_id: string }
+        Returns: Json
+      }
       combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
