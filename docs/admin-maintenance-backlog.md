@@ -12,7 +12,7 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-006 | XP Boost | correctness | Duplicate toggles were possible and malformed duration could create an invalid expiry. | None | No | No | Yes | Technical batch 1 | completed |
 | ADM-007 | Issues | async safety | Filter loads could race; status/delete writes could duplicate; delete confirmation did not identify the report. | None | No | No | Yes | Technical batch 1 | completed |
 | ADM-008 | Roadmap | async safety | Create/update/toggle/delete lacked a synchronous fence and mutation errors were ignored. | None | No | No | Yes | Technical batch 1 | completed |
-| ADM-010 | World Map / Node Editor | authority/atomicity | Reciprocal connection changes span browser writes and may leave one-sided connections. High world-integrity risk. | Design an authoritative transaction/RPC. | Likely | Possibly | Yes | Technical batch 2 | open |
+| ADM-010 | World Map / Node Editor | authority/atomicity | Ordinary reciprocal create/edit/remove now use an expected-state, idempotent transactional RPC. Intentional one-way/special paths are refused and preserved. | Install migration and regenerate types. Adjacent-node creation remains ADM-012. | Yes | No | Yes | Technical batch 2B | completed |
 | ADM-011 | Area Types | authority/atomicity | Rename formerly updated areas, created a type and deleted the old type in separate browser steps. Atomic admin RPC now owns rename and durable replay. | Install pending migration and regenerate types. | Yes | No | Yes | Technical batch 2A | completed |
 | ADM-012 | Regions | authority/atomicity | Region plus initial-node creation is multi-step and may partially complete. | Authoritative transaction/RPC. | Likely | No | Yes | Technical batch 2 | open |
 | ADM-013 | Batch Node Editor | authority/atomicity | Multi-node updates have partial-write exposure. | Define all-or-nothing behavior. | Likely | No | Yes | Technical batch 2 | open |
@@ -28,4 +28,4 @@ This is the canonical queue for admin correctness and design work. Completed ite
 
 ## Next recommended batch
 
-Implement ADM-010 next as a dedicated reciprocal-node-connection batch, then ADM-012 through ADM-014. Connection metadata and malformed legacy-state refusal deserve an isolated contract rather than sharing a migration with unrelated mutations.
+Implement ADM-012 next: atomic region creation with an optional initial node, including the deferred adjacent-node-plus-parent-connection workflow. Then address batch-node and loot-table atomicity.

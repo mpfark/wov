@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +19,8 @@ import IllustrationEditor from './IllustrationEditor';
 import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminStickyActions } from './common';
 import { CLASS_LABELS, getPlayableClassKeys } from '@/shared/formulas/classes';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
+import { createConnectionRequestTracker, directionalMetadata, findExactConnection, submitReciprocalConnection, type NodeDirection } from './node-connection-admin';
 
 interface VendorEntry {
   id: string;
@@ -171,6 +173,11 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const [editLocked, setEditLocked] = useState(false);
   const [editLockKey, setEditLockKey] = useState('');
   const [editLockHint, setEditLockHint] = useState('');
+  const operationFence = useRef(createSubmissionFence());
+  const refreshGuard = useRef(createLatestRequestGuard());
+  const requestTracker = useRef(createConnectionRequestTracker());
+
+  useEffect(() => () => { operationFence.current.invalidate(); refreshGuard.current.invalidate(); }, [nodeId]);
 
   const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
@@ -192,37 +199,24 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   };
 
   const refreshFromDb = async () => {
+    const request = refreshGuard.current.begin();
     const { data } = await supabase.from('nodes').select('connections').eq('id', nodeId).single();
-    if (data && onConnectionsChanged) {
+    if (data && onConnectionsChanged && refreshGuard.current.isCurrent(request)) {
       onConnectionsChanged(JSON.stringify(data.connections ?? [], null, 2));
     }
   };
 
   const saveEditConnection = async () => {
     if (!editingConnId) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     setSaving(true);
-    const newConns = parsed.map(c =>
-      c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), hidden: !!editHidden, ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
-        : c
-    );
-    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
-    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', editingConnId).single();
-    if (targetNode) {
-      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
-      const reverseIdx = targetConns.findIndex((c: any) => c.node_id === nodeId);
-      if (reverseIdx >= 0) {
-        const existing = targetConns[reverseIdx];
-        targetConns[reverseIdx] = {
-          ...existing,
-          direction: REVERSE_DIR[editDir] || existing.direction,
-          hidden: !!editHidden,
-          ...(editLabel ? { label: editLabel } : {}),
-        };
-        if (!editLabel) delete targetConns[reverseIdx].label;
-        await supabase.from('nodes').update({ connections: targetConns }).eq('id', editingConnId);
-      }
-    }
+    const source = findExactConnection(parsed, editingConnId);
+    const targetNode = allNodesGlobal.find((n: any) => n.id === editingConnId);
+    const target = findExactConnection(targetNode?.connections, nodeId);
+    const result = await submitReciprocalConnection({ operation: 'edit', sourceNodeId: nodeId, targetNodeId: editingConnId, expectedSourceEntry: source, expectedTargetEntry: target, desiredDirection: editDir as NodeDirection, desiredHidden: editHidden, desiredSourceDirectionalMetadata: directionalMetadata({ label: editLabel, locked: editLocked, lock_key: editLockKey, lock_hint: editLockHint }) }, requestTracker.current);
+    if (!operationFence.current.release(operation)) return;
+    if (!result.ok) { setSaving(false); toast.error(`Connection update refused: ${result.kind}`); return; }
     await refreshFromDb();
     toast.success('Connection updated');
     setEditingConnId(null);
@@ -233,17 +227,12 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const addConnection = async () => {
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), hidden: !!addHidden, ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
-    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
-    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
-    if (targetNode) {
-      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
-      if (!targetConns.some((c: any) => c.node_id === nodeId)) {
-        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', hidden: !!addHidden });
-        await supabase.from('nodes').update({ connections: targetConns }).eq('id', addNodeId);
-      }
-    }
+    const result = await submitReciprocalConnection({ operation: 'create', sourceNodeId: nodeId, targetNodeId: addNodeId, expectedSourceEntry: null, expectedTargetEntry: null, desiredDirection: addDir as NodeDirection, desiredHidden: addHidden, desiredSourceDirectionalMetadata: directionalMetadata({ label: addLabel, locked: addLocked, lock_key: addLockKey, lock_hint: addLockHint }) }, requestTracker.current);
+    if (!operationFence.current.release(operation)) return;
+    if (!result.ok) { setSaving(false); toast.error(`Connection creation refused: ${result.kind}`); return; }
     await refreshFromDb();
     toast.success('Connection added');
     setAddNodeId('');
@@ -257,14 +246,17 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   };
 
   const removeConnection = async (targetId: string) => {
+    const source = findExactConnection(parsed, targetId);
+    const targetNode = allNodesGlobal.find((n: any) => n.id === targetId);
+    const target = findExactConnection(targetNode?.connections, nodeId);
+    if (!source || !target) return toast.error('Connection is not a valid ordinary reciprocal pair');
+    if (!window.confirm(`Remove the reciprocal connection to "${nodeName(targetId)}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     setSaving(true);
-    const newConns = parsed.filter(c => c.node_id !== targetId);
-    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
-    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', targetId).single();
-    if (targetNode) {
-      const targetConns: any[] = Array.isArray(targetNode.connections) ? (targetNode.connections as any[]).filter((c: any) => c.node_id !== nodeId) : [];
-      await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
-    }
+    const result = await submitReciprocalConnection({ operation: 'remove', sourceNodeId: nodeId, targetNodeId: targetId, expectedSourceEntry: source, expectedTargetEntry: target }, requestTracker.current);
+    if (!operationFence.current.release(operation)) return;
+    if (!result.ok) { setSaving(false); toast.error(`Connection removal refused: ${result.kind}`); return; }
     await refreshFromDb();
     toast.success('Connection removed');
     setSaving(false);
@@ -276,19 +268,12 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   // Quick-connect a suggested node with a specific direction
   const quickConnect = async (targetId: string, direction: string) => {
     if (parsed.some(c => c.node_id === targetId)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     setSaving(true);
-    const dir = direction;
-    const newConns = [...parsed, { node_id: targetId, direction: dir }];
-    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
-    // Add reverse
-    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', targetId).single();
-    if (targetNode) {
-      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
-      if (!targetConns.some((c: any) => c.node_id === nodeId)) {
-        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[dir] || 'S' });
-        await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
-      }
-    }
+    const result = await submitReciprocalConnection({ operation: 'create', sourceNodeId: nodeId, targetNodeId: targetId, expectedSourceEntry: null, expectedTargetEntry: null, desiredDirection: direction as NodeDirection, desiredHidden: false, desiredSourceDirectionalMetadata: {} }, requestTracker.current);
+    if (!operationFence.current.release(operation)) return;
+    if (!result.ok) { setSaving(false); toast.error(`Connection creation refused: ${result.kind}`); return; }
     await refreshFromDb();
     toast.success('Connection added');
     setSaving(false);

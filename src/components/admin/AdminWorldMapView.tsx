@@ -2,10 +2,11 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
+import { createSubmissionFence } from './admin-operation-guards';
+import { createConnectionRequestTracker, submitReciprocalConnection, type NodeDirection } from './node-connection-admin';
 
 interface GraphNode {
   id: string;
@@ -91,8 +92,12 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
   const [isPanning, setIsPanning] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [connectionPending, setConnectionPending] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const connectionFence = useRef(createSubmissionFence());
+  const connectionRequestTracker = useRef(createConnectionRequestTracker());
+  useEffect(() => () => connectionFence.current.invalidate(), []);
   const allNodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
   const { colorMap } = useAreaTypes();
 
@@ -634,6 +639,9 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
 
               const handleSuggestionClick = async (targetId: string, targetPos: { px: number; py: number }) => {
                 if (!hNode || !hPos) return;
+                const operation = connectionFence.current.tryAcquire();
+                if (operation === false) return;
+                setConnectionPending(true);
                 const dx = targetPos.px - hPos.px;
                 const dy = targetPos.py - hPos.py;
                 const angle = Math.atan2(-dy, dx) * (180 / Math.PI);
@@ -647,21 +655,18 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                 else if (angle >= -112.5 && angle < -67.5) dir = 'S';
                 else dir = 'SE';
 
-                const OPPOSITE: Record<string, string> = { N: 'S', S: 'N', E: 'W', W: 'E', NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW' };
-                const reverseDir = OPPOSITE[dir] || 'N';
-
                 const targetNode = allNodeMap.get(targetId);
-                if (!targetNode) return;
+                if (!targetNode) { connectionFence.current.release(operation); setConnectionPending(false); return; }
 
-                // Update source node connections
-                const srcConns = [...(hNode.connections || []), { node_id: targetId, direction: dir }];
-                const { error: e1 } = await supabase.from('nodes').update({ connections: srcConns as any }).eq('id', hNode.id);
-                if (e1) { toast.error(e1.message); return; }
-
-                // Update target node connections
-                const tgtConns = [...(targetNode.connections || []), { node_id: hNode.id, direction: reverseDir }];
-                const { error: e2 } = await supabase.from('nodes').update({ connections: tgtConns as any }).eq('id', targetId);
-                if (e2) { toast.error(e2.message); return; }
+                const result = await submitReciprocalConnection({
+                  operation: 'create', sourceNodeId: hNode.id,
+                  targetNodeId: targetId, expectedSourceEntry: null, expectedTargetEntry: null,
+                  desiredDirection: dir as NodeDirection, desiredHidden: false,
+                  desiredSourceDirectionalMetadata: {},
+                }, connectionRequestTracker.current);
+                if (!connectionFence.current.release(operation)) return;
+                setConnectionPending(false);
+                if (!result.ok) { toast.error(`Connection creation refused: ${result.kind}`); return; }
 
                 toast.success(`Connected ${dir} → ${targetNode.name}`);
                 onConnectionCreated?.();
@@ -669,7 +674,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
 
               return suggestions.map(s => (
                 <g key={`suggest-${activeNode}-${s.id}`}
-                  className="cursor-pointer"
+                  className={connectionPending ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   onClick={(e) => { e.stopPropagation(); handleSuggestionClick(s.id, s); }}
                 >
                   <line
