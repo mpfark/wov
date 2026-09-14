@@ -24,6 +24,20 @@ describe('ordinary-world boss catalogue normalization', () => {
       return key;
     });
     expect(new Set(keys).size).toBe(28);
+    expect(new Set([...keys, 'proving_ground_slam']).size).toBe(29);
+  });
+
+  it('pins Ser Caldris to the proven live Riptide Cut source without changing authored values', () => {
+    const row = BOSS_CAST_PRODUCTION_IMAGES.find(candidate => candidate.creatureId === '3fc61566-798a-4a6c-8020-4db41dcb3b0a');
+    expect(row).toMatchObject({
+      name: 'Ser Caldris, the Drowned Blade', expectedKey: 'riptide_cut__3fc61566',
+      before: { label: 'Riptide Cut', base_amount: 55, cast_ms: 4000, cooldown_ms: 24000,
+        chance: 0.25, damage_type: 'physical' },
+    });
+    expect(row?.before).toHaveProperty('stored_power');
+    expect(row?.before).toHaveProperty('accumulate');
+    expect(migration).toContain("('3fc61566-798a-4a6c-8020-4db41dcb3b0a','riptide_cut__3fc61566')");
+    expect(migration).not.toContain('drowning_tide__3fc61566');
   });
 
   it('adapts every stored-power cast to deterministic resolution-time targeting and tick timing', () => {

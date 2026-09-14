@@ -21,7 +21,7 @@ INSERT INTO combat2_boss_normalization(creature_id,ability_key) VALUES
  ('bfff1d55-de1d-4fcb-ab79-9e8cf3c7828b','far_stalker_s_volley__bfff1d55'),
  ('a0b9ca20-7d12-431b-8877-8c53f250e6d2','orbital_convergence__a0b9ca20'),
  ('9b76b83d-24df-48cf-b2bb-a2c5e2ecc8de','the_third_mark__9b76b83d'),
- ('3fc61566-798a-4a6c-8020-4db41dcb3b0a','drowning_tide__3fc61566'),
+ ('3fc61566-798a-4a6c-8020-4db41dcb3b0a','riptide_cut__3fc61566'),
  ('8877a3a9-5e36-4881-85f9-65d0a402979c','final_absolution__8877a3a9'),
  ('1b77f42f-120e-4895-bc81-f72feba8f734','resonant_shattering__1b77f42f'),
  ('a16a0675-7479-4823-bbcd-d767ba575425','extinguish_the_living__a16a0675'),

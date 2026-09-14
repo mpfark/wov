@@ -133,9 +133,9 @@ export const BOSS_CAST_PRODUCTION_IMAGES: readonly BossCastProductionImage[] = [
     name: "Ser Caldris, the Drowned Blade",
     rarity: "boss",
     level: 30,
-    expectedKey: "drowning_tide__3fc61566",
+    expectedKey: "riptide_cut__3fc61566",
     expectedEnabled: true,
-    before: {"accumulate": {"crit_during_cast": "disabled", "enabled": true, "method": "expected", "pause_autoattacks": true, "source": "primary_target"}, "amount": 55, "base_amount": 55, "base_aoe_amount": 0, "cast_flavor": null, "cast_ms": 4000, "chance": 0.25, "cooldown_ms": 24000, "damage_type": "physical", "enabled": true, "hit_flavor": null, "label": "Drowning Tide", "lock_ms": 4000, "stored_power": {"aoe_share": 0.55, "cap": 112, "consume_mode": "all", "primary_share": 0.65}},
+    before: {"accumulate": {"crit_during_cast": "disabled", "enabled": true, "method": "expected", "pause_autoattacks": true, "source": "primary_target"}, "amount": 55, "base_amount": 55, "base_aoe_amount": 0, "cast_flavor": null, "cast_ms": 4000, "chance": 0.25, "cooldown_ms": 24000, "damage_type": "physical", "enabled": true, "hit_flavor": null, "label": "Riptide Cut", "lock_ms": 4000, "stored_power": {"aoe_share": 0.55, "cap": 112, "consume_mode": "all", "primary_share": 0.65}},
   },
   {
     creatureId: "8877a3a9-5e36-4881-85f9-65d0a402979c",

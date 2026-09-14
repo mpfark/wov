@@ -65,7 +65,7 @@ VALUES
     ('bfff1d55-de1d-4fcb-ab79-9e8cf3c7828b'::uuid, 'Maelor Ashvein, the Far-Stalker', 'boss', 'Far-Stalker''s Volley', 'far_stalker_s_volley__bfff1d55', true),
     ('a0b9ca20-7d12-431b-8877-8c53f250e6d2'::uuid, 'Orath Veyl, Keeper of the Turning Mind', 'boss', 'Orbital Convergence', 'orbital_convergence__a0b9ca20', true),
     ('9b76b83d-24df-48cf-b2bb-a2c5e2ecc8de'::uuid, 'Rell Vane, the Third Cut', 'boss', 'The Third Mark', 'the_third_mark__9b76b83d', true),
-    ('3fc61566-798a-4a6c-8020-4db41dcb3b0a'::uuid, 'Ser Caldris, the Drowned Blade', 'boss', 'Drowning Tide', 'drowning_tide__3fc61566', true),
+    ('3fc61566-798a-4a6c-8020-4db41dcb3b0a'::uuid, 'Ser Caldris, the Drowned Blade', 'boss', 'Riptide Cut', 'riptide_cut__3fc61566', true),
     ('8877a3a9-5e36-4881-85f9-65d0a402979c'::uuid, 'Sister Veyra, the Drowned Saint', 'boss', 'Final Absolution', 'final_absolution__8877a3a9', true),
     ('1b77f42f-120e-4895-bc81-f72feba8f734'::uuid, 'Skeldrath, the Shattered Peak', 'boss', 'Resonant Shattering', 'resonant_shattering__1b77f42f', true),
     ('a16a0675-7479-4823-bbcd-d767ba575425'::uuid, 'Solenne, the Last Lamplighter', 'boss', 'Extinguish the Living', 'extinguish_the_living__a16a0675', true),
