@@ -13,7 +13,7 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-007 | Issues | async safety | Filter loads could race; status/delete writes could duplicate; delete confirmation did not identify the report. | None | No | No | Yes | Technical batch 1 | completed |
 | ADM-008 | Roadmap | async safety | Create/update/toggle/delete lacked a synchronous fence and mutation errors were ignored. | None | No | No | Yes | Technical batch 1 | completed |
 | ADM-010 | World Map / Node Editor | authority/atomicity | Reciprocal connection changes span browser writes and may leave one-sided connections. High world-integrity risk. | Design an authoritative transaction/RPC. | Likely | Possibly | Yes | Technical batch 2 | open |
-| ADM-011 | Area Types | authority/atomicity | Rename updates areas, creates/updates a type and deletes the old type in separate steps. | Authoritative transaction/RPC. | Likely | No | Yes | Technical batch 2 | open |
+| ADM-011 | Area Types | authority/atomicity | Rename formerly updated areas, created a type and deleted the old type in separate browser steps. Atomic admin RPC now owns rename and durable replay. | Install pending migration and regenerate types. | Yes | No | Yes | Technical batch 2A | completed |
 | ADM-012 | Regions | authority/atomicity | Region plus initial-node creation is multi-step and may partially complete. | Authoritative transaction/RPC. | Likely | No | Yes | Technical batch 2 | open |
 | ADM-013 | Batch Node Editor | authority/atomicity | Multi-node updates have partial-write exposure. | Define all-or-nothing behavior. | Likely | No | Yes | Technical batch 2 | open |
 | ADM-014 | Loot Tables | authority/atomicity | Header/entry mutations need a focused partial-failure and duplicate-write review. | Establish transaction boundary. | Maybe | No | Yes | Technical batch 2 | open |
@@ -28,4 +28,4 @@ This is the canonical queue for admin correctness and design work. Completed ite
 
 ## Next recommended batch
 
-Implement ADM-010 through ADM-014 as a deliberately designed server-atomicity batch, beginning with reciprocal node connections and area-type rename. These have the highest data-integrity impact and cannot be made correct with client-side rollback.
+Implement ADM-010 next as a dedicated reciprocal-node-connection batch, then ADM-012 through ADM-014. Connection metadata and malformed legacy-state refusal deserve an isolated contract rather than sharing a migration with unrelated mutations.

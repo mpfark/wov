@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +15,8 @@ import {
   getAreaFillColor,
   getAreaStrokeColor,
 } from '@/features/world/utils/area-colors';
+import { createSubmissionFence } from './admin-operation-guards';
+import { decodeAreaTypeRenameResult } from './area-type-admin';
 
 interface Props {
   open: boolean;
@@ -26,6 +28,7 @@ export default function AreaTypeDialog({ open, onOpenChange }: Props) {
   const [editingType, setEditingType] = useState<string | null>(null);
   const [typeForm, setTypeForm] = useState({ name: '', color: NEUTRAL_AREA_COLOR });
   const [saving, setSaving] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
 
   const openCreate = () => {
     setEditingType(null);
@@ -39,25 +42,37 @@ export default function AreaTypeDialog({ open, onOpenChange }: Props) {
 
   const saveType = async () => {
     if (!typeForm.name.trim()) return toast.error('Name is required');
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     const color = isValidAreaColor(typeForm.color) ? typeForm.color : NEUTRAL_AREA_COLOR;
     setSaving(true);
     if (editingType) {
       if (editingType !== typeForm.name.trim()) {
-        const { error: insertErr } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), color } as any);
-        if (insertErr) { toast.error(insertErr.message); setSaving(false); return; }
-        await supabase.from('areas').update({ area_type: typeForm.name.trim().toLowerCase() } as any).eq('area_type', editingType);
-        await supabase.from('area_types').delete().eq('name', editingType);
+        const { data, error } = await supabase.rpc('admin_area_type_rename' as any, {
+          _request_id: crypto.randomUUID(),
+          _source_name: editingType,
+          _target_name: typeForm.name,
+          _color: color,
+        } as any);
+        const result = decodeAreaTypeRenameResult(data);
+        if (error || !result || !result.ok) {
+          operationFence.current.release(operation);
+          setSaving(false);
+          toast.error(error?.message || (!result ? 'Malformed rename response' : `Rename refused: ${result.kind}`));
+          return;
+        }
       } else {
         const { error } = await supabase.from('area_types').update({ color } as any).eq('name', editingType);
-        if (error) { toast.error(error.message); setSaving(false); return; }
+        if (error) { operationFence.current.release(operation); toast.error(error.message); setSaving(false); return; }
       }
       toast.success('Type updated');
     } else {
       const { error } = await supabase.from('area_types').insert({ name: typeForm.name.trim().toLowerCase(), color } as any);
-      if (error) { toast.error(error.message); setSaving(false); return; }
+      if (error) { operationFence.current.release(operation); toast.error(error.message); setSaving(false); return; }
       toast.success('Type created');
     }
     setSaving(false);
+    operationFence.current.release(operation);
     openCreate();
     refetch();
   };
