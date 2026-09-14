@@ -20,7 +20,7 @@ function state(hp: number, encounterId = ENCOUNTER, withTelegraph = false): Comb
         hp: 10, maxHp: 10, isAlive: true, engaged: true, tankFighterId: 'fighter-1',
         pendingAction: {
           abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 0, resolveAtTick: 2,
-          targetFighterId: 'fighter-1', targetCharacterId: CHARACTER, targetEntrySeq: 3,
+          targetMode: 'current_tank_at_resolution', targetFighterId: null, targetCharacterId: null, targetEntrySeq: null,
         },
       }] : [], effects: [], rewardClaims: [], batches: [],
     },

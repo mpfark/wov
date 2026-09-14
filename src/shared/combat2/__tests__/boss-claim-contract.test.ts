@@ -16,6 +16,7 @@ function claimedBoss(overrides: Record<string, unknown> = {}) {
       ability_key: 'tidal_crash',
       label: 'Tidal Crash',
       cast_ms: TICK_MS + 1,
+      cooldown_ms: TICK_MS * 2 + 1,
       chance: 0.5,
       base_amount: 17,
       target_mode: 'tank',
@@ -45,7 +46,8 @@ describe('claimed authored boss configuration', () => {
     expect(decoded.snapshot.boss_configurations?.[0]).toMatchObject({ spawn_seq: 7 });
     expect(out.snapshot.boss_abilities[0]).toMatchObject({
       ability_key: 'tidal_crash', creature_id: CLAIM.snapshot.creatures[0].creature_id,
-      windup_ticks: 2, magnitude: 17, spawn_seq: 7,
+      windup_ticks: 2, cooldown_ticks: 3, magnitude: 17, spawn_seq: 7,
+      targeting: 'current_tank_at_resolution', secondary_magnitude: 0,
     });
   });
 
@@ -64,7 +66,8 @@ describe('claimed authored boss configuration', () => {
     const decoded = decodeClaim(claimedBoss({ stored_power: { amount: 5 } }));
     if (decoded.ok !== true) throw new Error(decoded.errors.join('; '));
     expect(adaptClaimedBossCatalog(decoded.snapshot)).toMatchObject({
-      snapshot: { boss_abilities: [{ ability_key: 'tidal_crash', magnitude: 17, targeting: 'tank' }] },
+      snapshot: { boss_abilities: [{ ability_key: 'tidal_crash', magnitude: 17,
+        targeting: 'current_tank_at_resolution' }] },
       rejected: [],
     });
   });

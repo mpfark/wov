@@ -9,8 +9,8 @@ function telegraph(overrides: Partial<Combat2PresentationTelegraph> = {}): Comba
     id: 'telegraph-1', encounterId: 'encounter-1', nodeCreatureId: 'node-creature-1',
     creatureId: 'creature-1', spawnSeq: 3, creatureName: 'Granite Sentinel',
     abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 10, resolveAtTick: 12,
-    targetFighterId: 'fighter-1', targetCharacterId: 'character-1', targetEntrySeq: 4,
-    targetIsCurrentCharacter: true, ...overrides,
+    targetMode: 'current_tank_at_resolution', targetFighterId: null, targetCharacterId: null, targetEntrySeq: null,
+    targetIsCurrentCharacter: false, ...overrides,
   };
 }
 
@@ -20,9 +20,9 @@ afterEach(() => {
 });
 
 describe('Combat2TelegraphIndicator', () => {
-  it('uses the captured label, shows only an authorized current-character target, and falls back to ability key', () => {
+  it('uses the captured label, keeps dynamic targets non-person-specific, and falls back to ability key', () => {
     const view = render(<Combat2TelegraphIndicator telegraph={telegraph()} encounterTick={10} />);
-    expect(screen.getByLabelText(/Granite Slam: Gathering/)).toHaveTextContent('Target: You');
+    expect(screen.getByLabelText(/Granite Slam: Gathering/)).not.toHaveTextContent('Target:');
     view.rerender(<Combat2TelegraphIndicator telegraph={telegraph({
       id: 'telegraph-2', abilityLabel: null, abilityKey: 'falling_star', targetIsCurrentCharacter: false,
     })} encounterTick={10} />);

@@ -137,9 +137,13 @@ export interface SnapshotPendingAction {
   ability_label: string | null;
   started_at_tick: number;
   resolve_at_tick: number;
-  target_fighter_id: string;
-  target_character_id: string;
-  target_entry_seq: number;
+  target_mode?: 'current_tank_at_resolution' | 'all_present_at_resolution' | 'tank_plus_others';
+  primary_magnitude?: number;
+  secondary_magnitude?: number;
+  damage_type?: string | null;
+  target_fighter_id: string | null;
+  target_character_id: string | null;
+  target_entry_seq: number | null;
 }
 
 export interface SnapshotCreature {
@@ -274,7 +278,9 @@ export interface SnapshotBossAbility {
   label: string | null;
   weight: number;
   windup_ticks: number;
-  targeting: 'tank' | 'aoe' | 'random';
+  targeting: 'current_tank_at_resolution' | 'all_present_at_resolution' | 'tank_plus_others';
+  cooldown_ticks?: number;
+  secondary_magnitude?: number;
   magnitude: number | null;
   amount_calc: unknown;
   damage_type: string | null;
@@ -292,6 +298,15 @@ export interface SnapshotBossConfiguration {
   boss_cast: import('./boss-catalog').AuthoredBossCast | null;
 }
 
+export interface SnapshotBossCooldown {
+  encounter_id: string;
+  node_creature_id: string;
+  creature_id: string;
+  spawn_seq: number;
+  ability_key: string;
+  next_available_tick: number;
+}
+
 /** Authoritative tank fallbacks ordered by arrival-group priority at claim time. */
 export interface SnapshotTankCandidate {
   fighter_id: string;
@@ -307,6 +322,7 @@ export interface NodeSnapshot {
   intents: SnapshotIntent[];
   /** Resolver-ready abilities produced only from `boss_configurations`. */
   boss_abilities: SnapshotBossAbility[];
+  boss_cooldowns?: SnapshotBossCooldown[];
   /** Immutable-for-this-claim authored boss configuration. */
   boss_configurations?: SnapshotBossConfiguration[];
   /** Durable qualification rows for the creature spawns of this encounter. */
@@ -374,6 +390,10 @@ export interface ProposedEffectUpdate {
 export interface ProposedFighterState {
   id: string;
   present: boolean;
+}
+
+export interface ProposedBossCooldown extends SnapshotBossCooldown {
+  expected_next_available_tick: number;
 }
 
 /** Server-validated ordinary movement finalized by the same transaction as its exit tick. */
@@ -471,6 +491,7 @@ export interface ProposedTick {
   participation: ProposedParticipation[];
   /** Pending-event ids this tick folds into its committed batch, exactly once. */
   pending_event_ids: string[];
+  boss_cooldowns: ProposedBossCooldown[];
 }
 
 export function emptyProposedTick(tick: number): ProposedTick {
@@ -491,6 +512,7 @@ export function emptyProposedTick(tick: number): ProposedTick {
     intent_ids: [],
     participation: [],
     pending_event_ids: [],
+    boss_cooldowns: [],
 
   };
 }

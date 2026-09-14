@@ -126,7 +126,8 @@ function pendingAction(overrides: Record<string, unknown> = {}) {
   return {
     abilityKey: 'granite_slam', abilityLabel: 'Granite Slam',
     startedAtTick: 1, resolveAtTick: 3,
-    targetFighterId: FIGHTER, targetCharacterId: CHARACTER, targetEntrySeq: 7,
+    targetMode: 'current_tank_at_resolution',
+    targetFighterId: null, targetCharacterId: null, targetEntrySeq: null,
     ...overrides,
   };
 }
@@ -281,13 +282,13 @@ describe('Combat2 authoritative presentation model', () => {
     expect(buildCombat2Presentation(removed).effects).toEqual([]);
   });
 
-  it('retains every frozen telegraph identity field and uses a creature-life key', () => {
+  it('retains bounded dynamic telegraph identity and uses a creature-life key', () => {
     const model = buildCombat2Presentation(delivery());
     expect(model.telegraphs[0]).toMatchObject({
       encounterId: ENCOUNTER, nodeCreatureId: 'node-creature-1', creatureId: CREATURE, spawnSeq: 4,
       abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 1, resolveAtTick: 3,
-      targetFighterId: FIGHTER, targetCharacterId: CHARACTER, targetEntrySeq: 7,
-      targetIsCurrentCharacter: true,
+      targetMode: 'current_tank_at_resolution', targetFighterId: null, targetCharacterId: null,
+      targetEntrySeq: null, targetIsCurrentCharacter: false,
     });
     expect(model.telegraphsByCreatureLife[`${CREATURE}:4`]).toBe(model.telegraphs[0]);
   });
@@ -312,10 +313,10 @@ describe('Combat2 authoritative presentation model', () => {
     expect(buildCombat2Presentation(cleared).telegraphs).toEqual([]);
   });
 
-  it('does not reactivate a telegraph aimed at the current character under an old entry generation', () => {
+  it('keeps a dynamic telegraph visible after the current character re-enters', () => {
     const reentered = delivery();
     reentered.snapshot!.fighter = { id: FIGHTER, characterId: CHARACTER, entrySeq: 8, present: true };
-    expect(buildCombat2Presentation(reentered).telegraphs).toEqual([]);
+    expect(buildCombat2Presentation(reentered).telegraphs).toHaveLength(1);
   });
 
   it('fences identical creature definitions by node-creature row and spawn generation', () => {

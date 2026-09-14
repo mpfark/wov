@@ -93,9 +93,9 @@ function pending(overrides: Partial<NonNullable<SnapshotCreature['pending_action
     ability_label: 'Granite Slam',
     started_at_tick: 9,
     resolve_at_tick: 11,
-    target_fighter_id: 'f-ch-1',
-    target_character_id: 'ch-1',
-    target_entry_seq: 1,
+    target_mode: 'current_tank_at_resolution', primary_magnitude: 20,
+    secondary_magnitude: 0, damage_type: 'physical',
+    target_fighter_id: null, target_character_id: null, target_entry_seq: null,
     ...overrides,
   };
 }
@@ -103,7 +103,8 @@ function pending(overrides: Partial<NonNullable<SnapshotCreature['pending_action
 function bossAbility(overrides: Partial<NodeSnapshot['boss_abilities'][number]> = {}): NodeSnapshot['boss_abilities'][number] {
   return {
     id: 'ba-1', creature_id: 'cr-1', ability_key: 'granite_slam', label: 'Granite Slam',
-    weight: 1, windup_ticks: 2, targeting: 'aoe', magnitude: 20, amount_calc: null,
+    weight: 1, windup_ticks: 2, targeting: 'current_tank_at_resolution', cooldown_ticks: 3,
+    secondary_magnitude: 0, magnitude: 20, amount_calc: null,
     damage_type: 'physical', effect: null,
     telegraph_text: 'gathers force', resolution_text: 'slams down',
     ...overrides,
@@ -372,9 +373,11 @@ describe('combat2 resolver', () => {
     expect(out.creatures[0].pending_action).toEqual({
       ability_key: 'granite_slam', ability_label: 'Granite Slam',
       started_at_tick: 11, resolve_at_tick: 13,
-      target_fighter_id: 'f-ch-1', target_character_id: 'ch-1', target_entry_seq: 1,
+      target_mode: 'current_tank_at_resolution', primary_magnitude: 20,
+      secondary_magnitude: 0, damage_type: 'physical',
+      target_fighter_id: null, target_character_id: null, target_entry_seq: null,
     });
-    expect(out.events.find((event) => event.kind === 'boss_telegraph')?.target?.id).toBe('ch-1');
+    expect(out.events.find((event) => event.kind === 'boss_telegraph')?.target).toBeUndefined();
   });
 
   it('retains combat/death events but suppresses rewards for an authoritative test encounter', () => {
@@ -395,9 +398,9 @@ describe('combat2 resolver', () => {
     expect(out.rewards).toEqual([]);
   });
 
-  it('hits the unchanged captured fighter exactly once at resolution', () => {
+  it('hits the current tank exactly once at resolution', () => {
     const input = snapshot({
-        creatures: [creature({ pending_action: pending() })],
+        creatures: [creature({ pending_action: pending({ damage_type: 'fire' }) })],
         boss_abilities: [bossAbility({ damage_type: 'fire' })],
       });
     const out = resolveNodeTick(input, { abilities });
@@ -420,43 +423,114 @@ describe('combat2 resolver', () => {
     );
     expect(out.events.filter((e) => e.kind === 'boss_cast_evaded')).toHaveLength(1);
     expect(out.characters.find((c) => c.id === 'ch-1')?.hp ?? 100).toBe(100);
+    expect(out.boss_cooldowns).toEqual([expect.objectContaining({ ability_key: 'granite_slam', next_available_tick: 14 })]);
   });
 
-  it('does not retarget when the captured fighter leaves and another fighter becomes tank', () => {
+  it('uses one action category at cast start, windup, resolution, and cooldown boundaries', () => {
+    const start = resolveNodeTick(snapshot({ boss_abilities: [bossAbility()] }), { abilities });
+    expect(start.events.filter(event => event.actor?.type === 'creature').map(event => event.kind)).toEqual(['boss_telegraph']);
+
+    const windup = resolveNodeTick(snapshot({
+      encounter: { ...snapshot().encounter, candidate_tick: 12 },
+      creatures: [creature({ pending_action: pending({ started_at_tick: 11, resolve_at_tick: 13 }) })],
+      boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(windup.events.filter(event => event.actor?.type === 'creature')).toEqual([]);
+    expect(windup.creatures[0].pending_action).not.toBeNull();
+
+    const resolution = resolveNodeTick(snapshot({
+      encounter: { ...snapshot().encounter, candidate_tick: 13 },
+      creatures: [creature({ pending_action: pending({ started_at_tick: 11, resolve_at_tick: 13 }) })],
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })], boss_abilities: [bossAbility()],
+    }), { abilities });
+    expect(resolution.events.filter(event => event.kind === 'creature_attack')).toHaveLength(1);
+    expect(resolution.events.find(event => event.kind === 'creature_attack')?.abilityKey).toBe('granite_slam');
+    expect(resolution.boss_cooldowns).toEqual([expect.objectContaining({ next_available_tick: 16 })]);
+
+    const cooldown = resolveNodeTick(snapshot({
+      encounter: { ...snapshot().encounter, candidate_tick: 15 },
+      fighters: [fighter({ character_id: 'ch-1', ac: -100 })], boss_abilities: [bossAbility()],
+      boss_cooldowns: [{ encounter_id: 'enc-1', node_creature_id: 'nc-1', creature_id: 'cr-1', spawn_seq: 3,
+        ability_key: 'granite_slam', next_available_tick: 16 }],
+    }), { abilities });
+    expect(cooldown.events.filter(event => event.kind === 'creature_attack')).toHaveLength(1);
+    expect(cooldown.events[0].abilityKey).toBeUndefined();
+
+    const eligible = resolveNodeTick(snapshot({
+      encounter: { ...snapshot().encounter, candidate_tick: 16 }, boss_abilities: [bossAbility()],
+      boss_cooldowns: [{ encounter_id: 'enc-1', node_creature_id: 'nc-1', creature_id: 'cr-1', spawn_seq: 3,
+        ability_key: 'granite_slam', next_available_tick: 16 }],
+    }), { abilities });
+    expect(eligible.events.filter(event => event.actor?.type === 'creature').map(event => event.kind))
+      .toEqual(['boss_telegraph']);
+  });
+
+  it('hits all and only living present fighters for AoE in deterministic order', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ pending_action: pending({ target_mode: 'all_present_at_resolution' }) })],
+      fighters: [fighter({ character_id: 'ch-b', entry_seq: 2, ac: -100 }),
+        fighter({ character_id: 'ch-a', entry_seq: 1, ac: -100 }),
+        fighter({ character_id: 'ch-away', entry_seq: 3, present: false, ac: -100 }),
+        fighter({ character_id: 'ch-dead', entry_seq: 4, hp: 0, ac: -100 })],
+      boss_abilities: [bossAbility({ targeting: 'all_present_at_resolution' })],
+    }), { abilities });
+    expect(out.events.filter(event => event.abilityKey === 'granite_slam').map(event => event.target?.id))
+      .toEqual(['ch-a', 'ch-b']);
+  });
+
+  it('applies hybrid primary damage to the tank and secondary damage to every other present fighter', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ pending_action: pending({ target_mode: 'tank_plus_others', primary_magnitude: 24,
+        secondary_magnitude: 10 }) })],
+      fighters: [fighter({ character_id: 'ch-tank', id: 'f-tank', entry_seq: 2, ac: -100 }),
+        fighter({ character_id: 'ch-other', id: 'f-other', entry_seq: 1, ac: -100 })],
+      tank_candidates: [{ fighter_id: 'f-tank', character_id: 'ch-tank', entry_seq: 2 }],
+      boss_abilities: [bossAbility({ targeting: 'tank_plus_others', magnitude: 24, secondary_magnitude: 10 })],
+    }), { abilities });
+    const hits = out.events.filter(event => event.abilityKey === 'granite_slam');
+    expect(hits.map(event => event.target?.id)).toEqual(['ch-tank', 'ch-other']);
+    expect(hits.filter(event => event.target?.id === 'ch-tank')).toHaveLength(1);
+    expect(hits.filter(event => event.target?.id === 'ch-other')).toHaveLength(1);
+  });
+
+  it('targets a new current tank when the earlier fighter leaves', () => {
     const out = resolveNodeTick(snapshot({
       creatures: [creature({ pending_action: pending() })],
       fighters: [
         fighter({ character_id: 'ch-1', present: false }),
         fighter({ character_id: 'ch-2', entry_seq: 2 }),
       ],
+      tank_candidates: [{ fighter_id: 'f-ch-2', character_id: 'ch-2', entry_seq: 2 }],
       boss_abilities: [bossAbility()],
     }), { abilities });
-    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
-    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
-    expect(out.characters.find((character) => character.id === 'ch-2')?.hp ?? 100).toBe(100);
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(0);
+    expect(out.events.find((event) => event.abilityKey === 'granite_slam')?.target?.id).toBe('ch-2');
+    expect(out.characters.find((character) => character.id === 'ch-2')?.hp).toBeLessThan(100);
   });
 
-  it('does not retarget the original character after re-entry changes entry_seq', () => {
+  it('can target the original character after re-entry changes entry_seq', () => {
     const out = resolveNodeTick(snapshot({
       creatures: [creature({ pending_action: pending() })],
       fighters: [fighter({ character_id: 'ch-1', entry_seq: 2 })],
+      tank_candidates: [{ fighter_id: 'f-ch-1', character_id: 'ch-1', entry_seq: 2 }],
       boss_abilities: [bossAbility()],
     }), { abilities });
-    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
-    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(0);
+    expect(out.events.find((event) => event.abilityKey === 'granite_slam')?.target?.id).toBe('ch-1');
   });
 
-  it('does not let a newly entered fighter inherit an absent target cast', () => {
+  it('lets a newly entered fighter become the resolution-time tank', () => {
     const out = resolveNodeTick(snapshot({
       creatures: [creature({ pending_action: pending() })],
       fighters: [fighter({ character_id: 'ch-2', entry_seq: 7 })],
+      tank_candidates: [{ fighter_id: 'f-ch-2', character_id: 'ch-2', entry_seq: 7 }],
       boss_abilities: [bossAbility()],
     }), { abilities });
-    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(1);
-    expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
+    expect(out.events.filter((event) => event.kind === 'boss_cast_evaded')).toHaveLength(0);
+    expect(out.events.find((event) => event.abilityKey === 'granite_slam')?.target?.id).toBe('ch-2');
   });
 
-  it('allows a later new cast to capture the newly authoritative tank', () => {
+  it('starts a later new cast without freezing the newly authoritative tank', () => {
     const out = resolveNodeTick(snapshot({
       creatures: [creature({ tank_fighter_id: 'f-ch-2' })],
       fighters: [
@@ -467,7 +541,8 @@ describe('combat2 resolver', () => {
       boss_abilities: [bossAbility()],
     }), { abilities });
     expect(out.creatures[0].pending_action).toMatchObject({
-      target_fighter_id: 'f-ch-2', target_character_id: 'ch-2', target_entry_seq: 7,
+      target_mode: 'current_tank_at_resolution',
+      target_fighter_id: null, target_character_id: null, target_entry_seq: null,
     });
   });
 
@@ -770,7 +845,7 @@ describe('combat2 resolver', () => {
     expect(out.creatures).toContainEqual(expect.objectContaining({ tank_fighter_id: null }));
   });
 
-  it('does not retarget a frozen telegraph after its captured target flees', () => {
+  it('resolves a dynamic telegraph against the remaining current tank after a flee', () => {
     const out = resolveNodeTick(snapshot({
       fighters: [fighter({ character_id: 'ch-1' }), fighter({ character_id: 'ch-2' })],
       tank_candidates: [
@@ -785,8 +860,8 @@ describe('combat2 resolver', () => {
         payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW,
       }],
     }), { abilities });
-    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'boss_cast_evaded', outcomeReason: 'no_target' }));
-    expect(out.events.some((event) => event.abilityKey === 'granite_slam' && event.target?.id === 'ch-2')).toBe(false);
+    expect(out.events.some((event) => event.kind === 'boss_cast_evaded')).toBe(false);
+    expect(out.events.some((event) => event.abilityKey === 'granite_slam' && event.target?.id === 'ch-2')).toBe(true);
   });
 
   it('fails a flee when exit opportunities kill the fighter and never attacks them afterward', () => {

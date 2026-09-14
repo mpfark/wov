@@ -125,11 +125,13 @@ describe('authored boss casts', () => {
     }
   });
 
-  it('normalizes stored-power and split casts to one authored primary hit', () => {
+  it('normalizes stored-power while retaining an explicit atomic hybrid share', () => {
     const stored = adaptBossCast('cr-1', { ...cast, accumulate: { enabled: true } });
     expect('ability' in stored && stored.ability.magnitude).toBe(30);
     const split = adaptBossCast('cr-1', { ...cast, base_aoe_amount: 10 });
-    expect('ability' in split && split.ability).toMatchObject({ magnitude: 30, targeting: 'tank' });
+    expect('ability' in split && split.ability).toMatchObject({
+      magnitude: 30, secondary_magnitude: 10, targeting: 'tank_plus_others',
+    });
   });
 
   it('reports each creature separately so one bad cast cannot silence another boss', () => {

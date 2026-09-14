@@ -21,6 +21,7 @@ import type {
   SnapshotIntent,
   SnapshotParticipation,
   SnapshotPendingEvent,
+  SnapshotPendingAction,
   SnapshotLootEntry,
   SnapshotItemProc,
 } from './types.ts';
@@ -196,14 +197,22 @@ function decodeCreature(r: Reader, path: string, raw: unknown): SnapshotCreature
   let pendingAction: SnapshotCreature['pending_action'] = null;
   if (pending !== null && pending !== undefined) {
     const p = r.object(`${path}.pending_action`, pending);
+    const targetMode = r.str(`${path}.pending_action.target_mode`, p.target_mode);
+    if (!['current_tank_at_resolution','all_present_at_resolution','tank_plus_others'].includes(targetMode)) {
+      r.errors.push(`${path}.pending_action.target_mode: unsupported value`);
+    }
     pendingAction = {
       ability_key: r.str(`${path}.pending_action.ability_key`, p.ability_key),
       ability_label: r.strOrNull(`${path}.pending_action.ability_label`, p.ability_label),
       started_at_tick: r.num(`${path}.pending_action.started_at_tick`, p.started_at_tick),
       resolve_at_tick: r.num(`${path}.pending_action.resolve_at_tick`, p.resolve_at_tick),
-      target_fighter_id: r.str(`${path}.pending_action.target_fighter_id`, p.target_fighter_id),
-      target_character_id: r.str(`${path}.pending_action.target_character_id`, p.target_character_id),
-      target_entry_seq: r.num(`${path}.pending_action.target_entry_seq`, p.target_entry_seq),
+      target_mode: targetMode as SnapshotPendingAction['target_mode'],
+      primary_magnitude: r.num(`${path}.pending_action.primary_magnitude`, p.primary_magnitude),
+      secondary_magnitude: r.num(`${path}.pending_action.secondary_magnitude`, p.secondary_magnitude),
+      damage_type: r.strOrNull(`${path}.pending_action.damage_type`, p.damage_type),
+      target_fighter_id: r.strOrNull(`${path}.pending_action.target_fighter_id`, p.target_fighter_id),
+      target_character_id: r.strOrNull(`${path}.pending_action.target_character_id`, p.target_character_id),
+      target_entry_seq: r.numOrNull(`${path}.pending_action.target_entry_seq`, p.target_entry_seq),
     };
   }
   return {
@@ -325,6 +334,8 @@ function decodeBossAbility(r: Reader, path: string, raw: unknown): SnapshotBossA
     weight: r.num(`${path}.weight`, o.weight),
     windup_ticks: r.num(`${path}.windup_ticks`, o.windup_ticks),
     targeting: r.str(`${path}.targeting`, o.targeting) as SnapshotBossAbility['targeting'],
+    cooldown_ticks: r.num(`${path}.cooldown_ticks`, o.cooldown_ticks),
+    secondary_magnitude: r.num(`${path}.secondary_magnitude`, o.secondary_magnitude),
     magnitude: r.numOrNull(`${path}.magnitude`, o.magnitude),
     amount_calc: (o.amount_calc ?? null) as SnapshotBossAbility['amount_calc'],
     damage_type: r.strOrNull(`${path}.damage_type`, o.damage_type),
@@ -440,6 +451,16 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       ? r.array('snapshot.boss_abilities', root.boss_abilities)
           .map((row, i) => decodeBossAbility(r, `snapshot.boss_abilities[${i}]`, row))
       : [],
+    boss_cooldowns: r.array('snapshot.boss_cooldowns', root.boss_cooldowns).map((row, i) => {
+      const o=r.object(`snapshot.boss_cooldowns[${i}]`,row); return {
+        encounter_id:r.str(`snapshot.boss_cooldowns[${i}].encounter_id`,o.encounter_id),
+        node_creature_id:r.str(`snapshot.boss_cooldowns[${i}].node_creature_id`,o.node_creature_id),
+        creature_id:r.str(`snapshot.boss_cooldowns[${i}].creature_id`,o.creature_id),
+        spawn_seq:r.num(`snapshot.boss_cooldowns[${i}].spawn_seq`,o.spawn_seq),
+        ability_key:r.str(`snapshot.boss_cooldowns[${i}].ability_key`,o.ability_key),
+        next_available_tick:r.num(`snapshot.boss_cooldowns[${i}].next_available_tick`,o.next_available_tick),
+      };
+    }),
     boss_configurations: root.boss_configurations === undefined
       ? undefined
       : r.array('snapshot.boss_configurations', root.boss_configurations)

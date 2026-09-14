@@ -128,8 +128,7 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
     case 'equipment_broken': return `Your equipped ${String(meta.slot ?? 'item').replaceAll('_', ' ')} breaks.`;
     case 'boss_cast_evaded': return event.outcomeReason === 'no_target'
       ? `${action} lands on empty ground.` : `${action} is evaded.`;
-    case 'boss_telegraph': return typeof meta.text === 'string' && meta.text.trim()
-      ? meta.text.trim() : `${subject} prepares ${label}.`;
+    case 'boss_telegraph': return `${subject} begins preparing ${label}.`;
     // Unknown/internal rows remain cursor-bearing delivery evidence but have no
     // invented player-facing combat meaning.
     default: return null;

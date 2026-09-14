@@ -7,11 +7,12 @@
  *     lives in the `creatures.boss_cast` JSON document;
  *   - `boss_cast` is millisecond-based (`cast_ms`, `cooldown_ms`, `chance`) and
  *     carries a stored-power accumulation model plus split primary/AoE shares.
- *     The replacement contract is tick-based and single-target-mode.
+ *     The replacement contract is tick-based with explicit resolution-time targets.
  *
  * Production normalization deliberately uses the authored primary release
  * damage as one deterministic supported hit. Historical stored-power buildup
- * and secondary split damage are not replayed by Combat2.
+ * The one reviewed authored secondary share is represented as a single atomic
+ * hybrid cast; historical stored-power buildup is not replayed by Combat2.
  */
 
 import type { NodeSnapshot, SnapshotBossAbility, SnapshotBossConfiguration } from './types.ts';
@@ -91,8 +92,9 @@ export function adaptBossCast(
     return reject('unsupported_target_mode');
   }
 
-  const targeting: SnapshotBossAbility['targeting'] =
-    cast.target_mode === 'aoe' ? 'aoe' : ['random', 'random_alive'].includes(cast.target_mode ?? '') ? 'random' : 'tank';
+  const authoredTargeting = cast.target_mode === 'aoe'
+    ? 'aoe'
+    : ['random', 'random_alive'].includes(cast.target_mode ?? '') ? 'random' : 'tank';
 
   return {
     ability: {
@@ -104,7 +106,11 @@ export function adaptBossCast(
       // authored selection weight there is.
       weight: num(cast.chance) ?? 0,
       windup_ticks: Math.max(1, Math.ceil(castMs / TICK_MS)),
-      targeting,
+      targeting: (num(cast.base_aoe_amount) ?? 0) > 0
+        ? 'tank_plus_others'
+        : authoredTargeting === 'aoe' ? 'all_present_at_resolution' : 'current_tank_at_resolution',
+      cooldown_ticks: Math.max(0, Math.ceil((num(cast.cooldown_ms) ?? 0) / TICK_MS)),
+      secondary_magnitude: Math.max(0, Math.floor(num(cast.base_aoe_amount) ?? 0)),
       magnitude: Math.floor(amount),
       amount_calc: null,
       damage_type: cast.damage_type ?? null,

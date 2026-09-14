@@ -61,9 +61,10 @@ export interface Combat2PresentationPendingAction {
   abilityLabel: string | null;
   startedAtTick: number;
   resolveAtTick: number;
-  targetFighterId: string;
-  targetCharacterId: string;
-  targetEntrySeq: number;
+  targetMode: 'current_tank_at_resolution' | 'all_present_at_resolution' | 'tank_plus_others';
+  targetFighterId: string | null;
+  targetCharacterId: string | null;
+  targetEntrySeq: number | null;
 }
 
 export interface Combat2PresentationTelegraph extends Combat2PresentationPendingAction {
@@ -386,33 +387,30 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
     const creatureName = stringField(row, 'name');
     const tankFighterId = optionalString(row, 'tankFighterId');
     if (typeof row.engaged !== 'boolean') throw new Combat2PresentationError('combat2_sync engaged is invalid');
+    const targetMode = pending ? stringField(pending, 'targetMode') : null;
+    if (targetMode !== null && !['current_tank_at_resolution', 'all_present_at_resolution', 'tank_plus_others'].includes(targetMode)) {
+      throw new Combat2PresentationError('combat2_sync targetMode is invalid');
+    }
     const pendingAction: Combat2PresentationPendingAction | null = pending ? {
       abilityKey: stringField(pending, 'abilityKey'),
       abilityLabel: optionalString(pending, 'abilityLabel'),
       startedAtTick: integerField(pending, 'startedAtTick'),
       resolveAtTick: integerField(pending, 'resolveAtTick'),
-      targetFighterId: stringField(pending, 'targetFighterId'),
-      targetCharacterId: stringField(pending, 'targetCharacterId'),
-      targetEntrySeq: integerField(pending, 'targetEntrySeq'),
+      targetMode: targetMode as Combat2PresentationPendingAction['targetMode'],
+      targetFighterId: optionalString(pending, 'targetFighterId'),
+      targetCharacterId: optionalString(pending, 'targetCharacterId'),
+      targetEntrySeq: pending.targetEntrySeq == null ? null : integerField(pending, 'targetEntrySeq'),
     } : null;
     if (pendingAction && pendingAction.resolveAtTick < pendingAction.startedAtTick) {
       throw new Combat2PresentationError('combat2_sync pending action tick boundary is invalid');
     }
-    const targetsCurrentCharacter = pendingAction?.targetCharacterId === characterId;
-    const currentGenerationMatches = !targetsCurrentCharacter || (
-      !!fighter
-      && fighter.id === pendingAction.targetFighterId
-      && fighter.characterId === characterId
-      && fighter.entrySeq === pendingAction.targetEntrySeq
-      && fighter.present === true
-    );
-    if (row.isAlive && pendingAction && currentGenerationMatches) {
+    const targetsCurrentCharacter = false;
+    if (row.isAlive && pendingAction) {
       const telegraph: Combat2PresentationTelegraph = {
         ...pendingAction,
         id: JSON.stringify([
           encounterId, nodeCreatureId, creatureId, spawnSeq, pendingAction.abilityKey,
-          pendingAction.startedAtTick, pendingAction.resolveAtTick, pendingAction.targetFighterId,
-          pendingAction.targetCharacterId, pendingAction.targetEntrySeq,
+          pendingAction.startedAtTick, pendingAction.resolveAtTick, pendingAction.targetMode,
         ]),
         encounterId, nodeCreatureId, creatureId, spawnSeq, creatureName,
         targetIsCurrentCharacter: targetsCurrentCharacter,

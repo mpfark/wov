@@ -24,6 +24,7 @@ export const CLAIM = {
   intent_cutoff_seq: 1,
   snapshot: {
     boss_abilities: [],
+    boss_cooldowns: [],
     creatures: [
       {
         ac: 1,
@@ -232,7 +233,7 @@ describe('installed claim contract', () => {
     expect((foreignResult.errors ?? []).join(';')).toContain('binding does not match an eligible claimed fighter');
   });
 
-  it.each(['started_at_tick', 'target_fighter_id', 'target_character_id', 'target_entry_seq'])(
+  it.each(['started_at_tick', 'target_mode', 'primary_magnitude', 'secondary_magnitude'])(
     'fails closed when a pending cast omits %s',
     (field) => {
       const broken = structuredClone(CLAIM.snapshot) as Record<string, unknown>;
@@ -240,9 +241,8 @@ describe('installed claim contract', () => {
       creature.pending_action = {
         ability_key: 'granite_slam', ability_label: 'Granite Slam',
         started_at_tick: 1, resolve_at_tick: 3,
-        target_fighter_id: CLAIM.snapshot.fighters[0].id,
-        target_character_id: CLAIM.snapshot.fighters[0].character_id,
-        target_entry_seq: CLAIM.snapshot.fighters[0].entry_seq,
+        target_mode: 'current_tank_at_resolution', primary_magnitude: 20, secondary_magnitude: 0,
+        damage_type: 'physical', target_fighter_id: null, target_character_id: null, target_entry_seq: null,
       };
       delete (creature.pending_action as Record<string, unknown>)[field];
       const out = decodeSnapshot(broken) as { ok: boolean; errors?: string[] };

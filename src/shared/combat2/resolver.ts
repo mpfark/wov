@@ -31,6 +31,7 @@ import {
   type NodeSnapshot,
   type ProposedParticipation,
   type ProposedTick,
+  type SnapshotBossAbility,
   type SnapshotCreature,
   type SnapshotEffect,
   type SnapshotFighter,
@@ -1168,6 +1169,20 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     }
     return null;
   };
+  const presentFighters = (): SnapshotFighter[] => snapshot.fighters
+    .filter((fighter) => chars.get(fighter.character_id)?.present === true && livingCharacters().has(fighter.character_id))
+    .sort((a, b) => a.entry_seq - b.entry_seq || a.character_id.localeCompare(b.character_id));
+  const cooldownFor = (creature: WorkingCreature, abilityKey: string): number =>
+    snapshot.boss_cooldowns?.find((row) => row.encounter_id === snapshot.encounter.id
+      && row.node_creature_id === creature.row.id && row.creature_id === creature.row.creature_id
+      && row.spawn_seq === creature.row.spawn_seq && row.ability_key === abilityKey)?.next_available_tick ?? 0;
+  const beginCooldown = (creature: WorkingCreature, ability: SnapshotBossAbility): void => {
+    if (!ability.cooldown_ticks || ability.cooldown_ticks <= 0) return;
+    proposed.boss_cooldowns.push({ encounter_id: snapshot.encounter.id, node_creature_id: creature.row.id,
+      creature_id: creature.row.creature_id, spawn_seq: creature.row.spawn_seq, ability_key: ability.ability_key,
+      expected_next_available_tick: cooldownFor(creature, ability.ability_key),
+      next_available_tick: tick + (ability.cooldown_ticks ?? 0) });
+  };
 
   for (const creature of creatures.values()) {
     if (creature.hp <= 0 || !creature.row.is_alive) {
@@ -1177,7 +1192,6 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       }
       continue;
     }
-    const living = livingCharacters();
     const tank = currentTank();
     if (creature.tankFighterId !== (tank?.id ?? null)) {
       creature.tankFighterId = tank?.id ?? null;
@@ -1197,37 +1211,43 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       );
       creature.pendingAction = null;
       creature.dirty = true;
-      if (!ability) {
+      if (!ability || ability.targeting !== pendingAction.target_mode
+          || ability.magnitude !== pendingAction.primary_magnitude
+          || (ability.secondary_magnitude ?? 0) !== pendingAction.secondary_magnitude
+          || ability.damage_type !== pendingAction.damage_type) {
         emit({ kind: 'boss_cast_evaded', outcomeReason: 'ability_missing' });
         continue;
       }
-      const capturedFighter = snapshot.fighters.find(
-        (fighter) => fighter.id === pendingAction.target_fighter_id,
-      );
-      const capturedTarget = capturedFighter
-        && capturedFighter.character_id === pendingAction.target_character_id
-        && capturedFighter.entry_seq === pendingAction.target_entry_seq
-        && capturedFighter.present
-        && living.has(capturedFighter.character_id)
-        ? capturedFighter
-        : null;
-      if (!capturedTarget) {
+      const resolutionTank = currentTank();
+      const allPresent = presentFighters();
+      const primaryTargets = pendingAction.target_mode === 'all_present_at_resolution'
+        ? allPresent : resolutionTank ? [resolutionTank] : [];
+      if (primaryTargets.length === 0) {
         emit({
           kind: 'boss_cast_evaded',
           abilityKey: ability.ability_key,
           actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
           outcomeReason: 'no_target',
         });
-        continue;
+      } else {
+        for (const target of primaryTargets) applyCreatureDamage(creature, target, ability.ability_key,
+          pendingAction.primary_magnitude ?? 0, pendingAction.damage_type ?? null);
+        if (pendingAction.target_mode === 'tank_plus_others' && resolutionTank) {
+          for (const target of allPresent.filter((fighter) => fighter.id !== resolutionTank.id)) {
+            applyCreatureDamage(creature, target, ability.ability_key, pendingAction.secondary_magnitude ?? 0,
+              pendingAction.damage_type ?? null);
+          }
+        }
       }
-      applyCreatureDamage(creature, capturedTarget, ability.ability_key, Math.floor(ability.magnitude ?? 0), ability.damage_type);
+      beginCooldown(creature, ability);
       continue;
     }
 
     // 3b. select an ability; a wind-up writes a pending action and announces it.
     const pool = snapshot.boss_abilities.filter((b) =>
       b.creature_id === creature.row.creature_id &&
-      (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq));
+      (b.spawn_seq === undefined || b.spawn_seq === creature.row.spawn_seq) &&
+      tick >= cooldownFor(creature, b.ability_key));
     const chosen = rng.weightedPick(pool, (b) => b.weight, 'boss_select', creature.row.creature_id, tick);
     if (chosen && chosen.windup_ticks > 0) {
       if (!tank) {
@@ -1244,32 +1264,38 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         ability_label: chosen.label,
         started_at_tick: tick,
         resolve_at_tick: tick + chosen.windup_ticks,
-        target_fighter_id: tank.id,
-        target_character_id: tank.character_id,
-        target_entry_seq: tank.entry_seq,
+        target_mode: chosen.targeting,
+        primary_magnitude: Math.floor(chosen.magnitude ?? 0),
+        secondary_magnitude: chosen.secondary_magnitude ?? 0,
+        damage_type: chosen.damage_type,
+        target_fighter_id: null,
+        target_character_id: null,
+        target_entry_seq: null,
       };
       creature.dirty = true;
       emit({
         kind: 'boss_telegraph',
         abilityKey: chosen.ability_key,
         actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
-        target: { type: 'character', id: tank.character_id, name: tank.name },
-        meta: { resolveAtTick: creature.pendingAction.resolve_at_tick, text: chosen.telegraph_text },
+        meta: { resolveAtTick: creature.pendingAction.resolve_at_tick, targetMode: chosen.targeting,
+          text: chosen.telegraph_text },
       });
       continue; // no autoattack during wind-up
     }
 
     if (chosen) {
-      const targets =
-        chosen.targeting === 'aoe'
-          ? snapshot.fighters.filter((f) => f.present && living.has(f.character_id))
-          : tank
-            ? [tank]
-            : [];
+      const allPresent = presentFighters();
+      const targets = chosen.targeting === 'all_present_at_resolution' ? allPresent : tank ? [tank] : [];
       for (const target of targets) {
         applyCreatureDamage(creature, target, chosen.ability_key, Math.floor(chosen.magnitude ?? 0), chosen.damage_type);
       }
-      if (targets.length > 0) continue;
+      if (chosen.targeting === 'tank_plus_others' && tank) {
+        for (const target of allPresent.filter((fighter) => fighter.id !== tank.id)) {
+          applyCreatureDamage(creature, target, chosen.ability_key, chosen.secondary_magnitude ?? 0, chosen.damage_type);
+        }
+      }
+      beginCooldown(creature, chosen);
+      continue;
     }
 
     // 3c. ordinary autoattack against the current tank.

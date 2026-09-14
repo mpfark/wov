@@ -103,7 +103,7 @@ describe('Combat2ClientSession application bridge', () => {
           hp: 10, maxHp: 10, isAlive: true, engaged: true, tankFighterId: 'fighter-1',
           pendingAction: {
             abilityKey: 'granite_slam', abilityLabel: 'Granite Slam', startedAtTick: 1, resolveAtTick: 3,
-            targetFighterId: 'fighter-1', targetCharacterId: CHARACTER, targetEntrySeq: 3,
+            targetMode: 'current_tank_at_resolution', targetFighterId: null, targetCharacterId: null, targetEntrySeq: null,
           },
         }], effects: [], rewardClaims: [],
         batches: [{ id: 'batch-1', tick: 1, createdAt: '2026-09-01T00:00:00Z', events: [{ seq: 1, kind: 'attack', amount: 2 }] }],
