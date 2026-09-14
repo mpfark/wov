@@ -33,7 +33,7 @@ describe('permanent Combat2 proving-ground content and lifecycle', () => {
   expect(SQL).toContain("false,false,false,true,0,'salvage_only'");
   const cast={enabled:true,ability_key:'proving_ground_slam',label:'Proving Ground Slam',cast_ms:4000,cooldown_ms:4000,
    chance:1,base_amount:35,target_mode:'tank',damage_type:'physical',cast_flavor:'raises its testing hammer',hit_flavor:'brings the testing hammer down'};
-  expect(adaptBossCast('ffff5025-0000-4000-8000-000000000001',cast)).toMatchObject({ability:{windup_ticks:2,magnitude:35,targeting:'tank'}});
+  expect(adaptBossCast('ffff5025-0000-4000-8000-000000000001',cast)).toMatchObject({ability:{windup_ticks:2,magnitude:35,targeting:'current_tank_at_resolution'}});
   expect(SQL).not.toMatch(/stored_power|accumulate|loot_table_id[^\n]*ffff/);
  });
 

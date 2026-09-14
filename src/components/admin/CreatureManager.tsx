@@ -14,10 +14,10 @@ import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
-import { FlavorField, FLAVOR_TOKENS } from './FlavorField';
+import { FLAVOR_TOKENS } from './FlavorField';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
 import { renderFlavor } from '@shared/proc-log-format';
-import { bossCastFormFromCreature, buildBossCastSave } from './boss-cast-form';
+import { bossCastFormFromCreature, buildBossCastSave, type BossCastTargeting } from './boss-cast-form';
 
 
 interface Creature {
@@ -99,25 +99,14 @@ const defaultForm = () => ({
   boss_death_cry: '',
   boss_cast_enabled: false,
   boss_cast_label: 'Cataclysm',
+  boss_cast_ability_key: '',
   boss_cast_damage_type: '',
-  boss_cast_flavor: '',        // log line when the boss begins the cast
-  boss_cast_hit_flavor: '',    // log line when the cast lands on a character
-
-  boss_cast_ticks: 2,           // cast duration in combat ticks (× TICK_RATE_MS)
-  boss_cast_cooldown_ms: 20000,
-  boss_cast_chance: 0.3,
-  boss_cast_lock_ticks: 2,      // post-resolve lock in combat ticks (× TICK_RATE_MS)
-  // Unified Boss Cast (flat + Stored Power) — one card in the admin form.
-  // `boss_cast_base_amount` is the primary-target flat damage; on save it is
-  // mirrored to the legacy `amount` field so the two never drift.
+  boss_cast_targeting: 'current_tank_at_resolution' as BossCastTargeting,
+  boss_cast_windup_ticks: 2,
+  boss_cast_cooldown_ticks: 10,
+  boss_cast_selection_weight: 0.3,
   boss_cast_base_amount: 20,
   boss_cast_base_aoe_amount: 0,
-  boss_cast_primary_share: 1.0,
-  boss_cast_aoe_share: 0.4,
-  boss_cast_sp_cap: 0, // 0 = no cap
-  // The stored object exactly as loaded. Anything the form does not expose —
-  // stable identity, Stored Power consume vocabulary, accumulate tuning, and
-  // any genuinely unknown key — is carried through on save instead of erased.
   boss_cast_raw: null as Record<string, unknown> | null,
 
 });
@@ -730,16 +719,29 @@ export default function CreatureManager() {
                     </label>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    While channeling, this creature pauses its auto-attacks and stores what its mitigated hits would have dealt into a pool. On resolve, primary target takes <span className="font-mono">Flat + pool × primary_share</span>; other party members on the node take <span className="font-mono">Flat AoE + pool × aoe_share</span>. Leaving the node before resolve avoids the damage.
+                    Targets are chosen from living participants when the cast completes. The boss does not perform a basic attack while starting, continuing, or resolving a cast.
                   </p>
                   {form.boss_cast_enabled && (
                     <>
-                      <Input
+                      <label className="text-[10px] text-muted-foreground block">
+                        Cast label
+                        <Input
                           value={form.boss_cast_label}
                           onChange={e => setForm(f => ({ ...f, boss_cast_label: e.target.value }))}
                           placeholder="Cataclysm"
-                          className="flex-1 h-7 text-xs"
+                          className="h-7 text-xs mt-0.5"
                         />
+                      </label>
+                      <label className="text-[10px] text-muted-foreground block">
+                        Stable ability key
+                        <Input
+                          value={form.boss_cast_ability_key}
+                          onChange={e => setForm(f => ({ ...f, boss_cast_ability_key: e.target.value }))}
+                          placeholder="Generated from label and creature ID for a new cast"
+                          className="h-7 text-xs font-mono mt-0.5"
+                        />
+                        <span className="text-[9px] opacity-70">Changing the label does not change an existing key.</span>
+                      </label>
                       <label className="text-[10px] text-muted-foreground block">
                         Damage type
                         <Select
@@ -757,28 +759,22 @@ export default function CreatureManager() {
                           </SelectContent>
                         </Select>
                       </label>
-                      <FlavorField
-                        label="Casting flavor (log line when the cast begins)"
-                        value={form.boss_cast_flavor}
-                        onChange={v => setForm(f => ({ ...f, boss_cast_flavor: v }))}
-                        placeholder="{creature} draws the sky down — {cast} gathers above the node!"
-                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm' }}
-                        hint="{target}/{damage} are empty here"
-                        fallback={`${form.name || 'The Boss'} begins channeling ${form.boss_cast_label || 'Cataclysm'}! Flee the node to avoid it. (default)`}
-                      />
-                      <FlavorField
-                        label="Impact flavor (log line when the cast lands)"
-                        value={form.boss_cast_hit_flavor}
-                        onChange={v => setForm(f => ({ ...f, boss_cast_hit_flavor: v }))}
-                        placeholder="{cast} breaks over {target} in a wave of ruin!"
-                        sample={{ creature: form.name || 'The Boss', target: 'Hero', cast: form.boss_cast_label || 'Cataclysm', damage: 42 }}
-                        hint="damage is appended as [N] unless you write {damage}"
-                        fallback={`${form.name || 'The Boss'}'s ${form.boss_cast_label || 'Cataclysm'} strikes Hero! [42] (default)`}
-                      />
+                      <label className="text-[10px] text-muted-foreground block">
+                        Targeting at resolution
+                        <Select value={form.boss_cast_targeting} onValueChange={v => setForm(f => ({ ...f, boss_cast_targeting: v as typeof f.boss_cast_targeting }))}>
+                          <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            <SelectItem value="current_tank_at_resolution" className="text-xs">Current authoritative tank</SelectItem>
+                            <SelectItem value="all_present_at_resolution" className="text-xs">All living present participants</SelectItem>
+                            <SelectItem value="tank_plus_others" className="text-xs">Tank primary + everyone else secondary</SelectItem>
+                            <SelectItem value="random_present_at_resolution" className="text-xs">One random living present participant</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </label>
 
                       <div className="grid grid-cols-2 gap-1">
                         <label className="text-[10px] text-muted-foreground">
-                          Flat damage (primary)
+                          Primary damage
                           <Input
                             type="number" min={0} step={1}
                             value={form.boss_cast_base_amount}
@@ -786,88 +782,50 @@ export default function CreatureManager() {
                             className="h-7 text-xs"
                           />
                         </label>
-                        <label className="text-[10px] text-muted-foreground">
-                          Flat damage (AoE)
+                        {form.boss_cast_targeting === 'tank_plus_others' && <label className="text-[10px] text-muted-foreground">
+                          Secondary damage to everyone else
                           <Input
                             type="number" min={0} step={1}
                             value={form.boss_cast_base_aoe_amount}
                             onChange={e => setForm(f => ({ ...f, boss_cast_base_aoe_amount: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
-                        </label>
+                        </label>}
                         <label className="text-[10px] text-muted-foreground">
-                          Chance (0–1) per tick
+                          Selection weight
                           <Input
                             type="number"
-                            step={0.05}
+                            step={0.01}
                             min={0}
-                            max={1}
-                            value={form.boss_cast_chance}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_chance: Number(e.target.value) }))}
+                            value={form.boss_cast_selection_weight}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_selection_weight: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">Deterministic relative selection among available casts; not an independent percentage.</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
-                          Cooldown (ms)
+                          Cooldown ticks
                           <Input
                             type="number"
-                            min={1000}
-                            step={500}
-                            value={form.boss_cast_cooldown_ms}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ms: Number(e.target.value) }))}
+                            min={0}
+                            step={1}
+                            value={form.boss_cast_cooldown_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_cooldown_ticks: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
+                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_cooldown_ticks)) * TICK_RATE_MS / 1000}s</span>
                         </label>
                         <label className="text-[10px] text-muted-foreground">
-                          Cast ticks
+                          Windup ticks
                           <Input
                             type="number"
                             min={1}
                             step={1}
-                            value={form.boss_cast_ticks}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_ticks: Math.max(1, Math.floor(Number(e.target.value) || 1)) }))}
+                            value={form.boss_cast_windup_ticks}
+                            onChange={e => setForm(f => ({ ...f, boss_cast_windup_ticks: Number(e.target.value) }))}
                             className="h-7 text-xs"
                           />
-                          <span className="text-[9px] opacity-70">= {Math.max(1, Math.floor(form.boss_cast_ticks)) * TICK_RATE_MS} ms at {TICK_RATE_MS / 1000}s/tick</span>
-                        </label>
-                        <label className="text-[10px] text-muted-foreground">
-                          Lock ticks after resolve
-                          <Input
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={form.boss_cast_lock_ticks}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_lock_ticks: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
-                            className="h-7 text-xs"
-                          />
-                          <span className="text-[9px] opacity-70">= {Math.max(0, Math.floor(form.boss_cast_lock_ticks)) * TICK_RATE_MS} ms · 0 = no lock</span>
-                        </label>
-                        <label className="text-[10px] text-muted-foreground">
-                          Primary share (0–1)
-                          <Input
-                            type="number" min={0} max={2} step={0.05}
-                            value={form.boss_cast_primary_share}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_primary_share: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
-                        </label>
-                        <label className="text-[10px] text-muted-foreground">
-                          AoE share (0–1)
-                          <Input
-                            type="number" min={0} max={2} step={0.05}
-                            value={form.boss_cast_aoe_share}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_aoe_share: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
-                        </label>
-                        <label className="text-[10px] text-muted-foreground col-span-2">
-                          Stored Power cap (0 = no cap)
-                          <Input
-                            type="number" min={0} step={10}
-                            value={form.boss_cast_sp_cap}
-                            onChange={e => setForm(f => ({ ...f, boss_cast_sp_cap: Number(e.target.value) }))}
-                            className="h-7 text-xs"
-                          />
+                          <span className="text-[9px] opacity-70">= {Math.max(1, Math.floor(form.boss_cast_windup_ticks)) * TICK_RATE_MS / 1000}s</span>
                         </label>
                       </div>
                     </>
