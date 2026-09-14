@@ -19,7 +19,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 
 import { preheatNode } from '@/features/creatures/hooks/useCreatures';
-import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
@@ -192,6 +191,8 @@ export interface UseMovementActionsParams {
   authorizeCombat2Flee?: () => Promise<boolean>;
   /** Authoritative ordinary adjacent transition; when present no browser movement write follows. */
   authorizeCombat2Depart?: (destinationNodeId: string, destinationName: string) => Promise<void>;
+  /** Refresh the server-owned character row after an authoritative special transition. */
+  refreshCharacter?: () => Promise<unknown> | void;
   movementBlocked?: boolean;
 }
 
@@ -215,6 +216,15 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const searchGeneration = useRef(0);
   const searchPending = useRef(false);
   const searchRequestId = useRef<string | null>(null);
+  const specialTravelGeneration = useRef(0);
+  const specialTravelPending = useRef(false);
+  const specialTravelRequest = useRef<{ key: string; id: string } | null>(null);
+
+  useEffect(() => {
+    specialTravelGeneration.current += 1;
+    specialTravelPending.current = false;
+    specialTravelRequest.current = null;
+  }, [p.character.id, p.character.current_node_id]);
 
   const refreshHiddenConnections = useCallback(async () => {
     const nodeId = p.character.current_node_id;
@@ -391,8 +401,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Teleport ───────────────────────────────────────────────────
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
-    const current = begin();
-    if (!current()) return;
+    if (specialTravelPending.current) return;
+    const generation = specialTravelGeneration.current;
+    const originNodeId = p.character.current_node_id;
+    const current = () => generation === specialTravelGeneration.current && originNodeId === p.character.current_node_id;
     if (p.isDead) return;
     if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
       p.addLogEvent(buildErrorEvent('Party following does not support teleport travel.'));
@@ -408,30 +420,37 @@ export function useMovementActions(params: UseMovementActionsParams) {
       setWaymarkNodeId(p.character.current_node_id!);
       p.addLogEvent(buildMovementEvent(`You leave a hidden waymark at ${currentNodeObj.name}.`));
     }
+    const requestKey = `teleport:${nodeId}`;
+    const requestId = specialTravelRequest.current?.key === requestKey
+      ? specialTravelRequest.current.id : crypto.randomUUID();
+    specialTravelRequest.current = { key: requestKey, id: requestId };
+    specialTravelPending.current = true;
     const { data, error } = await supabase.rpc('character_special_travel' as never, {
       _character_id: p.character.id,
       _kind: 'teleport',
       _destination_node_id: nodeId,
-      _request_id: crypto.randomUUID(),
+      _request_id: requestId,
     } as never);
+    if (generation === specialTravelGeneration.current) specialTravelPending.current = false;
+    if (!current()) return;
     const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
     if (error || !result?.ok || !result.destination_node_id) {
       p.addLogEvent(buildErrorEvent(`Teleport refused: ${result?.kind ?? 'transport_error'}.`));
+      if (!error) specialTravelRequest.current = null;
       return;
     }
-    p.updateCharacterLocal?.({
-      current_node_id: result.destination_node_id,
-      cp: Math.max((p.character.cp ?? 0) - (result.cp_cost ?? cpCost), 0),
-    });
-    void markNodeVisited(p.character.id, result.destination_node_id);
+    specialTravelRequest.current = null;
     p.addLogEvent(buildMovementEvent(`You teleport to ${targetNode.name} for ${result.cp_cost ?? cpCost} CP.`));
     setTeleportOpen(false);
-  }, [p.character, p.getNode, p.updateCharacterLocal, p.addLogEvent, p.isDead, p.inCombat]);
+    await p.refreshCharacter?.();
+  }, [p.character, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
 
   // ── Return to Waymark ──────────────────────────────────────────
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
-    const current = begin();
-    if (!current()) return;
+    if (specialTravelPending.current) return;
+    const generation = specialTravelGeneration.current;
+    const originNodeId = p.character.current_node_id;
+    const current = () => generation === specialTravelGeneration.current && originNodeId === p.character.current_node_id;
     if (!waymarkNodeId) return;
     const waymarkNode = p.getNode(waymarkNodeId);
     if (!waymarkNode) { p.addLogEvent(buildErrorEvent('Your waymark has faded.')); setWaymarkNodeId(null); return; }
@@ -443,26 +462,31 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to return to waymark.')); return; }
     preheatNode(waymarkNodeId);
+    const requestKey = `waymark:${waymarkNodeId}`;
+    const requestId = specialTravelRequest.current?.key === requestKey
+      ? specialTravelRequest.current.id : crypto.randomUUID();
+    specialTravelRequest.current = { key: requestKey, id: requestId };
+    specialTravelPending.current = true;
     const { data, error } = await supabase.rpc('character_special_travel' as never, {
       _character_id: p.character.id,
       _kind: 'waymark',
       _destination_node_id: waymarkNodeId,
-      _request_id: crypto.randomUUID(),
+      _request_id: requestId,
     } as never);
+    if (generation === specialTravelGeneration.current) specialTravelPending.current = false;
+    if (!current()) return;
     const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
     if (error || !result?.ok || !result.destination_node_id) {
       p.addLogEvent(buildErrorEvent(`Waymark travel refused: ${result?.kind ?? 'transport_error'}.`));
+      if (!error) specialTravelRequest.current = null;
       return;
     }
-    p.updateCharacterLocal?.({
-      current_node_id: result.destination_node_id,
-      cp: Math.max((p.character.cp ?? 0) - (result.cp_cost ?? cpCost), 0),
-    });
-    void markNodeVisited(p.character.id, result.destination_node_id);
+    specialTravelRequest.current = null;
     p.addLogEvent(buildMovementEvent(`You return to your waymark at ${waymarkNode.name} for ${result.cp_cost ?? cpCost} CP.`));
     setWaymarkNodeId(null);
     setTeleportOpen(false);
-  }, [waymarkNodeId, p.character, p.getNode, p.updateCharacterLocal, p.addLogEvent, p.isDead, p.inCombat]);
+    await p.refreshCharacter?.();
+  }, [waymarkNodeId, p.character, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
 
   // ── Search ─────────────────────────────────────────────────────
   const handleSearch = useCallback(async (_keyword?: string) => {
@@ -485,7 +509,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
         return;
       }
       searchRequestId.current = null;
-      if (result.focus != null) p.updateCharacterLocal?.({ cp: result.focus });
+      if (result.focus != null) await p.refreshCharacter?.();
       if (result.kind === 'found') {
         p.addLogEvent(buildSystemEvent(`You reveal the hidden path ${result.direction ?? ''} for 5 minutes.`));
         await refreshHiddenConnections();
@@ -495,7 +519,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     } finally {
       if (generation === searchGeneration.current) searchPending.current = false;
     }
-  }, [p.character.id, p.character.current_node_id, p.addLogEvent, p.updateCharacterLocal, refreshHiddenConnections]);
+  }, [p.character.id, p.character.current_node_id, p.addLogEvent, p.refreshCharacter, refreshHiddenConnections]);
 
   return {
     handleMove, handleTeleport, handleReturnToWaymark, handleSearch,

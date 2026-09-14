@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useMovementActions, type UseMovementActionsParams } from '@/features/world/hooks/useMovementActions';
 import { guardControlledAction, MOVEMENT_UNAVAILABLE } from './controlled-actions';
+import { supabase } from '@/integrations/supabase/client';
 import fs from 'node:fs';
 
 vi.mock('@/features/creatures/hooks/useCreatures', () => ({ preheatNode: vi.fn() }));
@@ -22,13 +23,15 @@ function params() {
 }
 
 describe('controlled test movement lock', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('revalidates a visible party against server authority instead of trusting the legacy roster',()=>{
     const page=fs.readFileSync('src/pages/GamePage.tsx','utf8');
     expect(page).toContain('checkCombat2SessionPreflight(character.id,character.current_node_id)');
     expect(page).toContain('if(current&&!allowed)ownership.lock()');
     expect(page).not.toContain('if (combat2BlocksLegacy && (party || myMembership?.is_following)) ownership.lock()');
   });
-  it('routes ordinary movement authoritatively while teleport, waymark and search remain blocked', async () => {
+  it('routes ordinary movement authoritatively while active-combat teleport remains refused', async () => {
     const { options, write, log } = params();
     const flee = vi.fn();
     const depart = vi.fn().mockResolvedValue(undefined);
@@ -36,14 +39,64 @@ describe('controlled test movement lock', () => {
     await act(async () => {
       await result.current.handleMove('other');
       await result.current.handleTeleport('other', 1);
-      await result.current.handleReturnToWaymark(1);
-      await result.current.handleSearch();
     });
     expect(write).not.toHaveBeenCalled();
     expect(flee).not.toHaveBeenCalled();
     expect(depart).toHaveBeenCalledExactlyOnceWith('other', expect.any(String));
-    expect(log).toHaveBeenCalledTimes(3);
-    expect(JSON.stringify(log.mock.calls)).toContain(MOVEMENT_UNAVAILABLE);
+    expect(JSON.stringify(log.mock.calls)).toContain('cannot teleport while in combat');
+    expect(JSON.stringify(log.mock.calls)).not.toContain(MOVEMENT_UNAVAILABLE);
+  });
+
+  it('single-flights authoritative special travel and refreshes instead of writing location locally', async () => {
+    const { options, write, log } = params();
+    const refreshCharacter = vi.fn().mockResolvedValue(undefined);
+    let finish!: (value: unknown) => void;
+    const rpc = vi.spyOn(supabase, 'rpc').mockImplementation(((name: string) => {
+      if (name === 'hidden_path_openings') return Promise.resolve({ data: [], error: null });
+      return new Promise(resolve => { finish = resolve; });
+    }) as unknown as typeof supabase.rpc);
+    const { result } = renderHook(() => useMovementActions({
+      ...options, inCombat: false, movementBlocked: true, refreshCharacter,
+      getNode: (id: string) => ({ id, name: id === 'other' ? 'Elsewhere' : 'Origin', region_id: 'region', connections: [] }),
+    }));
+    let first!: Promise<void>;
+    act(() => {
+      first = result.current.handleTeleport('other', 1);
+      void result.current.handleTeleport('other', 1);
+    });
+    expect(rpc.mock.calls.filter(([name]) => name === 'character_special_travel')).toHaveLength(1);
+    await act(async () => {
+      finish({ data: { ok: true, kind: 'moved', destination_node_id: 'other', cp_cost: 1 }, error: null });
+      await first;
+    });
+    expect(write).not.toHaveBeenCalled();
+    expect(refreshCharacter).toHaveBeenCalledOnce();
+    expect(JSON.stringify(log.mock.calls)).toContain('You teleport to Elsewhere');
+  });
+
+  it('discards a special-travel response after the authoritative character location changes', async () => {
+    const { options, write, log } = params();
+    const refreshCharacter = vi.fn();
+    let finish!: (value: unknown) => void;
+    vi.spyOn(supabase, 'rpc').mockImplementation(((name: string) => {
+      if (name === 'hidden_path_openings') return Promise.resolve({ data: [], error: null });
+      return new Promise(resolve => { finish = resolve; });
+    }) as unknown as typeof supabase.rpc);
+    const { result, rerender } = renderHook(({ nodeId }) => useMovementActions({
+      ...options, inCombat: false, movementBlocked: true, refreshCharacter,
+      character: { ...options.character, current_node_id: nodeId },
+      getNode: (id: string) => ({ id, name: id, region_id: 'region', connections: [] }),
+    }), { initialProps: { nodeId: 'node' } });
+    let pending!: Promise<void>;
+    act(() => { pending = result.current.handleTeleport('other', 1); });
+    rerender({ nodeId: 'new-node' });
+    await act(async () => {
+      finish({ data: { ok: true, kind: 'moved', destination_node_id: 'other', cp_cost: 1 }, error: null });
+      await pending;
+    });
+    expect(write).not.toHaveBeenCalled();
+    expect(refreshCharacter).not.toHaveBeenCalled();
+    expect(log).not.toHaveBeenCalled();
   });
 
   it.each([true, false])('invalidates a saved flee/movement continuation (flee returned %s)', async result => {

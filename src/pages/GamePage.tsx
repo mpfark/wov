@@ -937,6 +937,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     onUnlockPath: handleUnlockPath,
     onPlayerCombatMove: () => wimpNotifyRef.current?.(),
     authorizeCombat2Depart,
+    refreshCharacter: refetchCharacters,
   });
 
   const consumableActions = useConsumableActions({
