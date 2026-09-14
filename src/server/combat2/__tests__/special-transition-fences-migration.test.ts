@@ -8,7 +8,7 @@ const PAGE=readFileSync('src/pages/GamePage.tsx','utf8');
 describe('Combat2 special transition fences',()=>{
  it('fences queued solo/party departures, present fighters, and live claims',()=>{
   for(const token of ['combat2_departure_request','combat2_party_departure_member',"d.status='queued'","m.status='queued'",
-    'f.present',"e.status='active'",'e.claim_token IS NOT NULL','e.claimed_until>clock_timestamp()']) expect(SQL).toContain(token);
+    'f.present',"e.status='active'",'e.claim_token IS NOT NULL','e.claim_expires_at>clock_timestamp()']) expect(SQL).toContain(token);
   expect(SQL.match(/combat2_special_transition_conflict\(c\.id,c\.current_node_id\)/g)).toHaveLength(2);
  });
  it('keeps browser access narrow and fixed-search-path helpers server-only',()=>{

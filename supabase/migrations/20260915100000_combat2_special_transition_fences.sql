@@ -12,7 +12,7 @@ RETURNS boolean LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=public,pg
    WHERE f.character_id=_character_id AND f.present AND e.status='active')
  OR EXISTS(SELECT 1 FROM public.node_encounter e
    WHERE e.node_id=_node_id AND e.status='active' AND e.claim_token IS NOT NULL
-     AND e.claimed_until>clock_timestamp());
+     AND e.claim_expires_at>clock_timestamp());
 $$;
 REVOKE ALL ON FUNCTION public.combat2_special_transition_conflict(uuid,uuid) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.combat2_special_transition_conflict(uuid,uuid) TO service_role;
