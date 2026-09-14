@@ -21,6 +21,7 @@ import { AdminEditorHeader, AdminStickyActions } from './common';
 import { CLASS_LABELS, getPlayableClassKeys } from '@/shared/formulas/classes';
 import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 import { createConnectionRequestTracker, directionalMetadata, findExactConnection, submitReciprocalConnection, type NodeDirection } from './node-connection-admin';
+import { createAdjacentNodeRequestTracker, submitAdjacentNode } from './adjacent-node-admin';
 
 interface VendorEntry {
   id: string;
@@ -44,14 +45,6 @@ interface NodeEditorPanelProps {
 }
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
-const DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
-const REVERSE_DIR: Record<string, string> = {
-  N: 'S', S: 'N', E: 'W', W: 'E',
-  NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW',
-};
 
 const RARITY_COLORS: Record<string, string> = {
   regular: 'text-foreground',
@@ -605,6 +598,9 @@ export default function NodeEditorPanel({
   const [areaDialogOpen, setAreaDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<{ id?: string; name: string; description: string; region_id: string; area_type: AreaType } | null>(null);
   const [areaSaving, setAreaSaving] = useState(false);
+  const adjacentCreationFence = useRef(createSubmissionFence());
+  const adjacentRequestTracker = useRef(createAdjacentNodeRequestTracker());
+  const adjacentParent = adjacentToNodeId ? allNodesGlobal.find((n: any) => n.id === adjacentToNodeId) : null;
 
   // For assigning existing entities
   const [allCreatures, setAllCreatures] = useState<any[]>([]);
@@ -655,6 +651,9 @@ export default function NodeEditorPanel({
   }, [activeNodeId, allNodesGlobal, nodePositions, allAreas]);
 
   useEffect(() => {
+    adjacentCreationFence.current.invalidate();
+    adjacentRequestTracker.current = createAdjacentNodeRequestTracker();
+    setLoading(false);
     setActiveNodeId(nodeId);
     setSelectedRegionId(initialRegionId);
     (async () => {
@@ -684,7 +683,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_public_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_public_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false, connections: '[]', searchable_items: [], area_id: adjacentParent?.area_id || '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -692,7 +691,7 @@ export default function NodeEditorPanel({
     setAssignCreatureId('');
     setAssignNpcId('');
     setVendorForm({ item_id: '', price: 10, stock: -1 });
-  }, [nodeId, initialRegionId]);
+  }, [nodeId, initialRegionId, adjacentToNodeId, adjacentDirection]);
 
   const loadNode = async (id: string) => {
     const { data } = await supabase.from('nodes').select('*').eq('id', id).single();
@@ -904,24 +903,32 @@ export default function NodeEditorPanel({
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
+    } else if (adjacentToNodeId && adjacentDirection) {
+      if (!adjacentParent || !Array.isArray(adjacentParent.connections)) { toast.error('Adjacent-node parent state is unavailable'); setLoading(false); return; }
+      const operation = adjacentCreationFence.current.tryAcquire();
+      if (operation === false) return;
+      const result = await submitAdjacentNode({
+        parentNodeId: adjacentToNodeId,
+        expectedParentConnections: adjacentParent.connections,
+        direction: adjacentDirection as NodeDirection,
+        nodeFields: {
+          name: form.name, description: form.description, searchable_items: searchable_items,
+          is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith,
+          is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder,
+          is_teleport: form.is_teleport, is_public_teleport: form.is_public_teleport,
+          is_trainer: form.is_trainer, is_marketplace: form.is_marketplace,
+          is_soulforge: form.is_soulforge, is_heraldry: form.is_heraldry,
+          illustration_url: form.illustration_url, illustration_metadata: form.illustration_metadata,
+          class_hall: form.class_hall || null,
+        },
+      }, adjacentRequestTracker.current);
+      if (!adjacentCreationFence.current.release(operation)) return;
+      if (!result.ok) { toast.error(`Adjacent-node creation refused: ${result.kind}`); setLoading(false); return; }
+      createdNodeId = result.node_id;
+      setActiveNodeId(result.node_id);
+      loadNode(result.node_id);
+      toast.success('Adjacent node created');
     } else {
-      if (adjacentToNodeId) {
-        const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
-        if (parentNode) {
-          const reverseDir = adjacentDirection ? (REVERSE_DIR[adjacentDirection] || 'S') : 'S';
-          connections = [{ node_id: adjacentToNodeId, direction: reverseDir, label: '' }];
-        }
-      }
-      // Calculate x/y from parent node + direction offset
-      let newX = 0, newY = 0;
-      if (adjacentToNodeId && adjacentDirection) {
-        const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
-        if (parentNode) {
-          const offset = DIRECTION_OFFSETS[adjacentDirection] || [1, 0];
-          newX = (parentNode.x ?? 0) + offset[0];
-          newY = (parentNode.y ?? 0) + offset[1];
-        }
-      }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
         is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_public_teleport: form.is_public_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, connections, searchable_items,
@@ -929,18 +936,9 @@ export default function NodeEditorPanel({
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
         class_hall: form.class_hall || null,
-        x: newX, y: newY,
+        x: 0, y: 0,
       } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
-
-      if (adjacentToNodeId && inserted) {
-        const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
-        if (parentNode) {
-          const parentConns = Array.isArray(parentNode.connections) ? [...parentNode.connections] : [];
-          parentConns.push({ node_id: inserted.id, direction: adjacentDirection || 'N', label: form.name });
-          await supabase.from('nodes').update({ connections: parentConns }).eq('id', adjacentToNodeId);
-        }
-      }
 
       toast.success('Node created');
       if (inserted) {
@@ -999,9 +997,16 @@ export default function NodeEditorPanel({
 
             {/* ── Details ── */}
             <TabsContent value="details" className="space-y-3">
+              {adjacentParent && adjacentDirection && !activeNodeId && (
+                <div className="rounded-md border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
+                  <p className="font-display text-foreground">Create adjacent node</p>
+                  <p>Parent: {getNodeLabel(adjacentParent, allAreas)} · Direction: {adjacentDirection}</p>
+                  <p>Region and area are inherited from the parent. Coordinates and the reciprocal connection are created atomically.</p>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] text-muted-foreground">Region</label>
-                <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
+                <Select value={selectedRegionId} onValueChange={setSelectedRegionId} disabled={!!adjacentParent && !activeNodeId}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select region..." /></SelectTrigger>
                   <SelectContent className="bg-popover border-border z-50 max-h-60">
                     {regions.map(r => (
@@ -1016,7 +1021,7 @@ export default function NodeEditorPanel({
               <div>
                 <label className="text-[10px] text-muted-foreground">Area (optional)</label>
                 <div className="flex gap-1">
-                  <Select value={form.area_id || 'none'} onValueChange={v => setForm(f => ({ ...f, area_id: v === 'none' ? '' : v }))}>
+                  <Select value={form.area_id || 'none'} onValueChange={v => setForm(f => ({ ...f, area_id: v === 'none' ? '' : v }))} disabled={!!adjacentParent && !activeNodeId}>
                     <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="No area" /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50 max-h-60">
                       <SelectItem value="none" className="text-xs text-muted-foreground">No area</SelectItem>
@@ -1032,7 +1037,7 @@ export default function NodeEditorPanel({
                       <Pencil className="w-3 h-3" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={openCreateArea} className="h-8 w-8 p-0 shrink-0" title="New area">
+                  <Button variant="ghost" size="sm" onClick={openCreateArea} disabled={!!adjacentParent && !activeNodeId} className="h-8 w-8 p-0 shrink-0" title="New area">
                     <Plus className="w-3 h-3" />
                   </Button>
                 </div>
@@ -1184,7 +1189,7 @@ Soulforge requires a Blacksmith node. Enable Blacksmith above or this flag will 
               <AdminStickyActions
                 onSave={saveNode}
                 onCancel={onClose}
-                saveLabel={activeNodeId ? 'Save' : 'Create'}
+                saveLabel={activeNodeId ? 'Save' : adjacentParent ? 'Create adjacent node' : 'Create'}
                 loading={loading}
                 extraActions={activeNodeId && isValar ? (
                   <Button variant="destructive" onClick={deleteNode} className="font-display text-xs">

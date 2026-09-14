@@ -53,7 +53,7 @@ describe('authoritative reciprocal node connections', () => {
   });
 
   it('keeps connections out of ordinary existing-node saves', () => {
-    const existingSave = NODE.slice(NODE.indexOf('if (activeNodeId) {'), NODE.indexOf('} else {', NODE.indexOf('if (activeNodeId) {')));
+    const existingSave = NODE.slice(NODE.indexOf('if (activeNodeId) {'), NODE.indexOf('} else if (adjacentToNodeId', NODE.indexOf('if (activeNodeId) {')));
     expect(existingSave).not.toContain('connections,');
   });
 

@@ -19,7 +19,7 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-014 | Loot Tables | authority/atomicity | Header/entry mutations need a focused partial-failure and duplicate-write review. | Establish transaction boundary. | Maybe | No | Yes | Technical batch 2 | open |
 | ADM-015 | Users / Characters | authority/atomicity | Level and remaining character edits may use sequential server calls. | Define atomic admin update contract. | Maybe | Yes | Yes | Technical batch 2 | open |
 | ADM-016 | Guide | correctness | Ordering and category/entry deletion consistency need focused review. | Define deletion/reorder semantics. | Maybe | No | Yes | Technical batch 2 | open |
-| ADM-017 | Node Editor | authority/atomicity | Adjacent-node creation still inserts the node and then connects its parent in separate browser writes. | Combine node creation and reciprocal parent connection without weakening ADM-010 expected-state rules. | Likely | No | Yes | Technical batch 2 | open |
+| ADM-017 | Node Editor | authority/atomicity | Adjacent-node creation and its reciprocal parent connection now share one stale-parent-fenced, idempotent transaction. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2D | completed |
 | ADM-020 | Node Editor | performance | Loads complete item, creature and NPC catalogues for local pickers and repeatedly reloads them. | Add scoped/paginated search without weakening selection. | No | No | Yes | Query batch | open |
 | ADM-021 | Items | product decision | Ownership of `tier`, `weapon_die`, `world_drop` and `drop_weight` is unclear between authoring and generated runtime records. | Product/data-owner decision required. | Unknown | No | Yes | Contract batch | blocked |
 | ADM-022 | Statuses | product decision | Buff/debuff terminology does not map cleanly to every active reusable status classification. | Agree player/admin taxonomy first. | No | No | Yes | Contract batch | blocked |
@@ -29,4 +29,4 @@ This is the canonical queue for admin correctness and design work. Completed ite
 
 ## Next recommended batch
 
-Implement ADM-017 next as a focused adjacent-node-plus-parent-connection transaction, then address batch-node and loot-table atomicity.
+Review ADM-013 Batch Node Editor atomicity next, then ADM-014 Loot Tables.
