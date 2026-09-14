@@ -1,14 +1,25 @@
 export function createSubmissionFence() {
-  let active = false;
+  let activeToken: number | null = null;
+  let generation = 0;
 
   return {
-    tryAcquire(): boolean {
-      if (active) return false;
-      active = true;
+    tryAcquire(): number | false {
+      if (activeToken !== null) return false;
+      generation += 1;
+      activeToken = generation;
+      return activeToken;
+    },
+    release(token?: number): boolean {
+      if (activeToken === null || (token !== undefined && token !== activeToken)) return false;
+      activeToken = null;
       return true;
     },
-    release(): void {
-      active = false;
+    invalidate(): void {
+      generation += 1;
+      activeToken = null;
+    },
+    isCurrent(token: number): boolean {
+      return activeToken === token;
     },
   };
 }

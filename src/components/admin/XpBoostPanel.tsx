@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 export default function XpBoostPanel() {
   const [multiplier, setMultiplier] = useState(2);
@@ -12,13 +13,16 @@ export default function XpBoostPanel() {
   const [durationUnit, setDurationUnit] = useState<'hours' | 'days'>('hours');
   const [currentBoost, setCurrentBoost] = useState<{ multiplier: number; expires_at: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
+  const requestGuard = useRef(createLatestRequestGuard());
 
   const fetchCurrent = async () => {
+    const request = requestGuard.current.begin();
     const { data } = await supabase.from('xp_boost').select('*').limit(1).single();
-    if (data) setCurrentBoost({ multiplier: data.multiplier, expires_at: data.expires_at });
+    if (data && requestGuard.current.isCurrent(request)) setCurrentBoost({ multiplier: data.multiplier, expires_at: data.expires_at });
   };
 
-  useEffect(() => { fetchCurrent(); }, []);
+  useEffect(() => { fetchCurrent(); return () => { requestGuard.current.invalidate(); operationFence.current.invalidate(); }; }, []);
 
   const isActive = currentBoost && currentBoost.multiplier > 1 && currentBoost.expires_at && new Date(currentBoost.expires_at).getTime() > Date.now();
 
@@ -32,8 +36,12 @@ export default function XpBoostPanel() {
   };
 
   const activate = async () => {
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const durationValue = Number.parseFloat(duration);
+    if (!Number.isFinite(durationValue) || durationValue <= 0) { operationFence.current.release(operation); toast.error('Duration must be greater than zero'); return; }
     setLoading(true);
-    const durationMs = parseFloat(duration) * (durationUnit === 'days' ? 86400000 : 3600000);
+    const durationMs = durationValue * (durationUnit === 'days' ? 86400000 : 3600000);
     const expiresAt = new Date(Date.now() + durationMs).toISOString();
 
     const { error } = await supabase
@@ -41,6 +49,7 @@ export default function XpBoostPanel() {
       .update({ multiplier, expires_at: expiresAt })
       .neq('id', '00000000-0000-0000-0000-000000000000'); // update all rows
 
+    if (!operationFence.current.release(operation)) return;
     if (error) {
       toast.error('Failed to activate boost: ' + error.message);
     } else {
@@ -51,12 +60,15 @@ export default function XpBoostPanel() {
   };
 
   const deactivate = async () => {
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     setLoading(true);
     const { error } = await supabase
       .from('xp_boost')
       .update({ multiplier: 1, expires_at: null })
       .neq('id', '00000000-0000-0000-0000-000000000000');
 
+    if (!operationFence.current.release(operation)) return;
     if (error) {
       toast.error('Failed to deactivate: ' + error.message);
     } else {
@@ -77,7 +89,7 @@ export default function XpBoostPanel() {
             {currentBoost!.multiplier}x Active — {timeRemaining()}
           </span>
           <Button variant="destructive" size="sm" className="text-xs h-7" onClick={deactivate} disabled={loading}>
-            Deactivate
+            {loading ? 'Deactivating…' : 'Deactivate'}
           </Button>
         </>
       ) : (
@@ -112,7 +124,7 @@ export default function XpBoostPanel() {
             </SelectContent>
           </Select>
           <Button size="sm" className="text-xs h-7" onClick={activate} disabled={loading}>
-            <Zap className="w-3 h-3 mr-1" /> Activate
+            <Zap className="w-3 h-3 mr-1" /> {loading ? 'Activating…' : 'Activate'}
           </Button>
         </>
       )}

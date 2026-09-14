@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import { useAreaTypes } from '@/features/world';
 import IllustrationEditor from './IllustrationEditor';
 import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions } from './common';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 interface Region {
   id: string;
@@ -34,8 +35,14 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
   const { areaTypes } = useAreaTypes();
   const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} as Record<string, string> });
   const [aiLoading, setAiLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
+  const sessionGuard = useRef(createLatestRequestGuard());
 
   useEffect(() => {
+    sessionGuard.current.begin();
+    operationFence.current.invalidate();
+    setSaving(false);
     if (isNew) {
       setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} });
     } else if (areaId) {
@@ -46,9 +53,12 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
     }
   }, [areaId, isNew, initialRegionId]);
 
+  useEffect(() => () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); }, []);
+
   const aiSuggest = async () => {
     if (!form.region_id) return toast.error('Select a region first');
     setAiLoading(true);
+    const session = sessionGuard.current.begin();
     try {
       const region = regions.find(r => r.id === form.region_id);
       const existingAreas = areas.filter(a => a.region_id === form.region_id).map(a => a.name).join(', ');
@@ -67,18 +77,24 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
         },
       });
       if (error) throw error;
-      setForm(prev => ({ ...prev, name: data.name, description: data.description }));
-      toast.success('AI suggestion applied');
+      if (sessionGuard.current.isCurrent(session)) {
+        setForm(prev => ({ ...prev, name: data.name, description: data.description }));
+        toast.success('AI suggestion applied');
+      }
     } catch (e: any) {
-      toast.error(e.message || 'AI suggestion failed');
+      if (sessionGuard.current.isCurrent(session)) toast.error(e.message || 'AI suggestion failed');
     } finally {
-      setAiLoading(false);
+      if (sessionGuard.current.isCurrent(session)) setAiLoading(false);
     }
   };
 
   const save = async () => {
     if (!form.name.trim()) return toast.error('Name is required');
     if (!form.region_id) return toast.error('Select a region');
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const session = sessionGuard.current.begin();
+    setSaving(true);
 
     const payload = {
       name: form.name.trim(),
@@ -95,10 +111,14 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
 
     if (isNew) {
       const { error } = await supabase.from('areas').insert(payload);
+      if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+      setSaving(false);
       if (error) return toast.error(error.message);
       toast.success('Area created');
     } else if (areaId) {
       const { error } = await supabase.from('areas').update(payload).eq('id', areaId);
+      if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+      setSaving(false);
       if (error) return toast.error(error.message);
       toast.success('Area updated');
     }
@@ -108,14 +128,20 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
   const handleDelete = async () => {
     if (!areaId) return;
     if (!window.confirm(`Delete area "${form.name}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const session = sessionGuard.current.begin();
+    setSaving(true);
     const { error } = await supabase.from('areas').delete().eq('id', areaId);
+    if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+    setSaving(false);
     if (error) return toast.error(error.message);
     toast.success('Area deleted');
     onDeleted?.(areaId);
   };
 
   const deleteButton = !isNew && areaId ? (
-    <Button variant="destructive" onClick={handleDelete} className="font-display text-xs">
+    <Button variant="destructive" onClick={handleDelete} disabled={saving} className="font-display text-xs">
       <Trash2 className="w-3 h-3 mr-1" /> Delete
     </Button>
   ) : undefined;
@@ -211,6 +237,7 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
             onSave={save}
             onCancel={onClose}
             saveLabel={isNew ? 'Create Area' : 'Save Changes'}
+            loading={saving}
             extraActions={deleteButton}
           />
         </div>

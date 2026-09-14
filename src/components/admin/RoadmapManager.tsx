@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 interface RoadmapItem {
   id: string;
@@ -42,6 +43,9 @@ export default function RoadmapManager() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('General');
   const [filterCat, setFilterCat] = useState<string>('all');
+  const [pending, setPending] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
+  const sessionGuard = useRef(createLatestRequestGuard());
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -53,9 +57,10 @@ export default function RoadmapManager() {
     setItems((data as RoadmapItem[]) || []);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); return () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); }; }, [load]);
 
   const resetForm = () => {
+    sessionGuard.current.invalidate();
     setTitle('');
     setDescription('');
     setCategory('General');
@@ -64,6 +69,7 @@ export default function RoadmapManager() {
   };
 
   const startEdit = (item: RoadmapItem) => {
+    sessionGuard.current.begin(); operationFence.current.invalidate(); setPending(false);
     setEditingId(item.id);
     setTitle(item.title);
     setDescription(item.description);
@@ -73,13 +79,21 @@ export default function RoadmapManager() {
 
   const save = async () => {
     if (!title.trim()) return toast.error('Title required');
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const session = sessionGuard.current.begin();
+    setPending(true);
     if (editingId) {
       const { error } = await supabase.from('roadmap_items').update({ title, description, category }).eq('id', editingId);
+      if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+      setPending(false);
       if (error) return toast.error(error.message);
       toast.success('Updated');
     } else {
       const maxOrder = items.reduce((m, i) => Math.max(m, i.sort_order), 0);
       const { error } = await supabase.from('roadmap_items').insert({ title, description, category, sort_order: maxOrder + 1 });
+      if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+      setPending(false);
       if (error) return toast.error(error.message);
       toast.success('Added');
     }
@@ -88,13 +102,26 @@ export default function RoadmapManager() {
   };
 
   const toggleDone = async (item: RoadmapItem) => {
-    await supabase.from('roadmap_items').update({ is_done: !item.is_done }).eq('id', item.id);
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    setPending(true);
+    const { error } = await supabase.from('roadmap_items').update({ is_done: !item.is_done }).eq('id', item.id);
+    if (!operationFence.current.release(operation)) return;
+    setPending(false);
+    if (error) return toast.error(error.message);
     load();
   };
 
   const deleteItem = async (id: string) => {
-    if (!confirm('Delete this roadmap entry?')) return;
-    await supabase.from('roadmap_items').delete().eq('id', id);
+    const item = items.find(candidate => candidate.id === id);
+    if (!confirm(`Delete roadmap entry "${item?.title || 'Unknown'}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    setPending(true);
+    const { error } = await supabase.from('roadmap_items').delete().eq('id', id);
+    if (!operationFence.current.release(operation)) return;
+    setPending(false);
+    if (error) return toast.error(error.message);
     toast.success('Deleted');
     load();
   };
@@ -135,10 +162,10 @@ export default function RoadmapManager() {
                 {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button size="sm" className="h-7 text-xs" onClick={save}>
+            <Button size="sm" className="h-7 text-xs" onClick={save} disabled={pending}>
               <Check className="w-3 h-3 mr-1" /> {editingId ? 'Update' : 'Save'}
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetForm}>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetForm} disabled={pending}>
               <X className="w-3 h-3" />
             </Button>
           </div>
@@ -155,6 +182,7 @@ export default function RoadmapManager() {
             <Checkbox
               checked={item.is_done}
               onCheckedChange={() => toggleDone(item)}
+              disabled={pending}
               className="mt-0.5"
             />
             <div className="flex-1 min-w-0">
@@ -170,10 +198,10 @@ export default function RoadmapManager() {
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
               )}
             </div>
-            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => startEdit(item)}>
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" disabled={pending} onClick={() => startEdit(item)}>
               <Pencil className="w-3 h-3" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0 text-destructive" onClick={() => deleteItem(item.id)}>
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0 text-destructive" disabled={pending} onClick={() => deleteItem(item.id)}>
               <Trash2 className="w-3 h-3" />
             </Button>
           </div>

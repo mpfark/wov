@@ -21,7 +21,7 @@
  * Scaling roles (`primary` / `secondary`) are bound to concrete attributes by
  * the applying ability, so a status never names a stat directly.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import { AlertTriangle, Loader2, Plus, Save } from 'lucide-react';
 import type { AppliedStatusDef, ScalingRoleName } from '@/shared/config/compose-ability';
 import type { AbilityCalc } from '@/shared/formulas/ability-calc';
 import { DAMAGE_TYPES, DAMAGE_TYPE_NONE } from './damage-types';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 import CalcBuilder from './ability/CalcBuilder';
 
 /** Categories a `damage_amp` status may declare eligible. */
@@ -155,6 +156,8 @@ export default function StatusManager() {
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
+  const sessionGuard = useRef(createLatestRequestGuard());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -170,15 +173,17 @@ export default function StatusManager() {
     setUsage((abilities ?? []) as unknown as UsageRow[]);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); }; }, [load]);
 
   const select = (row: StatusRow) => {
+    sessionGuard.current.begin(); operationFence.current.invalidate(); setSaving(false);
     setCreating(false);
     setSelectedKey(row.key);
     setDraft({ ...row });
   };
 
   const startCreate = () => {
+    sessionGuard.current.begin(); operationFence.current.invalidate(); setSaving(false);
     setCreating(true);
     setSelectedKey(null);
     setDraft({ ...BLANK });
@@ -195,11 +200,15 @@ export default function StatusManager() {
   const save = async () => {
     if (!draft) return;
     if (draftErrors.length) { toast.error(draftErrors[0]); return; }
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const session = sessionGuard.current.begin();
     setSaving(true);
     const payload = toPayload(draft);
     const { error } = creating
       ? await supabase.from('applied_statuses').insert(payload)
       : await supabase.from('applied_statuses').update(payload).eq('key', draft.key);
+    if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`${draft.label} saved.`);
@@ -722,7 +731,7 @@ export default function StatusManager() {
               </Button>
               <Button
                 size="sm" variant="outline"
-                onClick={() => { setDraft(null); setCreating(false); setSelectedKey(null); }}
+                onClick={() => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); setSaving(false); setDraft(null); setCreating(false); setSelectedKey(null); }}
               >
                 Cancel
               </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,7 @@ import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyStat
 import NodePicker from './NodePicker';
 import { CLASS_LABELS, getPlayableClassKeys } from '@/shared/formulas/classes';
 import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter' | 'heraldry';
 
@@ -72,6 +73,8 @@ export default function NPCManager() {
   const [loading, setLoading] = useState(false);
   const [npcRegions, setNpcRegions] = useState<RegionOption[]>([]);
   const [npcAreas, setNpcAreas] = useState<AreaOption[]>([]);
+  const operationFence = useRef(createSubmissionFence());
+  const sessionGuard = useRef(createLatestRequestGuard());
 
   const loadData = async () => {
     const [n, nd, r, a] = await Promise.all([
@@ -100,7 +103,7 @@ export default function NPCManager() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); return () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); }; }, []);
 
   const getNodeName = (id: string | null) => {
     if (!id) return 'Unassigned';
@@ -108,12 +111,14 @@ export default function NPCManager() {
   };
 
   const openNew = () => {
+    sessionGuard.current.invalidate();
     setSelectedId(null);
     setIsNew(true);
     setForm(defaultForm());
   };
 
   const openEdit = (npc: NPC) => {
+    sessionGuard.current.begin();
     setSelectedId(npc.id);
     setIsNew(false);
     setForm({
@@ -127,12 +132,16 @@ export default function NPCManager() {
   };
 
   const closePanel = () => {
+    sessionGuard.current.invalidate();
     setSelectedId(null);
     setIsNew(false);
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return toast.error('Name is required');
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    if (!form.name.trim()) { operationFence.current.release(operation); return toast.error('Name is required'); }
+    const session = sessionGuard.current.begin();
     setLoading(true);
 
     const payload = {
@@ -147,25 +156,34 @@ export default function NPCManager() {
     let savedId = selectedId;
     if (selectedId) {
       const { error } = await supabase.from('npcs').update(payload as any).eq('id', selectedId);
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      toast.success('NPC updated');
+      if (error) { if (operationFence.current.release(operation) && sessionGuard.current.isCurrent(session)) toast.error(error.message); setLoading(false); return; }
+      if (sessionGuard.current.isCurrent(session)) toast.success('NPC updated');
     } else {
       const { data, error } = await supabase.from('npcs').insert(payload as any).select().single();
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      toast.success('NPC created');
+      if (error) { if (operationFence.current.release(operation) && sessionGuard.current.isCurrent(session)) toast.error(error.message); setLoading(false); return; }
+      if (sessionGuard.current.isCurrent(session)) toast.success('NPC created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
+    operationFence.current.release(operation);
     const { data: refreshed } = await supabase.from('npcs').select('*').order('name');
     if (refreshed) {
       setNPCs(refreshed as unknown as NPC[]);
       const updated = refreshed.find((n: any) => n.id === savedId);
-      if (updated) openEdit(updated as unknown as NPC);
+      if (updated && sessionGuard.current.isCurrent(session)) openEdit(updated as unknown as NPC);
     }
   };
 
   const handleDelete = async (id: string) => {
+    const npc = npcs.find(candidate => candidate.id === id);
+    if (!window.confirm(`Delete NPC "${npc?.name || 'Unknown'}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    sessionGuard.current.invalidate();
+    setLoading(true);
     const { error } = await supabase.from('npcs').delete().eq('id', id);
+    setLoading(false);
+    if (!operationFence.current.release(operation)) return;
     if (error) return toast.error(error.message);
     toast.success('NPC deleted');
     if (selectedId === id) closePanel();

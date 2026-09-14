@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 interface IssueReport {
   id: string;
@@ -22,30 +23,46 @@ export default function IssueReportManager() {
   const [reports, setReports] = useState<IssueReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('open');
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const operationFence = useRef(createSubmissionFence());
+  const requestGuard = useRef(createLatestRequestGuard());
 
   const load = async () => {
+    const request = requestGuard.current.begin();
     setLoading(true);
     let query = supabase.from('issue_reports' as any).select('*').order('created_at', { ascending: false });
     if (filter !== 'all') {
       query = query.eq('status', filter);
     }
     const { data, error } = await query;
+    if (!requestGuard.current.isCurrent(request)) return;
     if (error) toast.error(error.message);
     setReports((data as any as IssueReport[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); return () => { requestGuard.current.invalidate(); operationFence.current.invalidate(); }; }, [filter]);
 
   const updateStatus = async (id: string, status: string) => {
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    setPendingId(id);
     const { error } = await supabase.from('issue_reports' as any).update({ status } as any).eq('id', id);
+    if (!operationFence.current.release(operation)) return;
+    setPendingId(null);
     if (error) toast.error(error.message);
     else load();
   };
 
   const deleteReport = async (id: string) => {
-    if (!window.confirm('Delete this report?')) return;
+    const report = reports.find(candidate => candidate.id === id);
+    if (!window.confirm(`Delete issue report from "${report?.character_name || 'Unknown character'}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    setPendingId(id);
     const { error } = await supabase.from('issue_reports' as any).delete().eq('id', id);
+    if (!operationFence.current.release(operation)) return;
+    setPendingId(null);
     if (error) toast.error(error.message);
     else load();
   };
@@ -100,7 +117,7 @@ export default function IssueReportManager() {
                   <p className="whitespace-pre-wrap break-words">{r.message}</p>
                 </TableCell>
                 <TableCell>
-                  <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)}>
+                  <Select value={r.status} disabled={pendingId !== null} onValueChange={(v) => updateStatus(r.id, v)}>
                     <SelectTrigger className="h-6 text-[10px] w-24">
                       <Badge variant={statusColor(r.status) as any} className="text-[9px]">{r.status}</Badge>
                     </SelectTrigger>
@@ -112,7 +129,7 @@ export default function IssueReportManager() {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteReport(r.id)}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" disabled={pendingId !== null} onClick={() => deleteReport(r.id)}>
                     <Trash2 className="h-3 w-3 text-destructive" />
                   </Button>
                 </TableCell>

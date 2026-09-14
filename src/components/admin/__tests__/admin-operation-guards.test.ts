@@ -7,10 +7,20 @@ const ITEM_MANAGER = readFileSync('src/components/admin/ItemManager.tsx', 'utf8'
 describe('admin operation guards', () => {
   it('fences duplicate submission until the active write finishes', () => {
     const fence = createSubmissionFence();
-    expect(fence.tryAcquire()).toBe(true);
+    const token = fence.tryAcquire();
+    expect(token).not.toBe(false);
     expect(fence.tryAcquire()).toBe(false);
-    fence.release();
-    expect(fence.tryAcquire()).toBe(true);
+    fence.release(token as number);
+    expect(fence.tryAcquire()).not.toBe(false);
+  });
+
+  it('does not let an obsolete completion release a newer editor-session lock', () => {
+    const fence = createSubmissionFence();
+    const old = fence.tryAcquire() as number;
+    fence.invalidate();
+    const current = fence.tryAcquire() as number;
+    expect(fence.release(old)).toBe(false);
+    expect(fence.isCurrent(current)).toBe(true);
   });
 
   it('rejects responses belonging to an older selection', () => {

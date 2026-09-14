@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { STAT_LABELS } from '@/lib/game-data';
 import AdminEntityToolbar from '@/components/admin/common/AdminEntityToolbar';
 import AdminEditorHeader from '@/components/admin/common/AdminEditorHeader';
 import AdminFormSection from '@/components/admin/common/AdminFormSection';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 type StatKey = typeof STAT_KEYS[number];
@@ -48,6 +49,8 @@ export default function RaceManager() {
   const [draft, setDraft] = useState<RaceRow | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const operationFence = useRef(createSubmissionFence());
+  const sessionGuard = useRef(createLatestRequestGuard());
 
   const load = async () => {
     setLoading(true);
@@ -63,16 +66,20 @@ export default function RaceManager() {
     setRaces((data ?? []) as unknown as RaceRow[]);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); return () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); }; }, []);
 
-  const startNew = () => { setDraft({ ...EMPTY }); setIsNew(true); };
-  const startEdit = (row: RaceRow) => { setDraft({ ...row }); setIsNew(false); };
+  const closeEditor = () => { sessionGuard.current.invalidate(); operationFence.current.invalidate(); setSaving(false); setDraft(null); };
+  const startNew = () => { sessionGuard.current.begin(); operationFence.current.invalidate(); setSaving(false); setDraft({ ...EMPTY }); setIsNew(true); };
+  const startEdit = (row: RaceRow) => { sessionGuard.current.begin(); operationFence.current.invalidate(); setSaving(false); setDraft({ ...row }); setIsNew(false); };
 
   const save = async () => {
     if (!draft) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
     const key = draft.race_key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    if (!key) { toast({ title: 'A race key is required', variant: 'destructive' }); return; }
-    if (!draft.label.trim()) { toast({ title: 'A display name is required', variant: 'destructive' }); return; }
+    if (!key) { operationFence.current.release(operation); toast({ title: 'A race key is required', variant: 'destructive' }); return; }
+    if (!draft.label.trim()) { operationFence.current.release(operation); toast({ title: 'A display name is required', variant: 'destructive' }); return; }
+    const session = sessionGuard.current.begin();
 
     setSaving(true);
     const payload = {
@@ -92,18 +99,27 @@ export default function RaceManager() {
       ? await supabase.from('races' as any).insert(payload as any)
       : await supabase.from('races' as any).update(payload as any).eq('race_key', key);
 
+    if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
     setSaving(false);
     if (error) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
       return;
     }
     toast({ title: isNew ? 'Race created' : 'Race saved', description: payload.label });
+    sessionGuard.current.invalidate();
     setDraft(null);
     load();
   };
 
   const remove = async (row: RaceRow) => {
+    if (!window.confirm(`Delete race "${row.label}"?`)) return;
+    const operation = operationFence.current.tryAcquire();
+    if (operation === false) return;
+    const session = sessionGuard.current.begin();
+    setSaving(true);
     const { error } = await supabase.from('races' as any).delete().eq('race_key', row.race_key);
+    if (!operationFence.current.release(operation) || !sessionGuard.current.isCurrent(session)) return;
+    setSaving(false);
     if (error) {
       toast({
         title: 'Could not delete race',
@@ -175,7 +191,7 @@ export default function RaceManager() {
           <div className="w-[360px] shrink-0 border-l border-border flex flex-col min-h-0">
             <AdminEditorHeader
               title={isNew ? 'New Race' : `Edit ${draft.label || draft.race_key}`}
-              onClose={() => setDraft(null)}
+              onClose={closeEditor}
             />
             <ScrollArea className="flex-1 min-h-0">
               <div className="p-3 space-y-4">
@@ -283,6 +299,7 @@ export default function RaceManager() {
                       variant="destructive"
                       className="h-7 text-xs"
                       onClick={() => remove(draft)}
+                      disabled={saving}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
