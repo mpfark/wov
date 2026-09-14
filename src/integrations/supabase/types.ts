@@ -5880,6 +5880,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: Json
       }
+      combat2_special_transition_conflict: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: boolean
+      }
       combat2_sync: {
         Args: {
           _after_tick?: number
