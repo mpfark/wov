@@ -1,23 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import NodePicker from './NodePicker';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-const DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
-
-const REVERSE_DIR: Record<string, string> = {
-  N: 'S', S: 'N', E: 'W', W: 'E',
-  NE: 'SW', NW: 'SE', SE: 'NW', SW: 'NE',
-};
+import { createSubmissionFence } from './admin-operation-guards';
+import { createRegionRequestTracker, submitRegionCreation } from './region-creation-admin';
 
 interface Region {
   id: string;
@@ -27,29 +18,23 @@ interface Region {
   max_level: number;
 }
 
-interface NodeData {
-  id: string;
-  name: string;
-  region_id: string;
-  x: number;
-  y: number;
-  connections: any[];
-}
-
 interface Props {
   regions: Region[];
-  allNodes: NodeData[];
   onCreated: () => void;
   isValar: boolean;
   onDelete: (id: string) => void;
 }
 
-export default function RegionManager({ regions, allNodes, onCreated, isValar: _isValar, onDelete: _onDelete }: Props) {
+export default function RegionManager({ regions, onCreated, isValar: _isValar, onDelete: _onDelete }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
   const [aiLoading, setAiLoading] = useState(false);
-  const [connectNodeId, setConnectNodeId] = useState<string>('');
-  const [connectDirection, setConnectDirection] = useState<string>('S');
+  const [createInitialNode, setCreateInitialNode] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const creationFence = useRef(createSubmissionFence());
+  const requestTracker = useRef(createRegionRequestTracker());
+
+  useEffect(() => () => creationFence.current.invalidate(), []);
 
   const aiSuggest = async () => {
     setAiLoading(true);
@@ -75,58 +60,41 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar: _
   };
 
   const create = async () => {
-    if (!form.name) return toast.error('Name required');
-    const { data: region, error } = await supabase.from('regions').insert({
-      name: form.name,
-      description: form.description,
-      min_level: form.min_level,
-      max_level: form.max_level,
-    }).select().single();
-    if (error) return toast.error(error.message);
-
-    if (region) {
-      const parentNode = connectNodeId ? allNodes.find(n => n.id === connectNodeId) : null;
-      let newX = 0;
-      let newY = 0;
-      const newConnections: any[] = [];
-
-      if (parentNode) {
-        const offset = DIRECTION_OFFSETS[connectDirection] || [0, 1];
-        newX = parentNode.x + offset[0];
-        newY = parentNode.y + offset[1];
-        newConnections.push({ node_id: parentNode.id, direction: REVERSE_DIR[connectDirection] || 'N' });
-      } else {
-        // Place standalone region far from existing nodes
-        const maxX = allNodes.length > 0 ? Math.max(...allNodes.map(n => n.x)) : 0;
-        newX = maxX + 10;
-        newY = 0;
-      }
-
-      const { data: newNode } = await supabase.from('nodes').insert({
-        name: `${form.name} Entrance`,
-        description: '',
-        region_id: region.id,
-        connections: newConnections,
-        x: newX,
-        y: newY,
-      }).select().single();
-
-      // Update parent node's connections to include new node
-      if (parentNode && newNode) {
-        const updatedConns = [
-          ...(parentNode.connections || []),
-          { node_id: newNode.id, direction: connectDirection },
-        ];
-        await supabase.from('nodes').update({ connections: updatedConns }).eq('id', parentNode.id);
-      }
+    if (!form.name.trim()) return toast.error('Region name is required');
+    if (!Number.isInteger(form.min_level) || !Number.isInteger(form.max_level) || form.min_level < 1 || form.max_level < form.min_level) {
+      return toast.error('Enter a valid whole-number level range');
+    }
+    const operation = creationFence.current.tryAcquire();
+    if (operation === false) return;
+    setCreating(true);
+    const result = await submitRegionCreation({
+      regionName: form.name,
+      regionDescription: form.description,
+      minLevel: form.min_level,
+      maxLevel: form.max_level,
+      createInitialNode,
+    }, requestTracker.current);
+    if (!creationFence.current.release(operation)) return;
+    setCreating(false);
+    if (!result.ok) {
+      toast.error(`Region creation refused: ${result.kind}`);
+      return;
     }
 
-    toast.success('Region created with starting node');
+    toast.success(createInitialNode ? 'Region and initial node created' : 'Region created');
     setForm({ name: '', description: '', min_level: 1, max_level: 10 });
-    setConnectNodeId('');
-    setConnectDirection('S');
+    setCreateInitialNode(true);
     setCreateOpen(false);
     onCreated();
+  };
+
+  const setDialogOpen = (open: boolean) => {
+    if (creating) return;
+    if (!open) {
+      creationFence.current.invalidate();
+      requestTracker.current = createRegionRequestTracker();
+    }
+    setCreateOpen(open);
   };
 
 
@@ -138,7 +106,7 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar: _
         <Plus className="w-3 h-3 mr-1" /> New Region
       </Button>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display text-primary">New Region</DialogTitle>
@@ -160,36 +128,22 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar: _
                 onChange={e => setForm(f => ({ ...f, max_level: +e.target.value }))} />
             </div>
 
-            {/* Connect to existing node */}
-            <div className="border border-border rounded-md p-2 space-y-2">
-              <label className="text-xs text-muted-foreground font-display block">Connect to existing node (optional)</label>
-              <NodePicker
-                nodes={allNodes.map(n => ({ id: n.id, name: n.name, region_id: n.region_id, x: n.x, y: n.y }))}
-                regions={regions}
-                value={connectNodeId || null}
-                onChange={v => setConnectNodeId(v || '')}
-                allowNone
-                placeholder="No connection"
-              />
-              {connectNodeId && (
-                <div>
-                  <label className="text-xs text-muted-foreground font-display block mb-1">Direction from parent</label>
-                  <Select value={connectDirection} onValueChange={setConnectDirection}>
-                    <SelectTrigger className="text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(DIRECTION_OFFSETS).map(dir => (
-                        <SelectItem key={dir} value={dir}>{dir}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="border border-border rounded-md p-3 space-y-2">
+              <label className="flex items-center gap-2 text-xs font-display">
+                <Checkbox checked={createInitialNode} onCheckedChange={checked => setCreateInitialNode(checked === true)} disabled={creating} />
+                Create an initial node
+              </label>
+              {createInitialNode && (
+                <div className="pl-6 text-xs text-muted-foreground space-y-1">
+                  <p>The server creates “{form.name.trim() || 'Region'} Entrance” with empty connections and places it beyond the current eastern edge.</p>
+                  <p>Connect it to the world afterward using the Node Editor.</p>
                 </div>
               )}
             </div>
 
-            <Button onClick={create} className="font-display text-xs w-full">
-              <Plus className="w-3 h-3 mr-1" /> Create Region
+            <Button onClick={create} className="font-display text-xs w-full" disabled={creating || aiLoading}>
+              {creating ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />}
+              {creating ? 'Creating…' : createInitialNode ? 'Create Region and Initial Node' : 'Create Region'}
             </Button>
           </div>
         </DialogContent>

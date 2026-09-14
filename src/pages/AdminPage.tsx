@@ -209,7 +209,6 @@ export default function AdminPage({ isValar }: AdminPageProps) {
             <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
               <RegionManager
                 regions={regions}
-                allNodes={nodes}
                 onCreated={loadData}
                 isValar={isValar}
                 onDelete={deleteRegion}
