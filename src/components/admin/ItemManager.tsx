@@ -15,6 +15,7 @@ import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 import { ProcExpectancyPanel } from './ProcExpectancyPanel';
 import CreaturePicker from './CreaturePicker';
 import NodePicker from './NodePicker';
+import { createLatestRequestGuard, createSubmissionFence } from './admin-operation-guards';
 
 
 interface ProcEntry {
@@ -105,6 +106,8 @@ export default function ItemManager() {
   const [generatingArt, setGeneratingArt] = useState(false);
   const [uploadingArt, setUploadingArt] = useState(false);
   const itemFileRef = useRef<HTMLInputElement>(null);
+  const saveFenceRef = useRef(createSubmissionFence());
+  const usageRequestGuardRef = useRef(createLatestRequestGuard());
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -139,7 +142,7 @@ export default function ItemManager() {
     setItems(data as unknown as Item[]);
   };
 
-  const loadItemUsage = async (itemId: string, itemRarity?: string) => {
+  const loadItemUsage = async (itemId: string, itemRarity?: string, requestId = usageRequestGuardRef.current.begin()) => {
     const [creaturesRes, nodesRes, vendorRes, lootEntryRes, lootTablesRes] = await Promise.all([
       supabase.from('creatures').select('id, name, loot_table'),
       supabase.from('nodes').select('id, name, searchable_items'),
@@ -191,7 +194,9 @@ export default function ItemManager() {
       }
     }
 
-    setItemUsage({ creatures, searchNodes, vendors, lootTables, holder });
+    if (usageRequestGuardRef.current.isCurrent(requestId)) {
+      setItemUsage({ creatures, searchNodes, vendors, lootTables, holder });
+    }
   };
 
   const loadUsedItemIds = async () => {
@@ -226,12 +231,14 @@ export default function ItemManager() {
   }, []);
 
   const openNew = () => {
+    usageRequestGuardRef.current.invalidate();
     setSelectedId(null);
     setIsNew(true);
     setForm(defaultForm());
   };
 
   const openEdit = (item: Item) => {
+    const usageRequestId = usageRequestGuardRef.current.begin();
     setSelectedId(item.id);
     setIsNew(false);
     setForm({
@@ -250,23 +257,26 @@ export default function ItemManager() {
       map_region_id: (item as any).map_region_id ?? null,
       map_flavor: (item as any).map_flavor ?? null,
     });
-    loadItemUsage(item.id, item.rarity);
+    loadItemUsage(item.id, item.rarity, usageRequestId);
   };
 
   const closePanel = () => {
+    usageRequestGuardRef.current.invalidate();
     setSelectedId(null);
     setIsNew(false);
     setItemUsage(null);
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return toast.error('Name is required');
-    if (form.name.length > 100) return toast.error('Name must be under 100 characters');
+    if (!saveFenceRef.current.tryAcquire()) return;
+    if (!form.name.trim()) { saveFenceRef.current.release(); return toast.error('Name is required'); }
+    if (form.name.length > 100) { saveFenceRef.current.release(); return toast.error('Name must be under 100 characters'); }
 
     const budget = getItemStatBudget(form.level, form.rarity, form.hands ?? 1, form.item_type);
     const cost = calculateItemStatCost(form.stats);
-    if (cost > budget) return toast.error(`Stat cost (${cost}) exceeds budget (${budget})`);
+    if (cost > budget) { saveFenceRef.current.release(); return toast.error(`Stat cost (${cost}) exceeds budget (${budget})`); }
 
+    const saveSelectionRequest = usageRequestGuardRef.current.begin();
     setLoading(true);
 
     const payload: any = {
@@ -294,15 +304,16 @@ export default function ItemManager() {
     let savedId = selectedId;
     if (selectedId) {
       const { error } = await supabase.from('items').update(payload).eq('id', selectedId);
-      if (error) { toast.error(error.message); setLoading(false); return; }
+      if (error) { toast.error(error.message); setLoading(false); saveFenceRef.current.release(); return; }
       toast.success('Item updated');
     } else {
       const { data, error } = await supabase.from('items').insert(payload).select().single();
-      if (error) { toast.error(error.message); setLoading(false); return; }
+      if (error) { toast.error(error.message); setLoading(false); saveFenceRef.current.release(); return; }
       toast.success('Item created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
+    saveFenceRef.current.release();
     const { fetchAllRows: fetchAll1 } = await import('@/lib/supabase-paginate');
     const refreshed = await fetchAll1<any>((from, to) =>
       supabase.from('items').select('*').order('name').range(from, to)
@@ -310,13 +321,15 @@ export default function ItemManager() {
     if (refreshed) {
       setItems(refreshed as unknown as Item[]);
       const updated = refreshed.find((i: any) => i.id === savedId);
-      if (updated) {
+      if (updated && usageRequestGuardRef.current.isCurrent(saveSelectionRequest)) {
         openEdit(updated as unknown as Item);
       }
     }
   };
 
   const handleDelete = async (id: string) => {
+    const item = items.find(candidate => candidate.id === id);
+    if (!window.confirm(`Delete item "${item?.name || 'Unknown'}"?`)) return;
     const { error } = await supabase.from('items').delete().eq('id', id);
     if (error) return toast.error(error.message);
     toast.success('Item deleted');
