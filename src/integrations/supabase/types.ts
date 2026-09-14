@@ -3899,6 +3899,48 @@ export type Database = {
           },
         ]
       }
+      node_boss_ability_cooldown: {
+        Row: {
+          ability_key: string
+          creature_id: string
+          encounter_id: string
+          next_available_tick: number
+          node_creature_id: string
+          spawn_seq: number
+        }
+        Insert: {
+          ability_key: string
+          creature_id: string
+          encounter_id: string
+          next_available_tick: number
+          node_creature_id: string
+          spawn_seq: number
+        }
+        Update: {
+          ability_key?: string
+          creature_id?: string
+          encounter_id?: string
+          next_available_tick?: number
+          node_creature_id?: string
+          spawn_seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_boss_ability_cooldown_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_boss_ability_cooldown_node_creature_id_fkey"
+            columns: ["node_creature_id"]
+            isOneToOne: false
+            referencedRelation: "node_creature"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       node_creature: {
         Row: {
           created_at: string
@@ -5865,6 +5907,15 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_sync_without_dynamic_boss_casts: {
+        Args: {
+          _after_tick?: number
+          _character_id: string
+          _encounter_id: string
+          _limit?: number
+        }
+        Returns: Json
+      }
       combat2_test_admin_allowed: { Args: never; Returns: boolean }
       combat2_test_admin_relocate: {
         Args: {
@@ -6449,11 +6500,27 @@ export type Database = {
         Args: { _lease_ms?: number; _node_id: string }
         Returns: Json
       }
+      node_tick_claim_without_boss_timing: {
+        Args: { _lease_ms?: number; _node_id: string }
+        Returns: Json
+      }
       node_tick_claim_without_canary_gate: {
         Args: { _lease_ms?: number; _node_id: string }
         Returns: Json
       }
       node_tick_commit: {
+        Args: {
+          _candidate_tick: number
+          _claim_token: string
+          _encounter_id: string
+          _expected_last_tick: number
+          _expected_state_version: number
+          _intent_ids: string[]
+          _proposed: Json
+        }
+        Returns: Json
+      }
+      node_tick_commit_without_boss_timing: {
         Args: {
           _candidate_tick: number
           _claim_token: string
