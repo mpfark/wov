@@ -25,8 +25,9 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-022 | Statuses | product decision | Buff/debuff terminology does not map cleanly to every active reusable status classification. | Agree player/admin taxonomy first. | No | No | Yes | Contract batch | blocked |
 | ADM-023 | Abilities | product decision | Legacy ability aliases remain active compatibility inputs and cannot safely be removed from editors/runtime independently. | Retirement plan and data inventory required. | Likely | Possibly | Yes | Contract batch | blocked |
 | ADM-024 | Combat2 summons | product decision | Authoritative summon editing semantics and ownership are not yet defined. | Combat2 contract decision required. | Unknown | Unknown | Yes | Contract batch | blocked |
+| ADM-025 | Loot model consolidation | product decision | Decide independently whether boss-specific inline/unique drops, assigned local loot tables, the general world item pool, gold rewards and salvage rewards are disabled, additive or replacing another layer, and designate one admin authoring surface for each. Preserve the legacy boss-specific mechanism until an authoritative replacement is approved; Combat2 currently selects item sources by `loot_mode`, evaluates inline gold separately, and rejects unique item candidates. | Product decision and live-data inventory required; do not fold into ADM-014. | Likely | Possibly | Yes | Contract batch | blocked |
 | ADM-030 | All admin pages | design | Full responsive layout, action hierarchy, density and accessibility review remains outstanding. | Complete technical correctness batches first. | No | No | Yes | Design audit | open |
 
 ## Next recommended batch
 
-Prioritize ADM-015 Users / Characters atomicity next, then ADM-016 Guide deletion/reorder consistency. Keep ADM-020 as the next query/performance batch and ADM-030 as the later full design audit; ADM-021–024 remain decision-blocked.
+Prioritize ADM-015 Users / Characters atomicity next, then ADM-016 Guide deletion/reorder consistency. Keep ADM-020 as the next query/performance batch and ADM-030 as the later full design audit; ADM-021–025 remain decision-blocked.
