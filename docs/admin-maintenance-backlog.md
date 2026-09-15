@@ -15,7 +15,7 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-010 | World Map / Node Editor | authority/atomicity | Ordinary reciprocal create/edit/remove now use an expected-state, idempotent transactional RPC. Intentional one-way/special paths are refused and preserved. | Install migration and regenerate types. Adjacent-node creation remains ADM-017. | Yes | No | Yes | Technical batch 2B | completed |
 | ADM-011 | Area Types | authority/atomicity | Rename formerly updated areas, created a type and deleted the old type in separate browser steps. Atomic admin RPC now owns rename and durable replay. | Install pending migration and regenerate types. | Yes | No | Yes | Technical batch 2A | completed |
 | ADM-012 | Regions | authority/atomicity | Region creation with an optional standalone initial node now uses one durable, idempotent transaction. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2C | completed |
-| ADM-013 | Batch Node Editor | authority/atomicity | Multi-node updates have partial-write exposure. | Define all-or-nothing behavior. | Likely | No | Yes | Technical batch 2 | open |
+| ADM-013 | Batch Node Editor | authority/atomicity | Region/area batch changes now use one complete-state-fenced, idempotent all-or-nothing RPC. Connections, coordinates and other fields remain excluded. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2E | completed |
 | ADM-014 | Loot Tables | authority/atomicity | Header/entry mutations need a focused partial-failure and duplicate-write review. | Establish transaction boundary. | Maybe | No | Yes | Technical batch 2 | open |
 | ADM-015 | Users / Characters | authority/atomicity | Level and remaining character edits may use sequential server calls. | Define atomic admin update contract. | Maybe | Yes | Yes | Technical batch 2 | open |
 | ADM-016 | Guide | correctness | Ordering and category/entry deletion consistency need focused review. | Define deletion/reorder semantics. | Maybe | No | Yes | Technical batch 2 | open |
@@ -29,4 +29,4 @@ This is the canonical queue for admin correctness and design work. Completed ite
 
 ## Next recommended batch
 
-Review ADM-013 Batch Node Editor atomicity next, then ADM-014 Loot Tables.
+Review ADM-014 Loot Table header/entry atomicity next.

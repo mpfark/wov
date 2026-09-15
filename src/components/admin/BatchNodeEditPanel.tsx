@@ -1,55 +1,51 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createSubmissionFence } from './admin-operation-guards';
+import { batchNodeExpectedState, createBatchNodeRequestTracker, MAX_BATCH_NODES, submitBatchNodeMutations } from './batch-node-admin';
 
 interface Props {
   selectedNodeIds: Set<string>;
+  nodes: Array<Record<string, unknown> & { id: string }>;
   regions: Array<{ id: string; name: string }>;
   areas: Array<{ id: string; name: string; region_id: string }>;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, onClose, onSaved }: Props) {
+export default function BatchNodeEditPanel({ selectedNodeIds, nodes, regions, areas, onClose, onSaved }: Props) {
   const [areaId, setAreaId] = useState<string>('');
   const [regionId, setRegionId] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
+  const saveFence=useRef(createSubmissionFence());
+  const requestTracker=useRef(createBatchNodeRequestTracker());
 
   const count = selectedNodeIds.size;
+  const selectionKey=Array.from(selectedNodeIds).sort().join(',');
+  useEffect(()=>{saveFence.current.invalidate();requestTracker.current=createBatchNodeRequestTracker();setSaving(false);},[selectionKey]);
 
   const applyChanges = async () => {
     if (!areaId && !regionId) {
       toast.error('Select at least one property to change');
       return;
     }
-    setSaving(true);
-    try {
-      const updates: { area_id?: string | null; region_id?: string } = {};
-      if (areaId === '__clear__') updates.area_id = null;
-      else if (areaId) updates.area_id = areaId;
-      if (regionId) updates.region_id = regionId;
-
-      const ids = Array.from(selectedNodeIds);
-      const { error } = await supabase
-        .from('nodes')
-        .update(updates)
-        .in('id', ids);
-
-      if (error) throw error;
-      toast.success(`Updated ${count} node(s)`);
-      onSaved();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+    if(count>MAX_BATCH_NODES)return toast.error(`Select at most ${MAX_BATCH_NODES} nodes`);
+    if(count>=20&&!window.confirm(`Apply this all-or-nothing update to ${count} nodes?`))return;
+    const changes:Record<string,unknown>={};
+    if(areaId==='__clear__')changes.area_id=null;else if(areaId)changes.area_id=areaId;if(regionId)changes.region_id=regionId;
+    const selected=Array.from(selectedNodeIds).sort().map(id=>nodes.find(n=>n.id===id));
+    if(selected.some(n=>!n))return toast.error('Refresh required: a selected node is unavailable');
+    const operation=saveFence.current.tryAcquire();if(operation===false)return;setSaving(true);
+    const result=await submitBatchNodeMutations(selected.map(node=>({node_id:node!.id,expected_state:batchNodeExpectedState(node!),changes})),requestTracker.current);
+    if(!saveFence.current.release(operation))return;setSaving(false);
+    if(!result.ok){toast.error(result.kind==='stale_node_state'?'Batch refused: node data changed; refresh before retrying':`Batch update refused: ${result.kind}`);return;}
+    toast.success(`Updated ${result.updated_count} node(s) atomically`);onSaved();
   };
 
   const filteredAreas = regionId
@@ -78,7 +74,7 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
         <h3 className="font-display text-sm text-primary">
           Batch Edit · {count} node{count !== 1 ? 's' : ''}
         </h3>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} disabled={saving}>
           <X className="w-4 h-4" />
         </Button>
       </div>
@@ -170,8 +166,9 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
           onClick={applyChanges}
           disabled={saving || (!areaId && !regionId)}
         >
-          {saving ? 'Applying…' : `Apply to ${count} node${count !== 1 ? 's' : ''}`}
+          {saving ? 'Applying entire batch…' : `Apply all-or-nothing to ${count} node${count !== 1 ? 's' : ''}`}
         </Button>
+        <p className="text-[10px] text-muted-foreground">Only selected fields change. “Don't change” preserves the current value; “Clear area” writes no area.</p>
       </div>
     </div>
   );

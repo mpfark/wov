@@ -343,6 +343,7 @@ export default function AdminPage({ isValar }: AdminPageProps) {
                 <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
                   <BatchNodeEditPanel
                     selectedNodeIds={multiSelectedIds}
+                    nodes={nodes}
                     regions={regions}
                     areas={areas}
                     onClose={() => { setMultiSelectMode(false); setMultiSelectedIds(new Set()); }}
