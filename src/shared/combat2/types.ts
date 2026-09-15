@@ -168,6 +168,14 @@ export interface SnapshotCreature {
   boss_crit_flavors: unknown;
   boss_death_cry: string | null;
   loot_mode: 'legacy_table' | 'item_pool' | 'salvage_only';
+  gold_enabled: boolean;
+  gold_min: number;
+  gold_max: number;
+  gold_chance: number;
+  salvage_enabled: boolean;
+  item_source: 'none' | 'world_pool' | 'assigned_table' | 'unique_boss_drop';
+  unique_item_id: string | null;
+  unique_drop_chance: number | null;
   loot_table_id: string | null;
   drop_chance: number | null;
   loot_table: SnapshotLootEntry[];
@@ -414,6 +422,7 @@ export interface ProposedReward {
   character_id: string;
   xp_awarded: number;
   gold_awarded: number;
+  salvage_awarded: number;
   is_killer: boolean;
 }
 
@@ -424,8 +433,8 @@ export interface ProposedLoot {
   loot_key: string;
   item_id: string | null;
   creature_name: string;
-  mode: 'item_pool' | 'legacy_table' | 'inline' | 'salvage_only';
-  outcome: 'dropped' | 'no_drop' | 'unique_rejected' | 'no_eligible_item';
+  mode: 'item_pool' | 'legacy_table' | 'inline' | 'salvage_only' | 'unique_boss_drop';
+  outcome: 'dropped' | 'no_drop' | 'unique_candidate' | 'unique_rejected' | 'unique_already_exists' | 'no_eligible_item';
 }
 
 export interface ProposedDurability {

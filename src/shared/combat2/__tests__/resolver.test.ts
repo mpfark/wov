@@ -56,6 +56,8 @@ function creature(overrides: Partial<SnapshotCreature> = {}): SnapshotCreature {
     is_aggressive: true,
     boss_crit_flavors: null,
     boss_death_cry: null,
+    gold_enabled: false, gold_min: 0, gold_max: 0, gold_chance: 0,
+    salvage_enabled: false, item_source: 'none', unique_item_id: null, unique_drop_chance: null,
     loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
     ...overrides,
   };
@@ -620,7 +622,7 @@ describe('combat2 resolver', () => {
       { creature_id: 'cr-1', spawn_seq: 3, character_id: 'ch-2', qualification: 'qualified' as const, qualified_by: 'damage', party_id_at_qualification: 'p-1' },
     ];
     const out = resolveNodeTick(snapshot({
-      creatures: [creature({ hp: 1, is_humanoid: true, loot_table: [{ type: 'gold', item_id: null, chance: 1, min: 20, max: 20 }] })],
+      creatures: [creature({ hp: 1, is_humanoid: true, gold_enabled: true, gold_min: 20, gold_max: 20, gold_chance: 1 })],
       fighters: [fighter({ character_id: 'ch-1', party_id: 'p-1', cha: 10 }), fighter({ character_id: 'ch-2', party_id: 'p-1', cha: 20 })],
       participation: participants,
       effects: [{ id: 'gold-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend', target_character_id: null,
@@ -636,7 +638,7 @@ describe('combat2 resolver', () => {
 
   it('resolves item-pool loot deterministically and fences it to the creature life', () => {
     const base = snapshot({
-      creatures: [creature({ hp: 1, loot_mode: 'item_pool', drop_chance: 1 })],
+      creatures: [creature({ hp: 1, loot_mode: 'item_pool', item_source: 'world_pool', drop_chance: 1 })],
       loot_items: [{ id: 'item-1', name: 'Iron Blade', level: 10, rarity: 'common', item_type: 'equipment', world_drop: true, is_soulbound: false, drop_weight: 10 }],
       effects: [{ id: 'loot-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend', target_character_id: null,
         target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null, stacks: 1, magnitude: 9,
@@ -655,10 +657,44 @@ describe('combat2 resolver', () => {
         target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null, stacks: 1, magnitude: 9,
         config: {}, expires_at: nowPlus(60_000), next_due_at: nowPlus(-1), interval_ms: 2000, last_pulse_tick: 5, is_reservation: false }],
     }), { abilities });
-    expect(kill(creature({ hp: 1, loot_mode: 'item_pool', drop_chance: 0 })).loot).toContainEqual(expect.objectContaining({ outcome: 'no_drop' }));
+    expect(kill(creature({ hp: 1, loot_mode: 'item_pool', item_source: 'world_pool', drop_chance: 0 })).loot).toContainEqual(expect.objectContaining({ outcome: 'no_drop' }));
     const unique = { id: 'unique-1', name: 'Crown', level: 10, rarity: 'unique', item_type: 'equipment', world_drop: false, is_soulbound: false, drop_weight: 10 };
-    expect(kill(creature({ hp: 1, loot_mode: 'legacy_table', loot_table_id: 'table-1', drop_chance: 1 }), [unique],
+    expect(kill(creature({ hp: 1, loot_mode: 'legacy_table', item_source: 'assigned_table', loot_table_id: 'table-1', drop_chance: 1 }), [unique],
       [{ loot_table_id: 'table-1', item_id: 'unique-1', weight: 10 }]).loot).toContainEqual(expect.objectContaining({ outcome: 'unique_rejected', item_id: null }));
+  });
+
+  it.each([['regular',1],['rare',2],['boss',4]] as const)('awards %s salvage in full to every qualified recipient', (rarity,amount) => {
+    const out=resolveNodeTick(snapshot({creatures:[creature({hp:1,rarity,salvage_enabled:true})],participation:[
+      {creature_id:'cr-1',spawn_seq:3,character_id:'ch-1',qualification:'qualified',qualified_by:'damage',party_id_at_qualification:null},
+      {creature_id:'cr-1',spawn_seq:3,character_id:'ch-2',qualification:'qualified',qualified_by:'damage',party_id_at_qualification:null}],
+      fighters:[fighter({character_id:'ch-1'}),fighter({character_id:'ch-2'})],effects:[{id:'kill',kind:'dot',effect_type:'rend',ability_key:'rend',target_character_id:null,target_creature_id:'cr-1',source_character_id:'ch-1',source_creature_id:null,stacks:1,magnitude:9,config:{},expires_at:nowPlus(60000),next_due_at:nowPlus(-1),interval_ms:2000,last_pulse_tick:5,is_reservation:false}]}),{abilities});
+    expect(out.rewards.map(r=>r.salvage_awarded)).toEqual([amount,amount]);
+  });
+
+  it('uses the unique source exclusively and proposes a successful roll without materializing it',()=>{
+    const item={id:'unique-1',name:'Crown',level:10,rarity:'unique',item_type:'equipment',world_drop:false,is_soulbound:false,drop_weight:1};
+    const out=resolveNodeTick(snapshot({creatures:[creature({hp:1,item_source:'unique_boss_drop',unique_item_id:item.id,unique_drop_chance:1})],loot_items:[item],effects:[{id:'kill',kind:'dot',effect_type:'rend',ability_key:'rend',target_character_id:null,target_creature_id:'cr-1',source_character_id:'ch-1',source_creature_id:null,stacks:1,magnitude:9,config:{},expires_at:nowPlus(60000),next_due_at:nowPlus(-1),interval_ms:2000,last_pulse_tick:5,is_reservation:false}]}),{abilities});
+    expect(out.loot).toEqual([expect.objectContaining({mode:'unique_boss_drop',outcome:'unique_candidate',item_id:'unique-1'})]);
+  });
+
+  it('never falls through from none or a failed unique roll', () => {
+    const unique={id:'unique-1',name:'Crown',level:10,rarity:'unique',item_type:'equipment',world_drop:false,is_soulbound:false,drop_weight:1};
+    const ordinary={id:'item-1',name:'Blade',level:10,rarity:'common',item_type:'equipment',world_drop:true,is_soulbound:false,drop_weight:1};
+    const killed=(over:Partial<SnapshotCreature>)=>resolveNodeTick(snapshot({creatures:[creature({hp:1,...over})],loot_items:[unique,ordinary],loot_table_entries:[{loot_table_id:'table-1',item_id:ordinary.id,weight:1}],effects:[{id:'kill',kind:'dot',effect_type:'rend',ability_key:'rend',target_character_id:null,target_creature_id:'cr-1',source_character_id:'ch-1',source_creature_id:null,stacks:1,magnitude:9,config:{},expires_at:nowPlus(60000),next_due_at:nowPlus(-1),interval_ms:2000,last_pulse_tick:5,is_reservation:false}]}),{abilities});
+    expect(killed({item_source:'none',loot_table_id:'table-1',loot_table:[{type:'item',item_id:ordinary.id,chance:1,min:null,max:null}]}).loot).toEqual([]);
+    expect(killed({item_source:'unique_boss_drop',unique_item_id:unique.id,unique_drop_chance:0}).loot).toEqual([
+      expect.objectContaining({mode:'unique_boss_drop',outcome:'no_drop',item_id:null}),
+    ]);
+  });
+
+  it('keeps assigned-table and world-pool selection mutually exclusive', () => {
+    const world={id:'world',name:'World Blade',level:10,rarity:'common',item_type:'equipment',world_drop:true,is_soulbound:false,drop_weight:1};
+    const table={id:'table',name:'Table Blade',level:10,rarity:'common',item_type:'equipment',world_drop:false,is_soulbound:false,drop_weight:1};
+    const base={loot_items:[world,table],loot_table_entries:[{loot_table_id:'table-1',item_id:table.id,weight:1}],effects:[{id:'kill',kind:'dot',effect_type:'rend',ability_key:'rend',target_character_id:null,target_creature_id:'cr-1',source_character_id:'ch-1',source_creature_id:null,stacks:1,magnitude:9,config:{},expires_at:nowPlus(60000),next_due_at:nowPlus(-1),interval_ms:2000,last_pulse_tick:5,is_reservation:false}]};
+    const assigned=resolveNodeTick(snapshot({...base,creatures:[creature({hp:1,item_source:'assigned_table',loot_table_id:'table-1',drop_chance:1})]}),{abilities});
+    expect(assigned.loot).toEqual([expect.objectContaining({mode:'legacy_table',item_id:'table'})]);
+    const pooled=resolveNodeTick(snapshot({...base,creatures:[creature({hp:1,item_source:'world_pool',drop_chance:1})]}),{abilities});
+    expect(pooled.loot.some(entry=>entry.mode==='legacy_table'||entry.item_id==='table')).toBe(false);
   });
 
   it('keeps an unengaged non-aggressive creature idle on entry', () => {

@@ -1166,7 +1166,7 @@ Economy — Gold, Salvage & Trading
                 <CardContent className="p-3 space-y-2">
                   <p className="text-xs font-display text-primary"> Party Loot Splitting</p>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p>When a creature dies, <strong className="text-foreground">XP, gold, and salvage</strong> are split equally among all party members at the same node.</p>
+                    <p>When a creature dies, <strong className="text-foreground">XP and gold</strong> are split among qualified recipients. Every qualified recipient receives the full salvage amount: 1 / 2 / 4 for regular / rare / boss creatures.</p>
                     <p><strong className="text-foreground">Item drops:</strong> Loot drops to the ground at the creature's node of death. Any player can pick it up (first come, first served).</p>
                     <p><strong className="text-foreground">Remote kills:</strong> If a creature dies from a DoT while you've moved away, loot drops at the creature's node — not yours.</p>
                   </div>

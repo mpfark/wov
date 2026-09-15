@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,10 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Skull } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
-import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
+import { generateCreatureStats, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { TICK_RATE_MS } from '@/shared/formulas/combat';
-import { Slider } from '@/components/ui/slider';
-import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import LootTablePicker from './LootTablePicker';
 import { FLAVOR_TOKENS } from './FlavorField';
@@ -38,6 +36,9 @@ interface Creature {
   is_alive: boolean;
   loot_table_id: string | null;
   drop_chance: number;
+  gold_enabled?: boolean; gold_min?: number; gold_max?: number; gold_chance?: number;
+  salvage_enabled?: boolean; item_source?: 'none'|'world_pool'|'assigned_table'|'unique_boss_drop';
+  unique_item_id?: string|null; unique_drop_chance?: number|null;
 }
 
 interface LootTableOption {
@@ -68,6 +69,21 @@ interface AreaOption {
   name: string;
 }
 
+type RewardMutationResult =
+  | { ok: true; kind: 'updated' }
+  | { ok: false; kind: 'stale'; current: Record<string, unknown> }
+  | { ok: false; kind: 'not_authorized' | 'not_found' | 'request_conflict' | 'invalid_request' | 'invalid_config' };
+
+function decodeRewardMutationResult(value: unknown): RewardMutationResult | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  if (row.ok === true && row.kind === 'updated') return { ok: true, kind: 'updated' };
+  if (row.ok !== false || typeof row.kind !== 'string') return null;
+  if (row.kind === 'stale' && row.current && typeof row.current === 'object') return { ok: false, kind: 'stale', current: row.current as Record<string, unknown> };
+  if (['not_authorized', 'not_found', 'request_conflict', 'invalid_request', 'invalid_config'].includes(row.kind)) return { ok: false, kind: row.kind as Exclude<RewardMutationResult, { ok: true } | { kind: 'stale' }>['kind'] };
+  return null;
+}
+
 const RARITIES = ['regular', 'rare', 'boss'] as const;
 
 const RARITY_COLORS: Record<string, string> = {
@@ -75,9 +91,6 @@ const RARITY_COLORS: Record<string, string> = {
   rare: 'text-dwarvish',
   boss: 'text-primary text-glow',
 };
-
-const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
-const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: 'Legacy Table', item_pool: 'Item Pool', salvage_only: 'Salvage Only' };
 
 interface BossCritFlavor {
   name: string;
@@ -92,9 +105,11 @@ const defaultForm = () => ({
   is_aggressive: false, is_humanoid: false, respawn_seconds: 300,
   loot_table: [] as { item_id: string; chance: number }[],
   gold_min: 0, gold_max: 0, gold_chance: 0.5,
+  gold_enabled: false, salvage_enabled: false,
+  item_source: 'none' as 'none'|'world_pool'|'assigned_table'|'unique_boss_drop',
+  unique_item_id: null as string|null, unique_drop_chance: 0.5,
   loot_table_id: null as string | null,
   drop_chance: 0.5,
-  loot_mode: 'legacy_table' as string,
   boss_crit_flavors: [] as BossCritFlavor[],
   boss_death_cry: '',
   boss_cast_enabled: false,
@@ -128,7 +143,9 @@ export default function CreatureManager() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
-  const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
+  const [uniqueItems,setUniqueItems]=useState<{id:string;name:string;origin_id:string|null}[]>([]);
+  const [rewardExpected,setRewardExpected]=useState<Record<string,unknown>|null>(null);
+  const rewardRequestRef=useRef<{key:string;id:string}|null>(null);
 
   // A new creature's permanent UUID, allocated client-side when the blank
   // editor opens. The insert carries it explicitly, so the boss-cast identity is
@@ -139,12 +156,13 @@ export default function CreatureManager() {
   const [cmAreas, setCmAreas] = useState<AreaOption[]>([]);
 
   const loadData = async () => {
-    const [c, n, r, lt, a] = await Promise.all([
+    const [c, n, r, lt, a, ui] = await Promise.all([
       supabase.from('creatures').select('*').order('name'),
       supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
       supabase.from('loot_tables').select('id, name').order('name'),
       supabase.from('areas').select('id, name'),
+      supabase.from('items').select('id,name,origin_id').eq('rarity','unique').order('name'),
     ]);
     if (lt.data) setLootTables(lt.data as LootTableOption[]);
     if (c.data) setCreatures(c.data as unknown as Creature[]);
@@ -165,6 +183,7 @@ export default function CreatureManager() {
         is_trainer: node.is_trainer,
       })));
     }
+    if(ui.data)setUniqueItems(ui.data as typeof uniqueItems);
   };
 
   useEffect(() => { loadData(); }, []);
@@ -179,6 +198,8 @@ export default function CreatureManager() {
     setIsNew(true);
     setNewCreatureId(crypto.randomUUID());
     setForm(defaultForm());
+    setRewardExpected(null);
+    rewardRequestRef.current = null;
   };
 
   const openEdit = (c: Creature) => {
@@ -187,18 +208,23 @@ export default function CreatureManager() {
     const rawLoot = Array.isArray(c.loot_table) ? c.loot_table : [];
     const goldEntry = rawLoot.find((e: any) => e.type === 'gold');
     const itemLoot = rawLoot.filter((e: any) => e.type !== 'gold');
+    const reward={gold_enabled:!!c.gold_enabled,gold_min:c.gold_min??goldEntry?.min??0,gold_max:c.gold_max??goldEntry?.max??0,gold_chance:c.gold_chance??goldEntry?.chance??0,salvage_enabled:!!c.salvage_enabled,item_source:c.item_source??'none',loot_table_id:c.loot_table_id??null,drop_chance:c.drop_chance??0.5,unique_item_id:c.unique_item_id??null,unique_drop_chance:c.unique_drop_chance??null};
+    setRewardExpected(reward);
     setForm({
       name: c.name, description: c.description, node_id: c.node_id,
       level: c.level, rarity: c.rarity,
       is_aggressive: c.is_aggressive, is_humanoid: c.is_humanoid ?? false,
       respawn_seconds: c.respawn_seconds,
       loot_table: itemLoot,
-      gold_min: goldEntry?.min || 0,
-      gold_max: goldEntry?.max || 0,
-      gold_chance: goldEntry?.chance ?? 0.5,
+      gold_min: reward.gold_min as number,
+      gold_max: reward.gold_max as number,
+      gold_chance: reward.gold_chance as number,
+      gold_enabled: reward.gold_enabled, salvage_enabled: reward.salvage_enabled,
+      item_source: reward.item_source as typeof form.item_source,
+      unique_item_id: reward.unique_item_id as string|null,
+      unique_drop_chance: (reward.unique_drop_chance as number|null) ?? 0.5,
       loot_table_id: c.loot_table_id || null,
       drop_chance: c.drop_chance ?? 0.5,
-      loot_mode: (c as any).loot_mode || 'legacy_table',
       boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
       boss_death_cry: typeof (c as any).boss_death_cry === 'string' ? (c as any).boss_death_cry : '',
       // Boss cast: loaded through the shared pure transform, so the checkbox
@@ -211,42 +237,25 @@ export default function CreatureManager() {
 
 
     });
-    // Load entries for selected loot table
-    if (c.loot_table_id) {
-      loadLootTableEntries(c.loot_table_id);
-    } else {
-      setLootTableEntries([]);
-    }
   };
 
   const closePanel = () => {
     setSelectedId(null);
     setIsNew(false);
-    setLootTableEntries([]);
-  };
-
-  const loadLootTableEntries = async (tableId: string) => {
-    const { data } = await supabase
-      .from('loot_table_entries')
-      .select('item_id, weight')
-      .eq('loot_table_id', tableId);
-    if (data) {
-      // Fetch item names
-      const itemIds = data.map(e => e.item_id);
-      const { data: itemsData } = await supabase.from('items').select('id, name').in('id', itemIds);
-      const nameMap = Object.fromEntries((itemsData || []).map(i => [i.id, i.name]));
-      setLootTableEntries(data.map(e => ({ item_id: e.item_id, weight: e.weight, item_name: nameMap[e.item_id] || 'Unknown' })));
-    }
+    setRewardExpected(null);
+    rewardRequestRef.current = null;
   };
 
   const handleSave = async () => {
+    if (loading) return;
     if (!form.name.trim()) return toast.error('Name is required');
+    if (form.gold_enabled && form.gold_max < form.gold_min) return toast.error('Gold maximum must be at least the minimum.');
+    if (form.item_source === 'assigned_table' && !form.loot_table_id) return toast.error('Select a loot table.');
+    if (form.item_source === 'unique_boss_drop' && form.rarity !== 'boss') return toast.error('Unique boss drops require boss rarity.');
+    if (form.item_source === 'unique_boss_drop' && !form.unique_item_id) return toast.error('Select an eligible unique item.');
+    if ((form.item_source === 'assigned_table' || form.item_source === 'world_pool') && (form.drop_chance < 0 || form.drop_chance > 1)) return toast.error('Item drop chance must be between 0 and 1.');
+    if (form.item_source === 'unique_boss_drop' && ((form.unique_drop_chance ?? -1) < 0 || (form.unique_drop_chance ?? 2) > 1)) return toast.error('Unique drop chance must be between 0 and 1.');
     setLoading(true);
-
-    const loot_table: any[] = [...form.loot_table];
-    if (form.gold_max > 0) {
-      loot_table.push({ type: 'gold', min: form.gold_min, max: form.gold_max, chance: form.gold_chance });
-    }
 
     const generated = generateCreatureStats(form.level, form.rarity);
 
@@ -286,10 +295,6 @@ export default function CreatureManager() {
       base_aggressive: form.is_aggressive,
       is_humanoid: form.is_humanoid,
       respawn_seconds: Math.max(0, form.respawn_seconds),
-      loot_table,
-      loot_table_id: form.loot_table_id || null,
-      drop_chance: form.drop_chance,
-      loot_mode: form.loot_mode,
       boss_crit_flavors: form.boss_crit_flavors
         .map(f => ({
           name: f.name?.trim() || '',
@@ -307,7 +312,6 @@ export default function CreatureManager() {
     if (selectedId) {
       const { error } = await supabase.from('creatures').update(payload).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
-      toast.success('Creature updated');
     } else {
       const { data, error } = await supabase
         .from('creatures')
@@ -315,8 +319,19 @@ export default function CreatureManager() {
         .select()
         .single();
       if (error) { toast.error(error.message); setLoading(false); return; }
-      toast.success('Creature created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
+    }
+    if(savedId){
+      const desired={gold_enabled:form.gold_enabled,gold_min:form.gold_min,gold_max:form.gold_max,gold_chance:form.gold_chance,salvage_enabled:form.salvage_enabled,item_source:form.item_source,loot_table_id:form.item_source==='assigned_table'?form.loot_table_id:null,drop_chance:form.item_source==='assigned_table'||form.item_source==='world_pool'?form.drop_chance:null,unique_item_id:form.item_source==='unique_boss_drop'?form.unique_item_id:null,unique_drop_chance:form.item_source==='unique_boss_drop'?form.unique_drop_chance:null};
+      const expected=rewardExpected??{gold_enabled:false,gold_min:0,gold_max:0,gold_chance:0,salvage_enabled:false,item_source:'none',loot_table_id:null,drop_chance:null,unique_item_id:null,unique_drop_chance:null};
+      const key=JSON.stringify({savedId,expected,desired});
+      if(rewardRequestRef.current?.key!==key)rewardRequestRef.current={key,id:crypto.randomUUID()};
+      const {data,error}=await supabase.rpc('admin_set_creature_rewards' as any,{_creature_id:savedId,_expected:expected,_desired:desired,_request_id:rewardRequestRef.current.id});
+      const result=decodeRewardMutationResult(data);
+      if(error||!result){toast.error(error?.message||'Malformed reward response');setLoading(false);return;}
+      if(!result.ok){if(result.kind==='stale')setRewardExpected(result.current);toast.error(result.kind);setLoading(false);return;}
+      rewardRequestRef.current=null;
+      setRewardExpected(desired); toast.success(selectedId?'Creature updated':'Creature created');
     }
     setLoading(false);
     const { data: refreshed } = await supabase.from('creatures').select('*').order('name');
@@ -351,12 +366,7 @@ export default function CreatureManager() {
     return nodes.find(n => n.id === nodeId)?.region_name || '';
   };
 
-  const hasNoLoot = (c: Creature) => {
-    if (c.loot_table_id) return false;
-    const loot = Array.isArray(c.loot_table) ? c.loot_table : [];
-    const itemLoot = loot.filter((e: any) => e.type !== 'gold');
-    return itemLoot.length === 0;
-  };
+  const hasNoLoot = (c: Creature) => !c.gold_enabled && !c.salvage_enabled && (c.item_source ?? 'none') === 'none';
 
   const RARITY_ORDER: Record<string, number> = { regular: 0, rare: 1, boss: 2 };
 
@@ -570,16 +580,7 @@ export default function CreatureManager() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Rarity</label>
-                  <Select value={form.rarity} onValueChange={v => {
-                    setForm(f => {
-                      const updated = { ...f, rarity: v };
-                      if (updated.is_humanoid) {
-                        const gold = calculateHumanoidGold(updated.level, v);
-                        updated.gold_min = gold.min; updated.gold_max = gold.max; updated.gold_chance = gold.chance;
-                      }
-                      return updated;
-                    });
-                  }}>
+                  <Select value={form.rarity} onValueChange={v => setForm(f => ({ ...f, rarity: v }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
                       {RARITIES.map(r => (
@@ -593,17 +594,7 @@ export default function CreatureManager() {
                 <div>
                   <label className="text-[10px] text-muted-foreground">Level</label>
                   <Input type="number" min={1} value={form.level}
-                    onChange={e => {
-                      const level = Math.max(1, +e.target.value);
-                      setForm(f => {
-                        const updated = { ...f, level };
-                        if (updated.is_humanoid) {
-                          const gold = calculateHumanoidGold(level, updated.rarity);
-                          updated.gold_min = gold.min; updated.gold_max = gold.max; updated.gold_chance = gold.chance;
-                        }
-                        return updated;
-                      });
-                    }}
+                    onChange={e => setForm(f => ({ ...f, level: Math.max(1, +e.target.value) }))}
                     className="h-8 text-xs" />
                 </div>
               </div>
@@ -640,30 +631,9 @@ export default function CreatureManager() {
                   </label>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input type="checkbox" checked={form.is_humanoid}
-                      onChange={e => {
-                        const checked = e.target.checked;
-                        setForm(f => {
-                          if (checked) {
-                            const gold = calculateHumanoidGold(f.level, f.rarity);
-                            return { ...f, is_humanoid: true, gold_min: gold.min, gold_max: gold.max, gold_chance: gold.chance };
-                          }
-                          return { ...f, is_humanoid: false, gold_min: 0, gold_max: 0, gold_chance: 0.5 };
-                        });
-                      }} />
-                    Humanoid (auto gold)
+                      onChange={e => setForm(f => ({ ...f, is_humanoid: e.target.checked }))} />
+                    Humanoid
                   </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">Loot Mode:</span>
-                    <select
-                      value={form.loot_mode}
-                      onChange={e => setForm(f => ({ ...f, loot_mode: e.target.value }))}
-                      className="h-7 text-xs bg-background border border-border rounded px-1.5"
-                    >
-                      {LOOT_MODES.map(m => (
-                        <option key={m} value={m}>{LOOT_MODE_LABELS[m]}</option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
               </div>
               </AdminFormSection>
@@ -928,88 +898,41 @@ export default function CreatureManager() {
                 </Button>
               </div>
 
-              <AdminFormSection title="Loot">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <p className="font-display text-xs text-primary">Shared Loot Table</p>
-                  {form.loot_table_id && (
-                    <span className="text-[9px] text-dwarvish border border-dwarvish/40 rounded px-1 py-0.5">linked</span>
-                  )}
-                </div>
-                <LootTablePicker
-                  tables={lootTables}
-                  value={form.loot_table_id}
-                  onChange={v => {
-                    setForm(f => ({ ...f, loot_table_id: v }));
-                    if (v) loadLootTableEntries(v);
-                    else setLootTableEntries([]);
-                  }}
-                  allowNone
-                  placeholder="Select loot table"
-                />
-
-                {form.loot_table_id ? (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-muted-foreground">Overall Drop Chance</label>
-                      <span className="text-xs font-mono text-primary">{Math.round(form.drop_chance * 100)}%</span>
-                    </div>
-                    <Slider
-                      value={[form.drop_chance * 100]}
-                      onValueChange={([v]) => setForm(f => ({ ...f, drop_chance: v / 100 }))}
-                      min={1} max={100} step={1}
-                    />
-                    {lootTableEntries.length > 0 ? (
-                      <div className="p-2 bg-background/50 rounded border border-border mt-1">
-                        <p className="text-[10px] text-muted-foreground mb-1">Items (weighted — edit in Loot Tables tab):</p>
-                        {(() => {
-                          const totalWeight = lootTableEntries.reduce((s, e) => s + e.weight, 0);
-                          return lootTableEntries.map((e, i) => (
-                            <div key={i} className="flex justify-between text-[10px]">
-                              <span>{e.item_name}</span>
-                              <span className="text-primary font-mono">{((e.weight / totalWeight) * form.drop_chance * 100).toFixed(1)}%</span>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    ) : (
-                      <p className="text-[9px] text-muted-foreground italic">No items in this table yet. Add them via the Loot Tables tab.</p>
-                    )}
-                  </div>
-                ) : (
-                  <ItemPickerList label="Per-item loot (individual chance per item)" value={form.loot_table}
-                    onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
-                )}
-              </div>
-              </AdminFormSection>
-
-              <AdminFormSection title="Gold Drop">
+              <AdminFormSection title="Rewards" description="Gold and salvage are independent. Item source is exclusive.">
+                <label className="flex gap-2 text-xs"><input type="checkbox" checked={form.gold_enabled} onChange={e=>setForm(f=>({...f,gold_enabled:e.target.checked}))}/>Gold</label>
+                <label className="flex gap-2 text-xs"><input type="checkbox" checked={form.salvage_enabled} onChange={e=>setForm(f=>({...f,salvage_enabled:e.target.checked}))}/>Salvage</label>
+                <p className="text-[9px] text-muted-foreground">Salvage grants every qualified recipient 1 / 2 / 4 for regular / rare / boss.</p>
+                {form.gold_enabled && <>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="text-[10px] text-muted-foreground">Min</label>
                     <Input type="number" min={0} value={form.gold_min}
                       onChange={e => setForm(f => ({ ...f, gold_min: Math.max(0, +e.target.value) }))}
-                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground">Max</label>
                     <Input type="number" min={0} value={form.gold_max}
                       onChange={e => setForm(f => ({ ...f, gold_max: Math.max(0, +e.target.value) }))}
-                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground">Chance</label>
                     <Input type="number" min={0} max={1} step={0.05} value={form.gold_chance}
                       onChange={e => setForm(f => ({ ...f, gold_chance: Math.min(1, Math.max(0, +e.target.value)) }))}
-                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                 </div>
-                <p className="text-[9px] text-muted-foreground">
-                  {form.is_humanoid ? 'Auto-calculated from level & rarity.' : 'Set max > 0 to enable. Chance 0–1.'}
-                </p>
+                </>}
+                <label className="text-[10px] text-muted-foreground">Item source</label>
+                <Select value={form.item_source} onValueChange={v=>setForm(f=>({...f,item_source:v as typeof f.item_source,loot_table_id:v==='assigned_table'?f.loot_table_id:null,unique_item_id:v==='unique_boss_drop'?f.unique_item_id:null}))}>
+                  <SelectTrigger className="h-8"><SelectValue/></SelectTrigger><SelectContent>
+                    <SelectItem value="none">No item drop</SelectItem><SelectItem value="world_pool">World item pool</SelectItem><SelectItem value="assigned_table">Assigned loot table</SelectItem>{form.rarity==='boss'&&<SelectItem value="unique_boss_drop">Unique boss drop</SelectItem>}
+                  </SelectContent>
+                </Select>
+                {form.item_source==='world_pool'&&<><label className="text-[10px] text-muted-foreground">Overall item drop chance</label><Input type="number" min={0} max={1} step={0.05} value={form.drop_chance} onChange={e=>setForm(f=>({...f,drop_chance:+e.target.value}))}/><p className="text-[9px] text-muted-foreground">Global rarity chances and level ranges are managed under Pool Rules.</p></>}
+                {form.item_source==='assigned_table'&&<><LootTablePicker tables={lootTables} value={form.loot_table_id} onChange={v=>setForm(f=>({...f,loot_table_id:v}))} placeholder="Select loot table"/><label className="text-[10px] text-muted-foreground">Overall item drop chance</label><Input type="number" min={0} max={1} step={0.05} value={form.drop_chance} onChange={e=>setForm(f=>({...f,drop_chance:+e.target.value}))}/></>}
+                {form.item_source==='unique_boss_drop'&&<><Select value={form.unique_item_id??''} onValueChange={v=>setForm(f=>({...f,unique_item_id:v}))}><SelectTrigger><SelectValue placeholder="Unique item"/></SelectTrigger><SelectContent>{uniqueItems.filter(i=>i.origin_id===selectedId||i.origin_id===newCreatureId).map(i=><SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select><Input type="number" min={0} max={1} step={0.05} value={form.unique_drop_chance??0} onChange={e=>setForm(f=>({...f,unique_drop_chance:+e.target.value}))}/><p className="text-[9px] text-muted-foreground">Only one copy may exist globally. It drops on the ground and may be stolen.</p></>}
               </AdminFormSection>
 
               <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading} />

@@ -46,6 +46,8 @@ export const CLAIM = {
         stats: { str: 10 },
         tank_fighter_id: null,
         loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
+        gold_enabled: false, gold_min: 0, gold_max: 0, gold_chance: 0,
+        salvage_enabled: false, item_source: 'none', unique_item_id: null, unique_drop_chance: null,
       },
     ],
     effects: [],
@@ -287,6 +289,7 @@ describe('installed claim contract', () => {
         character_id: 'aaaa0000-0000-4000-8000-000000000002',
         xp_awarded: 12,
         gold_awarded: 0,
+        salvage_awarded: 0,
         is_killer: true,
       },
     ]);

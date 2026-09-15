@@ -74,6 +74,8 @@ function creature(over: Partial<SnapshotCreature> = {}): SnapshotCreature {
     boss_crit_flavors: null,
     boss_death_cry: null,
     loot_mode: 'salvage_only', loot_table_id: null, drop_chance: null, loot_table: [],
+    gold_enabled: false, gold_min: 0, gold_max: 0, gold_chance: 0,
+    salvage_enabled: false, item_source: 'none', unique_item_id: null, unique_drop_chance: null,
     ...over,
   };
 }

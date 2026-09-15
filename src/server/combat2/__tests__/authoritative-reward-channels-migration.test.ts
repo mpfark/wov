@@ -1,0 +1,11 @@
+import {readFileSync} from 'node:fs'; import {describe,it,expect} from 'vitest';
+const SQL=readFileSync('supabase/migrations/20260915200000_combat2_authoritative_reward_channels.sql','utf8');
+describe('ADM-025B migration',()=>{
+ it('closes item sources and maps legacy modes',()=>{expect(SQL).toContain("item_source IN('none','world_pool','assigned_table','unique_boss_drop')");expect(SQL).toContain("c.loot_mode='item_pool' THEN 'world_pool'");expect(SQL).toContain("c.loot_mode='salvage_only'");});
+ it('uses durable replay and stale admin mutation',()=>{expect(SQL).toContain('admin_creature_reward_request');expect(SQL).toContain("'request_conflict'");expect(SQL).toContain("'stale'");});
+ it('serializes request replay before creature mutation and binds it to the caller',()=>{expect(SQL.indexOf("admin-creature-reward-request:")).toBeLessThan(SQL.indexOf("admin-creature-reward:'"));expect(SQL).toContain('prior.actor_id<>uid');expect(SQL).toContain("'invalid_config'");});
+ it('allocates unique only under the global lock at commit',()=>{expect(SQL).toContain("hashtextextended('unique-item:'");expect(SQL).toContain('unique_already_exists');expect(SQL).toContain('unique_created');expect(SQL).toContain("INSERT INTO public.node_ground_loot");});
+ it('awards salvage through the exactly-once reward claim',()=>{expect(SQL).toContain('salvage_awarded');expect(SQL).toContain("add_material((rec->>'character_id')::uuid,'salvage'");});
+ it('fails ambiguous legacy combinations and enforces source-specific shapes',()=>{expect(SQL).toContain("c.loot_mode='item_pool' AND c.loot_table_id IS NOT NULL");expect(SQL).toContain("item_source='none' AND loot_table_id IS NULL AND drop_chance IS NULL");expect(SQL).toContain("item_source='assigned_table' AND loot_table_id IS NOT NULL AND drop_chance IS NOT NULL");expect(SQL).toContain("rarity::text='boss'");});
+ it('keeps browser roles off internal tables and helpers',()=>{expect(SQL).toContain('ENABLE ROW LEVEL SECURITY');expect(SQL).toContain('REVOKE ALL ON public.admin_creature_reward_request FROM PUBLIC,anon,authenticated');expect(SQL).toContain('REVOKE ALL ON FUNCTION public.validate_creature_reward_config() FROM PUBLIC,anon,authenticated');});
+});

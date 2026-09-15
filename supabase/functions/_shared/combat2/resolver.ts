@@ -1531,11 +1531,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       }
       const orderedRecipients = snapshot.encounter.test_arena_id == null ? [...recipients].sort() : [];
       const partyBonus = getPartyXpBonus(orderedRecipients.length);
-      const goldEntry = creature.row.loot_table.find((entry) => entry.type === 'gold');
       let totalGold = 0;
-      if (goldEntry && rng.sample('gold_chance', creature.row.id, creature.row.spawn_seq) <= (goldEntry.chance || 0.5)) {
-        const min = Math.floor(goldEntry.min ?? 0);
-        const max = Math.max(min, Math.floor(goldEntry.max ?? min));
+      if (creature.row.gold_enabled && rng.sample('gold_chance', creature.row.id, creature.row.spawn_seq) <= creature.row.gold_chance) {
+        const min = Math.floor(creature.row.gold_min);
+        const max = Math.max(min, Math.floor(creature.row.gold_max));
         totalGold = min + Math.floor(rng.sample('gold_amount', creature.row.id, creature.row.spawn_seq) * (max - min + 1));
         if (creature.row.is_humanoid) {
           const bestCha = Math.max(0, ...orderedRecipients.map((id) => chars.get(id)?.fighter.cha ?? 0));
@@ -1557,15 +1556,18 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           character_id: characterId,
           xp_awarded: Math.max(1, Math.floor((baseXp / orderedRecipients.length) * penalty * partyBonus * snapshot.reward_config.xp_boost_multiplier)),
           gold_awarded: goldEach,
+          salvage_awarded: creature.row.salvage_enabled ? (creature.row.rarity === 'boss' ? 4 : creature.row.rarity === 'rare' ? 2 : 1) : 0,
           is_killer: characterId === creature.killedBy,
         });
         emit({ kind: 'xp_reward', actor: { type: 'character', id: characterId, name: chars.get(characterId)?.fighter.name ?? '' },
           target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name }, amount: proposed.rewards.at(-1)!.xp_awarded });
         if (goldEach > 0) emit({ kind: 'gold_reward', actor: { type: 'character', id: characterId, name: chars.get(characterId)?.fighter.name ?? '' },
           target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name }, amount: goldEach });
+        if (proposed.rewards.at(-1)!.salvage_awarded > 0) emit({ kind: 'salvage_reward', actor: { type: 'character', id: characterId, name: chars.get(characterId)?.fighter.name ?? '' },
+          target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name }, amount: proposed.rewards.at(-1)!.salvage_awarded });
       }
 
-      const recordLoot = (lootKey: string, itemId: string | null, mode: 'item_pool' | 'legacy_table' | 'inline' | 'salvage_only', outcome: 'dropped' | 'no_drop' | 'unique_rejected' | 'no_eligible_item') => {
+      const recordLoot = (lootKey: string, itemId: string | null, mode: ProposedTick['loot'][number]['mode'], outcome: ProposedTick['loot'][number]['outcome']) => {
         proposed.loot.push({ node_creature_id: creature.row.id, creature_id: creature.row.creature_id,
           spawn_seq: creature.row.spawn_seq, loot_key: lootKey, item_id: itemId, creature_name: creature.row.name, mode, outcome });
         emit({ kind: outcome === 'dropped' ? 'loot_drop' : 'loot_result', target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
@@ -1579,8 +1581,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           if (item.rarity === 'unique') return recordLoot(key, null, mode, 'unique_rejected');
           recordLoot(key, item.id, mode, 'dropped');
         };
-        if (creature.row.loot_mode === 'salvage_only') recordLoot('salvage', null, 'salvage_only', 'no_drop');
-        else if (creature.row.loot_mode === 'item_pool') {
+        if (creature.row.item_source === 'none') { /* closed source */ }
+        else if (creature.row.item_source === 'unique_boss_drop') {
+          const item=creature.row.unique_item_id ? itemById.get(creature.row.unique_item_id) : undefined;
+          if (!item || item.rarity!=='unique') recordLoot('unique',null,'unique_boss_drop','no_eligible_item');
+          else if (rng.sample('loot_unique_chance',creature.row.id,creature.row.spawn_seq)>(creature.row.unique_drop_chance??0)) recordLoot('unique',null,'unique_boss_drop','no_drop');
+          else recordLoot('unique',item.id,'unique_boss_drop','unique_candidate');
+        } else if (creature.row.item_source === 'world_pool') {
           const cfg = snapshot.reward_config;
           const dropChance = creature.row.drop_chance ?? (creature.row.rarity === 'boss' ? cfg.drop_chance_boss : creature.row.rarity === 'rare' ? cfg.drop_chance_rare : cfg.drop_chance_regular);
           if (rng.sample('loot_pool_chance', creature.row.id, creature.row.spawn_seq) > dropChance) recordLoot('equipment', null, 'item_pool', 'no_drop');
@@ -1605,16 +1612,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
               && item.level <= creature.row.level + cfg.consumable_level_max_offset + widen);
             accept('consumable', rng.weightedPick(pool, (item) => item.drop_weight, 'loot_consumable_item', creature.row.id, creature.row.spawn_seq)?.id ?? null, 'item_pool');
           }
-        } else if (creature.row.loot_table_id) {
+        } else if (creature.row.item_source === 'assigned_table' && creature.row.loot_table_id) {
           const entries = snapshot.loot_table_entries.filter((entry) => entry.loot_table_id === creature.row.loot_table_id);
           const chance = creature.row.drop_chance ?? 0.5;
           if (rng.sample('loot_table_chance', creature.row.id, creature.row.spawn_seq) > chance) recordLoot('table', null, 'legacy_table', 'no_drop');
           else accept('table', rng.weightedPick(entries, (entry) => entry.weight, 'loot_table_item', creature.row.id, creature.row.spawn_seq)?.item_id ?? null, 'legacy_table');
-        } else {
-          creature.row.loot_table.filter((entry) => entry.type !== 'gold').forEach((entry, index) => {
-            if (rng.sample('loot_inline', creature.row.id, creature.row.spawn_seq, index) <= (entry.chance || 0.1)) accept(`inline:${index}`, entry.item_id, 'inline');
-            else recordLoot(`inline:${index}`, null, 'inline', 'no_drop');
-          });
         }
       }
 
