@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package } from 'lucide-react';
 import ItemPicker from '../ItemPicker';
+import { createLatestRequestGuard, createSubmissionFence } from '../admin-operation-guards';
+import { createLootRequestTracker, MAX_LOOT_ENTRIES, submitLootMutation } from './loot-table-admin';
 
 interface LootTable {
   id: string;
@@ -38,66 +40,67 @@ export default function LegacyLootTablesTab() {
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [creatureCounts, setCreatureCounts] = useState<Map<string, number>>(new Map());
+  const [entriesByTable,setEntriesByTable]=useState<Map<string,LootEntry[]>>(new Map());
+  const [creaturesByTable,setCreaturesByTable]=useState<Map<string,string[]>>(new Map());
+  const mutationFence=useRef(createSubmissionFence());const requestTracker=useRef(createLootRequestTracker());const sessionGuard=useRef(createLatestRequestGuard());const editorGuard=useRef(createLatestRequestGuard());
 
   const loadData = async () => {
     const { fetchAllRows } = await import('@/lib/supabase-paginate');
-    const [t, items, c] = await Promise.all([
+    const request=sessionGuard.current.begin();
+    const [t, items, c, allEntries] = await Promise.all([
       supabase.from('loot_tables').select('*').order('name'),
       fetchAllRows<ItemOption>((from, to) =>
         supabase.from('items').select('id, name, rarity, level').order('name').range(from, to)
       ),
-      supabase.from('creatures').select('loot_table_id'),
+      supabase.from('creatures').select('id, loot_table_id'),
+      supabase.from('loot_table_entries').select('*').order('id'),
     ]);
+    if(!sessionGuard.current.isCurrent(request))return;
     if (t.data) setTables(t.data as LootTable[]);
     setItems(items);
     if (c.data) {
       const counts = new Map<string, number>();
+      const refs=new Map<string,string[]>();
       for (const cr of c.data) {
-        if (cr.loot_table_id) counts.set(cr.loot_table_id, (counts.get(cr.loot_table_id) || 0) + 1);
+        if (cr.loot_table_id){counts.set(cr.loot_table_id,(counts.get(cr.loot_table_id)||0)+1);refs.set(cr.loot_table_id,[...(refs.get(cr.loot_table_id)||[]),cr.id].sort());}
       }
       setCreatureCounts(counts);
+      setCreaturesByTable(refs);
     }
+    const grouped=new Map<string,LootEntry[]>();for(const e of(allEntries.data||[])as LootEntry[])grouped.set(e.loot_table_id,[...(grouped.get(e.loot_table_id)||[]),e]);setEntriesByTable(grouped);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData();return()=>{mutationFence.current.invalidate();sessionGuard.current.invalidate();}; }, []);
 
-  const openNew = () => { setSelectedId(null); setIsNew(true); setTableName(''); setEntries([]); };
+  const resetMutationSession=()=>{mutationFence.current.invalidate();editorGuard.current.invalidate();requestTracker.current=createLootRequestTracker();};
+  const openNew = () => {resetMutationSession();setSelectedId(null); setIsNew(true); setTableName(''); setEntries([]); };
 
-  const openEdit = async (table: LootTable) => {
+  const openEdit = (table: LootTable) => {
+    resetMutationSession();
     setSelectedId(table.id); setIsNew(false); setTableName(table.name);
-    const { data } = await supabase.from('loot_table_entries').select('*').eq('loot_table_id', table.id);
-    setEntries((data || []) as LootEntry[]);
+    setEntries(entriesByTable.get(table.id)||[]);
   };
 
-  const closePanel = () => { setSelectedId(null); setIsNew(false); };
+  const closePanel = () => {if(loading)return;resetMutationSession();setSelectedId(null);setIsNew(false);};
 
   const handleSave = async () => {
     if (!tableName.trim()) return toast.error('Name is required');
-    setLoading(true);
-    let tableId = selectedId;
-    if (selectedId) {
-      const { error } = await supabase.from('loot_tables').update({ name: tableName.trim() }).eq('id', selectedId);
-      if (error) { toast.error(error.message); setLoading(false); return; }
-    } else {
-      const { data, error } = await supabase.from('loot_tables').insert({ name: tableName.trim() }).select().single();
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      tableId = data.id; setSelectedId(data.id); setIsNew(false);
-    }
-    await supabase.from('loot_table_entries').delete().eq('loot_table_id', tableId!);
-    if (entries.length > 0) {
-      const rows = entries.map(e => ({ loot_table_id: tableId!, item_id: e.item_id, weight: e.weight }));
-      const { error } = await supabase.from('loot_table_entries').insert(rows);
-      if (error) { toast.error(error.message); setLoading(false); return; }
-    }
-    toast.success(selectedId ? 'Loot table updated' : 'Loot table created');
-    setLoading(false); loadData();
-    const { data: refreshed } = await supabase.from('loot_table_entries').select('*').eq('loot_table_id', tableId!);
-    if (refreshed) setEntries(refreshed as LootEntry[]);
+    if(entries.length>MAX_LOOT_ENTRIES)return toast.error(`A loot table supports at most ${MAX_LOOT_ENTRIES} entries`);
+    const table=tables.find(t=>t.id===selectedId);if(selectedId&&!table)return toast.error('Refresh required: loot table is unavailable');
+    const expectedEntries=selectedId?(entriesByTable.get(selectedId)||[]):[];const persistedIds=new Set(expectedEntries.map(e=>e.id));
+    const operation=mutationFence.current.tryAcquire();if(operation===false)return;const editorRequest=editorGuard.current.begin();setLoading(true);
+    const result=await submitLootMutation({operation:'save',lootTableId:selectedId,expectedTable:table?{id:table.id,name:table.name}:null,expectedEntries:expectedEntries.map(e=>({id:e.id,item_id:e.item_id,weight:e.weight})),expectedCreatureIds:selectedId?(creaturesByTable.get(selectedId)||[]):[],desiredName:tableName,desiredEntries:entries.map(e=>({entry_id:persistedIds.has(e.id)?e.id:null,item_id:e.item_id,weight:e.weight}))},requestTracker.current);
+    if(!mutationFence.current.release(operation)||!editorGuard.current.isCurrent(editorRequest))return;setLoading(false);if(!result.ok){toast.error(result.kind==='stale_loot_table_state'?'Save refused: loot table changed; authoritative state refreshed before retrying':`Loot table save refused: ${result.kind}`);if(result.kind==='stale_loot_table_state')await loadData();return;}
+    toast.success(result.kind==='created'?'Loot table created':'Loot table updated');setSelectedId(result.loot_table_id);setIsNew(false);await loadData();
+    const{data:refreshed}=await supabase.from('loot_table_entries').select('*').eq('loot_table_id',result.loot_table_id).order('id');if(refreshed&&editorGuard.current.isCurrent(editorRequest))setEntries(refreshed as LootEntry[]);
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('loot_tables').delete().eq('id', id);
-    if (error) return toast.error(error.message);
+    const table=tables.find(t=>t.id===id);if(!table)return toast.error('Refresh required: loot table is unavailable');
+    if(!window.confirm(`Delete loot table "${table.name}"? This is allowed only when no creature references it.`))return;
+    const operation=mutationFence.current.tryAcquire();if(operation===false)return;const editorRequest=editorGuard.current.begin();setLoading(true);
+    const expectedEntries=entriesByTable.get(id)||[];const result=await submitLootMutation({operation:'delete',lootTableId:id,expectedTable:{id:table.id,name:table.name},expectedEntries:expectedEntries.map(e=>({id:e.id,item_id:e.item_id,weight:e.weight})),expectedCreatureIds:creaturesByTable.get(id)||[],desiredName:null,desiredEntries:[]},requestTracker.current);
+    if(!mutationFence.current.release(operation)||!editorGuard.current.isCurrent(editorRequest))return;setLoading(false);if(!result.ok){toast.error(result.kind==='table_in_use'?`Cannot delete: ${result.reference_count} creature(s) use this table`:`Loot table deletion refused: ${result.kind}`);if(result.kind==='stale_loot_table_state')await loadData();return;}
     toast.success('Loot table deleted');
     if (selectedId === id) closePanel();
     loadData();
@@ -105,6 +108,7 @@ export default function LegacyLootTablesTab() {
 
   const addEntry = () => {
     if (items.length === 0) return;
+    if(entries.length>=MAX_LOOT_ENTRIES)return toast.error(`Maximum ${MAX_LOOT_ENTRIES} entries`);
     setEntries(prev => [...prev, { id: crypto.randomUUID(), loot_table_id: selectedId || '', item_id: items[0].id, weight: 10 }]);
   };
 
@@ -136,12 +140,12 @@ export default function LegacyLootTablesTab() {
             ) : filtered.map(table => (
               <div key={table.id}
                 className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer ${selectedId === table.id ? 'border-primary bg-primary/10' : 'border-border bg-card/50 hover:bg-card/80'}`}
-                onClick={() => openEdit(table)}>
+                onClick={() => {if(!loading)openEdit(table);}}>
                 <div className="flex-1 min-w-0">
                   <span className="font-display text-sm">{table.name}</span>
-                  <span className="text-[10px] text-muted-foreground ml-2">{creatureCounts.get(table.id) || 0} creatures</span>
+                  <span className="text-[10px] text-muted-foreground ml-2">{entriesByTable.get(table.id)?.length || 0} entries · {creatureCounts.get(table.id) || 0} creatures</span>
                 </div>
-                <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); handleDelete(table.id); }} className="h-7 w-7 p-0 shrink-0 ml-2">
+                <Button size="sm" variant="destructive" disabled={loading} onClick={(e) => { e.stopPropagation(); handleDelete(table.id); }} className="h-7 w-7 p-0 shrink-0 ml-2">
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -182,11 +186,11 @@ export default function LegacyLootTablesTab() {
                       </div>
                     );
                   })}
-                  {entries.length > 0 && <div className="text-[10px] text-muted-foreground">Total weight: {totalWeight}. One item is selected per kill using weighted random.</div>}
+                  {entries.length > 0 && <div className="text-[10px] text-muted-foreground">Total weight: {totalWeight}. One item is selected per kill using relative weights; duplicate item rows are allowed and add their weights.</div>}
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button onClick={handleSave} disabled={loading} className="font-display text-xs"><Save className="w-3 h-3 mr-1" /> {selectedId ? 'Update' : 'Create'}</Button>
-                  <Button variant="outline" onClick={closePanel} className="font-display text-xs"><X className="w-3 h-3 mr-1" /> Cancel</Button>
+                  <Button onClick={handleSave} disabled={loading} className="font-display text-xs"><Save className="w-3 h-3 mr-1" /> {loading?'Saving table and entries…':selectedId?'Save table and entries atomically':'Create table and entries atomically'}</Button>
+                  <Button variant="outline" onClick={closePanel} disabled={loading} className="font-display text-xs"><X className="w-3 h-3 mr-1" /> Cancel</Button>
                 </div>
               </div>
             </ScrollArea>

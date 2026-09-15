@@ -16,7 +16,7 @@ This is the canonical queue for admin correctness and design work. Completed ite
 | ADM-011 | Area Types | authority/atomicity | Rename formerly updated areas, created a type and deleted the old type in separate browser steps. Atomic admin RPC now owns rename and durable replay. | Install pending migration and regenerate types. | Yes | No | Yes | Technical batch 2A | completed |
 | ADM-012 | Regions | authority/atomicity | Region creation with an optional standalone initial node now uses one durable, idempotent transaction. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2C | completed |
 | ADM-013 | Batch Node Editor | authority/atomicity | Region/area batch changes now use one complete-state-fenced, idempotent all-or-nothing RPC. Connections, coordinates and other fields remain excluded. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2E | completed |
-| ADM-014 | Loot Tables | authority/atomicity | Header/entry mutations need a focused partial-failure and duplicate-write review. | Establish transaction boundary. | Maybe | No | Yes | Technical batch 2 | open |
+| ADM-014 | Loot Tables | authority/atomicity | Table metadata and its complete entry set now save atomically through an expected-state, idempotent RPC; referenced-table deletion is refused. Entry order is intentionally excluded because it has no schema or runtime meaning. Creature attachment remains owned by Creature Manager. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2F | completed |
 | ADM-015 | Users / Characters | authority/atomicity | Level and remaining character edits may use sequential server calls. | Define atomic admin update contract. | Maybe | Yes | Yes | Technical batch 2 | open |
 | ADM-016 | Guide | correctness | Ordering and category/entry deletion consistency need focused review. | Define deletion/reorder semantics. | Maybe | No | Yes | Technical batch 2 | open |
 | ADM-017 | Node Editor | authority/atomicity | Adjacent-node creation and its reciprocal parent connection now share one stale-parent-fenced, idempotent transaction. | Install migration and regenerate types. | Yes | No | Yes | Technical batch 2D | completed |
@@ -29,4 +29,4 @@ This is the canonical queue for admin correctness and design work. Completed ite
 
 ## Next recommended batch
 
-Review ADM-014 Loot Table header/entry atomicity next.
+Prioritize ADM-015 Users / Characters atomicity next, then ADM-016 Guide deletion/reorder consistency. Keep ADM-020 as the next query/performance batch and ADM-030 as the later full design audit; ADM-021–024 remain decision-blocked.
