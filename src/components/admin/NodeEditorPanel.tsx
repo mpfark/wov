@@ -820,6 +820,7 @@ export default function NodeEditorPanel({
 
   const addVendorItem = async () => {
     if (!activeNodeId || !vendorForm.item_id) return toast.error('Select an item');
+    if (allItems.find(i => i.id === vendorForm.item_id)?.rarity === 'unique') return toast.error('Globally unique items cannot be stocked by vendors');
     if (vendorItems.some(v => v.item_id === vendorForm.item_id)) return toast.error('Item already in vendor stock');
     const { error } = await supabase.from('vendor_inventory').insert({
       node_id: activeNodeId, item_id: vendorForm.item_id,
@@ -1449,7 +1450,7 @@ Soulforge requires a Blacksmith node. Enable Blacksmith above or this flag will 
                     <div className="flex-1 min-w-[120px]">
                       <label className="text-[10px] text-muted-foreground">Item</label>
                       <ItemPicker
-                        items={allItems.filter(i => !vendorItems.some(v => v.item_id === i.id))}
+                        items={allItems.filter(i => i.rarity !== 'unique' && !vendorItems.some(v => v.item_id === i.id))}
                         value={vendorForm.item_id || null}
                         onChange={v => {
                           const item = allItems.find(i => i.id === v);
