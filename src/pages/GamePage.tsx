@@ -86,7 +86,7 @@ import { useControlledAction, isCombatMutation } from '@/features/combat2/contro
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
-import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from '@/features/combat2/presentation-selectors';
+import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2EntryStatusLabel, selectCombat2SessionLocked } from '@/features/combat2/presentation-selectors';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
@@ -285,7 +285,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     : combat2.presentation.status === 'error' ? 'Transport/decoding error'
     : combat2.actionsReady ? 'Ready'
     : combat2.presentation.status === 'reconnecting' ? 'Reconnecting'
-    : combat2.entry.status === 'entered' ? 'Synchronizing' : 'Entering';
+    : selectCombat2EntryStatusLabel(combat2.entry.status);
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
     ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
     : null, [activeCombat2Presentation]);
