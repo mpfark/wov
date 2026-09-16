@@ -1444,6 +1444,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     <div className="h-screen flex flex-col parchment-bg w-full relative">
       {combat2BlocksLegacy && <Combat2TestStatus status={combat2VisibleLog.historical ? 'Historical' : combat2Status}
         onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
+        locked={combat2VisibleLog.historical || selectCombat2SessionLocked(combat2Status)}
         stale={!combat2.actionsReady && !!activeCombat2Presentation}
         diagnostic={combat2VisibleLog.historical
           ? 'Combat2 test run stopped — showing the last received combat log.'
