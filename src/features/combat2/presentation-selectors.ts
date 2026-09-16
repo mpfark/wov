@@ -49,3 +49,22 @@ export function selectCombat2Events(
   for (const event of model.events) byId.set(event.id, event);
   return [...byId.values()];
 }
+
+/**
+ * Idle entry is not a lock. Entry is deliberately never attempted while the node
+ * has no living creature (`hasLivingCreatures !== true`), so a peaceful node used
+ * to sit on "Entering" forever and claim actions were locked. Only a genuinely
+ * in-flight `combat_enter` is "Entering".
+ */
+export function selectCombat2EntryStatusLabel(
+  entryStatus: 'disabled' | 'idle' | 'entering' | 'entered' | 'refused' | 'uncertain' | 'error',
+): string {
+  if (entryStatus === 'entered') return 'Synchronizing';
+  if (entryStatus === 'entering') return 'Entering';
+  return 'Idle — no active encounter';
+}
+
+/** The lock sentence belongs to real locks, not to an idle, unlocked session. */
+export function selectCombat2SessionLocked(status: string): boolean {
+  return status !== 'Ready' && status !== 'Idle — no active encounter';
+}
