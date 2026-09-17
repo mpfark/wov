@@ -199,6 +199,216 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_adjacent_node_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          direction: string | null
+          expected_parent_connections: Json | null
+          node_fields: Json | null
+          parent_node_id: string | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          direction?: string | null
+          expected_parent_connections?: Json | null
+          node_fields?: Json | null
+          parent_node_id?: string | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          direction?: string | null
+          expected_parent_connections?: Json | null
+          node_fields?: Json | null
+          parent_node_id?: string | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
+      admin_area_type_rename_request: {
+        Row: {
+          caller_id: string
+          color: string
+          created_at: string
+          request_id: string
+          result: Json | null
+          source_name: string
+          target_name: string
+        }
+        Insert: {
+          caller_id: string
+          color: string
+          created_at?: string
+          request_id: string
+          result?: Json | null
+          source_name: string
+          target_name: string
+        }
+        Update: {
+          caller_id?: string
+          color?: string
+          created_at?: string
+          request_id?: string
+          result?: Json | null
+          source_name?: string
+          target_name?: string
+        }
+        Relationships: []
+      }
+      admin_batch_node_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          mutations: Json | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          mutations?: Json | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          mutations?: Json | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
+      admin_loot_table_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          desired_entries: Json
+          desired_name: string | null
+          expected_creature_ids: Json
+          expected_entries: Json
+          expected_table: Json | null
+          loot_table_id: string | null
+          operation: string
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          desired_entries: Json
+          desired_name?: string | null
+          expected_creature_ids: Json
+          expected_entries: Json
+          expected_table?: Json | null
+          loot_table_id?: string | null
+          operation: string
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          desired_entries?: Json
+          desired_name?: string | null
+          expected_creature_ids?: Json
+          expected_entries?: Json
+          expected_table?: Json | null
+          loot_table_id?: string | null
+          operation?: string
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
+      admin_node_connection_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          desired_direction: string | null
+          desired_hidden: boolean | null
+          desired_source_directional_metadata: Json
+          expected_source_entry: Json
+          expected_target_entry: Json
+          operation: string
+          request_id: string
+          result: Json | null
+          source_node_id: string
+          target_node_id: string
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          desired_direction?: string | null
+          desired_hidden?: boolean | null
+          desired_source_directional_metadata: Json
+          expected_source_entry: Json
+          expected_target_entry: Json
+          operation: string
+          request_id: string
+          result?: Json | null
+          source_node_id: string
+          target_node_id: string
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          desired_direction?: string | null
+          desired_hidden?: boolean | null
+          desired_source_directional_metadata?: Json
+          expected_source_entry?: Json
+          expected_target_entry?: Json
+          operation?: string
+          request_id?: string
+          result?: Json | null
+          source_node_id?: string
+          target_node_id?: string
+        }
+        Relationships: []
+      }
+      admin_region_creation_request: {
+        Row: {
+          caller_id: string
+          create_initial_node: boolean | null
+          created_at: string
+          max_level: number | null
+          min_level: number | null
+          region_description: string | null
+          region_name: string | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          create_initial_node?: boolean | null
+          created_at?: string
+          max_level?: number | null
+          min_level?: number | null
+          region_description?: string | null
+          region_name?: string | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          create_initial_node?: boolean | null
+          created_at?: string
+          max_level?: number | null
+          min_level?: number | null
+          region_description?: string | null
+          region_name?: string | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -728,6 +938,7 @@ export type Database = {
           is_pinned: boolean
           item_id: string
           stat_override: Json | null
+          unique_instance_id: string | null
         }
         Insert: {
           applied_gems?: Json
@@ -740,6 +951,7 @@ export type Database = {
           is_pinned?: boolean
           item_id: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Update: {
           applied_gems?: Json
@@ -752,6 +964,7 @@ export type Database = {
           is_pinned?: boolean
           item_id?: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Relationships: [
           {
@@ -766,6 +979,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_inventory_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
             referencedColumns: ["id"]
           },
         ]
@@ -3773,6 +3993,7 @@ export type Database = {
           status: string
           tax_amount: number
           tax_rate: number
+          unique_instance_id: string | null
         }
         Insert: {
           buyer_character_id?: string | null
@@ -3791,6 +4012,7 @@ export type Database = {
           status?: string
           tax_amount?: number
           tax_rate?: number
+          unique_instance_id?: string | null
         }
         Update: {
           buyer_character_id?: string | null
@@ -3809,8 +4031,17 @@ export type Database = {
           status?: string
           tax_amount?: number
           tax_rate?: number
+          unique_instance_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       materials: {
         Row: {
@@ -4336,6 +4567,7 @@ export type Database = {
           item_id: string
           node_id: string
           stat_override: Json | null
+          unique_instance_id: string | null
         }
         Insert: {
           applied_gems?: Json
@@ -4348,6 +4580,7 @@ export type Database = {
           item_id: string
           node_id: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Update: {
           applied_gems?: Json
@@ -4360,6 +4593,7 @@ export type Database = {
           item_id?: string
           node_id?: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Relationships: [
           {
@@ -4381,6 +4615,13 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_ground_loot_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
             referencedColumns: ["id"]
           },
         ]
@@ -5314,6 +5555,41 @@ export type Database = {
         }
         Relationships: []
       }
+      unique_item_instance: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          location_id: string
+          location_kind: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          location_id: string
+          location_kind: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          location_id?: string
+          location_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unique_item_instance_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -5490,7 +5766,68 @@ export type Database = {
         Args: { _character_id: string; _delta: number; _key: string }
         Returns: number
       }
+      admin_area_type_rename: {
+        Args: {
+          _color: string
+          _request_id: string
+          _source_name: string
+          _target_name: string
+        }
+        Returns: Json
+      }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
+      admin_create_adjacent_node: {
+        Args: {
+          _direction: string
+          _expected_parent_connections: Json
+          _node_fields: Json
+          _parent_node_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      admin_create_region_with_initial_node: {
+        Args: {
+          _create_initial_node: boolean
+          _max_level: number
+          _min_level: number
+          _region_description: string
+          _region_name: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      admin_mutate_loot_table: {
+        Args: {
+          _desired_entries: Json
+          _desired_name: string
+          _expected_creature_ids: Json
+          _expected_entries: Json
+          _expected_table: Json
+          _loot_table_id: string
+          _operation: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      admin_mutate_nodes_batch: {
+        Args: { _mutations: Json; _request_id: string }
+        Returns: Json
+      }
+      admin_mutate_reciprocal_node_connection: {
+        Args: {
+          _desired_direction: string
+          _desired_hidden: boolean
+          _desired_source_directional_metadata: Json
+          _expected_source_entry: Json
+          _expected_target_entry: Json
+          _operation: string
+          _request_id: string
+          _source_node_id: string
+          _target_node_id: string
+        }
+        Returns: Json
+      }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
