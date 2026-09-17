@@ -229,6 +229,51 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_node_connection_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          desired_direction: string | null
+          desired_hidden: boolean | null
+          desired_source_directional_metadata: Json
+          expected_source_entry: Json
+          expected_target_entry: Json
+          operation: string
+          request_id: string
+          result: Json | null
+          source_node_id: string
+          target_node_id: string
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          desired_direction?: string | null
+          desired_hidden?: boolean | null
+          desired_source_directional_metadata: Json
+          expected_source_entry: Json
+          expected_target_entry: Json
+          operation: string
+          request_id: string
+          result?: Json | null
+          source_node_id: string
+          target_node_id: string
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          desired_direction?: string | null
+          desired_hidden?: boolean | null
+          desired_source_directional_metadata?: Json
+          expected_source_entry?: Json
+          expected_target_entry?: Json
+          operation?: string
+          request_id?: string
+          result?: Json | null
+          source_node_id?: string
+          target_node_id?: string
+        }
+        Relationships: []
+      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -5530,6 +5575,20 @@ export type Database = {
         Returns: Json
       }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
+      admin_mutate_reciprocal_node_connection: {
+        Args: {
+          _desired_direction: string
+          _desired_hidden: boolean
+          _desired_source_directional_metadata: Json
+          _expected_source_entry: Json
+          _expected_target_entry: Json
+          _operation: string
+          _request_id: string
+          _source_node_id: string
+          _target_node_id: string
+        }
+        Returns: Json
+      }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
