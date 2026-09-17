@@ -262,6 +262,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_batch_node_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          mutations: Json | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          mutations?: Json | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          mutations?: Json | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       admin_node_connection_request: {
         Row: {
           caller_id: string
@@ -5663,6 +5687,10 @@ export type Database = {
           _region_name: string
           _request_id: string
         }
+        Returns: Json
+      }
+      admin_mutate_nodes_batch: {
+        Args: { _mutations: Json; _request_id: string }
         Returns: Json
       }
       admin_mutate_reciprocal_node_connection: {
