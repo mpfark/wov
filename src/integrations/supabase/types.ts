@@ -274,6 +274,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_region_creation_request: {
+        Row: {
+          caller_id: string
+          create_initial_node: boolean | null
+          created_at: string
+          max_level: number | null
+          min_level: number | null
+          region_description: string | null
+          region_name: string | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          create_initial_node?: boolean | null
+          created_at?: string
+          max_level?: number | null
+          min_level?: number | null
+          region_description?: string | null
+          region_name?: string | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          create_initial_node?: boolean | null
+          created_at?: string
+          max_level?: number | null
+          min_level?: number | null
+          region_description?: string | null
+          region_name?: string | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -5575,6 +5611,17 @@ export type Database = {
         Returns: Json
       }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
+      admin_create_region_with_initial_node: {
+        Args: {
+          _create_initial_node: boolean
+          _max_level: number
+          _min_level: number
+          _region_description: string
+          _region_name: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       admin_mutate_reciprocal_node_connection: {
         Args: {
           _desired_direction: string
