@@ -286,6 +286,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_loot_table_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          desired_entries: Json
+          desired_name: string | null
+          expected_creature_ids: Json
+          expected_entries: Json
+          expected_table: Json | null
+          loot_table_id: string | null
+          operation: string
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          desired_entries: Json
+          desired_name?: string | null
+          expected_creature_ids: Json
+          expected_entries: Json
+          expected_table?: Json | null
+          loot_table_id?: string | null
+          operation: string
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          desired_entries?: Json
+          desired_name?: string | null
+          expected_creature_ids?: Json
+          expected_entries?: Json
+          expected_table?: Json | null
+          loot_table_id?: string | null
+          operation?: string
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       admin_node_connection_request: {
         Row: {
           caller_id: string
@@ -5685,6 +5727,19 @@ export type Database = {
           _min_level: number
           _region_description: string
           _region_name: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      admin_mutate_loot_table: {
+        Args: {
+          _desired_entries: Json
+          _desired_name: string
+          _expected_creature_ids: Json
+          _expected_entries: Json
+          _expected_table: Json
+          _loot_table_id: string
+          _operation: string
           _request_id: string
         }
         Returns: Json
