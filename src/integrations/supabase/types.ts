@@ -199,6 +199,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_adjacent_node_request: {
+        Row: {
+          caller_id: string
+          created_at: string
+          direction: string | null
+          expected_parent_connections: Json | null
+          node_fields: Json | null
+          parent_node_id: string | null
+          request_id: string
+          result: Json | null
+        }
+        Insert: {
+          caller_id: string
+          created_at?: string
+          direction?: string | null
+          expected_parent_connections?: Json | null
+          node_fields?: Json | null
+          parent_node_id?: string | null
+          request_id: string
+          result?: Json | null
+        }
+        Update: {
+          caller_id?: string
+          created_at?: string
+          direction?: string | null
+          expected_parent_connections?: Json | null
+          node_fields?: Json | null
+          parent_node_id?: string | null
+          request_id?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       admin_area_type_rename_request: {
         Row: {
           caller_id: string
@@ -5611,6 +5644,16 @@ export type Database = {
         Returns: Json
       }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
+      admin_create_adjacent_node: {
+        Args: {
+          _direction: string
+          _expected_parent_connections: Json
+          _node_fields: Json
+          _parent_node_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       admin_create_region_with_initial_node: {
         Args: {
           _create_initial_node: boolean
