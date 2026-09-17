@@ -199,6 +199,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_area_type_rename_request: {
+        Row: {
+          caller_id: string
+          color: string
+          created_at: string
+          request_id: string
+          result: Json | null
+          source_name: string
+          target_name: string
+        }
+        Insert: {
+          caller_id: string
+          color: string
+          created_at?: string
+          request_id: string
+          result?: Json | null
+          source_name: string
+          target_name: string
+        }
+        Update: {
+          caller_id?: string
+          color?: string
+          created_at?: string
+          request_id?: string
+          result?: Json | null
+          source_name?: string
+          target_name?: string
+        }
+        Relationships: []
+      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -5489,6 +5519,15 @@ export type Database = {
       add_material: {
         Args: { _character_id: string; _delta: number; _key: string }
         Returns: number
+      }
+      admin_area_type_rename: {
+        Args: {
+          _color: string
+          _request_id: string
+          _source_name: string
+          _target_name: string
+        }
+        Returns: Json
       }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
       admin_teleport: {
