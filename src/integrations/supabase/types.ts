@@ -938,6 +938,7 @@ export type Database = {
           is_pinned: boolean
           item_id: string
           stat_override: Json | null
+          unique_instance_id: string | null
         }
         Insert: {
           applied_gems?: Json
@@ -950,6 +951,7 @@ export type Database = {
           is_pinned?: boolean
           item_id: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Update: {
           applied_gems?: Json
@@ -962,6 +964,7 @@ export type Database = {
           is_pinned?: boolean
           item_id?: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Relationships: [
           {
@@ -976,6 +979,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_inventory_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
             referencedColumns: ["id"]
           },
         ]
@@ -3983,6 +3993,7 @@ export type Database = {
           status: string
           tax_amount: number
           tax_rate: number
+          unique_instance_id: string | null
         }
         Insert: {
           buyer_character_id?: string | null
@@ -4001,6 +4012,7 @@ export type Database = {
           status?: string
           tax_amount?: number
           tax_rate?: number
+          unique_instance_id?: string | null
         }
         Update: {
           buyer_character_id?: string | null
@@ -4019,8 +4031,17 @@ export type Database = {
           status?: string
           tax_amount?: number
           tax_rate?: number
+          unique_instance_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       materials: {
         Row: {
@@ -4546,6 +4567,7 @@ export type Database = {
           item_id: string
           node_id: string
           stat_override: Json | null
+          unique_instance_id: string | null
         }
         Insert: {
           applied_gems?: Json
@@ -4558,6 +4580,7 @@ export type Database = {
           item_id: string
           node_id: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Update: {
           applied_gems?: Json
@@ -4570,6 +4593,7 @@ export type Database = {
           item_id?: string
           node_id?: string
           stat_override?: Json | null
+          unique_instance_id?: string | null
         }
         Relationships: [
           {
@@ -4591,6 +4615,13 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_ground_loot_unique_instance_fk"
+            columns: ["unique_instance_id"]
+            isOneToOne: true
+            referencedRelation: "unique_item_instance"
             referencedColumns: ["id"]
           },
         ]
@@ -5523,6 +5554,41 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      unique_item_instance: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          location_id: string
+          location_kind: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          location_id: string
+          location_kind: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          location_id?: string
+          location_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unique_item_instance_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
