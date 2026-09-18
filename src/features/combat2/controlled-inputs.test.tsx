@@ -9,6 +9,7 @@ import { Combat2TestStatus } from './Combat2TestStatus';
 import type { Combat2DeliverySessionState } from './useCombat2DeliverySession';
 import type { ClassAbility } from '@/features/combat/utils/class-abilities';
 import { buildCombat2Presentation } from './presentation';
+import { selectCombat2StatusPresentation } from './presentation-selectors';
 
 const C = 'aaaaaaaa-0000-4000-8000-000000000001';
 const E = 'bbbbbbbb-0000-4000-8000-000000000001';
@@ -68,8 +69,14 @@ describe('controlled input and display boundary', () => {
     expect(result.current.actionsReady).toBe(false);
     await act(async () => { await submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: T }); });
     expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent')).toHaveLength(0);
-    render(<Combat2TestStatus status={status} stale diagnostic="Combat2 synchronization unavailable." />);
-    expect(screen.getByRole('status')).toHaveTextContent('Stale display; actions disabled');
+    const presentation = selectCombat2StatusPresentation({
+      rolloutEnabled: true, access: 'allowed', preflight: 'allowed', ownershipLocked: false,
+      dead: false, testArenaDeath: false, sessionStatus: 'active', pendingFlee: false,
+      entryStatus: 'entered', entryClassification: null, presentationStatus: status,
+      actionsReady: false, hasModel: true, historical: false,
+    });
+    render(<Combat2TestStatus presentation={presentation} diagnostic="Combat2 synchronization unavailable." />);
+    expect(screen.getByRole('status')).toHaveTextContent('Last confirmed state shown');
     expect(screen.getByRole('alert')).not.toHaveTextContent('untrusted internal payload');
   });
 

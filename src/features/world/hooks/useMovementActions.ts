@@ -24,6 +24,7 @@ import { buildClientEvent, buildDeathEvent, buildErrorEvent, buildMovementEvent,
 import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
+import { movementIssueMessage } from '@/features/combat2/movement-presentation';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers
@@ -435,7 +436,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (!current()) return;
     const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
     if (error || !result?.ok || !result.destination_node_id) {
-      p.addLogEvent(buildErrorEvent(`Teleport refused: ${result?.kind ?? 'transport_error'}.`));
+      p.addLogEvent(buildErrorEvent(error
+        ? movementIssueMessage('error', 'transport_error')
+        : movementIssueMessage('refused', result?.kind)));
       if (!error) specialTravelRequest.current = null;
       return;
     }
@@ -477,7 +480,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (!current()) return;
     const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
     if (error || !result?.ok || !result.destination_node_id) {
-      p.addLogEvent(buildErrorEvent(`Waymark travel refused: ${result?.kind ?? 'transport_error'}.`));
+      p.addLogEvent(buildErrorEvent(error
+        ? movementIssueMessage('error', 'transport_error')
+        : movementIssueMessage('refused', result?.kind)));
       if (!error) specialTravelRequest.current = null;
       return;
     }
@@ -504,7 +509,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
       if (generation !== searchGeneration.current || nodeId !== p.character.current_node_id) return;
       const result = data as { ok?: boolean; kind?: string; direction?: string; focus?: number } | null;
       if (error || !result?.ok) {
-        p.addLogEvent(buildErrorEvent(`Search refused: ${result?.kind ?? 'transport_error'}.`));
+        p.addLogEvent(buildErrorEvent(error
+          ? movementIssueMessage('error', 'transport_error')
+          : movementIssueMessage('refused', result?.kind)));
         if (!error && result?.kind !== 'request_pending') searchRequestId.current = null;
         return;
       }

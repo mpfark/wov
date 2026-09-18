@@ -3,7 +3,8 @@ import type { Creature } from '@/features/creatures';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import type { Combat2PresentationModel } from './presentation';
 import type { Combat2DeliverySessionStatus } from './useCombat2DeliverySession';
-import type { Combat2EntryRefusal, Combat2EntrySessionStatus } from './entry';
+import type { Combat2EntryRefusal } from './entry';
+import type { Combat2EntrySessionStatus } from './useCombat2EntrySession';
 
 export function selectCombat2Character(
   enabled: boolean,
@@ -98,7 +99,6 @@ interface Combat2StatusInput {
   actionsReady: boolean;
   hasModel: boolean;
   historical: boolean;
-  isTestArena: boolean;
 }
 
 const view = (

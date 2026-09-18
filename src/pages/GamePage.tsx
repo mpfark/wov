@@ -91,7 +91,7 @@ import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
 import { createPartyAwareDepartureAdapter } from '@/features/combat2/party-departure';
-import { movementIssueMessage, presentCombat2Departure } from '@/features/combat2/movement-presentation';
+import { presentCombat2Departure } from '@/features/combat2/movement-presentation';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -1214,6 +1214,22 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     combat2.presentation.model,
     combat2.intents.acknowledgements,
   );
+  const combat2StatusPresentation = selectCombat2StatusPresentation({
+    rolloutEnabled: ownership.rolloutEnabled,
+    access: ownership.access,
+    preflight: ownership.preflight,
+    ownershipLocked: ownership.locked,
+    dead: combat2.dead,
+    testArenaDeath: combat2.testArenaDeath,
+    sessionStatus: combat2.sessionStatus,
+    pendingFlee: combat2.pendingFlee,
+    entryStatus: combat2.entry.status,
+    entryClassification: combat2.entry.classification,
+    presentationStatus: combat2.presentation.status,
+    actionsReady: combat2.actionsReady,
+    hasModel: !!activeCombat2Presentation,
+    historical: combat2VisibleLog.historical,
+  });
   const presentedEventLog = useMemo(() => {
     if (combat2VisibleLog.historical) return combat2VisibleLog.events as GameLogEvent[];
     const selected = selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
@@ -1421,12 +1437,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
-      {combat2BlocksLegacy && <Combat2TestStatus status={combat2VisibleLog.historical ? 'Historical' : combat2Status}
+      {combat2BlocksLegacy && <Combat2TestStatus presentation={combat2StatusPresentation}
         onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
-        locked={combat2VisibleLog.historical || selectCombat2SessionLocked(combat2Status)}
-        stale={!combat2.actionsReady && !!activeCombat2Presentation}
+        isTestArena={isCombat2TestArena}
         diagnostic={combat2VisibleLog.historical
-          ? 'Combat2 test run stopped — showing the last received combat log.'
+          ? 'Combat ended — showing the last received combat log.'
           : combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
