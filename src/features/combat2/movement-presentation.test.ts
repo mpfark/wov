@@ -14,7 +14,10 @@ describe('Combat2 movement presentation', () => {
   });
 
   it('does not mislabel a death during movement as a refusal', () => {
-    expect(presentCombat2Departure({ status: 'dead' }, 'North Road')).toEqual({
+    expect(presentCombat2Departure({
+      status: 'dead', classification: 'dead', originNodeId: 'origin',
+      destinationNodeId: 'destination', cost: 0,
+    }, 'North Road')).toEqual({
       kind: 'error', message: 'You fall before the movement can be completed.',
     });
   });

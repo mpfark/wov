@@ -144,7 +144,7 @@ export function selectCombat2StatusPresentation(input: Combat2StatusInput): Comb
     return view('reconnecting', 'Reconnecting', 'Waiting for a fresh authoritative snapshot.', true, input.hasModel);
   }
   if (input.entryStatus === 'entering' || input.entryStatus === 'entered' || input.presentationStatus === 'syncing') {
-    return view('synchronizing', 'Synchronizing', 'Waiting for the authoritative combat state.');
+    return view('synchronizing', 'Synchronizing', 'Waiting for the authoritative combat state.', true, input.hasModel);
   }
   return view('peaceful', 'Peaceful — no active encounter', 'Movement is available. Combat abilities become available when combat begins.', false, false);
 }
