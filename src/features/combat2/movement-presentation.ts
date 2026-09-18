@@ -5,13 +5,12 @@ export interface MovementPresentation {
   message: string;
 }
 
-const FINALIZING = new Set(['exit_pending', 'live_claim', 'claim_active', 'transition_finalizing']);
-const PENDING = new Set(['queued', 'already_queued', 'request_pending', 'in_flight']);
-const TRANSITION_CONFLICT = new Set(['transition_conflict', 'special_transition_conflict']);
-const AUTHORIZATION = new Set(['not_authorized', 'not_authenticated']);
+const FINALIZING = new Set(['exit_pending', 'live_claim']);
+const PENDING = new Set(['request_pending']);
+const TRANSITION_CONFLICT = new Set(['transition_conflict']);
+const AUTHORIZATION = new Set(['not_authorized']);
 const STALE_SESSION = new Set([
-  'no_session', 'no_encounter', 'not_at_node', 'not_present', 'stale_origin',
-  'stale_departure', 'session_unavailable',
+  'no_session', 'stale_origin', 'stale_departure',
 ]);
 
 /** Maps existing movement outcomes to concise guidance without changing their meaning. */

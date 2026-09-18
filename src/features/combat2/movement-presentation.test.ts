@@ -5,7 +5,7 @@ describe('Combat2 movement presentation', () => {
   it.each([
     ['local_refusal', 'exit_pending', 'Movement is being finalized'],
     ['refused', 'request_pending', 'previous movement request'],
-    ['refused', 'special_transition_conflict', 'Another transition'],
+    ['refused', 'transition_conflict', 'Another transition'],
     ['refused', 'not_authorized', 'not authorized'],
     ['refused', 'stale_origin', 'reconnecting'],
     ['error', 'transport_error', 'could not reach the server'],
