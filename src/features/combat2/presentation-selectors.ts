@@ -2,6 +2,9 @@ import type { Character } from '@/features/character';
 import type { Creature } from '@/features/creatures';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import type { Combat2PresentationModel } from './presentation';
+import type { Combat2DeliverySessionStatus } from './useCombat2DeliverySession';
+import type { Combat2EntryRefusal } from './entry';
+import type { Combat2EntrySessionStatus } from './useCombat2EntrySession';
 
 export function selectCombat2Character(
   enabled: boolean,
@@ -67,4 +70,81 @@ export function selectCombat2EntryStatusLabel(
 /** The lock sentence belongs to real locks, not to an idle, unlocked session. */
 export function selectCombat2SessionLocked(status: string): boolean {
   return status !== 'Ready' && status !== 'Idle — no active encounter';
+}
+
+export type Combat2VisibleState =
+  | 'peaceful' | 'synchronizing' | 'reconnecting' | 'unavailable'
+  | 'active' | 'stale' | 'authorization_refusal' | 'pending' | 'dead' | 'historical';
+
+export interface Combat2StatusPresentation {
+  state: Combat2VisibleState;
+  label: string;
+  guidance: string;
+  actionsLocked: boolean;
+  stale: boolean;
+}
+
+interface Combat2StatusInput {
+  rolloutEnabled: boolean;
+  access: 'checking' | 'allowed' | 'refused' | 'error';
+  preflight: 'checking' | 'allowed' | 'refused';
+  ownershipLocked: boolean;
+  dead: boolean;
+  testArenaDeath: boolean;
+  sessionStatus: 'active' | 'exited' | 'idle';
+  pendingFlee: boolean;
+  entryStatus: Combat2EntrySessionStatus;
+  entryClassification: Combat2EntryRefusal | string | null;
+  presentationStatus: Combat2DeliverySessionStatus;
+  actionsReady: boolean;
+  hasModel: boolean;
+  historical: boolean;
+}
+
+const view = (
+  state: Combat2VisibleState,
+  label: string,
+  guidance: string,
+  actionsLocked = true,
+  stale = false,
+): Combat2StatusPresentation => ({ state, label, guidance, actionsLocked, stale });
+
+/** Pure player-facing projection; authoritative readiness remains owned by the session. */
+export function selectCombat2StatusPresentation(input: Combat2StatusInput): Combat2StatusPresentation {
+  if (input.historical) return view('historical', 'Combat ended', 'Showing the last received combat state.', true, true);
+  if (!input.rolloutEnabled) return view('unavailable', 'Combat unavailable', 'Combat is temporarily unavailable.');
+  if (input.access === 'checking') return view('synchronizing', 'Checking combat access', 'Waiting for the authoritative combat state.');
+  if (input.access === 'refused') return view('authorization_refusal', 'Combat access refused', 'This character is not authorized to use Combat2 here.');
+  if (input.access === 'error') return view('unavailable', 'Combat unavailable', 'Combat access could not be verified. Try again shortly.');
+  if (input.ownershipLocked) return view('unavailable', 'Combat unavailable', 'Combat actions are unavailable until the party state is resolved.');
+  if (input.preflight === 'refused') return view('authorization_refusal', 'Combat access refused', 'Combat eligibility could not be verified for this character.');
+  if (input.preflight === 'checking') return view('synchronizing', 'Checking combat readiness', 'Waiting for the authoritative combat state.');
+  if (input.dead) return input.testArenaDeath
+    ? view('dead', 'Defeated', 'Use the Test Arena reset controls to continue.')
+    : view('dead', 'Defeated', 'Authoritative respawn becomes available after 3 seconds.');
+  if (input.sessionStatus === 'exited') return view('unavailable', 'Combat ended', 'Combat actions are unavailable until combat resumes.');
+  if (input.pendingFlee) return view('pending', 'Movement pending', 'Movement is being finalized — try again shortly.');
+  if (input.entryStatus === 'refused') return input.entryClassification === 'not_authorized'
+    ? view('authorization_refusal', 'Combat access refused', 'This character is not authorized to enter combat.')
+    : view('unavailable', 'Combat unavailable', 'Combat entry is temporarily unavailable.');
+  if (input.entryStatus === 'uncertain' || input.entryStatus === 'error') {
+    return view('unavailable', 'Combat state unavailable', 'Combat state is temporarily out of sync.');
+  }
+  if (input.presentationStatus === 'refused') {
+    return view('authorization_refusal', 'Combat access refused', 'The authoritative combat state refused this session.', true, input.hasModel);
+  }
+  if (input.presentationStatus === 'gap') {
+    return view('stale', 'Combat state out of sync', 'Waiting for a fresh authoritative snapshot.', true, true);
+  }
+  if (input.presentationStatus === 'error') {
+    return view('unavailable', 'Combat state unavailable', 'Combat state is temporarily out of sync.', true, input.hasModel);
+  }
+  if (input.actionsReady) return view('active', 'Active combat', 'Combat actions are ready.', false, false);
+  if (input.presentationStatus === 'reconnecting') {
+    return view('reconnecting', 'Reconnecting', 'Waiting for a fresh authoritative snapshot.', true, input.hasModel);
+  }
+  if (input.entryStatus === 'entering' || input.entryStatus === 'entered' || input.presentationStatus === 'syncing') {
+    return view('synchronizing', 'Synchronizing', 'Waiting for the authoritative combat state.', true, input.hasModel);
+  }
+  return view('peaceful', 'Peaceful — no active encounter', 'Movement is available. Combat abilities become available when combat begins.', false, false);
 }

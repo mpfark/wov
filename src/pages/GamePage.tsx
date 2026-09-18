@@ -86,11 +86,12 @@ import { useControlledAction, isCombatMutation } from '@/features/combat2/contro
 import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
-import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2EntryStatusLabel, selectCombat2SessionLocked } from '@/features/combat2/presentation-selectors';
+import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
 import { createPartyAwareDepartureAdapter } from '@/features/combat2/party-departure';
+import { presentCombat2Departure } from '@/features/combat2/movement-presentation';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -268,24 +269,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;
-  const combat2Status = !ownership.rolloutEnabled ? 'Refused — Combat2 test-arena client is disabled'
-    : ownership.access === 'checking' ? 'Checking test-arena access'
-    : ownership.access === 'refused' ? 'Refused — test-arena access is not authorized for this character'
-    : ownership.access === 'error' ? 'Test-arena access check failed'
-    : ownership.locked ? 'Locked — unexpected party membership'
-    : ownership.preflight === 'refused' ? 'Refused — arena entry eligibility could not be verified'
-    : ownership.preflight === 'checking' ? 'Checking arena entry eligibility'
-    : combat2.dead ? combat2.testArenaDeath ? 'Dead — Test Arena Reset required' : 'Dead — authoritative respawn available after 3 seconds'
-    : combat2.sessionStatus === 'exited' ? 'Exited — controlled session remains locked'
-    : combat2.pendingFlee ? 'Flee pending'
-    : combat2.entry.status === 'refused' ? 'Refused'
-    : combat2.entry.status === 'error' || combat2.entry.status === 'uncertain' ? 'Transport/decoding error'
-    : combat2.presentation.status === 'gap' ? 'Gap detected'
-    : combat2.presentation.status === 'refused' ? 'Refused'
-    : combat2.presentation.status === 'error' ? 'Transport/decoding error'
-    : combat2.actionsReady ? 'Ready'
-    : combat2.presentation.status === 'reconnecting' ? 'Reconnecting'
-    : selectCombat2EntryStatusLabel(combat2.entry.status);
+  const isCombat2TestArena = !!character.current_node_id
+    && COMBAT2_TEST_ARENA.nodes.some(node => node.id === character.current_node_id);
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
     ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
     : null, [activeCombat2Presentation]);
@@ -907,17 +892,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const authorizeCombat2Depart = useCallback(async (destinationNodeId: string, destinationName: string) => {
     const result = await authoritativeDeparture.move(destinationNodeId);
-    if (result.status === 'queued') {
-      addLocalLogEvent(buildSystemEvent(result.members?.length && result.members.length>1
-        ? `Party movement toward ${destinationName} is queued; followers resolve before the leader.`
-        : `You attempt to flee toward ${destinationName}.`));
-    } else if (result.status === 'moved') {
-      const summary=result.members?.map(member=>`${member.displayName}: ${member.status}`).join(', ');
-      addLocalLogEvent(buildMovementEvent(summary?`Party movement completed (${summary}).`:`You travel to ${destinationName}.`));
-    } else if (result.status !== 'stale' && !(result.status==='local_refusal'&&result.classification==='exit_pending')) {
-      const detail = 'reason' in result && result.reason ? `: ${result.reason}` : '';
-      addLocalLogEvent(buildErrorEvent(`Combat2 movement refused${detail}`));
-    }
+    const presented = presentCombat2Departure(result, destinationName);
+    if (!presented) return;
+    addLocalLogEvent(presented.kind === 'movement' ? buildMovementEvent(presented.message)
+      : presented.kind === 'system' ? buildSystemEvent(presented.message)
+      : buildErrorEvent(presented.message));
   }, [authoritativeDeparture, addLocalLogEvent]);
 
   const movementActions = useMovementActions({
@@ -1235,6 +1214,22 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     combat2.presentation.model,
     combat2.intents.acknowledgements,
   );
+  const combat2StatusPresentation = selectCombat2StatusPresentation({
+    rolloutEnabled: ownership.rolloutEnabled,
+    access: ownership.access,
+    preflight: ownership.preflight,
+    ownershipLocked: ownership.locked,
+    dead: combat2.dead,
+    testArenaDeath: combat2.testArenaDeath,
+    sessionStatus: combat2.sessionStatus,
+    pendingFlee: combat2.pendingFlee,
+    entryStatus: combat2.entry.status,
+    entryClassification: combat2.entry.classification,
+    presentationStatus: combat2.presentation.status,
+    actionsReady: combat2.actionsReady,
+    hasModel: !!activeCombat2Presentation,
+    historical: combat2VisibleLog.historical,
+  });
   const presentedEventLog = useMemo(() => {
     if (combat2VisibleLog.historical) return combat2VisibleLog.events as GameLogEvent[];
     const selected = selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
@@ -1442,12 +1437,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
-      {combat2BlocksLegacy && <Combat2TestStatus status={combat2VisibleLog.historical ? 'Historical' : combat2Status}
+      {combat2BlocksLegacy && <Combat2TestStatus presentation={combat2StatusPresentation}
         onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
-        locked={combat2VisibleLog.historical || selectCombat2SessionLocked(combat2Status)}
-        stale={!combat2.actionsReady && !!activeCombat2Presentation}
+        isTestArena={isCombat2TestArena}
         diagnostic={combat2VisibleLog.historical
-          ? 'Combat2 test run stopped — showing the last received combat log.'
+          ? 'Combat ended — showing the last received combat log.'
           : combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
