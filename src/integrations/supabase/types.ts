@@ -2012,6 +2012,114 @@ export type Database = {
           },
         ]
       }
+      combat2_diagnostic_server_event: {
+        Row: {
+          elapsed_ms: number | null
+          encounter_id: string | null
+          event_type: string
+          id: number
+          intent_id: string | null
+          node_id: string | null
+          occurred_at: string
+          outcome: string | null
+          request_id: string | null
+          sequence: number
+          session_id: string
+          tick: number | null
+        }
+        Insert: {
+          elapsed_ms?: number | null
+          encounter_id?: string | null
+          event_type: string
+          id?: never
+          intent_id?: string | null
+          node_id?: string | null
+          occurred_at?: string
+          outcome?: string | null
+          request_id?: string | null
+          sequence: number
+          session_id: string
+          tick?: number | null
+        }
+        Update: {
+          elapsed_ms?: number | null
+          encounter_id?: string | null
+          event_type?: string
+          id?: never
+          intent_id?: string | null
+          node_id?: string | null
+          occurred_at?: string
+          outcome?: string | null
+          request_id?: string | null
+          sequence?: number
+          session_id?: string
+          tick?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_diagnostic_server_event_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_diagnostic_session"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_diagnostic_session: {
+        Row: {
+          actor_id: string
+          character_id: string
+          encounter_id: string | null
+          expires_at: string
+          id: string
+          node_id: string | null
+          started_at: string
+          stopped_at: string | null
+        }
+        Insert: {
+          actor_id: string
+          character_id: string
+          encounter_id?: string | null
+          expires_at: string
+          id?: string
+          node_id?: string | null
+          started_at?: string
+          stopped_at?: string | null
+        }
+        Update: {
+          actor_id?: string
+          character_id?: string
+          encounter_id?: string | null
+          expires_at?: string
+          id?: string
+          node_id?: string | null
+          started_at?: string
+          stopped_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_diagnostic_session_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_diagnostic_session_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_diagnostic_session_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combat2_dispatch_schedule_state: {
         Row: {
           last_classification: string | null
@@ -6144,6 +6252,33 @@ export type Database = {
         Args: { _character_id: string }
         Returns: Json
       }
+      combat2_diagnostic_export: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      combat2_diagnostic_record_server_event: {
+        Args: {
+          _elapsed_ms?: number
+          _encounter_id?: string
+          _event_type: string
+          _intent_id?: string
+          _node_id?: string
+          _outcome?: string
+          _request_id?: string
+          _session_id: string
+          _tick?: number
+        }
+        Returns: undefined
+      }
+      combat2_diagnostic_start: {
+        Args: {
+          _character_id: string
+          _encounter_id?: string
+          _node_id: string
+        }
+        Returns: Json
+      }
+      combat2_diagnostic_stop: { Args: { _session_id: string }; Returns: Json }
       combat2_dispatch_scheduler_disable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
