@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug';
 import { supabase } from '@/integrations/supabase/client';
-import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity } from 'lucide-react';
+import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity, Download, Square, Circle } from 'lucide-react';
+import { buildCombat2DiagnosticExport, clearCombat2Recording, currentCombat2Recording,
+  startCombat2Recording, stopCombat2Recording } from '@/features/combat2/diagnostics';
 
 function usePing() {
   const [latency, setLatency] = useState<number | null>(null);
@@ -44,11 +46,22 @@ function latencyColor(ms: number | null): string {
   return 'text-destructive';
 }
 
-export default function BroadcastDebugOverlay() {
+export interface Combat2OverlayState { status: string; characterId: string; nodeId: string | null; encounterId: string | null;
+  tick: number | null; cursor: number | null; diagnostic?: string | null }
+
+export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2OverlayState }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const { entries, clear } = useBroadcastDebug(true);
   const latency = usePing();
+  const [, refresh] = useState(0);
+  useEffect(() => { const listener=()=>refresh(v=>v+1); window.addEventListener('combat2-diagnostic-change',listener);
+    return()=>window.removeEventListener('combat2-diagnostic-change',listener); },[]);
+  const recording=currentCombat2Recording();
+  const exportRecording=()=>{ if(!recording)return;
+    const blob=new Blob([JSON.stringify(buildCombat2DiagnosticExport(recording),null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
+    link.download=`combat2-diagnostic-${recording.sessionId}.json`; link.click(); URL.revokeObjectURL(url); };
 
   const recent = entries.slice(-30);
   const inCount = entries.filter(e => e.direction === 'in').length;
@@ -61,7 +74,7 @@ export default function BroadcastDebugOverlay() {
         className="fixed bottom-3 right-3 z-[9999] flex items-center gap-1.5 rounded-full bg-background/90 border border-border px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-lg backdrop-blur-sm hover:text-foreground transition-colors"
       >
         <Radio className="h-3 w-3 text-primary animate-pulse" />
-        <span>{entries.length}</span>
+        <span>{recording ? 'Recording' : combat2?.status ?? entries.length}</span>
         {latency !== null && (
           <span className={`ml-1 ${latencyColor(latency)}`}>{latency}ms</span>
         )}
@@ -75,7 +88,7 @@ export default function BroadcastDebugOverlay() {
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2 text-foreground">
           <Radio className="h-3 w-3 text-primary" />
-          <span className="font-semibold text-xs">Broadcast Debug</span>
+          <span className="font-semibold text-xs">Combat2 diagnostics</span>
           <span className="text-muted-foreground">
             ↑{outCount} ↓{inCount}
           </span>
@@ -100,6 +113,17 @@ export default function BroadcastDebugOverlay() {
       {/* Entries */}
       {expanded && (
         <div className="flex-1 overflow-y-auto max-h-[40vh] px-2 py-1 space-y-0.5">
+          {combat2 && <section className="space-y-1 border-b border-border p-2 text-muted-foreground">
+            <p>State: <b className="text-foreground">{combat2.status}</b> · tick {combat2.tick ?? '—'} · cursor {combat2.cursor ?? '—'}</p>
+            <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter {combat2.encounterId?.slice(0,8) ?? '—'}</p>
+            {combat2.diagnostic && <p role="alert">{combat2.diagnostic}</p>}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {!recording ? <button onClick={()=>startCombat2Recording(combat2.characterId,combat2.nodeId,combat2.encounterId)}><Circle className="mr-1 inline h-3 w-3"/>Start</button>
+                : <button onClick={()=>stopCombat2Recording()}><Square className="mr-1 inline h-3 w-3"/>Stop</button>}
+              <button onClick={clearCombat2Recording}><Trash2 className="mr-1 inline h-3 w-3"/>Clear</button>
+              <button disabled={!recording} onClick={exportRecording}><Download className="mr-1 inline h-3 w-3"/>Export</button>
+            </div>
+          </section>}
           {recent.length === 0 && (
             <p className="text-muted-foreground text-center py-4">No broadcasts yet…</p>
           )}

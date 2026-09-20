@@ -10,6 +10,7 @@ import {
   type Combat2SyncResult,
   type Combat2TickBatch,
 } from './delivery';
+import { recordCombat2ClientEvent } from './diagnostics';
 
 export type Combat2DeliverySessionStatus =
   | 'disabled'
@@ -122,6 +123,7 @@ export function useCombat2DeliverySession({
       encounterId,
       onStatus(status) {
         if (currentKeyRef.current !== key) return;
+        recordCombat2ClientEvent({event:'realtime_status_changed',encounterId,outcome:status});
         setActive((previous) => previous?.sessionKey === key
           ? { ...previous, status, error: null }
           : previous);
@@ -129,6 +131,7 @@ export function useCombat2DeliverySession({
       onError: applyError,
       onSync(result) {
         if (currentKeyRef.current !== key) return;
+        recordCombat2ClientEvent({event:'snapshot_accepted',encounterId,cursor:result.returned_through_tick,tick:result.returned_through_tick});
         setActive((previous) => {
           if (previous?.sessionKey !== key) return previous;
           const byTick = new Map(previous.batches.map((batch) => [batch.tick, batch]));
@@ -145,6 +148,7 @@ export function useCombat2DeliverySession({
       },
     });
     controllerRef.current = controller;
+    recordCombat2ClientEvent({event:'sync_requested',encounterId,cursor:0});
     void controller.start().catch(applyError);
 
     return () => {

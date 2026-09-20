@@ -83,7 +83,6 @@ import { checkCombat2SessionPreflight, heartbeatCombat2Presence, heartbeatCombat
 import { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
-import { Combat2TestStatus } from '@/features/combat2/Combat2TestStatus';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
@@ -1437,12 +1436,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
-      {combat2BlocksLegacy && <Combat2TestStatus presentation={combat2StatusPresentation}
-        onRetry={ownership.rolloutEnabled && (ownership.access==='refused'||ownership.access==='error') ? ownership.retryAccess : undefined}
-        isTestArena={isCombat2TestArena}
-        diagnostic={combat2VisibleLog.historical
-          ? 'Combat ended — showing the last received combat log.'
-          : combat2Diagnostic} />}
       <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
       {/* Main Content — centered game area; row width caps to fit widest ability bar */}
@@ -1904,7 +1897,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       )}
 
       {/* Broadcast Debug Overlay — admin only */}
-      {isAdmin && <BroadcastDebugOverlay />}
+      {isAdmin && <BroadcastDebugOverlay combat2={{ status: combat2StatusPresentation.label, characterId: character.id,
+        nodeId: currentNode?.id ?? null, encounterId: activeCombat2Presentation?.encounterId ?? null,
+        tick: activeCombat2Presentation?.lastAppliedTick ?? null, cursor: combat2.delivery.lastAppliedTick,
+        diagnostic: combat2VisibleLog.historical ? 'Last confirmed combat state shown.' : combat2Diagnostic }} />}
 
       {/* Combat timing breakdown — development instrumentation only */}
       {isAdmin && <CombatTimingPanel />}

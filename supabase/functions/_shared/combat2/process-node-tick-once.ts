@@ -30,6 +30,9 @@ export interface ProcessNodeTickDependencies {
   statusRecords?: readonly AppliedStatusRow[];
   /** Test seam for the pure resolver; production callers omit it. */
   resolve?: typeof resolver.resolveNodeTick;
+  /** Optional bounded diagnostic sink. It must never throw or affect gameplay. */
+  diagnostic?: (event: { event: 'claim_attempted'|'claim_acquired'|'decode_completed'|'resolve_completed'|'commit_attempted'|'commit_completed';
+    nodeId: string; encounterId?: string; tick?: number; elapsedMs: number; outcome?: string }) => void;
 }
 
 export type NodeTickRunResult =
@@ -77,6 +80,9 @@ export async function processNodeTickOnce(
   nodeId: string,
   dependencies: ProcessNodeTickDependencies,
 ): Promise<NodeTickRunResult> {
+  const started=performance.now();
+  const note=(event: Parameters<NonNullable<ProcessNodeTickDependencies['diagnostic']>>[0])=>{ try { dependencies.diagnostic?.(event); } catch { /* diagnostics are non-authoritative */ } };
+  note({event:'claim_attempted',nodeId,elapsedMs:0});
   let claimRaw: unknown;
   try {
     claimRaw = await dependencies.transport.claimNode(nodeId);
@@ -103,6 +109,9 @@ export async function processNodeTickOnce(
   if (claim.ok !== true || claim.kind !== 'claimed') {
     return { ok: false, kind: 'malformed_claim', diagnostic: 'unknown claim outcome' };
   }
+  const claimAt=performance.now();
+  note({event:'claim_acquired',nodeId,encounterId:typeof claim.encounter_id==='string'?claim.encounter_id:undefined,
+    tick:typeof claim.candidate_tick==='number'?claim.candidate_tick:undefined,elapsedMs:claimAt-started,outcome:'claimed'});
 
   const decoded = decodeClaim(claim);
   if (isDecodeFailure(decoded)) return { ok: false, kind: 'snapshot_rejected', errors: decoded.errors.slice(0, 20) };
@@ -116,6 +125,8 @@ export async function processNodeTickOnce(
       claim.state_version !== decoded.snapshot.encounter.state_version) {
     return { ok: false, kind: 'malformed_claim', diagnostic: 'claim authority fields disagree with snapshot' };
   }
+  const decodedAt=performance.now();
+  note({event:'decode_completed',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:decodedAt-claimAt});
 
   const abilities = playerCatalog.buildAbilityCatalog(dependencies.abilityRecords, dependencies.statusRecords);
   if (abilities.rejected.length > 0) {
@@ -132,9 +143,12 @@ export async function processNodeTickOnce(
   } catch (error) {
     return { ok: false, kind: 'resolver_failed', diagnostic: safeError(error) };
   }
+  const resolvedAt=performance.now();
+  note({event:'resolve_completed',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:resolvedAt-decodedAt});
 
   let commitRaw: unknown;
   try {
+    note({event:'commit_attempted',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:0});
     commitRaw = await dependencies.transport.commitTick({
       _encounter_id: encounterId,
       _claim_token: decoded.claimToken!,
@@ -154,6 +168,7 @@ export async function processNodeTickOnce(
   }
   if (commit.ok === true && (commit.kind === 'committed' || commit.kind === 'already_committed') &&
       typeof commit.tick === 'number') {
+    note({event:'commit_completed',nodeId,encounterId,tick:commit.tick,elapsedMs:performance.now()-resolvedAt,outcome:commit.kind});
     return { ok: true, kind: commit.kind, encounterId, tick: commit.tick };
   }
   if (commit.ok === false && commit.kind === 'stale_claim') {

@@ -10,6 +10,7 @@ import {
 } from './intent';
 import { buildAbilityEvent, buildBuffEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { recordCombat2ClientEvent } from './diagnostics';
 
 export type Combat2IntentResult =
   | Combat2IntentOutcome
@@ -104,7 +105,7 @@ export function useCombat2IntentSession({
   }, [authoritativeTick, pending]);
 
   const run = useCallback(async (attempt: Attempt): Promise<Combat2IntentResult> => {
-    if (!readyRef.current) return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 is not ready for input' };
+    if (!readyRef.current) { recordCombat2ClientEvent({event:'intent_local_refusal',requestId:attempt.requestId,encounterId,outcome:'no_session'}); return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 is not ready for input' }; }
     if (!sessionKey || !characterId || !encounterId || attempt.sessionKey !== sessionKey) {
       return { status: 'local_refusal', classification: 'no_session', reason: 'Combat2 session is not authoritative' };
     }
@@ -113,9 +114,12 @@ export function useCombat2IntentSession({
     }
     attempt.inFlight = true;
     attempt.uncertain = false;
+    const sentAt=performance.now();
+    recordCombat2ClientEvent({event:'request_sent',requestId:attempt.requestId,encounterId});
     const generation = generationRef.current;
     try {
       const outcome = await adapter.submit(encounterId, characterId, attempt.action, attempt.requestId);
+      recordCombat2ClientEvent({event:'response_received',requestId:attempt.requestId,encounterId,outcome:outcome.status,elapsedMs:performance.now()-sentAt});
       if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey
         || attemptRef.current !== attempt) {
         return { status: 'stale' };
@@ -142,6 +146,7 @@ export function useCombat2IntentSession({
       }
       return outcome;
     } catch (error) {
+      recordCombat2ClientEvent({event:'response_error',requestId:attempt.requestId,encounterId,outcome:error instanceof Error?error.name:'error',elapsedMs:performance.now()-sentAt});
       if (!readyRef.current || generationRef.current !== generation || sessionKeyRef.current !== attempt.sessionKey
         || attemptRef.current !== attempt) {
         return { status: 'stale' };
@@ -167,6 +172,8 @@ export function useCombat2IntentSession({
       return Promise.resolve<Combat2IntentResult>({ status: 'local_refusal', classification: 'in_flight', reason: 'Combat2 intent is already being submitted' });
     }
     const attempt: Attempt = { action, requestId: generateRequestId(), sessionKey, inFlight: false, uncertain: false };
+    recordCombat2ClientEvent({event:'action_clicked',requestId:attempt.requestId,encounterId,outcome:action.kind});
+    recordCombat2ClientEvent({event:'request_prepared',requestId:attempt.requestId,encounterId});
     attemptRef.current = attempt;
     if (feedback) feedbackRef.current.set(attempt.requestId, feedback);
     return run(attempt);
