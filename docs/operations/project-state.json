@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-09-21T00:00:00Z",
+  "based_on_source_sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+  "status_vocabulary": ["authored", "committed", "pushed", "installed", "deployed", "ready_for_manual_publish", "manually_published", "blocked", "unknown"],
+  "repository": {
+    "status": "pushed",
+    "artifact": "origin/main",
+    "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+    "timestamp": "2026-09-21T00:00:00Z",
+    "evidence_type": "repository",
+    "evidence": "GitHub origin/main was directly verified after the bounded diagnostic integration push.",
+    "reporting_actor": "Codex",
+    "directly_verified": true
+  },
+  "database_migrations": [
+    {
+      "identity": "20260921100000_combat2_bounded_diagnostics.sql",
+      "status": "pushed",
+      "sha": "94542b9ec9c3cc27cf4b894c2b2d3b1180f11214",
+      "timestamp": "2026-09-21T00:00:00Z",
+      "evidence_type": "repository",
+      "evidence": "Migration is present on origin/main; installation was explicitly excluded and is not verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "20260921110000_combat2_diagnostic_dispatch_integration.sql",
+      "status": "pushed",
+      "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+      "timestamp": "2026-09-21T00:00:00Z",
+      "evidence_type": "repository",
+      "evidence": "Migration is present on origin/main; installation was explicitly excluded and is not verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    }
+  ],
+  "generated_supabase_types": {
+    "status": "unknown",
+    "artifact": "src/integrations/supabase/types.ts",
+    "sha": null,
+    "timestamp": null,
+    "evidence_type": "none",
+    "evidence": "No authorized Cloud generation was performed for the diagnostic migrations.",
+    "reporting_actor": "Codex",
+    "directly_verified": false
+  },
+  "edge_function_deployments": [
+    {
+      "identity": "combat2-dispatch-once",
+      "status": "unknown",
+      "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+      "timestamp": null,
+      "evidence_type": "none",
+      "evidence": "Deployment-relevant source is pushed, but no deployment has been verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": false
+    }
+  ],
+  "frontend_publication": {
+    "status": "ready_for_manual_publish",
+    "artifact": "diagnostic admin overlay",
+    "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+    "timestamp": "2026-09-21T00:00:00Z",
+    "evidence_type": "build",
+    "evidence": "Production build passed. Frontend publication has not been reported; only Mik may publish it manually.",
+    "reporting_actor": "Codex",
+    "directly_verified": true
+  },
+  "combat2_operational_work": [
+    {
+      "identity": "bounded-diagnostics",
+      "status": "pushed",
+      "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+      "timestamp": "2026-09-21T00:00:00Z",
+      "evidence_type": "repository_and_tests",
+      "evidence": "Source, migrations and focused verification are pushed. Live latency has not been measured.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ADM-025B",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "task_boundary",
+      "evidence": "Separate pending work; explicitly excluded from the diagnostics tasks.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    }
+  ],
+  "known_blockers": [
+    {
+      "identity": "diagnostics-cloud-rollout",
+      "status": "blocked",
+      "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+      "timestamp": null,
+      "evidence_type": "handoff",
+      "evidence": "Requires authorized migration installation and combat2-dispatch-once deployment; frontend publication remains Mik-only.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    }
+  ],
+  "next_approved_task": {
+    "status": "authored",
+    "artifact": "Install diagnostic migrations, regenerate Cloud types, deploy combat2-dispatch-once, then hand frontend to Mik for manual publication.",
+    "sha": "bd0a2aca976891d6f0849cd53f5b8e8260b70aa4",
+    "timestamp": null,
+    "evidence_type": "handoff",
+    "evidence": "Repository implementation is ready; Cloud actions require separate authorization and evidence.",
+    "reporting_actor": "Codex",
+    "directly_verified": true
+  },
+  "volatile_runtime_observations": [
+    {
+      "identity": "combat2-live-runtime",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "none",
+      "evidence": "Maintenance/open, awake/asleep, jobs, claims and encounters require a fresh authorized observation.",
+      "reporting_actor": "Codex",
+      "directly_verified": false
+    }
+  ]
+}

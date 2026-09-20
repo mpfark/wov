@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "project-state:check": "node scripts/project-state.mjs",
+    "project-state:generate": "node scripts/project-state.mjs --write",
     "combat2:readiness": "node scripts/combat2-readiness.mjs",
     "dev": "vite",
     "build": "vite build",
