@@ -16,13 +16,15 @@ function request(body: string | null = '{}', authorization = `Bearer ${WORKER_SE
   });
 }
 
-function setup(candidates: unknown[] = []) {
+function setup(candidates: unknown[] = [], sessions: unknown[] = []) {
   const rpc = vi.fn(async (name: string) => name === 'combat2_due_nodes'
     ? { data: { ok: true, kind: 'candidates', candidates }, error: null }
-    : { data: null, error: null });
+    : name === 'combat2_diagnostic_sessions_for_candidates' ? {data:sessions,error:null}
+    : { data: {ok:true,kind:'recorded'}, error: null });
   const process = vi.fn(async (_nodeId: string, _deps: ProcessNodeTickDependencies): Promise<NodeTickRunResult> =>
     ({ ok: true, kind: 'not_due', nextDueAt: null }));
   const log = vi.fn();
+  const deferred: PromiseLike<unknown>[]=[];
   const deps: Combat2DispatchHandlerDependencies = {
     env: (name) => name === 'SUPABASE_URL' ? 'https://project.supabase.co'
       : name === 'SUPABASE_SERVICE_ROLE_KEY' ? SERVICE_KEY : WORKER_SECRET,
@@ -30,8 +32,9 @@ function setup(candidates: unknown[] = []) {
     processNodeTickOnce: process,
     abilityRecords: [],
     log,
+    defer: work=>deferred.push(work),
   };
-  return { deps, handler: createCombat2DispatchHandler(deps), rpc, process, log };
+  return { deps, handler: createCombat2DispatchHandler(deps), rpc, process, log, deferred };
 }
 
 describe('combat2-dispatch-once Edge handler', () => {
@@ -77,6 +80,36 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect(fixture.process).toHaveBeenCalledOnce();
     expect(fixture.process.mock.calls[0][0]).toBe(NODE);
     expect(await response.json()).toMatchObject({ classification: 'dispatched', candidateCount: 1, processedCount: 1 });
+  });
+
+  it('persists ordered worker phases only for authoritative relevant sessions without duplicating gameplay', async()=>{
+    const row={node_id:NODE,encounter_id:ENCOUNTER,next_due_at:'2026-08-31T00:00:00Z'};
+    const fixture=setup([row],[{session_id:'20000000-0000-4000-8000-000000000001',node_id:NODE,encounter_id:ENCOUNTER}]);
+    fixture.process.mockImplementation(async (_node,deps)=>{
+      for(const event of ['claim_attempted','claim_acquired','decode_completed','resolve_completed','commit_attempted','commit_completed'] as const)
+        deps.diagnostic?.({event,nodeId:NODE,encounterId:ENCOUNTER,tick:1,elapsedMs:2,outcome:'ok'});
+      return {ok:true,kind:'committed',encounterId:ENCOUNTER,tick:1};
+    });
+    expect((await fixture.handler(request())).status).toBe(200);
+    await Promise.all(fixture.deferred);
+    expect(fixture.process).toHaveBeenCalledOnce();
+    const persisted=fixture.rpc.mock.calls.find(([name])=>name==='combat2_diagnostic_record_server_events');
+    expect(persisted?.[1]._events.map((event: {event_type:string})=>event.event_type)).toEqual([
+      'dispatcher_requested','claim_attempted','claim_acquired','decode_completed','resolve_completed','commit_attempted','commit_completed']);
+  });
+
+  it('does not insert for no, unrelated, expired or stopped sessions and isolates sink failure',async()=>{
+    const row={node_id:NODE,encounter_id:ENCOUNTER,next_due_at:'2026-08-31T00:00:00Z'};
+    for(const sessions of [[],[{session_id:'x',node_id:'other',encounter_id:ENCOUNTER}]]){
+      const fixture=setup([row],sessions); const response=await fixture.handler(request()); await Promise.all(fixture.deferred);
+      expect(response.status).toBe(200); expect(fixture.process).toHaveBeenCalledOnce();
+      expect(fixture.rpc.mock.calls.some(([name])=>name==='combat2_diagnostic_record_server_events')).toBe(false);
+    }
+    const failing=setup([row],[{session_id:'x',node_id:NODE,encounter_id:ENCOUNTER}]);
+    failing.rpc.mockImplementation(async(name:string)=>{if(name==='combat2_due_nodes')return{data:{ok:true,kind:'candidates',candidates:[row]},error:null};
+      if(name==='combat2_diagnostic_sessions_for_candidates')return{data:[{session_id:'x',node_id:NODE,encounter_id:ENCOUNTER}],error:null}; throw new Error('sink');});
+    const response=await failing.handler(request()); await Promise.all(failing.deferred);
+    expect(response.status).toBe(200); expect(failing.process).toHaveBeenCalledOnce();
   });
 
   it('redacts both secrets from response and logs', async () => {

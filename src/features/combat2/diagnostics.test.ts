@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildCombat2DiagnosticExport, clearCombat2Recording, COMBAT2_DIAGNOSTIC_MAX_EVENTS,
-  currentCombat2Recording, recordCombat2ClientEvent, startCombat2Recording } from './diagnostics';
+  currentCombat2Recording, exportCombat2ServerRecording, recordCombat2ClientEvent, startCombat2Recording,
+  startCombat2ServerRecording, stopCombat2ServerRecording } from './diagnostics';
 
 describe('Combat2 bounded diagnostics', () => {
   beforeEach(() => { sessionStorage.clear(); vi.restoreAllMocks(); });
@@ -29,5 +30,18 @@ describe('Combat2 bounded diagnostics', () => {
     expect(out.unmatchedClientEvents).toHaveLength(1);
     expect(out.summaryStatistics.duplicateCorrelationIds).toContain('same');
     clearCombat2Recording();
+  });
+  it('uses the authoritative server session id and exports separate original streams',async()=>{
+    const rpc=vi.fn(async(name:string)=>name==='combat2_diagnostic_start'
+      ?{data:{ok:true,kind:'started',session_id:'server-session'},error:null}
+      :name==='combat2_diagnostic_stop'?{data:{ok:true,kind:'stopped'},error:null}
+      :{data:{ok:true,kind:'exported',events:[{event_type:'claim_acquired',occurred_at:'2026-09-21T00:00:00Z',node_id:'node',tick:1,elapsed_ms:2}]},error:null});
+    const recording=await startCombat2ServerRecording({rpc},'character','node','encounter');
+    expect(recording.sessionId).toBe('server-session');
+    recordCombat2ClientEvent({event:'notification_received',encounterId:'encounter',tick:1});
+    const exported=await exportCombat2ServerRecording({rpc},currentCombat2Recording()!);
+    expect(exported.clientEvents).toHaveLength(1);expect(exported.serverEvents).toHaveLength(1);
+    expect(exported.correlatedTimeline).toHaveLength(2);
+    await stopCombat2ServerRecording({rpc},recording.sessionId); expect(currentCombat2Recording()).toBeNull();
   });
 });

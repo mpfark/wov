@@ -18,7 +18,11 @@ export interface Combat2DispatchHandlerDependencies {
   abilityRecords: readonly AuthoredAbilityRecord[];
   statusRecords?: readonly AppliedStatusRow[];
   log?: (message: string, detail: Record<string, unknown>) => void;
+  defer?: (work: PromiseLike<unknown>) => void;
 }
+
+interface DiagnosticSession { session_id: string; node_id: string; encounter_id: string }
+interface DiagnosticEvent { event_type: string; node_id: string; encounter_id?: string; tick?: number; outcome?: string; elapsed_ms: number }
 
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -65,15 +69,24 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
     try { client = deps.createClient(url, serviceRoleKey); }
     catch { return failure('environment_failure', 'privileged transport is unavailable', 500); }
 
+    const candidatesByNode = new Map<string,string>();
     const result = await dispatchNodeTicksOnce({
       async discoverDueNodes(limit) {
         const { data, error } = await client.rpc('combat2_due_nodes', { _limit: limit });
         if (error) throw new Error(`combat2_due_nodes failed: ${error.code ?? 'database_error'}`);
+        const envelope=data as {candidates?:Array<{node_id?:unknown;encounter_id?:unknown}>};
+        for(const candidate of envelope?.candidates??[]) if(typeof candidate.node_id==='string'&&typeof candidate.encounter_id==='string') candidatesByNode.set(candidate.node_id,candidate.encounter_id);
         return data;
       },
-      processNode: (nodeId) => deps.processNodeTickOnce(nodeId, {
+      processNode: async (nodeId) => {
+        const events: DiagnosticEvent[]=[];
+        const invocationId=crypto.randomUUID();
+        events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:candidatesByNode.get(nodeId),outcome:invocationId,elapsed_ms:0});
+        const workerResult=await deps.processNodeTickOnce(nodeId, {
         abilityRecords: deps.abilityRecords,
         statusRecords: deps.statusRecords,
+        diagnostic: event=>events.push({event_type:event.event,node_id:event.nodeId,encounter_id:event.encounterId,
+          tick:event.tick,outcome:event.outcome,elapsed_ms:event.elapsedMs}),
         transport: {
           async claimNode(id) {
             const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });
@@ -86,7 +99,24 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             return data;
           },
         },
-      }),
+        });
+        if(!(workerResult.ok&&(workerResult.kind==='committed'||workerResult.kind==='already_committed'))) {
+          events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
+            encounter_id:'encounterId' in workerResult?workerResult.encounterId:candidatesByNode.get(nodeId),
+            tick:'tick' in workerResult?workerResult.tick:undefined,outcome:workerResult.kind,elapsed_ms:0});
+        }
+        const persist=(async()=>{
+          const encounterId=candidatesByNode.get(nodeId);
+          if(!encounterId)return;
+          const lookup=await client.rpc('combat2_diagnostic_sessions_for_candidates',{_candidates:[{node_id:nodeId,encounter_id:encounterId}]});
+          if(lookup.error||!Array.isArray(lookup.data))return;
+          const sessions=(lookup.data as DiagnosticSession[]).filter(s=>s.node_id===nodeId&&s.encounter_id===encounterId);
+          await Promise.all(sessions.map(session=>Promise.resolve(client.rpc('combat2_diagnostic_record_server_events',
+            {_session_id:session.session_id,_events:events})).catch(()=>undefined)));
+        })();
+        if(deps.defer)deps.defer(persist);else void persist.catch(()=>undefined);
+        return workerResult;
+      },
     });
 
     deps.log?.('[combat2-dispatch-once] completed', {

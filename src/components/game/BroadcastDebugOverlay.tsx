@@ -3,7 +3,7 @@ import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug'
 import { supabase } from '@/integrations/supabase/client';
 import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity, Download, Square, Circle } from 'lucide-react';
 import { buildCombat2DiagnosticExport, clearCombat2Recording, currentCombat2Recording,
-  startCombat2Recording, stopCombat2Recording } from '@/features/combat2/diagnostics';
+  exportCombat2ServerRecording, startCombat2ServerRecording, stopCombat2ServerRecording } from '@/features/combat2/diagnostics';
 
 function usePing() {
   const [latency, setLatency] = useState<number | null>(null);
@@ -58,8 +58,9 @@ export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2Ov
   useEffect(() => { const listener=()=>refresh(v=>v+1); window.addEventListener('combat2-diagnostic-change',listener);
     return()=>window.removeEventListener('combat2-diagnostic-change',listener); },[]);
   const recording=currentCombat2Recording();
-  const exportRecording=()=>{ if(!recording)return;
-    const blob=new Blob([JSON.stringify(buildCombat2DiagnosticExport(recording),null,2)],{type:'application/json'});
+  const exportRecording=async()=>{ if(!recording)return;
+    let diagnosticPackage; try{diagnosticPackage=await exportCombat2ServerRecording(supabase,recording);}catch{diagnosticPackage=buildCombat2DiagnosticExport(recording);}
+    const blob=new Blob([JSON.stringify(diagnosticPackage,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
     link.download=`combat2-diagnostic-${recording.sessionId}.json`; link.click(); URL.revokeObjectURL(url); };
 
@@ -118,10 +119,10 @@ export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2Ov
             <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter {combat2.encounterId?.slice(0,8) ?? '—'}</p>
             {combat2.diagnostic && <p role="alert">{combat2.diagnostic}</p>}
             <div className="flex flex-wrap gap-2 pt-1">
-              {!recording ? <button onClick={()=>startCombat2Recording(combat2.characterId,combat2.nodeId,combat2.encounterId)}><Circle className="mr-1 inline h-3 w-3"/>Start</button>
-                : <button onClick={()=>stopCombat2Recording()}><Square className="mr-1 inline h-3 w-3"/>Stop</button>}
+              {!recording ? <button onClick={()=>void startCombat2ServerRecording(supabase,combat2.characterId,combat2.nodeId,combat2.encounterId)}><Circle className="mr-1 inline h-3 w-3"/>Start</button>
+                : <button onClick={()=>void stopCombat2ServerRecording(supabase,recording.sessionId)}><Square className="mr-1 inline h-3 w-3"/>Stop</button>}
               <button onClick={clearCombat2Recording}><Trash2 className="mr-1 inline h-3 w-3"/>Clear</button>
-              <button disabled={!recording} onClick={exportRecording}><Download className="mr-1 inline h-3 w-3"/>Export</button>
+              <button disabled={!recording} onClick={()=>void exportRecording()}><Download className="mr-1 inline h-3 w-3"/>Export</button>
             </div>
           </section>}
           {recent.length === 0 && (

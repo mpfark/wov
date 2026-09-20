@@ -56,11 +56,34 @@ export function currentCombat2Recording(now = Date.now()): Combat2DiagnosticReco
   return recording;
 }
 
-export function startCombat2Recording(characterId: string, nodeId: string | null, encounterId: string | null, now = Date.now()): Combat2DiagnosticRecording {
-  const recording: Combat2DiagnosticRecording = { version: 1, sessionId: crypto.randomUUID(),
+export function startCombat2Recording(characterId: string, nodeId: string | null, encounterId: string | null, now = Date.now(), sessionId = crypto.randomUUID()): Combat2DiagnosticRecording {
+  const recording: Combat2DiagnosticRecording = { version: 1, sessionId,
     startedAt: new Date(now).toISOString(), expiresAt: new Date(now + COMBAT2_DIAGNOSTIC_DURATION_MS).toISOString(),
     characterId, nodeId, encounterId, events: [], dropped: 0 };
   write(recording); return recording;
+}
+
+interface DiagnosticRpcClient { rpc(name:string,args:Record<string,unknown>):PromiseLike<{data:unknown;error:{message?:string}|null}> }
+function row(value:unknown):Record<string,unknown>|null{return value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;}
+export async function startCombat2ServerRecording(client:DiagnosticRpcClient,characterId:string,nodeId:string|null,encounterId:string|null){
+  if(!nodeId)throw new Error('Combat2 diagnostic recording requires a node');
+  const {data,error}=await client.rpc('combat2_diagnostic_start',{_character_id:characterId,_node_id:nodeId,_encounter_id:encounterId});
+  const value=row(data); if(error||value?.ok!==true||value.kind!=='started'||typeof value.session_id!=='string')throw new Error(error?.message??'Diagnostic start refused');
+  return startCombat2Recording(characterId,nodeId,encounterId,Date.now(),value.session_id);
+}
+export async function stopCombat2ServerRecording(client:DiagnosticRpcClient,sessionId:string){
+  const {data,error}=await client.rpc('combat2_diagnostic_stop',{_session_id:sessionId}); const value=row(data);
+  if(error||value?.ok!==true||value.kind!=='stopped')throw new Error(error?.message??'Diagnostic stop refused'); return stopCombat2Recording();
+}
+export async function exportCombat2ServerRecording(client:DiagnosticRpcClient,recording:Combat2DiagnosticRecording){
+  const {data,error}=await client.rpc('combat2_diagnostic_export',{_session_id:recording.sessionId}); const value=row(data);
+  if(error||value?.ok!==true||value.kind!=='exported'||!Array.isArray(value.events))throw new Error(error?.message??'Diagnostic export refused');
+  const serverEvents:Combat2DiagnosticEvent[]=value.events.map((raw,index)=>{const event=row(raw);if(!event||typeof event.event_type!=='string'||typeof event.occurred_at!=='string')throw new Error(`Malformed server diagnostic event ${index}`);
+    return {side:'server',event:event.event_type,wallTime:event.occurred_at,requestId:typeof event.request_id==='string'?event.request_id:null,
+      intentId:typeof event.intent_id==='string'?event.intent_id:null,encounterId:typeof event.encounter_id==='string'?event.encounter_id:null,
+      nodeId:typeof event.node_id==='string'?event.node_id:null,tick:typeof event.tick==='number'?event.tick:null,
+      outcome:typeof event.outcome==='string'?event.outcome:null,elapsedMs:typeof event.elapsed_ms==='number'?event.elapsed_ms:null};});
+  return buildCombat2DiagnosticExport(recording,serverEvents);
 }
 
 export function stopCombat2Recording(): Combat2DiagnosticRecording | null {

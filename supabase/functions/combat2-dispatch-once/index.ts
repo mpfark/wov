@@ -5,6 +5,8 @@ import type { AppliedStatusRow } from '../_shared/config/status-contract.ts';
 import { processNodeTickOnce } from '../_shared/combat2/process-node-tick-once.ts';
 import { createCombat2DispatchHandler } from './handler.ts';
 
+declare const EdgeRuntime: { waitUntil(work: Promise<unknown>): void };
+
 const handler = createCombat2DispatchHandler({
   env: (name) => Deno.env.get(name),
   createClient: (url, serviceRoleKey) => createClient(url, serviceRoleKey, {
@@ -14,6 +16,7 @@ const handler = createCombat2DispatchHandler({
   abilityRecords: (inventory as { abilities: AuthoredAbilityRecord[] }).abilities,
   statusRecords: (inventory as { statuses: AppliedStatusRow[] }).statuses,
   log: (message, detail) => console.log(message, detail),
+  defer: (work) => EdgeRuntime.waitUntil(Promise.resolve(work)),
 });
 
 Deno.serve(handler);
