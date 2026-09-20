@@ -6270,6 +6270,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      combat2_diagnostic_record_server_events: {
+        Args: { _events: Json; _session_id: string }
+        Returns: Json
+      }
+      combat2_diagnostic_sessions_for_candidates: {
+        Args: { _candidates: Json }
+        Returns: Json
+      }
       combat2_diagnostic_start: {
         Args: {
           _character_id: string
