@@ -68,14 +68,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "ready_for_manual_publish",
+    "status": "manually_published",
     "artifact": "diagnostic admin overlay",
-    "sha": null,
-    "timestamp": "2026-09-21T06:41:04Z",
-    "evidence_type": "build",
-    "evidence": "The source-quality gate passed focused diagnostics, dispatcher, Test Arena and Edge packaging tests; clean root/application TypeScript; Edge parity; and a production build. No publication was performed; only Mik may publish the frontend manually.",
-    "reporting_actor": "Codex",
-    "directly_verified": true
+    "sha": "eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1",
+    "timestamp": "2026-09-21T07:45:00Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Mik reports that frontend source checkpoint eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 was manually published through Lovable. Operator-reported only; not independently verified. The later Stop/Export recovery correction is NOT published.",
+    "reporting_actor": "Mik",
+    "directly_verified": false
   },
   "combat2_operational_work": [
     {
