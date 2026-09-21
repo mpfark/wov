@@ -93,7 +93,7 @@ describe('installed claim reward-channel contract', () => {
   });
 
   it('the authored forward migration repairs the projection without ADM-025B work', () => {
-    const sql = readFileSync('supabase/migrations/20260922000000_combat2_claim_reward_channel_contract.sql', 'utf8');
+    const sql = readFileSync('supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql', 'utf8');
     for (const field of MISSING) expect(sql).toContain(`cr.${field}`);
     expect(sql).toContain('pg_get_functiondef');
     expect(sql).toMatch(/projection marker not found/);
