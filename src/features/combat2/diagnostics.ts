@@ -46,14 +46,28 @@ function write(recording: Combat2DiagnosticRecording | null): void {
   window.dispatchEvent(new Event('combat2-diagnostic-change'));
 }
 
+/**
+ * Pure read of the active recording. It must never write, because React renders
+ * call it: a write dispatches `combat2-diagnostic-change`, which synchronously
+ * re-renders the overlay and previously produced an unbounded render loop
+ * (React error #301) for any stopped or expired session.
+ */
 export function currentCombat2Recording(now = Date.now()): Combat2DiagnosticRecording | null {
   const recording = safeRead();
   if (!recording) return null;
-  if (Date.parse(recording.expiresAt) <= now) {
-    write({ ...recording, expiresAt: new Date(now).toISOString() });
-    return null;
-  }
-  return recording;
+  return isCombat2RecordingFinished(recording, now) ? null : recording;
+}
+
+export function isCombat2RecordingFinished(recording: Combat2DiagnosticRecording, now = Date.now()): boolean {
+  return Date.parse(recording.expiresAt) <= now;
+}
+
+/**
+ * Stopped and expired recordings stay readable so their client buffer survives
+ * reload and can still be exported. Only an explicit Clear discards them.
+ */
+export function recoverableCombat2Recording(): Combat2DiagnosticRecording | null {
+  return safeRead();
 }
 
 export function startCombat2Recording(characterId: string, nodeId: string | null, encounterId: string | null, now = Date.now(), sessionId: string = crypto.randomUUID()): Combat2DiagnosticRecording {
@@ -67,13 +81,17 @@ interface DiagnosticRpcClient { rpc(name:string,args:Record<string,unknown>):Pro
 function row(value:unknown):Record<string,unknown>|null{return value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;}
 export async function startCombat2ServerRecording(client:DiagnosticRpcClient,characterId:string,nodeId:string|null,encounterId:string|null){
   if(!nodeId)throw new Error('Combat2 diagnostic recording requires a node');
+  // A finished recording still holds an unexported client buffer; never silently overwrite it.
+  const retained=recoverableCombat2Recording();
+  if(retained&&isCombat2RecordingFinished(retained))throw new Error('A stopped recording is still unexported; export or clear it first');
   const {data,error}=await client.rpc('combat2_diagnostic_start',{_character_id:characterId,_node_id:nodeId,_encounter_id:encounterId});
   const value=row(data); if(error||value?.ok!==true||value.kind!=='started'||typeof value.session_id!=='string')throw new Error(error?.message??'Diagnostic start refused');
   return startCombat2Recording(characterId,nodeId,encounterId,Date.now(),value.session_id);
 }
 export async function stopCombat2ServerRecording(client:DiagnosticRpcClient,sessionId:string){
   const {data,error}=await client.rpc('combat2_diagnostic_stop',{_session_id:sessionId}); const value=row(data);
-  if(error||value?.ok!==true||value.kind!=='stopped')throw new Error(error?.message??'Diagnostic stop refused'); return stopCombat2Recording();
+  if(error||value?.ok!==true||value.kind!=='stopped')throw new Error(error?.message??'Diagnostic stop refused');
+  return stopCombat2Recording(sessionId);
 }
 export async function exportCombat2ServerRecording(client:DiagnosticRpcClient,recording:Combat2DiagnosticRecording){
   const {data,error}=await client.rpc('combat2_diagnostic_export',{_session_id:recording.sessionId}); const value=row(data);
@@ -86,10 +104,18 @@ export async function exportCombat2ServerRecording(client:DiagnosticRpcClient,re
   return buildCombat2DiagnosticExport(recording,serverEvents);
 }
 
-export function stopCombat2Recording(): Combat2DiagnosticRecording | null {
+/**
+ * Stopping is idempotent and fenced: a late response for an older session can
+ * never finish a newer recording.
+ */
+export function stopCombat2Recording(sessionId?: string): Combat2DiagnosticRecording | null {
   const recording = safeRead();
-  if (recording) write({ ...recording, expiresAt: new Date().toISOString() });
-  return recording;
+  if (!recording) return null;
+  if (sessionId !== undefined && recording.sessionId !== sessionId) return null;
+  if (isCombat2RecordingFinished(recording)) return recording;
+  const stopped = { ...recording, expiresAt: new Date().toISOString() };
+  write(stopped);
+  return stopped;
 }
 
 export function clearCombat2Recording(): void { write(null); }

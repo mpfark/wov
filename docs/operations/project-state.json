@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-21T06:41:04Z",
-  "based_on_source_sha": "37da09df77aa2b1c64a6f4fe1743dd251fb2b129",
+  "updated_at": "2026-09-21T11:30:00Z",
+  "based_on_source_sha": "299305fc02fe85bab66f840319b171d100341e87",
   "status_vocabulary": ["authored", "committed", "pushed", "installed", "deployed", "ready_for_manual_publish", "manually_published", "blocked", "unknown"],
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "37da09df77aa2b1c64a6f4fe1743dd251fb2b129",
-    "timestamp": "2026-09-21T06:41:04Z",
+    "sha": "299305fc02fe85bab66f840319b171d100341e87",
+    "timestamp": "2026-09-21T11:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main fast-forwarded cleanly to origin/main; b997a49d95b17b9e9a3a546a199cd64cfc7bac22 is an ancestor and the subsequent deployment-status commit was preserved.",
-    "reporting_actor": "Codex",
+    "evidence": "Synchronized from origin/main with a clean worktree; eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 is an ancestor and no unrelated pending source change existed. The Stop/Export recovery correction is committed on top.",
+    "reporting_actor": "Lovable",
     "directly_verified": true
   },
   "database_migrations": [
@@ -68,14 +68,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "ready_for_manual_publish",
+    "status": "manually_published",
     "artifact": "diagnostic admin overlay",
-    "sha": null,
-    "timestamp": "2026-09-21T06:41:04Z",
-    "evidence_type": "build",
-    "evidence": "The source-quality gate passed focused diagnostics, dispatcher, Test Arena and Edge packaging tests; clean root/application TypeScript; Edge parity; and a production build. No publication was performed; only Mik may publish the frontend manually.",
-    "reporting_actor": "Codex",
-    "directly_verified": true
+    "sha": "eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1",
+    "timestamp": "2026-09-21T07:45:00Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Mik reports that frontend source checkpoint eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 was manually published through Lovable. Operator-reported only; not independently verified. The later Stop/Export recovery correction is NOT published.",
+    "reporting_actor": "Mik",
+    "directly_verified": false
   },
   "combat2_operational_work": [
     {
@@ -96,6 +96,26 @@
       "evidence_type": "tests",
       "evidence": "The four reported application TypeScript errors were corrected with type-only/dead-code/test-fixture changes; the intended Stop Recording wording and current reset/RPC contracts are reflected by the focused test. Both root and application TypeScript now pass from a clean non-incremental check.",
       "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "diagnostic-stop-export-recovery",
+      "status": "ready_for_manual_publish",
+      "sha": "299305fc02fe85bab66f840319b171d100341e87",
+      "timestamp": "2026-09-21T11:30:00Z",
+      "evidence_type": "tests",
+      "evidence": "Frontend-only correction of the Stop/Export render loop (React error #301): the recording read is now pure, stopped and expired recordings are retained for reload recovery and export, Stop is ref-fenced to one RPC per click and session-fenced against late responses, server-export failure falls back to a local client-only export with a recoverable message, and Start refuses to overwrite an unexported stopped session. Committed bounds (5 minutes, 500 client events, 2000 server events) and admin-only access unchanged. Not published; publication is Mik-only.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "failed-live-diagnostic-2026-09-21",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-21T11:25:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Session 55ff81c5-3734-498f-a8e5-66cab7a33c86 (started 07:48:16Z, stop committed 07:52:15Z) persisted zero server events because it was scoped to node f6920091, which held no creature or encounter. Read-only inspection shows the scheduler fired every 2s and the dispatcher returned 200, yet no tick was committed in the window (no node_tick_log rows after 07:40Z; the active encounter stayed at tick 20 with unconsumed pending events and an unresolved queued departure). The failing boundary lies between claim acquisition and commit inside the worker, and remains unproven pending an authorized instrumented run. The creature's stale HP came from a pre-existing node_creature row at another node, untouched.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -146,9 +166,9 @@
       "identity": "combat2-live-latency",
       "status": "unknown",
       "sha": null,
-      "timestamp": null,
+      "timestamp": "2026-09-21T11:25:00Z",
       "evidence_type": "none",
-      "evidence": "Live latency has not been measured; no diagnostic recording or gameplay invocation was authorized.",
+      "evidence": "Still unmeasured. The 2026-09-21 live attempt produced no usable timing: the recording was scoped to a node with no combat work, the server stream is empty, and Combat2 committed no tick during the window. Neither latency nor the stall cause is fixed or proven.",
       "reporting_actor": "Lovable",
       "directly_verified": false
     }

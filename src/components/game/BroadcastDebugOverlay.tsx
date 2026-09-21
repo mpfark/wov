@@ -3,7 +3,8 @@ import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug'
 import { supabase } from '@/integrations/supabase/client';
 import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity, Download, Square, Circle } from 'lucide-react';
 import { buildCombat2DiagnosticExport, clearCombat2Recording, currentCombat2Recording,
-  exportCombat2ServerRecording, startCombat2ServerRecording, stopCombat2ServerRecording } from '@/features/combat2/diagnostics';
+  exportCombat2ServerRecording, recoverableCombat2Recording, startCombat2ServerRecording,
+  stopCombat2ServerRecording } from '@/features/combat2/diagnostics';
 
 function usePing() {
   const [latency, setLatency] = useState<number | null>(null);
@@ -55,14 +56,46 @@ export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2Ov
   const { entries, clear } = useBroadcastDebug(true);
   const latency = usePing();
   const [, refresh] = useState(0);
+  const [pending, setPending] = useState<'starting'|'stopping'|'exporting'|null>(null);
+  const [failure, setFailure] = useState<string|null>(null);
+  // A ref, not state: repeated clicks inside one React batch must still send exactly one RPC.
+  const busy = useRef(false);
+  const begin=(kind:'starting'|'stopping'|'exporting')=>{ if(busy.current)return false;
+    busy.current=true; setPending(kind); setFailure(null); return true; };
+  const finish=()=>{ busy.current=false; setPending(null); };
   useEffect(() => { const listener=()=>refresh(v=>v+1); window.addEventListener('combat2-diagnostic-change',listener);
     return()=>window.removeEventListener('combat2-diagnostic-change',listener); },[]);
+  // `currentCombat2Recording` is a pure read; a stopped or expired recording stays
+  // retained in storage so its client buffer survives reload and remains exportable.
+  const stored=recoverableCombat2Recording();
   const recording=currentCombat2Recording();
-  const exportRecording=async()=>{ if(!recording)return;
-    let diagnosticPackage; try{diagnosticPackage=await exportCombat2ServerRecording(supabase,recording);}catch{diagnosticPackage=buildCombat2DiagnosticExport(recording);}
-    const blob=new Blob([JSON.stringify(diagnosticPackage,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
-    link.download=`combat2-diagnostic-${recording.sessionId}.json`; link.click(); URL.revokeObjectURL(url); };
+  const retained=stored&&!recording?stored:null;
+  const exportable=recording??retained;
+  const message=(error:unknown)=>error instanceof Error?error.message:'Unexpected diagnostic failure';
+
+  const startRecording=async()=>{ if(!combat2||!begin('starting'))return;
+    try{ await startCombat2ServerRecording(supabase,combat2.characterId,combat2.nodeId,combat2.encounterId); }
+    catch(error){ setFailure(message(error)); } finally{ finish(); } };
+
+  const stopRecording=async()=>{ if(!recording)return; const sessionId=recording.sessionId;
+    if(!begin('stopping'))return;
+    try{ await stopCombat2ServerRecording(supabase,sessionId); }
+    catch(error){ setFailure(`${message(error)} — the local recording is retained and can still be exported`); }
+    finally{ finish(); } };
+
+  const exportRecording=async()=>{ if(!exportable||!begin('exporting'))return;
+    const target=exportable; let diagnosticPackage; let serverFailure:string|null=null;
+    try{ diagnosticPackage=await exportCombat2ServerRecording(supabase,target); }
+    catch(error){ serverFailure=message(error); }
+    try{
+      // The client buffer is never discarded when the server export fails.
+      diagnosticPackage=diagnosticPackage??buildCombat2DiagnosticExport(target);
+      const blob=new Blob([JSON.stringify(diagnosticPackage,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
+      link.download=`combat2-diagnostic-${target.sessionId}.json`; link.click(); URL.revokeObjectURL(url);
+      if(serverFailure)setFailure(`Server export unavailable (${serverFailure}); exported the local client events only`);
+    }catch(error){ setFailure(`${message(error)} — nothing was discarded; retry the export`); }
+    finally{ finish(); } };
 
   const recent = entries.slice(-30);
   const inCount = entries.filter(e => e.direction === 'in').length;
@@ -118,11 +151,13 @@ export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2Ov
             <p>State: <b className="text-foreground">{combat2.status}</b> · tick {combat2.tick ?? '—'} · cursor {combat2.cursor ?? '—'}</p>
             <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter {combat2.encounterId?.slice(0,8) ?? '—'}</p>
             {combat2.diagnostic && <p role="alert">{combat2.diagnostic}</p>}
+            {retained && <p>Stopped recording retained · {retained.events.length} client events · export or clear it</p>}
+            {failure && <p role="alert">{failure}</p>}
             <div className="flex flex-wrap gap-2 pt-1">
-              {!recording ? <button onClick={()=>void startCombat2ServerRecording(supabase,combat2.characterId,combat2.nodeId,combat2.encounterId)}><Circle className="mr-1 inline h-3 w-3"/>Start</button>
-                : <button onClick={()=>void stopCombat2ServerRecording(supabase,recording.sessionId)}><Square className="mr-1 inline h-3 w-3"/>Stop</button>}
-              <button onClick={clearCombat2Recording}><Trash2 className="mr-1 inline h-3 w-3"/>Clear</button>
-              <button disabled={!recording} onClick={()=>void exportRecording()}><Download className="mr-1 inline h-3 w-3"/>Export</button>
+              {!recording ? <button disabled={pending!==null||retained!==null} onClick={()=>void startRecording()}><Circle className="mr-1 inline h-3 w-3"/>Start</button>
+                : <button disabled={pending!==null} onClick={()=>void stopRecording()}><Square className="mr-1 inline h-3 w-3"/>Stop</button>}
+              <button disabled={pending!==null} onClick={clearCombat2Recording}><Trash2 className="mr-1 inline h-3 w-3"/>Clear</button>
+              <button disabled={pending!==null||!exportable} onClick={()=>void exportRecording()}><Download className="mr-1 inline h-3 w-3"/>Export</button>
             </div>
           </section>}
           {recent.length === 0 && (
