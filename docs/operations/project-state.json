@@ -40,7 +40,17 @@
       "sha": null,
       "timestamp": null,
       "evidence_type": "task_boundary",
-      "evidence": "Explicitly excluded from every authorized installation so far; remains unapplied.",
+      "evidence": "Explicitly excluded from every authorized installation so far; remains unapplied. Its reward-channel columns and node_tick_claim projection patch are the missing half of the proven snapshot_rejected contract defect, but its ADM-025B preflight assertions still abort on live data.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql",
+      "status": "authored",
+      "sha": "4fdb827d6508e1510c7b441e02d21340faf92588",
+      "timestamp": "2026-09-21T22:20:00Z",
+      "evidence_type": "handoff",
+      "evidence": "Forward migration authored and NOT applied (installation was outside this task). It adds only the six creature reward-channel columns the deployed decoder requires (gold_enabled, gold_min, gold_max, gold_chance, salvage_enabled, item_source) with behaviour-preserving values derived from existing loot_mode/loot_table authoring, then regenerates node_tick_claim from its installed definition to emit them, preserving grants, ownership, fixed search_path, locking, claim, lease and idempotency behaviour. No ADM-025B unique mapping, no constraints, triggers, admin RPCs, gameplay-data cleanup or encounter-specific statements. Staged under supabase/pending/ because migration files are written by the migration tool at installation time.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
