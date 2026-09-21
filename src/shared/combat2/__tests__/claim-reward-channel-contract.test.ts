@@ -22,15 +22,20 @@ const abilities = (inventory as { abilities: AuthoredAbilityRecord[] }).abilitie
 const statuses = (inventory as AuthoredAbilityInventory).statuses;
 
 function installedShapeClaim() {
-  const claim = structuredClone(CLAIM) as any;
+  const claim = patchedShapeClaim();
   for (const creature of claim.snapshot.creatures) for (const field of MISSING) delete creature[field];
-  claim.snapshot.boss_configurations = [];
   return claim;
 }
 
 function patchedShapeClaim() {
   const claim = structuredClone(CLAIM) as any;
-  claim.snapshot.boss_configurations = [];
+  claim.snapshot.boss_configurations = claim.snapshot.creatures.map((creature: any) => ({
+    encounter_id: claim.encounter_id,
+    node_creature_id: creature.id,
+    creature_id: creature.creature_id,
+    spawn_seq: creature.spawn_seq,
+    boss_cast: null,
+  }));
   return claim;
 }
 
@@ -97,6 +102,7 @@ describe('installed claim reward-channel contract', () => {
     for (const field of MISSING) expect(sql).toContain(`cr.${field}`);
     expect(sql).toContain('pg_get_functiondef');
     expect(sql).toMatch(/projection marker not found/);
-    expect(sql).not.toMatch(/unique_boss_drop|unique_item_id|CREATE TRIGGER|DELETE FROM/);
+    const statements = sql.split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');
+    expect(statements).not.toMatch(/unique_boss_drop|unique_item_id|unique_drop_chance|CREATE TRIGGER|DELETE FROM|ADM-025B preflight/);
   });
 });
