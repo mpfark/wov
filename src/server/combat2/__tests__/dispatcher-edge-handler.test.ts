@@ -119,6 +119,67 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect(response.status).toBe(200); expect(failing.process).toHaveBeenCalledOnce();
   });
 
+  it('records the refusal, its last reached phase and the per-node result when the worker never commits', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row], [{ session_id: '20000000-0000-4000-8000-000000000001', node_id: NODE, encounter_id: ENCOUNTER }]);
+    fixture.process.mockImplementation(async (_node, deps) => {
+      deps.diagnostic?.({ event: 'claim_attempted', nodeId: NODE, elapsedMs: 0 });
+      deps.diagnostic?.({ event: 'claim_acquired', nodeId: NODE, encounterId: ENCOUNTER, tick: 21, elapsedMs: 3, outcome: 'claimed' });
+      deps.diagnostic?.({ event: 'decode_completed', nodeId: NODE, encounterId: ENCOUNTER, tick: 21, elapsedMs: 5 });
+      return { ok: false, kind: 'resolver_failed', diagnostic: 'boom' };
+    });
+    expect((await fixture.handler(request())).status).toBe(200);
+    await Promise.all(fixture.deferred);
+    expect(fixture.process).toHaveBeenCalledOnce();
+    const persisted = fixture.rpc.mock.calls.find(([name]) => name === 'combat2_diagnostic_record_server_events');
+    const events = persisted?.[1]._events as Array<Record<string, unknown>>;
+    expect(events.map((event) => event.event_type)).toEqual([
+      'dispatcher_requested', 'claim_attempted', 'claim_acquired', 'decode_completed', 'claim_refused']);
+    expect(events.at(-1)?.outcome).toBe('resolver_failed after decode_completed');
+    expect(JSON.stringify(fixture.log.mock.calls)).toContain('resolver_failed');
+  });
+
+  it('records evidence from a finally path when the worker throws, without changing the gameplay result', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row], [{ session_id: '20000000-0000-4000-8000-000000000001', node_id: NODE, encounter_id: ENCOUNTER }]);
+    fixture.process.mockImplementation(async (_node, deps) => {
+      deps.diagnostic?.({ event: 'claim_attempted', nodeId: NODE, elapsedMs: 0 });
+      throw Object.assign(new Error('database transport failed'), { code: '57014' });
+    });
+    const response = await fixture.handler(request());
+    await Promise.all(fixture.deferred);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ summary: { worker_exception: 1 } });
+    const persisted = fixture.rpc.mock.calls.find(([name]) => name === 'combat2_diagnostic_record_server_events');
+    const events = persisted?.[1]._events as Array<Record<string, unknown>>;
+    expect(events.at(-1)).toMatchObject({ event_type: 'claim_refused', outcome: 'worker_exception:57014 after claim_attempted' });
+  });
+
+  it('resolves recording sessions before the worker runs and keeps the batch within the committed bound', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row], [{ session_id: '20000000-0000-4000-8000-000000000001', node_id: NODE, encounter_id: ENCOUNTER }]);
+    const order: string[] = [];
+    fixture.rpc.mockImplementation(async (name: string) => {
+      order.push(name);
+      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
+      if (name === 'combat2_diagnostic_sessions_for_candidates') {
+        return { data: [{ session_id: '20000000-0000-4000-8000-000000000001', node_id: NODE, encounter_id: ENCOUNTER }], error: null };
+      }
+      return { data: { ok: true, kind: 'recorded' }, error: null };
+    });
+    fixture.process.mockImplementation(async (_node, deps) => {
+      order.push('worker');
+      for (let index = 0; index < 60; index += 1) deps.diagnostic?.({ event: 'claim_attempted', nodeId: NODE, elapsedMs: 0 });
+      return { ok: true, kind: 'in_flight' };
+    });
+    expect((await fixture.handler(request())).status).toBe(200);
+    await Promise.all(fixture.deferred);
+    expect(order.indexOf('combat2_diagnostic_sessions_for_candidates')).toBeLessThan(order.indexOf('worker'));
+    const persisted = fixture.rpc.mock.calls.find(([name]) => name === 'combat2_diagnostic_record_server_events');
+    expect((persisted?.[1]._events as unknown[]).length).toBe(32);
+    expect(fixture.process).toHaveBeenCalledOnce();
+  });
+
   it('redacts both secrets from response and logs', async () => {
     const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
     const fixture = setup([row]);
