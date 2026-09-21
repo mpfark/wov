@@ -206,9 +206,9 @@
       "identity": "combat2-live-latency",
       "status": "unknown",
       "sha": null,
-      "timestamp": "2026-09-21T11:25:00Z",
+      "timestamp": "2026-09-21T22:35:00Z",
       "evidence_type": "none",
-      "evidence": "Still unmeasured. The 2026-09-21 live attempt produced no usable timing: the recording was scoped to a node with no combat work, the server stream is empty, and Combat2 committed no tick during the window. Neither latency nor the stall cause is fixed or proven.",
+      "evidence": "Still unmeasured. The 2026-09-21 live attempts produced no usable timing. The installed claim contract is now corrected in Cloud, but no live tick has been observed and no recording was authorized, so live Combat2 behaviour remains unproven.",
       "reporting_actor": "Lovable",
       "directly_verified": false
     }
