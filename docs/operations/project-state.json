@@ -58,10 +58,10 @@
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-    "timestamp": "2026-09-20T23:41:30Z",
+    "sha": "b795de05c41ef399788f8c30e2a0bda741de834b",
+    "timestamp": "2026-09-21T22:31:00Z",
     "evidence_type": "cloud_inspection",
-    "evidence": "Regenerated from the installed schema; declarations contain combat2_diagnostic_session, combat2_diagnostic_server_event and the five installed diagnostic RPC signatures.",
+    "evidence": "Regenerated from the installed schema, not hand-edited. Declarations contain the six new creature reward-channel fields (gold_enabled, gold_min, gold_max, gold_chance, salvage_enabled, item_source) in the creatures Row/Insert/Update shapes, plus combat2_diagnostic_session, combat2_diagnostic_server_event and the five installed diagnostic RPC signatures.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
