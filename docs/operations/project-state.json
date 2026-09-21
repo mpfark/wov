@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-21T12:05:00Z",
-  "based_on_source_sha": "a0516837972791c87356ea12b7fdaa74e5910203",
+  "updated_at": "2026-09-21T22:20:00Z",
+  "based_on_source_sha": "4fdb827d6508e1510c7b441e02d21340faf92588",
   "status_vocabulary": ["authored", "committed", "pushed", "installed", "deployed", "ready_for_manual_publish", "manually_published", "blocked", "unknown"],
   "repository": {
     "status": "pushed",
