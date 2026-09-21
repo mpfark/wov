@@ -99,6 +99,26 @@
       "directly_verified": true
     },
     {
+      "identity": "diagnostic-stop-export-recovery",
+      "status": "ready_for_manual_publish",
+      "sha": "299305fc02fe85bab66f840319b171d100341e87",
+      "timestamp": "2026-09-21T11:30:00Z",
+      "evidence_type": "tests",
+      "evidence": "Frontend-only correction of the Stop/Export render loop (React error #301): the recording read is now pure, stopped and expired recordings are retained for reload recovery and export, Stop is ref-fenced to one RPC per click and session-fenced against late responses, server-export failure falls back to a local client-only export with a recoverable message, and Start refuses to overwrite an unexported stopped session. Committed bounds (5 minutes, 500 client events, 2000 server events) and admin-only access unchanged. Not published; publication is Mik-only.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "failed-live-diagnostic-2026-09-21",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-21T11:25:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Session 55ff81c5-3734-498f-a8e5-66cab7a33c86 (started 07:48:16Z, stop committed 07:52:15Z) persisted zero server events because it was scoped to node f6920091, which held no creature or encounter. Read-only inspection shows the scheduler fired every 2s and the dispatcher returned 200, yet no tick was committed in the window (no node_tick_log rows after 07:40Z; the active encounter stayed at tick 20 with unconsumed pending events and an unresolved queued departure). The failing boundary lies between claim acquisition and commit inside the worker, and remains unproven pending an authorized instrumented run. The creature's stale HP came from a pre-existing node_creature row at another node, untouched.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
       "identity": "ADM-025B",
       "status": "blocked",
       "sha": null,
