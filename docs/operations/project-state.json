@@ -6,11 +6,11 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "37da09df77aa2b1c64a6f4fe1743dd251fb2b129",
-    "timestamp": "2026-09-21T06:41:04Z",
+    "sha": "299305fc02fe85bab66f840319b171d100341e87",
+    "timestamp": "2026-09-21T11:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main fast-forwarded cleanly to origin/main; b997a49d95b17b9e9a3a546a199cd64cfc7bac22 is an ancestor and the subsequent deployment-status commit was preserved.",
-    "reporting_actor": "Codex",
+    "evidence": "Synchronized from origin/main with a clean worktree; eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 is an ancestor and no unrelated pending source change existed. The Stop/Export recovery correction is committed on top.",
+    "reporting_actor": "Lovable",
     "directly_verified": true
   },
   "database_migrations": [
