@@ -97,12 +97,15 @@ describe('installed claim reward-channel contract', () => {
     expect(commits).toHaveLength(1);
   });
 
-  it('the authored forward migration repairs the projection without ADM-025B work', () => {
-    const sql = readFileSync('supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql', 'utf8');
-    for (const field of MISSING) expect(sql).toContain(`cr.${field}`);
-    expect(sql).toContain('pg_get_functiondef');
-    expect(sql).toMatch(/projection marker not found/);
-    const statements = sql.split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');
+  it('the installed forward migration repairs the projection without ADM-025B work', () => {
+    const staged = readFileSync('supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql', 'utf8');
+    const installed = readFileSync('supabase/migrations/20260921223049_274ba4d5-ba04-41c3-90fd-ab79cd77b566.sql', 'utf8');
+    expect(staged).toBe(installed);
+    for (const field of MISSING) expect(installed).toContain(`cr.${field}`);
+    expect(installed).toContain('pg_get_functiondef');
+    expect(installed).toContain('node_tick_claim_without_canary_gate(uuid,integer)');
+    expect(installed).toMatch(/projection marker not found/);
+    const statements = installed.split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');
     expect(statements).not.toMatch(/unique_boss_drop|unique_item_id|unique_drop_chance|CREATE TRIGGER|DELETE FROM|ADM-025B preflight/);
   });
 });
