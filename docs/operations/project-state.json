@@ -6,10 +6,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "4fdb827d6508e1510c7b441e02d21340faf92588",
-    "timestamp": "2026-09-21T22:20:00Z",
+    "sha": "b795de05c41ef399788f8c30e2a0bda741de834b",
+    "timestamp": "2026-09-21T22:35:00Z",
     "evidence_type": "repository",
-    "evidence": "Local HEAD equalled origin/main at 4fdb827d6508e1510c7b441e02d21340faf92588 with a clean worktree; 84024d55355353c80e819712b1fe6272dea1d92a, d91f4eca098a24e411de907d5c6d81d644d82993, 503f9e3a and eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 are ancestors. Reconciliation note: the previously reported correction SHA a0516837972791c87356ea12b7fdaa74e5910203 does not exist in this repository; the dispatcher failure-instrumentation source (per-node classification logging, sessions resolved before the worker, evidence persisted from a finally path) is nevertheless present byte-for-byte in supabase/functions/combat2-dispatch-once/handler.ts on origin/main, so the deployed instrumentation is represented in GitHub under different commit identities.",
+    "evidence": "SOURCE PRESERVATION CONFIRMED before installation: the previously local-only correction commits reached origin/main. At task start local HEAD equalled origin/main at d70da9df6395ab19c2929af4c024fdec6a4d6a50, which descends from 7b6685eb359258074338945efcd106a1df5f106f, 12de551fb and 6860bf52c; worktree clean, no force-push, no history rewrite. Ancestors also present: 4fdb827d, 84024d55, d91f4eca, 503f9e3a, eff0880aa. Installation-turn commits advance local HEAD to b795de05c41ef399788f8c30e2a0bda741de834b, which must still be pushed to origin/main. Reconciliation note retained: correction SHA a0516837972791c87356ea12b7fdaa74e5910203 does not exist in this repository, yet the dispatcher failure-instrumentation source is present byte-for-byte in supabase/functions/combat2-dispatch-once/handler.ts on origin/main.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
