@@ -173,6 +173,16 @@
       "directly_verified": true
     },
     {
+      "identity": "combat2-preserved-stalled-encounter",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-21T11:57:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Observed 2026-09-21T11:57Z, read-only and untouched: combat_mode open, encounter 2e7249d4 on node f45a8b21 active at tick 20 with claimed_tick 21, state_version 29, intent_cutoff_seq 99, next_due_at long past, and claim_expires_at renewed within the same second as observation. One present fighter. Diagnostic session 60b1f158 (node and encounter correctly scoped, 11:47:41Z-11:47:54Z) persisted zero server events. Volatile; preserved as diagnostic evidence and not corrected.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
       "identity": "combat2-live-latency",
       "status": "unknown",
       "sha": null,
