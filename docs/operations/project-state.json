@@ -6,10 +6,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
-    "timestamp": "2026-09-21T12:05:00Z",
+    "sha": "4fdb827d6508e1510c7b441e02d21340faf92588",
+    "timestamp": "2026-09-21T22:20:00Z",
     "evidence_type": "repository",
-    "evidence": "Synchronized from origin/main (d91f4eca098a24e411de907d5c6d81d644d82993) with a clean worktree; 503f9e3a and eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 are ancestors and no unrelated pending source change existed. The dispatcher failure-instrumentation correction is committed on top; this project-state commit follows it.",
+    "evidence": "Local HEAD equalled origin/main at 4fdb827d6508e1510c7b441e02d21340faf92588 with a clean worktree; 84024d55355353c80e819712b1fe6272dea1d92a, d91f4eca098a24e411de907d5c6d81d644d82993, 503f9e3a and eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 are ancestors. Reconciliation note: the previously reported correction SHA a0516837972791c87356ea12b7fdaa74e5910203 does not exist in this repository; the dispatcher failure-instrumentation source (per-node classification logging, sessions resolved before the worker, evidence persisted from a finally path) is nevertheless present byte-for-byte in supabase/functions/combat2-dispatch-once/handler.ts on origin/main, so the deployed instrumentation is represented in GitHub under different commit identities.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
