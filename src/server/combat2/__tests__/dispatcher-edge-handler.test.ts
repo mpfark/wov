@@ -8,6 +8,12 @@ const ENCOUNTER = '10000000-0000-4000-8000-000000000101';
 const SERVICE_KEY = 'server-only-secret';
 const WORKER_SECRET = 'invocation-only-secret';
 
+function rowEventType(value: unknown): unknown {
+  return value !== null && typeof value === 'object' && 'event_type' in value
+    ? value.event_type
+    : undefined;
+}
+
 function request(body: string | null = '{}', authorization = `Bearer ${WORKER_SECRET}`): Request {
   return new Request('http://local/combat2-dispatch-once', {
     method: 'POST',
@@ -17,7 +23,7 @@ function request(body: string | null = '{}', authorization = `Bearer ${WORKER_SE
 }
 
 function setup(candidates: unknown[] = [], sessions: unknown[] = []) {
-  const rpc = vi.fn(async (name: string) => name === 'combat2_due_nodes'
+  const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => name === 'combat2_due_nodes'
     ? { data: { ok: true, kind: 'candidates', candidates }, error: null }
     : name === 'combat2_diagnostic_sessions_for_candidates' ? {data:sessions,error:null}
     : { data: {ok:true,kind:'recorded'}, error: null });
@@ -94,7 +100,8 @@ describe('combat2-dispatch-once Edge handler', () => {
     await Promise.all(fixture.deferred);
     expect(fixture.process).toHaveBeenCalledOnce();
     const persisted=fixture.rpc.mock.calls.find(([name])=>name==='combat2_diagnostic_record_server_events');
-    expect(persisted?.[1]._events.map((event: {event_type:string})=>event.event_type)).toEqual([
+    const persistedEvents=persisted?.[1]._events;
+    expect(Array.isArray(persistedEvents) ? persistedEvents.map(event=>rowEventType(event)) : persistedEvents).toEqual([
       'dispatcher_requested','claim_attempted','claim_acquired','decode_completed','resolve_completed','commit_attempted','commit_completed']);
   });
 

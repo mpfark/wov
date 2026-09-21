@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-20T23:45:00Z",
-  "based_on_source_sha": "e98635446a7aac8853eb024920479547537a1dfe",
+  "updated_at": "2026-09-21T06:41:04Z",
+  "based_on_source_sha": "37da09df77aa2b1c64a6f4fe1743dd251fb2b129",
   "status_vocabulary": ["authored", "committed", "pushed", "installed", "deployed", "ready_for_manual_publish", "manually_published", "blocked", "unknown"],
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-    "timestamp": "2026-09-20T23:45:00Z",
+    "sha": "37da09df77aa2b1c64a6f4fe1743dd251fb2b129",
+    "timestamp": "2026-09-21T06:41:04Z",
     "evidence_type": "repository",
-    "evidence": "Local HEAD matched the authorized checkpoint with a clean worktree; bd0a2aca976891d6f0849cd53f5b8e8260b70aa4 is an ancestor and the project-state commit is present.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local main fast-forwarded cleanly to origin/main; b997a49d95b17b9e9a3a546a199cd64cfc7bac22 is an ancestor and the subsequent deployment-status commit was preserved.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
@@ -70,11 +70,11 @@
   "frontend_publication": {
     "status": "ready_for_manual_publish",
     "artifact": "diagnostic admin overlay",
-    "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-    "timestamp": "2026-09-20T23:44:00Z",
+    "sha": null,
+    "timestamp": "2026-09-21T06:41:04Z",
     "evidence_type": "build",
-    "evidence": "Production build passed. No publication was performed; only Mik may publish the frontend manually.",
-    "reporting_actor": "Lovable",
+    "evidence": "The source-quality gate passed focused diagnostics, dispatcher, Test Arena and Edge packaging tests; clean root/application TypeScript; Edge parity; and a production build. No publication was performed; only Mik may publish the frontend manually.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
@@ -90,12 +90,12 @@
     },
     {
       "identity": "application-typecheck-defects",
-      "status": "blocked",
-      "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-      "timestamp": "2026-09-20T23:43:00Z",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-09-21T06:41:04Z",
       "evidence_type": "tests",
-      "evidence": "Four pre-existing tsconfig.app.json errors and one pre-existing Test Arena wording test failure exist at the authorized checkpoint; repairing them was outside this task's scope.",
-      "reporting_actor": "Lovable",
+      "evidence": "The four reported application TypeScript errors were corrected with type-only/dead-code/test-fixture changes; the intended Stop Recording wording and current reset/RPC contracts are reflected by the focused test. Both root and application TypeScript now pass from a clean non-incremental check.",
+      "reporting_actor": "Codex",
       "directly_verified": true
     },
     {
@@ -113,11 +113,11 @@
     {
       "identity": "diagnostic-frontend-publication",
       "status": "ready_for_manual_publish",
-      "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-      "timestamp": "2026-09-20T23:44:00Z",
+      "sha": null,
+      "timestamp": "2026-09-21T06:41:04Z",
       "evidence_type": "handoff",
-      "evidence": "Cloud installation and dispatcher deployment are complete; frontend publication remains Mik-only and has not been performed.",
-      "reporting_actor": "Lovable",
+      "evidence": "Cloud installation and dispatcher deployment remain recorded from Lovable evidence. The local source-quality gate is green; frontend publication remains Mik-only and has not been performed.",
+      "reporting_actor": "Codex",
       "directly_verified": true
     }
   ],

@@ -268,8 +268,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const actionEpoch = `${activeCombat2Presentation?.encounterId}:${activeCombat2Presentation?.stateVersion}:${combat2.actionsReady}:${ownership.locked}`;
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;
-  const isCombat2TestArena = !!character.current_node_id
-    && COMBAT2_TEST_ARENA.nodes.some(node => node.id === character.current_node_id);
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
     ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
     : null, [activeCombat2Presentation]);

@@ -56,7 +56,7 @@ export function currentCombat2Recording(now = Date.now()): Combat2DiagnosticReco
   return recording;
 }
 
-export function startCombat2Recording(characterId: string, nodeId: string | null, encounterId: string | null, now = Date.now(), sessionId = crypto.randomUUID()): Combat2DiagnosticRecording {
+export function startCombat2Recording(characterId: string, nodeId: string | null, encounterId: string | null, now = Date.now(), sessionId: string = crypto.randomUUID()): Combat2DiagnosticRecording {
   const recording: Combat2DiagnosticRecording = { version: 1, sessionId,
     startedAt: new Date(now).toISOString(), expiresAt: new Date(now + COMBAT2_DIAGNOSTIC_DURATION_MS).toISOString(),
     characterId, nodeId, encounterId, events: [], dropped: 0 };
