@@ -2827,11 +2827,16 @@ export type Database = {
           description: string
           died_at: string | null
           drop_chance: number
+          gold_chance: number
+          gold_enabled: boolean
+          gold_max: number
+          gold_min: number
           hp: number
           id: string
           is_aggressive: boolean
           is_alive: boolean
           is_humanoid: boolean
+          item_source: string
           last_damaged_at: string | null
           level: number
           loot_mode: string
@@ -2843,6 +2848,7 @@ export type Database = {
           rarity: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds: number
           rewards_awarded_at: string | null
+          salvage_enabled: boolean
           spawn_seq: number
           stats: Json
         }
@@ -2856,11 +2862,16 @@ export type Database = {
           description?: string
           died_at?: string | null
           drop_chance?: number
+          gold_chance?: number
+          gold_enabled?: boolean
+          gold_max?: number
+          gold_min?: number
           hp?: number
           id?: string
           is_aggressive?: boolean
           is_alive?: boolean
           is_humanoid?: boolean
+          item_source?: string
           last_damaged_at?: string | null
           level?: number
           loot_mode?: string
@@ -2872,6 +2883,7 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
           rewards_awarded_at?: string | null
+          salvage_enabled?: boolean
           spawn_seq?: number
           stats?: Json
         }
@@ -2885,11 +2897,16 @@ export type Database = {
           description?: string
           died_at?: string | null
           drop_chance?: number
+          gold_chance?: number
+          gold_enabled?: boolean
+          gold_max?: number
+          gold_min?: number
           hp?: number
           id?: string
           is_aggressive?: boolean
           is_alive?: boolean
           is_humanoid?: boolean
+          item_source?: string
           last_damaged_at?: string | null
           level?: number
           loot_mode?: string
@@ -2901,6 +2918,7 @@ export type Database = {
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
           rewards_awarded_at?: string | null
+          salvage_enabled?: boolean
           spawn_seq?: number
           stats?: Json
         }
