@@ -139,6 +139,16 @@
       "directly_verified": true
     },
     {
+      "identity": "combat2-snapshot-rejected-root-cause",
+      "status": "authored",
+      "sha": "4fdb827d6508e1510c7b441e02d21340faf92588",
+      "timestamp": "2026-09-21T22:20:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ROOT CAUSE PROVEN, installed SQL contract is behind the deployed worker. The bounded recording showed claim_attempted -> claim_acquired (tick 21) -> snapshot_rejected, 9 cycles, tick frozen at 20. Read-only inspection of the installed public.node_tick_claim chain (node_tick_claim -> node_tick_claim_without_boss_timing -> node_tick_claim_without_canary_gate) shows the creature projection emits id, creature_id, spawn_seq, hp, is_alive, pending_action, tank_fighter_id, engaged, name, level, max_hp, ac, stats, rarity, is_humanoid, is_aggressive, boss_crit_flavors, boss_death_cry, loot_mode, loot_table_id, drop_chance and loot_table only. public.creatures has no gold_enabled, gold_min, gold_max, gold_chance, salvage_enabled or item_source column. The fail-closed decoder in src/shared/combat2/decode.ts (decodeCreature) requires all six, so it rejects every claim at snapshot.creatures[i].gold_enabled (expected boolean), .gold_min/.gold_max/.gold_chance (expected finite number), .salvage_enabled (expected boolean) and .item_source (expected non-empty string); decode never returns, so resolve and commit are unreachable. The fields are added only by the unapplied 20260915200000 reward-channels migration, whose ADM-025B assertions abort. No decoder weakening was performed: nothing may fabricate reward configuration. Correction delivered as an authored, unapplied contract-only forward migration plus a regression fixture reproducing the sanitized installed shape. Not live-verified: no tick has committed beyond 20.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
       "identity": "ADM-025B",
       "status": "blocked",
       "sha": null,
