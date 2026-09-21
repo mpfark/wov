@@ -24,6 +24,10 @@ export interface Combat2DispatchHandlerDependencies {
 interface DiagnosticSession { session_id: string; node_id: string; encounter_id: string }
 interface DiagnosticEvent { event_type: string; node_id: string; encounter_id?: string; tick?: number; outcome?: string; elapsed_ms: number }
 
+function object(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
@@ -70,6 +74,37 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
     catch { return failure('environment_failure', 'privileged transport is unavailable', 500); }
 
     const candidatesByNode = new Map<string,string>();
+
+    /**
+     * Sessions are resolved BEFORE the worker runs. A worker that rejects or
+     * throws must still leave evidence, and a recording that expires during the
+     * run must not silently discard the phases already collected.
+     */
+    const relevantSessions = async (nodeId: string, encounterId?: string): Promise<DiagnosticSession[]> => {
+      if (!encounterId) return [];
+      try {
+        const lookup = await client.rpc('combat2_diagnostic_sessions_for_candidates',
+          { _candidates: [{ node_id: nodeId, encounter_id: encounterId }] });
+        if (lookup.error || !Array.isArray(lookup.data)) return [];
+        return (lookup.data as DiagnosticSession[]).filter(s => s.node_id === nodeId && s.encounter_id === encounterId);
+      } catch { return []; }
+    };
+
+    /** Best effort, bounded and deferred. A diagnostic failure never reaches gameplay. */
+    const persistEvidence = (sessions: DiagnosticSession[], events: DiagnosticEvent[]): void => {
+      if (sessions.length === 0 || events.length === 0) return;
+      const batch = events.slice(0, 32);
+      const work = Promise.all(sessions.map(session => Promise.resolve(
+        client.rpc('combat2_diagnostic_record_server_events', { _session_id: session.session_id, _events: batch }),
+      ).catch(() => undefined))).then(() => undefined);
+      if (deps.defer) deps.defer(work); else void work.catch(() => undefined);
+    };
+
+    const failureClass = (error: unknown): string => {
+      const value = object(error);
+      return typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : 'unknown';
+    };
+
     const result = await dispatchNodeTicksOnce({
       async discoverDueNodes(limit) {
         const { data, error } = await client.rpc('combat2_due_nodes', { _limit: limit });
@@ -79,51 +114,56 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
         return data;
       },
       processNode: async (nodeId) => {
+        const encounterId = candidatesByNode.get(nodeId);
         const events: DiagnosticEvent[]=[];
         const invocationId=crypto.randomUUID();
-        events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:candidatesByNode.get(nodeId),outcome:invocationId,elapsed_ms:0});
-        const workerResult=await deps.processNodeTickOnce(nodeId, {
-        abilityRecords: deps.abilityRecords,
-        statusRecords: deps.statusRecords,
-        diagnostic: event=>events.push({event_type:event.event,node_id:event.nodeId,encounter_id:event.encounterId,
-          tick:event.tick,outcome:event.outcome,elapsed_ms:event.elapsedMs}),
-        transport: {
-          async claimNode(id) {
-            const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });
-            if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
-            return data;
+        events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:encounterId,outcome:invocationId,elapsed_ms:0});
+        let lastPhase='dispatcher_requested';
+        const sessions = await relevantSessions(nodeId, encounterId);
+        try {
+          const workerResult=await deps.processNodeTickOnce(nodeId, {
+          abilityRecords: deps.abilityRecords,
+          statusRecords: deps.statusRecords,
+          diagnostic: event=>{lastPhase=event.event;events.push({event_type:event.event,node_id:event.nodeId,encounter_id:event.encounterId,
+            tick:event.tick,outcome:event.outcome,elapsed_ms:event.elapsedMs});},
+          transport: {
+            async claimNode(id) {
+              const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });
+              if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
+              return data;
+            },
+            async commitTick(args: CommitTickArgs) {
+              const { data, error } = await client.rpc('node_tick_commit', args as unknown as Record<string, unknown>);
+              if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
+              return data;
+            },
           },
-          async commitTick(args: CommitTickArgs) {
-            const { data, error } = await client.rpc('node_tick_commit', args as unknown as Record<string, unknown>);
-            if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
-            return data;
-          },
-        },
-        });
-        if(!(workerResult.ok&&(workerResult.kind==='committed'||workerResult.kind==='already_committed'))) {
-          events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
-            encounter_id:'encounterId' in workerResult?workerResult.encounterId:candidatesByNode.get(nodeId),
-            tick:'tick' in workerResult?workerResult.tick:undefined,outcome:workerResult.kind,elapsed_ms:0});
+          });
+          if(!(workerResult.ok&&(workerResult.kind==='committed'||workerResult.kind==='already_committed'))) {
+            events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
+              encounter_id:'encounterId' in workerResult?workerResult.encounterId:encounterId,
+              tick:'tick' in workerResult?workerResult.tick:undefined,
+              outcome:`${workerResult.kind} after ${lastPhase}`.slice(0,80),elapsed_ms:0});
+          }
+          return workerResult;
+        } catch (error) {
+          events.push({event_type:lastPhase==='dispatcher_requested'||lastPhase==='claim_attempted'?'claim_refused':'commit_refused',
+            node_id:nodeId,encounter_id:encounterId,
+            outcome:`worker_exception:${failureClass(error)} after ${lastPhase}`.slice(0,80),elapsed_ms:0});
+          throw error;
+        } finally {
+          persistEvidence(sessions, events);
         }
-        const persist=(async()=>{
-          const encounterId=candidatesByNode.get(nodeId);
-          if(!encounterId)return;
-          const lookup=await client.rpc('combat2_diagnostic_sessions_for_candidates',{_candidates:[{node_id:nodeId,encounter_id:encounterId}]});
-          if(lookup.error||!Array.isArray(lookup.data))return;
-          const sessions=(lookup.data as DiagnosticSession[]).filter(s=>s.node_id===nodeId&&s.encounter_id===encounterId);
-          await Promise.all(sessions.map(session=>Promise.resolve(client.rpc('combat2_diagnostic_record_server_events',
-            {_session_id:session.session_id,_events:events})).catch(()=>undefined)));
-        })();
-        if(deps.defer)deps.defer(persist);else void persist.catch(()=>undefined);
-        return workerResult;
       },
     });
 
-    deps.log?.('[combat2-dispatch-once] completed', {
+    deps.log?.('[combat2-dispatch-once] completed', redact({
       classification: result.classification,
       candidateCount: result.candidateCount,
       processedCount: result.processedCount,
-    });
+      summary: result.summary,
+      results: result.results,
+    }, [serviceRoleKey, workerSecret]) as Record<string, unknown>);
     return json(redact(result, [serviceRoleKey, workerSecret]), statusFor(result));
   };
 }

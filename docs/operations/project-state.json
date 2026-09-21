@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-21T11:30:00Z",
-  "based_on_source_sha": "299305fc02fe85bab66f840319b171d100341e87",
+  "updated_at": "2026-09-21T12:05:00Z",
+  "based_on_source_sha": "a0516837972791c87356ea12b7fdaa74e5910203",
   "status_vocabulary": ["authored", "committed", "pushed", "installed", "deployed", "ready_for_manual_publish", "manually_published", "blocked", "unknown"],
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "299305fc02fe85bab66f840319b171d100341e87",
-    "timestamp": "2026-09-21T11:30:00Z",
+    "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
+    "timestamp": "2026-09-21T12:05:00Z",
     "evidence_type": "repository",
-    "evidence": "Synchronized from origin/main with a clean worktree; eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 is an ancestor and no unrelated pending source change existed. The Stop/Export recovery correction is committed on top.",
+    "evidence": "Synchronized from origin/main (d91f4eca098a24e411de907d5c6d81d644d82993) with a clean worktree; 503f9e3a and eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 are ancestors and no unrelated pending source change existed. The dispatcher failure-instrumentation correction is committed on top; this project-state commit follows it.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
@@ -59,10 +59,10 @@
     {
       "identity": "combat2-dispatch-once",
       "status": "deployed",
-      "sha": "e98635446a7aac8853eb024920479547537a1dfe",
-      "timestamp": "2026-09-20T23:43:30Z",
+      "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
+      "timestamp": "2026-09-21T12:04:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Deployed successfully at repository parity; the canonical worker mirror parity check passed and the dispatcher was not invoked afterwards.",
+      "evidence": "Redeployed successfully with the failure-instrumentation correction (per-node classification and reason are now logged, recording sessions are resolved before the worker runs, and phase/refusal/exception evidence is persisted from a finally path within the 32-event batch bound). Edge packaging and worker mirror parity passed; the dispatcher was not invoked afterwards. No cadence, lease, scheduler, resolver or gameplay change.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -115,6 +115,16 @@
       "timestamp": "2026-09-21T11:25:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Session 55ff81c5-3734-498f-a8e5-66cab7a33c86 (started 07:48:16Z, stop committed 07:52:15Z) persisted zero server events because it was scoped to node f6920091, which held no creature or encounter. Read-only inspection shows the scheduler fired every 2s and the dispatcher returned 200, yet no tick was committed in the window (no node_tick_log rows after 07:40Z; the active encounter stayed at tick 20 with unconsumed pending events and an unresolved queued departure). The failing boundary lies between claim acquisition and commit inside the worker, and remains unproven pending an authorized instrumented run. The creature's stale HP came from a pre-existing node_creature row at another node, untouched.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "dispatcher-failure-instrumentation",
+      "status": "deployed",
+      "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
+      "timestamp": "2026-09-21T12:04:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Instrumentation only; no root gameplay fix. Read-only inspection of the preserved encounter 2e7249d4 (node f45a8b21) at 2026-09-21T11:57Z proved the claim boundary succeeds repeatedly (claimed_tick 21 against committed tick 20, claim_expires_at renewed each dispatcher cycle, state_version 29) while no tick commits, so the failing step lies after claim acquisition and at or before commit. The exact step was unprovable because the dispatcher logged only aggregate counts and diagnostic persistence was best-effort after the worker returned. The corrected dispatcher logs per-node classification, reason, stage and code, resolves recording sessions before worker execution, and persists dispatcher selection plus the last reached phase and a sanitized failure classification from a catch/finally path. Worker invocation remains exactly once per candidate; no lock, idempotency, cadence, lease, scheduler or gameplay-rule change.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     },
