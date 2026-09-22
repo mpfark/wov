@@ -25,6 +25,15 @@ for (const source of files(sourceRoot)) {
   writeFileSync(destination, toDeno(readFileSync(source, 'utf8')));
 }
 
+// Formula modules reached by the Combat2 resolver are part of the same Edge
+// bundle boundary. Keep their Deno mirrors generator-owned as well.
+for (const name of ['resources.ts', 'stats.ts', 'classes.ts']) {
+  const source = join(root, 'src/shared/formulas', name);
+  const destination = join(root, 'supabase/functions/_shared/formulas', name);
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, toDeno(readFileSync(source, 'utf8')));
+}
+
 const workerSource = join(root, 'src/server/combat2/process-node-tick-once.ts');
 writeFileSync(join(destinationRoot, 'process-node-tick-once.ts'),
   toDeno(readFileSync(workerSource, 'utf8'))

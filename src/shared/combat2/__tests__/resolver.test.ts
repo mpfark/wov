@@ -184,6 +184,96 @@ const equipped = (overrides: Record<string, unknown> = {}) => ({
 
 
 describe('combat2 resolver', () => {
+  describe('passive CP regeneration', () => {
+    const cpFor = (out: ReturnType<typeof resolveNodeTick>, id: string) =>
+      out.characters.find(row => row.id === id)?.cp;
+
+    it('uses encounter-local even candidate ticks and is deterministic on retry', () => {
+      const odd = snapshot({ encounter: { ...snapshot().encounter, tick: 0, candidate_tick: 1 },
+        fighters: [fighter({ character_id: 'ch-1', cp: 10, max_cp: 50 })] });
+      const even = snapshot({ encounter: { ...odd.encounter, tick: 1, candidate_tick: 2 }, fighters: odd.fighters });
+      expect(cpFor(resolveNodeTick(odd, { abilities }), 'ch-1')).toBeUndefined();
+      const proposal = resolveNodeTick(even, { abilities });
+      expect(cpFor(proposal, 'ch-1')).toBe(12);
+      expect(resolveNodeTick(even, { abilities })).toEqual(proposal);
+      const secondEncounter = snapshot({ encounter: { ...even.encounter, id: 'enc-2' }, fighters: even.fighters });
+      expect(cpFor(resolveNodeTick(secondEncounter, { abilities }), 'ch-1')).toBe(12);
+    });
+
+    it('uses each fighter effective WIS, not INT, and caps at max CP', () => {
+      const input = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 }, fighters: [
+        fighter({ character_id: 'ch-int', int: 30, wis: 10, cp: 10, max_cp: 50 }),
+        fighter({ character_id: 'ch-wis', int: 10, wis: 19, cp: 10, max_cp: 50 }),
+        fighter({ character_id: 'ch-cap', wis: 30, cp: 49, max_cp: 50 }),
+      ] });
+      const out = resolveNodeTick(input, { abilities });
+      expect(cpFor(out, 'ch-int')).toBe(12);
+      expect(cpFor(out, 'ch-wis')).toBe(15);
+      expect(cpFor(out, 'ch-cap')).toBe(50);
+    });
+
+    it('uses equipped WIS for regen and equipped INT+WIS for the authoritative cap', () => {
+      const gear = equipped({ applied_gems: {}, base_stats: { int: 4, wis: 4 }, durability: 10 });
+      const input = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 }, fighters: [
+        fighter({ character_id: 'ch-1', level: 1, int: 10, wis: 10, cp: 30, max_cp: 30,
+          equipment: [gear] }),
+      ] });
+      const out = resolveNodeTick(input, { abilities });
+      expect(cpFor(out, 'ch-1')).toBe(34);
+      expect(out.events).toContainEqual(expect.objectContaining({ kind: 'passive_cp_regen', amount: 4 }));
+    });
+
+    it('does not regenerate dead, departed, non-present, or departing fighters', () => {
+      const input = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 }, fighters: [
+        fighter({ character_id: 'dead', hp: 0, cp: 10 }),
+        fighter({ character_id: 'gone', present: false, cp: 10 }),
+        fighter({ character_id: 'departing', cp: 10 }),
+      ], pending_events: [{ id: 'depart', event_type: 'fighter_depart_requested',
+        actor_character_id: 'departing', actor_creature_id: null, target_character_id: null,
+        target_creature_id: null, payload: {}, occurred_at: NOW }] });
+      const out = resolveNodeTick(input, { abilities });
+      expect(cpFor(out, 'dead')).toBeUndefined();
+      expect(cpFor(out, 'gone')).toBeUndefined();
+      expect(cpFor(out, 'departing')).toBeUndefined();
+      expect(out.events.some(event => event.kind === 'passive_cp_regen')).toBe(false);
+    });
+
+    it('preserves reservations and never performs passive HP regeneration', () => {
+      const reservation = absorbEffect('reserve', 'ch-1', 12, {
+        kind: 'reservation', effect_type: 'cp_reservation', is_reservation: true,
+      });
+      const input = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 },
+        fighters: [fighter({ character_id: 'ch-1', hp: 40, cp: 20, max_cp: 50 })],
+        effects: [reservation] });
+      const out = resolveNodeTick(input, { abilities });
+      expect(cpFor(out, 'ch-1')).toBe(22);
+      expect(out.characters.find(row => row.id === 'ch-1')?.hp).toBeLessThanOrEqual(40);
+      expect(out.effects_delete).not.toContain('reserve');
+      expect(out.effects_update).not.toContainEqual(expect.objectContaining({ id: 'reserve' }));
+    });
+
+    it('uses identical behavior in Test Arena and has no food or Inn input', () => {
+      const normal = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 },
+        fighters: [fighter({ character_id: 'ch-1', cp: 10, max_cp: 50 })] });
+      const arena = snapshot({ ...normal, encounter: { ...normal.encounter, test_arena_id: 'arena-1' } });
+      expect(cpFor(resolveNodeTick(arena, { abilities }), 'ch-1'))
+        .toBe(cpFor(resolveNodeTick(normal, { abilities }), 'ch-1'));
+      expect(JSON.stringify(arena)).not.toMatch(/food|inn/i);
+    });
+
+    it('applies passive regeneration before accepted intent costs', () => {
+      const input = snapshot({ encounter: { ...snapshot().encounter, candidate_tick: 2 },
+        fighters: [fighter({ character_id: 'ch-1', cp: 3, max_cp: 50 })],
+        creatures: [creature({ ac: 1 })],
+        intents: [abilityIntent('intent-after-regen', 1, 'ch-1', 'power_strike', 'cr-1')] });
+      const out = resolveNodeTick(input, { abilities });
+      expect(out.events).toContainEqual(expect.objectContaining({ kind: 'passive_cp_regen', amount: 2 }));
+      expect(out.intent_ids).toContain('intent-after-regen');
+      expect(out.events).toContainEqual(expect.objectContaining({ abilityKey: 'power_strike' }));
+      expect(cpFor(out, 'ch-1')).toBe(0);
+    });
+  });
+
   it('derives equipped stats once and proposes one deterministic durability loss for a landed weapon hit', () => {
     const row = fighter({ character_id: 'ch-1', equipment: [equipped()] });
     const input = snapshot({ fighters: [row], creatures: [creature({ ac: 1 })],

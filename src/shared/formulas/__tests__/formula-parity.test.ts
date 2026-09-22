@@ -49,9 +49,12 @@ describe('Resource caps — fixed snapshots', () => {
     expect(getMaxHp('assassin', 12, 5)).toBe(38); // 16 + 2 (conMod 1 × 2) + 20
   });
   it('CP', () => {
-    expect(getMaxCp(1, 10)).toBe(30);
-    expect(getMaxCp(10, 14)).toBe(69);   // 30 + 27 + 12 (wisMod=2 ×6)
-    expect(getMaxCp(20, 16)).toBe(105);  // 30 + 57 + 18 (wisMod=3 ×6)
+    expect(getMaxCp(1, 10, 10)).toBe(30);
+    expect(getMaxCp(10, 14, 14)).toBe(69);  // 30 + 27 + (2+2) × 3
+    expect(getMaxCp(20, 16, 16)).toBe(105); // 30 + 57 + (3+3) × 3
+    expect(getMaxCp(1, 14, 10)).toBe(36);
+    expect(getMaxCp(1, 10, 14)).toBe(36);
+    expect(getMaxCp(1, 4, 8)).toBe(30);
   });
   it('MP', () => {
     expect(getMaxMp(1, 10)).toBe(100);
@@ -60,7 +63,7 @@ describe('Resource caps — fixed snapshots', () => {
   });
   it('Gear-effective caps add bonuses', () => {
     expect(getEffectiveMaxHp('warrior', 10, 5, { hp: 5 })).toBe(getMaxHp('warrior', 10, 5) + 5);
-    expect(getEffectiveMaxCp(5, 10, { wis: 4 })).toBe(getMaxCp(5, 10) + 12);
+    expect(getEffectiveMaxCp(5, 10, 10, { int: 4, wis: 4 })).toBe(getMaxCp(5, 10, 10) + 12);
     expect(getEffectiveMaxMp(5, 10, { dex: 4 })).toBe(getMaxMp(5, 10) + 20);
   });
 });

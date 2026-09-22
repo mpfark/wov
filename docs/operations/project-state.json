@@ -25,6 +25,16 @@
   },
   "database_migrations": [
     {
+      "identity": "20260922100000_int_wis_max_cp_and_combat2_regen.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "tests",
+      "evidence": "Unapplied forward migration reconciles persisted max_cp and sync_character_resources to the canonical effective INT+WIS formula. It preserves absolute current CP, clamps only above the new maximum, grants no free CP, and does not modify authoritative reservation effects.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "20260921100000_combat2_bounded_diagnostics.sql",
       "status": "installed",
       "sha": "e98635446a7aac8853eb024920479547537a1dfe",
@@ -220,11 +230,31 @@
     },
     {
       "identity": "in-combat-cp-regeneration",
-      "status": "committed",
-      "sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
-      "timestamp": "2026-09-22T08:16:04Z",
-      "evidence_type": "source_audit",
-      "evidence": "The authored rule explicitly pauses passive CP regeneration during combat. Explicit authored CP-restoration effects such as Inspire remain server-authoritative and cap raw CP at max CP; active stance reservations remain separate authoritative effects, so restored raw CP above the reservation stays locked rather than spendable. No gameplay correction was made.",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "tests",
+      "evidence": "Canonical Combat2 resolution now restores WIS-based passive CP on every even encounter-local candidate tick (one four-second opportunity per two committed two-second ticks), before intent costs. Living present non-departing fighters use their own effective WIS and authoritative max CP. Food and Inn are excluded; Inspire remains separate and additive; reservations remain authoritative and passive HP regeneration stays disabled. Edge redeployment is required before this behavior is live.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "int-wis-max-cp-and-ooc-wis-regen",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "tests",
+      "evidence": "Shared, creation, equipment, planning, status and Combat2 calculations use max_cp = 30 + (level-1)*3 + (clamped INT modifier + clamped WIS modifier)*3. Out-of-combat CP regeneration now uses effective WIS while retaining the existing four-second cadence, half-strength browser-local food, milestones, Inn +10, Inspire, rounding and cap behavior.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "authoritative-food-effects",
+      "status": "authored",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "task_boundary",
+      "evidence": "Pending migration and consumption flow. Food remains browser-local and unchanged outside combat, so Combat2 deliberately grants zero food regeneration until the effect is authoritative.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -277,7 +307,7 @@
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "The repository task does not publish the frontend. The smallest follow-up is a passive UI observation after Mik's manual publication; in-combat passive regeneration remains intentionally paused, while stance-outside-combat, global resource settlement and ADM-025B remain separate.",
+    "evidence": "The repository task does not publish the frontend or deploy Edge functions. The next release step must install the unapplied INT+WIS resource migration, redeploy the Combat2 functions identified by dependency containment, and let Mik manually publish the frontend. Authoritative food effects, stance-outside-combat, global resource settlement and ADM-025B remain separate.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

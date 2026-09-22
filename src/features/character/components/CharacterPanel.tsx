@@ -838,9 +838,9 @@ export default function CharacterPanel({
                   const eWis = character.wis + (equipmentBonuses.wis || 0);
                   const eCha = character.cha + (equipmentBonuses.cha || 0);
                   const hpRegen = getStatRegen(eCon) + (itemHpRegen || 0);
-                  const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
+                  const maxCp = getEffectiveMaxCp(character.level, character.int, character.wis, equipmentBonuses);
                   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
-                  const baseCpRegen = getCpRegen(eInt);
+                  const baseCpRegen = getCpRegen(eWis);
                   const mpRegen = getMpRegenRate(eDex);
 
                   // Regen — additive only, no multipliers

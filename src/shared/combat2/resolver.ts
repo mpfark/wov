@@ -13,7 +13,7 @@ import { getPartyXpBonus } from '../combat/pure/party-xp';
 import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat';
 import { getStatModifier } from '../formulas/stats';
 import { effectiveItemStats } from '../formulas/items';
-import { getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp } from '../formulas/resources';
+import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from '../formulas/resources';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
 import { combat2PulseDue, combat2TickTiming, combat2TicksForMs, readCombat2TickTiming } from './time';
@@ -101,7 +101,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       wis: fighter.wis + (bonuses.wis ?? 0), cha: fighter.cha + (bonuses.cha ?? 0),
       ac: getEffectiveAC(fighter.class ?? '', fighter.dex, bonuses, hasShield),
       max_hp: getEffectiveMaxHp(fighter.class ?? '', fighter.con, fighter.level, bonuses),
-      max_cp: getEffectiveMaxCp(fighter.level, fighter.wis, bonuses),
+      max_cp: getEffectiveMaxCp(fighter.level, fighter.int, fighter.wis, bonuses),
       max_mp: getEffectiveMaxMp(fighter.level, fighter.dex, bonuses),
     };
   }) };
@@ -602,6 +602,24 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
           });
         }
       }
+    }
+  }
+
+  // Passive CP regeneration is encounter-local and commit-fenced. Every even
+  // candidate tick is one four-second opportunity; retries reproduce the same
+  // proposal and only a successful atomic commit persists it. Food and Inn are
+  // deliberately absent until they have authoritative Combat2 state.
+  if (tick % 2 === 0) {
+    for (const character of chars.values()) {
+      if (!character.present || character.hp <= 0 || departingCharacters.has(character.fighter.character_id)) continue;
+      const requested = getCpRegen(character.fighter.wis) + getMilestoneCpRegen(character.fighter.level);
+      const restored = Math.min(Math.max(0, character.fighter.max_cp - character.cp), requested);
+      if (restored <= 0) continue;
+      character.cp += restored;
+      character.dirty = true;
+      emit({ kind: 'passive_cp_regen', target: { type: 'character', id: character.fighter.character_id,
+        name: character.fighter.name }, amount: restored,
+      meta: { requested, applied: restored, wasted: requested - restored } });
     }
   }
 

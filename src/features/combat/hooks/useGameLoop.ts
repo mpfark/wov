@@ -234,14 +234,14 @@ export function useGameLoop(params: UseGameLoopParams) {
       // ── CP Regen (skipped during combat to avoid stale-ref race with ability costs) ──
       if (!inCombatRegenRef.current) {
         const { cp, level: cpLevel, int, wis } = cpCharRef.current;
-        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, wis, eqB);
+        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, eqB);
         if (cp < effectiveMaxCp) {
-          const intWithGear = int + (eqB.int || 0);
-          const intRegen = getCpRegen(intWithGear);
+          const wisWithGear = wis + (eqB.wis || 0);
+          const wisRegen = getCpRegen(wisWithGear);
           const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
           const food = foodBuffRef.current;
           const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp)), 1);
+          const regenAmount = Math.max(Math.floor((wisRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp)), 1);
           const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
           if (newCp > cp) {
             updates.cp = newCp;
@@ -264,7 +264,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       if (Object.keys(updates).length > 0) {
         const caps = {
           maxHp: effectiveMaxHp,
-          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.wis, eqB),
+          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, eqB),
           maxMp: effectiveMaxMp,
         };
 
@@ -303,7 +303,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const eqB = equipmentBonusesRef.current;
         const caps = {
           maxHp: getEffectiveMaxHp(regenCharRef.current.class, regenCharRef.current.con, regenCharRef.current.level, eqB),
-          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.wis, eqB),
+          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, eqB),
           maxMp: getEffectiveMaxMp(regenCharRef.current.level, regenCharRef.current.dex, eqB),
         };
         updateCharRegenRef.current(pendingRegenFlushRef.current, caps);

@@ -99,7 +99,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     if (!stats) return;
     setLoading(true);
     try {
-      const maxCp = getMaxCp(1, stats.wis);
+      const maxCp = getMaxCp(1, stats.int, stats.wis);
       const hp = getMaxHp(STARTING_CLASS, stats.con, 1);
       const ac = calculateAC(STARTING_CLASS, stats.dex);
       const char = await onCreateCharacter({

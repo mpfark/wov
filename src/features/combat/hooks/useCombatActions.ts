@@ -221,7 +221,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
 
-      const maxCp = getEffectiveMaxCp(p.character.level, p.character.wis, p.equipmentBonuses);
+      const maxCp = getEffectiveMaxCp(p.character.level, p.character.int, p.character.wis, p.equipmentBonuses);
       const cost = getStanceReserveCost(stanceDef.tier, maxCp);
       const stanceReservedNow = sumStanceReserved(reservedBuffs);
       const usable = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0, stanceReservedNow);

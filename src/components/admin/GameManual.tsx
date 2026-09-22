@@ -213,8 +213,8 @@ Character Stats & Creation
                     <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(3, floor(√mod))</code> min damage.</p>
                     <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(4, floor(√mod))</code> — max crit on 16-20.</p>
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
-                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (via INT modifier), spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
-                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP (via WIS modifier), healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(15%, √mod × 3%)</code>.</p>
+                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Contributes to max CP, spell damage, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Contributes to max CP, controls passive CP regeneration, healing power, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(15%, √mod × 3%)</code>.</p>
                     <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Assassins, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +25%.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
@@ -287,7 +287,7 @@ HP, AC & Regeneration
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
                 <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 2 + floor(√(CON − 10)) + gear + food + milestone + inn</p>
-                <p className="text-amber-400 mt-1"> <strong>In Combat:</strong> All passive regen (HP, CP, Stamina) is paused. Server-driven heals (potions, abilities) still apply.</p>
+                <p className="text-amber-400 mt-1"> <strong>In Combat:</strong> Passive HP and Stamina regeneration are paused. Combat2 restores WIS-based passive CP once every 4 seconds; authored effects remain additive.</p>
                 <p className="mt-1"> <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
                 <p className="mt-1">Example: CON 14 → base regen = <code className="text-primary">{getStatRegen(14)}</code> HP/tick, CON 20 → <code className="text-primary">{getStatRegen(20)}</code> HP/tick</p>
               </div>

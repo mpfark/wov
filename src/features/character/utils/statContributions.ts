@@ -78,9 +78,9 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
   },
   int: {
     full: 'Intelligence',
-    short: 'Arcane power, CP regen, arcane accuracy, Combat Insight',
+    short: 'Concentration pool, arcane accuracy, Combat Insight',
     effects: [
-      { label: 'CP Regen', value: e => fmtRegen(getCpRegen(e)) },
+      { label: 'Max CP contribution', value: (e, lvl) => `${getMaxCp(lvl, e, 10) - getMaxCp(lvl, 10, 10)}` },
       // Combat Insight: INT's secondary to-hit bonus on every attack whose
       // accuracy attribute is not INT (INT-based abilities count INT once).
       { label: 'Combat Insight', value: e => fmtPlus(getIntHitBonus(e)) },
@@ -91,9 +91,10 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
   },
   wis: {
     full: 'Wisdom',
-    short: 'Perception, CP pool, reduces incoming crit chance',
+    short: 'Perception, CP pool and regeneration, reduces incoming crit chance',
     effects: [
-      { label: 'Max CP', value: (e, lvl) => `${getMaxCp(lvl, e)}` },
+      { label: 'CP Regen', value: e => fmtRegen(getCpRegen(e)) },
+      { label: 'Max CP contribution', value: (e, lvl) => `${getMaxCp(lvl, 10, e) - getMaxCp(lvl, 10, 10)}` },
       { label: 'Crit Resistance', value: e => fmtPct(getWisAntiCrit(e)) },
     ],
   },
@@ -122,9 +123,9 @@ if (import.meta.env.DEV) {
   try {
     const probes: Array<[string, () => number]> = [
       ['CON → HP regen', () => getStatRegen(20)],
-      ['INT → CP regen', () => getCpRegen(20)],
+      ['WIS → CP regen', () => getCpRegen(20)],
       ['DEX → MP regen', () => getMpRegenRate(20)],
-      ['WIS → Max CP', () => getMaxCp(10, 20)],
+      ['INT+WIS → Max CP', () => getMaxCp(10, 20, 20)],
       ['DEX → Max MP', () => getMaxMp(10, 20)],
       ['STR → Damage floor', () => getStrDamageFloor(20)],
       ['DEX → Crit bonus', () => getDexCritBonus(20)],

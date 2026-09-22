@@ -79,10 +79,10 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       const maxHp = getEffectiveMaxHp(character.class, stats.con, character.level, equipmentBonuses);
       const ac = getEffectiveAC(character.class, stats.dex, equipmentBonuses, false);
-      const maxCp = getEffectiveMaxCp(character.level, stats.wis, equipmentBonuses);
+      const maxCp = getEffectiveMaxCp(character.level, stats.int, stats.wis, equipmentBonuses);
       const maxMp = getEffectiveMaxMp(character.level, stats.dex, equipmentBonuses);
       const hpRegen = getStatRegen(eCon) + (equipmentBonuses.hp_regen || 0);
-      const cpRegen = getCpRegen(eInt);
+      const cpRegen = getCpRegen(eWis);
       const mpRegen = getMpRegenRate(eDex);
 
       // Autoattacks are weapon-based for every class: DEX drives to-hit,

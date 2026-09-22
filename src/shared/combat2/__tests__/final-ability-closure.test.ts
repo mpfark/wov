@@ -84,11 +84,18 @@ describe('final Combat2 authored ability closure', () => {
     expect(cast.effects_insert).toContainEqual(expect.objectContaining({ kind: 'party_regen',
       ability_key: 'inspire', interval_ms: 2000,
       config: expect.objectContaining({ presence_effect: true, cp_per_tick: expect.any(Number) }) }));
-    const pulse = resolveNodeTick(next(input, cast), deps);
+    const pulseInput = next(input, cast);
+    const pulse = resolveNodeTick(pulseInput, deps);
     const rows = pulse.events.filter(e => e.kind === 'party_restore');
     expect(rows.map(e => e.target?.id)).toEqual(['ally', 'caster']);
     expect(rows.every(e => Number(e.meta?.cpApplied) > 0)).toBe(true);
     expect(rows.some(e => e.target?.id === 'foreign')).toBe(false);
+    for (const id of ['ally', 'caster']) {
+      const before = pulseInput.fighters.find(f => f.character_id === id)!.cp;
+      const explicit = Number(rows.find(e => e.target?.id === id)!.meta?.cpApplied);
+      const passive = pulse.events.find(e => e.kind === 'passive_cp_regen' && e.target?.id === id)!.amount!;
+      expect(pulse.characters.find(row => row.id === id)?.cp).toBe(before + explicit + passive);
+    }
   });
 
   it.each([['bard', 'crescendo'], ['healer', 'purifying_light']] as const)(
