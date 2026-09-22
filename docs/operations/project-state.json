@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T08:16:04Z",
-  "based_on_source_sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
+  "updated_at": "2026-09-22T11:30:00Z",
+  "based_on_source_sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,22 +16,22 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
-    "timestamp": "2026-09-22T08:16:04Z",
+    "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+    "timestamp": "2026-09-22T11:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main fast-forwarded cleanly to origin/main. The previous diagnostic source-quality commit eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 and the latest diagnostic/project-state commits are ancestors of the synchronized source. No history was rewritten.",
-    "reporting_actor": "Codex",
+    "evidence": "Local main equalled origin/main at d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4 with a clean worktree; b3fefa54e7781053c5907539403d70764c3144ce is retained in ancestry. No history rewrite and no force-push. The Lovable-generated migration ledger artifact was committed on top as e89d105f2c7b6bbd6a692d3cd463e600cc8d8e0c.",
+    "reporting_actor": "Lovable",
     "directly_verified": true
   },
   "database_migrations": [
     {
       "identity": "20260922100000_int_wis_max_cp_and_combat2_regen.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": null,
-      "evidence_type": "tests",
-      "evidence": "Unapplied forward migration reconciles persisted max_cp and sync_character_resources to the canonical effective INT+WIS formula. It preserves absolute current CP, clamps only above the new maximum, grants no free CP, and does not modify authoritative reservation effects.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Applied exactly once. Repository file SHA-256 3d2b99b1e08a9ed9b50c677ae1ca130580c6c9c7657395beb9ddefc4011d14f2; Lovable ledger artifact supabase/migrations/20260922112544_a2d63b3d-4f07-4641-a911-f6cf25ee1b45.sql, SHA-256 c821118f6e534dfbe11bce4886f75bc09e99d1922fa70bc6919d2e85827be4a6, differs from the repository copy only by the absent trailing newline; both are retained. Pre-apply safety state observed 2026-09-22T11:24Z: world asleep, combat_mode maintenance, combat_soak off, 0 cron jobs of any kind, 0 live claims, 0 recording Test Arena runs, 0 active diagnostic recordings, 0 queued solo or party departures, 3 encounters marked active but inert (no scheduler, no claim). Read-only compatibility preflight over 21 characters with authoritative effective INT/WIS including equipped durable gear and applied gems: 10 unchanged, 5 increases, 6 decreases, 5 current-CP clamps, 5 characters with equipment affecting effective INT, 6 affecting effective WIS, 5 rows where raw-stat and effective-stat results differ, 0 invalid or non-deterministic rows. Post-apply read-only verification: all 21 persisted max_cp values equal the effective INT+WIS formula, 0 characters hold CP above the new maximum, no increased maximum granted current CP, reserved_buffs unchanged. sync_character_resources remains SECURITY DEFINER, owner postgres, search_path=public, EXECUTE limited to postgres, authenticated and service_role with anon and PUBLIC revoked. Protected fingerprints identical before and after: character HP/max HP/MP/max MP/attributes/location/reserved_buffs 8d777d226a41d117dc12bf606a5b4586, inventory a323baa7b44090856343000695aa0eaf (65 rows), encounters 3beecebbc2c3a8c6f509fa9d44b144cb, creature HP 70e1254b05ebabafd57c6e8420ff579f, fighters 16b380ca54b22201a04d3515451f373a, 13 pending events, 27 intents, 23 departure rows, 3 parties, 3 party members, 6 diagnostic sessions, 223 diagnostic server events. No encounter repair, reward change or ADM-025B work. Security linter unchanged at 322 findings.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -78,10 +78,10 @@
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "b795de05c41ef399788f8c30e2a0bda741de834b",
-    "timestamp": "2026-09-21T22:31:00Z",
+    "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+    "timestamp": "2026-09-22T11:30:00Z",
     "evidence_type": "cloud_inspection",
-    "evidence": "Regenerated from the installed schema, not hand-edited. Declarations contain the six new creature reward-channel fields (gold_enabled, gold_min, gold_max, gold_chance, salvage_enabled, item_source) in the creatures Row/Insert/Update shapes, plus combat2_diagnostic_session, combat2_diagnostic_server_event and the five installed diagnostic RPC signatures.",
+    "evidence": "Regenerated from the installed schema after the migration; the declarations are byte-identical to the committed file because the migration changes only a function body and persisted row values, not any schema shape. Not hand-edited.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
@@ -89,10 +89,20 @@
     {
       "identity": "combat2-dispatch-once",
       "status": "deployed",
-      "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
-      "timestamp": "2026-09-22T06:10:00Z",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Redeployed successfully with the failure-instrumentation correction (per-node classification and reason are now logged, recording sessions are resolved before the worker runs, and phase/refusal/exception evidence is persisted from a finally path within the 32-event batch bound). Edge packaging and worker mirror parity passed; the dispatcher was not invoked afterwards. No cadence, lease, scheduler, resolver or gameplay change. Redeployed 2026-09-22 with commit-failure diagnostics only: the refusal record now carries a bounded category (pg, pgrst, serde, fetch, unknown), a sanitized five-character code, the commit substage, a closed-set top-level proposal field name and the refused proposal's intent count, plus a fail-closed pre-send serialization guard. No payload contents, SQL, database text, stack traces or personal data are recorded. Canonical worker source and generated Edge mirror at exact parity; the function was not invoked afterwards. No cadence, lease, scheduler, resolver, ability, movement, reward or ADM-025B change.",
+      "evidence": "Redeployed from source d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4. Dependency containment confirms it consumes the changed authoritative Combat2 resolver through supabase/functions/_shared/combat2/process-node-tick-once.ts. Canonical source and generated Edge mirror regenerate with no diff (exact parity). The function was not invoked after deployment. No cadence, cron, lease, movement-timing, scheduler or gameplay-rule change.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat2-tick-once",
+      "status": "deployed",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Redeployed from source d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4 for the same shared authoritative resolver change; mirror parity clean and the function was not invoked after deployment.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -230,22 +240,22 @@
     },
     {
       "identity": "in-combat-cp-regeneration",
-      "status": "ready_for_manual_publish",
-      "sha": null,
-      "timestamp": null,
-      "evidence_type": "tests",
-      "evidence": "Canonical Combat2 resolution now restores WIS-based passive CP on every even encounter-local candidate tick (one four-second opportunity per two committed two-second ticks), before intent costs. Living present non-departing fighters use their own effective WIS and authoritative max CP. Food and Inn are excluded; Inspire remains separate and additive; reservations remain authoritative and passive HP regeneration stays disabled. Edge redeployment is required before this behavior is live.",
-      "reporting_actor": "Codex",
+      "status": "deployed",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "The deployed Combat2 source restores WIS-based passive CP on every second successfully committed logical encounter tick (one four-second opportunity per two two-second ticks), before intent costs, for living present non-departing fighters, capped at authoritative max CP, with reserved CP unavailable. No passive HP regeneration, no food and no Inn contribution inside Combat2; Inspire stays separate and additive. Both consuming Edge functions are deployed. LIVE VERIFICATION PENDING: no gameplay, worker or dispatcher call was made, so live CP regeneration is not proven.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
       "identity": "int-wis-max-cp-and-ooc-wis-regen",
-      "status": "ready_for_manual_publish",
-      "sha": null,
-      "timestamp": null,
-      "evidence_type": "tests",
-      "evidence": "Shared, creation, equipment, planning, status and Combat2 calculations use max_cp = 30 + (level-1)*3 + (clamped INT modifier + clamped WIS modifier)*3. Out-of-combat CP regeneration now uses effective WIS while retaining the existing four-second cadence, half-strength browser-local food, milestones, Inn +10, Inspire, rounding and cap behavior.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Installed in Cloud: persisted max_cp and sync_character_resources now use max_cp = 30 + (level-1)*3 + (clamped effective INT modifier + clamped effective WIS modifier)*3 with equipped gear and gems included, negative modifiers contributing zero, absolute current CP preserved and clamped only above the new maximum, and no free CP granted. Out-of-combat CP regeneration uses effective WIS on the unchanged four-second cadence with milestones, half-strength browser-local food, Inn +10 and Inspire unchanged.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -299,19 +309,39 @@
       "evidence": "Historical root cause remains unknown, but Mik reports the latest passive recording completed ticks 27-40 with zero commit refusals, so the defect was not reproduced in that run.",
       "reporting_actor": "Mik",
       "directly_verified": false
+    },
+    {
+      "identity": "stale-focused-test-expectations-d3d21fc2",
+      "status": "blocked",
+      "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "tests",
+      "evidence": "Two focused tests already fail in the pushed source at d3d21fc2 and were not modified: src/shared/combat2/__tests__/authored-defense.test.ts expects 375 CP after a stance drop while the resolver now yields 380 (consistent with the new even-tick passive WIS restoration), and src/features/combat2/effect-catalogue-mapping.test.ts guards presentation source against a pattern that now matches. No test was relaxed to accept behaviour and no gameplay source was changed; these expectations need an authored decision.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik manually publishes the current frontend, then verifies healthy-sync buttons and the single semantic Holy Shield stance presentation/CP reservation display.",
+    "artifact": "Mik manually publishes the frontend, then decides on the two stale focused test expectations and schedules a bounded live verification of INT+WIS maximum CP and Combat2 WIS regeneration.",
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "The repository task does not publish the frontend or deploy Edge functions. The next release step must install the unapplied INT+WIS resource migration, redeploy the Combat2 functions identified by dependency containment, and let Mik manually publish the frontend. Authoritative food effects, stance-outside-combat, global resource settlement and ADM-025B remain separate.",
-    "reporting_actor": "Codex",
+    "evidence": "The installation left the world asleep in maintenance with no Combat2 schedules and no live claim. Live verification requires Mik to open combat mode, wake the world and re-enable the scheduler separately. Authoritative food effects, global world-tick resource settlement, stance-outside-combat and ADM-025B remain separate and unchanged.",
+    "reporting_actor": "Lovable",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-safety-state-2026-09-22",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-22T11:30:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Observed read-only 2026-09-22T11:24Z and unchanged after installation: world asleep, combat_mode maintenance, combat_soak off, 0 cron jobs, 0 live claims, 0 recording Test Arena runs, 0 active diagnostic recordings, 0 queued solo or party departures, 3 inert encounters (status active, unable to execute without scheduler or claim). Volatile; re-observe before relying on it.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-passive-diagnostic-3be561fc",
       "status": "unknown",
