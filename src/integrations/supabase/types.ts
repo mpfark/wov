@@ -6192,6 +6192,10 @@ export type Database = {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
       }
+      combat_enter_without_engagement_gate: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
       combat_flee: {
         Args: {
           _character_id: string
@@ -6312,6 +6316,14 @@ export type Database = {
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
       combat2_due_nodes_without_canary_gate: {
         Args: { _limit?: number }
+        Returns: Json
+      }
+      combat2_engage: {
+        Args: {
+          _character_id: string
+          _request_id: string
+          _target_creature_id: string
+        }
         Returns: Json
       }
       combat2_movement_scope_eligible: {
