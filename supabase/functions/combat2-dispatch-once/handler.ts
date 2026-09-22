@@ -105,6 +105,21 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
       return typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : 'unknown';
     };
 
+    /**
+     * Bounded, non-identifying classification of a refused RPC. Only a code shape, a category and
+     * a top-level contract field name may escape; database text, SQL and row data never do.
+     */
+    const transportDetail = (error: { code?: string; message?: string; details?: string; hint?: string }) => {
+      const code = typeof error.code === 'string' ? error.code : '';
+      const category = /^PGRST[0-9]{3}$/i.test(code) ? 'pgrst'
+        : /^[A-Z0-9]{5}$/i.test(code) ? 'pg'
+        : code === '' ? 'fetch' : 'unknown';
+      const haystack = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`;
+      const field = PROPOSAL_FIELDS.find((key) => new RegExp(`\\b${key}\\b`).test(haystack));
+      return { code: /^[A-Z0-9]{5}$/i.test(code) ? code : undefined, category, ...(field ? { field } : {}) };
+    };
+
+
     const result = await dispatchNodeTicksOnce({
       async discoverDueNodes(limit) {
         const { data, error } = await client.rpc('combat2_due_nodes', { _limit: limit });
