@@ -37,3 +37,5 @@ function run(withIntent: boolean) {
   console.log('  hazards:', bad.slice(0, 20));
 }
 run(false); run(true);
+import { it } from 'vitest';
+it('probe', () => {});
