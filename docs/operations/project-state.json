@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T21:05:00Z",
-  "based_on_source_sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
+  "updated_at": "2026-09-22T21:28:00Z",
+  "based_on_source_sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,11 +16,11 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-    "timestamp": "2026-09-22T17:50:59Z",
+    "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
+    "timestamp": "2026-09-22T21:28:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main is at 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and identical to origin/main with a clean worktree; dd10d8f45ab602e13bc8f3b69eff89a992ec3fe2 is retained in ancestry. Installed INT+WIS maximum-CP migration 20260922100000 and its ledger artifact 20260922112544 remain present, WIS-based Combat2 CP regeneration remains present in the shared resolver, Holy Shield semantic grouping and healthy-sync readiness remain present, and no unrelated source or migration change was pending. Lovable then produced local evidence commits cb6404830 (regenerated project-state Markdown view, which was out of sync with the JSON in the pushed source) and 5cecd97a2 (ledger artifact plus regenerated official types); these are local-only because the agent cannot push. No history rewrite or force-push.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local main and origin/main are identical at merge commit 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 with a clean worktree before this reconciliation update. The merge retains implementation commits 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and dd10d8f45ab602e13bc8f3b69eff89a992ec3fe2 and the exact Lovable installation chain cb64048305ba49e923e82c4cdf9093d7de67d3dc -> 5cecd97a2ad0080a46a5f43972a9db7452d14157 -> 415893f6bb8b336d99791c58a673e2dd24f946af. The merge brought the authoritative ledger artifact, regenerated official types and direct project-state installation evidence to origin/main without rewriting history. Installed INT+WIS evidence, WIS-based Combat2 regeneration, Holy Shield grouping and healthy-sync readiness remain present. No unrelated pending change existed.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
@@ -118,14 +118,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "ready_for_manual_publish",
+    "status": "manually_published",
     "artifact": "Combat2 engagement/release lifecycle frontend (ownership detachment, late-response fencing, deliberate engagement)",
-    "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-    "timestamp": "2026-09-22T21:05:00Z",
-    "evidence_type": "handoff",
-    "evidence": "The engagement/release lifecycle checkpoint changes client ownership and release, entry status presentation, visible-log ownership independence and the deliberate peaceful engagement path, so the frontend requires publication. Lovable performed no publication and used no publication control. Mik must publish manually after reviewing the handoff. The previous INT+WIS CP release remains recorded as manually published by Mik at d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4.",
-    "reporting_actor": "Lovable",
-    "directly_verified": true
+    "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
+    "timestamp": "2026-09-22T21:28:00Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Mik reports that he manually published the frontend after the engagement/release installation handoff. The published repository release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 descends from lifecycle source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634. This Codex task did not use publication controls or perform publication. Operator-reported publication does not prove live lifecycle behavior; bounded live verification remains pending.",
+    "reporting_actor": "Mik",
+    "directly_verified": false
   },
   "combat2_operational_work": [
     {
@@ -317,6 +317,16 @@
       "evidence": "Installed and ready for live verification; no gameplay verification was authorized or performed. Installed lifecycle rules verified from the catalog and read-only source inspection only: combat_enter now refuses with kind no_engagement unless a living aggressive creature stands at the character's server-derived node or an active encounter at that node contains a living engaged creature, so peaceful co-location alone creates no fighter and no ownership, and an inert or ended encounter shell cannot create ownership; the previously installed entry implementation is preserved unchanged behind that gate as the service_role-only combat_enter_without_engagement_gate, so aggressive automatic entry remains server-authoritative; deliberate peaceful hostility routes through combat2_engage, which derives caller identity through owns_character on auth.uid(), derives the node from public.characters, validates the target creature against that node and its living state, then performs entry plus exactly one basic_attack intent inside a single PL/pgSQL subtransaction so a refused intent rolls the entry back, making the pair all-or-nothing; the shared _request_id is the durable identity carried into both the fighter entry and combat_intent, so identical replay returns the same outcome and cannot create duplicate fighters, encounters or basic attacks, while reuse under changed arguments fails closed through the existing intent request-conflict path; the resolver ends an encounter when no living engaged creature and no durable non-reservation effect remains, counting engaged creatures rather than all living bystanders; surviving fighter release still runs through the installed authoritative triggers combat2_close_inactive_encounter_fighters on node_encounter and combat2_fighter_presence_changed on node_fighter, both present and enabled. Ended encounters, absent, departed or dead fighters and stale shells cannot satisfy active ownership under the client ownership contract, late RPC responses cannot reattach a released session, and durable combat-log presentation no longer implies current ownership. Focused tests: 20 files / 175 tests covering peaceful co-location refusal, aggressive automatic entry, deliberate engagement, request replay and conflict, duplicate-basic-attack prevention, shared active encounter joining, engaged-creature completion boundary, surviving fighter release, ended/absent/dead ownership detachment, stale-shell rejection, late-response fencing and movement/departure/flee preservation, plus 29 files / 375 tests covering WIS-based CP regeneration, reservations, Holy Shield grouping, worker claim/decode/resolve/commit, dispatcher fencing, Test Arena lifecycle parity and Edge packaging and mirror parity. Root and application TypeScript clean; production build succeeded. LIVE VERIFICATION PENDING.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "combat2-engagement-release-live-verification-readiness",
+      "status": "authored",
+      "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
+      "timestamp": "2026-09-22T21:28:00Z",
+      "evidence_type": "handoff",
+      "evidence": "Lifecycle release status is ready_for_live_verification: the migration is installed, the required Edge functions are deployed, Mik reports the descendant frontend release manually published, repository reconciliation is complete, and focused static verification passes. This is readiness only; no live behavior was tested in this reconciliation. Safe authoritative post-combat HP/MP settlement, character-scoped stances, authoritative food effects, global world-tick/resource settlement and ADM-025B remain unresolved or pending and unchanged.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
@@ -351,24 +361,24 @@
       "directly_verified": true
     },
     {
-      "identity": "agent-push-blocked",
-      "status": "blocked",
-      "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-      "timestamp": "2026-09-22T21:05:00Z",
-      "evidence_type": "handoff",
-      "evidence": "Lovable cannot run stateful Git commands, so the two local evidence commits cb6404830 (regenerated project-state Markdown) and 5cecd97a2 (ledger artifact 20260922210004_378f1214-3c89-404b-a8f9-49642fc2a46a.sql and regenerated official types) are committed locally but not pushed to origin/main. Mik or Codex must push normally; no force-push is required or permitted.",
-      "reporting_actor": "Lovable",
+      "identity": "installation-evidence-git-reconciliation",
+      "status": "pushed",
+      "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
+      "timestamp": "2026-09-22T21:28:00Z",
+      "evidence_type": "repository",
+      "evidence": "Resolved: cb64048305ba49e923e82c4cdf9093d7de67d3dc, 5cecd97a2ad0080a46a5f43972a9db7452d14157 and 415893f6bb8b336d99791c58a673e2dd24f946af are all retained unchanged in origin/main ancestry through merge commit 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73. The ledger artifact, official generated types and installation evidence are present on origin/main; no reconstruction or history rewrite occurred.",
+      "reporting_actor": "Codex",
       "directly_verified": true
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Publish the engagement/release lifecycle frontend manually, then run one bounded authorized live lifecycle verification before reopening the world.",
+    "artifact": "Run one separately authorized bounded live engagement/release lifecycle verification before reopening the world.",
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "Required next actions in order: push the two local evidence commits; Mik manually publishes the frontend; then a separately authorized live step reopens the world and verifies that peaceful co-location no longer enters combat, that deliberate engagement through combat2_engage queues exactly one basic attack, and that surviving fighters release cleanly. Authoritative food effects, global world-tick resource settlement, character-scoped stances, a safe authoritative post-combat HP/MP settlement and ADM-025B all remain separate, authored and unchanged.",
-    "reporting_actor": "Lovable",
+    "evidence": "Repository reconciliation and Mik's operator-reported manual publication are recorded. The next action requires separate authorization and fresh runtime safety evidence, then must verify that peaceful co-location no longer enters combat, deliberate engagement through combat2_engage queues exactly one basic attack, and surviving fighters release cleanly. This reconciliation did not reopen the world or invoke gameplay. Authoritative food effects, global world-tick resource settlement, character-scoped stances, safe authoritative post-combat HP/MP settlement and ADM-025B remain separate and unchanged.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
