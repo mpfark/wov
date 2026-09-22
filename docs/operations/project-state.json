@@ -80,19 +80,9 @@
       "identity": "combat2-dispatch-once",
       "status": "deployed",
       "sha": "a0516837972791c87356ea12b7fdaa74e5910203",
-      "timestamp": "2026-09-21T12:04:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Redeployed successfully with the failure-instrumentation correction (per-node classification and reason are now logged, recording sessions are resolved before the worker runs, and phase/refusal/exception evidence is persisted from a finally path within the 32-event batch bound). Edge packaging and worker mirror parity passed; the dispatcher was not invoked afterwards. No cadence, lease, scheduler, resolver or gameplay change.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
-    },
-    {
-      "identity": "combat2-dispatch-once",
-      "status": "authored",
-      "sha": "37fa5a765d7faa20cbc8af50119f8c34b9442cce",
       "timestamp": "2026-09-22T06:10:00Z",
-      "evidence_type": "repository",
-      "evidence": "Commit-failure diagnostics only (category, sanitized code, substage, closed-set field name, refused intent count) plus a fail-closed pre-send serialization guard. Deployment pending in this turn; canonical worker source and the generated Edge mirror are at exact parity.",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Redeployed successfully with the failure-instrumentation correction (per-node classification and reason are now logged, recording sessions are resolved before the worker runs, and phase/refusal/exception evidence is persisted from a finally path within the 32-event batch bound). Edge packaging and worker mirror parity passed; the dispatcher was not invoked afterwards. No cadence, lease, scheduler, resolver or gameplay change. Redeployed 2026-09-22 with commit-failure diagnostics only: the refusal record now carries a bounded category (pg, pgrst, serde, fetch, unknown), a sanitized five-character code, the commit substage, a closed-set top-level proposal field name and the refused proposal's intent count, plus a fail-closed pre-send serialization guard. No payload contents, SQL, database text, stack traces or personal data are recorded. Canonical worker source and generated Edge mirror at exact parity; the function was not invoked afterwards. No cadence, lease, scheduler, resolver, ability, movement, reward or ADM-025B change.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
