@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T06:10:00Z",
-  "based_on_source_sha": "37fa5a765d7faa20cbc8af50119f8c34b9442cce",
+  "updated_at": "2026-09-22T07:12:47Z",
+  "based_on_source_sha": "8f647453daf4cd134eda1809397b64cf9b809f66",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,11 +16,11 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "37fa5a765d7faa20cbc8af50119f8c34b9442cce",
-    "timestamp": "2026-09-22T06:10:00Z",
+    "sha": "8f647453daf4cd134eda1809397b64cf9b809f66",
+    "timestamp": "2026-09-22T07:12:47Z",
     "evidence_type": "repository",
-    "evidence": "Reconciled with GitHub at task start: local HEAD equalled origin/main and the contract-installation commit 7adba0dcd7f79731430da4cc02843f1cde2cca96 is an ancestor of origin/main, so it is present on GitHub. The installed contract migration ledger artifact supabase/migrations/20260921223049_274ba4d5-ba04-41c3-90fd-ab79cd77b566.sql and the repository copy supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql are byte-identical (SHA-256 21607d456320fda72477a03dc1c3d572eebfd05ae85a72322d10bc09208e6d14). Worktree clean, no force-push, no history rewrite. This turn's commit-diagnostics commit still needs pushing to origin/main.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local main fast-forwarded cleanly to origin/main. The previous diagnostic source-quality commit eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 and the latest diagnostic/project-state commits are ancestors of the synchronized source. No history was rewritten.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
@@ -88,14 +88,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "manually_published",
-    "artifact": "diagnostic admin overlay",
-    "sha": "eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1",
-    "timestamp": "2026-09-21T07:45:00Z",
-    "evidence_type": "operator_reported",
-    "evidence": "Mik reports that frontend source checkpoint eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 was manually published through Lovable. Operator-reported only; not independently verified. The later Stop/Export recovery correction is NOT published.",
-    "reporting_actor": "Mik",
-    "directly_verified": false
+    "status": "ready_for_manual_publish",
+    "artifact": "Combat2 diagnostic and sync-readiness frontend",
+    "sha": null,
+    "timestamp": "2026-09-22T07:12:47Z",
+    "evidence_type": "tests",
+    "evidence": "Mik previously reported manual publication of eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1. Later Stop/Export recovery and the current healthy-sync readiness correction are not published; focused checks and the production build make the current frontend ready for Mik's next manual publication.",
+    "reporting_actor": "Codex",
+    "directly_verified": true
   },
   "combat2_operational_work": [
     {
@@ -130,7 +130,7 @@
     },
     {
       "identity": "failed-live-diagnostic-2026-09-21",
-      "status": "blocked",
+      "status": "unknown",
       "sha": null,
       "timestamp": "2026-09-21T11:25:00Z",
       "evidence_type": "cloud_inspection",
@@ -184,8 +184,28 @@
       "sha": null,
       "timestamp": "2026-09-22T06:10:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Cause NOT yet proven; no speculative gameplay correction was made. commit_transport_error is emitted only by the worker catch around transport.commitTick, which the dispatcher adapter throws when supabase-js returns an RPC error object. Catalog inspection proves the installed chain node_tick_commit -> node_tick_commit_without_boss_timing both wrap the body in EXCEPTION WHEN OTHERS and return a structured internal_failure with a sanitized SQLSTATE, so no in-function database error can surface as a transport error; the failure therefore originates outside PL/pgSQL (PostgREST argument coercion or contract code, pooler/HTTP, or response handling). Static reproduction through the real resolve and JSON serialization path proves the no-new-intent request is complete and valid: all closed top-level proposal keys present, intent_ids an explicit empty array, lossless JSON round trip, no undefined/NaN/BigInt, and the only shape difference against an accepted-ability tick is the intent-derived characters and intent_ids collections. Postgres and edge log retention for the 23:05Z window has expired, so the sanitized error code and substage are unavailable. Bounded diagnostics were extended instead: category (pg, pgrst, serde, fetch, unknown), sanitized five-character SQLSTATE or PostgREST code, commit substage, a closed-set top-level field name and the refused proposal's intent count. No cadence, lease, scheduler, resolver, ability, movement or reward change; commit fencing, locking and exactly-once behaviour untouched.",
-      "reporting_actor": "Lovable",
+      "evidence": "The historical cause was not proven. Mik reports that the later passive diagnostic session 3be561fc-1bff-4973-a0c1-20bb67b73d6f completed 14 consecutive automatic ticks 27-40 through claim, decode, resolve and commit with zero refusals and zero player actions, so the prior commit transport failure was not reproduced. This does not prove a historical root cause.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
+    {
+      "identity": "frontend-sync-flicker",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-09-22T07:12:47Z",
+      "evidence_type": "tests",
+      "evidence": "The last accepted authoritative model now remains action-ready during a healthy transient syncing refresh. Unsafe delivery states, identity mismatches, death, pending departure, invalid targets, insufficient CP and request fencing remain fail-closed. Focused readiness, delivery, intent and rendered-button tests pass.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "stance-outside-combat",
+      "status": "authored",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "task_boundary",
+      "evidence": "Separate pending feature; explicitly excluded from the sync-flicker correction.",
+      "reporting_actor": "Codex",
       "directly_verified": true
     }
   ],
@@ -196,32 +216,42 @@
       "sha": null,
       "timestamp": "2026-09-21T06:41:04Z",
       "evidence_type": "handoff",
-      "evidence": "Cloud installation and dispatcher deployment remain recorded from Lovable evidence. The local source-quality gate is green; frontend publication remains Mik-only and has not been performed.",
+      "evidence": "Cloud installation and dispatcher deployment remain recorded from prior Lovable evidence. The latest frontend source includes unpublished Stop/Export recovery and sync-readiness corrections; publication remains Mik-only.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
     {
       "identity": "combat2-commit-transport-root-cause",
-      "status": "blocked",
+      "status": "unknown",
       "sha": null,
       "timestamp": "2026-09-22T06:10:00Z",
       "evidence_type": "tests",
-      "evidence": "The client-side commit request is proven valid for automatic ticks with no new intent, and every installed SQL wrapper converts database errors into structured refusals, so the remaining cause lies at the RPC/transport boundary and cannot be proven from expired logs. A further bounded live recording is required; Combat2 is NOT fixed.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "evidence": "Historical root cause remains unknown, but Mik reports the latest passive recording completed ticks 27-40 with zero commit refusals, so the defect was not reproduced in that run.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Run one bounded live diagnostic recording on node f45a8b21 and encounter 2e7249d4 for 30-40 seconds with no player action, then read the commit_refused outcomes for cat=, code=, field= and intents=.",
-    "sha": "37fa5a765d7faa20cbc8af50119f8c34b9442cce",
+    "artifact": "Mik manually publishes the current frontend, then verifies that ability buttons remain stable during several healthy automatic snapshot refreshes.",
+    "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "Only the diagnostic change was made; no gameplay invocation, migration or frontend publication was authorized or performed.",
-    "reporting_actor": "Lovable",
+    "evidence": "The repository task does not publish the frontend. The smallest follow-up is a passive UI observation after Mik's manual publication; stance-outside-combat and ADM-025B remain separate.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-passive-diagnostic-3be561fc",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-22T07:12:47Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports 14 consecutive automatic ticks 27-40 with claim, decode, resolve and commit completed, zero commit refusals, zero player actions and all 14 snapshots accepted. Each accepted snapshot caused a 60-145 ms live-to-syncing-to-live client transition. Runtime evidence is operator-reported and volatile.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-safety-state",
       "status": "unknown",

@@ -105,6 +105,8 @@ describe('useCombat2IntentSession', () => {
     }), { initialProps: { tick: 10, status: 'live' } });
     await act(async () => { await result.current.submit(action, { message: 'You prepare Fireball.' }); });
     expect(result.current.pending).not.toBeNull();
+    rerender({ tick: 10, status: 'syncing' });
+    expect(result.current.pending).not.toBeNull();
     rerender({ tick: 11, status: 'live' });
     expect(result.current.pending).toBeNull();
     expect(result.current.acknowledgements.map(line => line.message)).toEqual(['You prepare Fireball.']);

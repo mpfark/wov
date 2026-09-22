@@ -25,6 +25,7 @@ import LocationBackground from './LocationBackground';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
 import { Combat2TelegraphIndicator } from '@/features/combat2/Combat2TelegraphIndicator';
 import { shouldShowAttackControl } from '@/features/combat2/attack-control';
+import { combat2AbilityControlDisabled } from '@/features/combat2/action-readiness';
 import {
   combat2CreatureLifeKey,
   type Combat2PresentationEffect,
@@ -653,7 +654,8 @@ export default function NodeView({
                             variant="outline"
                             size="sm"
                             onClick={() => onUseAbility(idx, resolvedTarget)}
-                            disabled={!combatActionsReady || levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
+                            disabled={combat2AbilityControlDisabled({ actionsReady: combatActionsReady, levelLocked,
+                              insufficientCp: notEnoughCp, dead: character.hp <= 0, invalidTarget: disableNoTarget })}
                             className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
                           >
                             {ability.label}

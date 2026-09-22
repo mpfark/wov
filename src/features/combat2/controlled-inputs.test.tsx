@@ -61,7 +61,7 @@ describe('controlled input and display boundary', () => {
     expect(legacy).not.toHaveBeenCalled();
   });
 
-  it.each(['gap', 'error', 'refused', 'reconnecting', 'syncing'] as const)('disables even saved callbacks for %s and renders stale diagnostics', async status => {
+  it.each(['gap', 'error', 'refused', 'reconnecting'] as const)('disables even saved callbacks for %s and renders stale diagnostics', async status => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options));
     const submit = result.current.intents.submit;
     delivery = { ...delivery, status, error: 'untrusted internal payload' };
@@ -78,6 +78,25 @@ describe('controlled input and display boundary', () => {
     render(<Combat2TestStatus presentation={presentation} diagnostic="Combat2 synchronization unavailable." />);
     expect(screen.getByRole('status')).toHaveTextContent('Last confirmed state shown');
     expect(screen.getByRole('alert')).not.toHaveTextContent('untrusted internal payload');
+  });
+
+  it('keeps pointer and keyboard routing ready through a healthy snapshot refresh', async () => {
+    const { result, rerender } = renderHook(() => useCombat2ClientSession(options));
+    await waitFor(()=>expect(result.current.actionsReady).toBe(true));
+    const pointerSubmit = result.current.intents.submit;
+    const keyboardSubmit = result.current.intents.submit;
+    act(() => { delivery = { ...delivery, status: 'syncing' }; rerender(); });
+    expect(result.current.actionsReady).toBe(true);
+    await act(async () => {
+      await pointerSubmit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: T });
+      await keyboardSubmit({ kind: 'ability', abilityKey: 'force_shield', stanceKey: null, targetCreatureId: null });
+    });
+    expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent')).toHaveLength(2);
+    act(() => { delivery = { ...fixture(), lastAppliedTick: 1, snapshot: {
+      ...fixture().snapshot!, latest_tick: 1, returned_through_tick: 1,
+      encounter: { ...fixture().snapshot!.encounter, tick: 1, stateVersion: 1 },
+    } }; rerender(); });
+    expect(result.current.actionsReady).toBe(true);
   });
 
   it('latches authoritative death, blocks intents and rejects a later living snapshot for the same entry', async () => {

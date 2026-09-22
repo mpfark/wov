@@ -11,6 +11,7 @@ import {
 import { buildAbilityEvent, buildBuffEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { recordCombat2ClientEvent } from './diagnostics';
+import { combat2DeliveryPreservesPending } from './action-readiness';
 
 export type Combat2IntentResult =
   | Combat2IntentOutcome
@@ -97,7 +98,7 @@ export function useCombat2IntentSession({
   }, [sessionKey, canSubmit]);
 
   useEffect(() => {
-    if (deliveryStatus !== 'live') setPending(null);
+    if (!combat2DeliveryPreservesPending(deliveryStatus)) setPending(null);
   }, [deliveryStatus]);
 
   useEffect(() => {

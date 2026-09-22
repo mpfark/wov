@@ -6,6 +6,7 @@ import { useCombat2IntentSession } from './useCombat2IntentSession';
 import { useCombat2Presentation } from './useCombat2Presentation';
 import { useCombat2DepartureSession } from './useCombat2DepartureSession';
 import { useCombat2RespawnSession } from './useCombat2RespawnSession';
+import { deriveCombat2ActionReadiness } from './action-readiness';
 
 export interface Combat2ClientSessionProps {
   controlled?: boolean;
@@ -69,11 +70,16 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     onQueued: () => setPendingFleeKey(enteredSessionKey),
   });
   const pendingFlee = pendingFleeFromServer || departure.pending;
-  const actionsReady = !props.inputLocked && !!encounterId && presentation.status === 'live'
-    && !!model && !dead && !pendingFlee && model.encounterStatus === 'active'
-    && fighter?.present === true && fighter.characterId === props.characterId
-    && typeof fighter.entrySeq === 'number' && Number.isSafeInteger(fighter.entrySeq)
-    && typeof fighter.id === 'string' && !!fighter.id && model.fighterExitState === null;
+  const actionsReady = deriveCombat2ActionReadiness({
+    inputLocked: !!props.inputLocked,
+    encounterId,
+    presentationStatus: presentation.status,
+    model,
+    dead,
+    pendingFlee,
+    fighter: fighter ?? null,
+    characterId: props.characterId,
+  });
   const intents = useCombat2IntentSession({
     canSubmit: props.controlled ? actionsReady : true,
     enabled: props.enabled,
