@@ -196,20 +196,27 @@ export async function processNodeTickOnce(
   note({event:'resolve_completed',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:resolvedAt-decodedAt});
 
   let commitRaw: unknown;
+  const commitArgs: CommitTickArgs = {
+    _encounter_id: encounterId,
+    _claim_token: decoded.claimToken!,
+    _candidate_tick: decoded.snapshot.encounter.candidate_tick,
+    _expected_last_tick: decoded.snapshot.encounter.tick,
+    _expected_state_version: decoded.snapshot.encounter.state_version,
+    _intent_ids: proposal.intent_ids,
+    _proposed: proposal,
+  };
+  const proposalIntents = proposal.intent_ids.length;
+  if (!serializableProposal(commitArgs)) {
+    return { ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely',
+      stage: 'commit', category: 'serde', proposalIntents };
+  }
   try {
     note({event:'commit_attempted',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:0});
-    commitRaw = await dependencies.transport.commitTick({
-      _encounter_id: encounterId,
-      _claim_token: decoded.claimToken!,
-      _candidate_tick: decoded.snapshot.encounter.candidate_tick,
-      _expected_last_tick: decoded.snapshot.encounter.tick,
-      _expected_state_version: decoded.snapshot.encounter.state_version,
-      _intent_ids: proposal.intent_ids,
-      _proposed: proposal,
-    });
+    commitRaw = await dependencies.transport.commitTick(commitArgs);
   } catch (error) {
-    return { ok: false, kind: 'commit_transport_error', ...safeTransportFailure(error, 'commit') };
+    return { ok: false, kind: 'commit_transport_error', ...safeTransportFailure(error, 'commit'), proposalIntents };
   }
+
 
   const commit = object(commitRaw);
   if (!commit || typeof commit.ok !== 'boolean' || typeof commit.kind !== 'string') {
