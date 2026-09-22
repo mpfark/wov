@@ -24,6 +24,6 @@ describe('Combat2 effect presentation catalogue evidence', () => {
 
   it('keeps presentation free of combat calculations and persistence calls', () => {
     const source = readFileSync('src/features/combat2/presentation.ts', 'utf8');
-    expect(source).not.toMatch(/supabase|\.rpc\(|\.from\(|mitigat(?:e|ion)\s*[+*=]|damage\s*[+*=]|reservedCp/);
+    expect(source).not.toMatch(/supabase|\.rpc\(|\.from\(|mitigat(?:e|ion)\s*[+*=]|damage\s*[+*=]/);
   });
 });

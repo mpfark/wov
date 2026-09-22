@@ -64,4 +64,22 @@ describe('Combat2EffectPills', () => {
     ]} />);
     expect(screen.getAllByText('Shared Guard')).toHaveLength(2);
   });
+
+  it('pairs stances by source, target and ability without merging a foreign source', () => {
+    render(<Combat2EffectPills effects={[
+      effect({ id: 'reserve-a', kind: 'reservation', abilityKey: 'holy_shield',
+        sourceCharacterId: 'caster-a', sourceCreatureId: null, magnitude: 12,
+        isReservation: true, category: 'stance' }),
+      effect({ id: 'reactive-a', kind: 'reactive', abilityKey: 'holy_shield',
+        sourceCharacterId: 'caster-a', sourceCreatureId: null, magnitude: 7, category: 'stance' }),
+      effect({ id: 'reserve-b', kind: 'reservation', abilityKey: 'holy_shield',
+        sourceCharacterId: 'caster-b', sourceCreatureId: null, magnitude: 9,
+        isReservation: true, category: 'stance' }),
+      effect({ id: 'reactive-b', kind: 'reactive', abilityKey: 'holy_shield',
+        sourceCharacterId: 'caster-b', sourceCreatureId: null, magnitude: 4, category: 'stance' }),
+    ]} />);
+    expect(screen.getAllByText('Holy Shield')).toHaveLength(2);
+    expect(screen.getByLabelText('Holy Shield: 12 CP reserved, Reactive magnitude 7')).toBeInTheDocument();
+    expect(screen.getByLabelText('Holy Shield: 9 CP reserved, Reactive magnitude 4')).toBeInTheDocument();
+  });
 });

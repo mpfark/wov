@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T11:30:00Z",
-  "based_on_source_sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+  "updated_at": "2026-09-22T12:02:40Z",
+  "based_on_source_sha": "a9354bc5e794a76b744db45d894d9e5177024d8e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,11 +16,11 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
-    "timestamp": "2026-09-22T11:30:00Z",
+    "sha": "a9354bc5e794a76b744db45d894d9e5177024d8e",
+    "timestamp": "2026-09-22T12:02:40Z",
     "evidence_type": "repository",
-    "evidence": "Local main equalled origin/main at d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4 with a clean worktree; b3fefa54e7781053c5907539403d70764c3144ce is retained in ancestry. No history rewrite and no force-push. The Lovable-generated migration ledger artifact was committed on top as e89d105f2c7b6bbd6a692d3cd463e600cc8d8e0c.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local main fast-forwarded cleanly to origin/main at merge commit a9354bc5e794a76b744db45d894d9e5177024d8e. It retains implementation d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4, ledger commit e89d105f2c7b6bbd6a692d3cd463e600cc8d8e0c and Lovable evidence commit 58a746f615d7da0cd8e26c44df8f444aa8ee0d8f in ancestry. No history rewrite or force-push.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
@@ -108,14 +108,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "ready_for_manual_publish",
-    "artifact": "Combat2 diagnostic and sync-readiness frontend",
-    "sha": null,
-    "timestamp": "2026-09-22T08:16:04Z",
-    "evidence_type": "tests",
-    "evidence": "Mik previously reported manual publication of eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1. Later Stop/Export recovery, healthy-sync readiness and the Holy Shield authoritative stance presentation correction are not published; focused checks and the production build make the current frontend ready for Mik's next manual publication.",
-    "reporting_actor": "Codex",
-    "directly_verified": true
+    "status": "manually_published",
+    "artifact": "INT+WIS CP, healthy-sync and Holy Shield presentation frontend",
+    "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
+    "timestamp": "2026-09-22T12:02:40Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Mik reports that the frontend was manually published after the CP installation. This task performed no publication and does not independently verify the live frontend.",
+    "reporting_actor": "Mik",
+    "directly_verified": false
   },
   "combat2_operational_work": [
     {
@@ -249,6 +249,16 @@
       "directly_verified": true
     },
     {
+      "identity": "cp-release-post-install-test-reconciliation",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-22T12:02:40Z",
+      "evidence_type": "tests",
+      "evidence": "Two stale focused tests were reconciled without production changes. The authored-defense fixture reaches candidate tick 2 with 375 CP after Battle Cry activation; effective WIS 18 restores 4 CP and the level-20 milestone restores 1 before stance_drop, producing 380 with no reservation refund. An adjacent candidate-tick-3 assertion proves the same drop remains 375 without passive regeneration. The effect-catalogue source guard had begun rejecting the approved reservedCp projection; persistence/calculation exclusions remain, while behavioral component tests prove Holy Shield keeps both authoritative records, groups only matching source/target/ability pairs, and does not collapse unrelated same-labelled effects.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "int-wis-max-cp-and-ooc-wis-regen",
       "status": "installed",
       "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
@@ -312,7 +322,7 @@
     },
     {
       "identity": "stale-focused-test-expectations-d3d21fc2",
-      "status": "blocked",
+      "status": "committed",
       "sha": "d3d21fc2275ac0cce2cf4fa968e847ee0adcbac4",
       "timestamp": "2026-09-22T11:30:00Z",
       "evidence_type": "tests",
@@ -323,12 +333,12 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik manually publishes the frontend, then decides on the two stale focused test expectations and schedules a bounded live verification of INT+WIS maximum CP and Combat2 WIS regeneration.",
+    "artifact": "Schedule a separately authorized bounded live verification of INT+WIS maximum CP and Combat2 WIS regeneration.",
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
     "evidence": "The installation left the world asleep in maintenance with no Combat2 schedules and no live claim. Live verification requires Mik to open combat mode, wake the world and re-enable the scheduler separately. Authoritative food effects, global world-tick resource settlement, stance-outside-combat and ADM-025B remain separate and unchanged.",
-    "reporting_actor": "Lovable",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [

@@ -139,7 +139,7 @@ describe('real authored defensive activation → proposal → decoded next tick'
     expect(attacks(out)[0].meta?.percentMitigated ?? 0).toBe(0);
   });
 
-  it('drops the generated stance and reservation, with no CP refund or subsequent protection', () => {
+  it('drops the generated stance after even-tick passive CP regen, with no refund or subsequent protection', () => {
     const input = next(activate('battle_cry'));
     input.intents = [intent('battle_cry', 'stance_drop')];
     const dropped = resolveNodeTick(input, deps);
@@ -147,7 +147,17 @@ describe('real authored defensive activation → proposal → decoded next tick'
       input.effects.filter(effect => effect.ability_key === 'battle_cry').map(effect => effect.id).sort(),
     );
     expect(dropped.events.some(e => e.kind === 'stance_dropped')).toBe(true);
-    expect(dropped.characters.find(c => c.id === CHARACTER)?.cp).toBe(375);
+    expect(dropped.events).toContainEqual(expect.objectContaining({ kind: 'passive_cp_regen', amount: 5 }));
+    expect(dropped.characters.find(c => c.id === CHARACTER)?.cp).toBe(380);
+
+    const oddInput = next(activate('battle_cry'));
+    oddInput.encounter.tick = 2;
+    oddInput.encounter.candidate_tick = 3;
+    oddInput.intents = [intent('battle_cry', 'stance_drop')];
+    const oddDropped = resolveNodeTick(oddInput, deps);
+    expect(oddDropped.events.some(e => e.kind === 'passive_cp_regen')).toBe(false);
+    expect(oddDropped.characters.find(c => c.id === CHARACTER)?.cp).toBe(375);
+
     input.effects = input.effects.filter(e => !dropped.effects_delete.includes(e.id));
     input.intents = [];
     const { out } = seeded(input, out => attacks(out)[0]?.hitQuality === 'normal');
