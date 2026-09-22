@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T12:02:40Z",
+  "updated_at": "2026-09-22T18:00:00Z",
   "based_on_source_sha": "a9354bc5e794a76b744db45d894d9e5177024d8e",
   "status_vocabulary": [
     "authored",
@@ -294,7 +294,17 @@
       "sha": null,
       "timestamp": null,
       "evidence_type": "task_boundary",
-      "evidence": "Separate pending feature; explicitly excluded from the sync-flicker correction.",
+      "evidence": "Future character-scoped stance work, explicitly excluded from the engagement/release correction. Decided semantics: stances may be activated outside combat; belong to the character rather than an encounter; survive ordinary movement and encounter completion; retain their CP reservation while active; and are invalidated authoritatively by death, class change, explicit deactivation and any other approved invalidation rule. Current Combat2 stances remain encounter node_effect plus reservation records until that complete migration is implemented.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat2-engagement-release-lifecycle",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-22T18:00:00Z",
+      "evidence_type": "tests",
+      "evidence": "Forward migration 20260922140000 gates automatic combat_enter to an aggressive living creature or an already-active encounter with a living engaged creature, adds atomic replay-safe combat2_engage for deliberate basic hostility, and the resolver now ends an encounter when no living engaged creature or durable non-stance work remains. Client ownership is derived from active encounter + present living fighter + living engaged creature; terminal/absent snapshots detach the session and cannot be restored by retained delivery state. The migration is authored only and remains unapplied; Edge mirrors require deployment because the shared resolver changed. Existing browser-local non-combat resource processing was not re-enabled because it is not an authoritative writer.",
       "reporting_actor": "Codex",
       "directly_verified": true
     }
@@ -333,11 +343,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Schedule a separately authorized bounded live verification of INT+WIS maximum CP and Combat2 WIS regeneration.",
+    "artifact": "Install and publish the authored Combat2 engagement/release lifecycle checkpoint after a read-only compatibility preflight.",
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "The installation left the world asleep in maintenance with no Combat2 schedules and no live claim. Live verification requires Mik to open combat mode, wake the world and re-enable the scheduler separately. Authoritative food effects, global world-tick resource settlement, stance-outside-combat and ADM-025B remain separate and unchanged.",
+    "evidence": "Required Lovable action after this source checkpoint: keep combat in maintenance and the world asleep; verify no live claim; apply only 20260922140000_combat2_engagement_release_lifecycle.sql; regenerate official Supabase types if the platform requires it (no schema shape change is expected); deploy both Combat2 Edge consumers because the shared resolver changed; and publish the frontend because client ownership/release and deliberate peaceful engagement changed. Do not repair live encounters or invoke gameplay as part of installation. Authoritative food effects, global world-tick resource settlement, character-scoped stances and ADM-025B remain separate and unchanged.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

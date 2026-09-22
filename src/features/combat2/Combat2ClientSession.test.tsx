@@ -135,6 +135,32 @@ describe('Combat2ClientSession application bridge', () => {
     expect(rpc.mock.calls.filter(([name]) => name === 'combat_intent')).toHaveLength(0);
   });
 
+  it('releases a completed encounter from fighter presence and cannot be restored by retained delivery state', async () => {
+    vi.spyOn(supabase, 'rpc').mockImplementation((async (name: string) => {
+      if (name === 'combat_enter') return { data: { ok: true, kind: 'entered', encounter_id: ENCOUNTER }, error: null };
+      if (name === 'combat2_sync') return { data: {
+        ok: true, kind: 'sync', latest_tick: 1, returned_through_tick: 1, has_more: false,
+        encounter: { id: ENCOUNTER, status: 'ended', tick: 1, stateVersion: 2 },
+        character: { id: CHARACTER, hp: 10, maxHp: 10, cp: 8, maxCp: 8, mp: 10, maxMp: 10, level: 1, xp: 0, gold: 0 },
+        fighter: { id: 'fighter-1', characterId: CHARACTER, entrySeq: 1, present: false, exitState: null },
+        creatures: [], effects: [], rewardClaims: [], batches: [{ id: 'batch-1', tick: 1,
+          createdAt: '2026-09-22T00:00:00Z', events: [] }],
+      }, error: null };
+      throw new Error(`unexpected RPC ${name}`);
+    }) as never);
+    const channel = { on: vi.fn(() => channel), subscribe: vi.fn(() => channel) };
+    vi.spyOn(supabase, 'channel').mockReturnValue(channel as never);
+    const remove = vi.spyOn(supabase, 'removeChannel').mockResolvedValue('ok');
+    const { result } = renderHook(() => useCombat2ClientSession({ enabled: true, controlled: true,
+      characterId: CHARACTER, nodeId: NODE, hasLivingCreatures: true }));
+    await waitFor(() => expect(result.current.sessionStatus).toBe('exited'));
+    expect(result.current.encounterId).toBeNull();
+    expect(result.current.ownsActiveCombat).toBe(false);
+    expect(result.current.actionsReady).toBe(false);
+    expect(result.current.presentation.model).toMatchObject({ encounterStatus: 'ended', fighterPresent: false });
+    expect(remove).toHaveBeenCalledWith(channel);
+  });
+
   it('passes only authoritative entry identity and contains no prohibited call path', () => {
     const bridge = readFileSync('src/features/combat2/Combat2ClientSession.tsx', 'utf8');
     const entry = readFileSync('src/features/combat2/entry.ts', 'utf8');

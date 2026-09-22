@@ -26,6 +26,7 @@ describe('decodeCombat2Entry', () => {
     [{ ok: false, kind: 'no_node' }, 'no_node'],
     [{ ok: false, kind: 'node_changed' }, 'node_changed'],
     [{ ok: false, kind: 'invalid_request', reason: 'request_id_conflict' }, 'invalid_request'],
+    [{ ok: false, kind: 'no_engagement' }, 'no_engagement'],
     [{ ok: false, kind: 'future_refusal' }, 'refused'],
   ] as const)('normalizes refusal %#', (payload, classification) => {
     expect(decodeCombat2Entry(payload)).toMatchObject({ status: 'refused', classification });
@@ -48,6 +49,18 @@ describe('Combat2 entry transport', () => {
     const adapter = createCombat2EntryAdapter({ rpc });
     await expect(adapter.enter(CHARACTER, REQUEST)).resolves.toMatchObject({ status: 'entered', encounterId: ENCOUNTER });
     expect(rpc).toHaveBeenCalledWith('combat_enter', { _character_id: CHARACTER, _request_id: REQUEST });
+  });
+
+  it('decodes one atomic deliberate engagement with its authoritative entry identity', async () => {
+    const rpc = vi.fn(async () => ({ data: { ok: true, kind: 'queued', entry_kind: 'entered',
+      encounter_id: ENCOUNTER, fighter_id: FIGHTER, entry_seq: 4 }, error: null }));
+    const adapter = createCombat2EntryAdapter({ rpc });
+    await expect(adapter.engage!(CHARACTER, FIGHTER, REQUEST)).resolves.toEqual({
+      status: 'entered', classification: 'entered', encounterId: ENCOUNTER, fighterId: FIGHTER, entrySeq: 4,
+    });
+    expect(rpc).toHaveBeenCalledWith('combat2_engage', {
+      _character_id: CHARACTER, _target_creature_id: FIGHTER, _request_id: REQUEST,
+    });
   });
 
   it.each([

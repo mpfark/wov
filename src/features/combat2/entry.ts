@@ -12,6 +12,7 @@ export type Combat2EntryRefusal =
   | 'no_node'
   | 'node_changed'
   | 'invalid_request'
+  | 'no_engagement'
   | 'refused';
 
 export type Combat2EntryOutcome =
@@ -31,11 +32,12 @@ export type Combat2EntryOutcome =
 interface EntryRpcResponse { data: unknown; error: { message?: string } | null }
 
 export interface Combat2EntryClient {
-  rpc(name: 'combat_enter', args: { _character_id: string; _request_id: string }): PromiseLike<EntryRpcResponse>;
+  rpc(name: 'combat_enter' | 'combat2_engage', args: Record<string, string>): PromiseLike<EntryRpcResponse>;
 }
 
 export interface Combat2EntryAdapter {
   enter(characterId: string, requestId: string): Promise<Combat2EntryOutcome>;
+  engage?(characterId: string, targetCreatureId: string, requestId: string): Promise<Combat2EntryOutcome>;
 }
 
 export class Combat2EntryError extends Error {
@@ -73,15 +75,20 @@ export function decodeCombat2Entry(value: unknown): Combat2EntryOutcome {
     throw new Combat2EntryError('error', 'combat_enter returned a malformed response');
   }
 
-  const successful = row.kind === 'entered' || row.kind === 'reentered' || row.kind === 'already_entered';
+  const successful = row.kind === 'entered' || row.kind === 'reentered' || row.kind === 'already_entered'
+    || ((row.kind === 'queued' || row.kind === 'already_queued') && typeof row.entry_kind === 'string');
   const idempotentPresent = row.kind === 'already_present';
   if ((successful && row.ok === true) || (idempotentPresent && row.ok === false)) {
     if (typeof row.encounter_id !== 'string' || !UUID_RE.test(row.encounter_id)) {
       throw new Combat2EntryError('error', 'combat_enter returned an invalid encounter id');
     }
+    const rawClassification = typeof row.entry_kind === 'string' ? row.entry_kind : row.kind;
+    if (!['entered', 'reentered', 'reactivated', 'already_entered', 'already_present'].includes(rawClassification)) {
+      throw new Combat2EntryError('error', 'combat_enter returned an invalid entry classification');
+    }
     const classification: Combat2EntryClassification = row.reactivated === true
       ? 'reactivated'
-      : row.kind as Combat2EntryClassification;
+      : rawClassification as Combat2EntryClassification;
     return {
       status: 'entered',
       classification,
@@ -102,8 +109,10 @@ export function decodeCombat2Entry(value: unknown): Combat2EntryOutcome {
             ? 'no_node'
             : row.kind === 'node_changed'
               ? 'node_changed'
-              : row.kind === 'invalid_request'
+            : row.kind === 'invalid_request'
                 ? 'invalid_request'
+                : row.kind === 'no_engagement'
+                  ? 'no_engagement'
                 : 'refused';
     return { status: 'refused', classification, reason: typeof row.reason === 'string' ? row.reason : null };
   }
@@ -121,6 +130,18 @@ export function createCombat2EntryAdapter(client: Combat2EntryClient): Combat2En
         throw new Combat2EntryError('uncertain', error instanceof Error ? error.message : 'combat_enter transport failed');
       }
       if (response.error) throw new Combat2EntryError('uncertain', response.error.message ?? 'combat_enter transport failed');
+      return decodeCombat2Entry(response.data);
+    },
+    async engage(characterId, targetCreatureId, requestId) {
+      let response: EntryRpcResponse;
+      try {
+        response = await client.rpc('combat2_engage', {
+          _character_id: characterId, _target_creature_id: targetCreatureId, _request_id: requestId,
+        });
+      } catch (error) {
+        throw new Combat2EntryError('uncertain', error instanceof Error ? error.message : 'combat2_engage transport failed');
+      }
+      if (response.error) throw new Combat2EntryError('uncertain', response.error.message ?? 'combat2_engage transport failed');
       return decodeCombat2Entry(response.data);
     },
   };

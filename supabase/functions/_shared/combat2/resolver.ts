@@ -1720,7 +1720,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
   // ── 5. encounter lifecycle ────────────────────────────────────
   const anythingPending =
-    [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive) ||
+    [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive && c.engaged) ||
     snapshot.effects.some((e) => !['autoattack', 'stack_source'].includes(e.kind)
       && e.config?.persistent_stance !== true && !expiredIds.has(e.id) && !e.is_reservation);
   if (!anythingPending) proposed.status = 'ended';

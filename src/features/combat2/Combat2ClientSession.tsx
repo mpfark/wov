@@ -25,12 +25,12 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
   const enteredSessionKey = props.enabled && props.characterId && props.nodeId && enteredEncounterId
     ? `${props.characterId}:${props.nodeId}:${enteredEncounterId}`
     : null;
-  const [exitedSessionKey, setExitedSessionKey] = useState<string | null>(null);
+  const [releasedSessionKey, setReleasedSessionKey] = useState<string | null>(null);
   const [pendingFleeKey, setPendingFleeKey] = useState<string | null>(null);
   useEffect(() => {
-    if (!enteredSessionKey) setExitedSessionKey(null);
+    if (!enteredSessionKey) setReleasedSessionKey(null);
   }, [enteredSessionKey]);
-  const encounterId = enteredSessionKey && exitedSessionKey !== enteredSessionKey ? enteredEncounterId : null;
+  const encounterId = enteredSessionKey && releasedSessionKey !== enteredSessionKey ? enteredEncounterId : null;
   const delivery = useCombat2DeliverySession({
     enabled: props.enabled,
     characterId: props.characterId,
@@ -89,7 +89,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     authoritativeTick: model?.encounterTick ?? null,
     deliveryStatus: presentation.status,
   });
-  const onExited = useCallback((sessionKey: string) => setExitedSessionKey(sessionKey), []);
+  const onExited = useCallback((sessionKey: string) => setReleasedSessionKey(sessionKey), []);
   const flee = useCombat2FleeSession({
     canSubmit: props.controlled ? actionsReady : true,
     onQueued: () => setPendingFleeKey(enteredSessionKey),
@@ -100,10 +100,17 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     onExited,
   });
   useEffect(() => {
-    if (enteredSessionKey && presentation.model?.fighterExitState === 'exited') {
-      setExitedSessionKey(enteredSessionKey);
+    if (enteredSessionKey && presentation.model && (
+      presentation.model.fighterExitState === 'exited'
+      || presentation.model.fighterExitState === 'dead'
+      || presentation.model.encounterStatus !== 'active'
+      || !presentation.model.fighterPresent
+    )) {
+      setReleasedSessionKey(enteredSessionKey);
     }
-  }, [enteredSessionKey, presentation.model?.fighterExitState]);
+  }, [enteredSessionKey, presentation.model]);
+  const ownsActiveCombat = !!model && model.encounterStatus === 'active' && model.fighterPresent
+    && model.character.hp > 0 && model.creatures.some(creature => creature.isAlive && creature.hp > 0 && creature.engaged);
   return {
     entry,
     intents,
@@ -117,7 +124,8 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     testArenaDeath,
     pendingFlee,
     encounterId,
-    sessionStatus: encounterId ? 'active' as const : exitedSessionKey === enteredSessionKey && enteredSessionKey
+    ownsActiveCombat,
+    sessionStatus: encounterId ? 'active' as const : releasedSessionKey === enteredSessionKey && enteredSessionKey
       ? 'exited' as const
       : 'idle' as const,
   };

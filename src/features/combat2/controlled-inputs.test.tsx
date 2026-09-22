@@ -70,7 +70,7 @@ describe('controlled input and display boundary', () => {
     await act(async () => { await submit({ kind: 'ability', abilityKey: 'fireball', stanceKey: null, targetCreatureId: T }); });
     expect(vi.mocked(supabase.rpc).mock.calls.filter(([name])=>name==='combat_intent')).toHaveLength(0);
     const presentation = selectCombat2StatusPresentation({
-      rolloutEnabled: true, access: 'allowed', preflight: 'allowed', ownershipLocked: false,
+      rolloutEnabled: true, access: 'allowed', preflight: 'allowed', ownershipLocked: false, ownsActiveCombat: true,
       dead: false, testArenaDeath: false, sessionStatus: 'active', pendingFlee: false,
       entryStatus: 'entered', entryClassification: null, presentationStatus: status,
       actionsReady: false, hasModel: true, historical: false,

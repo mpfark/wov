@@ -7,7 +7,7 @@ const statusInput = {
   rolloutEnabled: true, access: 'allowed', preflight: 'allowed', ownershipLocked: false,
   dead: false, testArenaDeath: false, sessionStatus: 'idle', pendingFlee: false,
   entryStatus: 'idle', entryClassification: null, presentationStatus: 'idle',
-  actionsReady: false, hasModel: false, historical: false,
+  actionsReady: false, ownsActiveCombat: false, hasModel: false, historical: false,
 } as const;
 
 describe('Combat2 entry status label', () => {
@@ -46,7 +46,7 @@ describe('Combat2 entry status label', () => {
     [{ presentationStatus: 'gap', hasModel: true }, 'Combat state out of sync', 'fresh authoritative snapshot'],
     [{ presentationStatus: 'error' }, 'Combat state unavailable', 'temporarily out of sync'],
     [{ access: 'refused' }, 'Combat access refused', 'not authorized'],
-    [{ actionsReady: true, sessionStatus: 'active', entryStatus: 'entered', presentationStatus: 'live', hasModel: true }, 'Active combat', 'Combat actions are ready'],
+    [{ actionsReady: true, ownsActiveCombat: true, sessionStatus: 'active', entryStatus: 'entered', presentationStatus: 'live', hasModel: true }, 'Active combat', 'Combat actions are ready'],
   ] as const)('presents authoritative state %o distinctly', (overrides, label, guidance) => {
     const presentation = selectCombat2StatusPresentation({ ...statusInput, ...overrides });
     expect(presentation.label).toBe(label);

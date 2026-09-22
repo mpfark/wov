@@ -8,6 +8,7 @@ const CHARACTER_2 = 'aaaaaaaa-0000-4000-8000-000000000002';
 const NODE = 'eeeeeeee-0000-4000-8000-000000000001';
 const NODE_2 = 'eeeeeeee-0000-4000-8000-000000000002';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
+const FIGHTER = 'cccccccc-0000-4000-8000-000000000001';
 
 const entered = (classification: 'entered' | 'already_entered' | 'already_present' | 'reentered' | 'reactivated' = 'entered'): Combat2EntryOutcome => ({
   status: 'entered', classification, encounterId: ENCOUNTER, fighterId: null, entrySeq: null,
@@ -106,6 +107,45 @@ describe('useCombat2EntrySession', () => {
     const { result, rerender } = renderHook(({ living }) => useCombat2EntrySession({ enabled: true, characterId: CHARACTER, nodeId: NODE, hasLivingCreatures: living, adapter, generateRequestId: () => 'request' }), { initialProps: { living: true } });
     await waitFor(() => expect(result.current.status).toBe('entered'));
     rerender({ living: false });
+    expect(result.current.encounterId).toBe(ENCOUNTER);
+  });
+
+  it('lets one deliberate hostile action establish the authoritative session on a peaceful node', async () => {
+    const engage = vi.fn(async () => entered());
+    const adapter: Combat2EntryAdapter = { enter: vi.fn(), engage };
+    const { result } = renderHook(() => useCombat2EntrySession({ enabled: true, characterId: CHARACTER,
+      nodeId: NODE, hasLivingCreatures: false, adapter, generateRequestId: () => 'engage-request' }));
+    await act(async () => { expect(await result.current.engage(FIGHTER)).toMatchObject({ status: 'entered' }); });
+    expect(engage).toHaveBeenCalledWith(CHARACTER, FIGHTER, 'engage-request');
+    expect(result.current).toMatchObject({ status: 'entered', encounterId: ENCOUNTER });
+    expect(adapter.enter).not.toHaveBeenCalled();
+  });
+
+  it('reuses the deliberate engagement request after an uncertain transport result', async () => {
+    const engage = vi.fn()
+      .mockRejectedValueOnce(new Combat2EntryError('uncertain', 'response lost'))
+      .mockResolvedValueOnce(entered('already_entered'));
+    const requestId = vi.fn(() => 'stable-engage-request');
+    const { result } = renderHook(() => useCombat2EntrySession({ enabled: true, characterId: CHARACTER,
+      nodeId: NODE, hasLivingCreatures: false, adapter: { enter: vi.fn(), engage }, generateRequestId: requestId }));
+    await act(async () => { await expect(result.current.engage(FIGHTER)).rejects.toMatchObject({ code: 'uncertain' }); });
+    await act(async () => { await expect(result.current.engage(FIGHTER)).resolves.toMatchObject({ status: 'entered' }); });
+    expect(engage).toHaveBeenNthCalledWith(1, CHARACTER, FIGHTER, 'stable-engage-request');
+    expect(engage).toHaveBeenNthCalledWith(2, CHARACTER, FIGHTER, 'stable-engage-request');
+    expect(requestId).toHaveBeenCalledOnce();
+  });
+
+  it('does not let a late speculative entry refusal overwrite deliberate engagement', async () => {
+    const automatic = deferred<Combat2EntryOutcome>();
+    const adapter: Combat2EntryAdapter = { enter: vi.fn(() => automatic.promise), engage: vi.fn(async () => entered()) };
+    const { result } = renderHook(() => useCombat2EntrySession({ enabled: true, characterId: CHARACTER,
+      nodeId: NODE, hasLivingCreatures: true, adapter, generateRequestId: vi.fn()
+        .mockReturnValueOnce('automatic-request').mockReturnValueOnce('engage-request') }));
+    await waitFor(() => expect(result.current.status).toBe('entering'));
+    await act(async () => { await result.current.engage(FIGHTER); });
+    expect(result.current.status).toBe('entered');
+    await act(async () => automatic.resolve({ status: 'refused', classification: 'no_engagement', reason: null }));
+    expect(result.current.status).toBe('entered');
     expect(result.current.encounterId).toBe(ENCOUNTER);
   });
 

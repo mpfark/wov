@@ -34,6 +34,9 @@ export function useCombat2VisibleLog(
 
   if (!reserved) retained.current = null;
   if (active && retained.current?.key === key) return { events: retained.current.events, historical: false };
+  if (validModel && ['ended', 'completed'].includes(validModel.encounterStatus) && retained.current?.key === key) {
+    return { events: retained.current.events, historical: false };
+  }
   if (reserved && retained.current) return { events: retained.current.events, historical: true };
   return { events: [], historical: false };
 }

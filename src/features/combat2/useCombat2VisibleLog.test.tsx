@@ -8,7 +8,7 @@ const CHARACTER = '22222222-2222-4222-8222-222222222222';
 const ENCOUNTER = '33333333-3333-4333-8333-333333333333';
 const line = (id: string, message: string, ts: number): GameLogEvent => ({ v: 1, id, ts, type: 'ability', message });
 const model = (status: string, events: readonly GameLogEvent[]): Combat2PresentationModel => ({
-  encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 1, encounterStatus: status, fighterExitState: null,
+  encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 1, encounterStatus: status, fighterPresent: status === 'active', fighterExitState: null,
   autoattack: null, character: { id: CHARACTER, level: 1, xp: 0, gold: 0, hp: 10, maxHp: 10, cp: 10, maxCp: 10, mp: 10, maxMp: 10 },
   allies: [], creatures: [], effects: [], characterEffects: [], creatureEffects: {}, telegraphs: [], telegraphsByCreatureLife: {},
   rewardClaims: [], events, lastAppliedTick: 1,
@@ -48,5 +48,14 @@ describe('useCombat2VisibleLog', () => {
     expect(result.current).toEqual({ events: [], historical: false });
     rerender({ character: '99999999-9999-4999-8999-999999999999', reserved: true, current: null });
     expect(result.current).toEqual({ events: [], historical: false });
+  });
+
+  it('keeps completed ordinary combat lines without mislabelling the released state as stale', () => {
+    const received = [line('one', 'Combat ends.', 1)];
+    const { result, rerender } = renderHook(({ current }) => useCombat2VisibleLog(CHARACTER, true, current, []), {
+      initialProps: { current: model('active', received) },
+    });
+    rerender({ current: model('ended', received) });
+    expect(result.current).toEqual({ events: received, historical: false });
   });
 });

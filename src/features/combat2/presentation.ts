@@ -126,6 +126,7 @@ export interface Combat2PresentationModel {
   encounterTick: number;
   stateVersion: number;
   encounterStatus: string;
+  fighterPresent: boolean;
   fighterExitState: 'pending' | 'exited' | 'dead' | null;
   autoattack: { targetCreatureId: string; nodeCreatureId: string; spawnSeq: number; active: boolean } | null;
   character: Combat2PresentationCharacter;
@@ -376,6 +377,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
   const characterId = stringField(character, 'id');
   const fighter = record(sync.fighter);
   const ownFighterId = fighter ? stringField(fighter, 'id') : null;
+  const fighterPresent = fighter?.present === true;
   const rawExitState = fighter?.exitState;
   if (rawExitState !== null && rawExitState !== undefined && rawExitState !== 'pending' && rawExitState !== 'exited' && rawExitState !== 'dead') {
     throw new Combat2PresentationError('combat2_sync exitState is invalid');
@@ -469,6 +471,7 @@ export function buildCombat2Presentation(delivery: Combat2DeliverySessionState, 
     encounterTick,
     stateVersion: integerField(encounter, 'stateVersion'),
     encounterStatus: stringField(encounter, 'status'),
+    fighterPresent,
     fighterExitState: (rawExitState ?? null) as Combat2PresentationModel['fighterExitState'],
     autoattack,
     character: {

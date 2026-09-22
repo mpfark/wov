@@ -97,6 +97,7 @@ interface Combat2StatusInput {
   entryClassification: Combat2EntryRefusal | string | null;
   presentationStatus: Combat2DeliverySessionStatus;
   actionsReady: boolean;
+  ownsActiveCombat: boolean;
   hasModel: boolean;
   historical: boolean;
 }
@@ -124,9 +125,14 @@ export function selectCombat2StatusPresentation(input: Combat2StatusInput): Comb
     : view('dead', 'Defeated', 'Authoritative respawn becomes available after 3 seconds.');
   if (input.sessionStatus === 'exited') return view('unavailable', 'Combat ended', 'Combat actions are unavailable until combat resumes.');
   if (input.pendingFlee) return view('pending', 'Movement pending', 'Movement is being finalized — try again shortly.');
-  if (input.entryStatus === 'refused') return input.entryClassification === 'not_authorized'
-    ? view('authorization_refusal', 'Combat access refused', 'This character is not authorized to enter combat.')
-    : view('unavailable', 'Combat unavailable', 'Combat entry is temporarily unavailable.');
+  if (input.entryStatus === 'refused') {
+    if (input.entryClassification === 'no_engagement') {
+      return view('peaceful', 'Peaceful — no active encounter', 'Movement is available. Attack a peaceful creature to begin combat.', false);
+    }
+    return input.entryClassification === 'not_authorized'
+      ? view('authorization_refusal', 'Combat access refused', 'This character is not authorized to enter combat.')
+      : view('unavailable', 'Combat unavailable', 'Combat entry is temporarily unavailable.');
+  }
   if (input.entryStatus === 'uncertain' || input.entryStatus === 'error') {
     return view('unavailable', 'Combat state unavailable', 'Combat state is temporarily out of sync.');
   }
@@ -139,7 +145,7 @@ export function selectCombat2StatusPresentation(input: Combat2StatusInput): Comb
   if (input.presentationStatus === 'error') {
     return view('unavailable', 'Combat state unavailable', 'Combat state is temporarily out of sync.', true, input.hasModel);
   }
-  if (input.actionsReady) return view('active', 'Active combat', 'Combat actions are ready.', false, false);
+  if (input.actionsReady && input.hasModel && input.ownsActiveCombat) return view('active', 'Active combat', 'Combat actions are ready.', false, false);
   if (input.presentationStatus === 'reconnecting') {
     return view('reconnecting', 'Reconnecting', 'Waiting for a fresh authoritative snapshot.', true, input.hasModel);
   }

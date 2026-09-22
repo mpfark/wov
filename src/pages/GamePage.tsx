@@ -253,7 +253,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     } else if(result.status==='not_ready') setCombat2Diagnostic(`Respawn is not ready until ${new Date(result.eligibleAt).toLocaleTimeString()}.`);
     else if(result.status!=='stale') setCombat2Diagnostic(result.status==='refused'?`Respawn refused: ${result.classification}`:result.reason);
   },[combat2.respawn,refetchCharacters]);
-  const activeCombat2Presentation = combat2OwnsSession
+  const activeCombat2Presentation = combat2OwnsSession && combat2.encounterId
     ? combat2.presentation.model
     : null;
   const authoritativeCombat2ReservationState = useMemo(() => selectCombat2Reservations(
@@ -1045,6 +1045,13 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const handleSelectedBasicAttack = useCallback((id: string) => {
     if (!combat2BlocksLegacy) { setSelectedTargetId(id); handleAttack(id); return; }
+    if (!combat2.encounterId) {
+      void combat2.entry.engage(id).then(result => {
+        if (result.status === 'entered') setCombat2Diagnostic(null);
+        else setCombat2Diagnostic(`Combat2 attack refused${result.reason ? `: ${result.reason}` : ''}`);
+      }).catch(() => setCombat2Diagnostic('Combat2 attack state is uncertain.'));
+      return;
+    }
     combat2Targets.select(id);
     void routeCombat2BasicAttack({ enabled: true, sessionReady: combat2.actionsReady && !ownership.locked,
       resolveTarget: () => combat2Targets.resolveManualAttackId(id), legacy: () => {}, submit: combat2.intents.submit,
@@ -1230,6 +1237,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     entryClassification: combat2.entry.classification,
     presentationStatus: combat2.presentation.status,
     actionsReady: combat2.actionsReady,
+    ownsActiveCombat: combat2.ownsActiveCombat,
     hasModel: !!activeCombat2Presentation,
     historical: combat2VisibleLog.historical,
   });

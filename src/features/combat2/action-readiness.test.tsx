@@ -5,7 +5,7 @@ import { combat2AbilityControlDisabled, combat2DeliveryPreservesPending, deriveC
 
 const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
-const model = { encounterStatus: 'active', fighterExitState: null } as const;
+const model = { encounterStatus: 'active', fighterExitState: null, fighterPresent: true } as const;
 const fighter = { id: 'fighter', characterId: CHARACTER, present: true, entrySeq: 1 };
 const readyInput = {
   inputLocked: false,
@@ -45,6 +45,7 @@ describe('Combat2 action readiness', () => {
     expect(deriveCombat2ActionReadiness({ ...readyInput, encounterId: null })).toBe(false);
     expect(deriveCombat2ActionReadiness({ ...readyInput, fighter: { ...fighter, characterId: 'other' } })).toBe(false);
     expect(deriveCombat2ActionReadiness({ ...readyInput, fighter: { ...fighter, present: false } })).toBe(false);
+    expect(deriveCombat2ActionReadiness({ ...readyInput, model: { ...model, fighterPresent: false } })).toBe(false);
     expect(deriveCombat2ActionReadiness({ ...readyInput, dead: true })).toBe(false);
     expect(deriveCombat2ActionReadiness({ ...readyInput, pendingFlee: true })).toBe(false);
     expect(deriveCombat2ActionReadiness({ ...readyInput, inputLocked: true })).toBe(false);
