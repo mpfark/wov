@@ -64,6 +64,44 @@ function object(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/** Closed set of top-level commit-proposal contract keys. Only these names may be reported. */
+export const PROPOSAL_FIELDS = [
+  'tick', 'status', 'characters', 'creatures', 'effects_insert', 'effects_update', 'effects_delete',
+  'fighters', 'departures', 'rewards', 'loot', 'durability', 'equipment_fence', 'events',
+  'intent_ids', 'participation', 'pending_event_ids', 'boss_cooldowns',
+] as const;
+
+/**
+ * Bounded classification of a transport failure:
+ * `pg` a PostgreSQL SQLSTATE, `pgrst` a PostgREST contract code, `serde` a payload that cannot
+ * be serialized before any request is sent, `fetch` a network/response failure with no code.
+ */
+export type TransportFailureCategory = 'pg' | 'pgrst' | 'serde' | 'fetch' | 'unknown';
+
+function transportCategory(error: Record<string, unknown> | null): TransportFailureCategory {
+  const category = error?.category;
+  if (category === 'pg' || category === 'pgrst' || category === 'serde' || category === 'fetch') return category;
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (/^PGRST[0-9]{3}$/i.test(code)) return 'pgrst';
+  if (/^[A-Z0-9]{5}$/i.test(code)) return 'pg';
+  if (code === '') return 'fetch';
+  return 'unknown';
+}
+
+/** Fails closed before any request when the proposal cannot survive JSON serialization. */
+function serializableProposal(args: CommitTickArgs): boolean {
+  try {
+    const encoded = JSON.parse(JSON.stringify(args)) as Record<string, unknown>;
+    const proposed = object(encoded._proposed);
+    if (!proposed) return false;
+    return PROPOSAL_FIELDS.every((key) => key === 'status' || proposed[key] !== undefined);
+  } catch {
+    return false;
+  }
+}
+
+
+
 /** Explicit guard: discriminant narrowing on `ok` is unreliable under tsgo here. */
 function isDecodeFailure(
   result: ClaimDecodeResult,
