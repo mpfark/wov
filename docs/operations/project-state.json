@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T07:12:47Z",
-  "based_on_source_sha": "8f647453daf4cd134eda1809397b64cf9b809f66",
+  "updated_at": "2026-09-22T08:16:04Z",
+  "based_on_source_sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,8 +16,8 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "8f647453daf4cd134eda1809397b64cf9b809f66",
-    "timestamp": "2026-09-22T07:12:47Z",
+    "sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
+    "timestamp": "2026-09-22T08:16:04Z",
     "evidence_type": "repository",
     "evidence": "Local main fast-forwarded cleanly to origin/main. The previous diagnostic source-quality commit eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1 and the latest diagnostic/project-state commits are ancestors of the synchronized source. No history was rewritten.",
     "reporting_actor": "Codex",
@@ -91,9 +91,9 @@
     "status": "ready_for_manual_publish",
     "artifact": "Combat2 diagnostic and sync-readiness frontend",
     "sha": null,
-    "timestamp": "2026-09-22T07:12:47Z",
+    "timestamp": "2026-09-22T08:16:04Z",
     "evidence_type": "tests",
-    "evidence": "Mik previously reported manual publication of eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1. Later Stop/Export recovery and the current healthy-sync readiness correction are not published; focused checks and the production build make the current frontend ready for Mik's next manual publication.",
+    "evidence": "Mik previously reported manual publication of eff0880aa1b68db9f22f7ecd3c96d3461d3ad3a1. Later Stop/Export recovery, healthy-sync readiness and the Holy Shield authoritative stance presentation correction are not published; focused checks and the production build make the current frontend ready for Mik's next manual publication.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -199,6 +199,46 @@
       "directly_verified": true
     },
     {
+      "identity": "holy-shield-duplicate-presentation",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-09-22T08:16:04Z",
+      "evidence_type": "tests",
+      "evidence": "The authoritative snapshot intentionally contains one reactive Holy Shield effect and one CP-reservation effect. The UI formerly rendered both under the same label. The presentation now groups only the source/target/ability-matched stance pair into one semantic badge while retaining both authoritative records, and the action buttons and CP bar read the authoritative reservation rather than characters.reserved_buffs.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "in-combat-hp-regeneration",
+      "status": "committed",
+      "sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
+      "timestamp": "2026-09-22T08:16:04Z",
+      "evidence_type": "source_audit",
+      "evidence": "The authored rule explicitly pauses passive HP regeneration during combat. Combat2 therefore applies no base CON, equipment, food, milestone or Inn regeneration in a node tick. Explicit authored regeneration effects such as Inspire remain server-authoritative, pulse once per eligible Combat2 tick for living present party members and cap at max HP. No gameplay correction was made.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "in-combat-cp-regeneration",
+      "status": "committed",
+      "sha": "d8366164b8a25529a3e6a587b6d2feb41ba1dfeb",
+      "timestamp": "2026-09-22T08:16:04Z",
+      "evidence_type": "source_audit",
+      "evidence": "The authored rule explicitly pauses passive CP regeneration during combat. Explicit authored CP-restoration effects such as Inspire remain server-authoritative and cap raw CP at max CP; active stance reservations remain separate authoritative effects, so restored raw CP above the reservation stays locked rather than spendable. No gameplay correction was made.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "global-world-tick-resource-settlement",
+      "status": "authored",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "task_boundary",
+      "evidence": "Separate pending architecture topic. It is not required to implement the current authored in-combat regeneration contract and was explicitly excluded from this correction.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "stance-outside-combat",
       "status": "authored",
       "sha": null,
@@ -233,11 +273,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik manually publishes the current frontend, then verifies that ability buttons remain stable during several healthy automatic snapshot refreshes.",
+    "artifact": "Mik manually publishes the current frontend, then verifies healthy-sync buttons and the single semantic Holy Shield stance presentation/CP reservation display.",
     "sha": null,
     "timestamp": null,
     "evidence_type": "handoff",
-    "evidence": "The repository task does not publish the frontend. The smallest follow-up is a passive UI observation after Mik's manual publication; stance-outside-combat and ADM-025B remain separate.",
+    "evidence": "The repository task does not publish the frontend. The smallest follow-up is a passive UI observation after Mik's manual publication; in-combat passive regeneration remains intentionally paused, while stance-outside-combat, global resource settlement and ADM-025B remain separate.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

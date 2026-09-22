@@ -86,6 +86,7 @@ import { useControlledAction, isCombatMutation } from '@/features/combat2/contro
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
+import { selectCombat2Reservations } from '@/features/combat2/presentation';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
@@ -255,6 +256,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const activeCombat2Presentation = combat2OwnsSession
     ? combat2.presentation.model
     : null;
+  const authoritativeCombat2ReservationState = useMemo(() => selectCombat2Reservations(
+    activeCombat2Presentation?.characterEffects ?? [],
+  ), [activeCombat2Presentation]);
+  const authoritativeCombat2Reservations = authoritativeCombat2ReservationState.reservedBuffs;
+  const authoritativeCombat2ReservedCp = authoritativeCombat2ReservationState.reservedCp;
   const presentedCharacter = useMemo(() => selectCombat2Character(
     combat2BlocksLegacy, activeCombat2Presentation, character,
   ), [activeCombat2Presentation, character]);
@@ -957,7 +963,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       currentCharacterId: character.id,
       authoritativeAllies: activeCombat2Presentation?.allies,
       reservedBuffs: combat2BlocksLegacy
-        ? Object.fromEntries((activeCombat2Presentation?.characterEffects ?? []).filter(e => e.isReservation).map(e => [e.abilityKey ?? e.kind, {}]))
+        ? authoritativeCombat2Reservations
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
       legacy: () => handleUseAbility(abilityIndex, targetId),
       submit: combat2.intents.submit,
@@ -967,7 +973,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, ownership.locked, actionEpoch]);
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, ownership.locked, actionEpoch]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
@@ -1494,7 +1500,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               abilityTargetId={abilityTargetId}
               pendingAbilityIndex={pendingAbilityIndex ?? pendingAbility?.index ?? null}
               pendingAbilityStage={pendingAbilityStage ?? null}
-              reservedBuffs={(character as any).reserved_buffs ?? null}
+              reservedBuffs={combat2BlocksLegacy
+                ? authoritativeCombat2Reservations
+                : (character as any).reserved_buffs ?? null}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
@@ -1540,12 +1548,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
                 inspireBuff,
                 holyShieldBuff, consecrateBuff, divineChallengeBuff,
                 reservedCp: pendingCpCost,
-                stanceReservedCp: (() => {
+                stanceReservedCp: combat2BlocksLegacy ? authoritativeCombat2ReservedCp : (() => {
                   const rb = (character as any).reserved_buffs as Record<string, { reserved: number }> | null;
                   if (!rb) return 0;
                   return Object.values(rb).reduce((s, e) => s + (Number(e?.reserved) || 0), 0);
                 })(),
-                reservedBuffs: (character as any).reserved_buffs ?? null,
+                reservedBuffs: combat2BlocksLegacy
+                  ? authoritativeCombat2Reservations
+                  : (character as any).reserved_buffs ?? null,
                 authoritativeEffects: activeCombat2Presentation?.characterEffects,
               }}
             />

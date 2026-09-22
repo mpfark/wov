@@ -102,6 +102,25 @@ export interface Combat2PresentationEffect {
   category: Combat2EffectCategory;
 }
 
+export interface Combat2ReservationPresentation {
+  reservedCp: number;
+  reservedBuffs: Record<string, { reserved: number }>;
+}
+
+export function selectCombat2Reservations(
+  effects: readonly Combat2PresentationEffect[],
+): Combat2ReservationPresentation {
+  const reservedBuffs: Record<string, { reserved: number }> = {};
+  for (const effect of effects) {
+    if (!effect.isReservation || effect.abilityKey === null) continue;
+    reservedBuffs[effect.abilityKey] = { reserved: Math.max(0, effect.magnitude ?? 0) };
+  }
+  return {
+    reservedCp: Object.values(reservedBuffs).reduce((sum, reservation) => sum + reservation.reserved, 0),
+    reservedBuffs,
+  };
+}
+
 export interface Combat2PresentationModel {
   encounterId: string;
   encounterTick: number;

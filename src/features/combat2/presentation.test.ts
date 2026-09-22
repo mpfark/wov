@@ -3,7 +3,7 @@ import type { Character } from '@/features/character';
 import type { Creature } from '@/features/creatures';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import type { Combat2DeliverySessionState } from './useCombat2DeliverySession';
-import { buildCombat2Presentation, Combat2PresentationError } from './presentation';
+import { buildCombat2Presentation, Combat2PresentationError, selectCombat2Reservations } from './presentation';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events } from './presentation-selectors';
 import { decodeCombat2Intent } from './intent';
 import { combat2AbilityLabel, combat2FleeCommandRefusal } from './event-message';
@@ -280,6 +280,22 @@ describe('Combat2 authoritative presentation model', () => {
 
     const removed = delivery();
     expect(buildCombat2Presentation(removed).effects).toEqual([]);
+  });
+
+  it('projects CP reservations once from authoritative stance records', () => {
+    const state = delivery();
+    state.snapshot!.effects = [
+      effect({ id: 'reservation', kind: 'reservation', effectType: 'cp_reservation',
+        abilityKey: 'holy_shield', magnitude: 12, isReservation: true }),
+      effect({ id: 'stance-effect', kind: 'reactive', effectType: 'reactive_damage',
+        abilityKey: 'holy_shield', magnitude: 7 }),
+    ];
+    const model = buildCombat2Presentation(state);
+    expect(model.characterEffects).toHaveLength(2);
+    expect(selectCombat2Reservations(model.characterEffects)).toEqual({
+      reservedCp: 12,
+      reservedBuffs: { holy_shield: { reserved: 12 } },
+    });
   });
 
   it('retains bounded dynamic telegraph identity and uses a creature-life key', () => {

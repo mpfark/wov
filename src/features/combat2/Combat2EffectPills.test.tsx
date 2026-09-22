@@ -35,4 +35,33 @@ describe('Combat2EffectPills', () => {
     expect(screen.getByText(/Rend ×2 · 0s/)).toBeInTheDocument();
     expect(view.container.querySelectorAll('[data-combat2-effect-id="effect-1"]')).toHaveLength(1);
   });
+
+  it('presents the authoritative Holy Shield mechanic and reservation as one semantic stance', () => {
+    const reservation = effect({
+      id: 'holy-reservation', kind: 'reservation', effectType: 'cp_reservation', abilityKey: 'holy_shield',
+      sourceCharacterId: 'character-target', sourceCreatureId: null, magnitude: 12,
+      isReservation: true, category: 'stance',
+    });
+    const retaliation = effect({
+      id: 'holy-reactive', kind: 'reactive', effectType: 'reactive_damage', abilityKey: 'holy_shield',
+      sourceCharacterId: 'character-target', sourceCreatureId: null, magnitude: 7, category: 'stance',
+    });
+    const view = render(<Combat2EffectPills effects={[reservation, retaliation]} />);
+
+    expect(screen.getAllByText('Holy Shield')).toHaveLength(1);
+    expect(screen.getByLabelText('Holy Shield: 12 CP reserved, Reactive magnitude 7')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-combat2-effect-id]')).toHaveAttribute(
+      'data-combat2-effect-id', 'holy-reservation holy-reactive',
+    );
+  });
+
+  it('does not collapse same-labelled effects from different authoritative sources', () => {
+    render(<Combat2EffectPills effects={[
+      effect({ id: 'first', abilityKey: 'shared_guard', sourceCharacterId: 'caster-a', sourceCreatureId: null,
+        category: 'beneficial' }),
+      effect({ id: 'second', abilityKey: 'shared_guard', sourceCharacterId: 'caster-b', sourceCreatureId: null,
+        category: 'beneficial' }),
+    ]} />);
+    expect(screen.getAllByText('Shared Guard')).toHaveLength(2);
+  });
 });

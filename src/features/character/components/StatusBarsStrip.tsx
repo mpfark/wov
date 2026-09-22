@@ -45,7 +45,7 @@ export interface StatusBarsStripProps {
   /** CP currently locked by active CP-reservation stances (display-only). */
   stanceReservedCp?: number;
   /** Active stance map keyed by stance key. Used to render stance pips. */
-  reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
+  reservedBuffs?: Record<string, { tier?: number; reserved: number; activated_at?: number }> | null;
   /** Defined only while Combat2 owns the active presentation session. */
   authoritativeEffects?: readonly Combat2PresentationEffect[];
 }
@@ -358,7 +358,7 @@ export default function StatusBarsStrip({
                     {reservedBuffs && Object.keys(reservedBuffs).length > 0 && (
                       <div className="mt-1 font-display">
                         {Object.entries(reservedBuffs).map(([k, v]) => (
-                          <div key={k}>• {k} (T{v.tier}): -{v.reserved} CP</div>
+                          <div key={k}>• {k}{v.tier === undefined ? '' : ` (T${v.tier})`}: -{v.reserved} CP</div>
                         ))}
                       </div>
                     )}
