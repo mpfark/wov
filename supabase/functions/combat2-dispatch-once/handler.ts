@@ -149,17 +149,24 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             },
             async commitTick(args: CommitTickArgs) {
               const { data, error } = await client.rpc('node_tick_commit', args as unknown as Record<string, unknown>);
-              if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
+              if (error) throw Object.assign(new Error('database transport failed'), transportDetail(error));
               return data;
             },
           },
           });
           if(!(workerResult.ok&&(workerResult.kind==='committed'||workerResult.kind==='already_committed'))) {
+            const detail=[
+              'category' in workerResult&&workerResult.category?`cat=${workerResult.category}`:'',
+              'code' in workerResult&&workerResult.code?`code=${workerResult.code}`:'',
+              'field' in workerResult&&workerResult.field?`field=${workerResult.field}`:'',
+              'proposalIntents' in workerResult&&workerResult.proposalIntents!==undefined?`intents=${workerResult.proposalIntents}`:'',
+            ].filter(Boolean).join(' ');
             events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
               encounter_id:'encounterId' in workerResult?workerResult.encounterId:encounterId,
               tick:'tick' in workerResult?workerResult.tick:undefined,
-              outcome:`${workerResult.kind} after ${lastPhase}`.slice(0,80),elapsed_ms:0});
+              outcome:`${workerResult.kind} after ${lastPhase}${detail?` ${detail}`:''}`.slice(0,80),elapsed_ms:0});
           }
+
           return workerResult;
         } catch (error) {
           events.push({event_type:lastPhase==='dispatcher_requested'||lastPhase==='claim_attempted'?'claim_refused':'commit_refused',
