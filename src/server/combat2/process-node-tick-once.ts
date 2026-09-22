@@ -39,7 +39,13 @@ export type NodeTickRunResult =
   | { ok: true; kind: 'committed' | 'already_committed'; encounterId: string; tick: number }
   | { ok: true; kind: 'not_due'; nextDueAt: string | null }
   | { ok: true; kind: 'in_flight' | 'locked_or_absent' }
-  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string; stage: 'claim' | 'commit'; code?: string }
+  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string; stage: 'claim' | 'commit'; code?: string;
+      /** Bounded failure category. Never carries database text, SQL or row data. */
+      category?: TransportFailureCategory;
+      /** Name of an invalid top-level proposal field, only when it is one of the closed contract keys. */
+      field?: string;
+      /** Shape-only evidence: how many intents the refused proposal carried. */
+      proposalIntents?: number }
   | { ok: false; kind: 'malformed_claim' | 'malformed_commit'; diagnostic: string }
   | { ok: false; kind: 'snapshot_rejected'; errors: string[] }
   | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
@@ -72,8 +78,13 @@ function safeError(error: unknown): string {
 function safeTransportFailure(error: unknown, stage: 'claim' | 'commit') {
   const value = object(error);
   const code = typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : undefined;
-  return { diagnostic: 'transport failed safely', stage, ...(code ? { code } : {}) };
+  const category = transportCategory(value);
+  const field = typeof value?.field === 'string' && (PROPOSAL_FIELDS as readonly string[]).includes(value.field)
+    ? value.field
+    : undefined;
+  return { diagnostic: 'transport failed safely', stage, category, ...(code ? { code } : {}), ...(field ? { field } : {}) };
 }
+
 
 /** Process at most one authoritative tick for one node. Never retries. */
 export async function processNodeTickOnce(
