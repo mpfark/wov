@@ -169,7 +169,9 @@ describe('processNodeTickOnce', () => {
     const first = await processNodeTickOnce(NODE, { transport: failed.value, abilityRecords: abilities, statusRecords: statuses });
     expect(first).toEqual({
       ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely', stage: 'commit', code: '23514',
+      category: 'pg', proposalIntents: 1,
     });
+
     expect(failed.calls.commits).toHaveLength(1);
     expect(JSON.stringify(first)).not.toContain('constraint detail');
     expect(JSON.stringify(first)).not.toContain('private row');

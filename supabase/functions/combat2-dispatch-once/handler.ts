@@ -1,12 +1,12 @@
 import type { AuthoredAbilityRecord } from '../_shared/combat2/catalog.ts';
 import type { AppliedStatusRow } from '../_shared/config/status-contract.ts';
 import { dispatchNodeTicksOnce, DISPATCH_LIMIT, type DispatchRunResult } from '../_shared/combat2/dispatch-node-ticks-once.ts';
-import type { CommitTickArgs, NodeTickRunResult, ProcessNodeTickDependencies } from '../_shared/combat2/process-node-tick-once.ts';
+import { PROPOSAL_FIELDS, type CommitTickArgs, type NodeTickRunResult, type ProcessNodeTickDependencies } from '../_shared/combat2/process-node-tick-once.ts';
 import { bearerToken, constantTimeSecretEqual, redact } from '../_shared/combat2-internal-edge-auth.ts';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-interface RpcResult { data: unknown; error: { code?: string } | null }
+interface RpcResult { data: unknown; error: { code?: string; message?: string; details?: string; hint?: string } | null }
 export interface DispatchRpcClient {
   rpc(name: string, args: Record<string, unknown>): PromiseLike<RpcResult>;
 }
@@ -105,6 +105,21 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
       return typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : 'unknown';
     };
 
+    /**
+     * Bounded, non-identifying classification of a refused RPC. Only a code shape, a category and
+     * a top-level contract field name may escape; database text, SQL and row data never do.
+     */
+    const transportDetail = (error: { code?: string; message?: string; details?: string; hint?: string }) => {
+      const code = typeof error.code === 'string' ? error.code : '';
+      const category = /^PGRST[0-9]{3}$/i.test(code) ? 'pgrst'
+        : /^[A-Z0-9]{5}$/i.test(code) ? 'pg'
+        : code === '' ? 'fetch' : 'unknown';
+      const haystack = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`;
+      const field = PROPOSAL_FIELDS.find((key) => new RegExp(`\\b${key}\\b`).test(haystack));
+      return { code: /^[A-Z0-9]{5}$/i.test(code) ? code : undefined, category, ...(field ? { field } : {}) };
+    };
+
+
     const result = await dispatchNodeTicksOnce({
       async discoverDueNodes(limit) {
         const { data, error } = await client.rpc('combat2_due_nodes', { _limit: limit });
@@ -134,17 +149,24 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             },
             async commitTick(args: CommitTickArgs) {
               const { data, error } = await client.rpc('node_tick_commit', args as unknown as Record<string, unknown>);
-              if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
+              if (error) throw Object.assign(new Error('database transport failed'), transportDetail(error));
               return data;
             },
           },
           });
           if(!(workerResult.ok&&(workerResult.kind==='committed'||workerResult.kind==='already_committed'))) {
+            const detail=[
+              'category' in workerResult&&workerResult.category?`cat=${workerResult.category}`:'',
+              'code' in workerResult&&workerResult.code?`code=${workerResult.code}`:'',
+              'field' in workerResult&&workerResult.field?`field=${workerResult.field}`:'',
+              'proposalIntents' in workerResult&&workerResult.proposalIntents!==undefined?`intents=${workerResult.proposalIntents}`:'',
+            ].filter(Boolean).join(' ');
             events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
               encounter_id:'encounterId' in workerResult?workerResult.encounterId:encounterId,
               tick:'tick' in workerResult?workerResult.tick:undefined,
-              outcome:`${workerResult.kind} after ${lastPhase}`.slice(0,80),elapsed_ms:0});
+              outcome:`${workerResult.kind} after ${lastPhase}${detail?` ${detail}`:''}`.slice(0,80),elapsed_ms:0});
           }
+
           return workerResult;
         } catch (error) {
           events.push({event_type:lastPhase==='dispatcher_requested'||lastPhase==='claim_attempted'?'claim_refused':'commit_refused',

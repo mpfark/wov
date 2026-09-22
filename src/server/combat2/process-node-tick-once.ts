@@ -39,7 +39,13 @@ export type NodeTickRunResult =
   | { ok: true; kind: 'committed' | 'already_committed'; encounterId: string; tick: number }
   | { ok: true; kind: 'not_due'; nextDueAt: string | null }
   | { ok: true; kind: 'in_flight' | 'locked_or_absent' }
-  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string; stage: 'claim' | 'commit'; code?: string }
+  | { ok: false; kind: 'claim_transport_error' | 'commit_transport_error'; diagnostic: string; stage: 'claim' | 'commit'; code?: string;
+      /** Bounded failure category. Never carries database text, SQL or row data. */
+      category?: TransportFailureCategory;
+      /** Name of an invalid top-level proposal field, only when it is one of the closed contract keys. */
+      field?: string;
+      /** Shape-only evidence: how many intents the refused proposal carried. */
+      proposalIntents?: number }
   | { ok: false; kind: 'malformed_claim' | 'malformed_commit'; diagnostic: string }
   | { ok: false; kind: 'snapshot_rejected'; errors: string[] }
   | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
@@ -58,6 +64,44 @@ function object(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/** Closed set of top-level commit-proposal contract keys. Only these names may be reported. */
+export const PROPOSAL_FIELDS = [
+  'tick', 'status', 'characters', 'creatures', 'effects_insert', 'effects_update', 'effects_delete',
+  'fighters', 'departures', 'rewards', 'loot', 'durability', 'equipment_fence', 'events',
+  'intent_ids', 'participation', 'pending_event_ids', 'boss_cooldowns',
+] as const;
+
+/**
+ * Bounded classification of a transport failure:
+ * `pg` a PostgreSQL SQLSTATE, `pgrst` a PostgREST contract code, `serde` a payload that cannot
+ * be serialized before any request is sent, `fetch` a network/response failure with no code.
+ */
+export type TransportFailureCategory = 'pg' | 'pgrst' | 'serde' | 'fetch' | 'unknown';
+
+function transportCategory(error: Record<string, unknown> | null): TransportFailureCategory {
+  const category = error?.category;
+  if (category === 'pg' || category === 'pgrst' || category === 'serde' || category === 'fetch') return category;
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (/^PGRST[0-9]{3}$/i.test(code)) return 'pgrst';
+  if (/^[A-Z0-9]{5}$/i.test(code)) return 'pg';
+  if (code === '') return 'fetch';
+  return 'unknown';
+}
+
+/** Fails closed before any request when the proposal cannot survive JSON serialization. */
+function serializableProposal(args: CommitTickArgs): boolean {
+  try {
+    const encoded = JSON.parse(JSON.stringify(args)) as Record<string, unknown>;
+    const proposed = object(encoded._proposed);
+    if (!proposed) return false;
+    return PROPOSAL_FIELDS.every((key) => key === 'status' || proposed[key] !== undefined);
+  } catch {
+    return false;
+  }
+}
+
+
+
 /** Explicit guard: discriminant narrowing on `ok` is unreliable under tsgo here. */
 function isDecodeFailure(
   result: ClaimDecodeResult,
@@ -72,8 +116,13 @@ function safeError(error: unknown): string {
 function safeTransportFailure(error: unknown, stage: 'claim' | 'commit') {
   const value = object(error);
   const code = typeof value?.code === 'string' && /^[A-Z0-9]{5}$/i.test(value.code) ? value.code : undefined;
-  return { diagnostic: 'transport failed safely', stage, ...(code ? { code } : {}) };
+  const category = transportCategory(value);
+  const field = typeof value?.field === 'string' && (PROPOSAL_FIELDS as readonly string[]).includes(value.field)
+    ? value.field
+    : undefined;
+  return { diagnostic: 'transport failed safely', stage, category, ...(code ? { code } : {}), ...(field ? { field } : {}) };
 }
+
 
 /** Process at most one authoritative tick for one node. Never retries. */
 export async function processNodeTickOnce(
@@ -147,20 +196,27 @@ export async function processNodeTickOnce(
   note({event:'resolve_completed',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:resolvedAt-decodedAt});
 
   let commitRaw: unknown;
+  const commitArgs: CommitTickArgs = {
+    _encounter_id: encounterId,
+    _claim_token: decoded.claimToken!,
+    _candidate_tick: decoded.snapshot.encounter.candidate_tick,
+    _expected_last_tick: decoded.snapshot.encounter.tick,
+    _expected_state_version: decoded.snapshot.encounter.state_version,
+    _intent_ids: proposal.intent_ids,
+    _proposed: proposal,
+  };
+  const proposalIntents = proposal.intent_ids.length;
+  if (!serializableProposal(commitArgs)) {
+    return { ok: false, kind: 'commit_transport_error', diagnostic: 'transport failed safely',
+      stage: 'commit', category: 'serde', proposalIntents };
+  }
   try {
     note({event:'commit_attempted',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:0});
-    commitRaw = await dependencies.transport.commitTick({
-      _encounter_id: encounterId,
-      _claim_token: decoded.claimToken!,
-      _candidate_tick: decoded.snapshot.encounter.candidate_tick,
-      _expected_last_tick: decoded.snapshot.encounter.tick,
-      _expected_state_version: decoded.snapshot.encounter.state_version,
-      _intent_ids: proposal.intent_ids,
-      _proposed: proposal,
-    });
+    commitRaw = await dependencies.transport.commitTick(commitArgs);
   } catch (error) {
-    return { ok: false, kind: 'commit_transport_error', ...safeTransportFailure(error, 'commit') };
+    return { ok: false, kind: 'commit_transport_error', ...safeTransportFailure(error, 'commit'), proposalIntents };
   }
+
 
   const commit = object(commitRaw);
   if (!commit || typeof commit.ok !== 'boolean' || typeof commit.kind !== 'string') {
