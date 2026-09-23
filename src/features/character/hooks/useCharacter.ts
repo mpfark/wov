@@ -80,6 +80,14 @@ export interface Character {
   movement_locked_until?: string | null;
 }
 
+export interface CharacterResourceDeliveryState {
+  status: 'connecting' | 'current' | 'refreshing' | 'stale' | 'disconnected';
+  lastAuthoritativeAt: number | null;
+  source: 'initial' | 'realtime' | 'poll' | 'focus' | 'reconnect' | null;
+}
+
+const RESOURCE_REFRESH_MS = 4000;
+
 export function useCharacter(user: User | null) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
@@ -96,7 +104,17 @@ export function useCharacter(user: User | null) {
   }, [selectedCharacterId]);
 
   const [loading, setLoading] = useState(true);
+  const [resourceDelivery, setResourceDelivery] = useState<CharacterResourceDeliveryState>({
+    status: 'connecting', lastAuthoritativeAt: null, source: null,
+  });
   const prevUserIdRef = useRef<string | null>(null);
+  const activeUserIdRef = useRef<string | null>(user?.id ?? null);
+  activeUserIdRef.current = user?.id ?? null;
+  const selectedCharacterIdRef = useRef(selectedCharacterId);
+  selectedCharacterIdRef.current = selectedCharacterId;
+  const fetchInFlightRef = useRef(false);
+  const fetchQueuedRef = useRef(false);
+  const fetchSourceRef = useRef<CharacterResourceDeliveryState['source']>('initial');
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
@@ -112,13 +130,21 @@ export function useCharacter(user: User | null) {
 
   const fetchCharactersRef = useRef(async () => {});
   fetchCharactersRef.current = async () => {
-    if (!user) return;
+    const userId = activeUserIdRef.current;
+    if (!userId) return;
+    if (fetchInFlightRef.current) {
+      fetchQueuedRef.current = true;
+      return;
+    }
+    fetchInFlightRef.current = true;
+    const source = fetchSourceRef.current;
+    setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'refreshing' : 'connecting' }));
     const { data, error } = await supabase
       .from('characters')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true });
-    if (!error && data) {
+    if (activeUserIdRef.current === userId && !error && data) {
       // A fresh fetch is the new source of truth — drop any stale pending masks
       // for the rows we just received so the next realtime echo is honored.
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
@@ -137,12 +163,25 @@ export function useCharacter(user: User | null) {
       }
 
       setCharacters(data as Character[]);
+      setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), source });
+    } else if (activeUserIdRef.current === userId && error) {
+      setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'stale' : 'disconnected' }));
     }
-    setLoading(false);
+    if (activeUserIdRef.current === userId) setLoading(false);
+    fetchInFlightRef.current = false;
+    // A user/session change can queue a replacement request while the previous
+    // user's request is still in flight. Always service that queue for the
+    // currently active user; the identity fence above already discarded the
+    // stale response.
+    if (fetchQueuedRef.current && activeUserIdRef.current) {
+      fetchQueuedRef.current = false;
+      void fetchCharactersRef.current();
+    }
   };
 
-  const refetchCharacters = useCallback(() => {
-    fetchCharactersRef.current();
+  const refetchCharacters = useCallback((source: CharacterResourceDeliveryState['source'] = 'focus') => {
+    fetchSourceRef.current = source;
+    void fetchCharactersRef.current();
   }, []);
 
   const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null;
@@ -157,6 +196,8 @@ export function useCharacter(user: User | null) {
       // that may have been initialized as a non-Map in a prior code version.
       pendingWritesRef.current = new Map();
       heldFieldsRef.current = new Map();
+      fetchQueuedRef.current = false;
+      setResourceDelivery({ status: 'disconnected', lastAuthoritativeAt: null, source: null });
 
       setLoading(false);
       return;
@@ -167,7 +208,8 @@ export function useCharacter(user: User | null) {
     prevUserIdRef.current = user.id;
     if (isNewUser) {
       setLoading(true);
-      fetchCharactersRef.current();
+      fetchSourceRef.current = 'initial';
+      void fetchCharactersRef.current();
     }
     // Skip refetch on token refreshes — realtime subscription keeps state in sync
     // and refetching would revert optimistic regen updates (HP/CP/MP).
@@ -206,10 +248,39 @@ export function useCharacter(user: User | null) {
           }));
 
         }
+        setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), source: 'realtime' });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (activeUserIdRef.current !== user.id) return;
+        if (status === 'SUBSCRIBED') {
+          setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'current' : 'connecting' }));
+          fetchSourceRef.current = 'reconnect';
+          void fetchCharactersRef.current();
+        } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
+          setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'stale' : 'disconnected' }));
+        }
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    const refresh = (source: CharacterResourceDeliveryState['source']) => {
+      if (document.visibilityState !== 'visible' || !selectedCharacterIdRef.current) return;
+      fetchSourceRef.current = source;
+      void fetchCharactersRef.current();
+    };
+    const poll = window.setInterval(() => refresh('poll'), RESOURCE_REFRESH_MS);
+    const onFocus = () => refresh('focus');
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh('focus'); };
+    const onOnline = () => refresh('reconnect');
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisible);
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const selectCharacter = useCallback((id: string) => {
@@ -414,5 +485,6 @@ export function useCharacter(user: User | null) {
     clearCharacterFields,
     selectCharacterAfterCreate,
     refetchCharacters,
+    resourceDelivery,
   };
 }

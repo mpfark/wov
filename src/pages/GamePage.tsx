@@ -89,6 +89,7 @@ import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, se
 import { selectCombat2Reservations } from '@/features/combat2/presentation';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
+import type { CharacterResourceDeliveryState } from '@/features/character/hooks/useCharacter';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
 import { createPartyAwareDepartureAdapter } from '@/features/combat2/party-departure';
 import { presentCombat2Departure } from '@/features/combat2/movement-presentation';
@@ -111,9 +112,10 @@ interface Props {
   /** True once `sync_character_resources` has resolved on entry. The regen
    *  loop waits on this so it doesn't write against pre-sync `max_*`. */
   resourcesSynced?: boolean;
+  resourceDelivery?: CharacterResourceDeliveryState;
 }
 
-export default function GamePage({ character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, clearCharacterFields: clearFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+export default function GamePage({ character, updateCharacter: writeCharacter, updateCharacterLocal: writeCharacterLocal, clearCharacterFields: clearFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true, resourceDelivery }: Props) {
   const ownership = useCombat2TestOwnership({
     enabled: COMBAT2_CLIENT_ENABLED, characterId: character.id, nodeId: character.current_node_id,
   });
@@ -256,6 +258,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const activeCombat2Presentation = combat2OwnsSession && combat2.encounterId
     ? combat2.presentation.model
     : null;
+  const previousCombat2SessionStatus = useRef(combat2.sessionStatus);
+  useEffect(() => {
+    const previous = previousCombat2SessionStatus.current;
+    previousCombat2SessionStatus.current = combat2.sessionStatus;
+    if (previous === 'active' && combat2.sessionStatus === 'exited') refetchCharacters?.();
+  }, [combat2.sessionStatus, refetchCharacters]);
   const authoritativeCombat2ReservationState = useMemo(() => selectCombat2Reservations(
     activeCombat2Presentation?.characterEffects ?? [],
   ), [activeCombat2Presentation]);
@@ -1245,16 +1253,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     historical: combat2VisibleLog.historical,
   });
   const presentedEventLog = useMemo(() => {
-    if (combat2VisibleLog.historical) return combat2VisibleLog.events as GameLogEvent[];
     const selected = selectCombat2Events(combat2BlocksLegacy, combat2.presentation.model, filteredEventLog);
-    if (!combat2BlocksLegacy) return selected;
     const byId = new Map(selected.map(event => [event.id, event]));
     for (const event of combat2VisibleLog.events) byId.set(event.id, event);
-    return [...byId.values()].sort((a, b) => a.ts - b.ts);
+    return [...byId.values()].sort((a, b) => a.ts - b.ts).slice(-100);
   }, [filteredEventLog, combat2.presentation.model, combat2BlocksLegacy, combat2VisibleLog]);
 
   // On-device archive: full personal log history with infinite scrollback.
-  const logArchive = useLogArchive(character.id, eventLog);
+  const logArchive = useLogArchive(character.id, presentedEventLog);
   const filteredOlderEvents = useMemo(() => {
     if (!(isWideScreen && chatPanelOpen)) return logArchive.olderEvents;
     return logArchive.olderEvents.filter(e => e.type !== 'speech' && e.type !== 'whisper');
@@ -1918,7 +1924,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       {/* Broadcast Debug Overlay — admin only */}
       {isAdmin && <BroadcastDebugOverlay combat2={{ status: combat2StatusPresentation.label, characterId: character.id,
         nodeId: currentNode?.id ?? null, encounterId: activeCombat2Presentation?.encounterId ?? null,
-        tick: activeCombat2Presentation?.lastAppliedTick ?? null, cursor: combat2.delivery.lastAppliedTick,
+        tick: activeCombat2Presentation?.encounterTick ?? null, cursor: combat2.delivery.lastAppliedTick,
+        resourceDelivery: resourceDelivery ?? { status: 'unknown', lastAuthoritativeAt: null, source: null },
         diagnostic: combat2VisibleLog.historical ? 'Last confirmed combat state shown.' : combat2Diagnostic }} />}
 
       {/* Combat timing breakdown — development instrumentation only */}

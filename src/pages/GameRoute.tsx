@@ -8,7 +8,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { combat2ArenaReservesLegacy } from '@/features/combat2/test-config';
 
 export default function GameRoute() {
-  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
+  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters, resourceDelivery } = useGameContext();
 
 
   const navigate = useNavigate();
@@ -91,6 +91,7 @@ export default function GameRoute() {
       onSwitchCharacter={() => { clearSelectedCharacter(); navigate('/'); }}
       refetchCharacters={refetchCharacters}
       resourcesSynced={isSyncedForCurrent}
+      resourceDelivery={resourceDelivery}
     />
   );
 }

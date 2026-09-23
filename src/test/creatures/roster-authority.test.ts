@@ -226,7 +226,7 @@ function code(p: string): string {
 describe('client never invokes the internal catch-up endpoint', () => {
   it("has no 'combat-catchup' invocation anywhere in src/", () => {
     const offenders = walk('src')
-      .filter(f => !f.includes('/test/'))
+      .filter(f => !/[\\/](?:test|__tests__)[\\/]/.test(f))
       .filter(f => /['"`]combat-catchup['"`]/.test(code(f)));
     expect(offenders).toEqual([]);
   });

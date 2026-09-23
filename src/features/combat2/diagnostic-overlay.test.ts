@@ -11,4 +11,11 @@ describe('Combat2 diagnostic overlay boundary',()=>{
   for(const text of ['Recording','Start','Stop','Clear','Export','latency'])expect(OVERLAY).toContain(text);
   expect(OVERLAY).toContain('bottom-3 right-3');
  });
+ it('distinguishes encounter progress from character-resource delivery outside combat',()=>{
+  expect(OVERLAY).toContain('encounter tick');
+  expect(OVERLAY).toContain('delivery cursor');
+  expect(OVERLAY).toContain('No active encounter');
+  expect(OVERLAY).toContain('Resource delivery:');
+  expect(OVERLAY).toContain('Settlement: server-owned 4s cadence');
+ });
 });

@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getStatRegen, getEffectiveMaxHp } from '@/lib/game-data';
+import { getStatRegen } from '@/lib/game-data';
 
 import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';

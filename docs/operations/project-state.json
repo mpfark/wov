@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-23T10:13:00Z",
-  "based_on_source_sha": "28f4791632ba21f10d9a07f8456eebe1680d6a14",
+  "updated_at": "2026-09-23T14:45:00Z",
+  "based_on_source_sha": "04bad9fc524309bf383a4e49f7c0e54f0fb68b71",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,11 +16,11 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "28f4791632ba21f10d9a07f8456eebe1680d6a14",
-    "timestamp": "2026-09-23T10:13:00Z",
+    "sha": "04bad9fc524309bf383a4e49f7c0e54f0fb68b71",
+    "timestamp": "2026-09-23T14:45:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at 28f4791632ba21f10d9a07f8456eebe1680d6a14 at the start of installation; b198c6876e4a5a959ed24119e9cf633c3ad6e864 remains in ancestry. No unrelated local migration or source change was pending.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local main was clean at 28f4791632ba21f10d9a07f8456eebe1680d6a14, then fast-forwarded to origin/main 04bad9fc524309bf383a4e49f7c0e54f0fb68b71. The intervening Lovable commits contain only the out-of-combat settlement ledger artifact, regenerated Supabase types and installation evidence; no runtime source was introduced.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
@@ -139,15 +139,25 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Peaceful-creature visibility plus display-only HP/CP/MP client",
-    "sha": "28f4791632ba21f10d9a07f8456eebe1680d6a14",
-    "timestamp": "2026-09-23T10:13:00Z",
+    "artifact": "Authoritative resource delivery and continuous Combat2 presentation",
+    "sha": null,
+    "timestamp": "2026-09-23T14:45:00Z",
     "evidence_type": "handoff",
-    "evidence": "The settlement migration is now installed, so the pending frontend release is ready for Mik's manual publication. Lovable used no publication control. Live HP/CP/MP regeneration and restored movement remain unverified and require Mik's manual publication plus bounded live verification after the world is reopened.",
-    "reporting_actor": "Lovable",
+    "evidence": "Local source correction keeps scoped characters Realtime as the immediate authority and adds a bounded four-second visible-tab refetch fallback plus focus, visibility and online recovery. Character-session changes fence late responses. Combat2 presentation retains the latest 100 character-scoped authoritative events across ordinary encounter release and movement, merges local travel evidence, and archives the merged presentation. The admin diagnostic overlay distinguishes encounter tick, delivery cursor and out-of-combat character-resource delivery. Focused tests, TypeScript, readiness and build evidence must pass before commit; Mik remains the only frontend publisher.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "post-install-resource-delivery-and-log-continuity-2026-09-23",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-23T14:45:00Z",
+      "evidence_type": "tests",
+      "evidence": "Root causes were client delivery and presentation boundaries, not evidence of a changed server cadence. Character rows had scoped Realtime but no connection-state diagnostics or bounded visible-tab fallback, so tab focus could appear to be required when Realtime delivery stalled. Combat2 visible history was encounter-keyed and could be replaced or cleared at release, while the on-device archive received the legacy local log instead of the merged authoritative presentation. The correction retains scoped Realtime as primary, adds a coalesced four-second visible fallback and recovery refreshes, fences stale user responses, refreshes resources when an active Combat2 session exits, retains a bounded 100-event character-scoped log across release/movement/new encounters, and archives that merged view. The overlay no longer presents a stale cursor as an encounter tick outside combat. Operator-observed roughly eight-second UI updates are presentation evidence only; without timestamped Cloud rows they do not prove server settlement cadence. No Cloud, SQL, scheduler, resolver, Edge or gameplay mutation occurred.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "authoritative-ooc-resource-settlement-installed-2026-09-23T10Z",
       "status": "installed",

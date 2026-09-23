@@ -48,7 +48,8 @@ function latencyColor(ms: number | null): string {
 }
 
 export interface Combat2OverlayState { status: string; characterId: string; nodeId: string | null; encounterId: string | null;
-  tick: number | null; cursor: number | null; diagnostic?: string | null }
+  tick: number | null; cursor: number | null; diagnostic?: string | null;
+  resourceDelivery?: { status: string; lastAuthoritativeAt: number | null; source: string | null } }
 
 export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2OverlayState }) {
   const [open, setOpen] = useState(false);
@@ -148,8 +149,18 @@ export default function BroadcastDebugOverlay({ combat2 }: { combat2?: Combat2Ov
       {expanded && (
         <div className="flex-1 overflow-y-auto max-h-[40vh] px-2 py-1 space-y-0.5">
           {combat2 && <section className="space-y-1 border-b border-border p-2 text-muted-foreground">
-            <p>State: <b className="text-foreground">{combat2.status}</b> · tick {combat2.tick ?? '—'} · cursor {combat2.cursor ?? '—'}</p>
-            <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter {combat2.encounterId?.slice(0,8) ?? '—'}</p>
+            {combat2.encounterId ? <>
+              <p>Combat: <b className="text-foreground">{combat2.status}</b> · encounter tick {combat2.tick ?? '—'} · delivery cursor {combat2.cursor ?? '—'}</p>
+              <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter {combat2.encounterId.slice(0,8)}</p>
+            </> : <>
+              <p>Combat: <b className="text-foreground">No active encounter</b></p>
+              <p>Resource delivery: <b className="text-foreground">{combat2.resourceDelivery?.status ?? 'unknown'}</b>
+                {combat2.resourceDelivery?.lastAuthoritativeAt
+                  ? ` · authoritative row ${Math.max(0, Math.floor((Date.now() - combat2.resourceDelivery.lastAuthoritativeAt) / 1000))}s ago`
+                  : ' · no authoritative row observed'}</p>
+              <p>Settlement: server-owned 4s cadence · delivery {combat2.resourceDelivery?.source ?? 'unobserved'}</p>
+              <p>Node {combat2.nodeId?.slice(0,8) ?? '—'} · encounter —</p>
+            </>}
             {combat2.diagnostic && <p role="alert">{combat2.diagnostic}</p>}
             {retained && <p>Stopped recording retained · {retained.events.length} client events · export or clear it</p>}
             {failure && <p role="alert">{failure}</p>}

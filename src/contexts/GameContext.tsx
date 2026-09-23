@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter, Character } from '@/features/character';
+import type { CharacterResourceDeliveryState } from '@/features/character/hooks/useCharacter';
 import { useRole } from '@/hooks/useRole';
 import { useNodes, GameNode, Region } from '@/features/world';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
@@ -27,6 +28,7 @@ interface GameContextValue {
   selectCharacterAfterCreate: (id: string) => void;
 
   refetchCharacters: () => void;
+  resourceDelivery: CharacterResourceDeliveryState;
 
   // Role
   isAdmin: boolean;
@@ -54,7 +56,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     characters, character, loading: charLoading,
     selectCharacter, clearSelectedCharacter, deleteCharacter,
     createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate,
-    refetchCharacters,
+    refetchCharacters, resourceDelivery,
   } = useCharacter(user);
 
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
@@ -106,7 +108,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       user, authLoading, signOut,
       characters, character, charLoading,
       selectCharacter, clearSelectedCharacter, deleteCharacter,
-      createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate, refetchCharacters,
+      createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate, refetchCharacters, resourceDelivery,
 
       isAdmin, isValar, roleLoading,
       nodes, regions, nodesLoading, startingNode,

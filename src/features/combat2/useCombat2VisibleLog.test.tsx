@@ -7,8 +7,8 @@ import { useCombat2VisibleLog } from './useCombat2VisibleLog';
 const CHARACTER = '22222222-2222-4222-8222-222222222222';
 const ENCOUNTER = '33333333-3333-4333-8333-333333333333';
 const line = (id: string, message: string, ts: number): GameLogEvent => ({ v: 1, id, ts, type: 'ability', message });
-const model = (status: string, events: readonly GameLogEvent[]): Combat2PresentationModel => ({
-  encounterId: ENCOUNTER, encounterTick: 1, stateVersion: 1, encounterStatus: status, fighterPresent: status === 'active', fighterExitState: null,
+const model = (status: string, events: readonly GameLogEvent[], encounterId = ENCOUNTER): Combat2PresentationModel => ({
+  encounterId, encounterTick: 1, stateVersion: 1, encounterStatus: status, fighterPresent: status === 'active', fighterExitState: null,
   autoattack: null, character: { id: CHARACTER, level: 1, xp: 0, gold: 0, hp: 10, maxHp: 10, cp: 10, maxCp: 10, mp: 10, maxMp: 10 },
   allies: [], creatures: [], effects: [], characterEffects: [], creatureEffects: {}, telegraphs: [], telegraphsByCreatureLife: {},
   rewardClaims: [], events, lastAppliedTick: 1,
@@ -39,13 +39,13 @@ describe('useCombat2VisibleLog', () => {
     },
   );
 
-  it('clears retained history outside the arena and never crosses characters', () => {
+  it('retains recent personal history outside combat but never crosses characters', () => {
     const received = [line('one', 'First.', 1)];
     const { result, rerender } = renderHook(({ character, reserved, current }) => useCombat2VisibleLog(character, reserved, current, []), {
       initialProps: { character: CHARACTER, reserved: true, current: model('active', received) as Combat2PresentationModel | null },
     });
     rerender({ character: CHARACTER, reserved: false, current: null });
-    expect(result.current).toEqual({ events: [], historical: false });
+    expect(result.current).toEqual({ events: received, historical: false });
     rerender({ character: '99999999-9999-4999-8999-999999999999', reserved: true, current: null });
     expect(result.current).toEqual({ events: [], historical: false });
   });
@@ -57,5 +57,29 @@ describe('useCombat2VisibleLog', () => {
     });
     rerender({ current: model('ended', received) });
     expect(result.current).toEqual({ events: received, historical: false });
+  });
+
+  it('keeps death history ordered when movement and a new encounter follow', () => {
+    const death = line('death', 'The creature dies.', 10);
+    const travel = line('travel', 'You travel north.', 11);
+    const next = line('next', 'A new creature attacks.', 12);
+    const secondEncounter = '44444444-4444-4444-8444-444444444444';
+    const { result, rerender } = renderHook(({ current, local }) => useCombat2VisibleLog(CHARACTER, true, current, local), {
+      initialProps: { current: model('ended', [death]) as Combat2PresentationModel | null, local: [] as GameLogEvent[] },
+    });
+    rerender({ current: null, local: [travel] });
+    expect(result.current.events.map(event => event.id)).toEqual(['death']);
+    rerender({ current: model('active', [next], secondEncounter), local: [] });
+    expect(result.current.events.map(event => event.id)).toEqual(['death', 'next']);
+  });
+
+  it('does not accept late acknowledgements after detaching an old encounter', () => {
+    const accepted = line('accepted', 'Accepted.', 1);
+    const late = line('late', 'Late.', 2);
+    const { result, rerender } = renderHook(({ current, local }) => useCombat2VisibleLog(CHARACTER, true, current, local), {
+      initialProps: { current: model('ended', [accepted]) as Combat2PresentationModel | null, local: [] as GameLogEvent[] },
+    });
+    rerender({ current: null, local: [late] });
+    expect(result.current.events.map(event => event.id)).toEqual(['accepted']);
   });
 });
