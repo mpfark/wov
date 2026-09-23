@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-22T21:28:00Z",
+  "updated_at": "2026-09-23T08:20:00Z",
   "based_on_source_sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
   "status_vocabulary": [
     "authored",
@@ -118,16 +118,36 @@
     }
   ],
   "frontend_publication": {
-    "status": "manually_published",
-    "artifact": "Combat2 engagement/release lifecycle frontend (ownership detachment, late-response fencing, deliberate engagement)",
-    "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
-    "timestamp": "2026-09-22T21:28:00Z",
-    "evidence_type": "operator_reported",
-    "evidence": "Mik reports that he manually published the frontend after the engagement/release installation handoff. The published repository release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 descends from lifecycle source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634. This Codex task did not use publication controls or perform publication. Operator-reported publication does not prove live lifecycle behavior; bounded live verification remains pending.",
-    "reporting_actor": "Mik",
-    "directly_verified": false
+    "status": "ready_for_manual_publish",
+    "artifact": "Peaceful-creature node visibility correction (frontend-only)",
+    "sha": null,
+    "timestamp": "2026-09-23T08:20:00Z",
+    "evidence_type": "tests",
+    "evidence": "The creature-visibility correction is frontend-only and unpublished. Mik must publish manually after reviewing the handoff. The previous release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 remains operator-reported as manually published.",
+    "reporting_actor": "Lovable",
+    "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "peaceful-creature-visibility-regression",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "tests",
+      "evidence": "Root cause proven in client presentation source, not in the database. GamePage restricted the visible node roster to creatures contained in the authoritative encounter presentation (creatures.filter(c => activeCombat2Presentation?.creatures.some(...))) whenever Combat2 owned the session. After the engagement/release lifecycle release, peaceful co-location no longer enters an encounter, so that filter produced an empty 'In the area' list while the minimap kept deriving presence from the node roster. Correction is frontend-only and minimal: the node roster is now the single source of creature visibility and the encounter model may only refine hp/max hp/alive for creatures it contains. No creature was marked engaged, no encounter fabricated, automatic peaceful entry was not re-enabled and selected-target fencing and late-response handling are unchanged. Guarded by src/features/combat2/creature-visibility.test.ts (5 tests) plus the existing presentation suite.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "automatic-tick-stall-2026-09-23",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Read-only boundary evidence for the reported stall. Last successful boundary: claim. First failing boundary: commit transport. cron.job_run_details shows 2017 successful runs of public.combat2_dispatch_scheduler_fire() at the intended 2s cadence from 06:52Z until 08:00:56Z, when the world went asleep (world_state.changed_at 08:00:58Z), so world wake, scheduler and dispatcher were all healthy and the node was selected by due-node discovery. The active encounter at the reported node held a present fighter and one living engaged creature and its claim was refreshed every 2 seconds (claimed tick 5 above committed tick 4), proving claim, decode and resolve succeeded repeatedly. Every dispatch attempt then returned commit_transport_error with PostgreSQL-category SQLSTATE 42703 (undefined column) at the commit stage. node_tick_commit and both installed wrappers trap all errors and return internal_failure, so a 42703 surfacing as a transport failure originates outside the PL/pgSQL body (PostgREST/pooler request handling or post-return deferred work). Ability submission did not bypass anything: it changed proposal content, so the failure is proposal-content dependent rather than input driven. Deferred-trigger candidates were inspected and release_stances_on_death is excluded (it returns before planning any statement while hp > 0). Postgres error logs for the window are no longer retained and no diagnostic recording covered it, so the exact undefined column remains unproven. Proving it requires one separately authorized bounded probe of node_tick_commit; no such invocation was performed and no gameplay row was repaired.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
     {
       "identity": "bounded-diagnostics",
       "status": "installed",
@@ -331,6 +351,26 @@
   ],
   "known_blockers": [
     {
+      "identity": "combat2-commit-42703-unproven",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Automatic Combat2 progression is blocked by a deterministic commit refusal (SQLSTATE 42703) that escapes every installed PL/pgSQL handler. The failure boundary is proven, the exact undefined column is not. No correction was authored because the authorized workflow forbids guessing; the next step is one separately authorized bounded probe or a live diagnostic recording scoped to the affected node while the error is reproducible.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "post-combat-hp-mp-settlement-absent",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "The operator is currently movement-blocked at 0 MP because authoritative post-combat HP/MP settlement and global world-tick resource settlement remain absent. The character was deliberately not mutated to unblock testing. Character-scoped persistent stances, stance activation outside combat, authoritative food effects and ADM-025B remain separate, pending and unchanged.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
       "identity": "diagnostic-frontend-publication",
       "status": "ready_for_manual_publish",
       "sha": null,
@@ -373,15 +413,25 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Run one separately authorized bounded live engagement/release lifecycle verification before reopening the world.",
+    "artifact": "Obtain authorization for one bounded probe that proves the exact 42703 undefined column at the Combat2 commit boundary.",
     "sha": null,
-    "timestamp": null,
+    "timestamp": "2026-09-23T08:20:00Z",
     "evidence_type": "handoff",
-    "evidence": "Repository reconciliation and Mik's operator-reported manual publication are recorded. The next action requires separate authorization and fresh runtime safety evidence, then must verify that peaceful co-location no longer enters combat, deliberate engagement through combat2_engage queues exactly one basic attack, and surviving fighters release cleanly. This reconciliation did not reopen the world or invoke gameplay. Authoritative food effects, global world-tick resource settlement, character-scoped stances, safe authoritative post-combat HP/MP settlement and ADM-025B remain separate and unchanged.",
-    "reporting_actor": "Codex",
+    "evidence": "The automatic-tick failure boundary is proven (claim succeeds, commit transport refuses with SQLSTATE 42703). The exact undefined column cannot be proven without either one authorized bounded invocation of node_tick_commit or a live diagnostic recording scoped to the affected node while the error reproduces. Live lifecycle behaviour and the creature-visibility correction have not been verified in a running world; no gameplay verification was authorized. Authoritative post-combat HP/MP settlement, global world-tick resource settlement, character-scoped stances, stance activation outside combat, authoritative food effects, the recorded inactive-character return-home request and ADM-025B remain separate and unchanged.",
+    "reporting_actor": "Lovable",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-safety-state-2026-09-23T08Z",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Observed read-only during this diagnosis: world asleep (changed_at 08:00:58Z), combat_mode maintenance, combat_soak off, 0 live claims, 0 active diagnostic recordings, 0 queued departures, 4 encounters marked active. One of those four is the preserved encounter from the reported session and still references a present fighter and a living engaged creature; it was deliberately left untouched as failure evidence and holds no claim, with no scheduler running and no processable work. Nothing was reopened, restarted, repaired or advanced. Volatile; requires fresh evidence before reuse.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-safety-state-2026-09-22T21Z",
       "status": "unknown",
@@ -449,6 +499,18 @@
       "timestamp": "2026-09-22T06:10:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Observed read-only from preserved session c84328c9 (encounter 2e7249d4, node f45a8b21): automatic dispatcher attempts reached commit_attempted every cycle; ticks 23, 24 and 25 committed only on the retry following an accepted ability intent, and every no-new-intent retry ended commit_refused/commit_transport_error. Duplicate correlation IDs are retries of the same uncommitted tick. Postgres and edge logs for the window have expired. Volatile; preserved and untouched.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    }
+  ],
+  "product_backlog": [
+    {
+      "identity": "inactive-character-return-home",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-23T08:20:00Z",
+      "evidence_type": "handoff",
+      "evidence": "Product request recorded, not designed or implemented. After a character has been logged out/inactive for a configured period, reset its authoritative position to the default city/start location. The period should preferably reference the same configured duration already used for unique-item inactivity/loss rather than duplicating a hard-coded number. The initial destination is the current default city/start node, described by the operator as position 0,0; before implementation it must be verified whether 0,0 is an authoritative coordinate, a map-presentation concept or shorthand for a specific node id. Future extension: let a character choose an authoritative personal home/bind/start location. The reset must never occur while the character holds a live combat claim, participates in an active encounter, has a queued movement or departure, an active marketplace or other protected transaction, or any other incompatible lifecycle state. 'Logged out/inactive' must be defined from authoritative session/activity evidence, not browser presence. Idempotency and safe interaction with parties and followers must be resolved before implementation. No schema, RPC, timer or cleanup job was added.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }

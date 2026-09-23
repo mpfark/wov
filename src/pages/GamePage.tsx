@@ -264,9 +264,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const presentedCharacter = useMemo(() => selectCombat2Character(
     combat2BlocksLegacy, activeCombat2Presentation, character,
   ), [activeCombat2Presentation, character]);
+  // The node roster is the only source of creature visibility. Encounter
+  // membership refines runtime values but never removes a living creature from
+  // ordinary presentation, so peaceful creatures stay listed while Combat2 owns
+  // the session and remain targetable through deliberate engagement.
   const presentedCreatures = useMemo(() => selectCombat2Creatures(
-    combat2BlocksLegacy, activeCombat2Presentation, combat2BlocksLegacy
-      ? creatures.filter(c => activeCombat2Presentation?.creatures.some(a => a.creatureId === c.id)) : creatures,
+    combat2BlocksLegacy, activeCombat2Presentation, creatures,
   ), [activeCombat2Presentation, creatures, combat2BlocksLegacy]);
   // Target presentation remains mounted through transient delivery/action locks;
   // submission readiness is enforced independently by the action router.
