@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-23T09:20:00Z",
-  "based_on_source_sha": "7c0464b05081901fb046500850dc9abb06da691d",
+  "updated_at": "2026-09-23T09:56:53Z",
+  "based_on_source_sha": "b198c6876e4a5a959ed24119e9cf633c3ad6e864",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "7c0464b05081901fb046500850dc9abb06da691d",
-    "timestamp": "2026-09-23T09:20:00Z",
+    "sha": "b198c6876e4a5a959ed24119e9cf633c3ad6e864",
+    "timestamp": "2026-09-23T09:56:53Z",
     "evidence_type": "repository",
-    "evidence": "Local main was fast-forwarded cleanly to origin/main at 7c0464b05081901fb046500850dc9abb06da691d. Recent lifecycle, peaceful-creature visibility, INT+WIS CP regeneration and unique-holder-trigger correction history is retained; 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and dd10d8f45ab602e13bc8f3b69eff89a992ec3fe2 remain ancestors. The correction file 20260923084603_63ed1235-60fa-4f63-a4a6-f37673d50ae8.sql is present with expected SHA-256 4f30b604887f6d24e04dfc3d6cf24adfbc4a4f9676bef21076d28982872b60d4. No unrelated local change existed before this task.",
+    "evidence": "Local main and origin/main were clean and identical at b198c6876e4a5a959ed24119e9cf633c3ad6e864 before this correction. All prior lifecycle, visibility, CP and out-of-combat settlement source commits remain ancestors. The unique-holder trigger correction 20260923084603_63ed1235-60fa-4f63-a4a6-f37673d50ae8.sql is unchanged. No unrelated local change existed before this task.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -98,9 +98,9 @@
       "identity": "20260923100000_authoritative_ooc_resource_settlement.sql",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-23T09:20:00Z",
+      "timestamp": "2026-09-23T09:56:53Z",
       "evidence_type": "tests",
-      "evidence": "Forward-only migration authored with SHA-256 fcdb8e12fc73f8e0695487d8d8993c5810fbd4e751df71ca64f3e32fda41f475. It adds a service-role-only RLS-protected global settlement cursor and settle_out_of_combat_resources, then composes settlement into the existing combat2_dispatch_scheduler_fire clock without adding cron or Edge work. Four-second logical cadence; duplicate buckets are idempotent; delays of at most three intervals catch up at most three ticks; longer gaps award one current tick and discard downtime. Eligibility is server-derived after locking character rows in UUID order: living ordinary-world characters only, excluding active present/claimed Combat2 ownership, queued/finalizing or same-bucket completed solo/party movement, same-bucket combat release or respawn, death and all Test Arena nodes. Peaceful co-location, inert encounters and absent fighters do not block. HP uses effective CON plus durable equipped hp_regen, milestone and authoritative Inn; CP uses effective WIS plus milestone and Inn; MP uses the canonical doubled four-second effective-DEX rate plus Inn. Browser-only food and client Inspire state are excluded; Combat2 CP regeneration and authoritative Inspire are unchanged. Not installed or live-verified.",
+      "evidence": "Corrected unapplied forward-only migration SHA-256 b973e4fe9cbc7b8c787c12ac6e623e65c3ffe7a5ea8937446fc58f90acbae6b9. Lovable's read-only installed-schema preflight rejected the prior authored bytes (SHA-256 fcdb8e12fc73f8e0695487d8d8993c5810fbd4e751df71ca64f3e32fda41f475) before installation because node_creature has encounter_id and no node_id; no settlement ledger artifact exists and those prior bytes are not installable. The ownership predicate now joins nc.encounter_id=e.id, so only a living present fighter in an active encounter with a living engaged creature in that same encounter is excluded; peaceful co-location and inert shells remain eligible. Settlement and dispatch are separately exception-contained with bounded SQLSTATE evidence, while the locked four-second cursor keeps retries idempotent. All formulas, bounded catch-up, eligibility, locks, browser exclusions and scheduler cadence are otherwise unchanged. Not installed or live-verified.",
       "reporting_actor": "Codex",
       "directly_verified": true
     }
@@ -141,7 +141,7 @@
     "status": "ready_for_manual_publish",
     "artifact": "Peaceful-creature visibility plus display-only HP/CP/MP client",
     "sha": null,
-    "timestamp": "2026-09-23T09:20:00Z",
+    "timestamp": "2026-09-23T09:56:53Z",
     "evidence_type": "tests",
     "evidence": "The pending frontend release contains the prior peaceful-creature visibility correction and removes the competing browser HP/CP/MP regeneration writer. The client continues to display authoritative character-row updates and owns no passive-resource clock or amount. Mik must publish manually only after the settlement migration is installed; this task did not publish. The previous release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 remains operator-reported as manually published.",
     "reporting_actor": "Codex",
@@ -372,9 +372,9 @@
       "identity": "authoritative-out-of-combat-resource-settlement",
       "status": "committed",
       "sha": null,
-      "timestamp": "2026-09-23T09:20:00Z",
+      "timestamp": "2026-09-23T09:56:53Z",
       "evidence_type": "tests",
-      "evidence": "Source implementation complete and installation pending. Source-of-truth matrix: active-combat HP/CP ownership remains node_tick_commit/Combat2; active-combat MP changes only through authoritative departure; Combat2 passive CP remains effective-WIS plus milestone every second encounter tick; passive HP and MP remain disabled in combat and Inspire remains a separate authoritative Combat2 effect. Out of combat, settle_out_of_combat_resources owns persisted characters.hp/cp/mp on a four-second logical cadence driven by the existing two-second world scheduler. HP = effective-CON base regen + durable equipped hp_regen + HP milestone + server node Inn bonus; CP = effective-WIS regen + CP milestone + Inn bonus; MP = 2 * canonical effective-DEX MP rate + Inn bonus. Caps use the existing effective class/level/gear/gem formulas. Browser food is excluded because no authoritative persisted amount/expiry exists. One global locked bucket fences retries and all characters regardless of node; characters lock in UUID order, re-read ownership after locking, and no encounter row is locked. World sleep/maintenance/scheduler absence advances or resets the cursor without banking time; <=3 delayed intervals catch up, larger gaps award one tick. Active present/claimed Combat2 ownership, queued/finalizing movement, death/respawn and Test Arena nodes are excluded. All browser passive resource writers are removed, including the legacy party-regeneration timer and heal_party_member path; authoritative Combat2 Inspire behavior is unchanged. No Edge consumer changed; the SQL scheduler wrapper is the only consumer. Live verification pending.",
+      "evidence": "Source implementation complete and installation pending. The corrected ownership relation is node_creature.encounter_id=node_encounter.id; generated-type-backed schema compilation covers every qualified table alias/column in the settlement function and executable fixtures cover active ownership, peaceful co-location and inert shells. Settlement failure no longer suppresses dispatch, dispatch failure no longer rolls back a successful settlement, both return bounded domain evidence, and the locked four-second cursor prevents double regeneration on retry. Source-of-truth matrix remains unchanged: active-combat HP/CP ownership is node_tick_commit/Combat2; active-combat MP changes only through authoritative departure; Combat2 passive CP remains effective-WIS plus milestone every second encounter tick; passive HP and MP remain disabled in combat and Inspire remains a separate authoritative Combat2 effect. Out of combat, settle_out_of_combat_resources owns persisted characters.hp/cp/mp on a four-second cadence. HP uses effective CON, durable gear, milestone and Inn; CP uses effective WIS, milestone and Inn; MP uses the canonical effective-DEX rate and Inn. Browser food is excluded. Movement, death/respawn and Test Arena exclusions and all browser-writer removals remain unchanged. No Edge consumer changed; the SQL scheduler wrapper is the only consumer. Live verification pending.",
       "reporting_actor": "Codex",
       "directly_verified": true
     }
@@ -437,7 +437,7 @@
     "sha": null,
     "timestamp": "2026-09-23T09:20:00Z",
     "evidence_type": "handoff",
-    "evidence": "Lovable may perform a read-only ledger preflight, stop if the unique-holder correction conflicts or its status is ambiguous, otherwise install the exact pending corrections in repository order: 20260923084603 when not already installed, then 20260923100000. Regenerate official Cloud types after settlement installation. No Edge deployment is required. Leave world asleep/maintenance and do not invoke gameplay without separate authorization. Mik alone manually publishes the pending frontend after installation. Live lifecycle and resource settlement remain unverified. Authoritative food, character-scoped stances, inactive-character return-home and ADM-025B remain separate.",
+    "evidence": "Lovable must first perform a fresh read-only ledger and safety preflight. Confirm or install 20260923084603 when absent, then install only the corrected repository bytes of 20260923100000 with SHA-256 b973e4fe9cbc7b8c787c12ac6e623e65c3ffe7a5ea8937446fc58f90acbae6b9. The one preserved present fighter is evidence rather than a blocker only when the fresh preflight proves world asleep and maintenance, zero schedules, live claims, unconsumed processable events, queued/finalizing departures and active diagnostic/Test Arena recordings, no additional present fighter, and installation does not invoke settlement; preserve before/after gameplay fingerprints. Stop on any changed condition. Regenerate official Cloud types afterward. No Edge deployment is required. Mik alone manually publishes the pending frontend. Do not invoke gameplay.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -448,7 +448,7 @@
       "sha": null,
       "timestamp": "2026-09-23T08:20:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Observed read-only during this diagnosis: world asleep (changed_at 08:00:58Z), combat_mode maintenance, combat_soak off, 0 live claims, 0 active diagnostic recordings, 0 queued departures, 4 encounters marked active. One of those four is the preserved encounter from the reported session and still references a present fighter and a living engaged creature; it was deliberately left untouched as failure evidence and holds no claim, with no scheduler running and no processable work. Nothing was reopened, restarted, repaired or advanced. Volatile; requires fresh evidence before reuse.",
+      "evidence": "Lovable read-only preflight observed: world asleep, combat_mode maintenance, zero schedules, zero live claims, zero unconsumed processable events, zero queued or finalizing departures, four active encounter shells and one preserved present fighter. That fighter has no live claim, processable event, queued departure or scheduler capable of processing it. The settlement migration was not installed, no settlement ledger artifact was created and the protected resource fingerprint remained unchanged. The fighter was deliberately preserved and must not be repaired, released or deleted. For later installation it may be treated as evidence rather than a blocker only after a fresh preflight again proves world asleep/maintenance, zero schedules, claims, processable events, queued/finalizing departures and active diagnostic/Test Arena recordings, that installation itself does not invoke settlement, and that before/after gameplay fingerprints remain unchanged. Any additional present fighter or changed condition is a stop condition. Volatile; requires fresh evidence before reuse.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     },

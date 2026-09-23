@@ -21,6 +21,19 @@ BEGIN
      OR to_regprocedure('public.combat2_dispatch_scheduler_fire_without_resource_settlement()') IS NOT NULL THEN
     RAISE EXCEPTION 'unexpected resource settlement installation state';
   END IF;
+  IF to_regclass('public.node_creature') IS NULL
+     OR NOT EXISTS (
+       SELECT 1 FROM pg_attribute
+       WHERE attrelid = 'public.node_creature'::regclass
+         AND attname = 'encounter_id' AND NOT attisdropped
+     )
+     OR EXISTS (
+       SELECT 1 FROM pg_attribute
+       WHERE attrelid = 'public.node_creature'::regclass
+         AND attname = 'node_id' AND NOT attisdropped
+     ) THEN
+    RAISE EXCEPTION 'unexpected node_creature encounter contract';
+  END IF;
   SELECT pg_get_functiondef('public.combat2_dispatch_scheduler_fire()'::regprocedure) INTO scheduler;
   IF position('combat2-dispatch-once-fire' in scheduler) = 0
      OR position('combat2_dispatch_scheduler_eligible' in scheduler) = 0
@@ -121,7 +134,7 @@ BEGIN
       JOIN public.node_encounter e ON e.id = f.encounter_id
       WHERE f.character_id = c.id AND e.status = 'active' AND (
         (f.present AND EXISTS (SELECT 1 FROM public.node_creature nc
-          WHERE nc.node_id = e.node_id AND nc.is_alive AND nc.hp > 0 AND nc.engaged))
+          WHERE nc.encounter_id = e.id AND nc.is_alive AND nc.hp > 0 AND nc.engaged))
         OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)
       )) THEN CONTINUE; END IF;
 
@@ -198,13 +211,20 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE settlement jsonb; dispatch jsonb;
 BEGIN
-  settlement := public.settle_out_of_combat_resources(clock_timestamp());
+  BEGIN
+    settlement := public.settle_out_of_combat_resources(clock_timestamp());
+  EXCEPTION WHEN OTHERS THEN
+    settlement := jsonb_build_object('ok', false, 'kind', 'settlement_error', 'code', SQLSTATE);
+  END;
   BEGIN
     dispatch := public.combat2_dispatch_scheduler_fire_without_resource_settlement();
   EXCEPTION WHEN OTHERS THEN
     dispatch := jsonb_build_object('ok', false, 'classification', 'scheduler_error', 'code', SQLSTATE);
   END;
-  RETURN dispatch || jsonb_build_object('resource_settlement', settlement);
+  RETURN dispatch || jsonb_build_object(
+    'ok', COALESCE((settlement->>'ok')::boolean, false) AND COALESCE((dispatch->>'ok')::boolean, false),
+    'resource_settlement', settlement
+  );
 END;
 $$;
 REVOKE ALL ON FUNCTION public.combat2_dispatch_scheduler_fire() FROM PUBLIC, anon, authenticated;

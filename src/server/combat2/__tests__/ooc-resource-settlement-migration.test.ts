@@ -3,6 +3,37 @@ import { describe, expect, it } from 'vitest';
 
 const sql = readFileSync('supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql', 'utf8').replaceAll('\r\n', '\n');
 const loop = readFileSync('src/features/combat/hooks/useGameLoop.ts', 'utf8');
+const generatedTypes = readFileSync('src/integrations/supabase/types.ts', 'utf8').replaceAll('\r\n', '\n');
+
+function rowColumns(table: string): Set<string> {
+  const tableStart = generatedTypes.indexOf(`      ${table}: {`);
+  if (tableStart < 0) throw new Error(`missing generated table contract: ${table}`);
+  const rowStart = generatedTypes.indexOf('        Row: {', tableStart);
+  const rowEnd = generatedTypes.indexOf('        }\n        Insert:', rowStart);
+  if (rowStart < 0 || rowEnd < 0) throw new Error(`missing generated Row contract: ${table}`);
+  return new Set([...generatedTypes.slice(rowStart, rowEnd).matchAll(/^          ([a-z_][a-z0-9_]*):/gm)].map(match => match[1]));
+}
+
+const settlementBody = sql.slice(
+  sql.indexOf('CREATE FUNCTION public.settle_out_of_combat_resources'),
+  sql.indexOf('REVOKE ALL ON FUNCTION public.settle_out_of_combat_resources'),
+);
+
+function combatOwned(fixture: {
+  encounterActive: boolean;
+  fighterPresent: boolean;
+  fighterLiving: boolean;
+  creatureEncounterMatches: boolean;
+  creatureLiving: boolean;
+  creatureEngaged: boolean;
+}): boolean {
+  return fixture.encounterActive
+    && fixture.fighterPresent
+    && fixture.fighterLiving
+    && fixture.creatureEncounterMatches
+    && fixture.creatureLiving
+    && fixture.creatureEngaged;
+}
 
 describe('authoritative out-of-combat resource settlement', () => {
   it('uses the existing scheduler with a durable four-second cursor and bounded catch-up', () => {
@@ -57,6 +88,56 @@ describe('authoritative out-of-combat resource settlement', () => {
     expect(sql).toContain('combat2_test_arena_node');
   });
 
+  it('compiles every qualified settlement reference against the generated representative schema', () => {
+    const aliases: Record<string, string> = {
+      c: 'characters',
+      t: 'combat2_test_arena_node',
+      d: 'combat2_departure_request',
+      m: 'combat2_party_departure_member',
+      r: 'combat2_party_departure_request',
+      rr: 'combat2_respawn_request',
+      released: 'node_fighter',
+      f: 'node_fighter',
+      e: 'node_encounter',
+      nc: 'node_creature',
+      ci: 'character_inventory',
+      i: 'items',
+      n: 'nodes',
+    };
+
+    for (const [alias, table] of Object.entries(aliases)) {
+      const schema = rowColumns(table);
+      const references = [...settlementBody.matchAll(new RegExp(`\\b${alias}\\.([a-z_][a-z0-9_]*)\\b`, 'g'))]
+        .map(match => match[1]);
+      expect(references.length, `${alias} must reference ${table}`).toBeGreaterThan(0);
+      for (const column of references) expect(schema.has(column), `${alias}.${column} must exist on ${table}`).toBe(true);
+    }
+    expect(rowColumns('node_creature').has('encounter_id')).toBe(true);
+    expect(rowColumns('node_creature').has('node_id')).toBe(false);
+    expect(sql).toContain("attrelid = 'public.node_creature'::regclass");
+    expect(sql).toContain("attname = 'encounter_id'");
+    expect(sql).toContain("attname = 'node_id'");
+    expect(settlementBody).toContain('nc.encounter_id = e.id');
+    expect(settlementBody).not.toContain('nc.node_id');
+  });
+
+  it('executes the ownership boundary for active combat, peaceful co-location and inert shells', () => {
+    const active = {
+      encounterActive: true,
+      fighterPresent: true,
+      fighterLiving: true,
+      creatureEncounterMatches: true,
+      creatureLiving: true,
+      creatureEngaged: true,
+    };
+    expect(combatOwned(active)).toBe(true);
+    expect(combatOwned({ ...active, creatureEngaged: false })).toBe(false);
+    expect(combatOwned({ ...active, fighterPresent: false })).toBe(false);
+    expect(combatOwned({ ...active, encounterActive: false })).toBe(false);
+    expect(combatOwned({ ...active, creatureEncounterMatches: false })).toBe(false);
+    expect(settlementBody).toContain('c.hp <= 0');
+  });
+
   it('does not let peaceful creatures or inert/absent encounter shells suppress settlement', () => {
     expect(sql).toContain('nc.is_alive AND nc.hp > 0 AND nc.engaged');
     expect(sql).toContain('(f.present AND EXISTS');
@@ -72,6 +153,21 @@ describe('authoritative out-of-combat resource settlement', () => {
     expect(sql).toContain('REVOKE ALL ON FUNCTION public.settle_out_of_combat_resources(timestamptz) FROM PUBLIC, anon, authenticated');
     expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.settle_out_of_combat_resources(timestamptz) TO service_role');
     expect(sql).toContain('ENABLE ROW LEVEL SECURITY');
+  });
+
+  it('isolates settlement and dispatch failures while retaining evidence and idempotency', () => {
+    const wrapper = sql.slice(
+      sql.indexOf('CREATE FUNCTION public.combat2_dispatch_scheduler_fire()'),
+      sql.indexOf('REVOKE ALL ON FUNCTION public.combat2_dispatch_scheduler_fire()'),
+    );
+    expect(wrapper).toMatch(/BEGIN\s+settlement := public\.settle_out_of_combat_resources[\s\S]*EXCEPTION WHEN OTHERS THEN[\s\S]*'settlement_error'/);
+    expect(wrapper).toMatch(/BEGIN\s+dispatch := public\.combat2_dispatch_scheduler_fire_without_resource_settlement[\s\S]*EXCEPTION WHEN OTHERS THEN[\s\S]*'scheduler_error'/);
+    expect(wrapper).toContain("'code', SQLSTATE");
+    expect(wrapper).not.toContain('SQLERRM');
+    expect(wrapper).toContain("COALESCE((settlement->>'ok')::boolean, false) AND COALESCE((dispatch->>'ok')::boolean, false)");
+    expect(wrapper.indexOf('settle_out_of_combat_resources')).toBeLessThan(wrapper.indexOf('combat2_dispatch_scheduler_fire_without_resource_settlement'));
+    expect(sql).toContain('WHERE singleton FOR UPDATE');
+    expect(sql).toContain("'already_settled'");
   });
 
   it('leaves the browser as a display-only resource consumer', () => {
