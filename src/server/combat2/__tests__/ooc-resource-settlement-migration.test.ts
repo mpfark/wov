@@ -79,5 +79,7 @@ describe('authoritative out-of-combat resource settlement', () => {
     expect(loop).not.toContain('pendingRegenFlushRef');
     expect(loop).not.toContain('updateCharRegenRef');
     expect(loop).not.toContain('foodCpRegen');
+    expect(loop).not.toContain("rpc('heal_party_member'");
+    expect(loop).not.toContain('partyRegenBuff.healPerTick');
   });
 });

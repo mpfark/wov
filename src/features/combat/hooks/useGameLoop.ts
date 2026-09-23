@@ -8,11 +8,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { getStatRegen, getEffectiveMaxHp } from '@/lib/game-data';
-import { supabase } from '@/integrations/supabase/client';
 
 import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';
-import { buildDeathEvent, buildHealEvent } from '@/features/combat/events/client-event-builder';
+import { buildDeathEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 
@@ -125,13 +124,11 @@ export function useGameLoop(params: UseGameLoopParams) {
   const execution = useExecutionFence(combatEnabled);
   const {
     character, updateCharacter, equipped, equipmentBonuses, addLogEvent,
-    startingNodeId, creatures, party, partyMembers, bus,
+    startingNodeId, creatures, bus,
   } = params;
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
-  const { partyRegenBuff } = buff.buffState;
-  const { setPartyRegenBuff } = buff.buffSetters;
 
   // ── Local state ────────────────────────────────────────────
   const [isDead, setIsDead] = useState(false);
@@ -139,13 +136,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const [deathCountdown, setDeathCountdown] = useState(3);
   const isDeadRef = useRef(false);
 
-  // ── Regen refs (avoid stale closures in intervals) ─────────
-  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class });
   const inCombatRegenRef = useRef(false);
-  const equipmentBonusesRef = useRef(equipmentBonuses);
-
-  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
-  useEffect(() => { equipmentBonusesRef.current = equipmentBonuses; }, [equipmentBonuses]);
 
 
   // ── Computed values ────────────────────────────────────────
@@ -231,51 +222,6 @@ export function useGameLoop(params: UseGameLoopParams) {
     isDeadRef.current = false;
   }, []);
 
-
-  // ── Crescendo / Purifying Light party regen ────────────────
-  useEffect(() => {
-    if (!combatEnabled) return;
-    const current = execution.capture();
-    if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
-    const abilityLabel = partyRegenBuff.label ?? 'Regeneration';
-    const tickLine = (who: string) =>
-      (partyRegenBuff.tickText ?? `${abilityLabel} heals {who} for {amount} HP!`)
-        .replace('{who}', who)
-        .replace('{amount}', String(partyRegenBuff.healPerTick));
-    const interval = setInterval(async () => {
-      if (!current()) return;
-      if (Date.now() >= partyRegenBuff.expiresAt) {
-        setPartyRegenBuff(null); clearInterval(interval); return;
-      }
-      const charState = regenCharRef.current;
-      const eqBonuses = equipmentBonusesRef.current;
-      const partyEffectiveMaxHp = getEffectiveMaxHp(charState.class, charState.con, charState.level, eqBonuses);
-      const selfNewHp = Math.min(partyEffectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
-      if (selfNewHp > charState.hp) {
-        await updateCharacter({ hp: selfNewHp });
-        if (!current()) return;
-      }
-      if (party) {
-        const membersHere = partyMembers.filter(m => m.character_id !== character.id && m.character?.current_node_id === charState.current_node_id);
-        for (const m of membersHere) {
-          await supabase.rpc('heal_party_member', {
-            _healer_id: character.id,
-            _target_id: m.character_id,
-            _heal_amount: partyRegenBuff.healPerTick,
-          });
-          if (!current()) return;
-        }
-        if (membersHere.length > 0) {
-          addLogEvent(buildHealEvent(tickLine(`${membersHere.length + 1} allies`), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
-        } else {
-          addLogEvent(buildHealEvent(tickLine('you'), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
-        }
-      } else {
-        addLogEvent(buildHealEvent(tickLine('you'), { amount: partyRegenBuff.healPerTick, amountKind: 'heal', effectType: 'party_regen' }));
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [partyRegenBuff, party, partyMembers, character, addLogEvent, updateCharacter, combatEnabled, execution]);
 
   return {
     // Buff state (from useBuffState)
