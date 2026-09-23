@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-23T14:45:00Z",
-  "based_on_source_sha": "04bad9fc524309bf383a4e49f7c0e54f0fb68b71",
+  "updated_at": "2026-09-24T01:45:00Z",
+  "based_on_source_sha": "bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,14 +16,24 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "04bad9fc524309bf383a4e49f7c0e54f0fb68b71",
-    "timestamp": "2026-09-23T14:45:00Z",
+    "sha": "bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7",
+    "timestamp": "2026-09-24T01:45:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main was clean at 28f4791632ba21f10d9a07f8456eebe1680d6a14, then fast-forwarded to origin/main 04bad9fc524309bf383a4e49f7c0e54f0fb68b71. The intervening Lovable commits contain only the out-of-combat settlement ledger artifact, regenerated Supabase types and installation evidence; no runtime source was introduced.",
+    "evidence": "Local main and origin/main were clean and identical at bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7 before the post-completion settlement lifecycle correction. All settlement installation evidence and the resource-delivery/log-continuity correction remain in ancestry.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20260924100000_combat2_post_completion_settlement_ownership.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-24T01:45:00Z",
+      "evidence_type": "tests",
+      "evidence": "Forward-only correction for the installed settle_out_of_combat_resources(timestamptz) ownership predicate. The installed predicate attached a live encounter claim to every historical fighter row for that encounter without requiring the fighter to remain present. The migration fail-closes on source drift and changes only that predicate so a live claim excludes settlement only while f.present is true. It also verifies the installed inactive-fighter release trigger exists and is enabled. Formulas, four-second cursor, two-second Combat2 cadence, catch-up bounds, transition bucket fence, death/respawn, Test Arena, movement/departure, rewards and history are unchanged. Authored only; not installed or live-verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260922140000_combat2_engagement_release_lifecycle.sql",
       "status": "installed",
@@ -148,6 +158,16 @@
     "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "post-completion-resource-settlement-ownership-2026-09-24",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-24T01:45:00Z",
+      "evidence_type": "tests",
+      "evidence": "Static installed-contract tracing proves one lifecycle defect: settle_out_of_combat_resources considered e.claim_token independently of f.present, so a historical absent fighter could remain excluded when its reactivated encounter generation held a live claim. Resolver completion, commit status persistence, claim clearing, the enabled inactive-fighter release trigger and client detachment otherwise form the intended sequence. The forward migration scopes both living-opposition and live-claim ownership to present fighters. Executable transition tests cover final combat interval exclusion, next-boundary HP/CP/MP settlement without banking, aggressive and deliberately peaceful completion, multiple survivors, a dead member, live and expired claims, duplicate settlement and immediate re-entry. No Cloud access was available, so the exact predicate present on Mik's most recent live row remains unobserved and post-combat regeneration remains unverified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "post-install-resource-delivery-and-log-continuity-2026-09-23",
       "status": "committed",
@@ -463,15 +483,25 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Install the unique-holder prerequisite if needed, then install and verify authoritative out-of-combat resource settlement.",
+    "artifact": "Install and verify the post-completion Combat2 settlement-ownership correction.",
     "sha": null,
-    "timestamp": "2026-09-23T09:20:00Z",
+    "timestamp": "2026-09-24T01:45:00Z",
     "evidence_type": "handoff",
-    "evidence": "Lovable must first perform a fresh read-only ledger and safety preflight. Confirm or install 20260923084603 when absent, then install only the corrected repository bytes of 20260923100000 with SHA-256 b973e4fe9cbc7b8c787c12ac6e623e65c3ffe7a5ea8937446fc58f90acbae6b9. The one preserved present fighter is evidence rather than a blocker only when the fresh preflight proves world asleep and maintenance, zero schedules, live claims, unconsumed processable events, queued/finalizing departures and active diagnostic/Test Arena recordings, no additional present fighter, and installation does not invoke settlement; preserve before/after gameplay fingerprints. Stop on any changed condition. Regenerate official Cloud types afterward. No Edge deployment is required. Mik alone manually publishes the pending frontend. Do not invoke gameplay.",
+    "evidence": "Lovable must first perform a read-only ledger and runtime preflight, then install only 20260924100000_combat2_post_completion_settlement_ownership.sql after confirming the expected installed settlement predicate and enabled fighter-release trigger. Do not invoke settlement, dispatcher, worker, combat or repair RPCs during installation. Verify the resulting function requires f.present for both living engaged opposition and a live claim, preserves every other function clause and grant, and creates exactly one ledger artifact. No generated type change or Edge deployment is expected. Mik must then perform bounded ordinary aggressive and deliberately peaceful live verification, including post-combat HP/CP/MP progression; Mik alone handles any required frontend publication.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "post-completion-regeneration-operator-report-2026-09-24",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-24T01:45:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that out-of-combat HP/CP/MP settlement works before combat and becomes visible in the browser; aggressive combat starts and advances automatically; peaceful creatures can be deliberately engaged and killed; encounter death/completion is visible; regeneration does not resume afterward. This proves the user-visible boundary but not the exact persisted encounter, fighter, claim, cursor or resource rows. No Cloud connector was available for fresh read-only row inspection in this task.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-safety-state-2026-09-23T10Z",
       "status": "unknown",

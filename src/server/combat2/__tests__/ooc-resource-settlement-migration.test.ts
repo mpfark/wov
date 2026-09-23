@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const sql = readFileSync('supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql', 'utf8').replaceAll('\r\n', '\n');
+const transition = readFileSync('supabase/migrations/20260924100000_combat2_post_completion_settlement_ownership.sql', 'utf8').replaceAll('\r\n', '\n');
 const loop = readFileSync('src/features/combat/hooks/useGameLoop.ts', 'utf8');
 const generatedTypes = readFileSync('src/integrations/supabase/types.ts', 'utf8').replaceAll('\r\n', '\n');
 
@@ -142,6 +143,17 @@ describe('authoritative out-of-combat resource settlement', () => {
     expect(sql).toContain('nc.is_alive AND nc.hp > 0 AND nc.engaged');
     expect(sql).toContain('(f.present AND EXISTS');
     expect(sql).not.toContain('nc.is_aggressive');
+    expect(transition).toContain('OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)');
+    expect(transition).toContain("tgname = 'combat2_close_inactive_encounter_fighters'");
+  });
+
+  it('patches only the installed live-claim ownership predicate and fails closed on drift', () => {
+    expect(transition).toContain("'public.settle_out_of_combat_resources(timestamptz)'::regprocedure");
+    expect(transition).toContain("old_predicate text := 'OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)'");
+    expect(transition).toContain("new_predicate text := 'OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)'");
+    expect(transition).toContain('definition := replace(definition, old_predicate, new_predicate)');
+    expect(transition).toContain("RAISE EXCEPTION 'unexpected out-of-combat ownership predicate'");
+    expect(transition).not.toMatch(/hp_per_tick|cp_per_tick|mp_per_tick|date_bin|interval '4 seconds'/);
   });
 
   it('is idempotent, monotonic and inaccessible to browser roles', () => {
