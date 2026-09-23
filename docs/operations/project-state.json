@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-23T08:50:00Z",
-  "based_on_source_sha": "bcdff64d8abdbfaca7c7664df0a89a146f554e8b",
+  "updated_at": "2026-09-23T09:20:00Z",
+  "based_on_source_sha": "7c0464b05081901fb046500850dc9abb06da691d",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73",
-    "timestamp": "2026-09-22T21:28:00Z",
+    "sha": "7c0464b05081901fb046500850dc9abb06da691d",
+    "timestamp": "2026-09-23T09:20:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main are identical at merge commit 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 with a clean worktree before this reconciliation update. The merge retains implementation commits 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and dd10d8f45ab602e13bc8f3b69eff89a992ec3fe2 and the exact Lovable installation chain cb64048305ba49e923e82c4cdf9093d7de67d3dc -> 5cecd97a2ad0080a46a5f43972a9db7452d14157 -> 415893f6bb8b336d99791c58a673e2dd24f946af. The merge brought the authoritative ledger artifact, regenerated official types and direct project-state installation evidence to origin/main without rewriting history. Installed INT+WIS evidence, WIS-based Combat2 regeneration, Holy Shield grouping and healthy-sync readiness remain present. No unrelated pending change existed.",
+    "evidence": "Local main was fast-forwarded cleanly to origin/main at 7c0464b05081901fb046500850dc9abb06da691d. Recent lifecycle, peaceful-creature visibility, INT+WIS CP regeneration and unique-holder-trigger correction history is retained; 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and dd10d8f45ab602e13bc8f3b69eff89a992ec3fe2 remain ancestors. The correction file 20260923084603_63ed1235-60fa-4f63-a4a6-f37673d50ae8.sql is present with expected SHA-256 4f30b604887f6d24e04dfc3d6cf24adfbc4a4f9676bef21076d28982872b60d4. No unrelated local change existed before this task.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -83,6 +83,26 @@
       "evidence": "Applied exactly once. Installed SQL SHA-256 21607d456320fda72477a03dc1c3d572eebfd05ae85a72322d10bc09208e6d14; the staged repository copy was aligned byte-for-byte to the installed ledger artifact and has the identical hash. The originally authored file (SHA-256 2000d01f12df015160594d1141b7243cd634916ea9ef47e3933b73a0ef4fcc9e) aborted fail-closed with 'P0001: claim reward-channel contract patch failed: projection marker not found' and applied nothing, because it targeted public.node_tick_claim(uuid,integer); catalog inspection proved the creature projection marker lives in public.node_tick_claim_without_canary_gate(uuid,integer) at offset 2214, and the two outer wrappers compose that snapshot without re-projecting creature fields. The corrected migration retargets only that function; everything else is unchanged. Installed result verified read-only: creatures.gold_enabled boolean NOT NULL DEFAULT false, gold_min integer NOT NULL DEFAULT 0, gold_max integer NOT NULL DEFAULT 0, gold_chance numeric NOT NULL DEFAULT 0, salvage_enabled boolean NOT NULL DEFAULT false, item_source text NOT NULL DEFAULT 'none'; across all 459 creatures zero null or empty values, zero unsupported item_source values, zero out-of-range gold bounds or chances. Backfill deterministic from existing loot_mode/loot_table authoring: 272 salvage/none, 139 gold/world_pool, 17 gold/none, 10 gold+salvage/none, 10 none/world_pool, 9 none/none, 2 assigned_table. Claim chain unchanged otherwise: node_tick_claim(_node_id uuid, _lease_ms integer DEFAULT 5000), all three functions SECURITY DEFINER, owner postgres, EXECUTE limited to postgres and service_role, fixed search_path, no browser-accessible mutation surface added. No ADM-025B mapping, constraints, triggers, admin RPCs, gameplay-data cleanup or encounter-specific statements. Security linter unchanged at 322 findings.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "20260923084603_63ed1235-60fa-4f63-a4a6-f37673d50ae8.sql",
+      "status": "unknown",
+      "sha": "7c0464b05081901fb046500850dc9abb06da691d",
+      "timestamp": null,
+      "evidence_type": "repository",
+      "evidence": "Repository artifact is present and its Git blob SHA-256 is 4f30b604887f6d24e04dfc3d6cf24adfbc4a4f9676bef21076d28982872b60d4. Project-state contains no direct Cloud installation evidence or ledger artifact for this correction. Installation must be confirmed or completed before relying on automatic Combat2 commits; this task did not access Cloud or apply it.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "20260923100000_authoritative_ooc_resource_settlement.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-23T09:20:00Z",
+      "evidence_type": "tests",
+      "evidence": "Forward-only migration authored with SHA-256 fcdb8e12fc73f8e0695487d8d8993c5810fbd4e751df71ca64f3e32fda41f475. It adds a service-role-only RLS-protected global settlement cursor and settle_out_of_combat_resources, then composes settlement into the existing combat2_dispatch_scheduler_fire clock without adding cron or Edge work. Four-second logical cadence; duplicate buckets are idempotent; delays of at most three intervals catch up at most three ticks; longer gaps award one current tick and discard downtime. Eligibility is server-derived after locking character rows in UUID order: living ordinary-world characters only, excluding active present/claimed Combat2 ownership, queued/finalizing or same-bucket completed solo/party movement, same-bucket combat release or respawn, death and all Test Arena nodes. Peaceful co-location, inert encounters and absent fighters do not block. HP uses effective CON plus durable equipped hp_regen, milestone and authoritative Inn; CP uses effective WIS plus milestone and Inn; MP uses the canonical doubled four-second effective-DEX rate plus Inn. Browser-only food and client Inspire state are excluded; Combat2 CP regeneration and authoritative Inspire are unchanged. Not installed or live-verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "generated_supabase_types": {
@@ -119,12 +139,12 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Peaceful-creature node visibility correction (frontend-only)",
+    "artifact": "Peaceful-creature visibility plus display-only HP/CP/MP client",
     "sha": null,
-    "timestamp": "2026-09-23T08:20:00Z",
+    "timestamp": "2026-09-23T09:20:00Z",
     "evidence_type": "tests",
-    "evidence": "The creature-visibility correction is frontend-only and unpublished. Mik must publish manually after reviewing the handoff. The previous release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 remains operator-reported as manually published.",
-    "reporting_actor": "Lovable",
+    "evidence": "The pending frontend release contains the prior peaceful-creature visibility correction and removes the competing browser HP/CP/MP regeneration writer. The client continues to display authoritative character-row updates and owns no passive-resource clock or amount. Mik must publish manually only after the settlement migration is installed; this task did not publish. The previous release at 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73 remains operator-reported as manually published.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
@@ -347,17 +367,27 @@
       "evidence": "Lifecycle release status is ready_for_live_verification: the migration is installed, the required Edge functions are deployed, Mik reports the descendant frontend release manually published, repository reconciliation is complete, and focused static verification passes. This is readiness only; no live behavior was tested in this reconciliation. Safe authoritative post-combat HP/MP settlement, character-scoped stances, authoritative food effects, global world-tick/resource settlement and ADM-025B remain unresolved or pending and unchanged.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "identity": "authoritative-out-of-combat-resource-settlement",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-23T09:20:00Z",
+      "evidence_type": "tests",
+      "evidence": "Source implementation complete and installation pending. Source-of-truth matrix: active-combat HP/CP ownership remains node_tick_commit/Combat2; active-combat MP changes only through authoritative departure; Combat2 passive CP remains effective-WIS plus milestone every second encounter tick; passive HP and MP remain disabled in combat and Inspire remains a separate effect. Out of combat, settle_out_of_combat_resources owns persisted characters.hp/cp/mp on a four-second logical cadence driven by the existing two-second world scheduler. HP = effective-CON base regen + durable equipped hp_regen + HP milestone + server node Inn bonus; CP = effective-WIS regen + CP milestone + Inn bonus; MP = 2 * canonical effective-DEX MP rate + Inn bonus. Caps use the existing effective class/level/gear/gem formulas. Browser food is excluded because no authoritative persisted amount/expiry exists. One global locked bucket fences retries and all characters regardless of node; characters lock in UUID order, re-read ownership after locking, and no encounter row is locked. World sleep/maintenance/scheduler absence advances or resets the cursor without banking time; <=3 delayed intervals catch up, larger gaps award one tick. Active present/claimed Combat2 ownership, queued/finalizing movement, death/respawn and Test Arena nodes are excluded. Browser passive writers are removed. No Edge consumer changed; the SQL scheduler wrapper is the only consumer. Live verification pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
     {
-      "identity": "post-combat-hp-mp-settlement-absent",
-      "status": "blocked",
+      "identity": "authoritative-ooc-resource-settlement-installation",
+      "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-23T08:20:00Z",
-      "evidence_type": "operator_reported",
-      "evidence": "The operator is currently movement-blocked at 0 MP because authoritative post-combat HP/MP settlement and global world-tick resource settlement remain absent. The character was deliberately not mutated to unblock testing. Character-scoped persistent stances, stance activation outside combat, authoritative food effects and ADM-025B remain separate, pending and unchanged.",
-      "reporting_actor": "Lovable",
+      "timestamp": "2026-09-23T09:20:00Z",
+      "evidence_type": "task_boundary",
+      "evidence": "Source is authored but not installed. The operator-reported 0-MP movement block was not repaired and no character was mutated. Release prerequisite: first confirm/install unique-holder correction 20260923084603, whose installation is currently unknown; then install 20260923100000, regenerate official Cloud types, and perform bounded live verification before relying on regeneration. Character-scoped persistent stances, stance activation outside combat, authoritative food effects, inactive-character return-home and ADM-025B remain pending and unchanged.",
+      "reporting_actor": "Codex",
       "directly_verified": true
     },
     {
@@ -403,12 +433,12 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Obtain authorization for one bounded probe that proves the exact 42703 undefined column at the Combat2 commit boundary.",
+    "artifact": "Install the unique-holder prerequisite if needed, then install and verify authoritative out-of-combat resource settlement.",
     "sha": null,
-    "timestamp": "2026-09-23T08:20:00Z",
+    "timestamp": "2026-09-23T09:20:00Z",
     "evidence_type": "handoff",
-    "evidence": "The automatic-tick failure boundary is proven (claim succeeds, commit transport refuses with SQLSTATE 42703). The exact undefined column cannot be proven without either one authorized bounded invocation of node_tick_commit or a live diagnostic recording scoped to the affected node while the error reproduces. Live lifecycle behaviour and the creature-visibility correction have not been verified in a running world; no gameplay verification was authorized. Authoritative post-combat HP/MP settlement, global world-tick resource settlement, character-scoped stances, stance activation outside combat, authoritative food effects, the recorded inactive-character return-home request and ADM-025B remain separate and unchanged.",
-    "reporting_actor": "Lovable",
+    "evidence": "Lovable may perform a read-only ledger preflight, stop if the unique-holder correction conflicts or its status is ambiguous, otherwise install the exact pending corrections in repository order: 20260923084603 when not already installed, then 20260923100000. Regenerate official Cloud types after settlement installation. No Edge deployment is required. Leave world asleep/maintenance and do not invoke gameplay without separate authorization. Mik alone manually publishes the pending frontend after installation. Live lifecycle and resource settlement remain unverified. Authoritative food, character-scoped stances, inactive-character return-home and ADM-025B remain separate.",
+    "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [

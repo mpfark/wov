@@ -1,12 +1,13 @@
 /**
- * useGameLoop — owns regen intervals, death detection, and party regen.
+ * useGameLoop — owns legacy death detection and presentation-only buff timers.
+ * Authoritative passive HP/CP/MP settlement is server-owned.
  * Delegates buff/debuff state to useBuffState.
  *
  * Mirrors LPMud's heart_beat() pattern for periodic effects.
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getStatRegen, getCpRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
+import { getStatRegen, getEffectiveMaxHp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 
 import type { GameEventBus } from '@/hooks/useGameEvents';
@@ -112,11 +113,9 @@ export interface UseGameLoopParams {
   partyMembers: any[];
   /** Optional event bus — when provided, fires 'player:death' on death */
   bus?: GameEventBus;
-  /** When false, the regen interval is suppressed. */
+  /** Legacy execution gate; passive resource settlement is server-owned. */
   enabled?: boolean;
-  /** Optional local-only updater. When provided, regen ticks update local
-   *  state every tick but only flush to the DB every Nth tick (or on cap-
-   *  reach / tab-hide). Cuts the #2/#5/#7/#10 DB hotspots ~70%. */
+  /** Retained for caller compatibility; passive resources are never written here. */
   updateCharacterLocal?: (updates: Partial<Character>, hold?: boolean) => void;
 }
 
@@ -124,57 +123,28 @@ export interface UseGameLoopParams {
 export function useGameLoop(params: UseGameLoopParams) {
   const combatEnabled = params.combatEnabled !== false;
   const execution = useExecutionFence(combatEnabled);
-  const combatAllowedRef = useRef(combatEnabled);
-  combatAllowedRef.current = combatEnabled;
   const {
-    character, updateCharacter, equipped, equipmentBonuses, getNode, addLogEvent,
+    character, updateCharacter, equipped, equipmentBonuses, addLogEvent,
     startingNodeId, creatures, party, partyMembers, bus,
-    enabled = true,
-    updateCharacterLocal,
   } = params;
-
-
-  // Keep a ref so the long-lived interval below can read the latest value
-  // without being re-created.
-  const enabledRef = useRef(enabled);
-  enabledRef.current = enabled && combatEnabled;
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
-  const { partyRegenBuff, inspireBuff } = buff.buffState;
+  const { partyRegenBuff } = buff.buffState;
   const { setPartyRegenBuff } = buff.buffSetters;
-  const { foodBuff } = buff.buffState;
 
   // ── Local state ────────────────────────────────────────────
   const [isDead, setIsDead] = useState(false);
-  const [regenTick, setRegenTick] = useState(false);
+  const [regenTick] = useState(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const isDeadRef = useRef(false);
 
   // ── Regen refs (avoid stale closures in intervals) ─────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class });
-  const foodBuffRef = useRef(foodBuff);
-  const inspireBuffRef = useRef(inspireBuff);
-  const getNodeRef = useRef(getNode);
-  const updateCharRegenRef = useRef(updateCharacter);
-  const updateCharLocalRef = useRef(updateCharacterLocal);
-  const equippedRef = useRef(equipped);
   const inCombatRegenRef = useRef(false);
   const equipmentBonusesRef = useRef(equipmentBonuses);
-  /** Tick counter so we can flush regen to the DB every Nth tick instead
-   *  of every tick. ~70% fewer character UPDATE writes. */
-  const regenTickCountRef = useRef(0);
-  /** Pending local-only regen deltas we still owe the DB (so a tab-hide
-   *  flush or cap-reach can persist them). */
-  const pendingRegenFlushRef = useRef<Partial<Character> | null>(null);
 
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
-  useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
-  useEffect(() => { inspireBuffRef.current = inspireBuff; }, [inspireBuff]);
-  useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
-  useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
-  useEffect(() => { updateCharLocalRef.current = updateCharacterLocal; }, [updateCharacterLocal]);
-  useEffect(() => { equippedRef.current = equipped; }, [equipped]);
   useEffect(() => { equipmentBonusesRef.current = equipmentBonuses; }, [equipmentBonuses]);
 
 
@@ -182,146 +152,8 @@ export function useGameLoop(params: UseGameLoopParams) {
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
   const baseRegen = getStatRegen(character.con + (equipmentBonuses.con || 0));
 
-  // ── Unified HP + CP + MP Regen (every 4s) ───────────────────
-  const cpCharRef = useRef({ cp: character.cp ?? 100, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
-  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.level, character.int, character.wis, character.cha]);
-
-  useEffect(() => {
-    if (!combatEnabled) { pendingRegenFlushRef.current = null; return; }
-    const interval = setInterval(() => {
-      // Wait until the on-entry `sync_character_resources` RPC has resolved.
-      // Writing before that means we may write against stale `max_*` and have
-      // the row trigger silently clamp `hp`/`cp`/`mp` down.
-      if (!enabledRef.current) return;
-
-      const updates: Partial<Character> = {};
-
-      // ── HP Regen ──
-      // During combat, the `combat-tick` edge function is the SOLE writer for
-      // the character's HP. Doing client-side regen writes here races with the
-      // server: a stale-ref or interleaved write can re-inflate the row's HP
-      // and the next tick will deal damage off the inflated value, producing
-      // the visible "bars jumping up and down" symptom.
-      const { hp, current_node_id, con, mp, dex, level: charLevel, class: charClass } = regenCharRef.current;
-      const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-      const innFlat = node?.is_inn ? 10 : 0;
-      const eqB = equipmentBonusesRef.current;
-
-      const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
-
-      // Inspire (Bard) — flat additive HP & CP regen for the duration.
-      // Like all other client regen sources, it is suppressed during combat.
-      const insp = inspireBuffRef.current;
-      const inspireActive = !!(insp && Date.now() < insp.expiresAt);
-      const inspireHp = inspireActive ? insp!.hpPerTick : 0;
-      const inspireCp = inspireActive ? insp!.cpPerTick : 0;
-
-      if (!inCombatRegenRef.current && hp < effectiveMaxHp && hp > 0) {
-        const conRegen = getStatRegen(con + (eqB.con || 0));
-        const eqItemRegen = eqB.hp_regen || 0;
-        const food = foodBuffRef.current;
-        const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
-        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat + inspireHp), 1);
-        const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
-        if (newHp !== hp) {
-          updates.hp = newHp;
-          setRegenTick(true);
-          setTimeout(() => setRegenTick(false), 1200);
-        }
-      }
-
-      // ── CP Regen (skipped during combat to avoid stale-ref race with ability costs) ──
-      if (!inCombatRegenRef.current) {
-        const { cp, level: cpLevel, int, wis } = cpCharRef.current;
-        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, eqB);
-        if (cp < effectiveMaxCp) {
-          const wisWithGear = wis + (eqB.wis || 0);
-          const wisRegen = getCpRegen(wisWithGear);
-          const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
-          const food = foodBuffRef.current;
-          const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-          const regenAmount = Math.max(Math.floor((wisRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp)), 1);
-          const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
-          if (newCp > cp) {
-            updates.cp = newCp;
-          }
-        }
-      }
-
-      // ── MP Regen (skipped during combat — same race-avoidance reason) ──
-      const effectiveMaxMp = getEffectiveMaxMp(regenCharRef.current.level, dex, eqB);
-      if (!inCombatRegenRef.current && mp < effectiveMaxMp) {
-        const dexWithGear = dex + (eqB.dex || 0);
-        // ×2 to compensate for 4s tick (was 2s)
-        const regenAmount = getMpRegenRate(dexWithGear) * 2 + innFlat;
-        const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
-        if (newMp > mp) {
-          updates.mp = newMp;
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        const caps = {
-          maxHp: effectiveMaxHp,
-          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, eqB),
-          maxMp: effectiveMaxMp,
-        };
-
-        // Throttle DB writes: apply optimistically to local state every tick,
-        // but only persist every 3rd tick (~12s) — or immediately if any
-        // resource reached its cap (so the persisted row is at full).
-        regenTickCountRef.current += 1;
-        const reachedCap =
-          (updates.hp !== undefined && updates.hp >= caps.maxHp) ||
-          (updates.cp !== undefined && updates.cp >= caps.maxCp) ||
-          (updates.mp !== undefined && updates.mp >= caps.maxMp);
-        const shouldFlush = !updateCharLocalRef.current || regenTickCountRef.current >= 3 || reachedCap;
-
-        if (shouldFlush) {
-          regenTickCountRef.current = 0;
-          pendingRegenFlushRef.current = null;
-          updateCharRegenRef.current(updates, caps);
-        } else {
-          // `hold: true` — these values are not persisted yet, so keep them
-          // protected from realtime echoes (e.g. socket reconnect after a tab
-          // switch) until the next flush actually writes them.
-          updateCharLocalRef.current(updates, true);
-
-          // Track latest pending values so tab-hide / cleanup can flush them.
-          pendingRegenFlushRef.current = { ...(pendingRegenFlushRef.current ?? {}), ...updates };
-        }
-      }
-    }, 4000);
-
-    // Flush any pending local-only regen on tab hide / unload so the
-    // persisted row catches up.
-    const flushPending = () => {
-      // Preserve ordinary legacy unmount flushing; only ownership suspension discards it.
-      if (!combatAllowedRef.current) { pendingRegenFlushRef.current = null; return; }
-      if (pendingRegenFlushRef.current && Object.keys(pendingRegenFlushRef.current).length > 0) {
-        const eqB = equipmentBonusesRef.current;
-        const caps = {
-          maxHp: getEffectiveMaxHp(regenCharRef.current.class, regenCharRef.current.con, regenCharRef.current.level, eqB),
-          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, eqB),
-          maxMp: getEffectiveMaxMp(regenCharRef.current.level, regenCharRef.current.dex, eqB),
-        };
-        updateCharRegenRef.current(pendingRegenFlushRef.current, caps);
-        pendingRegenFlushRef.current = null;
-        regenTickCountRef.current = 0;
-      }
-    };
-    const onVis = () => { if (document.visibilityState === 'hidden') flushPending(); };
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('pagehide', flushPending);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('pagehide', flushPending);
-      flushPending();
-    };
-  }, [combatEnabled, execution]);
+  // HP/CP/MP regeneration is server-authoritative. The browser intentionally
+  // owns no regeneration timer and writes no calculated resource amount.
 
 
   // ── Death detection & respawn ──────────────────────────────

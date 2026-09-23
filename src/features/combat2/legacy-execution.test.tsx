@@ -53,16 +53,16 @@ describe('legacy execution fences', () => {
     unmount();
   });
 
-  it('preserves a pending legacy regeneration flush on ordinary unmount', async () => {
+  it('never calculates or persists browser-owned HP/CP/MP regeneration', async () => {
     vi.useFakeTimers();
     const write = vi.fn().mockResolvedValue(undefined);
     const local = vi.fn();
     const { unmount } = renderHook(() => useGameLoop({ character, updateCharacter: write, updateCharacterLocal: local, equipped: [], equipmentBonuses: {}, getNode: vi.fn(), addLogEvent: vi.fn(), creatures: [], party: null, partyMembers: [] } as unknown as UseGameLoopParams));
     await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
-    expect(local).toHaveBeenCalled();
+    expect(local).not.toHaveBeenCalled();
     expect(write).not.toHaveBeenCalled();
     unmount();
-    expect(write).toHaveBeenCalledOnce();
+    expect(write).not.toHaveBeenCalled();
   });
 
   it('blocks automatic/basic/queued legacy work under Strict Mode while owned', () => {

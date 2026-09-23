@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const sql = readFileSync('supabase/migrations/20260922100000_int_wis_max_cp_and_combat2_regen.sql','utf8');
 const gameLoop = readFileSync('src/features/combat/hooks/useGameLoop.ts', 'utf8');
+const settlement = readFileSync('supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql', 'utf8');
 
 describe('INT+WIS maximum CP migration', () => {
   it('uses effective INT and WIS with the authoritative clamped formula', () => {
@@ -20,12 +21,13 @@ describe('INT+WIS maximum CP migration', () => {
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.sync_character_resources');
     expect(sql).not.toMatch(/DELETE FROM|TRUNCATE|DROP TABLE/i);
   });
-  it('keeps four-second out-of-combat modifiers but sources passive CP from effective WIS', () => {
-    expect(gameLoop).toContain('}, 4000);');
-    expect(gameLoop).toContain('const wisWithGear = wis + (eqB.wis || 0);');
-    expect(gameLoop).toContain('const wisRegen = getCpRegen(wisWithGear);');
-    expect(gameLoop).toContain('food.flatRegen * 0.5');
-    expect(gameLoop).toContain('wisRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp');
-    expect(gameLoop).not.toContain('getCpRegen(int');
+  it('moves four-second out-of-combat CP settlement to effective WIS on the server', () => {
+    expect(settlement).toContain("date_bin(interval '4 seconds'");
+    expect(settlement).toContain('effective_wis := c.wis + bonus_wis');
+    expect(settlement).toContain('floor(sqrt(greatest(effective_wis - 10, 0)))');
+    expect(settlement).toContain("(gems->>'pearl')");
+    expect(gameLoop).toContain('browser intentionally');
+    expect(gameLoop).not.toContain('food.flatRegen * 0.5');
+    expect(gameLoop).not.toContain('updateCharRegenRef');
   });
 });
