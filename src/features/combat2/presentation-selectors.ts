@@ -21,6 +21,13 @@ export function selectCombat2Character(
   };
 }
 
+/**
+ * Ordinary node presentation. The authoritative encounter model may only refine
+ * runtime values (hp/max hp/alive) for creatures it actually contains; it must
+ * never decide which creatures on the node are visible. Engagement and encounter
+ * membership govern the combat lifecycle only, so a living peaceful creature that
+ * was never pulled into an encounter stays listed exactly like any other.
+ */
 export function selectCombat2Creatures(
   enabled: boolean,
   model: Combat2PresentationModel | null,
