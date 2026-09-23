@@ -1103,6 +1103,24 @@ export type Database = {
           },
         ]
       }
+      character_resource_settlement_state: {
+        Row: {
+          settled_bucket: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          settled_bucket: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          settled_bucket?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       character_special_travel_request: {
         Row: {
           character_id: string
@@ -6313,6 +6331,10 @@ export type Database = {
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
+      combat2_dispatch_scheduler_fire_without_resource_settlement: {
+        Args: never
+        Returns: Json
+      }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
       combat2_due_nodes_without_canary_gate: {
         Args: { _limit?: number }
@@ -7184,6 +7206,7 @@ export type Database = {
         Args: { _party_id: string; _tank_character_id: string }
         Returns: Json
       }
+      settle_out_of_combat_resources: { Args: { _now?: string }; Returns: Json }
       shutdown_world: { Args: never; Returns: undefined }
       sim_note_progress: { Args: never; Returns: undefined }
       sim_note_resume: { Args: never; Returns: undefined }
