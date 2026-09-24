@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T22:05:00Z",
-  "based_on_source_sha": "a1da978240edda2b118760ddd6439668a0b899ab",
+  "updated_at": "2026-09-24T22:30:00Z",
+  "based_on_source_sha": "1b2f14d0d5af28f5fbe9cef61a8e201a73b8acd4",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -121,6 +121,16 @@
       "timestamp": "2026-09-24T06:10:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Applied exactly once from repository bytes SHA-256 fda4238a3c96eebfd82131788ab06688be9541c70dcc369daeb77f86033d7473. Ledger row version 20260924100000 name 22c8af73-29da-436c-aebd-cc52d1aaf97b; no separate ledger file was generated. Installed settle_out_of_combat_resources predicate changed from 'OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)' to 'OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)'; engaged-opposition rule, 4-second cadence and 3-interval catch-up text unchanged. Owner postgres, SECURITY DEFINER, search_path public,cron,pg_temp, EXECUTE postgres+service_role only (anon/authenticated false). Settlement table RLS on, no Realtime publication, privileges unchanged. Trigger combat2_close_inactive_encounter_fighters present and enabled. All protected gameplay fingerprints and the settlement cursor identical before and after. Settlement not invoked; no types regenerated; no Edge deployment (mirror parity clean); no frontend publication required.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
+      "status": "installed",
+      "sha": null,
+      "timestamp": "2026-09-24T22:25:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Applied exactly once from repository bytes SHA-256 aeb009491e54e43bb899c7d43fd33519ff38af1a947e864799b396f9d216440f; rejected SHA-256 e12b1cca4d96e68530adb49d752a1b3f9d93cb30dc33fcb68dc573ab71993ccd never installed. Ledger row version 20260924110000 name cef50f98-6796-4b0f-b6cb-b366f9f5fe6d; no separate ledger file generated. All migration guards passed. Installed public.combat_intent(8 args): owner postgres, SECURITY DEFINER, VOLATILE, search_path public,pg_temp, EXECUTE authenticated+service_role (no PUBLIC/anon); body reads v_character.max_cp, never v_fighter.max_cp, fighter identity-matched to v_character.id before resource calculation. Internal combat_intent_without_spendable_cp_preflight: postgres, SECURITY DEFINER, EXECUTE service_role only. No table, grant or Realtime publication change; types not regenerated (no shape change). plpgsql_check not installed; rollback-only behavioral verification not performed (no inert present-fighter fixture exists without inserting gameplay rows) - behavior pending live verification. All protected fingerprints identical before and after. No Edge deployment (mirror parity clean).",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
