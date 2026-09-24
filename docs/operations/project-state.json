@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T06:12:00Z",
-  "based_on_source_sha": "0b1bb0362053ecb22a7c99282225528bb441d7af",
+  "updated_at": "2026-09-24T09:30:00Z",
+  "based_on_source_sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "0b1bb0362053ecb22a7c99282225528bb441d7af",
-    "timestamp": "2026-09-24T06:12:00Z",
+    "sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
+    "timestamp": "2026-09-24T09:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at 0b1bb0362053ecb22a7c99282225528bb441d7af before the canonical engine documentation task. All settlement installation evidence, generated Cloud types and resource-delivery/log-continuity changes remain in ancestry.",
+    "evidence": "Local main and origin/main were clean and identical at f1f8a0251c72d9d64dc46a25672cd124939f89e8 before the immediate movement/departure source audit. The canonical engine specification/roadmap and all prior ledger artifacts and installation evidence remain in ancestry.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -421,6 +421,16 @@
   ],
   "known_blockers": [
     {
+      "identity": "immediate-combat2-departure-architecture",
+      "status": "blocked",
+      "sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
+      "timestamp": "2026-09-24T09:30:00Z",
+      "evidence_type": "source_audit",
+      "evidence": "Static source audit (ENG-MOVE-001) proves ordinary out-of-combat combat2_depart is immediate, but a present fighter, coordinated party member in combat, or combat_flee is queued through node_pending_event and waits for a later claim/resolve/node_tick_commit. The resolver owns exactly-once exit opportunity/death/effect decisions and node_tick_commit owns atomic fighter cleanup plus relocation/MP charge. Making the browser-callable SQL RPC synchronous by itself would duplicate Combat2 mechanics in SQL, move before the commit owner, or require an unsafe Edge callback inside a database transaction. No migration or runtime correction was authored. A future design must select one server-side orchestration boundary and prove a global lock order across claim/commit, entry, intent, solo/party departure, flee, respawn, arena lifecycle, party mutation and settlement. Installation and live parity were not inspected.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "repository-verification-defects-at-28f47916",
       "status": "blocked",
       "sha": "28f4791632ba21f10d9a07f8456eebe1680d6a14",
@@ -483,11 +493,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Perform the focused Combat2 targeting and combat-initiation audit (ENG-COMBAT-001).",
+    "artifact": "Resolve the immediate serialized Combat2 departure architecture (ENG-MOVE-001), then perform ENG-COMBAT-001.",
     "sha": null,
-    "timestamp": "2026-09-24T06:30:00Z",
+    "timestamp": "2026-09-24T09:30:00Z",
     "evidence_type": "handoff",
-    "evidence": "The settlement ownership correction is installed and Mik has operator-reported successful aggressive and peaceful encounter completion, fighter release, resumed HP/CP/MP regeneration and restored movement. The next engine task is the source-to-live audit defined by ENG-COMBAT-001: selected/queued/engaged/dead target states, Attack semantics, heartbeat fencing, multiplayer first-hit ordering and expected versus abnormal initiation latency. Preserve the authoritative heartbeat and do not infer direct Cloud evidence from the operator report.",
+    "evidence": "The approved engine rule requires immediate serialized combat departure. Current source queues present fighters for a later heartbeat because TypeScript resolveNodeTick owns exit mechanics and SQL node_tick_commit owns atomic persistence. Before implementation, choose a single safe server-side orchestration boundary and executable lock-order strategy; do not duplicate combat logic in SQL or call Edge from a database transaction. After that blocker is resolved, continue ENG-COMBAT-001 for selected/queued/engaged/dead target states, Attack semantics, heartbeat fencing, multiplayer first-hit ordering and latency.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

@@ -36,7 +36,7 @@ The engine keeps these concepts distinct:
 
 ## One authoritative world heartbeat
 
-The world has one authoritative heartbeat. Its intended base cadence is two seconds. Combat does not own an independent wall-clock timer. Active encounters are processed on heartbeat boundaries; out-of-combat resource settlement runs every second heartbeat, for a four-second cadence. Future systems attach through deterministic divisors/phases, not competing timers. A heartbeat processes only eligible due work, not every node or creature. Maintenance, sleep and scheduler absence halt heartbeat work.
+The world has one authoritative heartbeat. Its intended base cadence is two seconds. Combat does not own an independent wall-clock timer. Active encounters are processed on heartbeat boundaries; out-of-combat resource settlement runs every second heartbeat, for a four-second cadence. Ordinary attacks, queued abilities, AI, periodic effects, combat regeneration, encounter completion and future time-based systems resolve on eligible heartbeat boundaries. Future systems attach through deterministic divisors/phases, not competing timers. A heartbeat processes only eligible due work, not every node or creature. Maintenance, sleep and scheduler absence halt heartbeat work.
 
 > No gameplay mechanic may introduce an independent wall-clock loop when it can be resolved deterministically on the authoritative world heartbeat. Any exception must be explicit and documented.
 
@@ -48,7 +48,11 @@ client intention      accepted/refused now -> resolves at next eligible H
 encounter tick        local k commits      -> local k+1 (only on commit)
 ```
 
-Target behaviour: selecting a target or submitting an attack is accepted or refused immediately, while its outcome waits for the next eligible heartbeat. Normal latency may approach one heartbeat. The UI may show queued/prepared state but may not fabricate a result. Each encounter begins and advances its own local successful-commit sequence; a failed commit does not advance it and a new encounter may start at tick one regardless of global heartbeat number.
+Target behaviour: direct authoritative transactions do not automatically wait for a heartbeat. Ordinary out-of-combat movement and combat departure/flee are immediate authoritative transactions. Time-based gameplay outcomes still wait for an eligible heartbeat: selecting a target or submitting an attack may have its identity, ownership, shape and obvious static preconditions checked immediately, but a queued combat intent is not finally successful until evaluated against the authoritative heartbeat snapshot. Target death, departure, changed resources or other authoritative changes may deterministically refuse it at resolution. Normal latency may approach one heartbeat. The UI may show queued/prepared state but may not fabricate a result.
+
+Movement/departure serializes against encounter processing through a documented database lock order. If departure obtains ownership first, the fighter is excluded from the next tick. If a tick already owns the relevant state, it commits first and departure resolves immediately afterward. Any exit opportunity resolves exactly once inside that same departure transition. A dead character neither moves nor pays MP; a survivor moves and pays MP exactly once; remaining participants continue. No path may duplicate exit opportunities, relocation, MP charge, cleanup or encounter completion. No missed heartbeat may be replayed as a burst of combat ticks. Requests can arrive between heartbeats without making browser state authoritative.
+
+Each encounter begins and advances its own local successful-commit sequence; a failed commit does not advance it and a new encounter may start at tick one regardless of global heartbeat number. A future common `heartbeat_id` and explicit intent-cutoff identity must make the world boundary and accepted-intent set observable (`ENG-HB-001`).
 
 Current implementation is semantically close to the target: `combat2_dispatch_scheduler_fire()` is scheduled at two seconds, settlement is phase-gated to four-second buckets, and the dispatcher discovers only due encounters before bounded sequential worker calls. Encounter cadence is stored in encounter-local `next_due_at`/tick state. Settlement uses its own locked cursor. There is no second browser combat loop in the authoritative path. The remaining gap is explicit global heartbeat identity shared by settlement, dispatch and diagnostics; today local encounter ticks and the settlement cursor can obscure which world boundary caused work. See `ENG-HB-001` and `ENG-DIAG-002`.
 
@@ -131,7 +135,7 @@ Holy Shield currently consists of a retaliation effect plus its reservation effe
 
 ## Movement and party movement
 
-Solo movement validates caller ownership, origin, destination, connection visibility/adjacency, locks/keys, lifecycle fences and MP, then charges and moves atomically under a durable request ID. During combat, departure is queued/finalized through the encounter boundary; reconnect state comes from the departure projection. Replays return the durable outcome and conflicting/stale requests fail closed.
+Solo movement validates caller ownership, origin, destination, connection visibility/adjacency, locks/keys, lifecycle fences and MP, then charges and moves atomically under a durable request ID. The approved rule requires combat departure/flee to be an immediate serialized transaction with its exit opportunity resolved exactly once. **Current source does not yet meet that rule:** it queues `fighter_depart_requested`/`fighter_exit_requested`, invalidates the current claim, advances `next_due_at`, and waits for a later worker claim/resolve/commit. Reconnect state comes from the departure projection. Replays return the durable outcome and conflicting/stale requests fail closed. The source audit and architecture blocker are recorded in [the movement/departure audit](combat2-movement-departure-audit.md) and `ENG-MOVE-001`; Git presence or this decision does not prove Cloud installation.
 
 Coordinated party movement snapshots eligible followers and moves followers before the leader, leader last. Each member has its own survival/result outcome; dead, off-node or non-following members remain independent. Party request/member rows preserve the group transition and stable order. Sources: `20260905194227_fbe2e172-650d-43c2-a3d2-b6dff0c3210a.sql`, `20260908122530_e728cbda-72d0-415c-96bf-a8758fe327ac.sql`, `src/features/combat2/departure.ts`, and `src/features/combat2/party-departure.ts`.
 
@@ -178,8 +182,8 @@ Detailed volatile facts belong in [project state](../operations/project-state.md
 | Combat2 processing | bounded claim/resolve/commit | implemented | live operator evidence | latency measurement |
 | Engagement/release | peaceful deliberate, aggressive automatic, present-only ownership | implemented | installed; operator reported live | targeting audit |
 | Resource settlement/delivery | OOC 4s settlement and authoritative delivery | implemented | installed; operator reported live | jitter evidence |
-| Solo movement | atomic authoritative departure | implemented | installed; operator observed | continued verification |
-| Party movement | coordinated atomic ordering | implemented source | see project state | release/live verification |
+| Solo movement | immediate atomic OOC move; immediate serialized combat departure | partial | OOC path source/install evidence; operator observed movement | combat departure currently waits for worker (`ENG-MOVE-001`) |
+| Party movement | immediate coordinated transition, follower-first/leader-last | partial source | see project state | combat members currently wait for worker; release/live verification |
 | Logs/diagnostics | bounded authoritative delivery/recording | implemented | see project state | world-vs-encounter tick label |
 | Targeting/initiation | immediate intention, next-heartbeat outcome | partial | operator reports intermittent delay | `ENG-COMBAT-001` |
 | Stances | authoritative reservation/effects | encounter-scoped | partial | character scope/out-of-combat |
@@ -196,4 +200,3 @@ Detailed volatile facts belong in [project state](../operations/project-state.md
 - Delivery/presentation: `src/features/combat2/`
 - Movement: `src/features/combat2/departure.ts`, `src/features/combat2/party-departure.ts`
 - Operational evidence: `docs/operations/project-state.json` (canonical) and generated `project-state.md`
-
