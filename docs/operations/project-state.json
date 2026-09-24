@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T22:05:00Z",
-  "based_on_source_sha": "a1da978240edda2b118760ddd6439668a0b899ab",
+  "updated_at": "2026-09-24T22:30:00Z",
+  "based_on_source_sha": "1b2f14d0d5af28f5fbe9cef61a8e201a73b8acd4",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
-      "status": "authored",
+      "status": "installed",
       "sha": null,
-      "timestamp": "2026-09-24T22:05:00Z",
-      "evidence_type": "tests",
-      "evidence": "Still authored and unapplied. Lovable's direct installation preflight found no 20260924110000 ledger row/artifact and no changed Cloud data, and proved the rejected repository bytes referenced nonexistent node_fighter.max_cp. Rejected/uninstalled SHA-256 e12b1cca4d96e68530adb49d752a1b3f9d93cb30dc33fcb68dc573ab71993ccd must never be installed. Corrected source uses the identity-matched, FOR UPDATE-locked characters.max_cp resource authority, adds pre-rename schema/predecessor guards, and is covered by a TypeScript-compiler-backed complete row-field mapping against generated schema types. Corrected installable SHA-256 aeb009491e54e43bb899c7d43fd33519ff38af1a947e864799b396f9d216440f. It still makes replay payload-exact and rejects already-proven insufficient authoritative spendable CP before queue insertion. Frozen-snapshot resolver validation and commit fencing remain unchanged. No Cloud access or migration application occurred in the correction task.",
-      "reporting_actor": "Codex",
+      "timestamp": "2026-09-24T22:25:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Applied exactly once from repository bytes SHA-256 aeb009491e54e43bb899c7d43fd33519ff38af1a947e864799b396f9d216440f; rejected SHA-256 e12b1cca4d96e68530adb49d752a1b3f9d93cb30dc33fcb68dc573ab71993ccd never installed. Ledger row version 20260924110000 name cef50f98-6796-4b0f-b6cb-b366f9f5fe6d; no separate ledger file generated. All migration guards passed. Installed public.combat_intent(8 args): owner postgres, SECURITY DEFINER, VOLATILE, search_path public,pg_temp, EXECUTE authenticated+service_role (no PUBLIC/anon); body reads v_character.max_cp, never v_fighter.max_cp, fighter identity-matched to v_character.id before resource calculation. Internal combat_intent_without_spendable_cp_preflight: postgres, SECURITY DEFINER, EXECUTE service_role only. No table, grant or Realtime publication change; types not regenerated (no shape change). plpgsql_check not installed; rollback-only behavioral verification not performed (no inert present-fighter fixture exists without inserting gameplay rows) - behavior pending live verification. All protected fingerprints identical before and after. No Edge deployment (mirror parity clean).",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
