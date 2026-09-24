@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T15:15:00Z",
-  "based_on_source_sha": "00895a2d61bff7b96350c25e9286bf4f345225c7",
+  "updated_at": "2026-09-24T22:05:00Z",
+  "based_on_source_sha": "a1da978240edda2b118760ddd6439668a0b899ab",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "00895a2d61bff7b96350c25e9286bf4f345225c7",
-    "timestamp": "2026-09-24T09:30:00Z",
+    "sha": "a1da978240edda2b118760ddd6439668a0b899ab",
+    "timestamp": "2026-09-24T22:05:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at 00895a2d61bff7b96350c25e9286bf4f345225c7 before the targeting/initiation audit; that SHA descends from the required checkpoint. All prior commits, generated types, ledger artifacts and installation evidence remain in ancestry. This entry records the pre-edit source baseline; final commit identity is reported by Git handoff.",
+    "evidence": "Local main and origin/main were clean and identical at a1da978240edda2b118760ddd6439668a0b899ab before correcting the still-unapplied spendable-CP migration. That SHA contains the targeting/initiation audit and descends from its required checkpoint. All prior commits, generated types, ledger artifacts and installation evidence remain in ancestry.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -28,9 +28,9 @@
       "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-24T15:15:00Z",
+      "timestamp": "2026-09-24T22:05:00Z",
       "evidence_type": "tests",
-      "evidence": "Unapplied forward migration wraps the installed eight-argument combat_intent contract. It makes request UUID replay payload-exact and rejects an already-proven insufficient authoritative spendable-CP request before queue insertion, using characters.cp minus active node_effect reservation magnitudes plus authored ability cost and stance reserve percentage. Frozen-snapshot resolver validation and commit fencing remain unchanged. No Cloud access or migration application occurred.",
+      "evidence": "Still authored and unapplied. Lovable's direct installation preflight found no 20260924110000 ledger row/artifact and no changed Cloud data, and proved the rejected repository bytes referenced nonexistent node_fighter.max_cp. Rejected/uninstalled SHA-256 e12b1cca4d96e68530adb49d752a1b3f9d93cb30dc33fcb68dc573ab71993ccd must never be installed. Corrected source uses the identity-matched, FOR UPDATE-locked characters.max_cp resource authority, adds pre-rename schema/predecessor guards, and is covered by a TypeScript-compiler-backed complete row-field mapping against generated schema types. Corrected installable SHA-256 aeb009491e54e43bb899c7d43fd33519ff38af1a947e864799b396f9d216440f. It still makes replay payload-exact and rejects already-proven insufficient authoritative spendable CP before queue insertion. Frozen-snapshot resolver validation and commit fencing remain unchanged. No Cloud access or migration application occurred in the correction task.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -168,6 +168,16 @@
     "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "spendable-cp-preflight-installation-preflight-2026-09-25",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-24T22:05:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Lovable directly inspected the Cloud migration ledger and installed schema before application: no 20260924110000 migration or ledger artifact exists, no migration was applied and no Cloud data changed. Installed public.node_fighter has no max_cp column; public.characters.max_cp exists. The rejected/uninstalled source would have created successfully but failed with SQLSTATE 42703 on its first relevant execution because PL/pgSQL did not eagerly reject v_fighter.max_cp. This evidence authorizes correcting the existing unapplied migration bytes in place but does not prove the corrected source installed or live.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
     {
       "identity": "targeting-initiation-source-audit-2026-09-24",
       "status": "committed",

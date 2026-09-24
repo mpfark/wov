@@ -4,6 +4,98 @@
 -- unaffordable from consuming the pending action slot.
 BEGIN;
 
+-- PostgreSQL does not reliably validate every composite-row field while a
+-- PL/pgSQL body is created. Prove the installed predecessor and every table
+-- field this wrapper depends on before renaming any function.
+DO $$
+DECLARE
+  v_predecessor text;
+BEGIN
+  IF to_regprocedure('public.combat_intent(uuid,uuid,text,text,text,uuid,uuid,uuid)') IS NULL THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: expected public combat_intent signature is missing';
+  END IF;
+  IF to_regprocedure('public.combat_intent_without_spendable_cp_preflight(uuid,uuid,text,text,text,uuid,uuid,uuid)') IS NOT NULL THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: internal wrapper already exists';
+  END IF;
+  IF to_regprocedure('public.combat_intent_without_ability_support_gate(uuid,uuid,text,text,text,uuid,uuid)') IS NULL THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: installed queue helper is missing';
+  END IF;
+
+  SELECT pg_get_functiondef('public.combat_intent(uuid,uuid,text,text,text,uuid,uuid,uuid)'::regprocedure)
+    INTO v_predecessor;
+  IF position('combat_intent_without_ability_support_gate' IN v_predecessor) = 0
+     OR position('target_character_id' IN v_predecessor) = 0 THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: unexpected installed predecessor body';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_proc procedure
+    WHERE procedure.oid = 'public.combat_intent(uuid,uuid,text,text,text,uuid,uuid,uuid)'::regprocedure
+      AND procedure.prosecdef
+      AND 'search_path=public, pg_temp' = ANY(COALESCE(procedure.proconfig, ARRAY[]::text[]))
+  ) THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: unexpected predecessor security/search_path contract';
+  END IF;
+
+  IF EXISTS (
+    SELECT required.table_name, required.column_name
+    FROM (VALUES
+      ('node_intent','request_id'), ('node_intent','encounter_id'),
+      ('node_intent','character_id'), ('node_intent','intent_kind'),
+      ('node_intent','ability_key'), ('node_intent','stance_key'),
+      ('node_intent','target_creature_id'), ('node_intent','target_character_id'),
+      ('characters','id'), ('characters','class'), ('characters','cp'),
+      ('characters','max_cp'),
+      ('node_fighter','id'), ('node_fighter','encounter_id'),
+      ('node_fighter','character_id'), ('node_fighter','present'),
+      ('class_ability_assignments','ability_id'),
+      ('class_ability_assignments','class_ability_key'),
+      ('class_ability_assignments','class_key'),
+      ('class_ability_assignments','status'),
+      ('class_ability_assignments','unlock_level'),
+      ('abilities','id'), ('abilities','base_ability_id'),
+      ('abilities','ability_key'), ('abilities','status'),
+      ('abilities','cp_cost'), ('abilities','cp_reserve_pct'),
+      ('base_abilities','id'), ('base_abilities','cp_cost'),
+      ('base_abilities','cp_reserve_pct'),
+      ('node_effect','encounter_id'), ('node_effect','target_character_id'),
+      ('node_effect','is_reservation'), ('node_effect','magnitude')
+    ) AS required(table_name, column_name)
+    EXCEPT
+    SELECT columns.table_name, columns.column_name
+    FROM information_schema.columns columns
+    WHERE columns.table_schema = 'public'
+  ) THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: required table column is missing';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'node_fighter' AND column_name = 'max_cp'
+  ) THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: unexpected node_fighter.max_cp must not become a resource authority';
+  END IF;
+
+  IF EXISTS (
+    SELECT required.table_name, required.column_name, required.udt_name
+    FROM (VALUES
+      ('characters','cp','int4'), ('characters','max_cp','int4'),
+      ('abilities','cp_cost','int4'), ('abilities','cp_reserve_pct','numeric'),
+      ('base_abilities','cp_cost','int4'), ('base_abilities','cp_reserve_pct','numeric'),
+      ('node_effect','magnitude','numeric'), ('node_effect','is_reservation','bool')
+    ) AS required(table_name, column_name, udt_name)
+    LEFT JOIN information_schema.columns columns
+      ON columns.table_schema = 'public'
+     AND columns.table_name = required.table_name
+     AND columns.column_name = required.column_name
+     AND columns.udt_name = required.udt_name
+    WHERE columns.column_name IS NULL
+  ) THEN
+    RAISE EXCEPTION 'combat2 spendable-cp preflight: resource column type is unexpected';
+  END IF;
+END;
+$$;
+
 ALTER FUNCTION public.combat_intent(uuid,uuid,text,text,text,uuid,uuid,uuid)
   RENAME TO combat_intent_without_spendable_cp_preflight;
 REVOKE ALL ON FUNCTION public.combat_intent_without_spendable_cp_preflight(uuid,uuid,text,text,text,uuid,uuid,uuid)
@@ -78,7 +170,7 @@ BEGIN
     SELECT nf.* INTO v_fighter
     FROM public.node_fighter nf
     WHERE nf.encounter_id = _encounter_id
-      AND nf.character_id = _character_id
+      AND nf.character_id = v_character.id
       AND nf.present;
 
     IF v_character.id IS NOT NULL AND v_fighter.id IS NOT NULL THEN
@@ -106,7 +198,7 @@ BEGIN
         v_available := GREATEST(0, COALESCE(v_character.cp, 0) - v_reserved);
         v_required := GREATEST(0, COALESCE(v_cp_cost, 0))
           + CASE WHEN _intent_kind = 'stance_activate'
-              THEN FLOOR(GREATEST(0, COALESCE(v_fighter.max_cp, 0)) * GREATEST(0, COALESCE(v_reserve_pct, 0)))::integer
+              THEN FLOOR(GREATEST(0, COALESCE(v_character.max_cp, 0)) * GREATEST(0, COALESCE(v_reserve_pct, 0)))::integer
               ELSE 0 END;
 
         IF v_available < v_required THEN
