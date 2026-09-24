@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T22:30:00Z",
-  "based_on_source_sha": "1b2f14d0d5af28f5fbe9cef61a8e201a73b8acd4",
+  "updated_at": "2026-09-24T22:45:40Z",
+  "based_on_source_sha": "452dcdd88455de167fca1b9bacb3247169d15cbf",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "a1da978240edda2b118760ddd6439668a0b899ab",
-    "timestamp": "2026-09-24T22:05:00Z",
+    "sha": "452dcdd88455de167fca1b9bacb3247169d15cbf",
+    "timestamp": "2026-09-24T22:45:40Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at a1da978240edda2b118760ddd6439668a0b899ab before correcting the still-unapplied spendable-CP migration. That SHA contains the targeting/initiation audit and descends from its required checkpoint. All prior commits, generated types, ledger artifacts and installation evidence remain in ancestry.",
+    "evidence": "Local main fast-forwarded cleanly to origin/main at 452dcdd88455de167fca1b9bacb3247169d15cbf before the character-local log hydration correction. The synchronized SHA descends from required checkpoint 1b2f14d0d5af28f5fbe9cef61a8e201a73b8acd4 and preserves Lovable's spendable-CP installation evidence and generated types.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -159,15 +159,35 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Combat2 authoritative spendable-CP input gating",
+    "artifact": "Initial character-local gameplay-log hydration",
     "sha": null,
-    "timestamp": "2026-09-24T15:15:00Z",
-    "evidence_type": "handoff",
-    "evidence": "Frontend source now computes ability availability from the latest authoritative total CP minus projected active reservation effects. The shared action router blocks both pointer and keyboard submission, exposes required/available CP, and still permits dropping an active stance at zero spendable CP. All prior delivery/session fencing remains. Mik remains the only frontend publisher; no publication occurred.",
+    "timestamp": "2026-09-24T22:45:40Z",
+    "evidence_type": "tests",
+    "evidence": "Frontend source now hydrates the selected character's newest bounded IndexedDB log page immediately, fences character switches and late reads, and de-duplicates later live encounter events. Focused archive/session tests prove retained history is visible without an encounter and survives remount without crossing character identity. The prior spendable-CP frontend was manually published by Mik; this newer log-hydration source still requires Mik's manual publication.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "character-local-log-initial-hydration-2026-09-25",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-24T22:45:40Z",
+      "evidence_type": "tests",
+      "evidence": "Source root cause was confined to useLogArchive: IndexedDB history was read only after an explicit older-page scroll, leaving the initial log empty until a Combat2 batch populated the live slice. The frontend-only correction loads the newest archived page on character selection/remount, preserves newest-first order and the 100000-event retention cap, removes live/archive duplicates, and uses owner plus epoch fences against character crossover and late hydration. No targeting, initiation, ability, stance, movement, heartbeat, backend or engine rule changed.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "spendable-cp-frontend-publication-2026-09-25",
+      "status": "manually_published",
+      "sha": null,
+      "timestamp": "2026-09-24T22:45:40Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports manually publishing the spendable-CP frontend. Normal spendable-CP gating works in ordinary use; replay/request-conflict and rare concurrency branches remain not live-verified. This is operator evidence, not direct Codex Cloud or browser verification.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "spendable-cp-preflight-installation-preflight-2026-09-25",
       "status": "unknown",

@@ -43,17 +43,47 @@ export function useLogArchive(
   const lastSeenIdRef = useRef<string | null>(null);
   const cursorRef = useRef<number | null>(null);
   const loadingRef = useRef(false);
+  const hydrationEpochRef = useRef(0);
+  const archiveOwnerRef = useRef<string | null>(null);
+  const liveLogRef = useRef(liveLog);
+  liveLogRef.current = liveLog;
 
-  // Reset everything when switching character.
+  // Reset and immediately hydrate the selected character's newest archived
+  // page. The epoch and owner fence prevent a slower previous-character read
+  // from becoming visible after a character switch.
   useEffect(() => {
+    const epoch = ++hydrationEpochRef.current;
+    archiveOwnerRef.current = characterId ?? null;
     queueRef.current = [];
     keyByEventRef.current = new Map();
     lastSeenIdRef.current = null;
     cursorRef.current = null;
     loadingRef.current = false;
     setOlderEvents([]);
-    setHasMore(true);
+    setHasMore(!!characterId);
     setLoadingOlder(false);
+    if (!characterId) return;
+
+    void (async () => {
+      const page = await loadPage(characterId, null, PAGE_SIZE);
+      if (hydrationEpochRef.current !== epoch || archiveOwnerRef.current !== characterId) return;
+
+      const storedIds = new Set(page.map(({ event }) => event.id).filter(Boolean));
+      for (const { key, event } of page) {
+        if (event.id) keyByEventRef.current.set(event.id, key);
+      }
+      // A live model can attach while IndexedDB is opening. Never persist or
+      // render those already archived events twice.
+      queueRef.current = queueRef.current.filter(event => !event.id || !storedIds.has(event.id));
+      const liveIds = new Set(liveLogRef.current.map(event => event.id).filter(Boolean));
+      setOlderEvents(page.map(({ event }) => event).filter(event => !event.id || !liveIds.has(event.id)));
+      cursorRef.current = page.length ? page[page.length - 1].key : null;
+      setHasMore(page.length === PAGE_SIZE);
+    })();
+
+    return () => {
+      if (hydrationEpochRef.current === epoch) hydrationEpochRef.current++;
+    };
   }, [characterId]);
 
   // ── Append path ────────────────────────────────────────────────
@@ -69,7 +99,10 @@ export function useLogArchive(
     }
     if (fresh.length === 0) return;
     lastSeenIdRef.current = liveLog[liveLog.length - 1].id ?? lastSeen;
-    queueRef.current.push(...fresh);
+    const persisted = fresh.filter(event => !event.id || !keyByEventRef.current.has(event.id));
+    queueRef.current.push(...persisted);
+    const liveIds = new Set(liveLog.map(event => event.id).filter(Boolean));
+    setOlderEvents(previous => previous.filter(event => !event.id || !liveIds.has(event.id)));
   }, [liveLog, characterId]);
 
   const flush = useCallback(async () => {
@@ -119,9 +152,6 @@ export function useLogArchive(
   }, [characterId]);
 
   // ── Scrollback ─────────────────────────────────────────────────
-  const liveLogRef = useRef(liveLog);
-  liveLogRef.current = liveLog;
-
   const loadOlder = useCallback(() => {
     if (!characterId || loadingRef.current || !hasMore) return;
     loadingRef.current = true;
@@ -162,5 +192,10 @@ export function useLogArchive(
     })();
   }, [characterId, hasMore, flush]);
 
-  return { olderEvents, hasMore, loadingOlder, loadOlder };
+  return {
+    olderEvents: archiveOwnerRef.current === characterId ? olderEvents : [],
+    hasMore: archiveOwnerRef.current === characterId && hasMore,
+    loadingOlder: archiveOwnerRef.current === characterId && loadingOlder,
+    loadOlder,
+  };
 }
