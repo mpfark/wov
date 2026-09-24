@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "updated_at": "2026-09-24T06:12:00Z",
-  "based_on_source_sha": "da992d6eedee45e3e45db22ad5181e4acbbafa50",
+  "based_on_source_sha": "0b1bb0362053ecb22a7c99282225528bb441d7af",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7",
-    "timestamp": "2026-09-24T01:45:00Z",
+    "sha": "0b1bb0362053ecb22a7c99282225528bb441d7af",
+    "timestamp": "2026-09-24T06:12:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7 before the post-completion settlement lifecycle correction. All settlement installation evidence and the resource-delivery/log-continuity correction remain in ancestry.",
+    "evidence": "Local main and origin/main were clean and identical at 0b1bb0362053ecb22a7c99282225528bb441d7af before the canonical engine documentation task. All settlement installation evidence, generated Cloud types and resource-delivery/log-continuity changes remain in ancestry.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -483,15 +483,25 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Install and verify the post-completion Combat2 settlement-ownership correction.",
+    "artifact": "Perform the focused Combat2 targeting and combat-initiation audit (ENG-COMBAT-001).",
     "sha": null,
-    "timestamp": "2026-09-24T01:45:00Z",
+    "timestamp": "2026-09-24T06:30:00Z",
     "evidence_type": "handoff",
-    "evidence": "Lovable must first perform a read-only ledger and runtime preflight, then install only 20260924100000_combat2_post_completion_settlement_ownership.sql after confirming the expected installed settlement predicate and enabled fighter-release trigger. Do not invoke settlement, dispatcher, worker, combat or repair RPCs during installation. Verify the resulting function requires f.present for both living engaged opposition and a live claim, preserves every other function clause and grant, and creates exactly one ledger artifact. No generated type change or Edge deployment is expected. Mik must then perform bounded ordinary aggressive and deliberately peaceful live verification, including post-combat HP/CP/MP progression; Mik alone handles any required frontend publication.",
+    "evidence": "The settlement ownership correction is installed and Mik has operator-reported successful aggressive and peaceful encounter completion, fighter release, resumed HP/CP/MP regeneration and restored movement. The next engine task is the source-to-live audit defined by ENG-COMBAT-001: selected/queued/engaged/dead target states, Attack semantics, heartbeat fencing, multiplayer first-hit ordering and expected versus abnormal initiation latency. Preserve the authoritative heartbeat and do not infer direct Cloud evidence from the operator report.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-completion-resource-delivery-operator-report-2026-09-24",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-24T06:30:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that automatic aggressive combat progresses without player actions; peaceful creatures can be deliberately engaged; both encounter types complete; death and reward presentation work; fighter/Combat2 ownership releases after completion; out-of-combat HP, CP and MP regeneration resumes after both encounter types; MP regeneration restores movement capability; and resource delivery works without tab switching. Mik also reports small intermittent delay/lag and that targeting/combat initiation still need focused review. This is user-visible operator evidence, not direct Codex Cloud inspection, and does not establish exact persisted rows or boundary timings.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "post-completion-regeneration-operator-report-2026-09-24",
       "status": "unknown",
