@@ -25,16 +25,6 @@
   },
   "database_migrations": [
     {
-      "identity": "20260924100000_combat2_post_completion_settlement_ownership.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-09-24T01:45:00Z",
-      "evidence_type": "tests",
-      "evidence": "Forward-only correction for the installed settle_out_of_combat_resources(timestamptz) ownership predicate. The installed predicate attached a live encounter claim to every historical fighter row for that encounter without requiring the fighter to remain present. The migration fail-closes on source drift and changes only that predicate so a live claim excludes settlement only while f.present is true. It also verifies the installed inactive-fighter release trigger exists and is enabled. Formulas, four-second cursor, two-second Combat2 cadence, catch-up bounds, transition bucket fence, death/respawn, Test Arena, movement/departure, rewards and history are unchanged. Authored only; not installed or live-verified.",
-      "reporting_actor": "Codex",
-      "directly_verified": true
-    },
-    {
       "identity": "20260922140000_combat2_engagement_release_lifecycle.sql",
       "status": "installed",
       "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
