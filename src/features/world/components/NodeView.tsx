@@ -59,6 +59,8 @@ interface Props {
   authoritativeCreatureEffects?: Readonly<Record<string, readonly Combat2PresentationEffect[]>>;
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
+  /** Authoritative spendable CP for Combat2; omitted on the legacy path. */
+  abilityAvailableCp?: number;
   combatActionsReady?: boolean;
   authoritativeTargetSelection?: boolean;
   pendingBasicAttackTargetId?: string | null;
@@ -94,7 +96,7 @@ interface Props {
 
 export default function NodeView({
   node, region, area, allNodes = [], players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
-  inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId,
+  inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId, abilityAvailableCp,
   pendingAbilityIndex = null,
   combatActionsReady = true,
   authoritativeTargetSelection = false,
@@ -633,13 +635,14 @@ export default function NodeView({
               <div className="flex flex-wrap items-center gap-1 justify-center">
                 {classAbilities.map((ability, idx) => {
                   const levelLocked = character.level < ability.levelRequired;
-                  const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
+                  const stanceDef = resolveStanceForAbility(ability);
+                  const stanceActive = !!(stanceDef && isStanceActive(reservedBuffs, stanceDef.key));
+                  const availableCp = abilityAvailableCp ?? (character.cp ?? 0);
+                  const notEnoughCp = !stanceActive && availableCp < ability.cpCost;
                   const needsTarget = ability.type === 'hp_transfer';
                   const selfFallback = ability.targetType === 'ally' ? character.id : undefined;
                   const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
-                  const stanceDef = resolveStanceForAbility(ability);
-                  const stanceActive = !!(stanceDef && isStanceActive(reservedBuffs, stanceDef.key));
                   const isPending = pendingAbilityIndex === idx;
                   const stateClass = stanceActive
                     ? 'bg-soulforged/15 border-soulforged text-soulforged hover:bg-soulforged/25'
@@ -672,7 +675,7 @@ export default function NodeView({
                             ? `${ability.tooltip} · Active — click to drop (CP not refunded).`
                             : isPending
                               ? `${ability.tooltip} · ${pendingAbilityStage === 'submitted' ? 'Waiting for the next combat tick…' : 'Preparing…'}`
-                              : `${ability.tooltip} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
+                              : `${ability.tooltip} · requires ${ability.cpCost} CP · ${availableCp} available${disableNoTarget ? ' — select a target in party panel' : ''}`
                         }
                       </TooltipContent>
                     </Tooltip>

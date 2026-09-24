@@ -973,6 +973,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       allyTargetId: targetId ?? abilityTargetId,
       currentCharacterId: character.id,
       authoritativeAllies: activeCombat2Presentation?.allies,
+      availableCp: combat2BlocksLegacy
+        ? Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp)
+        : undefined,
       reservedBuffs: combat2BlocksLegacy
         ? authoritativeCombat2Reservations
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
@@ -984,7 +987,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, ownership.locked, actionEpoch]);
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
@@ -1512,6 +1515,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
               authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
               classAbilities={CLASS_ABILITIES[character.class] || []}
+              abilityAvailableCp={combat2BlocksLegacy
+                ? Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp)
+                : undefined}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               combatActionsReady={!combat2BlocksLegacy || (combat2.actionsReady && !ownership.locked)}
               abilityTargetId={abilityTargetId}

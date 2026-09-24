@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T09:30:00Z",
-  "based_on_source_sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
+  "updated_at": "2026-09-24T15:15:00Z",
+  "based_on_source_sha": "00895a2d61bff7b96350c25e9286bf4f345225c7",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,14 +16,24 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
+    "sha": "00895a2d61bff7b96350c25e9286bf4f345225c7",
     "timestamp": "2026-09-24T09:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at f1f8a0251c72d9d64dc46a25672cd124939f89e8 before the immediate movement/departure source audit. The canonical engine specification/roadmap and all prior ledger artifacts and installation evidence remain in ancestry.",
+    "evidence": "Local main and origin/main were clean and identical at 00895a2d61bff7b96350c25e9286bf4f345225c7 before the targeting/initiation audit; that SHA descends from the required checkpoint. All prior commits, generated types, ledger artifacts and installation evidence remain in ancestry. This entry records the pre-edit source baseline; final commit identity is reported by Git handoff.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-24T15:15:00Z",
+      "evidence_type": "tests",
+      "evidence": "Unapplied forward migration wraps the installed eight-argument combat_intent contract. It makes request UUID replay payload-exact and rejects an already-proven insufficient authoritative spendable-CP request before queue insertion, using characters.cp minus active node_effect reservation magnitudes plus authored ability cost and stance reserve percentage. Frozen-snapshot resolver validation and commit fencing remain unchanged. No Cloud access or migration application occurred.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260922140000_combat2_engagement_release_lifecycle.sql",
       "status": "installed",
@@ -149,15 +159,25 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Authoritative resource delivery and continuous Combat2 presentation",
+    "artifact": "Combat2 authoritative spendable-CP input gating",
     "sha": null,
-    "timestamp": "2026-09-23T14:45:00Z",
+    "timestamp": "2026-09-24T15:15:00Z",
     "evidence_type": "handoff",
-    "evidence": "Local source correction keeps scoped characters Realtime as the immediate authority and adds a bounded four-second visible-tab refetch fallback plus focus, visibility and online recovery. Character-session changes fence late responses. Combat2 presentation retains the latest 100 character-scoped authoritative events across ordinary encounter release and movement, merges local travel evidence, and archives the merged presentation. The admin diagnostic overlay distinguishes encounter tick, delivery cursor and out-of-combat character-resource delivery. Focused tests, TypeScript, readiness and build evidence must pass before commit; Mik remains the only frontend publisher.",
+    "evidence": "Frontend source now computes ability availability from the latest authoritative total CP minus projected active reservation effects. The shared action router blocks both pointer and keyboard submission, exposes required/available CP, and still permits dropping an active stance at zero spendable CP. All prior delivery/session fencing remains. Mik remains the only frontend publisher; no publication occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
+    {
+      "identity": "targeting-initiation-source-audit-2026-09-24",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-24T15:15:00Z",
+      "evidence_type": "source_audit",
+      "evidence": "The source-of-truth matrix is recorded in docs/design/combat2-targeting-initiation-audit.md. Selection is local-only; Basic Attack engagement is transactional; queued manual targets remain frozen; captured refused intents consume the slot; autoattack retargets by server ordering; peaceful observers do not qualify for rewards. Proven gaps: movement does not invoke combat entry, party follower entry can depend on each browser, arbitrary hostile first-action engagement has no RPC, and installed tank ordering retains designated-party priority. These coupled gaps remain ENG-COMBAT-002. Independent spendable-CP client and RPC preflight corrections are authored. ENG-MOVE-001 and heartbeat identity/cutoff work are unchanged.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "post-completion-resource-settlement-ownership-2026-09-24",
       "status": "committed",
@@ -421,6 +441,16 @@
   ],
   "known_blockers": [
     {
+      "identity": "authoritative-arrival-and-hostile-first-action",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-24T15:15:00Z",
+      "evidence_type": "source_audit",
+      "evidence": "ENG-COMBAT-002: solo and party movement update character location but do not invoke combat_enter. Automatic entry is browser-driven after roster delivery, so offline followers and delayed roster clients are not guaranteed immediate authoritative participation. combat2_engage hard-codes Basic Attack, while a generic hostile action needs server-owned catalogue/preflight semantics. Tank projection prioritizes a configured party tank/leader inside the newest arrival group rather than pure newest entry. A safe correction must compose movement, entry, intent and claim lock order and must not duplicate the TypeScript combat catalogue in SQL.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "immediate-combat2-departure-architecture",
       "status": "blocked",
       "sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
@@ -493,11 +523,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Resolve the immediate serialized Combat2 departure architecture (ENG-MOVE-001), then perform ENG-COMBAT-001.",
+    "artifact": "Resolve immediate serialized departure (ENG-MOVE-001) and authoritative arrival/generic hostile initiation (ENG-COMBAT-002).",
     "sha": null,
-    "timestamp": "2026-09-24T09:30:00Z",
+    "timestamp": "2026-09-24T15:15:00Z",
     "evidence_type": "handoff",
-    "evidence": "The approved engine rule requires immediate serialized combat departure. Current source queues present fighters for a later heartbeat because TypeScript resolveNodeTick owns exit mechanics and SQL node_tick_commit owns atomic persistence. Before implementation, choose a single safe server-side orchestration boundary and executable lock-order strategy; do not duplicate combat logic in SQL or call Edge from a database transaction. After that blocker is resolved, continue ENG-COMBAT-001 for selected/queued/engaged/dead target states, Attack semantics, heartbeat fencing, multiplayer first-hit ordering and latency.",
+    "evidence": "ENG-COMBAT-001 source audit is complete. The remaining coupled architecture decisions are ENG-MOVE-001 and ENG-COMBAT-002: choose one transaction/lock composition so solo and follower-first/leader-last party movement invoke idempotent entry, generic hostile actions can atomically enter and queue without duplicating the TypeScript catalogue, and newest valid entry becomes tank. Shared heartbeat_id and explicit intent cutoff remain pending. Do not infer installation from authored source.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

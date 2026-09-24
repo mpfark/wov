@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import type { ClassAbility } from '@/features/combat/utils/class-abilities';
 import { routeCombat2Action, routeCombat2BasicAttack } from './routeCombat2Action';
 
@@ -107,6 +108,38 @@ describe('Combat2 deliberate action routing', () => {
     await routeCombat2Action(transfer.options);
     expect(transfer.submit).not.toHaveBeenCalled();
     expect(transfer.diagnose).toHaveBeenCalledWith(expect.stringContaining('another eligible'));
+  });
+
+  it('blocks unaffordable pointer or keyboard routing against authoritative spendable CP', async () => {
+    const h = harness({ availableCp: 9 });
+    await routeCombat2Action(h.options);
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.legacy).not.toHaveBeenCalled();
+    expect(h.diagnose).toHaveBeenCalledWith('Not enough CP for Fireball: requires 10, 9 available.');
+  });
+
+  it('feeds pointer and keyboard actions through the same spendable-CP router', () => {
+    const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
+    const view = readFileSync('src/features/world/components/NodeView.tsx', 'utf8');
+    expect(page).toContain('const handleAbilityKey = useCallback((index: number) => {');
+    expect(page).toContain('void handlePlayerUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);');
+    expect(page).toContain('onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}');
+    expect(page).toContain('presentedCharacter.cp - authoritativeCombat2ReservedCp');
+    expect(view).toContain('abilityAvailableCp ?? (character.cp ?? 0)');
+    expect(view).toContain('insufficientCp: notEnoughCp');
+  });
+
+  it('still permits dropping an active stance when spendable CP is zero', async () => {
+    const h = harness({
+      availableCp: 0,
+      ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }),
+      reservedBuffs: { force_shield: { reserved_cp: 10 } },
+    });
+    await routeCombat2Action(h.options);
+    expect(h.submit).toHaveBeenCalledWith(
+      { kind: 'stance_drop', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
+      expect.anything(),
+    );
   });
 
   it('surfaces structured refusal without legacy fallback', async () => {

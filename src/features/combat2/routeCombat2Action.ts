@@ -13,6 +13,8 @@ export interface RouteCombat2ActionOptions {
   allyTargetId?: string | null;
   currentCharacterId?: string;
   authoritativeAllies?: readonly { characterId: string; name: string; present: boolean; hp: number }[];
+  /** Latest authoritative total CP less authoritative active reservations. */
+  availableCp?: number;
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction, feedback?: { message: string }): Promise<Combat2IntentResult>;
@@ -41,10 +43,15 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   }
 
   const stance = resolveStanceForAbility(ability);
+  const stanceActive = !!stance && isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key);
+  if (!stanceActive && options.availableCp !== undefined && ability.cpCost > options.availableCp) {
+    options.diagnose(`Not enough CP for ${ability.label}: requires ${ability.cpCost}, ${options.availableCp} available.`);
+    return;
+  }
   let action: Combat2IntentAction;
   if (stance) {
     action = {
-      kind: isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key) ? 'stance_drop' : 'stance_activate',
+      kind: stanceActive ? 'stance_drop' : 'stance_activate',
       abilityKey: null,
       stanceKey: stance.key,
       targetCreatureId: null,

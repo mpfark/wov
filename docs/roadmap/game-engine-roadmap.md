@@ -16,13 +16,23 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-COMBAT-001 — Targeting and combat-initiation audit
 
-- **Engine area / status / priority:** targeting; `ready`; 1.
+- **Engine area / status / priority:** targeting; `implemented_source`; 1.
 - **Problem or decision:** selected, queued, engaged and dead targets and first-action timing are not yet proven as one coherent contract; intermittent delay remains operator-reported.
 - **Intended outcome:** one documented, stale-fenced initiation flow with expected heartbeat latency and multiplayer first-hit order.
 - **Dependencies:** bounded diagnostics and preserved live evidence.
-- **Evidence/current state:** aggressive and peaceful completion are operator-reported live; exact initiation timing remains unmeasured.
+- **Evidence/current state:** repository audit and matrix are recorded in `docs/design/combat2-targeting-initiation-audit.md`; Basic Attack engagement, target freezing/retargeting, action-slot ownership and resolver CP validation were source-proven. Spendable-CP client and public-RPC preflight corrections are authored but not installed/published. Exact live initiation timing remains unmeasured.
 - **Acceptance criteria:** trace UI → RPC → entry/intent → heartbeat → presentation; answer every open question in the targeting section; focused source/installed/live evidence; no legacy fallback.
 - **Specification sections:** Creatures, targeting and initiation; One authoritative world heartbeat.
+
+### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
+
+- **Engine area / status / priority:** entry/targeting/concurrency; `blocked`; 2.
+- **Problem or decision:** movement does not invoke encounter entry; automatic entry currently depends on each moved character's browser receiving an actionable roster. The atomic engagement RPC accepts only Basic Attack. Tank projection also retains designated-party priority rather than the approved newest-entry-only rule.
+- **Intended outcome:** solo and coordinated movement invoke one idempotent authoritative entry check in follower-first/leader-last order; reconnect attaches without duplication; one generic server-authored hostile-action boundary atomically enters and queues a validated hostile ability or Basic Attack; tank fallback becomes newest valid entry globally.
+- **Dependencies:** choose a transaction/lock composition with movement and the existing entry/intent RPCs; define server-side hostile/non-hostile ability preflight without duplicating the TypeScript catalogue; preserve `ENG-MOVE-001`.
+- **Evidence/current state:** static source audit proves the browser-driven gap and Basic-Attack-only RPC. No migration was guessed in this batch.
+- **Acceptance criteria:** executable solo/party/reconnect concurrency tests, action-payload replay conflict tests, invalid-first-action rollback, follower-first/leader-last entry generations, unrelated newcomer tank, no duplicate encounter/fighter/intent/reward qualification, installed and bounded live proof.
+- **Specification sections:** Creatures, targeting and initiation; Movement and party movement; Combat resolution.
 
 ### ENG-HB-001 — Explicit global heartbeat identity
 

@@ -97,14 +97,27 @@ Visible node creatures are a location projection. Peaceful co-location does not 
 
 A basic attack or supported ability intention occupies the character's action slot for the claimed tick. Server-owned autoattack selects the first living engaged spawn by stable runtime ordering when no captured intent owns that slot. Target death causes authoritative retargeting to the next eligible engaged creature; encounter completion occurs only when no living engaged creature and no lifecycle-preserving durable effect remains.
 
-Fighter entry, tank candidates and shared encounters are snapshot authority. Current tank is chosen at resolution, allowing party/member changes to be reflected deterministically. Targeting and combat initiation still require focused audit (`ENG-COMBAT-001`), specifically:
+Fighter entry, tank candidates and shared encounters are snapshot authority. Current tank is chosen at resolution from living, present, identity-matched candidates. The approved ordinary rule is newest authoritative entry generation first: re-entry gets a new generation, departure/death falls back in that order, coordinated party arrival is followers first and leader last, and an unrelated newcomer becomes the tank. The current installed source still gives an explicit party tank and then the party leader priority inside the newest arrival group; completing the approved rule is blocked on making solo and coordinated movement invoke entry authoritatively (`ENG-COMBAT-002`).
 
-- when target selection becomes authoritative;
-- whether Attack both engages and queues the first basic attack;
-- how selected, queued, engaged and dead are distinguished in UI;
-- how target changes near a heartbeat are fenced;
-- first-hit ordering for multiple characters;
-- expected one-heartbeat delay versus abnormal intermittent latency.
+Targeting states are deliberately separate:
+
+- `visible` is a living creature projected at the node;
+- `selected` is immediate local presentation state only and creates no encounter, fighter, engagement or intent;
+- `engaged` is server-owned encounter membership;
+- `queued target` is the creature identity frozen into an accepted intent;
+- `resolved target` is that identity revalidated against the claimed heartbeat snapshot.
+
+Changing local selection never rewrites a queued intent. A paid/manual intent refuses if its frozen target is dead or invalid; it never silently redirects. Server-owned autoattack may retarget, using runtime creature-row UUID, spawn sequence and creature-definition UUID as deterministic server-derived ordering. Browser list order is irrelevant.
+
+Peaceful co-location, selection, non-hostile abilities and stance input do not start combat. Basic Attack uses the transactional `combat2_engage` boundary, so entry and the first attack either both persist or both roll back. Arbitrary hostile ability as the first engagement action is not yet supported: the current RPC shape hard-codes Basic Attack and extending it requires one server-authored action/preflight contract (`ENG-COMBAT-002`), not a client-side preliminary attack. A living aggressive creature, or an already active encounter with a living engaged creature, permits `combat_enter`; the current browser invokes that check after an actionable living roster arrives. Movement itself does not invoke it, so server-authoritative solo/party arrival and browser-independent follower entry remain pending in `ENG-COMBAT-002`.
+
+Client authority is limited to input collection, local selection, pending feedback, prepare animation, interpolation, diagnostics and projection of the latest identity-checked authoritative model. A bounded healthy `syncing` transition may retain that model. Realtime, polling and reconnect only deliver server-owned state. The client never authors or predicts final damage, healing, HP, CP, MP, effects, reservations, rewards, death, creature state or completed movement. It may immediately show `sending`, `engaging`, `queued` and prepare animation; hit, damage, healing, death, activated effects and result animation wait for the authoritative result. Gaps, identity mismatch, reconnect uncertainty and actual stale state fail closed. Every update and late response is fenced by character, node, encounter, target, request and version identity.
+
+At one eligible encounter heartbeat the existing finer order is: due pending transitions/effects, valid captured player intents in server order, server-owned autoattack for a fighter whose slot was not occupied by any captured intent, then creature actions. A captured intent owns the slot even if heartbeat validation refuses it, so no replacement Basic Attack is inserted. Ordinary aggression grants no instant attack; first damage waits for the next eligible heartbeat. A future explicitly authored `ambush` mechanic may define a narrower exception.
+
+Spendable CP is authoritative total CP minus active reservation effects. The client disables and blocks pointer and keyboard input when the known spendable amount is below the authored cost and displays required/available CP, but this is only an input filter. The public intent boundary revalidates the current authoritative amount and queues nothing when insufficiency is already provable; the resolver validates again against the frozen snapshot, and commit fencing prevents double spend. If resources change after a valid queue, resolution refuses the captured intent without cost and without a replacement autoattack.
+
+The complete source audit and source-of-truth matrix are recorded in [the targeting/initiation audit](combat2-targeting-initiation-audit.md). Remaining material boundaries are tracked by `ENG-COMBAT-002`; installed/live verification is not inferred from source. Expected initiation latency is at most the wait to the next eligible encounter heartbeat plus delivery time; abnormal intermittent latency remains measurement work under `ENG-DIAG-001`.
 
 ## Combat resolution
 
