@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T01:45:00Z",
-  "based_on_source_sha": "bf146b27a8ecfc76ef16d8bcad4cfd3db90df1e7",
+  "updated_at": "2026-09-24T06:12:00Z",
+  "based_on_source_sha": "da992d6eedee45e3e45db22ad5181e4acbbafa50",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -111,6 +111,16 @@
       "timestamp": "2026-09-23T10:13:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Installed exactly once from repository bytes SHA-256 b973e4fe9cbc7b8c787c12ac6e623e65c3ffe7a5ea8937446fc58f90acbae6b9 (the rejected prior bytes fcdb8e12fc73f8e0695487d8d8993c5810fbd4e751df71ca64f3e32fda41f475 were never applied). Lovable generated ledger artifact supabase/migrations/20260923101233_3c56c1fc-a209-492b-a3ec-7eb752390f4c.sql, SHA-256 00076c1691b70ff026b69de01d8de928123e1babc06b71901f41bc89f9f90ad2, content-identical to the repository migration apart from the absent trailing newline; both files are retained separately and unmodified. Installed objects verified by Cloud inspection: public.settle_out_of_combat_resources(_now timestamptz) and public.combat2_dispatch_scheduler_fire() and public.combat2_dispatch_scheduler_fire_without_resource_settlement(), all postgres-owned, SECURITY DEFINER, VOLATILE, fixed search_paths (settlement public,cron,pg_temp; composed scheduler public,pg_temp; preserved dispatcher public,cron,net,vault,pg_temp), EXECUTE granted only to postgres and service_role with no anon/authenticated privilege. public.character_resource_settlement_state has RLS enabled, zero policies, no anon/authenticated privileges, service_role only, and is in no Realtime publication. Its fail-closed installation assertions passed, proving node_creature.encounter_id exists and node_creature.node_id does not and that the preserved dispatcher body still contains combat2-dispatch-once-fire, combat2_dispatch_scheduler_eligible and net.http_post. No cron job was added (cron.job count 0 before and after). The settlement function was not invoked.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "20260924100000_combat2_post_completion_settlement_ownership.sql",
+      "status": "installed",
+      "sha": null,
+      "timestamp": "2026-09-24T06:10:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Applied exactly once from repository bytes SHA-256 fda4238a3c96eebfd82131788ab06688be9541c70dcc369daeb77f86033d7473. Ledger row version 20260924100000 name 22c8af73-29da-436c-aebd-cc52d1aaf97b; no separate ledger file was generated. Installed settle_out_of_combat_resources predicate changed from 'OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)' to 'OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)'; engaged-opposition rule, 4-second cadence and 3-interval catch-up text unchanged. Owner postgres, SECURITY DEFINER, search_path public,cron,pg_temp, EXECUTE postgres+service_role only (anon/authenticated false). Settlement table RLS on, no Realtime publication, privileges unchanged. Trigger combat2_close_inactive_encounter_fighters present and enabled. All protected gameplay fingerprints and the settlement cursor identical before and after. Settlement not invoked; no types regenerated; no Edge deployment (mirror parity clean); no frontend publication required.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -589,6 +599,16 @@
       "timestamp": "2026-09-22T06:10:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Observed read-only from preserved session c84328c9 (encounter 2e7249d4, node f45a8b21): automatic dispatcher attempts reached commit_attempted every cycle; ticks 23, 24 and 25 committed only on the retry following an accepted ability intent, and every no-new-intent retry ended commit_refused/commit_transport_error. Duplicate correlation IDs are retries of the same uncommitted tick. Postgres and edge logs for the window have expired. Volatile; preserved and untouched.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "post-completion-ownership-install-2026-09-24",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-09-24T06:12:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Post-combat HP/CP/MP regeneration awaits Mik's bounded live verification. At install: maintenance, asleep, soak off, 0 cron jobs, 0 live claims, 0 unconsumed events, 0 queued departures, 0 active recordings; 4 encounters (2 active), 4 fighters, 0 present.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
