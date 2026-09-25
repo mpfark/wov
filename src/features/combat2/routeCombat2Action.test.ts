@@ -115,18 +115,33 @@ describe('Combat2 deliberate action routing', () => {
     await routeCombat2Action(h.options);
     expect(h.submit).not.toHaveBeenCalled();
     expect(h.legacy).not.toHaveBeenCalled();
-    expect(h.diagnose).toHaveBeenCalledWith('Not enough CP for Fireball: requires 10, 9 available.');
+    expect(h.diagnose).toHaveBeenCalledWith('Requires 10 CP — 9 available');
+  });
+
+  it('uses the same typed refusal for pointer and keyboard entry into the shared router', async () => {
+    const readiness = { ready: false as const, reason: 'movement_pending' as const, message: 'Movement is pending' };
+    const pointer = harness({ readiness });
+    const keyboard = harness({ readiness });
+    await routeCombat2Action(pointer.options);
+    await routeCombat2Action(keyboard.options);
+    for (const path of [pointer, keyboard]) {
+      expect(path.submit).not.toHaveBeenCalled();
+      expect(path.diagnose).toHaveBeenCalledWith('Movement is pending');
+    }
   });
 
   it('feeds pointer and keyboard actions through the same spendable-CP router', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
     const view = readFileSync('src/features/world/components/NodeView.tsx', 'utf8');
     expect(page).toContain('const handleAbilityKey = useCallback((index: number) => {');
-    expect(page).toContain('void handlePlayerUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);');
+    expect(page).toContain("const targetId = ability?.targetType === 'ally'");
+    expect(page).toContain('void handlePlayerUseAbility(index, targetId);');
     expect(page).toContain('onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}');
+    expect(page).toContain('readiness: combat2BlocksLegacy ? getCombat2AbilityReadiness(abilityIndex, targetId) : undefined');
+    expect(page).toContain('getAbilityReadiness={combat2BlocksLegacy ? getCombat2AbilityReadiness : undefined}');
     expect(page).toContain('presentedCharacter.cp - authoritativeCombat2ReservedCp');
     expect(view).toContain('abilityAvailableCp ?? (character.cp ?? 0)');
-    expect(view).toContain('insufficientCp: notEnoughCp');
+    expect(view).toContain('const readiness = getAbilityReadiness?.(idx, resolvedTarget);');
   });
 
   it('still permits dropping an active stance when spendable CP is zero', async () => {

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-24T22:45:40Z",
-  "based_on_source_sha": "452dcdd88455de167fca1b9bacb3247169d15cbf",
+  "updated_at": "2026-09-25T09:33:00Z",
+  "based_on_source_sha": "f4f98990415a530889c3227ea615156d563c8ebe",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "452dcdd88455de167fca1b9bacb3247169d15cbf",
-    "timestamp": "2026-09-24T22:45:40Z",
+    "sha": "f4f98990415a530889c3227ea615156d563c8ebe",
+    "timestamp": "2026-09-25T09:33:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main fast-forwarded cleanly to origin/main at 452dcdd88455de167fca1b9bacb3247169d15cbf before the character-local log hydration correction. The synchronized SHA descends from required checkpoint 1b2f14d0d5af28f5fbe9cef61a8e201a73b8acd4 and preserves Lovable's spendable-CP installation evidence and generated types.",
+    "evidence": "Local main and origin/main were clean and identical at f4f98990415a530889c3227ea615156d563c8ebe before centralizing Combat2 ability-disabled reasons. The synchronized SHA is the required checkpoint and preserves all installation evidence, generated types and the character-local log hydration source.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -159,22 +159,32 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Initial character-local gameplay-log hydration",
+    "artifact": "Centralized Combat2 ability-disabled reasons",
     "sha": null,
-    "timestamp": "2026-09-24T22:45:40Z",
+    "timestamp": "2026-09-25T09:33:00Z",
     "evidence_type": "tests",
-    "evidence": "Frontend source now hydrates the selected character's newest bounded IndexedDB log page immediately, fences character switches and late reads, and de-duplicates later live encounter events. Focused archive/session tests prove retained history is visible without an encounter and survives remount without crossing character identity. The prior spendable-CP frontend was manually published by Mik; this newer log-hydration source still requires Mik's manual publication.",
+    "evidence": "Frontend source now derives one typed, deterministically prioritized readiness result for Combat2 ability native disabled state, styling/help text, pointer submission and keyboard submission. Existing session, delivery, movement, death, target, in-flight and spendable-CP gates are exposed without expanding availability. Healthy syncing still uses the retained identity-checked model and active stance drop still bypasses activation CP. Ready for Mik's manual publication; no publication occurred in this task.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "combat2_operational_work": [
     {
       "identity": "character-local-log-initial-hydration-2026-09-25",
-      "status": "committed",
+      "status": "ready_for_manual_publish",
       "sha": null,
       "timestamp": "2026-09-24T22:45:40Z",
       "evidence_type": "tests",
       "evidence": "Source root cause was confined to useLogArchive: IndexedDB history was read only after an explicit older-page scroll, leaving the initial log empty until a Combat2 batch populated the live slice. The frontend-only correction loads the newest archived page on character selection/remount, preserves newest-first order and the 100000-event retention cap, removes live/archive duplicates, and uses owner plus epoch fences against character crossover and late hydration. No targeting, initiation, ability, stance, movement, heartbeat, backend or engine rule changed.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat2-centralized-action-disabled-reasons-2026-09-25",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-25T09:33:00Z",
+      "evidence_type": "tests",
+      "evidence": "One typed result in action-readiness.ts now owns the current Combat2 ability gates and messages used by the button and shared pointer/keyboard router. Deterministic precedence is incapacity, pending movement, unsafe delivery or missing snapshot, active ownership, level, same-action in-flight/pending, target validity, then spendable CP. The change exposes existing refusals only: no action, stance, engagement, target, movement, heartbeat, server or gameplay availability was added or reinterpreted. ENG-COMBAT-002, ENG-MOVE-001, heartbeat identity, character-scoped stances/buffs and ability classification remain pending and unchanged.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },

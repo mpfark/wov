@@ -4,10 +4,12 @@ import type { Combat2IntentAction } from './intent';
 import type { Combat2IntentResult } from './useCombat2IntentSession';
 import type { Combat2TargetResolution } from './target-resolution';
 import { combat2AbilitySupport } from '@/shared/combat2/ability-support';
+import type { ActionReadiness } from './action-readiness';
 
 export interface RouteCombat2ActionOptions {
   enabled: boolean;
   sessionReady: boolean;
+  readiness?: ActionReadiness;
   ability: ClassAbility | null;
   resolveTarget(): Combat2TargetResolution;
   allyTargetId?: string | null;
@@ -25,6 +27,10 @@ export interface RouteCombat2ActionOptions {
 export async function routeCombat2Action(options: RouteCombat2ActionOptions): Promise<void> {
   if (!options.enabled) {
     await options.legacy();
+    return;
+  }
+  if (options.readiness && 'message' in options.readiness) {
+    options.diagnose(options.readiness.message);
     return;
   }
   if (!options.sessionReady) {
@@ -45,7 +51,7 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   const stance = resolveStanceForAbility(ability);
   const stanceActive = !!stance && isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key);
   if (!stanceActive && options.availableCp !== undefined && ability.cpCost > options.availableCp) {
-    options.diagnose(`Not enough CP for ${ability.label}: requires ${ability.cpCost}, ${options.availableCp} available.`);
+    options.diagnose(`Requires ${ability.cpCost} CP — ${options.availableCp} available`);
     return;
   }
   let action: Combat2IntentAction;

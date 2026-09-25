@@ -25,7 +25,7 @@ import LocationBackground from './LocationBackground';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
 import { Combat2TelegraphIndicator } from '@/features/combat2/Combat2TelegraphIndicator';
 import { shouldShowAttackControl } from '@/features/combat2/attack-control';
-import { combat2AbilityControlDisabled } from '@/features/combat2/action-readiness';
+import type { ActionReadiness } from '@/features/combat2/action-readiness';
 import {
   combat2CreatureLifeKey,
   type Combat2PresentationEffect,
@@ -62,6 +62,7 @@ interface Props {
   /** Authoritative spendable CP for Combat2; omitted on the legacy path. */
   abilityAvailableCp?: number;
   combatActionsReady?: boolean;
+  getAbilityReadiness?: (abilityIndex: number, targetId?: string) => ActionReadiness;
   authoritativeTargetSelection?: boolean;
   pendingBasicAttackTargetId?: string | null;
   abilityTargetId?: string | null;
@@ -99,6 +100,7 @@ export default function NodeView({
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, authoritativeCreatureEffects, classAbilities = [], onUseAbility, abilityTargetId, abilityAvailableCp,
   pendingAbilityIndex = null,
   combatActionsReady = true,
+  getAbilityReadiness,
   authoritativeTargetSelection = false,
   pendingBasicAttackTargetId = null,
   pendingAbilityStage = null,
@@ -644,6 +646,11 @@ export default function NodeView({
                   const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
                   const isPending = pendingAbilityIndex === idx;
+                  const readiness = getAbilityReadiness?.(idx, resolvedTarget);
+                  const disabled = readiness
+                    ? !readiness.ready
+                    : !combatActionsReady || levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget;
+                  const disabledMessage = readiness && 'message' in readiness ? readiness.message : null;
                   const stateClass = stanceActive
                     ? 'bg-soulforged/15 border-soulforged text-soulforged hover:bg-soulforged/25'
                     : isPending
@@ -657,8 +664,9 @@ export default function NodeView({
                             variant="outline"
                             size="sm"
                             onClick={() => onUseAbility(idx, resolvedTarget)}
-                            disabled={combat2AbilityControlDisabled({ actionsReady: combatActionsReady, levelLocked,
-                              insufficientCp: notEnoughCp, dead: character.hp <= 0, invalidTarget: disableNoTarget })}
+                            disabled={disabled}
+                            title={disabledMessage ?? undefined}
+                            aria-label={disabledMessage ? `${ability.label}: ${disabledMessage}` : ability.label}
                             className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
                           >
                             {ability.label}
@@ -669,7 +677,9 @@ export default function NodeView({
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs max-w-[200px]">
-                        {levelLocked
+                        {disabledMessage
+                          ? disabledMessage
+                          : levelLocked
                           ? `Unlocks at level ${ability.levelRequired}`
                           : stanceActive
                             ? `${ability.tooltip} · Active — click to drop (CP not refunded).`

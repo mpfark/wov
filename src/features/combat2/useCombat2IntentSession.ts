@@ -52,6 +52,7 @@ export interface Combat2IntentSession {
   submit(action: Combat2IntentAction, feedback?: Combat2IntentFeedback): Promise<Combat2IntentResult>;
   retry(): Promise<Combat2IntentResult>;
   pending: Combat2PendingIntent | null;
+  inFlightAction: Combat2IntentAction | null;
   acknowledgements: readonly GameLogEvent[];
 }
 
@@ -83,6 +84,7 @@ export function useCombat2IntentSession({
   const tickRef = useRef(authoritativeTick);
   tickRef.current = authoritativeTick;
   const [pending, setPending] = useState<Combat2PendingIntent | null>(null);
+  const [inFlightAction, setInFlightAction] = useState<Combat2IntentAction | null>(null);
   const [acknowledgements, setAcknowledgements] = useState<GameLogEvent[]>([]);
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export function useCombat2IntentSession({
     attemptRef.current = null;
     feedbackRef.current.clear();
     setPending(null);
+    setInFlightAction(null);
     setAcknowledgements([]);
     return () => {
       generationRef.current += 1;
@@ -114,6 +117,7 @@ export function useCombat2IntentSession({
       return { status: 'local_refusal', classification: 'in_flight', reason: 'Combat2 intent is already being submitted' };
     }
     attempt.inFlight = true;
+    setInFlightAction(attempt.action);
     attempt.uncertain = false;
     const sentAt=performance.now();
     recordCombat2ClientEvent({event:'request_sent',requestId:attempt.requestId,encounterId});
@@ -126,6 +130,7 @@ export function useCombat2IntentSession({
         return { status: 'stale' };
       }
       attempt.inFlight = false;
+      setInFlightAction(null);
       if (outcome.status === 'accepted') {
         const feedback = feedbackRef.current.get(attempt.requestId);
         if (feedback) {
@@ -153,6 +158,7 @@ export function useCombat2IntentSession({
         return { status: 'stale' };
       }
       attempt.inFlight = false;
+      setInFlightAction(null);
       attempt.uncertain = error instanceof Combat2IntentError && error.code === 'uncertain';
       return {
         status: attempt.uncertain ? 'uncertain' : 'error',
@@ -188,5 +194,5 @@ export function useCombat2IntentSession({
     return run(attempt);
   }, [run]);
 
-  return { submit, retry, pending, acknowledgements };
+  return { submit, retry, pending, inFlightAction, acknowledgements };
 }

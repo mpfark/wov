@@ -90,10 +90,12 @@ describe('useCombat2IntentSession', () => {
     let first!: ReturnType<typeof result.current.submit>;
     act(() => { first = result.current.submit(action, { message: 'You prepare Fireball.' }); });
     expect(result.current.pending).toBeNull();
+    expect(result.current.inFlightAction).toEqual(action);
     await expect(result.current.submit(action, { message: 'You prepare Fireball.' }))
       .resolves.toMatchObject({ classification: 'in_flight' });
     expect(adapter.submit).toHaveBeenCalledTimes(1);
     await act(async () => { release(accepted); await first; });
+    expect(result.current.inFlightAction).toBeNull();
     expect(result.current.pending?.message).toBe('You prepare Fireball.');
   });
 

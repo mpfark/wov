@@ -85,6 +85,9 @@ import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
+import { deriveCombat2AbilityReadiness, type ActionReadiness } from '@/features/combat2/action-readiness';
+import type { Combat2IntentAction } from '@/features/combat2/intent';
+import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
 import { selectCombat2Reservations } from '@/features/combat2/presentation';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
@@ -962,12 +965,53 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const handleUseConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, consumableActions.handleUseConsumable);
   const { handleUseAbility, handleAttack } = combatActions;
 
+  const getCombat2AbilityReadiness = useCallback((abilityIndex: number, targetId?: string): ActionReadiness => {
+    const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
+    if (!ability) return { ready: false, reason: 'requires_active_combat', message: 'Requires active combat' };
+    const stance = resolveStanceForAbility(ability);
+    const stanceActive = !!stance && isStanceActive(authoritativeCombat2Reservations as ReservedBuffsMap, stance.key);
+    let targetValid = true;
+    let targetCreatureId: string | null = null;
+    let targetCharacterId: string | null = null;
+    if (!stance && ability.targetType === 'enemy') {
+      const resolved = combat2Targets.resolve();
+      targetValid = resolved.ok;
+      if (resolved.ok) targetCreatureId = resolved.target.creatureId;
+    }
+    if (!stance && ability.targetType === 'ally') {
+      const selected = targetId ?? abilityTargetId;
+      targetCharacterId = selected ?? null;
+      targetValid = !!selected && (activeCombat2Presentation?.allies ?? []).some(ally =>
+        ally.characterId === selected && ally.present && ally.hp > 0)
+        && !(ability.type === 'hp_transfer' && selected === character.id);
+    }
+    const matchesAbility = (action: Combat2IntentAction | null | undefined) => !!action && (stance
+      ? action.stanceKey === stance.key
+      : action.kind === 'ability' && action.abilityKey === ability.abilityKey
+        && (action.targetCreatureId ?? null) === targetCreatureId
+        && (action.targetCharacterId ?? null) === targetCharacterId);
+    const availableCp = Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp);
+    return deriveCombat2AbilityReadiness({
+      session: combat2.actionReadiness,
+      levelLocked: character.level < ability.levelRequired,
+      levelRequired: ability.levelRequired,
+      inFlight: matchesAbility(combat2.intents.inFlightAction) || matchesAbility(combat2.intents.pending?.action),
+      targetValid,
+      stanceActive,
+      requiredCp: ability.cpCost,
+      availableCp,
+    });
+  }, [character.class, character.id, character.level, authoritativeCombat2Reservations,
+    authoritativeCombat2ReservedCp, combat2.actionReadiness, combat2.intents.inFlightAction,
+    combat2.intents.pending, combat2Targets, activeCombat2Presentation?.allies, abilityTargetId, presentedCharacter.cp]);
+
   const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (combat2BlocksLegacy && actionEpochRef.current !== actionEpoch) return;
     const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
     await routeCombat2Action({
       enabled: combat2BlocksLegacy,
       sessionReady: combat2.actionsReady && !ownership.locked,
+      readiness: combat2BlocksLegacy ? getCombat2AbilityReadiness(abilityIndex, targetId) : undefined,
       ability: ability ?? null,
       resolveTarget: combat2Targets.resolve,
       allyTargetId: targetId ?? abilityTargetId,
@@ -987,7 +1031,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch]);
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch, getCombat2AbilityReadiness]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });
@@ -1004,8 +1048,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
-    void handlePlayerUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
-  }, [handlePlayerUseAbility, abilityTargetId, selectedTargetId]);
+    const ability = (CLASS_ABILITIES[character.class] || [])[index];
+    const targetId = ability?.targetType === 'ally'
+      ? abilityTargetId ?? character.id
+      : selectedTargetId ?? undefined;
+    void handlePlayerUseAbility(index, targetId);
+  }, [handlePlayerUseAbility, abilityTargetId, selectedTargetId, character.class, character.id]);
 
   // Belt-potion hotkeys removed with the belt slot.
 
@@ -1520,6 +1568,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
                 : undefined}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               combatActionsReady={!combat2BlocksLegacy || (combat2.actionsReady && !ownership.locked)}
+              getAbilityReadiness={combat2BlocksLegacy ? getCombat2AbilityReadiness : undefined}
               abilityTargetId={abilityTargetId}
               pendingAbilityIndex={pendingAbilityIndex ?? pendingAbility?.index ?? null}
               pendingAbilityStage={pendingAbilityStage ?? null}

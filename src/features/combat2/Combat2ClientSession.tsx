@@ -70,7 +70,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     onQueued: () => setPendingFleeKey(enteredSessionKey),
   });
   const pendingFlee = pendingFleeFromServer || departure.pending;
-  const actionsReady = deriveCombat2ActionReadiness({
+  const actionReadiness = deriveCombat2ActionReadiness({
     inputLocked: !!props.inputLocked,
     encounterId,
     presentationStatus: presentation.status,
@@ -80,6 +80,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     fighter: fighter ?? null,
     characterId: props.characterId,
   });
+  const actionsReady = actionReadiness.ready;
   const intents = useCombat2IntentSession({
     canSubmit: props.controlled ? actionsReady : true,
     enabled: props.enabled,
@@ -119,6 +120,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     respawn,
     delivery,
     presentation,
+    actionReadiness,
     actionsReady,
     dead,
     testArenaDeath,
