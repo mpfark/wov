@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-28T10:15:00Z",
-  "based_on_source_sha": "8e6e5a62d529a8bfd2a386c4a5158f35fde6ee1a",
+  "updated_at": "2026-09-28T12:36:00Z",
+  "based_on_source_sha": "8affe996d1f3900c5086886bcf5e0cd869bdb732",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -28,9 +28,9 @@
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-28T10:15:00Z",
+      "timestamp": "2026-09-28T12:36:00Z",
       "evidence_type": "tests",
-      "evidence": "ENG-COMBAT-002 source authored only; not installed. The forward migration adds service-only movement-completion entry for living solo and party characters, including offline followers, gates peaceful arrival, reuses the active node encounter, makes tank candidates pure newest-entry order, exposes one authenticated generic hostile-action RPC whose hostility classification comes from active authored enemy-targeted abilities, composes exact intent/spendable-CP validation atomically, and normalizes node/encounter/intent/character lock order. Resolver, rewards, cadence, scheduler, leases and ENG-MOVE-001 departure semantics are unchanged. Cloud installation and bounded live verification remain pending.",
+      "evidence": "ENG-COMBAT-002 source authored only; not installed. Lovable rejected the prior bytes SHA-256 3f1db810fe58d27a7bf26e9ac1c0b6507b95b7aebde413ca0458ab818b5c0529 before installation because the tank rewrite incorrectly targeted the outer node_tick_claim wrapper. Corrected source SHA-256 1ab9ee0ac3c12535c00578b5328fb906e81522ee4b6a0b9368ebe434c0c7932f targets only node_tick_claim_without_canary_gate, preserves byte-equivalent node_tick_claim_without_boss_timing and node_tick_claim wrappers plus all three functions' owner/security/search-path/ACL metadata, and orders tank candidates by global entry_seq then character UUID. The remaining movement-entry and generic hostile-action contract is unchanged. Installed-schema execution, Cloud installation and bounded live verification remain pending for Lovable.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },

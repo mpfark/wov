@@ -4,6 +4,16 @@ import { describe, expect, it } from 'vitest';
 const PATH = 'supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql';
 const sql = readFileSync(PATH, 'utf8').replaceAll('\r\n', '\n');
 const types = readFileSync('src/integrations/supabase/types.ts', 'utf8').replaceAll('\r\n', '\n');
+const OLD_CASE = 'CASE WHEN g.party_id IS NULL THEN 0 WHEN nf.character_id = p.tank_id THEN 0 WHEN nf.character_id = p.leader_id THEN 1 ELSE 2 END AS member_priority';
+const OLD_ORDER = 'representative.arrival_seq DESC, representative.group_id DESC, representative.member_priority, representative.entry_seq DESC, representative.fighter_id DESC';
+
+function modelRewrite(outer: string, middle: string, inner: string): string {
+  if (!outer.includes('node_tick_claim_without_boss_timing') || !middle.includes('node_tick_claim_without_canary_gate')) throw new Error('composition');
+  if ([outer, middle].some(definition => definition.includes('tank_candidates') || definition.includes('p.tank_id') || definition.includes('p.leader_id'))) throw new Error('wrong layer');
+  if (inner.split(OLD_CASE).length !== 2 || inner.split(OLD_ORDER).length !== 2) throw new Error('cardinality');
+  return inner.replace(OLD_CASE, '0 AS member_priority')
+    .replace(OLD_ORDER, 'representative.entry_seq DESC, representative.character_id DESC');
+}
 
 function tableType(name: string): string {
   const marker = `      ${name}: {`;
@@ -17,8 +27,12 @@ describe('ENG-COMBAT-002 authoritative arrival and hostile initiation migration'
   it('verifies every declared table/column dependency against generated schema types', () => {
     const manifest = sql.slice(sql.indexOf('FROM (VALUES'), sql.indexOf(') AS required(table_name,column_name)'));
     const required = [...manifest.matchAll(/\('([a-z_]+)','([a-z_]+)'\)/g)].map(match => [match[1], match[2]] as const);
-    expect(required.length).toBeGreaterThan(45);
+    expect(required.length).toBeGreaterThan(70);
     for (const [table, column] of required) expect(tableType(table)).toMatch(new RegExp(`\\b${column}\\??:`));
+    for (const field of ['next_due_at', 'left_at', 'joined_at', 'party_id_at_entry', 'exit_request_id',
+      'tank_fighter_id', 'reject_reason', 'consumed_at', 'consumed_tick', 'payload', 'updated_at']) {
+      expect(manifest).toContain(`'${field}'`);
+    }
   });
 
   it('enters only relocated living characters at aggressive or active-engaged destinations', () => {
@@ -41,10 +55,41 @@ describe('ENG-COMBAT-002 authoritative arrival and hostile initiation migration'
 
   it('uses pure newest-entry tank order with a deterministic UUID tie and no party role preference', () => {
     const transform = sql.slice(sql.indexOf('-- Remove party-role priority'));
-    expect(transform).toContain('representative.entry_seq DESC, representative.fighter_id DESC');
+    expect(transform).toContain('representative.entry_seq DESC, representative.character_id DESC');
     expect(transform).toContain("position('nf.character_id = p.tank_id' IN d)>0");
     expect(transform).toContain("position('nf.character_id = p.leader_id' IN d)>0");
     expect(transform).toContain("'0 AS member_priority'");
+  });
+
+  it('targets only the installed inner claim builder and preserves both composed wrappers', () => {
+    const transform = sql.slice(sql.indexOf('-- Remove party-role priority'), sql.indexOf("DO $$\nDECLARE signature"));
+    expect(transform).toContain("pg_get_functiondef('public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure)");
+    expect(transform).toContain("pg_get_functiondef('public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure)<>middle_before");
+    expect(transform).toContain("pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure)<>outer_before");
+    expect(transform).toContain('p.proacl IS NOT DISTINCT FROM inner_acl');
+    expect(transform).toContain('p.proconfig IS NOT DISTINCT FROM inner_config');
+    expect(transform).not.toContain('REVOKE ALL ON FUNCTION public.node_tick_claim(uuid,integer)');
+  });
+
+  it('models exact-one matching and rejects zero, multiple, wrong-layer and broken composition fixtures', () => {
+    const outer = 'RETURN public.node_tick_claim_without_boss_timing(_node_id,_lease_ms);';
+    const middle = 'source:=public.node_tick_claim_without_canary_gate(_node_id,_lease_ms);';
+    const inner = `'tank_candidates' ${OLD_CASE} ORDER BY ${OLD_ORDER}`;
+    expect(modelRewrite(outer, middle, inner)).toContain('representative.entry_seq DESC, representative.character_id DESC');
+    expect(() => modelRewrite(outer, middle, 'tank_candidates')).toThrow('cardinality');
+    expect(() => modelRewrite(outer, middle, `${inner} ${OLD_CASE} ${OLD_ORDER}`)).toThrow('cardinality');
+    expect(() => modelRewrite(`${outer} tank_candidates p.tank_id`, middle, inner)).toThrow('wrong layer');
+    expect(() => modelRewrite('RETURN other()', middle, inner)).toThrow('composition');
+  });
+
+  it('fails closed over the complete claim chain, fixed paths and pre-install trigger absence', () => {
+    expect(sql).toContain("to_regprocedure('public.node_tick_claim_without_boss_timing(uuid,integer)')");
+    expect(sql).toContain("to_regprocedure('public.node_tick_claim_without_canary_gate(uuid,integer)')");
+    expect(sql).toContain("'search_path=public, auth, pg_temp'=ANY");
+    expect(sql).toContain("to_regclass('public.node_fighter_entry_seq_seq')");
+    expect(sql).toContain("t.tgname='combat2_authoritative_arrival'");
+    expect(sql).toContain("owner.rolname IS DISTINCT FROM 'postgres'");
+    expect(sql).toContain("has_function_privilege('authenticated','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')");
   });
 
   it('derives hostility from active authored enemy-targeted catalogue rows', () => {

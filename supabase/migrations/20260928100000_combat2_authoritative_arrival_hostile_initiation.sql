@@ -5,7 +5,9 @@ BEGIN;
 
 DO $$
 DECLARE
-  v_claim text;
+  v_outer text; v_middle text; v_inner text;
+  v_case_pattern text := 'CASE\s+WHEN g\.party_id IS NULL THEN 0\s+WHEN nf\.character_id = p\.tank_id THEN 0\s+WHEN nf\.character_id = p\.leader_id THEN 1\s+ELSE 2\s+END AS member_priority';
+  v_order_pattern text := 'representative\.arrival_seq\s+DESC,\s*representative\.group_id\s+DESC,\s*representative\.member_priority,\s*representative\.entry_seq\s+DESC,\s*representative\.fighter_id\s+DESC';
 BEGIN
   IF EXISTS (
     SELECT required.table_name, required.column_name
@@ -15,18 +17,24 @@ BEGIN
       ('node_encounter','id'), ('node_encounter','node_id'), ('node_encounter','status'),
       ('node_encounter','tick'), ('node_encounter','state_version'), ('node_encounter','claim_token'),
       ('node_encounter','claimed_tick'), ('node_encounter','claim_expires_at'), ('node_encounter','intent_cutoff_seq'),
+      ('node_encounter','next_due_at'), ('node_encounter','updated_at'),
       ('node_fighter','id'), ('node_fighter','encounter_id'), ('node_fighter','character_id'),
       ('node_fighter','entry_seq'), ('node_fighter','present'), ('node_fighter','arrival_group_id'),
+      ('node_fighter','left_at'), ('node_fighter','joined_at'), ('node_fighter','party_id_at_entry'),
+      ('node_fighter','exit_request_id'), ('node_fighter','updated_at'),
       ('node_arrival_group','id'), ('node_arrival_group','encounter_id'), ('node_arrival_group','party_id'),
       ('node_arrival_group','generation'), ('node_arrival_group','arrival_seq'),
       ('node_arrival_group','active'), ('node_arrival_group','deactivated_at'),
       ('node_creature','id'), ('node_creature','encounter_id'), ('node_creature','creature_id'),
-      ('node_creature','is_alive'), ('node_creature','engaged'),
-      ('node_pending_event','request_id'), ('node_pending_event','encounter_id'),
+      ('node_creature','is_alive'), ('node_creature','engaged'), ('node_creature','tank_fighter_id'),
+      ('node_creature','updated_at'),
+      ('node_pending_event','id'), ('node_pending_event','request_id'), ('node_pending_event','encounter_id'),
       ('node_pending_event','event_type'), ('node_pending_event','actor_character_id'),
+      ('node_pending_event','payload'), ('node_pending_event','consumed_at'), ('node_pending_event','consumed_tick'),
       ('node_intent','id'), ('node_intent','seq'), ('node_intent','status'),
       ('node_intent','request_id'), ('node_intent','encounter_id'), ('node_intent','character_id'),
       ('node_intent','intent_kind'), ('node_intent','ability_key'), ('node_intent','target_creature_id'),
+      ('node_intent','reject_reason'),
       ('party_members','party_id'), ('party_members','character_id'), ('party_members','status'),
       ('class_ability_assignments','ability_id'), ('class_ability_assignments','class_key'),
       ('class_ability_assignments','class_ability_key'), ('class_ability_assignments','status'),
@@ -45,11 +53,24 @@ BEGIN
      OR to_regprocedure('public.combat2_seed_spawns(uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat2_refresh_tanks(uuid)') IS NULL
      OR to_regprocedure('public.node_tick_claim(uuid,integer)') IS NULL
+     OR to_regprocedure('public.node_tick_claim_without_boss_timing(uuid,integer)') IS NULL
+     OR to_regprocedure('public.node_tick_claim_without_canary_gate(uuid,integer)') IS NULL
      OR to_regprocedure('public.node_tick_commit(uuid,uuid,integer,integer,bigint,uuid[],jsonb)') IS NULL
      OR to_regprocedure('public.combat2_depart_without_canary_gate(uuid,uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat2_movement_scope_eligible(uuid,uuid)') IS NULL THEN
     RAISE EXCEPTION 'ENG-COMBAT-002: required installed function signature is missing';
+  END IF;
+
+  IF to_regclass('public.node_fighter_entry_seq_seq') IS NULL THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: authoritative entry sequence is missing';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_trigger t
+    WHERE t.tgrelid='public.characters'::regclass AND t.tgname='combat2_authoritative_arrival'
+      AND NOT t.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: authoritative-arrival trigger already exists';
   END IF;
 
   IF NOT EXISTS (
@@ -60,11 +81,57 @@ BEGIN
     RAISE EXCEPTION 'ENG-COMBAT-002: unexpected combat_intent security/search_path contract';
   END IF;
 
-  SELECT pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure) INTO v_claim;
-  IF position('''tank_candidates''' IN v_claim)=0
-     OR position('nf.character_id = p.tank_id' IN v_claim)=0
-     OR position('nf.character_id = p.leader_id' IN v_claim)=0 THEN
-    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected tank-candidate predecessor';
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid='public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure
+      AND p.prosecdef AND 'search_path=public, auth, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
+  ) THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected party-depart predecessor search_path';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM unnest(ARRAY[
+      'public.node_tick_claim(uuid,integer)'::regprocedure,
+      'public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure,
+      'public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
+    ]) AS required(signature)
+    LEFT JOIN pg_proc p ON p.oid=required.signature
+    LEFT JOIN pg_roles owner ON owner.oid=p.proowner
+    WHERE owner.rolname IS DISTINCT FROM 'postgres' OR NOT p.prosecdef OR p.provolatile<>'v'
+      OR NOT ('search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[])))
+  ) THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected claim-chain owner/security/search_path contract';
+  END IF;
+
+  SELECT pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure) INTO v_outer;
+  SELECT pg_get_functiondef('public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure) INTO v_middle;
+  SELECT pg_get_functiondef('public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure) INTO v_inner;
+  IF position('public.node_tick_claim_without_boss_timing' IN v_outer)=0
+     OR position('public.node_tick_claim_without_canary_gate' IN v_middle)=0 THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected claim wrapper composition';
+  END IF;
+  IF position('''tank_candidates''' IN v_outer)>0 OR position('''tank_candidates''' IN v_middle)>0
+     OR position('p.tank_id' IN v_outer)>0 OR position('p.tank_id' IN v_middle)>0
+     OR position('p.leader_id' IN v_outer)>0 OR position('p.leader_id' IN v_middle)>0 THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: tank ordering unexpectedly exists in a claim wrapper';
+  END IF;
+  IF position('''tank_candidates''' IN v_inner)=0
+     OR position('nf.character_id = p.tank_id' IN v_inner)=0
+     OR position('nf.character_id = p.leader_id' IN v_inner)=0
+     OR (SELECT count(*) FROM regexp_matches(v_inner,v_case_pattern,'g'))<>1
+     OR (SELECT count(*) FROM regexp_matches(v_inner,v_order_pattern,'g'))<>1 THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected inner tank-candidate predecessor';
+  END IF;
+  IF has_function_privilege('anon','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR has_function_privilege('authenticated','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR has_function_privilege('anon','public.node_tick_claim_without_boss_timing(uuid,integer)','EXECUTE')
+     OR has_function_privilege('authenticated','public.node_tick_claim_without_boss_timing(uuid,integer)','EXECUTE')
+     OR NOT has_function_privilege('postgres','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR NOT has_function_privilege('service_role','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR EXISTS (SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+       WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
+         AND acl.grantee=0 AND acl.privilege_type='EXECUTE') THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: unexpected inner claim ACL';
   END IF;
 END;
 $$;
@@ -441,28 +508,82 @@ REVOKE ALL ON FUNCTION public.combat2_engage(uuid,uuid,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.combat2_engage(uuid,uuid,uuid) TO authenticated,service_role;
 
 -- Remove party-role priority. The resolver consumes candidates in this order;
--- entry_seq is globally monotonic and fighter UUID is the deterministic tie.
+-- entry_seq is globally monotonic and character UUID is the deterministic tie.
+-- Only the installed inner snapshot builder is rewritten; both wrappers and
+-- every function metadata/ACL property are captured and proved unchanged.
 DO $$
-DECLARE d text; before text;
+DECLARE
+  d text; before text; outer_before text; middle_before text;
+  case_pattern text := 'CASE\s+WHEN g\.party_id IS NULL THEN 0\s+WHEN nf\.character_id = p\.tank_id THEN 0\s+WHEN nf\.character_id = p\.leader_id THEN 1\s+ELSE 2\s+END AS member_priority';
+  order_pattern text := 'representative\.arrival_seq\s+DESC,\s*representative\.group_id\s+DESC,\s*representative\.member_priority,\s*representative\.entry_seq\s+DESC,\s*representative\.fighter_id\s+DESC';
+  inner_owner oid; inner_security boolean; inner_volatility "char"; inner_config text[]; inner_acl aclitem[];
+  middle_owner oid; middle_security boolean; middle_volatility "char"; middle_config text[]; middle_acl aclitem[];
+  outer_owner oid; outer_security boolean; outer_volatility "char"; outer_config text[]; outer_acl aclitem[];
 BEGIN
-  SELECT pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure) INTO d;
+  SELECT pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure),
+         p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl
+    INTO outer_before,outer_owner,outer_security,outer_volatility,outer_config,outer_acl
+    FROM pg_proc p WHERE p.oid='public.node_tick_claim(uuid,integer)'::regprocedure;
+  SELECT pg_get_functiondef('public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure),
+         p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl
+    INTO middle_before,middle_owner,middle_security,middle_volatility,middle_config,middle_acl
+    FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure;
+  SELECT pg_get_functiondef('public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure),
+         p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl
+    INTO d,inner_owner,inner_security,inner_volatility,inner_config,inner_acl
+    FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure;
   before:=d;
+  IF (SELECT count(*) FROM regexp_matches(d,case_pattern,'g'))<>1
+     OR (SELECT count(*) FROM regexp_matches(d,order_pattern,'g'))<>1 THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: inner tank-order predecessor must match exactly once';
+  END IF;
   d:=regexp_replace(d,
-    'CASE\s+WHEN g\.party_id IS NULL THEN 0\s+WHEN nf\.character_id = p\.tank_id THEN 0\s+WHEN nf\.character_id = p\.leader_id THEN 1\s+ELSE 2\s+END AS member_priority',
+    case_pattern,
     '0 AS member_priority');
   d:=regexp_replace(d,
-    'representative\.member_priority,\s*representative\.entry_seq DESC,\s*representative\.fighter_id DESC',
-    'representative.entry_seq DESC, representative.fighter_id DESC');
+    order_pattern,
+    'representative.entry_seq DESC, representative.character_id DESC');
   IF d=before OR position('nf.character_id = p.tank_id' IN d)>0
-     OR position('nf.character_id = p.leader_id' IN d)>0 THEN
+     OR position('nf.character_id = p.leader_id' IN d)>0
+     OR position('representative.entry_seq DESC, representative.character_id DESC' IN d)=0
+     OR (SELECT count(*) FROM regexp_matches(d,case_pattern,'g'))<>0
+     OR (SELECT count(*) FROM regexp_matches(d,order_pattern,'g'))<>0 THEN
     RAISE EXCEPTION 'ENG-COMBAT-002: tank-candidate transformation failed';
   END IF;
   EXECUTE d;
+
+  IF pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure)<>outer_before
+     OR pg_get_functiondef('public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure)<>middle_before
+     OR position('public.node_tick_claim_without_boss_timing' IN pg_get_functiondef('public.node_tick_claim(uuid,integer)'::regprocedure))=0
+     OR position('public.node_tick_claim_without_canary_gate' IN pg_get_functiondef('public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure))=0 THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: claim wrapper changed or composition was lost';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
+      AND p.proowner=inner_owner AND p.prosecdef=inner_security AND p.provolatile=inner_volatility
+      AND p.proconfig IS NOT DISTINCT FROM inner_config AND p.proacl IS NOT DISTINCT FROM inner_acl
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure
+      AND p.proowner=middle_owner AND p.prosecdef=middle_security AND p.provolatile=middle_volatility
+      AND p.proconfig IS NOT DISTINCT FROM middle_config AND p.proacl IS NOT DISTINCT FROM middle_acl
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim(uuid,integer)'::regprocedure
+      AND p.proowner=outer_owner AND p.prosecdef=outer_security AND p.provolatile=outer_volatility
+      AND p.proconfig IS NOT DISTINCT FROM outer_config AND p.proacl IS NOT DISTINCT FROM outer_acl
+  ) THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: claim-chain metadata or ACL changed';
+  END IF;
+  IF has_function_privilege('anon','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR has_function_privilege('authenticated','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')
+     OR has_function_privilege('anon','public.node_tick_claim_without_boss_timing(uuid,integer)','EXECUTE')
+     OR has_function_privilege('authenticated','public.node_tick_claim_without_boss_timing(uuid,integer)','EXECUTE')
+     OR EXISTS (SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+       WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
+         AND acl.grantee=0 AND acl.privilege_type='EXECUTE') THEN
+    RAISE EXCEPTION 'ENG-COMBAT-002: browser access gained on inner claim';
+  END IF;
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.node_tick_claim(uuid,integer) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.node_tick_claim(uuid,integer) TO service_role;
 
 DO $$
 DECLARE signature regprocedure;
