@@ -15,6 +15,16 @@ function modelRewrite(outer: string, middle: string, inner: string): string {
     .replace(OLD_ORDER, 'representative.entry_seq DESC, representative.character_id DESC');
 }
 
+type ClaimMetadata = { owner: string; securityDefiner: boolean; volatility: string; config?: string[]; acl: string[] };
+function validateMixedClaimMetadata(outer: ClaimMetadata, middle: ClaimMetadata, inner: ClaimMetadata): void {
+  const common = (metadata: ClaimMetadata) => metadata.owner === 'postgres'
+    && metadata.securityDefiner && metadata.volatility === 'v';
+  if (!common(outer) || !common(middle) || !common(inner)
+    || !outer.config?.includes('search_path=public, pg_temp')
+    || !middle.config?.includes('search_path=public, pg_temp')
+    || !inner.config?.includes('search_path=public')) throw new Error('metadata');
+}
+
 function tableType(name: string): string {
   const marker = `      ${name}: {`;
   const start = types.indexOf(marker);
@@ -83,13 +93,35 @@ describe('ENG-COMBAT-002 authoritative arrival and hostile initiation migration'
   });
 
   it('fails closed over the complete claim chain, fixed paths and pre-install trigger absence', () => {
+    const preflight = sql.slice(0, sql.indexOf('-- Trigger-only entry implementation'));
     expect(sql).toContain("to_regprocedure('public.node_tick_claim_without_boss_timing(uuid,integer)')");
     expect(sql).toContain("to_regprocedure('public.node_tick_claim_without_canary_gate(uuid,integer)')");
     expect(sql).toContain("'search_path=public, auth, pg_temp'=ANY");
     expect(sql).toContain("to_regclass('public.node_fighter_entry_seq_seq')");
     expect(sql).toContain("t.tgname='combat2_authoritative_arrival'");
-    expect(sql).toContain("owner.rolname IS DISTINCT FROM 'postgres'");
+    expect(preflight.match(/owner\.rolname='postgres'/g)).toHaveLength(3);
     expect(sql).toContain("has_function_privilege('authenticated','public.node_tick_claim_without_canary_gate(uuid,integer)','EXECUTE')");
+  });
+
+  it('models the exact installed mixed search paths and rejects drift at every layer', () => {
+    const trusted = { owner: 'postgres', securityDefiner: true, volatility: 'v', acl: ['postgres=X/postgres', 'service_role=X/postgres'] };
+    const outer = { ...trusted, config: ['search_path=public, pg_temp'] };
+    const middle = { ...trusted, config: ['search_path=public, pg_temp'] };
+    const inner = { ...trusted, config: ['search_path=public'] };
+    expect(() => validateMixedClaimMetadata(outer, middle, inner)).not.toThrow();
+    expect(() => validateMixedClaimMetadata(outer, middle, { ...inner, config: ['search_path=public, pg_temp'] })).toThrow('metadata');
+    expect(() => validateMixedClaimMetadata({ ...outer, config: ['search_path=public'] }, middle, inner)).toThrow('metadata');
+    expect(() => validateMixedClaimMetadata(outer, { ...middle, config: ['search_path=public'] }, inner)).toThrow('metadata');
+    expect(() => validateMixedClaimMetadata({ ...outer, config: undefined }, middle, inner)).toThrow('metadata');
+    expect(() => validateMixedClaimMetadata(outer, middle, { ...inner, config: ['search_path="$user", public'] })).toThrow('metadata');
+  });
+
+  it('asserts the same mixed paths after inner-only transformation while preserving all metadata arrays', () => {
+    const transform = sql.slice(sql.indexOf('-- Remove party-role priority'), sql.indexOf("DO $$\nDECLARE signature"));
+    expect(transform).toContain("p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure");
+    expect(transform).toContain("'search_path=public'=ANY");
+    expect(transform.match(/'search_path=public, pg_temp'=ANY/g)).toHaveLength(2);
+    for (const field of ['proowner', 'prosecdef', 'provolatile', 'proconfig', 'proacl']) expect(transform).toContain(field);
   });
 
   it('derives hostility from active authored enemy-targeted catalogue rows', () => {

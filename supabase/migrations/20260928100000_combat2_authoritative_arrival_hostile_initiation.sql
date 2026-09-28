@@ -89,16 +89,21 @@ BEGIN
     RAISE EXCEPTION 'ENG-COMBAT-002: unexpected party-depart predecessor search_path';
   END IF;
 
-  IF EXISTS (
-    SELECT 1 FROM unnest(ARRAY[
-      'public.node_tick_claim(uuid,integer)'::regprocedure,
-      'public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure,
-      'public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
-    ]) AS required(signature)
-    LEFT JOIN pg_proc p ON p.oid=required.signature
-    LEFT JOIN pg_roles owner ON owner.oid=p.proowner
-    WHERE owner.rolname IS DISTINCT FROM 'postgres' OR NOT p.prosecdef OR p.provolatile<>'v'
-      OR NOT ('search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[])))
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_roles owner ON owner.oid=p.proowner
+    WHERE p.oid='public.node_tick_claim(uuid,integer)'::regprocedure
+      AND owner.rolname='postgres' AND p.prosecdef AND p.provolatile='v'
+      AND 'search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_roles owner ON owner.oid=p.proowner
+    WHERE p.oid='public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure
+      AND owner.rolname='postgres' AND p.prosecdef AND p.provolatile='v'
+      AND 'search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_roles owner ON owner.oid=p.proowner
+    WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
+      AND owner.rolname='postgres' AND p.prosecdef AND p.provolatile='v'
+      AND 'search_path=public'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
   ) THEN
     RAISE EXCEPTION 'ENG-COMBAT-002: unexpected claim-chain owner/security/search_path contract';
   END IF;
@@ -562,14 +567,17 @@ BEGIN
     SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_canary_gate(uuid,integer)'::regprocedure
       AND p.proowner=inner_owner AND p.prosecdef=inner_security AND p.provolatile=inner_volatility
       AND p.proconfig IS NOT DISTINCT FROM inner_config AND p.proacl IS NOT DISTINCT FROM inner_acl
+      AND 'search_path=public'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
   ) OR NOT EXISTS (
     SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim_without_boss_timing(uuid,integer)'::regprocedure
       AND p.proowner=middle_owner AND p.prosecdef=middle_security AND p.provolatile=middle_volatility
       AND p.proconfig IS NOT DISTINCT FROM middle_config AND p.proacl IS NOT DISTINCT FROM middle_acl
+      AND 'search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
   ) OR NOT EXISTS (
     SELECT 1 FROM pg_proc p WHERE p.oid='public.node_tick_claim(uuid,integer)'::regprocedure
       AND p.proowner=outer_owner AND p.prosecdef=outer_security AND p.provolatile=outer_volatility
       AND p.proconfig IS NOT DISTINCT FROM outer_config AND p.proacl IS NOT DISTINCT FROM outer_acl
+      AND 'search_path=public, pg_temp'=ANY(COALESCE(p.proconfig,ARRAY[]::text[]))
   ) THEN
     RAISE EXCEPTION 'ENG-COMBAT-002: claim-chain metadata or ACL changed';
   END IF;
