@@ -148,7 +148,7 @@ Holy Shield currently consists of a retaliation effect plus its reservation effe
 
 ## Movement and party movement
 
-Solo movement validates caller ownership, origin, destination, connection visibility/adjacency, locks/keys, lifecycle fences and MP, then charges and moves atomically under a durable request ID. The approved rule requires combat departure/flee to be an immediate serialized transaction with its exit opportunity resolved exactly once. **Current source does not yet meet that rule:** it queues `fighter_depart_requested`/`fighter_exit_requested`, invalidates the current claim, advances `next_due_at`, and waits for a later worker claim/resolve/commit. Reconnect state comes from the departure projection. Replays return the durable outcome and conflicting/stale requests fail closed. The source audit and architecture blocker are recorded in [the movement/departure audit](combat2-movement-departure-audit.md) and `ENG-MOVE-001`; Git presence or this decision does not prove Cloud installation.
+Solo movement validates caller ownership, origin, destination, connection visibility/adjacency, locks/keys, lifecycle fences and MP, then charges and moves atomically under a durable request ID. ENG-MOVE-001 source makes a present fighter's valid movement the same immediate transaction: it fences the origin claim, releases only character-scoped encounter state, marks the fighter absent, moves, charges once and permits authoritative destination arrival. It never resolves a combat tick or exit attack. Identical replay is durable; conflicts and stale/dead state fail closed. Destination-less `combat_flee` is a compatibility refusal because relocation requires an authoritative adjacent destination. Installation and live status remain governed by project state.
 
 Coordinated party movement snapshots eligible followers and moves followers before the leader, leader last. Each member has its own survival/result outcome; dead, off-node or non-following members remain independent. Party request/member rows preserve the group transition and stable order. Sources: `20260905194227_fbe2e172-650d-43c2-a3d2-b6dff0c3210a.sql`, `20260908122530_e728cbda-72d0-415c-96bf-a8758fe327ac.sql`, `src/features/combat2/departure.ts`, and `src/features/combat2/party-departure.ts`.
 
@@ -195,8 +195,8 @@ Detailed volatile facts belong in [project state](../operations/project-state.md
 | Combat2 processing | bounded claim/resolve/commit | implemented | live operator evidence | latency measurement |
 | Engagement/release | peaceful deliberate, aggressive automatic, present-only ownership | implemented | installed; operator reported live | targeting audit |
 | Resource settlement/delivery | OOC 4s settlement and authoritative delivery | implemented | installed; operator reported live | jitter evidence |
-| Solo movement | immediate atomic OOC move; immediate serialized combat departure | partial | OOC path source/install evidence; operator observed movement | combat departure currently waits for worker (`ENG-MOVE-001`) |
-| Party movement | immediate coordinated transition, follower-first/leader-last | partial source | see project state | combat members currently wait for worker; release/live verification |
+| Solo movement | immediate atomic OOC move; immediate serialized combat departure | source complete | OOC path installed; ENG-MOVE-001 install pending | install and bounded race/live verification |
+| Party movement | immediate coordinated transition, follower-first/leader-last | source complete | ENG-MOVE-001 install pending | installed-schema and live verification |
 | Logs/diagnostics | bounded authoritative delivery/recording | implemented | see project state | world-vs-encounter tick label |
 | Targeting/initiation | immediate intention, next-heartbeat outcome | partial | operator reports intermittent delay | `ENG-COMBAT-001` |
 | Stances | authoritative reservation/effects | encounter-scoped | partial | character scope/out-of-combat |

@@ -4,7 +4,15 @@ Date: 2026-09-24. Baseline: `f1f8a0251c72d9d64dc46a25672cd124939f89e8`.
 
 This is a static repository audit. It proves source contracts only. Installation and live behaviour remain governed by [project state](../operations/project-state.md). No Cloud inspection or gameplay invocation was performed.
 
-## Finding
+## Implemented source correction (ENG-MOVE-001)
+
+Forward migration `20260929100000_combat2_immediate_authoritative_departure.sql` replaces the heartbeat wait at the public boundary without copying resolver mechanics. The installed predecessor remains the owner of caller identity, route/key/MP validation, party membership/order and durable request creation. When that predecessor returns `queued`, one service-role-only finalizer in the same transaction fences the claim, rejects pending intents, consumes the departure event, removes only character-targeted encounter state, marks the fighter absent, refreshes tanks, moves the character and charges MP once. It performs no damage, attack, DoT pulse, regeneration, reward, durability or death resolution.
+
+Public node locks remain first and destination arrival remains the installed character-relocation trigger. A departure-first transaction invalidates the origin claim/version before relocation. A tick-first transaction commits under the same node/encounter serialization; departure then revalidates current HP, location and participation. Party finalization owns all members in stored `movement_order`, so followers arrive before the leader. Historical queued rows remain readable and can be completed by replay. The old destination-less `combat_flee` signature is retained as an explicit `destination_required` refusal; it cannot safely express relocation, and all ordinary browser movement already routes through `combat2_depart`.
+
+Source verification is not installation or live proof. Local PostgreSQL installed-equivalent execution was unavailable; Lovable must compile/apply and inspect the composed definitions before activation.
+
+## Prior audited state (superseded by the source correction above)
 
 Ordinary out-of-combat adjacent movement is already an immediate authoritative database transaction. Combat-owned solo departure, coordinated party members in combat, and `combat_flee` are not immediate: they insert a pending event and return `queued`; a later world-heartbeat worker claim decodes the event, the resolver computes the exit opportunity/death outcome, and `node_tick_commit` applies fighter release, cleanup, relocation and MP charge atomically.
 
@@ -56,7 +64,6 @@ The current commit boundary prevents duplicate MP, relocation, event consumption
 - `combat2_respawn`, special transitions, arena stop/reset and party lifecycle each have separate guards. Their source contracts must be included in the lock-graph design before `ENG-MOVE-001` leaves `blocked`.
 - Settlement locks its singleton cursor, then characters in UUID order and deliberately locks no encounter; it re-reads encounter/departure ownership after the character lock. This avoids adding a reversed encounter/character pair.
 
-## Required next design
+## Verification remaining
 
-`ENG-MOVE-001` must choose a single server-side orchestration boundary capable of invoking the existing deterministic resolver and atomic commit synchronously after acquiring the same serialized ownership. It must define one lock order across claim/commit, entry, intent, solo/party departure, flee, respawn, arena lifecycle, party mutation and settlement. It may not duplicate resolver rules in SQL, call back into Edge from a database transaction, or expose service credentials to the browser.
-
+Lovable must execute the migration against the installed schema, inspect owner/SECURITY/search-path/ACL preservation, and prove departure-first and tick-first serialization with rollback-only or disposable fixtures before gameplay activation. Bounded solo and coordinated-party live verification remains separate. No Edge deployment is required by this source change.

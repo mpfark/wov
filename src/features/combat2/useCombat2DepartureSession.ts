@@ -33,9 +33,8 @@ export function useCombat2DepartureSession(options: {
       const result = await adapter.depart(options.characterId, current.destination, current.requestId);
       if (keyRef.current !== current.key) return { status: 'stale', reason: 'Combat2 movement response is stale' };
       current.inFlight = false; current.uncertain = false;
-      if (result.status === 'queued' || result.status === 'moved' || result.status === 'dead') {
-        pendingRef.current = true; setPending(true);
-        if (result.status === 'queued') options.onQueued?.();
+      if (result.status === 'queued') {
+        pendingRef.current = true; setPending(true); options.onQueued?.();
       } else { pendingRef.current = false; setPending(false); }
       return result;
     } catch (error) {

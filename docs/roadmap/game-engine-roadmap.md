@@ -6,11 +6,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-MOVE-001 — Immediate serialized Combat2 departure
 
-- **Engine area / status / priority:** movement/concurrency; `blocked`; 1.
-- **Problem or decision:** approved semantics require combat departure/flee to resolve immediately, but current public SQL only queues an event; exit damage/effects live in the TypeScript resolver and relocation/MP/cleanup live in `node_tick_commit`.
-- **Intended outcome:** one synchronous authoritative transition serialized with encounter processing: departure-first excludes the fighter from the next tick; tick-first commits then departure completes; opportunity, death/survival, MP, relocation and cleanup occur exactly once.
-- **Dependencies:** choose one server-side orchestration boundary and prove a global lock order without SQL combat duplication, Edge callbacks inside SQL, browser authority or a second movement engine.
-- **Evidence/current state:** [static audit](../design/combat2-movement-departure-audit.md) proves OOC movement is immediate and combat/party/flee paths wait for a worker tick. Installed/live parity is unverified.
+- **Engine area / status / priority:** movement/concurrency; `source_complete`; 1.
+- **Problem or decision:** approved semantics require ordinary combat departure to resolve immediately without an exit attack or any combat tick.
+- **Intended outcome:** one synchronous authoritative transition serialized with encounter processing: departure-first excludes the fighter from the next tick; tick-first commits then a surviving fighter departs; MP, relocation and non-damage cleanup occur exactly once.
+- **Dependencies:** install and inspect `20260929100000_combat2_immediate_authoritative_departure.sql`, then perform bounded solo/party live verification.
+- **Evidence/current state:** the forward migration reuses the installed validation/request owners and adds one service-only non-combat finalizer. Solo and coordinated movement complete in the request transaction; destination-less `combat_flee` fails closed and browser movement already uses `combat2_depart`. No Cloud installation or live proof is claimed.
 - **Acceptance criteria:** executable departure-first/tick-first concurrency tests; replay/conflict/death/MP/destination/solo-party/encounter-end races; follower-first/leader-last; remaining participants continue; no duplicate event, charge, relocation, release, cleanup or completion; no catch-up burst; installed and bounded live verification.
 - **Specification sections:** One authoritative world heartbeat; Movement and party movement; Combat resolution.
 

@@ -502,11 +502,11 @@
     },
     {
       "identity": "immediate-combat2-departure-architecture",
-      "status": "blocked",
-      "sha": "f1f8a0251c72d9d64dc46a25672cd124939f89e8",
-      "timestamp": "2026-09-24T09:30:00Z",
-      "evidence_type": "source_audit",
-      "evidence": "Static source audit (ENG-MOVE-001) proves ordinary out-of-combat combat2_depart is immediate, but a present fighter, coordinated party member in combat, or combat_flee is queued through node_pending_event and waits for a later claim/resolve/node_tick_commit. The resolver owns exactly-once exit opportunity/death/effect decisions and node_tick_commit owns atomic fighter cleanup plus relocation/MP charge. Making the browser-callable SQL RPC synchronous by itself would duplicate Combat2 mechanics in SQL, move before the commit owner, or require an unsafe Edge callback inside a database transaction. No migration or runtime correction was authored. A future design must select one server-side orchestration boundary and prove a global lock order across claim/commit, entry, intent, solo/party departure, flee, respawn, arena lifecycle, party mutation and settlement. Installation and live parity were not inspected.",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-28T22:30:00Z",
+      "evidence_type": "tests",
+      "evidence": "ENG-MOVE-001 source is complete in forward migration 20260929100000_combat2_immediate_authoritative_departure.sql. Installed predecessor functions remain the sole owners of ownership, route/key/MP validation, party inclusion/order and durable request creation; one service-role-only finalizer completes only non-damage cleanup, absence, relocation, MP charge and installed destination arrival in the same transaction. It fences claims and pending intents, preserves participation and creature-targeted effects, refreshes tanks, and performs no attack, damage, DoT pulse, regeneration, reward, durability or death resolution. Coordinated members finalize in stored follower-first/leader-last order. Destination-less combat_flee is retained as a destination_required compatibility refusal; browser movement already routes through combat2_depart. Focused migration/client tests, readiness, TypeScript and build are source gates; installation, installed-schema execution and bounded live race verification remain pending. No Cloud operation was performed.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },

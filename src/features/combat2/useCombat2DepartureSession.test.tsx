@@ -8,6 +8,7 @@ const A = 'aaaaaaaa-0000-4000-8000-000000000002';
 const B = 'aaaaaaaa-0000-4000-8000-000000000003';
 const R = 'aaaaaaaa-0000-4000-8000-000000000004';
 const queued = { status: 'queued', classification: 'queued', originNodeId: A, destinationNodeId: B, cost: 5 } as const;
+const moved = { status: 'moved', classification: 'moved', originNodeId: A, destinationNodeId: B, cost: 5 } as const;
 
 describe('useCombat2DepartureSession', () => {
   it('queues once and blocks duplicate movement', async () => {
@@ -17,6 +18,14 @@ describe('useCombat2DepartureSession', () => {
     await act(async () => { expect(await result.current.move(B)).toMatchObject({ status: 'queued' }); });
     await expect(result.current.move(B)).resolves.toMatchObject({ status: 'local_refusal', classification: 'exit_pending' });
     expect(adapter.depart).toHaveBeenCalledOnce();
+  });
+
+  it('clears the input fence as soon as immediate movement completes', async () => {
+    const adapter: Combat2DepartureAdapter = { depart: vi.fn().mockResolvedValue(moved),state:vi.fn().mockResolvedValue({status:'none'}) };
+    const { result } = renderHook(() => useCombat2DepartureSession({ enabled: true, canSubmit: true, characterId: C, nodeId: A, adapter, generateRequestId: () => R }));
+    await act(async()=>{await Promise.resolve();});
+    await act(async () => { expect(await result.current.move(B)).toMatchObject({ status: 'moved' }); });
+    expect(result.current.pending).toBe(false);
   });
 
   it('retries an uncertain response with the same request id and drops stale responses', async () => {
