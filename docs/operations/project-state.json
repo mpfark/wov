@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-28T16:49:00Z",
-  "based_on_source_sha": "3cd6c7f2c6c532f5f970513f477440c344cb0dbc",
+  "updated_at": "2026-09-28T21:45:00Z",
+  "based_on_source_sha": "9c439cce6984a48ec838fe373921c6db72567b9c",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-09-28T16:49:00Z",
-      "evidence_type": "tests",
-      "evidence": "ENG-COMBAT-002 source authored only; not installed. Lovable rejected SHA-256 1ab9ee0ac3c12535c00578b5328fb906e81522ee4b6a0b9368ebe434c0c7932f before installation because its compatibility guard incorrectly required public,pg_temp on all claim layers. Corrected source SHA-256 540e2d44d853e641bc5b3f04db3067e3e459d3815f575c057b2ffb7ce4c63095 deliberately preserves the installed mixed fixed search paths: node_tick_claim and node_tick_claim_without_boss_timing remain public,pg_temp; node_tick_claim_without_canary_gate remains public. Search-path standardization is outside this migration. The inner-only tank rewrite, byte-equivalent wrappers, complete owner/security/volatility/ACL preservation, global entry_seq plus character UUID ordering, movement entry and hostile-action behavior are unchanged. Installed-schema execution, Cloud installation and bounded live verification remain pending for Lovable.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "9c439cce6984a48ec838fe373921c6db72567b9c",
+      "timestamp": "2026-09-28T21:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Applied exactly once from repository bytes SHA-256 540e2d44d853e641bc5b3f04db3067e3e459d3815f575c057b2ffb7ce4c63095 (rejected, never-installed versions 3f1db810fe58d27a7bf26e9ac1c0b6507b95b7aebde413ca0458ab818b5c0529 and 1ab9ee0ac3c12535c00578b5328fb906e81522ee4b6a0b9368ebe434c0c7932f). Ledger row version 20260928213905 name bbf754d1-f039-447c-8b43-eacf987b77eb; ledger artifact supabase/migrations/20260928213905_bbf754d1-f039-447c-8b43-eacf987b77eb.sql SHA-256 df5a8017b8012eaa2555eb787c86551c7c0d3819d17c72cb7538dd6c91b9c45f, identical except missing trailing newline; both retained. Read-only compatibility DO block passed before install. Post-install: node_tick_claim (def md5 b30c234901692bf81245b576458fdc3b) and node_tick_claim_without_boss_timing (961ca790fe9f0f8641b3912300641850) definition-identical, search_path public, pg_temp; inner node_tick_claim_without_canary_gate changed (cbab55efc3537ed85994e32640f25c2e -> cded16cd5963a2cf9978ca8c85f6a335), search_path public unchanged, uses entry_seq DESC, character_id DESC with no party tank/leader priority; ACLs of all three unchanged (postgres, service_role, sandbox_exec). New/replaced functions all postgres-owned SECURITY DEFINER search_path public, pg_temp: combat2_arrive_after_relocation and node_tick_commit(+_without_authoritative_arrival) and combat_intent_without_global_lock_order service_role only; combat2_authoritative_arrival_trigger no role grants; combat2_hostile_action, combat2_engage, combat2_depart, combat2_party_depart, combat_intent authenticated+service_role; no PUBLIC/anon. Trigger combat2_authoritative_arrival on characters enabled. Linter flags 2 intended authenticated-executable definer functions (combat_intent wrapper, combat2_hostile_action). Protected gameplay fingerprints unchanged; no function invoked. Live arrival, hostile initiation and tank behavior unverified.",
+      "reporting_actor": "lovable",
       "directly_verified": true
     },
     {
@@ -171,7 +171,7 @@
     "status": "ready_for_manual_publish",
     "artifact": "ENG-COMBAT-002 authoritative arrival and hostile-action initiation",
     "sha": null,
-    "timestamp": "2026-09-28T10:15:00Z",
+    "timestamp": "2026-09-28T21:45:00Z",
     "evidence_type": "tests",
     "evidence": "Frontend source routes an enemy-targeted ability without an encounter through the new generic hostile-action boundary; the server remains authoritative for hostility, target, ability and CP classification. Existing in-encounter ability/stance routing, disabled reasons and legacy-off behavior remain unchanged. Ready for Mik's manual publication only after migration installation; no publication occurred.",
     "reporting_actor": "Codex",
@@ -573,11 +573,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Install and verify ENG-COMBAT-002; resolve immediate serialized departure (ENG-MOVE-001) separately.",
+    "artifact": "Mik manually publishes the frontend and performs bounded live verification of ENG-COMBAT-002 arrival, hostile initiation and tank order; ENG-MOVE-001 remains separate.",
     "sha": null,
-    "timestamp": "2026-09-28T10:15:00Z",
+    "timestamp": "2026-09-28T21:45:00Z",
     "evidence_type": "handoff",
-    "evidence": "ENG-COMBAT-002 source is authored and verified locally but not installed or live-verified. Lovable must perform guarded migration preflight/application and read-only definition/ACL checks; Mik alone publishes the frontend afterward. ENG-MOVE-001, shared heartbeat_id, character-scoped stances and explicit intent-cutoff identity remain separate and unchanged.",
+    "evidence": "ENG-COMBAT-002 installed with direct Cloud evidence; live behavior not verified.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
