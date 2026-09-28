@@ -32,12 +32,13 @@ export type Combat2EntryOutcome =
 interface EntryRpcResponse { data: unknown; error: { message?: string } | null }
 
 export interface Combat2EntryClient {
-  rpc(name: 'combat_enter' | 'combat2_engage', args: Record<string, string>): PromiseLike<EntryRpcResponse>;
+  rpc(name: 'combat_enter' | 'combat2_engage' | 'combat2_hostile_action', args: Record<string, string | null>): PromiseLike<EntryRpcResponse>;
 }
 
 export interface Combat2EntryAdapter {
   enter(characterId: string, requestId: string): Promise<Combat2EntryOutcome>;
   engage?(characterId: string, targetCreatureId: string, requestId: string): Promise<Combat2EntryOutcome>;
+  engageAction?(characterId: string, targetCreatureId: string, abilityKey: string, requestId: string): Promise<Combat2EntryOutcome>;
 }
 
 export class Combat2EntryError extends Error {
@@ -142,6 +143,22 @@ export function createCombat2EntryAdapter(client: Combat2EntryClient): Combat2En
         throw new Combat2EntryError('uncertain', error instanceof Error ? error.message : 'combat2_engage transport failed');
       }
       if (response.error) throw new Combat2EntryError('uncertain', response.error.message ?? 'combat2_engage transport failed');
+      return decodeCombat2Entry(response.data);
+    },
+    async engageAction(characterId, targetCreatureId, abilityKey, requestId) {
+      let response: EntryRpcResponse;
+      try {
+        response = await client.rpc('combat2_hostile_action', {
+          _character_id: characterId,
+          _intent_kind: 'ability',
+          _ability_key: abilityKey,
+          _target_creature_id: targetCreatureId,
+          _request_id: requestId,
+        });
+      } catch (error) {
+        throw new Combat2EntryError('uncertain', error instanceof Error ? error.message : 'combat2_hostile_action transport failed');
+      }
+      if (response.error) throw new Combat2EntryError('uncertain', response.error.message ?? 'combat2_hostile_action transport failed');
       return decodeCombat2Entry(response.data);
     },
   };

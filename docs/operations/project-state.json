@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-25T09:33:00Z",
-  "based_on_source_sha": "f4f98990415a530889c3227ea615156d563c8ebe",
+  "updated_at": "2026-09-28T10:15:00Z",
+  "based_on_source_sha": "8e6e5a62d529a8bfd2a386c4a5158f35fde6ee1a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -24,6 +24,16 @@
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-28T10:15:00Z",
+      "evidence_type": "tests",
+      "evidence": "ENG-COMBAT-002 source authored only; not installed. The forward migration adds service-only movement-completion entry for living solo and party characters, including offline followers, gates peaceful arrival, reuses the active node encounter, makes tank candidates pure newest-entry order, exposes one authenticated generic hostile-action RPC whose hostility classification comes from active authored enemy-targeted abilities, composes exact intent/spendable-CP validation atomically, and normalizes node/encounter/intent/character lock order. Resolver, rewards, cadence, scheduler, leases and ENG-MOVE-001 departure semantics are unchanged. Cloud installation and bounded live verification remain pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
       "status": "installed",
@@ -159,11 +169,11 @@
   ],
   "frontend_publication": {
     "status": "ready_for_manual_publish",
-    "artifact": "Centralized Combat2 ability-disabled reasons",
+    "artifact": "ENG-COMBAT-002 authoritative arrival and hostile-action initiation",
     "sha": null,
-    "timestamp": "2026-09-25T09:33:00Z",
+    "timestamp": "2026-09-28T10:15:00Z",
     "evidence_type": "tests",
-    "evidence": "Frontend source now derives one typed, deterministically prioritized readiness result for Combat2 ability native disabled state, styling/help text, pointer submission and keyboard submission. Existing session, delivery, movement, death, target, in-flight and spendable-CP gates are exposed without expanding availability. Healthy syncing still uses the retained identity-checked model and active stance drop still bypasses activation CP. Ready for Mik's manual publication; no publication occurred in this task.",
+    "evidence": "Frontend source routes an enemy-targeted ability without an encounter through the new generic hostile-action boundary; the server remains authoritative for hostility, target, ability and CP classification. Existing in-encounter ability/stance routing, disabled reasons and legacy-off behavior remain unchanged. Ready for Mik's manual publication only after migration installation; no publication occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -484,9 +494,9 @@
       "identity": "authoritative-arrival-and-hostile-first-action",
       "status": "blocked",
       "sha": null,
-      "timestamp": "2026-09-24T15:15:00Z",
-      "evidence_type": "source_audit",
-      "evidence": "ENG-COMBAT-002: solo and party movement update character location but do not invoke combat_enter. Automatic entry is browser-driven after roster delivery, so offline followers and delayed roster clients are not guaranteed immediate authoritative participation. combat2_engage hard-codes Basic Attack, while a generic hostile action needs server-owned catalogue/preflight semantics. Tank projection prioritizes a configured party tank/leader inside the newest arrival group rather than pure newest entry. A safe correction must compose movement, entry, intent and claim lock order and must not duplicate the TypeScript combat catalogue in SQL.",
+      "timestamp": "2026-09-28T10:15:00Z",
+      "evidence_type": "tests",
+      "evidence": "ENG-COMBAT-002 is implemented in repository source by 20260928100000_combat2_authoritative_arrival_hostile_initiation.sql and focused frontend routing. Movement completion owns browser-independent entry; hostile first actions use the server-authored ability target contract and existing exact intent/CP authority; newest entry owns tank priority. Installation, Mik's manual publication and bounded live verification remain pending, so no live behavior is claimed.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -563,11 +573,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Resolve immediate serialized departure (ENG-MOVE-001) and authoritative arrival/generic hostile initiation (ENG-COMBAT-002).",
+    "artifact": "Install and verify ENG-COMBAT-002; resolve immediate serialized departure (ENG-MOVE-001) separately.",
     "sha": null,
-    "timestamp": "2026-09-24T15:15:00Z",
+    "timestamp": "2026-09-28T10:15:00Z",
     "evidence_type": "handoff",
-    "evidence": "ENG-COMBAT-001 source audit is complete. The remaining coupled architecture decisions are ENG-MOVE-001 and ENG-COMBAT-002: choose one transaction/lock composition so solo and follower-first/leader-last party movement invoke idempotent entry, generic hostile actions can atomically enter and queue without duplicating the TypeScript catalogue, and newest valid entry becomes tank. Shared heartbeat_id and explicit intent cutoff remain pending. Do not infer installation from authored source.",
+    "evidence": "ENG-COMBAT-002 source is authored and verified locally but not installed or live-verified. Lovable must perform guarded migration preflight/application and read-only definition/ACL checks; Mik alone publishes the frontend afterward. ENG-MOVE-001, shared heartbeat_id, character-scoped stances and explicit intent-cutoff identity remain separate and unchanged.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

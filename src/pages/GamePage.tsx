@@ -975,8 +975,13 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     let targetCharacterId: string | null = null;
     if (!stance && ability.targetType === 'enemy') {
       const resolved = combat2Targets.resolve();
-      targetValid = resolved.ok;
+      const selected = targetId ?? selectedTargetId;
+      const initiationTarget = !combat2.actionsReady
+        ? creatures.find(creature => creature.id === selected && creature.is_alive)
+        : null;
+      targetValid = resolved.ok || !!initiationTarget;
       if (resolved.ok) targetCreatureId = resolved.target.creatureId;
+      else if (initiationTarget) targetCreatureId = initiationTarget.id;
     }
     if (!stance && ability.targetType === 'ally') {
       const selected = targetId ?? abilityTargetId;
@@ -991,8 +996,13 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         && (action.targetCreatureId ?? null) === targetCreatureId
         && (action.targetCharacterId ?? null) === targetCharacterId);
     const availableCp = Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp);
+    const sessionReadiness = !combat2.actionsReady && ability.targetType === 'enemy'
+      && 'reason' in combat2.actionReadiness
+      && ['requires_active_combat', 'no_authoritative_snapshot'].includes(combat2.actionReadiness.reason)
+      ? { ready: true as const }
+      : combat2.actionReadiness;
     return deriveCombat2AbilityReadiness({
-      session: combat2.actionReadiness,
+      session: sessionReadiness,
       levelLocked: character.level < ability.levelRequired,
       levelRequired: ability.levelRequired,
       inFlight: matchesAbility(combat2.intents.inFlightAction) || matchesAbility(combat2.intents.pending?.action),
@@ -1003,7 +1013,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     });
   }, [character.class, character.id, character.level, authoritativeCombat2Reservations,
     authoritativeCombat2ReservedCp, combat2.actionReadiness, combat2.intents.inFlightAction,
-    combat2.intents.pending, combat2Targets, activeCombat2Presentation?.allies, abilityTargetId, presentedCharacter.cp]);
+    combat2.intents.pending, combat2Targets, combat2.actionsReady, activeCombat2Presentation?.allies,
+    abilityTargetId, presentedCharacter.cp, creatures, selectedTargetId]);
 
   const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (combat2BlocksLegacy && actionEpochRef.current !== actionEpoch) return;
@@ -1025,13 +1036,21 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
       legacy: () => handleUseAbility(abilityIndex, targetId),
       submit: combat2.intents.submit,
+      initiateHostile: (targetCreatureId, abilityKey) => combat2.entry.engageAction(targetCreatureId, abilityKey),
+      resolveInitiationTarget: () => {
+        const id = targetId ?? selectedTargetId;
+        const target = creatures.find(creature => creature.id === id && creature.is_alive);
+        return target
+          ? { ok: true as const, target: { creatureId: target.id, name: target.name } }
+          : { ok: false as const, reason: 'Select a living creature before using this hostile ability.' };
+      },
       diagnose: (message) => {
         if (message === null) { setCombat2Diagnostic(null); return; }
         if (combat2BlocksLegacy) setCombat2Diagnostic(message);
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch, getCombat2AbilityReadiness]);
+  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, selectedTargetId, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch, getCombat2AbilityReadiness]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });

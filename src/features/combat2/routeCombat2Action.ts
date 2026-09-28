@@ -20,6 +20,8 @@ export interface RouteCombat2ActionOptions {
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction, feedback?: { message: string }): Promise<Combat2IntentResult>;
+  initiateHostile?(targetCreatureId: string, abilityKey: string): Promise<{ status: 'entered' | 'refused'; reason?: string | null }>;
+  resolveInitiationTarget?(): { ok: true; target: { creatureId: string; name: string } } | { ok: false; reason: string };
   diagnose(message: string | null): void;
 }
 
@@ -27,14 +29,6 @@ export interface RouteCombat2ActionOptions {
 export async function routeCombat2Action(options: RouteCombat2ActionOptions): Promise<void> {
   if (!options.enabled) {
     await options.legacy();
-    return;
-  }
-  if (options.readiness && 'message' in options.readiness) {
-    options.diagnose(options.readiness.message);
-    return;
-  }
-  if (!options.sessionReady) {
-    options.diagnose('Combat2 is not ready to accept an action.');
     return;
   }
   const ability = options.ability;
@@ -52,6 +46,28 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
   const stanceActive = !!stance && isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key);
   if (!stanceActive && options.availableCp !== undefined && ability.cpCost > options.availableCp) {
     options.diagnose(`Requires ${ability.cpCost} CP — ${options.availableCp} available`);
+    return;
+  }
+
+  if (!options.sessionReady && ability.targetType === 'enemy' && options.initiateHostile && options.resolveInitiationTarget) {
+    if (options.readiness && 'reason' in options.readiness
+      && !['requires_active_combat', 'no_authoritative_snapshot'].includes(options.readiness.reason)) {
+      options.diagnose(options.readiness.message);
+      return;
+    }
+    const target = options.resolveInitiationTarget();
+    if (target.ok === false) { options.diagnose(target.reason); return; }
+    const result = await options.initiateHostile(target.target.creatureId, ability.abilityKey);
+    if (result.status === 'entered') { options.diagnose(null); return; }
+    options.diagnose(`Combat2 refused ${ability.label}${result.reason ? `: ${result.reason}` : ''}`);
+    return;
+  }
+  if (options.readiness && 'message' in options.readiness) {
+    options.diagnose(options.readiness.message);
+    return;
+  }
+  if (!options.sessionReady) {
+    options.diagnose('Combat2 is not ready to accept an action.');
     return;
   }
   let action: Combat2IntentAction;

@@ -110,6 +110,38 @@ describe('Combat2 deliberate action routing', () => {
     expect(transfer.diagnose).toHaveBeenCalledWith(expect.stringContaining('another eligible'));
   });
 
+  it('uses the atomic hostile-initiation boundary before a session exists', async () => {
+    const initiateHostile = vi.fn().mockResolvedValue({ status: 'entered' as const });
+    const h = harness({ sessionReady: false, initiateHostile,
+      resolveInitiationTarget: () => ({ ok: true as const, target: { creatureId: CREATURE, name: 'Goblin' } }) });
+    await routeCombat2Action(h.options);
+    expect(initiateHostile).toHaveBeenCalledExactlyOnceWith(CREATURE, 'fireball');
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.legacy).not.toHaveBeenCalled();
+  });
+
+  it('does not use hostile initiation for a stance or self/support ability', async () => {
+    const initiateHostile = vi.fn();
+    const h = harness({ sessionReady: false, initiateHostile,
+      resolveInitiationTarget: () => ({ ok: true as const, target: { creatureId: CREATURE, name: 'Goblin' } }),
+      ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }),
+    });
+    await routeCombat2Action(h.options);
+    expect(initiateHostile).not.toHaveBeenCalled();
+    expect(h.submit).not.toHaveBeenCalled();
+    expect(h.legacy).not.toHaveBeenCalled();
+  });
+
+  it('does not bypass death, movement or delivery readiness to initiate hostility', async () => {
+    const initiateHostile = vi.fn();
+    const h = harness({ sessionReady: false, initiateHostile,
+      readiness: { ready: false, reason: 'movement_pending', message: 'Movement is pending' },
+      resolveInitiationTarget: () => ({ ok: true as const, target: { creatureId: CREATURE, name: 'Goblin' } }) });
+    await routeCombat2Action(h.options);
+    expect(initiateHostile).not.toHaveBeenCalled();
+    expect(h.diagnose).toHaveBeenCalledWith('Movement is pending');
+  });
+
   it('blocks unaffordable pointer or keyboard routing against authoritative spendable CP', async () => {
     const h = harness({ availableCp: 9 });
     await routeCombat2Action(h.options);
@@ -140,6 +172,8 @@ describe('Combat2 deliberate action routing', () => {
     expect(page).toContain('readiness: combat2BlocksLegacy ? getCombat2AbilityReadiness(abilityIndex, targetId) : undefined');
     expect(page).toContain('getAbilityReadiness={combat2BlocksLegacy ? getCombat2AbilityReadiness : undefined}');
     expect(page).toContain('presentedCharacter.cp - authoritativeCombat2ReservedCp');
+    expect(page).toContain("['requires_active_combat', 'no_authoritative_snapshot'].includes(combat2.actionReadiness.reason)");
+    expect(page).toContain('combat2.entry.engageAction(targetCreatureId, abilityKey)');
     expect(view).toContain('abilityAvailableCp ?? (character.cp ?? 0)');
     expect(view).toContain('const readiness = getAbilityReadiness?.(idx, resolvedTarget);');
   });

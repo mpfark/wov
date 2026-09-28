@@ -135,6 +135,20 @@ describe('useCombat2EntrySession', () => {
     expect(requestId).toHaveBeenCalledOnce();
   });
 
+  it('reuses the exact hostile-ability request after an uncertain transport result', async () => {
+    const engageAction = vi.fn()
+      .mockRejectedValueOnce(new Combat2EntryError('uncertain', 'response lost'))
+      .mockResolvedValueOnce(entered('already_entered'));
+    const requestId = vi.fn(() => 'stable-ability-request');
+    const { result } = renderHook(() => useCombat2EntrySession({ enabled: true, characterId: CHARACTER,
+      nodeId: NODE, hasLivingCreatures: false, adapter: { enter: vi.fn(), engageAction }, generateRequestId: requestId }));
+    await act(async () => { await expect(result.current.engageAction(FIGHTER, 'power_strike')).rejects.toMatchObject({ code: 'uncertain' }); });
+    await act(async () => { await expect(result.current.engageAction(FIGHTER, 'power_strike')).resolves.toMatchObject({ status: 'entered' }); });
+    expect(engageAction).toHaveBeenNthCalledWith(1, CHARACTER, FIGHTER, 'power_strike', 'stable-ability-request');
+    expect(engageAction).toHaveBeenNthCalledWith(2, CHARACTER, FIGHTER, 'power_strike', 'stable-ability-request');
+    expect(requestId).toHaveBeenCalledOnce();
+  });
+
   it('does not let a late speculative entry refusal overwrite deliberate engagement', async () => {
     const automatic = deferred<Combat2EntryOutcome>();
     const adapter: Combat2EntryAdapter = { enter: vi.fn(() => automatic.promise), engage: vi.fn(async () => entered()) };

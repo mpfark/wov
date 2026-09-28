@@ -63,6 +63,18 @@ describe('Combat2 entry transport', () => {
     });
   });
 
+  it('submits an exact hostile ability through the generic atomic boundary', async () => {
+    const rpc = vi.fn(async () => ({ data: { ok: true, kind: 'queued', entry_kind: 'entered',
+      encounter_id: ENCOUNTER, fighter_id: FIGHTER, entry_seq: 5 }, error: null }));
+    const adapter = createCombat2EntryAdapter({ rpc });
+    await expect(adapter.engageAction!(CHARACTER, FIGHTER, 'fireball', REQUEST)).resolves
+      .toMatchObject({ status: 'entered', encounterId: ENCOUNTER, entrySeq: 5 });
+    expect(rpc).toHaveBeenCalledWith('combat2_hostile_action', {
+      _character_id: CHARACTER, _intent_kind: 'ability', _ability_key: 'fireball',
+      _target_creature_id: FIGHTER, _request_id: REQUEST,
+    });
+  });
+
   it.each([
     vi.fn(async () => { throw new Error('connection lost'); }),
     vi.fn(async () => ({ data: null, error: { message: 'response lost' } })),

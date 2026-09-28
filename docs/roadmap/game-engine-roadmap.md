@@ -26,11 +26,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
 
-- **Engine area / status / priority:** entry/targeting/concurrency; `blocked`; 2.
+- **Engine area / status / priority:** entry/targeting/concurrency; `implemented_source`; 2.
 - **Problem or decision:** movement does not invoke encounter entry; automatic entry currently depends on each moved character's browser receiving an actionable roster. The atomic engagement RPC accepts only Basic Attack. Tank projection also retains designated-party priority rather than the approved newest-entry-only rule.
 - **Intended outcome:** solo and coordinated movement invoke one idempotent authoritative entry check in follower-first/leader-last order; reconnect attaches without duplication; one generic server-authored hostile-action boundary atomically enters and queues a validated hostile ability or Basic Attack; tank fallback becomes newest valid entry globally.
 - **Dependencies:** choose a transaction/lock composition with movement and the existing entry/intent RPCs; define server-side hostile/non-hostile ability preflight without duplicating the TypeScript catalogue; preserve `ENG-MOVE-001`.
-- **Evidence/current state:** static source audit proves the browser-driven gap and Basic-Attack-only RPC. No migration was guessed in this batch.
+- **Evidence/current state:** forward migration `20260928100000_combat2_authoritative_arrival_hostile_initiation.sql` authors movement-completion entry, generic server-classified hostile initiation, newest-entry-only tank order and a single documented node/encounter/intent/character lock order. Focused source tests cover the contract. Installation, Mik's manual publication and bounded live proof remain pending.
 - **Acceptance criteria:** executable solo/party/reconnect concurrency tests, action-payload replay conflict tests, invalid-first-action rollback, follower-first/leader-last entry generations, unrelated newcomer tank, no duplicate encounter/fighter/intent/reward qualification, installed and bounded live proof.
 - **Specification sections:** Creatures, targeting and initiation; Movement and party movement; Combat resolution.
 

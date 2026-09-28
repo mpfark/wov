@@ -28,6 +28,7 @@ export interface Combat2EntrySessionState {
   error: string | null;
   retry(): void;
   engage(targetCreatureId: string): Promise<Combat2EntryOutcome>;
+  engageAction(targetCreatureId: string, abilityKey: string): Promise<Combat2EntryOutcome>;
 }
 
 export interface UseCombat2EntrySessionOptions {
@@ -48,14 +49,14 @@ interface Attempt {
   observerGeneration?: number;
 }
 
-interface InternalState extends Omit<Combat2EntrySessionState, 'retry' | 'engage'> { key: string | null }
+interface InternalState extends Omit<Combat2EntrySessionState, 'retry' | 'engage' | 'engageAction'> { key: string | null }
 
 const defaultAdapter = createCombat2EntryAdapter({
   rpc: (name, args) => supabase.rpc(name as never, args as never),
 } satisfies Combat2EntryClient);
 const defaultRequestId = () => crypto.randomUUID();
 
-const EMPTY: Omit<Combat2EntrySessionState, 'retry' | 'engage'> = {
+const EMPTY: Omit<Combat2EntrySessionState, 'retry' | 'engage' | 'engageAction'> = {
   status: 'idle', encounterId: null, fighterId: null, entrySeq: null, classification: null, error: null,
 };
 
@@ -72,7 +73,7 @@ export function useCombat2EntrySession({
   currentKeyRef.current = sessionKey;
   const generationRef = useRef(0);
   const attemptRef = useRef<Attempt | null>(null);
-  const engagementRef = useRef<{ key: string; targetCreatureId: string; requestId: string; inFlight: boolean; uncertain: boolean } | null>(null);
+  const engagementRef = useRef<{ key: string; targetCreatureId: string; abilityKey: string | null; requestId: string; inFlight: boolean; uncertain: boolean } | null>(null);
   const [state, setState] = useState<InternalState>({ ...EMPTY, key: null });
 
   const runAttempt = useCallback((attempt: Attempt, generation: number) => {
@@ -143,15 +144,19 @@ export function useCombat2EntrySession({
     runAttempt(attempt, generationRef.current);
   }, [sessionKey, characterId, hasLivingCreatures, state.status, generateRequestId, runAttempt]);
 
-  const engage = useCallback(async (targetCreatureId: string): Promise<Combat2EntryOutcome> => {
-    if (!sessionKey || !characterId || !adapter.engage) return { status: 'refused', classification: 'refused', reason: 'session_unavailable' };
+  const engageWith = useCallback(async (targetCreatureId: string, abilityKey: string | null): Promise<Combat2EntryOutcome> => {
+    if (!sessionKey || !characterId || (abilityKey ? !adapter.engageAction : !adapter.engage)) {
+      return { status: 'refused', classification: 'refused', reason: 'session_unavailable' };
+    }
     const previous = engagementRef.current;
-    if (previous?.key === sessionKey && previous.targetCreatureId === targetCreatureId && previous.inFlight) {
+    if (previous?.key === sessionKey && previous.targetCreatureId === targetCreatureId
+      && previous.abilityKey === abilityKey && previous.inFlight) {
       return { status: 'refused', classification: 'refused', reason: 'in_flight' };
     }
-    const engagement = previous?.key === sessionKey && previous.targetCreatureId === targetCreatureId && previous.uncertain
+    const engagement = previous?.key === sessionKey && previous.targetCreatureId === targetCreatureId
+      && previous.abilityKey === abilityKey && previous.uncertain
       ? previous
-      : { key: sessionKey, targetCreatureId, requestId: generateRequestId(), inFlight: false, uncertain: false };
+      : { key: sessionKey, targetCreatureId, abilityKey, requestId: generateRequestId(), inFlight: false, uncertain: false };
     engagement.inFlight = true;
     engagementRef.current = engagement;
     // A deliberate hostile action supersedes a speculative automatic entry.
@@ -160,7 +165,9 @@ export function useCombat2EntrySession({
     const generation = ++generationRef.current;
     setState({ ...EMPTY, key: sessionKey, status: 'entering' });
     try {
-      const outcome = await adapter.engage(characterId, targetCreatureId, engagement.requestId);
+      const outcome = abilityKey
+        ? await adapter.engageAction!(characterId, targetCreatureId, abilityKey, engagement.requestId)
+        : await adapter.engage!(characterId, targetCreatureId, engagement.requestId);
       engagement.inFlight = false;
       engagement.uncertain = false;
       if (generationRef.current !== generation || currentKeyRef.current !== sessionKey) {
@@ -185,11 +192,15 @@ export function useCombat2EntrySession({
     }
   }, [sessionKey, characterId, adapter, generateRequestId]);
 
+  const engage = useCallback((targetCreatureId: string) => engageWith(targetCreatureId, null), [engageWith]);
+  const engageAction = useCallback((targetCreatureId: string, abilityKey: string) =>
+    engageWith(targetCreatureId, abilityKey), [engageWith]);
+
   return useMemo(() => {
-    if (!enabled) return { ...EMPTY, status: 'disabled' as const, retry, engage };
-    if (!characterId || !nodeId) return { ...EMPTY, status: 'idle' as const, retry, engage };
-    if (state.key === sessionKey && state.status !== 'idle') return { ...state, retry, engage };
-    if (hasLivingCreatures !== true || state.key !== sessionKey) return { ...EMPTY, status: 'idle' as const, retry, engage };
-    return { ...state, retry, engage };
-  }, [enabled, characterId, nodeId, hasLivingCreatures, state, sessionKey, retry, engage]);
+    if (!enabled) return { ...EMPTY, status: 'disabled' as const, retry, engage, engageAction };
+    if (!characterId || !nodeId) return { ...EMPTY, status: 'idle' as const, retry, engage, engageAction };
+    if (state.key === sessionKey && state.status !== 'idle') return { ...state, retry, engage, engageAction };
+    if (hasLivingCreatures !== true || state.key !== sessionKey) return { ...EMPTY, status: 'idle' as const, retry, engage, engageAction };
+    return { ...state, retry, engage, engageAction };
+  }, [enabled, characterId, nodeId, hasLivingCreatures, state, sessionKey, retry, engage, engageAction]);
 }
