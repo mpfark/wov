@@ -6259,6 +6259,19 @@ export type Database = {
         }
         Returns: Json
       }
+      combat_intent_without_global_lock_order: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _encounter_id: string
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_character_id: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
       combat_intent_without_spendable_cp_preflight: {
         Args: {
           _ability_key: string
@@ -6276,6 +6289,10 @@ export type Database = {
       combat_soak_access_check: {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
+      }
+      combat2_arrive_after_relocation: {
+        Args: { _character_id: string; _request_id: string }
+        Returns: Json
       }
       combat2_delivery_authorized: {
         Args: { _character_id: string; _encounter_id: string }
@@ -6356,6 +6373,16 @@ export type Database = {
       combat2_engage: {
         Args: {
           _character_id: string
+          _request_id: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
+      combat2_hostile_action: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _intent_kind: string
           _request_id: string
           _target_creature_id: string
         }
@@ -7058,6 +7085,18 @@ export type Database = {
         Returns: Json
       }
       node_tick_commit: {
+        Args: {
+          _candidate_tick: number
+          _claim_token: string
+          _encounter_id: string
+          _expected_last_tick: number
+          _expected_state_version: number
+          _intent_ids: string[]
+          _proposed: Json
+        }
+        Returns: Json
+      }
+      node_tick_commit_without_authoritative_arrival: {
         Args: {
           _candidate_tick: number
           _claim_token: string
