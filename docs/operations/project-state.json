@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T21:08:30Z",
-  "based_on_source_sha": "d78c13572fd27f78c092be0f54440e0e62195ba0",
+  "updated_at": "2026-09-29T21:25:00Z",
+  "based_on_source_sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -24,16 +24,6 @@
     "directly_verified": true
   },
   "database_migrations": [
-    {
-      "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-09-29T21:08:30Z",
-      "evidence_type": "repository",
-      "evidence": "Corrected ENG-HB-001 source is authored at repository SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd and is not installed or live-verified. Lovable's installed-schema preflight rejected the prior, never-installed SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11 because pg_get_functiondef rendered the guarded predecessor assignment as body:='{}'::jsonb rather than the migration's whitespace-specific body := '{}'::jsonb marker; the guard aborted before mutation, no ledger entry exists and no object changed. The corrected guard and transformation use one context-bounded net.http_post body-assignment match, accept insignificant spaces/tabs/newlines, require exactly one expected empty-jsonb assignment and preserve quoted text and unrelated assignments. All heartbeat behavior, 24-hour retention, failure isolation, ACL, cadence and gameplay semantics remain unchanged. Official types require regeneration only after installation. No Cloud access or gameplay invocation occurred in the correction.",
-      "reporting_actor": "Codex",
-      "directly_verified": true
-    },
     {
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
       "status": "installed",
@@ -153,6 +143,16 @@
       "evidence": "Installed exactly once through the migration runner from repository bytes SHA-256 11b2778c84de0fde6714a06e0d5c8da549365afe6365b669aa1f60f859677fdb (source 188e86c23260e034e2746c4b3079b8bcf1670ff6; rejected 3db3bc26..., a213cdc7..., 7537307c..., 9e8a2498..., 09a497b9... never installed). Ledger version 20260929093442 name 8b9ada16-f768-4652-9a47-5fd1c147699d; generated artifact supabase/migrations/20260929093442_8b9ada16-f768-4652-9a47-5fd1c147699d.sql SHA-256 0c17218c75e4d2ddda33d2ff633dc95e2e16db3a8401fd859960cb99b4ea3239, retained separately. Full rollback-only compile reached a deliberate stop marker first with no residue. Post-install read-only checks (the removed postflight) passed: combat2_depart -> combat2_depart_without_immediate_transition -> combat2_depart_without_canary_gate and finish_immediate_departure; combat2_party_depart -> combat2_party_depart_without_immediate_transition -> combat2_party_depart_without_canary_gate and finish_immediate_party_departure -> finish_immediate_departure; all postgres-owned SECURITY DEFINER VOLATILE; search_path public,pg_temp (party canary inner keeps public,auth,pg_temp); only combat2_depart, combat2_party_depart and combat_flee are executable by authenticated; internal functions service_role only; no anon/PUBLIC. Trigger combat2_party_departure_member_finalized removed; no other trigger on combat2_departure_request; arrival trigger combat2_authoritative_arrival and location guards on characters still enabled. Encounter pair locked by UUID before characters (solo and party); movers locked by UUID; leader-first lock removed; ORDER BY leader_last,joined_at,id twice, movement context once. Protected fingerprints identical before and after (21 characters location/HP/MP/CP md5 43fe2160..., intents de7e48be..., departures 821ed04d..., 4 encounters 1 active, 12 effects, 0 party departures, 3 accepted members none following). No gameplay RPC invoked; live movement not verified.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
+      "status": "installed",
+      "sha": null,
+      "timestamp": "2026-09-29T21:18:04Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-HB-001 installed exactly once through the migration runner from repository bytes SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd (source e4f539038eb18ce165f8dcd11fe7ffe3d090f82e; rejected b763f723... never installed). Ledger version 20260929211804 name 761d0556-953f-4c59-92d2-da56eca4b29e; generated artifact SHA-256 f66ae5f784b3adafd499227d302c12afb0e1e51697b4e7722e9246f3baa35eae (repository bytes without final newline), retained separately. Pre-install: guard block ran byte-exact against Cloud and accepted the compact body:='{}'::jsonb (exactly one match); rollback-only run of guard, table/column creation, dispatcher body patch and wrapper rename reached a deliberate stop marker with no residue. Post-install: world_heartbeat_run RLS on, no anon/authenticated grants, not in Realtime, 0 rows; wrapper chain combat2_dispatch_scheduler_fire -> settle_out_of_combat_resources + combat2_dispatch_scheduler_fire_without_resource_settlement (patched body with heartbeat_id, one match) with isolated settlement_error/scheduler_error branches; renamed predecessor kept; 24h retention, cleanup LIMIT 2048; all six affected functions postgres-owned SECURITY DEFINER VOLATILE, service_role-only execute. Fingerprints identical before/after (characters 4438d1a2..., encounters fd54f5af..., fighters f0378e62..., settlement cursor 88680be7..., schedule state 78eb245d..., 223 diagnostic rows), world asleep, maintenance, soak off, 0 cron jobs. No scheduler/settlement/dispatcher/gameplay call; live heartbeat correlation unverified.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "generated_supabase_types": {
@@ -166,16 +166,6 @@
     "directly_verified": true
   },
   "edge_function_deployments": [
-    {
-      "identity": "combat2-dispatch-once",
-      "status": "deployed",
-      "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-      "timestamp": "2026-09-22T21:03:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Redeployed from source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and reported successful. Dependency containment justifies exactly this function: it imports the shared Combat2 node-tick worker, which imports the shared resolver changed by this checkpoint, where encounter completion now counts living engaged creatures (c.hp > 0 && c.row.is_alive && c.engaged) instead of all living bystanders. Canonical/Edge mirror generation produced no diff, proving exact parity between src/shared/combat2/resolver.ts and supabase/functions/_shared/combat2/resolver.ts. No unrelated function was deployed and neither deployed function was invoked. No cadence, cron, claim-lease, movement-timing, combat-rule or world-state change accompanied the deployment.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
-    },
     {
       "identity": "combat2-tick-once",
       "status": "deployed",
@@ -203,6 +193,16 @@
       "timestamp": "2026-09-29T09:45:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Deployed for the committed CP-mirror correction (resolver.ts getEffectiveMaxCp with INT+WIS, commit e72f20471). Transitive import analysis of every Edge entry point proved combat-tick and combat-catchup are the only functions reaching supabase/functions/_shared/combat/pure/resolver.ts. No Combat2 Edge function deployed; functions not invoked.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat2-dispatch-once",
+      "status": "deployed",
+      "sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
+      "timestamp": "2026-09-29T21:22:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Deployed from the verified checkpoint after ENG-HB-001 install; Edge mirror parity, focused tests and both TypeScript checks passed. Not invoked; no other function deployed.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
