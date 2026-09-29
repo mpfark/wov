@@ -6,11 +6,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-MOVE-001 — Immediate serialized Combat2 departure
 
-- **Engine area / status / priority:** movement/concurrency; `source_complete`; 1.
+- **Engine area / status / priority:** movement/concurrency; `live_verification_pending`; 1.
 - **Problem or decision:** approved semantics require ordinary combat departure to resolve immediately without an exit attack or any combat tick.
 - **Intended outcome:** one synchronous authoritative transition serialized with encounter processing: departure-first excludes the fighter from the next tick; tick-first commits then a surviving fighter departs; MP, relocation and non-damage cleanup occur exactly once.
-- **Dependencies:** install and inspect `20260929100000_combat2_immediate_authoritative_departure.sql`, then perform bounded solo/party live verification.
-- **Evidence/current state:** the forward migration reuses the installed validation/request owners and adds one service-only non-combat finalizer. Lovable rejected uninstalled SHA-256 `09a497…f544` after proving its preserved early-leader lock could deadlock UUID-ordered resource settlement. Corrected SHA-256 `9e8a24…d24f4` pre-locks the origin/destination encounter pair by UUID, freezes movers, locks every included character by UUID, then moves followers by `joined_at`/UUID and the leader last; settlement remains unchanged. Solo and coordinated movement complete in the request transaction; destination-less `combat_flee` fails closed. No Cloud installation or live proof is claimed.
+- **Dependencies:** bounded solo/party race and live verification.
+- **Evidence/current state:** repository migration SHA-256 `11b2778…77fdb` is recorded installed once as ledger version `20260929093442`; the exact Git artifact is retained separately. Installed-definition/grant/lock-order inspection passed. Mik reports the dependent frontend manually published, but live movement behavior is not verified. Solo and coordinated movement complete in the request transaction; destination-less `combat_flee` fails closed.
 - **Acceptance criteria:** executable departure-first/tick-first concurrency tests; replay/conflict/death/MP/destination/solo-party/encounter-end races; follower-first/leader-last; remaining participants continue; no duplicate event, charge, relocation, release, cleanup or completion; no catch-up burst; installed and bounded live verification.
 - **Specification sections:** One authoritative world heartbeat; Movement and party movement; Combat resolution.
 
@@ -26,22 +26,22 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
 
-- **Engine area / status / priority:** entry/targeting/concurrency; `implemented_source`; 2.
-- **Problem or decision:** movement does not invoke encounter entry; automatic entry currently depends on each moved character's browser receiving an actionable roster. The atomic engagement RPC accepts only Basic Attack. Tank projection also retains designated-party priority rather than the approved newest-entry-only rule.
+- **Engine area / status / priority:** entry/targeting/concurrency; `live_verification_pending`; 2.
+- **Problem or decision:** the source and installed contract now cover authoritative arrival, generic hostile first action and newest-entry tank priority; bounded live behavior remains unverified.
 - **Intended outcome:** solo and coordinated movement invoke one idempotent authoritative entry check in follower-first/leader-last order; reconnect attaches without duplication; one generic server-authored hostile-action boundary atomically enters and queues a validated hostile ability or Basic Attack; tank fallback becomes newest valid entry globally.
-- **Dependencies:** choose a transaction/lock composition with movement and the existing entry/intent RPCs; define server-side hostile/non-hostile ability preflight without duplicating the TypeScript catalogue; preserve `ENG-MOVE-001`.
-- **Evidence/current state:** forward migration `20260928100000_combat2_authoritative_arrival_hostile_initiation.sql` authors movement-completion entry, generic server-classified hostile initiation, newest-entry-only tank order and a single documented node/encounter/intent/character lock order. Focused source tests cover the contract. Installation, Mik's manual publication and bounded live proof remain pending.
+- **Dependencies:** bounded live arrival, hostile-initiation and multiplayer tank-order verification; preserve `ENG-MOVE-001` serialization.
+- **Evidence/current state:** forward migration `20260928100000_combat2_authoritative_arrival_hostile_initiation.sql` authors movement-completion entry, generic server-classified hostile initiation, newest-entry-only tank order and one documented lock order. Project state records direct installation evidence, and Mik reports the dependent frontend manually published. Arrival, hostile initiation and multiplayer tank order remain live-unverified.
 - **Acceptance criteria:** executable solo/party/reconnect concurrency tests, action-payload replay conflict tests, invalid-first-action rollback, follower-first/leader-last entry generations, unrelated newcomer tank, no duplicate encounter/fighter/intent/reward qualification, installed and bounded live proof.
 - **Specification sections:** Creatures, targeting and initiation; Movement and party movement; Combat resolution.
 
 ### ENG-HB-001 — Explicit global heartbeat identity
 
-- **Engine area / status / priority:** scheduling; `planned`; 2.
+- **Engine area / status / priority:** scheduling; `ready`; 2.
 - **Problem or decision:** current two-second scheduler is semantically shared, but encounter ticks and settlement buckets lack a common observable heartbeat identity.
-- **Intended outcome:** deterministic global heartbeat number/time boundary carried to phased systems without changing local encounter tick semantics.
-- **Dependencies:** ENG-COMBAT-001 evidence; schema compatibility design.
-- **Evidence/current state:** scheduler fire, four-second cursor and due encounters exist; no competing authoritative browser timer was found.
-- **Acceptance criteria:** one identity survives retries; settlement runs on a defined phase; commits advance only local ticks; maintenance/sleep do not bank unbounded work; installed and diagnostic proof.
+- **Intended outcome:** a durable monotonic scheduler-invocation identity carried as correlation metadata to settlement, selected nodes, claims, commits and bounded diagnostics without changing local encounter tick semantics or delaying immediate transactions.
+- **Dependencies:** Mik chooses ineligible-attempt recording and retention; then one forward schema/transport batch.
+- **Evidence/current state:** [the approved design note](../design/world-heartbeat-identity.md) maps the distinct current identities and specifies a database-generated `bigint` run identity. Current source has no shared id: settlement uses a four-second bucket, encounter work uses local ticks/claim tokens, immediate transitions use request UUIDs, delivery uses a local cursor, and the Edge handler creates a per-node diagnostic UUID.
+- **Acceptance criteria:** strictly increasing durable ids with documented gaps; one fire can correlate zero/many nodes and zero/many settlement steps; retries get new ids while existing domain fences prevent duplicate effects; commits advance only local ticks; immediate transactions remain immediate; maintenance/sleep do not bank work; fields and retention are bounded; installed and diagnostic proof.
 - **Specification sections:** One authoritative world heartbeat; Failure, diagnostics and verification.
 
 ### ENG-DIAG-001 — Limited latency and jitter measurement

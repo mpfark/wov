@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T09:45:00Z",
-  "based_on_source_sha": "a10c2ce2a028c31f4c1ff2011d85c64b12a0e2dc",
+  "updated_at": "2026-09-29T12:30:00Z",
+  "based_on_source_sha": "ee1b4f7fefc19e45517a0b975aecb5860c13ce20",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "f4f98990415a530889c3227ea615156d563c8ebe",
-    "timestamp": "2026-09-25T09:33:00Z",
+    "sha": "ee1b4f7fefc19e45517a0b975aecb5860c13ce20",
+    "timestamp": "2026-09-29T12:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and identical at f4f98990415a530889c3227ea615156d563c8ebe before centralizing Combat2 ability-disabled reasons. The synchronized SHA is the required checkpoint and preserves all installation evidence, generated types and the character-local log hydration source.",
+    "evidence": "Local main was safely fast-forwarded to origin/main at ee1b4f7fefc19e45517a0b975aecb5860c13ce20; required checkpoint 188e86c23260e034e2746c4b3079b8bcf1670ff6 is in its ancestry. The synchronized history preserves Lovable's exact immediate-departure ledger artifact, regenerated Supabase types and installation/deployment evidence without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -148,10 +148,10 @@
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "28f4791632ba21f10d9a07f8456eebe1680d6a14",
-    "timestamp": "2026-09-23T10:13:00Z",
+    "sha": "51ae2512d395988528786651a22f8e46edcc4f6c",
+    "timestamp": "2026-09-29T09:34:45Z",
     "evidence_type": "cloud_inspection",
-    "evidence": "Regenerated from the installed Cloud schema, never hand-edited. The regenerated output is byte-identical to the committed file at 28f4791632ba21f10d9a07f8456eebe1680d6a14, which already declares character_resource_settlement_state; no further type change was required.",
+    "evidence": "Lovable regenerated the official types from the installed schema and committed the 24-line immediate-departure function surface in 51ae2512d395988528786651a22f8e46edcc4f6c together with the exact ledger artifact. This reconciliation reads the committed evidence only and does not independently inspect Cloud.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
@@ -198,14 +198,14 @@
     }
   ],
   "frontend_publication": {
-    "status": "ready_for_manual_publish",
-    "artifact": "ENG-COMBAT-002 authoritative arrival and hostile-action initiation",
+    "status": "manually_published",
+    "artifact": "ENG-COMBAT-002 authoritative arrival/hostile initiation and ENG-MOVE-001 immediate departure frontend",
     "sha": null,
-    "timestamp": "2026-09-28T21:45:00Z",
-    "evidence_type": "tests",
-    "evidence": "Frontend source routes an enemy-targeted ability without an encounter through the new generic hostile-action boundary; the server remains authoritative for hostility, target, ability and CP classification. Existing in-encounter ability/stance routing, disabled reasons and legacy-off behavior remain unchanged. Ready for Mik's manual publication only after migration installation; no publication occurred.",
-    "reporting_actor": "Codex",
-    "directly_verified": true
+    "timestamp": "2026-09-29T12:30:00Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Mik reports the dependent frontend manually published after the ENG-COMBAT-002 and immediate-departure installations. This records publication only: live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
+    "reporting_actor": "Mik",
+    "directly_verified": false
   },
   "combat2_operational_work": [
     {
@@ -522,22 +522,22 @@
   "known_blockers": [
     {
       "identity": "authoritative-arrival-and-hostile-first-action",
-      "status": "blocked",
+      "status": "installed",
       "sha": null,
-      "timestamp": "2026-09-28T10:15:00Z",
-      "evidence_type": "tests",
-      "evidence": "ENG-COMBAT-002 is implemented in repository source by 20260928100000_combat2_authoritative_arrival_hostile_initiation.sql and focused frontend routing. Movement completion owns browser-independent entry; hostile first actions use the server-authored ability target contract and existing exact intent/CP authority; newest entry owns tank priority. Installation, Mik's manual publication and bounded live verification remain pending, so no live behavior is claimed.",
-      "reporting_actor": "Codex",
+      "timestamp": "2026-09-28T21:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-COMBAT-002 is installed with repository-recorded direct Cloud evidence and Mik reports the dependent frontend manually published. Movement completion owns browser-independent entry; hostile first actions use the server-authored ability target contract and existing exact intent/CP authority; newest entry owns tank priority. Live arrival, hostile initiation and multiplayer tank order remain unverified.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
       "identity": "immediate-combat2-departure-architecture",
-      "status": "authored",
+      "status": "installed",
       "sha": null,
-      "timestamp": "2026-09-29T09:21:34Z",
-      "evidence_type": "tests",
-      "evidence": "ENG-MOVE-001 remains authored and uninstalled in forward migration 20260929100000_combat2_immediate_authoritative_departure.sql. Earlier rejected hashes remain unapplied, including 3db3bc269373eec36a7b33e72fe8abc988887e0b43d055af720d0916ac35828a: Lovable proved its first three blocks compile and pass and its final DO block is valid ordinary SQL, but the installation runner consistently truncates/corrupts that final postflight and returns SQLSTATE 42601; every attempt rolled back with no ledger row or artifact. Corrected install candidate SHA-256 11b2778c84de0fde6714a06e0d5c8da549365afe6365b669aa1f60f859677fdb removes only that runner-incompatible postflight DO block. Its assertions moved to source contract tests and this mandatory read-only Lovable post-install checklist: confirm combat2_depart, combat2_party_depart and combat_flee plus both immediate finalizers and both renamed predecessors exist; confirm public wrappers compose through the renamed predecessors/finalizers; confirm combat2_party_departure_member_finalized is absent; confirm all owners are postgres, SECURITY DEFINER true, volatility volatile, search paths are public,pg_temp except the preserved canary predecessor public,auth,pg_temp, and ACLs expose public wrappers only to authenticated/service_role while internal functions are service_role-only with no PUBLIC/anon; confirm encounter-pair and mover-character locks remain UUID ordered while movement remains follower joined_at/UUID then leader last; confirm no position(\"...\") or strpos(\"...\"), embedded BEGIN/COMMIT, or unbalanced/truncated statement remains. Lexer-aware tests prove the final file has three complete DO statements, ends on the complete combat_flee service grant, and retains every functional guard and patch contract. Approved movement behavior, lock graph and byte-identical resource settlement remain unchanged. Cloud compilation, installation and live verification remain pending. Canonical/server INT+WIS CP parity remains exact; combat-tick and combat-catchup still require later deployment for that independent correction. No Cloud operation occurred.",
-      "reporting_actor": "Codex",
+      "timestamp": "2026-09-29T09:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-MOVE-001 installed exactly once from repository SHA-256 11b2778c84de0fde6714a06e0d5c8da549365afe6365b669aa1f60f859677fdb. Git retains ledger artifact supabase/migrations/20260929093442_8b9ada16-f768-4652-9a47-5fd1c147699d.sql with SHA-256 0c17218c75e4d2ddda33d2ff633dc95e2e16db3a8401fd859960cb99b4ea3239; it is normalized-identical to the repository migration and lacks only the final newline. Repository-recorded post-install inspection covers definitions, grants, lock order and trigger removal. Mik reports the frontend manually published. No live movement or race behavior is claimed. combat-tick and combat-catchup deployments are separately recorded at source 188e86c23260e034e2746c4b3079b8bcf1670ff6.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -556,7 +556,7 @@
       "sha": null,
       "timestamp": "2026-09-23T10:13:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Both prerequisite migrations are installed and verified by direct Cloud inspection; the remaining gap is Mik's manual frontend publication plus bounded live verification of regeneration and movement, which Lovable is not authorized to perform. The operator-reported 0-MP movement block was not repaired and no character was mutated. Character-scoped persistent stances, stance activation outside combat, authoritative food effects, inactive-character return-home and ADM-025B remain pending and unchanged.",
+      "evidence": "Both prerequisite migrations are installed and verified by direct Cloud inspection; Mik subsequently reports the dependent frontend manually published. Bounded live verification of regeneration and movement remains outstanding and was not performed in this reconciliation. The operator-reported 0-MP movement block was not repaired and no character was mutated. Character-scoped persistent stances, stance activation outside combat, authoritative food effects, inactive-character return-home and ADM-025B remain pending and unchanged.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     },
@@ -603,11 +603,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik manually publishes the frontend and performs bounded live verification of ENG-COMBAT-002 arrival, hostile initiation and tank order; ENG-MOVE-001 remains separate.",
+    "artifact": "ENG-HB-001 minimal durable world-heartbeat identity implementation after Mik chooses ineligible-attempt recording and retention; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
     "sha": null,
-    "timestamp": "2026-09-28T21:45:00Z",
-    "evidence_type": "handoff",
-    "evidence": "ENG-COMBAT-002 installed with direct Cloud evidence; live behavior not verified.",
+    "timestamp": "2026-09-29T12:30:00Z",
+    "evidence_type": "repository",
+    "evidence": "The repository-backed heartbeat audit distinguishes scheduler invocation, settlement bucket, encounter candidate/committed tick, request UUID and delivery cursor. The approved design recommends a database-generated bigint correlation id and bounded run record without changing cadence or immediate gameplay. No implementation or Cloud operation occurred; live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
