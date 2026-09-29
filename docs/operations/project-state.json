@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-28T21:45:00Z",
-  "based_on_source_sha": "9c439cce6984a48ec838fe373921c6db72567b9c",
+  "updated_at": "2026-09-29T07:07:00Z",
+  "based_on_source_sha": "4b663268e1ebb3ee67f937f4f2d13c1100f417ea",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -504,9 +504,9 @@
       "identity": "immediate-combat2-departure-architecture",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-28T22:30:00Z",
+      "timestamp": "2026-09-29T07:07:00Z",
       "evidence_type": "tests",
-      "evidence": "ENG-MOVE-001 source is complete in corrected, still-unapplied forward migration 20260929100000_combat2_immediate_authoritative_departure.sql. Lovable rejected SHA-256 09a497b9bf8aae7f7238162eb4478708eb26c2ccb76cce4d6419bbb01e28f544 before installation after proving a leader-first/follower-later character-lock cycle against UUID-ordered resource settlement. Corrected SHA-256 9e8a24982a6dae443d18811362f65a04f45d873ea399ddcb394c134a3e6d24f4 pre-locks origin/destination encounters by UUID, freezes the complete included mover set under the party-lifecycle boundary, locks all included character rows by UUID, revalidates, then preserves follower joined_at/UUID and leader-last movement/arrival order. This also removes the Test Arena reset encounter-before-character versus destination-arrival character-before-encounter cycle found by the full lock audit. Resource settlement is unchanged. Installed predecessor functions remain the owners of ownership, route/key/MP validation, party inclusion/order and durable request creation; the service-only finalizer performs only non-damage cleanup, absence, relocation, MP charge and installed destination arrival. Destination-less combat_flee remains a destination_required compatibility refusal. Structural, schema-aware and lock-model source verification is complete; installed-schema compilation, real concurrent PostgreSQL races and bounded live verification remain pending. No Cloud operation was performed.",
+      "evidence": "ENG-MOVE-001 remains authored and uninstalled in forward migration 20260929100000_combat2_immediate_authoritative_departure.sql. Lovable rejected SHA-256 09a497b9bf8aae7f7238162eb4478708eb26c2ccb76cce4d6419bbb01e28f544 after proving a leader-first/follower-later lock cycle; SHA-256 9e8a24982a6dae443d18811362f65a04f45d873ea399ddcb394c134a3e6d24f4 was also rejected and uninstalled because five party-lock-order position guards used PostgreSQL identifier-style double quotes and failed compilation with SQLSTATE 42703. Corrected install candidate SHA-256 7537307cedf9a0aecff4789c2585ea46c778a681d2af13eeaf94d805c9132564 uses valid single-quoted literals, doubles the embedded party-lifecycle quotes and requires every guarded predecessor fragment exactly once. The approved lock graph and behavior remain unchanged: origin/destination encounters by UUID, complete mover freeze under party-lifecycle, included characters by UUID, follower joined_at/UUID order with leader last, revalidation and immediate non-damage departure. Resource settlement remains byte-identical. Installed-schema PostgreSQL compilation, concurrent races and bounded live verification remain pending. Synchronized Lovable commit e72f204718f48e801f11c50c5962a9096f562761 corrected only the generated Edge/server C1 resolver mirror to call the canonical INT+WIS maximum-CP formula; canonical source was already correct and a focused source/mirror identity pair now guards it. combat-tick and combat-catchup import that mirror and require later redeployment for this CP correction; no deployment or Cloud operation occurred.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },

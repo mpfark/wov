@@ -14,6 +14,7 @@ const PAIRS: Array<[string, string]> = [
   ['src/shared/combat/ability-magnitude.ts', 'supabase/functions/_shared/combat/ability-magnitude.ts'],
   ['src/shared/config/effective-ability.ts', 'supabase/functions/_shared/config/effective-ability.ts'],
   ['src/shared/combat/tick-rng.ts', 'supabase/functions/_shared/combat/tick-rng.ts'],
+  ['src/shared/combat/pure/resolver.ts', 'supabase/functions/_shared/combat/pure/resolver.ts'],
   ['src/shared/combat/tick-rng.ts', 'supabase/functions/_shared/combat/tick-rng.ts'],
   ['src/shared/formulas/combat.ts', 'supabase/functions/_shared/formulas/combat.ts'],
   ['src/shared/formulas/stats.ts', 'supabase/functions/_shared/formulas/stats.ts'],
@@ -22,7 +23,7 @@ const PAIRS: Array<[string, string]> = [
 
 /** Strip `.ts` extensions from relative import specifiers so both sides compare equal. */
 function normalize(source: string): string {
-  return source.replace(/from '(\.[^']*?)\.ts'/g, "from '$1'");
+  return source.replaceAll('\r\n', '\n').replace(/from '(\.[^']*?)\.ts'/g, "from '$1'");
 }
 
 describe('shared mirror identity', () => {

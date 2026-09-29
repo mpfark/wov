@@ -64,6 +64,8 @@ DECLARE
   leader_lock_needle text;
   mover_relock_needle text;
   encounter_lock_needle text;
+  guard_needle text;
+  guard_offset integer;
   before_owner oid;
   before_security boolean;
   before_volatility "char";
@@ -106,14 +108,32 @@ BEGIN
     LEFT JOIN pg_roles role ON role.oid=acl.grantee
     WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname IN('anon','authenticated'))
   ) THEN RAISE EXCEPTION 'ENG-MOVE-001 party predecessor browser ACL drift'; END IF;
-  IF position("PERFORM pg_advisory_xact_lock(hashtextextended('party-lifecycle',0))" in definition)=0
-     OR position("ORDER BY leader_last,joined_at,id" in definition)=0
-     OR position("SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE" in definition)=0
-     OR position("IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()" in definition)=0
-     OR position("FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP" in
+  IF position('PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))' in definition)=0
+     OR position('ORDER BY leader_last,joined_at,id' in definition)=0
+     OR position('SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE' in definition)=0
+     OR position('IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()' in definition)=0
+     OR position('FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP' in
        pg_get_functiondef('public.settle_out_of_combat_resources(timestamptz)'::regprocedure))=0 THEN
     RAISE EXCEPTION 'ENG-MOVE-001 expected party/settlement lock contract drift';
   END IF;
+  FOREACH guard_needle IN ARRAY ARRAY[
+    'PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))',
+    'ORDER BY leader_last,joined_at,id',
+    'SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE',
+    'IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()'
+  ] LOOP
+    guard_offset:=position(guard_needle in definition);
+    IF guard_offset=0 OR position(guard_needle in substring(definition FROM guard_offset+length(guard_needle)))>0 THEN
+      RAISE EXCEPTION 'ENG-MOVE-001 expected party lock contract must occur exactly once';
+    END IF;
+  END LOOP;
+  guard_needle:='FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP';
+  definition:=pg_get_functiondef('public.settle_out_of_combat_resources(timestamptz)'::regprocedure);
+  guard_offset:=position(guard_needle in definition);
+  IF guard_offset=0 OR position(guard_needle in substring(definition FROM guard_offset+length(guard_needle)))>0 THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 expected settlement lock contract must occur exactly once';
+  END IF;
+  SELECT pg_get_functiondef('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure) INTO definition;
 
   declaration_needle := ' ordinal integer:=0; child uuid; event_id uuid; queued integer:=0; outcomes jsonb;';
   encounter_lock_needle := ' SELECT * INTO encounter FROM public.node_encounter WHERE node_id=leader.current_node_id AND status=''active'' FOR UPDATE;';

@@ -7,6 +7,13 @@ const settlement=readFileSync('supabase/migrations/20260923100000_authoritative_
 const arenaReset=readFileSync('supabase/migrations/20260907051948_f907b2a9-78e9-4e38-a179-68f04e0cbc7d.sql','utf8').replaceAll('\r\n','\n');
 const generatedTypes=readFileSync('src/integrations/supabase/types.ts','utf8').replaceAll('\r\n','\n');
 const lockBody=sql.slice(sql.indexOf('locked_origin:=leader.current_node_id;'),sql.indexOf('$body$);'));
+const partyGuardFragments=[
+  "PERFORM pg_advisory_xact_lock(hashtextextended('party-lifecycle',0))",
+  'ORDER BY leader_last,joined_at,id',
+  'SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE',
+  'IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()',
+  'FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP',
+];
 
 function rowColumns(table:string):Set<string>{
   const start=generatedTypes.indexOf(`      ${table}: {`);
@@ -28,6 +35,27 @@ function reversedPair(left:string[],right:string[]):boolean{
 }
 
 describe('ENG-MOVE-001 immediate authoritative departure migration',()=>{
+  it('uses valid exact-once PostgreSQL text guards for all five predecessor fragments',()=>{
+    expect(sql).not.toMatch(/\b(?:position|strpos)\s*\(\s*"/i);
+    expect(sql).toContain("position('PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))' in definition)=0");
+    expect(sql).toContain("position('ORDER BY leader_last,joined_at,id' in definition)=0");
+    expect(sql).toContain("position('SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE' in definition)=0");
+    expect(sql).toContain("position('IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()' in definition)=0");
+    expect(sql).toContain("position('FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP' in");
+    expect(sql).toContain('guard_offset=0 OR position(guard_needle in substring(definition FROM guard_offset+length(guard_needle)))>0');
+    for(const fragment of partyGuardFragments)expect(sql).toContain(fragment.replaceAll("'","''"));
+  });
+  it('models each migration guard as fail-closed for zero or multiple matches',()=>{
+    const acceptsExactlyOnce=(definition:string,needle:string)=>{
+      const first=definition.indexOf(needle);
+      return first>=0&&definition.indexOf(needle,first+needle.length)<0;
+    };
+    for(const fragment of partyGuardFragments){
+      expect(acceptsExactlyOnce('',fragment)).toBe(false);
+      expect(acceptsExactlyOnce(fragment,fragment)).toBe(true);
+      expect(acceptsExactlyOnce(`${fragment}\n${fragment}`,fragment)).toBe(false);
+    }
+  });
   it('reuses installed validation and completes present-fighter movement in one call',()=>{
     expect(sql).toContain('combat2_depart_without_immediate_transition');
     expect(sql).toContain("result->>'kind' IN('queued','already_queued')");
