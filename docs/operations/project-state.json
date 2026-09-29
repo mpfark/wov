@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T12:30:00Z",
-  "based_on_source_sha": "ee1b4f7fefc19e45517a0b975aecb5860c13ce20",
+  "updated_at": "2026-09-29T17:04:23Z",
+  "based_on_source_sha": "239820183bfc70b27adaa86e1384365942bfec8f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -24,6 +24,16 @@
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-29T17:04:23Z",
+      "evidence_type": "repository",
+      "evidence": "ENG-HB-001 source is authored at repository SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11 and is not installed or live-verified. It creates a generated bigint world_heartbeat_run identity for every actual scheduler-wrapper call, including ineligible calls; retains bounded scalar run evidence for 24 hours with indexed cleanup capped at 2048 rows per call; preserves independent settlement and dispatch failure branches; passes the optional id to the dispatcher and bounded server diagnostics; and leaves encounter ticks, settlement buckets, request UUIDs, claims and delivery cursors independent. The table has authored RLS/no-browser/no-Realtime guards. Official types require regeneration only after installation. No Cloud access or gameplay invocation occurred.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
       "status": "installed",
@@ -208,6 +218,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "eng-hb-001-source-checkpoint",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-09-29T17:04:23Z",
+      "evidence_type": "tests",
+      "evidence": "The scheduler wrapper, settlement composition and dispatcher dependency were traced from installed-evidence source before authoring. Focused contracts cover allocation before ineligibility, zero/multiple node correlation, retry identity separation, four-second settlement phase, independent settlement/dispatch failures, encounter-local tick independence, immediate transaction independence, 24-hour bounded cleanup, runner-compatible SQL, RLS/browser/Realtime closure and optional backward-compatible dispatcher bodies. The only changed Edge entry point is combat2-dispatch-once/handler.ts; shared generator output remains unchanged. Installation, official type regeneration, deployment and bounded live observation remain pending Lovable/operator work.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "character-local-log-initial-hydration-2026-09-25",
       "status": "ready_for_manual_publish",
@@ -603,11 +623,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "ENG-HB-001 minimal durable world-heartbeat identity implementation after Mik chooses ineligible-attempt recording and retention; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
+    "artifact": "Install and verify ENG-HB-001, regenerate official Supabase types and deploy only combat2-dispatch-once; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
     "sha": null,
-    "timestamp": "2026-09-29T12:30:00Z",
+    "timestamp": "2026-09-29T17:04:23Z",
     "evidence_type": "repository",
-    "evidence": "The repository-backed heartbeat audit distinguishes scheduler invocation, settlement bucket, encounter candidate/committed tick, request UUID and delivery cursor. The approved design recommends a database-generated bigint correlation id and bounded run record without changing cadence or immediate gameplay. No implementation or Cloud operation occurred; live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
+    "evidence": "ENG-HB-001 is implemented in source only. Lovable must install the exact migration once, verify the guarded table/function/grant/composition/retention contract, regenerate official types and deploy the changed combat2-dispatch-once handler. A separately authorized bounded observation must establish live correlation. No Cloud operation occurred in source work; live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

@@ -11,6 +11,7 @@ export interface Combat2DiagnosticEvent {
   encounterId?: string | null;
   nodeId?: string | null;
   cursor?: number | null;
+  heartbeatId?: number | null;
   outcome?: string | null;
   elapsedMs?: number | null;
 }
@@ -100,6 +101,7 @@ export async function exportCombat2ServerRecording(client:DiagnosticRpcClient,re
     return {side:'server',event:event.event_type,wallTime:event.occurred_at,requestId:typeof event.request_id==='string'?event.request_id:null,
       intentId:typeof event.intent_id==='string'?event.intent_id:null,encounterId:typeof event.encounter_id==='string'?event.encounter_id:null,
       nodeId:typeof event.node_id==='string'?event.node_id:null,tick:typeof event.tick==='number'?event.tick:null,
+      heartbeatId:typeof event.heartbeat_id==='number'?event.heartbeat_id:null,
       outcome:typeof event.outcome==='string'?event.outcome:null,elapsedMs:typeof event.elapsed_ms==='number'?event.elapsed_ms:null};});
   return buildCombat2DiagnosticExport(recording,serverEvents);
 }

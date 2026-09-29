@@ -63,7 +63,9 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect((await createCombat2DispatchHandler(identical.deps)(request('{}', `Bearer ${SERVICE_KEY}`))).status).toBe(500);
   });
 
-  it.each(['{"node_id":"' + NODE + '"}', '[]', 'null', '{'])('rejects non-empty or malformed body %s', async (body) => {
+  it.each(['{"node_id":"' + NODE + '"}', '{"heartbeat_id":0}', '{"heartbeat_id":1.5}',
+    '{"heartbeat_id":"1"}', '{"heartbeat_id":1,"extra":true}', '[]', 'null', '{'])(
+    'rejects unsupported or malformed body %s', async (body) => {
     const fixture = setup();
     expect((await fixture.handler(request(body))).status).toBe(400);
     expect(fixture.rpc).not.toHaveBeenCalled();
@@ -86,6 +88,45 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect(fixture.process).toHaveBeenCalledOnce();
     expect(fixture.process.mock.calls[0][0]).toBe(NODE);
     expect(await response.json()).toMatchObject({ classification: 'dispatched', candidateCount: 1, processedCount: 1 });
+  });
+
+  it('carries one scheduler heartbeat through zero or several nodes without replacing local ticks', async () => {
+    const secondNode = '10000000-0000-4000-8000-000000000002';
+    const rows = [
+      { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' },
+      { node_id: secondNode, encounter_id: '10000000-0000-4000-8000-000000000102', next_due_at: '2026-08-31T00:00:01Z' },
+    ];
+    const fixture = setup(rows, [{ session_id: 'session', node_id: NODE, encounter_id: ENCOUNTER }]);
+    const response = await fixture.handler(request('{"heartbeat_id":43201}'));
+    await Promise.all(fixture.deferred);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ heartbeat_id: 43201, candidateCount: 2, processedCount: 2 });
+    expect(fixture.process).toHaveBeenCalledTimes(2);
+    expect(fixture.rpc).toHaveBeenCalledWith('combat2_heartbeat_record_dispatch', {
+      _heartbeat_id: 43201, _classification: 'dispatched', _candidate_count: 2,
+      _processed_count: 2, _more_may_remain: false,
+    });
+    const persisted = fixture.rpc.mock.calls.find(([name]) => name === 'combat2_diagnostic_record_server_events');
+    const events = persisted?.[1]._events as Array<Record<string, unknown>>;
+    expect(events.every(event => event.heartbeat_id === 43201)).toBe(true);
+    expect(events.every(event => event.tick === undefined)).toBe(true);
+
+    const empty = setup();
+    const emptyResponse = await empty.handler(request('{"heartbeat_id":43202}'));
+    expect(await emptyResponse.json()).toMatchObject({ heartbeat_id: 43202, candidateCount: 0, processedCount: 0 });
+    expect(empty.process).not.toHaveBeenCalled();
+  });
+
+  it('isolates heartbeat persistence failure from a completed dispatch', async () => {
+    const fixture = setup();
+    fixture.rpc.mockImplementation(async (name: string) => {
+      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [] }, error: null };
+      if (name === 'combat2_heartbeat_record_dispatch') throw new Error('diagnostic sink unavailable');
+      return { data: [], error: null };
+    });
+    const response = await fixture.handler(request('{"heartbeat_id":9}'));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, heartbeat_id: 9, classification: 'dispatched' });
   });
 
   it('persists ordered worker phases only for authoritative relevant sessions without duplicating gameplay', async()=>{

@@ -24,7 +24,7 @@ HP, CP and MP are distinct resources. Equipment, attributes, effects, stances an
 
 ## Time and authority
 
-The intended timed-work model is one shared server heartbeat with a two-second base cadence. Current source is close to that model but does not yet persist one global heartbeat identity.
+The intended timed-work model is one shared server heartbeat with a two-second base cadence. Source now authors a durable global heartbeat identity, but it is not installed or live-verified yet.
 
 - A scheduled server invocation opens an opportunity to process due work.
 - Each encounter advances its own committed tick sequence. An encounter tick is not a global world tick.
@@ -32,7 +32,7 @@ The intended timed-work model is one shared server heartbeat with a two-second b
 - Movement, encounter entry and other explicitly immediate authoritative transactions do not wait for a heartbeat; they serialize against encounter work.
 - Request UUIDs, claim tokens, encounter ticks, settlement buckets and delivery cursors serve different replay and ordering purposes.
 
-The proposed correlation contract is described in [World heartbeat identity](world-heartbeat-identity.md). It remains pending implementation and must not be described as an installed shared global tick.
+The correlation contract and authored implementation are described in [World heartbeat identity](world-heartbeat-identity.md). Installation and live verification remain pending, so production must not yet be described as having the shared identity.
 
 ## System responsibilities
 
@@ -99,7 +99,7 @@ This project description summarizes those layers. It must not become a parallel 
 
 ### Design intent or incomplete boundaries
 
-- A durable shared `heartbeat_id` is specified but not implemented.
+- A durable shared `heartbeat_id` is authored in source but not installed or live-verified.
 - Stances are encounter-scoped; character-scoped persistence and appropriate out-of-combat activation remain decisions/work.
 - Some ability behavior outside active combat remains intentionally constrained by current encounter authority.
 - Food effects are not yet authoritative durable effects used consistently by settlement and combat.

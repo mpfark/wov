@@ -22,7 +22,7 @@ export interface Combat2DispatchHandlerDependencies {
 }
 
 interface DiagnosticSession { session_id: string; node_id: string; encounter_id: string }
-interface DiagnosticEvent { event_type: string; node_id: string; encounter_id?: string; tick?: number; outcome?: string; elapsed_ms: number }
+interface DiagnosticEvent { event_type: string; node_id: string; encounter_id?: string; tick?: number; outcome?: string; elapsed_ms: number; heartbeat_id?: number }
 
 function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -61,12 +61,17 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
     }
 
     const text = await request.text();
+    let heartbeatId: number | null = null;
     if (text.trim()) {
       let body: unknown;
       try { body = JSON.parse(text); } catch { return failure('invalid_request', 'body is not valid JSON', 400); }
-      if (body === null || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 0) {
-        return failure('invalid_request', 'body must be empty or an empty JSON object', 400);
+      const value = object(body);
+      const keys = value ? Object.keys(value) : [];
+      if (!value || (keys.length !== 0 && (keys.length !== 1 || keys[0] !== 'heartbeat_id')) ||
+          (keys.length === 1 && (!Number.isSafeInteger(value.heartbeat_id) || (value.heartbeat_id as number) <= 0))) {
+        return failure('invalid_request', 'body must be empty or contain one positive heartbeat_id', 400);
       }
+      heartbeatId = keys.length === 1 ? value.heartbeat_id as number : null;
     }
 
     let client: DispatchRpcClient;
@@ -132,7 +137,8 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
         const encounterId = candidatesByNode.get(nodeId);
         const events: DiagnosticEvent[]=[];
         const invocationId=crypto.randomUUID();
-        events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:encounterId,outcome:invocationId,elapsed_ms:0});
+        events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:encounterId,outcome:invocationId,elapsed_ms:0,
+          ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});
         let lastPhase='dispatcher_requested';
         const sessions = await relevantSessions(nodeId, encounterId);
         try {
@@ -140,7 +146,8 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
           abilityRecords: deps.abilityRecords,
           statusRecords: deps.statusRecords,
           diagnostic: event=>{lastPhase=event.event;events.push({event_type:event.event,node_id:event.nodeId,encounter_id:event.encounterId,
-            tick:event.tick,outcome:event.outcome,elapsed_ms:event.elapsedMs});},
+            tick:event.tick,outcome:event.outcome,elapsed_ms:event.elapsedMs,
+            ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});},
           transport: {
             async claimNode(id) {
               const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });
@@ -164,14 +171,16 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             events.push({event_type:workerResult.kind.includes('commit')?'commit_refused':'claim_refused',node_id:nodeId,
               encounter_id:'encounterId' in workerResult?workerResult.encounterId:encounterId,
               tick:'tick' in workerResult?workerResult.tick:undefined,
-              outcome:`${workerResult.kind} after ${lastPhase}${detail?` ${detail}`:''}`.slice(0,80),elapsed_ms:0});
+              outcome:`${workerResult.kind} after ${lastPhase}${detail?` ${detail}`:''}`.slice(0,80),elapsed_ms:0,
+              ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});
           }
 
           return workerResult;
         } catch (error) {
           events.push({event_type:lastPhase==='dispatcher_requested'||lastPhase==='claim_attempted'?'claim_refused':'commit_refused',
             node_id:nodeId,encounter_id:encounterId,
-            outcome:`worker_exception:${failureClass(error)} after ${lastPhase}`.slice(0,80),elapsed_ms:0});
+            outcome:`worker_exception:${failureClass(error)} after ${lastPhase}`.slice(0,80),elapsed_ms:0,
+            ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});
           throw error;
         } finally {
           persistEvidence(sessions, events);
@@ -179,14 +188,28 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
       },
     });
 
+    if (heartbeatId !== null) {
+      try {
+        await client.rpc('combat2_heartbeat_record_dispatch', {
+          _heartbeat_id: heartbeatId,
+          _classification: result.classification,
+          _candidate_count: result.candidateCount,
+          _processed_count: result.processedCount,
+          _more_may_remain: result.moreMayRemain,
+        });
+      } catch { /* heartbeat diagnostics never change dispatcher gameplay */ }
+    }
+
     deps.log?.('[combat2-dispatch-once] completed', redact({
+      heartbeatId,
       classification: result.classification,
       candidateCount: result.candidateCount,
       processedCount: result.processedCount,
       summary: result.summary,
       results: result.results,
     }, [serviceRoleKey, workerSecret]) as Record<string, unknown>);
-    return json(redact(result, [serviceRoleKey, workerSecret]), statusFor(result));
+    return json(redact({ ...result, ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId }) },
+      [serviceRoleKey, workerSecret]), statusFor(result));
   };
 }
 
