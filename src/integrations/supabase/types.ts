@@ -2035,6 +2035,7 @@ export type Database = {
           elapsed_ms: number | null
           encounter_id: string | null
           event_type: string
+          heartbeat_id: number | null
           id: number
           intent_id: string | null
           node_id: string | null
@@ -2049,6 +2050,7 @@ export type Database = {
           elapsed_ms?: number | null
           encounter_id?: string | null
           event_type: string
+          heartbeat_id?: number | null
           id?: never
           intent_id?: string | null
           node_id?: string | null
@@ -2063,6 +2065,7 @@ export type Database = {
           elapsed_ms?: number | null
           encounter_id?: string | null
           event_type?: string
+          heartbeat_id?: number | null
           id?: never
           intent_id?: string | null
           node_id?: string | null
@@ -5818,6 +5821,63 @@ export type Database = {
         }
         Relationships: []
       }
+      world_heartbeat_run: {
+        Row: {
+          candidate_count: number | null
+          cleanup_classification: string
+          cleanup_deleted: number
+          completed_at: string | null
+          dispatch_classification: string | null
+          dispatch_completed_at: string | null
+          heartbeat_id: number
+          more_may_remain: boolean | null
+          processed_count: number | null
+          scheduler_classification: string
+          scheduler_eligible: boolean
+          settlement_bucket: string
+          settlement_kind: string | null
+          settlement_steps: number | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_count?: number | null
+          cleanup_classification?: string
+          cleanup_deleted?: number
+          completed_at?: string | null
+          dispatch_classification?: string | null
+          dispatch_completed_at?: string | null
+          heartbeat_id?: never
+          more_may_remain?: boolean | null
+          processed_count?: number | null
+          scheduler_classification?: string
+          scheduler_eligible: boolean
+          settlement_bucket: string
+          settlement_kind?: string | null
+          settlement_steps?: number | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_count?: number | null
+          cleanup_classification?: string
+          cleanup_deleted?: number
+          completed_at?: string | null
+          dispatch_classification?: string | null
+          dispatch_completed_at?: string | null
+          heartbeat_id?: never
+          more_may_remain?: boolean | null
+          processed_count?: number | null
+          scheduler_classification?: string
+          scheduler_eligible?: boolean
+          settlement_bucket?: string
+          settlement_kind?: string | null
+          settlement_steps?: number | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       world_slumber_log: {
         Row: {
           awake_characters: number
@@ -6348,6 +6408,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      combat2_diagnostic_record_server_event_with_heartbeat: {
+        Args: {
+          _elapsed_ms: number
+          _encounter_id: string
+          _event_type: string
+          _heartbeat_id: number
+          _intent_id: string
+          _node_id: string
+          _outcome: string
+          _request_id: string
+          _session_id: string
+          _tick: number
+        }
+        Returns: undefined
+      }
       combat2_diagnostic_record_server_events: {
         Args: { _events: Json; _session_id: string }
         Returns: Json
@@ -6369,6 +6444,10 @@ export type Database = {
       combat2_dispatch_scheduler_eligible: { Args: never; Returns: boolean }
       combat2_dispatch_scheduler_enable: { Args: never; Returns: Json }
       combat2_dispatch_scheduler_fire: { Args: never; Returns: Json }
+      combat2_dispatch_scheduler_fire_without_heartbeat_identity: {
+        Args: never
+        Returns: Json
+      }
       combat2_dispatch_scheduler_fire_without_resource_settlement: {
         Args: never
         Returns: Json
@@ -6392,6 +6471,16 @@ export type Database = {
       }
       combat2_finish_immediate_party_departure: {
         Args: { _request_id: string }
+        Returns: Json
+      }
+      combat2_heartbeat_record_dispatch: {
+        Args: {
+          _candidate_count: number
+          _classification: string
+          _heartbeat_id: number
+          _more_may_remain: boolean
+          _processed_count: number
+        }
         Returns: Json
       }
       combat2_hostile_action: {
