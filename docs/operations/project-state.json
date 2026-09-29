@@ -25,16 +25,6 @@
   },
   "database_migrations": [
     {
-      "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-09-29T21:08:30Z",
-      "evidence_type": "repository",
-      "evidence": "Corrected ENG-HB-001 source is authored at repository SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd and is not installed or live-verified. Lovable's installed-schema preflight rejected the prior, never-installed SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11 because pg_get_functiondef rendered the guarded predecessor assignment as body:='{}'::jsonb rather than the migration's whitespace-specific body := '{}'::jsonb marker; the guard aborted before mutation, no ledger entry exists and no object changed. The corrected guard and transformation use one context-bounded net.http_post body-assignment match, accept insignificant spaces/tabs/newlines, require exactly one expected empty-jsonb assignment and preserve quoted text and unrelated assignments. All heartbeat behavior, 24-hour retention, failure isolation, ACL, cadence and gameplay semantics remain unchanged. Official types require regeneration only after installation. No Cloud access or gameplay invocation occurred in the correction.",
-      "reporting_actor": "Codex",
-      "directly_verified": true
-    },
-    {
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
       "status": "installed",
       "sha": "9c439cce6984a48ec838fe373921c6db72567b9c",
@@ -176,16 +166,6 @@
     "directly_verified": true
   },
   "edge_function_deployments": [
-    {
-      "identity": "combat2-dispatch-once",
-      "status": "deployed",
-      "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-      "timestamp": "2026-09-22T21:03:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Redeployed from source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and reported successful. Dependency containment justifies exactly this function: it imports the shared Combat2 node-tick worker, which imports the shared resolver changed by this checkpoint, where encounter completion now counts living engaged creatures (c.hp > 0 && c.row.is_alive && c.engaged) instead of all living bystanders. Canonical/Edge mirror generation produced no diff, proving exact parity between src/shared/combat2/resolver.ts and supabase/functions/_shared/combat2/resolver.ts. No unrelated function was deployed and neither deployed function was invoked. No cadence, cron, claim-lease, movement-timing, combat-rule or world-state change accompanied the deployment.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
-    },
     {
       "identity": "combat2-tick-once",
       "status": "deployed",
