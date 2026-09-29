@@ -7,8 +7,11 @@ DO $guard$
 BEGIN
   IF to_regprocedure('public.combat2_depart(uuid,uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat2_party_depart(uuid,uuid,uuid)') IS NULL
+     OR to_regprocedure('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)') IS NULL
+     OR to_regprocedure('public.combat2_depart_without_canary_gate(uuid,uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat_flee(uuid,uuid,uuid)') IS NULL
-     OR to_regprocedure('public.combat2_refresh_tanks(uuid)') IS NULL THEN
+     OR to_regprocedure('public.combat2_refresh_tanks(uuid)') IS NULL
+     OR to_regprocedure('public.settle_out_of_combat_resources(timestamptz)') IS NULL THEN
     RAISE EXCEPTION 'ENG-MOVE-001 predecessor contract is incomplete';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='node_encounter' AND column_name='claim_expires_at')
@@ -21,19 +24,158 @@ BEGIN
 END
 $guard$;
 
--- A captured lease is fenced by the same encounter lock/version transition; it
--- is not a reason to preserve the old wait. Patch only the installed inner
--- party validator and fail closed if its exact predecessor contract drifted.
-DO $party_claim_fence$
-DECLARE definition text; needle text;
+-- Arena reset locks encounters by UUID before touching characters. Pre-lock the
+-- origin/destination encounter pair in that same order so authoritative arrival
+-- never holds a mover character while waiting for the destination encounter.
+DO $solo_encounter_pair$
+DECLARE definition text; needle text; replacement text; before_row record;
 BEGIN
-  needle := ' IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now() THEN RETURN jsonb_build_object(''ok'',false,''kind'',''live_claim''); END IF;';
-  SELECT pg_get_functiondef('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure) INTO definition;
-  IF position(needle in definition)=0 THEN RAISE EXCEPTION 'ENG-MOVE-001 party claim predecessor drift'; END IF;
-  definition := replace(definition,needle,' -- ENG-MOVE-001: the immediate owner fences the captured claim below.');
-  EXECUTE definition;
+  SELECT p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl,pg_get_functiondef(p.oid) definition
+    INTO before_row FROM pg_proc p
+    WHERE p.oid='public.combat2_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure;
+  IF pg_get_userbyid(before_row.proowner)<>'postgres' OR NOT before_row.prosecdef
+     OR before_row.provolatile<>'v' OR before_row.proconfig IS DISTINCT FROM ARRAY['search_path=public, pg_temp']::text[] THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 solo predecessor metadata drift';
+  END IF;
+  needle := E'  SELECT * INTO v_encounter FROM public.node_encounter\n    WHERE node_id = v_origin AND status = ''active'' FOR UPDATE;';
+  IF position(needle in before_row.definition)=0 THEN RAISE EXCEPTION 'ENG-MOVE-001 solo encounter lock drift'; END IF;
+  replacement := E'  PERFORM 1 FROM public.node_encounter\n    WHERE node_id IN (v_origin,_destination_node_id) ORDER BY id FOR UPDATE;\n'||needle;
+  EXECUTE replace(before_row.definition,needle,replacement);
+  IF EXISTS (SELECT 1 FROM pg_proc p
+    WHERE p.oid='public.combat2_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure
+      AND (p.proowner IS DISTINCT FROM before_row.proowner OR p.prosecdef IS DISTINCT FROM before_row.prosecdef
+        OR p.provolatile IS DISTINCT FROM before_row.provolatile OR p.proconfig IS DISTINCT FROM before_row.proconfig
+        OR p.proacl IS DISTINCT FROM before_row.proacl)) THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 solo predecessor metadata/ACL changed';
+  END IF;
 END
-$party_claim_fence$;
+$solo_encounter_pair$;
+
+-- Patch only the installed inner party predecessor. Party membership is stable
+-- under the existing party-lifecycle advisory. The complete mover UUID set is
+-- frozen before any character row lock, all character rows are then locked in
+-- UUID order (matching resource settlement), and movement still uses the
+-- predecessor's joined_at/UUID follower order with the leader last.
+DO $party_lock_order$
+DECLARE
+  definition text;
+  wrapper_definition text;
+  declaration_needle text;
+  leader_lock_needle text;
+  mover_relock_needle text;
+  encounter_lock_needle text;
+  before_owner oid;
+  before_security boolean;
+  before_volatility "char";
+  before_config text[];
+  before_acl aclitem[];
+  wrapper_owner oid;
+  wrapper_security boolean;
+  wrapper_volatility "char";
+  wrapper_config text[];
+  wrapper_acl aclitem[];
+BEGIN
+  SELECT pg_get_functiondef(p.oid),p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl
+    INTO wrapper_definition,wrapper_owner,wrapper_security,wrapper_volatility,wrapper_config,wrapper_acl
+    FROM pg_proc p WHERE p.oid='public.combat2_party_depart(uuid,uuid,uuid)'::regprocedure;
+  IF position('combat2_party_depart_without_canary_gate' in wrapper_definition)=0 THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 party wrapper composition drift';
+  END IF;
+  IF pg_get_userbyid(wrapper_owner)<>'postgres' OR NOT wrapper_security OR wrapper_volatility<>'v'
+     OR wrapper_config IS DISTINCT FROM ARRAY['search_path=public, pg_temp']::text[] THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 public party wrapper metadata drift';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(COALESCE(wrapper_acl,acldefault('f',wrapper_owner))) acl
+    LEFT JOIN pg_roles role ON role.oid=acl.grantee
+    WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname='anon')
+  ) OR NOT EXISTS (
+    SELECT 1 FROM aclexplode(COALESCE(wrapper_acl,acldefault('f',wrapper_owner))) acl
+    JOIN pg_roles role ON role.oid=acl.grantee
+    WHERE acl.privilege_type='EXECUTE' AND role.rolname='authenticated'
+  ) THEN RAISE EXCEPTION 'ENG-MOVE-001 public party wrapper ACL drift'; END IF;
+  SELECT pg_get_functiondef(p.oid),p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl
+    INTO definition,before_owner,before_security,before_volatility,before_config,before_acl
+    FROM pg_proc p WHERE p.oid='public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure;
+  IF pg_get_userbyid(before_owner)<>'postgres' OR NOT before_security OR before_volatility<>'v'
+     OR before_config IS DISTINCT FROM ARRAY['search_path=public, auth, pg_temp']::text[] THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 party predecessor metadata drift';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(COALESCE(before_acl,acldefault('f',before_owner))) acl
+    LEFT JOIN pg_roles role ON role.oid=acl.grantee
+    WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname IN('anon','authenticated'))
+  ) THEN RAISE EXCEPTION 'ENG-MOVE-001 party predecessor browser ACL drift'; END IF;
+  IF position("PERFORM pg_advisory_xact_lock(hashtextextended('party-lifecycle',0))" in definition)=0
+     OR position("ORDER BY leader_last,joined_at,id" in definition)=0
+     OR position("SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE" in definition)=0
+     OR position("IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()" in definition)=0
+     OR position("FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP" in
+       pg_get_functiondef('public.settle_out_of_combat_resources(timestamptz)'::regprocedure))=0 THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 expected party/settlement lock contract drift';
+  END IF;
+
+  declaration_needle := ' ordinal integer:=0; child uuid; event_id uuid; queued integer:=0; outcomes jsonb;';
+  encounter_lock_needle := ' SELECT * INTO encounter FROM public.node_encounter WHERE node_id=leader.current_node_id AND status=''active'' FOR UPDATE;';
+  leader_lock_needle := ' SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE;';
+  mover_relock_needle := '  PERFORM 1 FROM public.characters WHERE id=mover.id FOR UPDATE;';
+  IF position(declaration_needle in definition)=0 OR position(encounter_lock_needle in definition)=0 OR position(leader_lock_needle in definition)=0
+     OR position(mover_relock_needle in definition)=0 THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 early-leader predecessor drift';
+  END IF;
+  definition:=replace(definition,declaration_needle,
+    declaration_needle||' mover_ids uuid[]; locked_count integer; locked_origin uuid;');
+  definition:=replace(definition,encounter_lock_needle,
+    ' PERFORM 1 FROM public.node_encounter WHERE node_id IN(leader.current_node_id,_destination_node_id) ORDER BY id FOR UPDATE;'||chr(10)||encounter_lock_needle);
+  definition:=replace(definition,
+    ' IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now() THEN RETURN jsonb_build_object(''ok'',false,''kind'',''live_claim''); END IF;',
+    ' -- ENG-MOVE-001: the immediate owner fences the captured claim below.');
+  definition:=replace(definition,leader_lock_needle,$body$
+ -- Freeze the complete authoritative mover set without taking a character row
+ -- lock, then acquire the entire set in the same UUID order as settlement.
+ locked_origin:=leader.current_node_id;
+ SELECT array_agg(candidate.id ORDER BY candidate.id) INTO mover_ids FROM (
+  SELECT c.id FROM public.party_members pm JOIN public.characters c ON c.id=pm.character_id
+   WHERE pm.party_id=p.id AND pm.status='accepted' AND pm.is_following
+     AND c.id<>leader.id AND c.current_node_id=leader.current_node_id AND c.hp>0
+  UNION ALL SELECT leader.id
+ ) candidate;
+ PERFORM 1 FROM public.characters c WHERE c.id=ANY(mover_ids) ORDER BY c.id FOR UPDATE;
+ GET DIAGNOSTICS locked_count=ROW_COUNT;
+ IF locked_count<>cardinality(mover_ids) THEN
+  RETURN jsonb_build_object('ok',false,'kind','party_changed');
+ END IF;
+ SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id;
+ IF leader.id IS NULL OR leader.user_id<>caller OR leader.current_node_id IS DISTINCT FROM locked_origin THEN
+  RETURN jsonb_build_object('ok',false,'kind','party_changed');
+ END IF;
+ IF leader.hp<=0 THEN RETURN jsonb_build_object('ok',false,'kind','dead','member',leader.name); END IF;
+ IF EXISTS (
+  SELECT 1 FROM unnest(mover_ids) included(id) JOIN public.characters c ON c.id=included.id
+  WHERE c.id<>leader.id AND (c.current_node_id IS DISTINCT FROM leader.current_node_id OR c.hp<=0 OR NOT EXISTS (
+    SELECT 1 FROM public.party_members pm WHERE pm.party_id=p.id AND pm.character_id=c.id
+      AND pm.status='accepted' AND pm.is_following
+  ))
+ ) THEN RETURN jsonb_build_object('ok',false,'kind','party_changed'); END IF;$body$);
+  definition:=replace(definition,mover_relock_needle,
+    '  -- Every included character row is already held by the canonical UUID lock set.');
+  EXECUTE definition;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid='public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure
+      AND (p.proowner IS DISTINCT FROM before_owner OR p.prosecdef IS DISTINCT FROM before_security
+        OR p.provolatile IS DISTINCT FROM before_volatility OR p.proconfig IS DISTINCT FROM before_config
+        OR p.proacl IS DISTINCT FROM before_acl)
+  ) THEN RAISE EXCEPTION 'ENG-MOVE-001 party predecessor metadata/ACL changed'; END IF;
+  SELECT pg_get_functiondef('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure) INTO definition;
+  IF position(leader_lock_needle in definition)>0
+     OR position('ORDER BY c.id FOR UPDATE' in definition)=0
+     OR position('ORDER BY leader_last,joined_at,id' in definition)=0 THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 corrected party lock/movement contract missing';
+  END IF;
+END
+$party_lock_order$;
 
 -- This function performs no combat resolution. Lock order after the public
 -- node locks is encounter -> character -> fighter/effects/request state.
@@ -197,5 +339,53 @@ RETURNS jsonb LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=public,pg_t
 $$;
 REVOKE ALL ON FUNCTION public.combat_flee(uuid,uuid,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.combat_flee(uuid,uuid,uuid) TO authenticated,service_role;
+
+DO $postflight$
+DECLARE signature regprocedure; p record;
+BEGIN
+  FOREACH signature IN ARRAY ARRAY[
+    'public.combat2_depart(uuid,uuid,uuid)'::regprocedure,
+    'public.combat2_party_depart(uuid,uuid,uuid)'::regprocedure,
+    'public.combat_flee(uuid,uuid,uuid)'::regprocedure
+  ] LOOP
+    SELECT * INTO p FROM pg_proc WHERE oid=signature;
+    IF pg_get_userbyid(p.proowner)<>'postgres' OR NOT p.prosecdef OR p.provolatile<>'v'
+       OR p.proconfig IS DISTINCT FROM ARRAY['search_path=public, pg_temp']::text[] THEN
+      RAISE EXCEPTION 'ENG-MOVE-001 public function metadata drift: %',signature;
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+      LEFT JOIN pg_roles role ON role.oid=acl.grantee
+      WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname='anon')
+    ) OR 2<>(
+      SELECT count(DISTINCT role.rolname) FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+      JOIN pg_roles role ON role.oid=acl.grantee
+      WHERE acl.privilege_type='EXECUTE' AND role.rolname IN('authenticated','service_role')
+    ) THEN RAISE EXCEPTION 'ENG-MOVE-001 public function ACL drift: %',signature; END IF;
+  END LOOP;
+  FOREACH signature IN ARRAY ARRAY[
+    'public.combat2_finish_immediate_departure(uuid)'::regprocedure,
+    'public.combat2_finish_immediate_party_departure(uuid)'::regprocedure,
+    'public.combat2_depart_without_immediate_transition(uuid,uuid,uuid)'::regprocedure,
+    'public.combat2_party_depart_without_immediate_transition(uuid,uuid,uuid)'::regprocedure,
+    'public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure
+  ] LOOP
+    SELECT * INTO p FROM pg_proc WHERE oid=signature;
+    IF pg_get_userbyid(p.proowner)<>'postgres' OR NOT p.prosecdef OR p.provolatile<>'v'
+       OR p.proconfig IS DISTINCT FROM CASE WHEN signature='public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'::regprocedure
+         THEN ARRAY['search_path=public, auth, pg_temp']::text[] ELSE ARRAY['search_path=public, pg_temp']::text[] END THEN
+      RAISE EXCEPTION 'ENG-MOVE-001 internal function metadata drift: %',signature;
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
+      LEFT JOIN pg_roles role ON role.oid=acl.grantee
+      WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname IN('anon','authenticated'))
+    ) THEN RAISE EXCEPTION 'ENG-MOVE-001 internal function browser ACL drift: %',signature; END IF;
+  END LOOP;
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='combat2_party_departure_member_finalized' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'ENG-MOVE-001 heartbeat-dependent party finalizer remains active';
+  END IF;
+END
+$postflight$;
 
 COMMIT;

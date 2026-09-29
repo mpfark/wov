@@ -6,11 +6,30 @@ This is a static repository audit. It proves source contracts only. Installation
 
 ## Implemented source correction (ENG-MOVE-001)
 
-Forward migration `20260929100000_combat2_immediate_authoritative_departure.sql` replaces the heartbeat wait at the public boundary without copying resolver mechanics. The installed predecessor remains the owner of caller identity, route/key/MP validation, party membership/order and durable request creation. When that predecessor returns `queued`, one service-role-only finalizer in the same transaction fences the claim, rejects pending intents, consumes the departure event, removes only character-targeted encounter state, marks the fighter absent, refreshes tanks, moves the character and charges MP once. It performs no damage, attack, DoT pulse, regeneration, reward, durability or death resolution.
+Forward migration `20260929100000_combat2_immediate_authoritative_departure.sql` replaces the heartbeat wait at the public boundary without copying resolver mechanics. The first authored bytes (`09a497b9bf8aae7f7238162eb4478708eb26c2ccb76cce4d6419bbb01e28f544`) were rejected before installation because the preserved party predecessor locked the leader before followers, creating a real character-row cycle with UUID-ordered resource settlement. The corrected bytes (`9e8a24982a6dae443d18811362f65a04f45d873ea399ddcb394c134a3e6d24f4`) freeze the authoritative mover UUID set under the party-lifecycle boundary, lock the origin/destination encounter pair by UUID, lock the whole mover set by `characters.id ASC`, revalidate, and only then retain the independent follower `joined_at`, UUID tie-breaker, leader-last movement order. Settlement is unchanged.
+
+The installed predecessor remains the owner of caller identity, route/key/MP validation, party membership/order and durable request creation. When that predecessor returns `queued`, one service-role-only finalizer in the same transaction fences the claim, rejects pending intents, consumes the departure event, removes only character-targeted encounter state, marks the fighter absent, refreshes tanks, moves the character and charges MP once. It performs no damage, attack, DoT pulse, regeneration, reward, durability or death resolution.
 
 Public node locks remain first and destination arrival remains the installed character-relocation trigger. A departure-first transaction invalidates the origin claim/version before relocation. A tick-first transaction commits under the same node/encounter serialization; departure then revalidates current HP, location and participation. Party finalization owns all members in stored `movement_order`, so followers arrive before the leader. Historical queued rows remain readable and can be completed by replay. The old destination-less `combat_flee` signature is retained as an explicit `destination_required` refusal; it cannot safely express relocation, and all ordinary browser movement already routes through `combat2_depart`.
 
 Source verification is not installation or live proof. Local PostgreSQL installed-equivalent execution was unavailable; Lovable must compile/apply and inspect the composed definitions before activation.
+
+## Corrected lock graph
+
+| Boundary | Effective order | Cycle result |
+|---|---|---|
+| Solo departure | sorted origin/destination node advisory → origin encounter → character → fighter/effect/request | Compatible with commit and arrival; one character only. |
+| Coordinated departure | sorted node advisory → party-lifecycle/request advisory → origin encounter → frozen mover characters by UUID → per-fighter/effect/request; relocation remains follower `joined_at`, UUID, leader last | Corrected: no leader/follower or follower/follower reversal against settlement. |
+| Resource settlement | settlement cursor → all characters by UUID; later ownership reads take no encounter row lock | Unchanged; identical character order removes the proven cycle. |
+| Intent / hostile initiation | node advisory where applicable → encounter → intent advisory → character/fighter/intent | Departure's node/encounter serialization prevents a character/intent reversal; stale intent is rejected after the departure fence. |
+| Claim / commit | node advisory wrapper → encounter; commit locks proposed characters by UUID before character mutations | Party and commit share node/encounter serialization and UUID character order. |
+| Party follow/leave/kick/disband | global party-lifecycle advisory before membership mutation | Serializes mover-set derivation; no membership row can change the frozen set concurrently. |
+| Death / respawn | request/transition fencing and character-owned mutation | UUID mover locks force revalidation after an earlier death/respawn; a dead or relocated included mover aborts all movement. No reversed multi-character pair exists. |
+| Test Arena stop/reset | arena advisory → encounters by UUID, then arena cleanup/character restore | Solo and party departure now pre-lock origin/destination encounters by UUID before characters, removing the reset encounter→character versus arrival character→destination-encounter cycle. Installed concurrent proof remains pending. |
+| Two party departures | sorted node pair plus global party-lifecycle advisory, then UUID mover locks | Same/opposite routes and overlapping sets serialize before character mutation. |
+| Destination arrival | sorted node pair already held → destination arrival trigger/encounter → relocated character (already held) | Opposite-direction node pairs cannot reverse; arrival order remains followers first, leader last. |
+
+Static/source and model verification found no remaining reversed character pair or origin/destination-node pair. PostgreSQL concurrent execution, installed function metadata and live races remain explicit Lovable gates.
 
 ## Prior audited state (superseded by the source correction above)
 
