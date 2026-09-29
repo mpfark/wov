@@ -6318,6 +6318,14 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_depart_without_immediate_transition: {
+        Args: {
+          _character_id: string
+          _destination_node_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       combat2_departure_state: {
         Args: { _character_id: string }
         Returns: Json
@@ -6378,6 +6386,14 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_finish_immediate_departure: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      combat2_finish_immediate_party_departure: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
       combat2_hostile_action: {
         Args: {
           _ability_key: string
@@ -6405,6 +6421,14 @@ export type Database = {
         Returns: Json
       }
       combat2_party_depart_without_canary_gate: {
+        Args: {
+          _destination_node_id: string
+          _leader_character_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat2_party_depart_without_immediate_transition: {
         Args: {
           _destination_node_id: string
           _leader_character_id: string
