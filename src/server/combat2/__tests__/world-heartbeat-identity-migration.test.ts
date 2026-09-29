@@ -4,6 +4,11 @@ import { describe, expect, it } from 'vitest';
 const PATH = 'supabase/migrations/20260929130000_combat2_world_heartbeat_identity.sql';
 const sql = readFileSync(PATH, 'utf8').replaceAll('\r\n', '\n');
 const lower = sql.toLowerCase();
+const schedulerFoundation = readFileSync('supabase/migrations/20260831133000_combat2_dispatch_scheduler_foundation.sql', 'utf8')
+  .replaceAll('\r\n', '\n');
+const predecessorStart = schedulerFoundation.indexOf('CREATE OR REPLACE FUNCTION public.combat2_dispatch_scheduler_fire()');
+const predecessorEnd = schedulerFoundation.indexOf('REVOKE ALL ON FUNCTION public.combat2_dispatch_scheduler_fire()', predecessorStart);
+const repositoryPredecessor = schedulerFoundation.slice(predecessorStart, predecessorEnd);
 
 function splitSqlStatements(source: string): string[] {
   const statements: string[] = [];
@@ -57,6 +62,14 @@ function splitSqlStatements(source: string): string[] {
 }
 
 const executableStatements = splitSqlStatements(sql);
+const httpBodyPattern = /(net\.http_post\s*\([^;]*)(body\s*:=\s*'\{\}'::jsonb)(\s*,\s*timeout_milliseconds\s*:=)/gs;
+
+function patchHeartbeatBody(definition: string): string {
+  const matches = [...definition.matchAll(httpBodyPattern)];
+  if (matches.length !== 1) throw new Error(`expected one HTTP body assignment, found ${matches.length}`);
+  return definition.replace(httpBodyPattern, (_match, prefix: string, _assignment: string, suffix: string) =>
+    `${prefix}body := jsonb_build_object('heartbeat_id', heartbeat_id)${suffix}`);
+}
 
 describe('ENG-HB-001 world heartbeat identity migration', () => {
   it('guards the installed scheduler, settlement and diagnostic predecessors', () => {
@@ -70,8 +83,36 @@ describe('ENG-HB-001 world heartbeat identity migration', () => {
       "search_path=public, cron, pg_temp", 'has_function_privilege',
       "attname='elapsed_ms' AND atttypid='numeric'::regtype", 'diagnostic column contract drift',
     ]) expect(sql).toContain(marker);
-    expect(sql).toContain("position('settle_out_of_combat_resources(clock_timestamp())'");
-    expect(sql).toContain("position('body := ''{}''::jsonb'");
+    expect(sql).toContain("wrapper_definition !~ 'settle_out_of_combat_resources[[:space:]]*");
+    expect(sql).toContain("SELECT count(*) INTO http_body_matches FROM regexp_matches");
+    expect(sql).not.toContain("replace(definition,'body := ''{}''::jsonb'");
+  });
+
+  it.each([
+    ["compact", "body:='{}'::jsonb"],
+    ['spaced', "body := '{}'::jsonb"],
+    ['tabs and newlines', "body\t:=\n  '{}'::jsonb"],
+  ])('matches and patches the real repository HTTP predecessor with %s assignment', (_label, assignment) => {
+    const fixture = repositoryPredecessor.replace("body := '{}'::jsonb", assignment);
+    const patched = patchHeartbeatBody(fixture);
+    expect(patched).toContain("body := jsonb_build_object('heartbeat_id', heartbeat_id)");
+    expect(patched).toContain("url := 'https://gpclaklkaolyzfnooajt.supabase.co/functions/v1/combat2-dispatch-once'");
+    expect(patched).toContain('timeout_milliseconds := 12000');
+  });
+
+  it('fails closed for zero, multiple, or unexpected HTTP body contracts', () => {
+    expect(() => patchHeartbeatBody(repositoryPredecessor.replace("'{}'::jsonb", "jsonb_build_object('other', true)")))
+      .toThrow('found 0');
+    expect(() => patchHeartbeatBody(`${repositoryPredecessor}\n${repositoryPredecessor}`)).toThrow('found 2');
+    expect(() => patchHeartbeatBody(repositoryPredecessor.replace("'{}'::jsonb", "'{\"unexpected\":true}'::jsonb")))
+      .toThrow('found 0');
+  });
+
+  it('preserves quoted text and unrelated assignments while patching only the HTTP body argument', () => {
+    const prefix = "PERFORM 'body := ''{}''::jsonb';\nunrelated := '{}'::jsonb;\n";
+    const patched = patchHeartbeatBody(prefix + repositoryPredecessor);
+    expect(patched.startsWith(prefix)).toBe(true);
+    expect(patched.match(/jsonb_build_object\('heartbeat_id'/g)).toHaveLength(1);
   });
 
   it('creates one monotonic bigint identity and a bounded scalar-only run record', () => {

@@ -6,6 +6,8 @@ DO $$
 DECLARE
   wrapper_definition text;
   dispatcher_definition text;
+  http_body_pattern constant text := '(net[.]http_post[[:space:]]*[(][^;]*)(body[[:space:]]*:=[[:space:]]*''\{\}''::jsonb)([[:space:]]*,[[:space:]]*timeout_milliseconds[[:space:]]*:=)';
+  http_body_matches integer;
 BEGIN
   IF to_regprocedure('public.combat2_dispatch_scheduler_fire()') IS NULL
      OR to_regprocedure('public.combat2_dispatch_scheduler_fire_without_resource_settlement()') IS NULL
@@ -79,15 +81,13 @@ BEGIN
 
   wrapper_definition:=pg_get_functiondef('public.combat2_dispatch_scheduler_fire()'::regprocedure);
   dispatcher_definition:=pg_get_functiondef('public.combat2_dispatch_scheduler_fire_without_resource_settlement()'::regprocedure);
-  IF position('settle_out_of_combat_resources(clock_timestamp())' in wrapper_definition)=0
-     OR position('combat2_dispatch_scheduler_fire_without_resource_settlement()' in wrapper_definition)=0
+  SELECT count(*) INTO http_body_matches FROM regexp_matches(dispatcher_definition,http_body_pattern,'g');
+  IF wrapper_definition !~ 'settle_out_of_combat_resources[[:space:]]*[(][[:space:]]*clock_timestamp[[:space:]]*[(][[:space:]]*[)][[:space:]]*[)]'
+     OR wrapper_definition !~ 'combat2_dispatch_scheduler_fire_without_resource_settlement[[:space:]]*[(][[:space:]]*[)]'
      OR position('settlement_error' in wrapper_definition)=0
      OR position('scheduler_error' in wrapper_definition)=0
-     OR position('combat2_dispatch_scheduler_eligible()' in dispatcher_definition)=0
-     OR position('net.http_post' in dispatcher_definition)=0
-     OR position('body := ''{}''::jsonb' in dispatcher_definition)=0
-     OR position('body := ''{}''::jsonb' in substring(dispatcher_definition FROM
-       position('body := ''{}''::jsonb' in dispatcher_definition)+1))>0 THEN
+     OR dispatcher_definition !~ 'combat2_dispatch_scheduler_eligible[[:space:]]*[(][[:space:]]*[)]'
+     OR http_body_matches<>1 THEN
     RAISE EXCEPTION 'ENG-HB-001 predecessor composition drift';
   END IF;
 END $$;
@@ -203,12 +203,21 @@ GRANT EXECUTE ON FUNCTION public.combat2_heartbeat_record_dispatch(bigint,text,i
   TO service_role;
 
 DO $$
-DECLARE definition text; patched text;
+DECLARE
+  definition text;
+  patched text;
+  http_body_pattern constant text := '(net[.]http_post[[:space:]]*[(][^;]*)(body[[:space:]]*:=[[:space:]]*''\{\}''::jsonb)([[:space:]]*,[[:space:]]*timeout_milliseconds[[:space:]]*:=)';
+  http_body_matches integer;
 BEGIN
   definition:=pg_get_functiondef('public.combat2_dispatch_scheduler_fire_without_resource_settlement()'::regprocedure);
-  patched:=replace(definition,'body := ''{}''::jsonb',
-    'body := jsonb_build_object(''heartbeat_id'',NULLIF(current_setting(''app.combat2_heartbeat_id'',true),'''')::bigint)');
-  IF patched=definition OR position('jsonb_build_object(''heartbeat_id''' in patched)=0 THEN
+  SELECT count(*) INTO http_body_matches FROM regexp_matches(definition,http_body_pattern,'g');
+  IF http_body_matches<>1 THEN
+    RAISE EXCEPTION 'ENG-HB-001 dispatcher body patch expected one HTTP body assignment, found %',http_body_matches;
+  END IF;
+  patched:=regexp_replace(definition,http_body_pattern,
+    '\1body := jsonb_build_object(''heartbeat_id'',NULLIF(current_setting(''app.combat2_heartbeat_id'',true),'''')::bigint)\3');
+  IF patched=definition OR position('jsonb_build_object(''heartbeat_id''' in patched)=0
+     OR patched ~ http_body_pattern THEN
     RAISE EXCEPTION 'ENG-HB-001 dispatcher body patch failed';
   END IF;
   EXECUTE patched;

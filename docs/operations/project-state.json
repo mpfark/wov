@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T17:04:23Z",
-  "based_on_source_sha": "239820183bfc70b27adaa86e1384365942bfec8f",
+  "updated_at": "2026-09-29T21:08:30Z",
+  "based_on_source_sha": "d78c13572fd27f78c092be0f54440e0e62195ba0",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -28,9 +28,9 @@
       "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-09-29T17:04:23Z",
+      "timestamp": "2026-09-29T21:08:30Z",
       "evidence_type": "repository",
-      "evidence": "ENG-HB-001 source is authored at repository SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11 and is not installed or live-verified. It creates a generated bigint world_heartbeat_run identity for every actual scheduler-wrapper call, including ineligible calls; retains bounded scalar run evidence for 24 hours with indexed cleanup capped at 2048 rows per call; preserves independent settlement and dispatch failure branches; passes the optional id to the dispatcher and bounded server diagnostics; and leaves encounter ticks, settlement buckets, request UUIDs, claims and delivery cursors independent. The table has authored RLS/no-browser/no-Realtime guards. Official types require regeneration only after installation. No Cloud access or gameplay invocation occurred.",
+      "evidence": "Corrected ENG-HB-001 source is authored at repository SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd and is not installed or live-verified. Lovable's installed-schema preflight rejected the prior, never-installed SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11 because pg_get_functiondef rendered the guarded predecessor assignment as body:='{}'::jsonb rather than the migration's whitespace-specific body := '{}'::jsonb marker; the guard aborted before mutation, no ledger entry exists and no object changed. The corrected guard and transformation use one context-bounded net.http_post body-assignment match, accept insignificant spaces/tabs/newlines, require exactly one expected empty-jsonb assignment and preserve quoted text and unrelated assignments. All heartbeat behavior, 24-hour retention, failure isolation, ACL, cadence and gameplay semantics remain unchanged. Official types require regeneration only after installation. No Cloud access or gameplay invocation occurred in the correction.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
