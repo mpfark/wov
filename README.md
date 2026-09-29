@@ -51,6 +51,10 @@ supabase/
 - **Realtime**: Supabase Realtime channels for creature state, party sync, and combat broadcasts
 - **World**: Three-layer hierarchy (Region → Area → Node) with directional connections
 
+## Project Documentation
+
+Start with the approved [project understanding and document map](docs/design/project-understanding.md). It points contributors to the authoritative engine specification, repository-backed project state, roadmap and operating instructions without duplicating them.
+
 ## Admin Access
 
 Admin tools are role-gated with a three-tier hierarchy:

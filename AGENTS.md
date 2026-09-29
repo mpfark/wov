@@ -1,6 +1,6 @@
 # Shared AI operating instructions
 
-Before changing this repository, read `docs/operations/project-state.json`, `docs/operations/project-state.md`, and `docs/operations/ai-operating-guide.md`. For gameplay or engine work, also read the canonical [engine specification](docs/design/game-engine.md) and [engine roadmap](docs/roadmap/game-engine-roadmap.md).
+Before changing this repository, first read the approved [project understanding and document map](docs/design/project-understanding.md), then `docs/operations/project-state.json`, `docs/operations/project-state.md`, and `docs/operations/ai-operating-guide.md`. For gameplay or engine work, also read the canonical [engine specification](docs/design/game-engine.md) and [engine roadmap](docs/roadmap/game-engine-roadmap.md). The project understanding is an entry point, not a competing rules, evidence or backlog source.
 
 Fetch and inspect `origin/main`, preserve unrelated work, and validate Git ancestry from `based_on_source_sha`. A newer descendant is not a conflict. Keep pushed source, installed migrations, generated Cloud types, deployed Edge Functions, and manually published frontend as separate states. Never infer Cloud state from repository files; unknown remains unknown, and volatile runtime facts require fresh timestamped evidence.
 

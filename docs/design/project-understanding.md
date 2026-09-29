@@ -1,12 +1,12 @@
-# Wayfarers of Varneth — project understanding (review draft)
+# Wayfarers of Varneth — project understanding
 
-> **Review draft:** This document is a contributor-oriented description for discussion with Mik. It is not an authoritative rules source, an approved product description or required reading. Where it conflicts with the engine specification or project state, those sources win.
+This is the approved project-level entry point and document map for contributors. It explains the product and its architecture without duplicating detailed rules, operational evidence or backlog ownership. The engine specification, project state and engine roadmap remain authoritative for those respective concerns.
 
 ## What WoV is
 
-Wayfarers of Varneth (WoV) is a browser-based, MUD-like fantasy role-playing game. A player creates a persistent character, enters an interconnected world of regions, areas and nodes, meets creatures and other characters, fights, explores, gathers rewards, improves equipment and develops through class-based progression. The browser supplies a visual interface around a world whose durable outcomes are intended to remain server-authoritative.
+Wayfarers of Varneth (WoV) is a **browser-based fantasy MUD with a visual user interface**. A player creates a persistent character, enters an interconnected world of regions, areas and nodes, meets creatures and other characters, fights, explores, gathers rewards, improves equipment and develops through class-based progression. The browser supplies a visual interface around a world whose durable outcomes are intended to remain server-authoritative.
 
-The experience combines the spatial and social structure of a MUD—named places, movement between connected locations, text-rich events, chat and shared encounters—with a modern browser interface. Parties, shared node presence and coordinated movement support cooperation, while most current combat and progression work is focused on authoritative PvE behavior.
+The experience combines the spatial and social structure of a MUD—named places, movement between connected locations, text-rich events, chat and shared encounters—with a modern browser interface. Its long-term primary focus is cooperative PvE: parties, shared node presence and coordinated movement let players explore and overcome the world together. PvP is not established here as an equal product goal.
 
 ## The main player loop
 
@@ -57,7 +57,7 @@ Immediate paths are shorter. For example, authoritative departure validates and 
 - **Encounter:** node-local Combat2 authority containing fighters, creature instances, intents, effects, participation, claims and a local committed tick.
 - **Character:** the player's persistent identity, position, attributes, equipment, inventory and resources. Encounter projections temporarily describe combat-owned state but do not replace the durable character identity.
 - **Party:** durable social membership and following/coordination metadata. Party movement and shared encounters must still obey per-character authority and deterministic ordering.
-- **Combat2 Test Arena:** an admin-controlled, isolated proving environment for bounded fixtures, recording, reports and lifecycle controls. It is verification infrastructure, not a second gameplay rules engine.
+- **Combat2 Test Arena:** an admin-controlled, isolated proving environment for bounded fixtures, recording, reports and lifecycle controls. It belongs to developer and administrator documentation rather than the public game introduction, and it is not a second gameplay rules engine.
 
 ## Development and release workflow
 
@@ -79,7 +79,7 @@ The current committed [project state](../operations/project-state.md) records in
 - [`AGENTS.md`](../../AGENTS.md): mandatory repository operating constraints for AI contributors.
 - [AI operating guide](../operations/ai-operating-guide.md): evidence, release and handoff discipline.
 
-This draft summarizes those layers. It must not become a parallel rules document, operational ledger or backlog. The Admin Roadmap and Game Manual remain separate presentation surfaces and are not changed by this draft.
+This project description summarizes those layers. It must not become a parallel rules document, operational ledger or backlog. The Admin Roadmap and Game Manual remain separate presentation surfaces.
 
 ## Current maturity
 
@@ -103,15 +103,8 @@ This draft summarizes those layers. It must not become a parallel rules document
 - Stances are encounter-scoped; character-scoped persistence and appropriate out-of-combat activation remain decisions/work.
 - Some ability behavior outside active combat remains intentionally constrained by current encounter authority.
 - Food effects are not yet authoritative durable effects used consistently by settlement and combat.
-- Legacy gameplay-writer and obsolete-runtime cleanup remains an evidence-led future task.
+- Combat1 remains temporary compatibility during the transition to Combat2, not a long-term alternative combat engine. Removal of legacy gameplay writers and obsolete runtime surfaces remains an evidence-led future task.
 - ADM-025B authoritative reward-channel completion remains blocked/pending; existing reward data and legacy mechanisms must not be casually consolidated.
 - Broader multiplayer, party movement and immediate-transition behavior still needs installed/live verification even where source contracts and focused tests exist.
 
 See the [engine roadmap](../roadmap/game-engine-roadmap.md) for the maintained status and dependencies rather than extending this list here.
-
-## Questions for Mik
-
-1. Should the project-facing description lead with “cooperative browser MUD,” “browser RPG with MUD structure,” or another primary label? The repository supports both descriptions, but the emphasis affects expectations.
-2. Is the long-term player experience intended to be primarily cooperative PvE, or should this overview reserve equal conceptual space for competitive/player-conflict systems that are not currently evident in the active engine documents?
-3. Should Combat2 Test Arena be mentioned in future public-facing project descriptions, or remain contributor/operator context only?
-4. Is legacy Combat1 best described as a temporary compatibility surface on the way to Combat2-only gameplay, or must it remain a supported mode for a defined class of content?
