@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T09:21:34Z",
+  "updated_at": "2026-09-29T09:45:00Z",
   "based_on_source_sha": "a10c2ce2a028c31f4c1ff2011d85c64b12a0e2dc",
   "status_vocabulary": [
     "authored",
@@ -133,6 +133,16 @@
       "evidence": "Applied exactly once from repository bytes SHA-256 fda4238a3c96eebfd82131788ab06688be9541c70dcc369daeb77f86033d7473. Ledger row version 20260924100000 name 22c8af73-29da-436c-aebd-cc52d1aaf97b; no separate ledger file was generated. Installed settle_out_of_combat_resources predicate changed from 'OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)' to 'OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)'; engaged-opposition rule, 4-second cadence and 3-interval catch-up text unchanged. Owner postgres, SECURITY DEFINER, search_path public,cron,pg_temp, EXECUTE postgres+service_role only (anon/authenticated false). Settlement table RLS on, no Realtime publication, privileges unchanged. Trigger combat2_close_inactive_encounter_fighters present and enabled. All protected gameplay fingerprints and the settlement cursor identical before and after. Settlement not invoked; no types regenerated; no Edge deployment (mirror parity clean); no frontend publication required.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "20260929100000_combat2_immediate_authoritative_departure.sql",
+      "status": "installed",
+      "sha": null,
+      "timestamp": "2026-09-29T09:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Installed exactly once through the migration runner from repository bytes SHA-256 11b2778c84de0fde6714a06e0d5c8da549365afe6365b669aa1f60f859677fdb (source 188e86c23260e034e2746c4b3079b8bcf1670ff6; rejected 3db3bc26..., a213cdc7..., 7537307c..., 9e8a2498..., 09a497b9... never installed). Ledger version 20260929093442 name 8b9ada16-f768-4652-9a47-5fd1c147699d; generated artifact supabase/migrations/20260929093442_8b9ada16-f768-4652-9a47-5fd1c147699d.sql SHA-256 0c17218c75e4d2ddda33d2ff633dc95e2e16db3a8401fd859960cb99b4ea3239, retained separately. Full rollback-only compile reached a deliberate stop marker first with no residue. Post-install read-only checks (the removed postflight) passed: combat2_depart -> combat2_depart_without_immediate_transition -> combat2_depart_without_canary_gate and finish_immediate_departure; combat2_party_depart -> combat2_party_depart_without_immediate_transition -> combat2_party_depart_without_canary_gate and finish_immediate_party_departure -> finish_immediate_departure; all postgres-owned SECURITY DEFINER VOLATILE; search_path public,pg_temp (party canary inner keeps public,auth,pg_temp); only combat2_depart, combat2_party_depart and combat_flee are executable by authenticated; internal functions service_role only; no anon/PUBLIC. Trigger combat2_party_departure_member_finalized removed; no other trigger on combat2_departure_request; arrival trigger combat2_authoritative_arrival and location guards on characters still enabled. Encounter pair locked by UUID before characters (solo and party); movers locked by UUID; leader-first lock removed; ORDER BY leader_last,joined_at,id twice, movement context once. Protected fingerprints identical before and after (21 characters location/HP/MP/CP md5 43fe2160..., intents de7e48be..., departures 821ed04d..., 4 encounters 1 active, 12 effects, 0 party departures, 3 accepted members none following). No gameplay RPC invoked; live movement not verified.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "generated_supabase_types": {
@@ -163,6 +173,26 @@
       "timestamp": "2026-09-22T21:03:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Redeployed from source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and reported successful. Dependency containment justifies exactly this function: it imports the shared Combat2 node-tick worker, which imports the shared resolver changed by this checkpoint, where encounter completion now counts living engaged creatures (c.hp > 0 && c.row.is_alive && c.engaged) instead of all living bystanders. Canonical/Edge mirror generation produced no diff, proving exact parity between src/shared/combat2/resolver.ts and supabase/functions/_shared/combat2/resolver.ts. No unrelated function was deployed and neither deployed function was invoked. No cadence, cron, claim-lease, movement-timing, combat-rule or world-state change accompanied the deployment.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat-tick",
+      "status": "deployed",
+      "sha": "188e86c23260e034e2746c4b3079b8bcf1670ff6",
+      "timestamp": "2026-09-29T09:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Deployed for the committed CP-mirror correction (resolver.ts getEffectiveMaxCp with INT+WIS, commit e72f20471). Transitive import analysis of every Edge entry point proved combat-tick and combat-catchup are the only functions reaching supabase/functions/_shared/combat/pure/resolver.ts. No Combat2 Edge function deployed; functions not invoked.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat-catchup",
+      "status": "deployed",
+      "sha": "188e86c23260e034e2746c4b3079b8bcf1670ff6",
+      "timestamp": "2026-09-29T09:45:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Deployed for the committed CP-mirror correction (resolver.ts getEffectiveMaxCp with INT+WIS, commit e72f20471). Transitive import analysis of every Edge entry point proved combat-tick and combat-catchup are the only functions reaching supabase/functions/_shared/combat/pure/resolver.ts. No Combat2 Edge function deployed; functions not invoked.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
