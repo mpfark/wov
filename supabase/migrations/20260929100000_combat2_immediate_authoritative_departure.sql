@@ -66,6 +66,9 @@ DECLARE
   encounter_lock_needle text;
   guard_needle text;
   guard_offset integer;
+  normalized_definition text;
+  preflight_order_needle text:='ORDER BY leader_last,joined_at,id LOOP PERFORM 1 FROM public.characters WHERE id=mover.id FOR UPDATE;';
+  movement_order_needle text:='UNION ALL SELECT leader.*,NULL::timestamptz,true ORDER BY leader_last,joined_at,id LOOP ordinal:=ordinal+1;';
   before_owner oid;
   before_security boolean;
   before_volatility "char";
@@ -108,8 +111,10 @@ BEGIN
     LEFT JOIN pg_roles role ON role.oid=acl.grantee
     WHERE acl.privilege_type='EXECUTE' AND (acl.grantee=0 OR role.rolname IN('anon','authenticated'))
   ) THEN RAISE EXCEPTION 'ENG-MOVE-001 party predecessor browser ACL drift'; END IF;
+  normalized_definition:=regexp_replace(definition,'[[:space:]]+',' ','g');
   IF position('PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))' in definition)=0
-     OR position('ORDER BY leader_last,joined_at,id' in definition)=0
+     OR position(preflight_order_needle in normalized_definition)=0
+     OR position(movement_order_needle in normalized_definition)=0
      OR position('SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE' in definition)=0
      OR position('IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()' in definition)=0
      OR position('FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP' in
@@ -118,13 +123,18 @@ BEGIN
   END IF;
   FOREACH guard_needle IN ARRAY ARRAY[
     'PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))',
-    'ORDER BY leader_last,joined_at,id',
     'SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE',
     'IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()'
   ] LOOP
     guard_offset:=position(guard_needle in definition);
     IF guard_offset=0 OR position(guard_needle in substring(definition FROM guard_offset+length(guard_needle)))>0 THEN
       RAISE EXCEPTION 'ENG-MOVE-001 expected party lock contract must occur exactly once';
+    END IF;
+  END LOOP;
+  FOREACH guard_needle IN ARRAY ARRAY[preflight_order_needle,movement_order_needle] LOOP
+    guard_offset:=position(guard_needle in normalized_definition);
+    IF guard_offset=0 OR position(guard_needle in substring(normalized_definition FROM guard_offset+length(guard_needle)))>0 THEN
+      RAISE EXCEPTION 'ENG-MOVE-001 expected party order context must occur exactly once';
     END IF;
   END LOOP;
   guard_needle:='FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP';

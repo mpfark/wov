@@ -6,10 +6,17 @@ const sql=readFileSync('supabase/migrations/20260929100000_combat2_immediate_aut
 const settlement=readFileSync('supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql','utf8').replaceAll('\r\n','\n');
 const arenaReset=readFileSync('supabase/migrations/20260907051948_f907b2a9-78e9-4e38-a179-68f04e0cbc7d.sql','utf8').replaceAll('\r\n','\n');
 const generatedTypes=readFileSync('src/integrations/supabase/types.ts','utf8').replaceAll('\r\n','\n');
+const historicalPartyMigration=readFileSync('supabase/migrations/20260908122530_e728cbda-72d0-415c-96bf-a8758fe327ac.sql','utf8').replaceAll('\r\n','\n');
+const predecessorStart=historicalPartyMigration.indexOf('CREATE OR REPLACE FUNCTION public.combat2_party_depart(_leader_character_id uuid');
+const predecessorEnd=historicalPartyMigration.indexOf('END $$;',predecessorStart)+7;
+const installedEquivalentPredecessor=historicalPartyMigration.slice(predecessorStart,predecessorEnd);
+const normalizeSql=(value:string)=>value.replace(/\s+/g,' ');
+const shortOrderMarker='ORDER BY leader_last,joined_at,id';
+const preflightOrderMarker='ORDER BY leader_last,joined_at,id LOOP PERFORM 1 FROM public.characters WHERE id=mover.id FOR UPDATE;';
+const movementOrderMarker='UNION ALL SELECT leader.*,NULL::timestamptz,true ORDER BY leader_last,joined_at,id LOOP ordinal:=ordinal+1;';
 const lockBody=sql.slice(sql.indexOf('locked_origin:=leader.current_node_id;'),sql.indexOf('$body$);'));
 const partyGuardFragments=[
   "PERFORM pg_advisory_xact_lock(hashtextextended('party-lifecycle',0))",
-  'ORDER BY leader_last,joined_at,id',
   'SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE',
   'IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()',
   'FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP',
@@ -35,15 +42,40 @@ function reversedPair(left:string[],right:string[]):boolean{
 }
 
 describe('ENG-MOVE-001 immediate authoritative departure migration',()=>{
-  it('uses valid exact-once PostgreSQL text guards for all five predecessor fragments',()=>{
+  it('uses valid exact-once PostgreSQL text guards for every predecessor fragment',()=>{
     expect(sql).not.toMatch(/\b(?:position|strpos)\s*\(\s*"/i);
     expect(sql).toContain("position('PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))' in definition)=0");
-    expect(sql).toContain("position('ORDER BY leader_last,joined_at,id' in definition)=0");
+    expect(sql).toContain('position(preflight_order_needle in normalized_definition)=0');
+    expect(sql).toContain('position(movement_order_needle in normalized_definition)=0');
+    expect(sql).toContain(`preflight_order_needle text:='${preflightOrderMarker}'`);
+    expect(sql).toContain(`movement_order_needle text:='${movementOrderMarker}'`);
     expect(sql).toContain("position('SELECT * INTO leader FROM public.characters WHERE id=_leader_character_id FOR UPDATE' in definition)=0");
     expect(sql).toContain("position('IF encounter.claim_token IS NOT NULL AND encounter.claim_expires_at>now()' in definition)=0");
     expect(sql).toContain("position('FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP' in");
     expect(sql).toContain('guard_offset=0 OR position(guard_needle in substring(definition FROM guard_offset+length(guard_needle)))>0');
     for(const fragment of partyGuardFragments)expect(sql).toContain(fragment.replaceAll("'","''"));
+  });
+  it('derives both unique order contexts from the real historical predecessor',()=>{
+    expect(predecessorStart).toBeGreaterThanOrEqual(0);
+    expect(predecessorEnd).toBeGreaterThan(predecessorStart);
+    const normalized=normalizeSql(installedEquivalentPredecessor);
+    expect(normalized.split(shortOrderMarker)).toHaveLength(3);
+    expect(normalized.split(preflightOrderMarker)).toHaveLength(2);
+    expect(normalized.split(movementOrderMarker)).toHaveLength(2);
+  });
+  it('fails closed when either real order context is missing, duplicated, or altered',()=>{
+    const acceptsUniqueContexts=(definition:string)=>{
+      const normalized=normalizeSql(definition);
+      return [preflightOrderMarker,movementOrderMarker].every(marker=>normalized.split(marker).length===2);
+    };
+    const normalizedPredecessor=normalizeSql(installedEquivalentPredecessor);
+    expect(acceptsUniqueContexts(normalizedPredecessor)).toBe(true);
+    for(const marker of [preflightOrderMarker,movementOrderMarker]){
+      expect(acceptsUniqueContexts(normalizedPredecessor.replace(marker,''))).toBe(false);
+      expect(acceptsUniqueContexts(`${normalizedPredecessor} ${marker}`)).toBe(false);
+    }
+    expect(acceptsUniqueContexts(normalizedPredecessor.replace(movementOrderMarker,movementOrderMarker.replace(shortOrderMarker,'ORDER BY id')))).toBe(false);
+    expect(acceptsUniqueContexts(normalizedPredecessor.replace(movementOrderMarker,movementOrderMarker.replace('true ORDER BY','false ORDER BY')))).toBe(false);
   });
   it('models each migration guard as fail-closed for zero or multiple matches',()=>{
     const acceptsExactlyOnce=(definition:string,needle:string)=>{
