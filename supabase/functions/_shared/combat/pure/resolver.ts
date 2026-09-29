@@ -2800,7 +2800,7 @@ export function resolveTickPure(snapshot: EncounterSnapshot): ProposedTick {
       ? getEffectiveMaxHp(p.classKey, attrWith('con'), level, eb as Record<string, number>)
       : p.maxHp;
     const maxCp = levelled
-      ? getEffectiveMaxCp(level, attrWith('wis'), eb as Record<string, number>)
+      ? getEffectiveMaxCp(level, attrWith('int'), attrWith('wis'), eb as Record<string, number>)
       : p.maxCp;
     const maxMp = levelled
       ? getEffectiveMaxMp(level, attrWith('dex'), eb as Record<string, number>)
