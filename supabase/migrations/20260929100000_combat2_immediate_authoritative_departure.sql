@@ -1,9 +1,7 @@
 -- ENG-MOVE-001: finish ordinary Combat2 relocation in the caller transaction.
 -- The installed predecessors remain the sole owners of movement validation,
 -- cost calculation, party inclusion, and durable request creation.
-BEGIN;
-
-DO $guard$
+DO $$
 BEGIN
   IF to_regprocedure('public.combat2_depart(uuid,uuid,uuid)') IS NULL
      OR to_regprocedure('public.combat2_party_depart(uuid,uuid,uuid)') IS NULL
@@ -21,13 +19,13 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='node_effect' AND column_name='target_character_id') THEN
     RAISE EXCEPTION 'ENG-MOVE-001 installed schema drift';
   END IF;
-END
-$guard$;
+END;
+$$;
 
 -- Arena reset locks encounters by UUID before touching characters. Pre-lock the
 -- origin/destination encounter pair in that same order so authoritative arrival
 -- never holds a mover character while waiting for the destination encounter.
-DO $solo_encounter_pair$
+DO $$
 DECLARE definition text; needle text; replacement text; before_row record;
 BEGIN
   SELECT p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl,pg_get_functiondef(p.oid) definition
@@ -48,15 +46,15 @@ BEGIN
         OR p.proacl IS DISTINCT FROM before_row.proacl)) THEN
     RAISE EXCEPTION 'ENG-MOVE-001 solo predecessor metadata/ACL changed';
   END IF;
-END
-$solo_encounter_pair$;
+END;
+$$;
 
 -- Patch only the installed inner party predecessor. Party membership is stable
 -- under the existing party-lifecycle advisory. The complete mover UUID set is
 -- frozen before any character row lock, all character rows are then locked in
 -- UUID order (matching resource settlement), and movement still uses the
 -- predecessor's joined_at/UUID follower order with the leader last.
-DO $party_lock_order$
+DO $$
 DECLARE
   definition text;
   wrapper_definition text;
@@ -204,8 +202,8 @@ BEGIN
      OR position('ORDER BY leader_last,joined_at,id' in definition)=0 THEN
     RAISE EXCEPTION 'ENG-MOVE-001 corrected party lock/movement contract missing';
   END IF;
-END
-$party_lock_order$;
+END;
+$$;
 
 -- This function performs no combat resolution. Lock order after the public
 -- node locks is encounter -> character -> fighter/effects/request state.
@@ -370,7 +368,7 @@ $$;
 REVOKE ALL ON FUNCTION public.combat_flee(uuid,uuid,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.combat_flee(uuid,uuid,uuid) TO authenticated,service_role;
 
-DO $postflight$
+DO $$
 DECLARE signature regprocedure; p record;
 BEGIN
   FOREACH signature IN ARRAY ARRAY[
@@ -415,7 +413,5 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='combat2_party_departure_member_finalized' AND NOT tgisinternal) THEN
     RAISE EXCEPTION 'ENG-MOVE-001 heartbeat-dependent party finalizer remains active';
   END IF;
-END
-$postflight$;
-
-COMMIT;
+END;
+$$;

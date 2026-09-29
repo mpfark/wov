@@ -22,6 +22,46 @@ const partyGuardFragments=[
   'FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP',
 ];
 
+function splitSqlStatements(source:string):string[]{
+  const statements:string[]=[]; let start=0; let index=0;
+  while(index<source.length){
+    if(source.startsWith('--',index)){
+      const newline=source.indexOf('\n',index+2); index=newline<0?source.length:newline+1; continue;
+    }
+    if(source.startsWith('/*',index)){
+      const close=source.indexOf('*/',index+2); if(close<0)throw new Error('unclosed SQL block comment'); index=close+2; continue;
+    }
+    const quote=source[index];
+    if(quote==="'"||quote==='"'){
+      index++;
+      while(index<source.length){
+        if(source[index]===quote){
+          if(source[index+1]===quote){index+=2;continue;}
+          index++;break;
+        }
+        index++;
+      }
+      continue;
+    }
+    if(quote==='$'){
+      const delimiter=source.slice(index).match(/^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/)?.[0];
+      if(delimiter){
+        const close=source.indexOf(delimiter,index+delimiter.length);
+        if(close<0)throw new Error(`unclosed SQL dollar quote ${delimiter}`);
+        index=close+delimiter.length;continue;
+      }
+    }
+    if(quote===';'){
+      statements.push(source.slice(start,index+1).trim()); start=index+1;
+    }
+    index++;
+  }
+  if(source.slice(start).trim())throw new Error('trailing incomplete SQL statement');
+  return statements.filter(Boolean);
+}
+
+const executableStatements=splitSqlStatements(sql);
+
 function rowColumns(table:string):Set<string>{
   const start=generatedTypes.indexOf(`      ${table}: {`);
   const row=generatedTypes.indexOf('        Row: {',start);
@@ -42,6 +82,19 @@ function reversedPair(left:string[],right:string[]):boolean{
 }
 
 describe('ENG-MOVE-001 immediate authoritative departure migration',()=>{
+  it('is runner-compatible complete SQL without embedded transaction control',()=>{
+    expect(executableStatements.some(statement=>/^BEGIN\s*;$/i.test(statement))).toBe(false);
+    expect(executableStatements.some(statement=>/^COMMIT\s*;$/i.test(statement))).toBe(false);
+    const doBlocks=executableStatements.filter(statement=>/^(?:--[^\n]*\n\s*)*DO\s+\$\$/i.test(statement));
+    expect(doBlocks).toHaveLength(4);
+    expect(doBlocks.every(statement=>statement.endsWith('$$;'))).toBe(true);
+    const postflight=doBlocks.at(-1)!;
+    expect(postflight).toContain('ENG-MOVE-001 heartbeat-dependent party finalizer remains active');
+    expect(postflight).toContain('END IF;');
+    expect(postflight).toContain('END LOOP;');
+    expect(postflight.trim()).toMatch(/END;\r?\n\$\$;$/);
+    expect(executableStatements.at(-1)).toBe(postflight);
+  });
   it('uses valid exact-once PostgreSQL text guards for every predecessor fragment',()=>{
     expect(sql).not.toMatch(/\b(?:position|strpos)\s*\(\s*"/i);
     expect(sql).toContain("position('PERFORM pg_advisory_xact_lock(hashtextextended(''party-lifecycle'',0))' in definition)=0");
@@ -183,7 +236,7 @@ describe('ENG-MOVE-001 immediate authoritative departure migration',()=>{
     expect(sql).toContain('WHERE node_id IN(leader.current_node_id,_destination_node_id) ORDER BY id FOR UPDATE');
     expect(arenaReset).toContain('WHERE test_arena_id=_arena_id ORDER BY id FOR UPDATE');
     expect(arenaReset.indexOf('ORDER BY id FOR UPDATE')).toBeLessThan(arenaReset.indexOf('UPDATE public.characters c SET'));
-    const soloPatch=sql.slice(sql.indexOf('DO $solo_encounter_pair$'),sql.indexOf('$solo_encounter_pair$;',sql.indexOf('DO $solo_encounter_pair$')));
+    const soloPatch=executableStatements.find(statement=>statement.includes("ORDER BY id FOR UPDATE;\\n'||needle"))!;
     expect(soloPatch).toContain("ORDER BY id FOR UPDATE;\\n'||needle");
   });
   it('maps referenced columns to their installed table contracts',()=>{
