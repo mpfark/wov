@@ -86,14 +86,33 @@ describe('ENG-MOVE-001 immediate authoritative departure migration',()=>{
     expect(executableStatements.some(statement=>/^BEGIN\s*;$/i.test(statement))).toBe(false);
     expect(executableStatements.some(statement=>/^COMMIT\s*;$/i.test(statement))).toBe(false);
     const doBlocks=executableStatements.filter(statement=>/^(?:--[^\n]*\n\s*)*DO\s+\$\$/i.test(statement));
-    expect(doBlocks).toHaveLength(4);
+    expect(doBlocks).toHaveLength(3);
     expect(doBlocks.every(statement=>statement.endsWith('$$;'))).toBe(true);
-    const postflight=doBlocks.at(-1)!;
-    expect(postflight).toContain('ENG-MOVE-001 heartbeat-dependent party finalizer remains active');
-    expect(postflight).toContain('END IF;');
-    expect(postflight).toContain('END LOOP;');
-    expect(postflight.trim()).toMatch(/END;\r?\n\$\$;$/);
-    expect(executableStatements.at(-1)).toBe(postflight);
+    expect(sql).not.toContain('ENG-MOVE-001 heartbeat-dependent party finalizer remains active');
+    expect(executableStatements.at(-1)).toContain('GRANT EXECUTE ON FUNCTION public.combat_flee(uuid,uuid,uuid) TO authenticated,service_role;');
+    expect(executableStatements.every(statement=>statement.endsWith(';'))).toBe(true);
+  });
+  it('retains every contract required by the external read-only post-install verification',()=>{
+    for(const signature of [
+      'combat2_finish_immediate_departure(_request_id uuid)',
+      'combat2_finish_immediate_party_departure(_request_id uuid)',
+      'combat2_depart(_character_id uuid,_destination_node_id uuid,_request_id uuid)',
+      'combat2_party_depart(_leader_character_id uuid,_destination_node_id uuid,_request_id uuid)',
+      'combat_flee(_encounter_id uuid,_character_id uuid,_request_id uuid)',
+    ])expect(sql).toContain(signature);
+    expect(sql).toContain('RENAME TO combat2_depart_without_immediate_transition');
+    expect(sql).toContain('RENAME TO combat2_party_depart_without_immediate_transition');
+    expect(sql).toContain('DROP TRIGGER IF EXISTS combat2_party_departure_member_finalized');
+    expect(sql.match(/VOLATILE SECURITY DEFINER SET search_path=public,pg_temp/g)).toHaveLength(5);
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.combat2_depart(uuid,uuid,uuid) TO authenticated,service_role');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.combat2_party_depart(uuid,uuid,uuid) TO authenticated,service_role');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.combat_flee(uuid,uuid,uuid) TO authenticated,service_role');
+    for(const internal of [
+      'combat2_finish_immediate_departure(uuid)',
+      'combat2_finish_immediate_party_departure(uuid)',
+      'combat2_depart_without_immediate_transition(uuid,uuid,uuid)',
+      'combat2_party_depart_without_immediate_transition(uuid,uuid,uuid)',
+    ])expect(sql).toContain(`GRANT EXECUTE ON FUNCTION public.${internal} TO service_role`);
   });
   it('uses valid exact-once PostgreSQL text guards for every predecessor fragment',()=>{
     expect(sql).not.toMatch(/\b(?:position|strpos)\s*\(\s*"/i);
