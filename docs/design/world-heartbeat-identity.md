@@ -71,52 +71,32 @@ The source explains the observation: due-node selection requires `next_due_at <=
 
 Mik separately operator-reports that deliberate peaceful initiation works and that out-of-combat regeneration resumes after release. Those observations remain operator evidence (`directly_verified: false`), not proof of the cadence model or its rare branches.
 
-## Pending deliberate encounter cadence (`ENG-HB-003`)
+## Authored two-second phase correction (`ENG-HB-003`)
 
-Mik considers the observed pace comfortable and accepts a deliberate four-second encounter cadence as the recommended candidate if it is stable and explicit. This section is a proposal awaiting approval, not implemented or installed behavior.
+The approved gameplay cadence remains one encounter tick per eligible two-second scheduler opportunity. CP regeneration remains every second committed encounter tick; effect pulse/expiry rules and boss windup/cooldown conversion remain based on the existing two-second encounter tick. A deliberate three- or four-second cadence remains an unapproved future option.
 
-### Timing dependency audit
+Migration `20260930130000_combat2_encounter_schedule_drift.sql` is authored but not installed. It patches only the effective inner atomic commit function, `node_tick_commit_without_bounded_failure(...)`. After a successful commit it advances from the encounter's **previous scheduled deadline**, not from worker transaction time:
 
-| Concern | Current source contract | Effect of merely making commits every four seconds | Proposed treatment |
-|---|---|---|---|
-| Ordinary attacks and queued intents | one player action slot and creature action per successful candidate tick; claim captures the intent cutoff | actions resolve every four seconds | keep one action slot per encounter tick |
-| First resolution | entry/reactivation writes `next_due_at = now()` | normally selected by the next scheduler fire | retain next-actual-heartbeat first resolution, then establish the encounter's phase |
-| Passive CP regeneration | every even candidate tick; comment defines this as one four-second opportunity | becomes every eight seconds | change to every encounter tick if four seconds is approved |
-| Inspire and other regeneration effects | pulse timing is stored as tick offsets; authored 2,000 ms intervals map to one tick | one-tick pulses become four-second pulses | define four seconds as the minimum pulse quantum; rederive tick counts from authored milliseconds |
-| DoT and off-screen effects | tick-fenced, at most one pulse per tick; missed pulses are skipped, never stacked; a departed source can still qualify its DoT | real-time duration and pulse spacing double if counts are unchanged | preserve skip-not-stack; convert authored durations/intervals to the new four-second quantum and explicitly accept that sub-four-second intervals quantize upward |
-| Effect and stance duration | `activated_at_tick`, `expires_after_tick`, `interval_ticks` and `next_pulse_tick` are encounter-local | unchanged counts last twice as long | preserve tick authority but recalculate new activations from a four-second quantum; decide separately whether existing live effects require compatibility handling |
-| Boss windups, telegraphs and cooldowns | milliseconds become ticks with `ceil(ms / 2000)`; resolution/cooldown compare encounter ticks | all real durations double if untouched | use `ceil(ms / 4000)` for new snapshots; telegraph starts on one tick and resolves no earlier than the next eligible phased tick |
-| Intent cutoff and queued UI | claim freezes the maximum pending sequence; browser acknowledgement means queued, not resolved | longer bounded wait, no authority change | keep cutoff and request-id fences; UI may state “queued for the next combat beat” but must not predict success |
-| Claims, leases, retries and catch-up | default lease is 5 seconds; retry reclaims the same candidate tick; no combat catch-up burst | a 5-second lease overlaps the next nominal 4-second phase | lease must be reviewed/raised above worst-case processing; retry keeps the candidate tick but gets the retry heartbeat id; at most one commit per encounter per heartbeat and missed phases are skipped |
-| Completion and reactivation | completion is a committed tick; reactivation clears claim/cutoff and sets due now | cadence remains implicit | completion stays tick-owned; reactivation resolves on the next actual heartbeat and establishes a fresh phase |
-| Test Arena | uses the same resolver, claim/commit and scheduler paths with explicit lifecycle controls | inherits any production cadence | no arena-only cadence; focused tests and controlled observation must prove the shared contract |
-| Diagnostics and display | heartbeat id, encounter tick, settlement bucket, request id and delivery cursor are distinct | accidental “tick = heartbeat” wording becomes more tempting | display both ids only as diagnostics; show configured encounter period/phase separately; never derive readiness from heartbeat id |
+```text
+elapsed slots = floor(max(0, commit_transaction_start - previous_due) / 2 seconds)
+next due      = previous_due + (elapsed slots + 1) × 2 seconds
+```
 
-The current two-second assumptions are source facts in `src/shared/combat2/time.ts`, `resolver.ts`, boss catalogue conversion and their Edge mirrors. A cadence change is therefore a gameplay-timing change, not a scheduler-only optimization.
+During healthy execution, a commit 0.4–0.5 seconds after its due opportunity therefore advances from `04.000` to `06.000`, allowing the `06.1` scheduler fire to select it. Latency does not accumulate into the schedule. If processing is delayed past one or more deadlines, the expression chooses the first phase-aligned deadline strictly after the commit transaction start. Obsolete opportunities are skipped; no backlog of attacks is replayed.
 
-### Recommended phase contract
+Entry and reactivation continue to set `next_due_at = now()`, so the first resolution remains eligible on the next scheduler invocation. A failed/refused commit never reaches the deadline update. An expired lease may reclaim the same candidate tick; exactly-once tick/state/token fences still allow only one successful commit. Completion retains the existing status transition. Maintenance, sleep or missing scheduler calls create no combat work; after reopening, the first successful overdue commit skips old phases. Immediate movement continues to serialize independently between heartbeats and can invalidate an old claim through the existing fences.
 
-Use an explicit server-owned heartbeat phase, not transaction timestamps:
+`heartbeat_id` is unchanged correlation metadata. Its value, parity and numeric gaps are not used as a clock or gameplay ordering rule. The due-node selector, scheduler wrapper, claim functions, public commit wrappers, resolver and Edge code are unchanged.
 
-1. Entry or reactivation remains immediate and marks the encounter ready for its first resolution on the next actual eligible heartbeat. That successful claim records the encounter's phase anchor.
-2. After a successful commit, the next ordinary candidate is the first actual heartbeat whose id is at least `committed_heartbeat_id + 2`. Different encounters may anchor on different odd/even phases; they need not synchronize their attacks with one another.
-3. A failed claim or commit does not advance the encounter tick or phase. A retry receives a new heartbeat id, reuses the same candidate tick under existing fences and may commit at the next eligible fire.
-4. A missed scheduler fire creates no heartbeat id and no combat debt. A delayed dispatcher may commit once; it schedules from the heartbeat that actually committed, not from the old wall-clock deadline. Never burst multiple encounter ticks to catch up.
-5. Immediate movement, entry and hostile initiation remain immediate transactions between heartbeats. They may observe a heartbeat id but do not own or reserve it.
-6. Four-second settlement keeps its independent bucket cursor. It can correlate to the same heartbeat without becoming an encounter tick.
+### Mandatory Lovable installation and live checks
 
-This requires persistent encounter phase metadata (for example a nullable `next_due_heartbeat_id` plus the last committed heartbeat correlation) and guarded due-node/claim/commit changes. A schema change is therefore expected. Deriving phase from `heartbeat_id % 2` alone is insufficient because first resolution must be the next heartbeat and different encounters may begin on either phase.
+Before installation, while the world is asleep and Combat2 is in maintenance, verify read-only that:
 
-### Alternatives and decisions
+- the migration is absent from the ledger and its repository SHA-256 matches the authorized handoff;
+- `node_tick_commit_without_bounded_failure(...)` is postgres-owned, `SECURITY DEFINER`, volatile, `search_path=public`, service-role-only, and contains exactly one guarded old due-time assignment;
+- the public/arrival/boss/bounded-failure wrapper chain and `combat2_due_nodes` definitions match their recorded predecessors;
+- there are no live claims, active Test Arena processing or queued gameplay work that installation could disturb.
 
-Continuing wall-clock due-time progression from the prior deadline (`next_due_at + 4 seconds`) removes commit-latency drift but still depends on timestamp comparison, can become immediately overdue after delays and needs a separate catch-up rule. Progression from commit time deliberately skips debt but remains phase-shifted by transport latency. The explicit heartbeat phase above makes cadence observable and deterministic while retaining one-commit fences, and is recommended.
+Run the migration first in a rollback-only transaction against the installed schema and compile every statement. After the atomic install, verify the patched assignment exactly once; unchanged owner/security/volatility/search path/ACL; unchanged wrappers, claim signature, due selector, lock order and resolver contracts; no gameplay-row mutation; and no generated type diff (the migration changes no schema or signature).
 
-Approval is still required for the gameplay consequences: four seconds as the encounter-tick duration; CP regeneration on every tick; upward quantization of sub-four-second periodic effects; conversion/rebaseline of boss windups, cooldowns and effect durations; handling of effects already live during rollout; and the revised lease budget. Until those decisions are approved, the current two-second authored tick contract and observed accidental ~four-second pace remain unchanged.
-
-### Smallest safe implementation sequence
-
-1. Approve the timing decisions above and inventory authored milliseconds/tick expectations with golden compatibility cases.
-2. Add one guarded forward migration for encounter heartbeat-phase metadata and due/claim/commit composition; do not alter the scheduler's two-second cadence.
-3. Change the canonical time conversion, CP phase and boss/effect adapters; regenerate Edge mirrors through the checked-in generator.
-4. Add deterministic model tests for both anchor parities, simultaneous encounters, first resolution, retry, delayed/missed fires, no burst catch-up, completion/reactivation and settlement independence.
-5. Install while asleep/maintenance, deploy only proven transitive Edge consumers, then perform one bounded diagnostic observation before opening normal gameplay.
+The bounded live test must observe one ordinary encounter for at least six eligible heartbeats. Require consecutive committed encounter ticks near the two-second cadence, no claim/commit refusals, no duplicate tick per dispatcher invocation, unchanged even-tick CP regeneration, normal completion/release and operator-visible post-combat regeneration. Record heartbeat and encounter tick as separate fields. Do not infer success from HTTP 200 or from heartbeat-id arithmetic.

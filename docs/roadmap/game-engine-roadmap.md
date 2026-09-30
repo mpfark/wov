@@ -44,14 +44,14 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Acceptance criteria:** strictly increasing durable ids with documented gaps; one fire can correlate zero/many nodes and zero/many settlement steps; retries get new ids while existing domain fences prevent duplicate effects; commits advance only local ticks; immediate transactions remain immediate; maintenance/sleep do not bank work; fields and retention are bounded; installed and diagnostic proof.
 - **Specification sections:** One authoritative world heartbeat; Failure, diagnostics and verification.
 
-### ENG-HB-003 — Deliberate heartbeat-aligned encounter cadence
+### ENG-HB-003 — Two-second encounter schedule phase correction
 
-- **Engine area / status / priority:** combat timing; `decision_needed`; 3.
+- **Engine area / status / priority:** combat timing; `implemented_source`; 3.
 - **Problem or decision:** commit-time `next_due_at` progression drifts behind the two-second scheduler and currently makes an encounter resolve on roughly every second fire by accident.
-- **Intended outcome:** if approved, an explicit four-second encounter cadence anchored to durable heartbeat identity, with first resolution on the next actual heartbeat, no wall-clock phase drift and no combat catch-up burst.
-- **Dependencies:** Mik approval of the four-second gameplay quantum, CP on every encounter tick, sub-four-second pulse quantization, boss/effect duration conversion, live-effect rollout and claim-lease budget.
-- **Evidence/current state:** Lovable's read-only 10:13:03–10:13:59 UTC window found healthy ~2.016-second heartbeats but ticks 526–531 only on alternating fires. Source proves `greatest(now(), next_due_at) + 2 seconds` plus dispatch latency as the cause. The design note contains the full timing-dependency audit and recommends an explicit per-encounter heartbeat phase; no runtime or schema change exists.
-- **Acceptance criteria:** both anchor parities and simultaneous encounters; next-heartbeat first resolution; deterministic retry of one candidate tick; delayed/missed fires skip debt; at most one commit per encounter per heartbeat; CP/effect/boss timing golden cases; lease safety; Test Arena parity; installed and bounded live proof.
+- **Intended outcome:** preserve one encounter tick per eligible two-second heartbeat by advancing from the previous authoritative server deadline, while skipping obsolete opportunities after delays and never replaying combat debt.
+- **Dependencies:** guarded installation of the authored forward migration and bounded live verification; no gameplay decision remains.
+- **Evidence/current state:** Lovable's read-only 10:13:03–10:13:59 UTC window found healthy ~2.016-second heartbeats but ticks 526–531 only on alternating fires. Source proves `greatest(now(), next_due_at) + 2 seconds` plus dispatch latency as the cause. Migration `20260930130000_combat2_encounter_schedule_drift.sql` patches only the inner atomic commit assignment; timing-model tests reproduce the defect and consecutive-fire correction. It is not installed. Heartbeat id remains correlation-only, and all CP/effect/boss timing is unchanged.
+- **Acceptance criteria:** 2.016-second fire/0.4–0.5-second latency reproduction; consecutive eligible commits after correction; varied latency without drift; delayed/missed fires skip debt; failed/retried/duplicate claims commit once; even-tick CP unchanged; entry/reactivation, completion, immediate departure and Test Arena parity; rollback compile, installed contract inspection and bounded live proof.
 - **Specification sections:** One authoritative world heartbeat; Resources and attributes; Effects and stances; Combat resolution.
 
 ### ENG-DIAG-001 — Limited latency and jitter measurement

@@ -24,7 +24,7 @@ HP, CP and MP are distinct resources. Equipment, attributes, effects, stances an
 
 ## Time and authority
 
-The intended timed-work model is one shared server heartbeat with a two-second base cadence. The durable global heartbeat identity is implemented and installed, but live correlation remains unverified.
+The intended timed-work model is one shared server heartbeat with a two-second base cadence. The durable global heartbeat identity is implemented and installed. One bounded ordinary-flow window is live-correlated; failure and recovery branches remain unverified.
 
 - A scheduled server invocation opens an opportunity to process due work.
 - Each encounter advances its own committed tick sequence. An encounter tick is not a global world tick.
@@ -32,7 +32,7 @@ The intended timed-work model is one shared server heartbeat with a two-second b
 - Movement, encounter entry and other explicitly immediate authoritative transactions do not wait for a heartbeat; they serialize against encounter work.
 - Request UUIDs, claim tokens, encounter ticks, settlement buckets and delivery cursors serve different replay and ordering purposes.
 
-The correlation contract and installed implementation are described in [World heartbeat identity](world-heartbeat-identity.md). Installation and deployment evidence lives in project state; production correlation must not be described as live-verified until a separately authorized bounded observation proves it.
+The correlation contract and installed implementation are described in [World heartbeat identity](world-heartbeat-identity.md). Installation, deployment and bounded observation evidence lives in project state; unobserved failure/recovery branches must not be inferred from that ordinary-flow window.
 
 ## System responsibilities
 

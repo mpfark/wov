@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-30T10:30:00Z",
-  "based_on_source_sha": "37492f079b008ffd0827f75c1b4e70ec80100406",
+  "updated_at": "2026-09-30T19:30:00Z",
+  "based_on_source_sha": "325d9cdbca142342246548a067513a7a40de74ca",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,14 +16,24 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "37492f079b008ffd0827f75c1b4e70ec80100406",
-    "timestamp": "2026-09-30T10:30:00Z",
+    "sha": "325d9cdbca142342246548a067513a7a40de74ca",
+    "timestamp": "2026-09-30T19:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main was clean and safely fast-forwarded from required checkpoint 7033042d6d4c80e033585e05f4b2faf06060026f to origin/main at 37492f079b008ffd0827f75c1b4e70ec80100406. The synchronized history preserves the Lovable-authored read-only cadence note and all earlier ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
+    "evidence": "Local main and origin/main were both clean and synchronized at required checkpoint 325d9cdbca142342246548a067513a7a40de74ca before ENG-HB-003 source work. Its ancestry preserves the Lovable-authored read-only cadence evidence and all earlier ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20260930130000_combat2_encounter_schedule_drift.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": null,
+      "evidence_type": "tests",
+      "evidence": "ENG-HB-003 source correction, SHA-256 7f7aaaa87a35ade39559b3e494a5e034aed62bd7a8aa61fb5dd7c0bc94ada05e. It patches only node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb), advancing next_due_at from its previous two-second server phase and skipping obsolete deadlines after delay. No schema, signature, resolver, CP, effect, boss, claim, movement or wrapper contract changes. Not installed; PostgreSQL rollback compilation and installed predecessor/owner/ACL verification remain mandatory Lovable gates.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
       "status": "installed",
@@ -218,6 +228,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "eng-hb-003-two-second-schedule-phase-correction",
+      "status": "committed",
+      "sha": null,
+      "timestamp": "2026-09-30T19:30:00Z",
+      "evidence_type": "tests",
+      "evidence": "Authored source preserves the approved two-second encounter cadence. A deterministic model reproduces Lovable's measured 2.016-second fires plus 0.45-second worker latency: the installed formula commits on alternating fires, while the corrected prior-deadline formula commits on consecutive eligible fires without cumulative drift. Delayed fires skip obsolete phases without burst catch-up. Existing claim/token/tick/state-version fences, even-tick CP regeneration, resolver mechanics, entry/reactivation, completion, immediate departure and Test Arena shared path remain unchanged. The forward migration is not installed and live correction is not claimed.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "eng-hb-001-source-checkpoint",
       "status": "pushed",
@@ -623,11 +643,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik decision on ENG-HB-003 timing consequences, followed only if approved by a guarded heartbeat-phase implementation; remaining ENG-HB-001 branch verification stays separate.",
+    "artifact": "Guarded Lovable installation and bounded live verification of ENG-HB-003; a three-/four-second cadence remains a separate unapproved future option.",
     "sha": null,
-    "timestamp": "2026-09-30T10:30:00Z",
+    "timestamp": "2026-09-30T19:30:00Z",
     "evidence_type": "repository",
-    "evidence": "ENG-HB-003 is design-only and pending approval. The recommended candidate is an explicit four-second encounter cadence anchored per encounter to actual heartbeat identities, with next-heartbeat first resolution and no burst catch-up. Approval is still required for CP-on-every-tick, sub-four-second pulse quantization, boss/effect timing conversion, existing-effect rollout and lease budget. No schema or runtime implementation is authorized by this record. ENG-HB-001 ineligible/retry/failure/catch-up observation and live movement/multiplayer verification remain separate.",
+    "evidence": "Install only migration 20260930130000_combat2_encounter_schedule_drift.sql after byte/hash, predecessor composition, safety-state and rollback-only compilation gates. Post-install verify the inner function authority and phase expression while all wrappers, claims, due selection, lock order and gameplay fingerprints remain unchanged. Then observe at least six eligible heartbeats with consecutive near-two-second encounter commits, no refusals/duplicates, even-tick CP behavior, completion/release and post-combat regeneration. No Edge or frontend deployment is expected.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

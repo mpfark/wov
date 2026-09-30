@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 const SCHEDULER_PATH = 'supabase/migrations/20260831133000_combat2_dispatch_scheduler_foundation.sql';
 const COMMIT_PATH = 'supabase/migrations/20260829084704_518ce69a-0799-4ec1-8beb-7fb32baa3cca.sql';
+const DRIFT_PATH = 'supabase/migrations/20260930130000_combat2_encounter_schedule_drift.sql';
 const sql = readFileSync(SCHEDULER_PATH, 'utf8');
 const normal = sql.toLowerCase().replace(/\s+/g, ' ');
 const commit = readFileSync(COMMIT_PATH, 'utf8').toLowerCase().replace(/\s+/g, ' ');
+const drift = readFileSync(DRIFT_PATH, 'utf8').toLowerCase().replace(/\s+/g, ' ');
 
 describe('Combat2 dispatcher scheduler migration contract', () => {
   it('uses the authoritative two-second Combat2 cadence', () => {
     expect(commit).toContain("next_due_at = greatest(now(), next_due_at) + interval '2 seconds'");
+    expect(drift).toContain("next_due_at = next_due_at' || e'\\n + (floor(greatest(0::numeric, extract(epoch from (now() - next_due_at))) / 2)::bigint + 1)' || e'\\n * interval ''2 seconds'''");
     expect(normal).toContain("'combat2-dispatch-once', '2 seconds'");
   });
 
