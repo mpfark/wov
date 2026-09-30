@@ -115,6 +115,8 @@ export function useCharacter(user: User | null) {
   const fetchInFlightRef = useRef(false);
   const fetchQueuedRef = useRef(false);
   const fetchSourceRef = useRef<CharacterResourceDeliveryState['source']>('initial');
+  const locationRevisionCounterRef = useRef(0);
+  const locationRevisionRef = useRef<Map<string, number>>(new Map());
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
@@ -137,6 +139,7 @@ export function useCharacter(user: User | null) {
       return;
     }
     fetchInFlightRef.current = true;
+    const fetchStartedAtLocationRevision = locationRevisionCounterRef.current;
     const source = fetchSourceRef.current;
     setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'refreshing' : 'connecting' }));
     const { data, error } = await supabase
@@ -149,10 +152,26 @@ export function useCharacter(user: User | null) {
       // for the rows we just received so the next realtime echo is honored.
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
       // write could hide the post-login authoritative HP/CP/MP for several seconds.)
-      const fetchedIds = new Set((data as Character[]).map(c => c.id));
+      const rows = data as Character[];
+      const fetchedIds = new Set(rows.map(c => c.id));
       for (const id of fetchedIds) {
-        pendingWritesRef.current.delete(id);
-        heldFieldsRef.current.delete(id);
+        const locationChangedAfterFetchStarted = (locationRevisionRef.current.get(id) ?? 0) > fetchStartedAtLocationRevision;
+        if (locationChangedAfterFetchStarted) {
+          const pending = pendingWritesRef.current.get(id);
+          if (pending) {
+            for (const field of Array.from(pending)) if (field !== 'current_node_id') pending.delete(field);
+            if (pending.size === 0) pendingWritesRef.current.delete(id);
+          }
+          const held = heldFieldsRef.current.get(id);
+          if (held) {
+            for (const field of Array.from(held)) if (field !== 'current_node_id') held.delete(field);
+            if (held.size === 0) heldFieldsRef.current.delete(id);
+          }
+        } else {
+          pendingWritesRef.current.delete(id);
+          heldFieldsRef.current.delete(id);
+          locationRevisionRef.current.delete(id);
+        }
       }
       // Drop entries for characters that no longer belong to this user.
       for (const id of Array.from(pendingWritesRef.current.keys())) {
@@ -162,7 +181,12 @@ export function useCharacter(user: User | null) {
         if (!fetchedIds.has(id)) heldFieldsRef.current.delete(id);
       }
 
-      setCharacters(data as Character[]);
+      setCharacters(previous => rows.map(incoming => {
+        const locationChangedAfterFetchStarted = (locationRevisionRef.current.get(incoming.id) ?? 0) > fetchStartedAtLocationRevision;
+        if (!locationChangedAfterFetchStarted) return incoming;
+        const current = previous.find(character => character.id === incoming.id);
+        return current ? { ...incoming, current_node_id: current.current_node_id } : incoming;
+      }));
       setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), source });
     } else if (activeUserIdRef.current === userId && error) {
       setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'stale' : 'disconnected' }));
@@ -196,6 +220,7 @@ export function useCharacter(user: User | null) {
       // that may have been initialized as a non-Map in a prior code version.
       pendingWritesRef.current = new Map();
       heldFieldsRef.current = new Map();
+      locationRevisionRef.current = new Map();
       fetchQueuedRef.current = false;
       setResourceDelivery({ status: 'disconnected', lastAuthoritativeAt: null, source: null });
 
@@ -365,6 +390,9 @@ export function useCharacter(user: User | null) {
     }
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+    if (Object.prototype.hasOwnProperty.call(updates, 'current_node_id')) {
+      locationRevisionRef.current.set(charId, ++locationRevisionCounterRef.current);
+    }
 
     // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
     // silently reduce them. Prefer caller-supplied effective caps (which
@@ -414,6 +442,9 @@ export function useCharacter(user: User | null) {
     }
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+    if (Object.prototype.hasOwnProperty.call(updates, 'current_node_id')) {
+      locationRevisionRef.current.set(charId, ++locationRevisionCounterRef.current);
+    }
 
     // Clear pending after a short delay to let realtime catch up
     setTimeout(() => {

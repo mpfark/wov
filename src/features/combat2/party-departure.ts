@@ -7,6 +7,30 @@ const members = (value:unknown):Combat2DepartureMemberOutcome[] => {
   return value.map(raw=>{if(!object(raw)||!UUID.test(String(raw.character_id))||typeof raw.display_name!=='string'||!Number.isSafeInteger(raw.order)||!Number.isSafeInteger(raw.cost)||!['waiting','queued','moved','dead','remaining'].includes(String(raw.status)))throw new Error('combat2_party_depart returned malformed members');return {characterId:String(raw.character_id),displayName:raw.display_name,order:raw.order as number,status:raw.status as Combat2DepartureMemberOutcome['status'],cost:raw.cost as number};});
 };
 
+export function shouldUseCoordinatedDeparture(input: {
+  partyId: string | null;
+  isLeader: boolean;
+  leaderCharacterId: string;
+  leaderNodeId: string | null;
+  members: Array<{
+    character_id: string;
+    status: string;
+    is_following: boolean;
+    character: { hp: number; current_node_id: string | null };
+  }>;
+  acknowledged?: { partyId: string; destinationNodeId: string; movedMemberIds: Set<string> } | null;
+}): boolean {
+  if (!input.partyId || !input.isLeader || !input.leaderNodeId) return false;
+  return input.members.some(member => member.character_id !== input.leaderCharacterId
+    && member.status === 'accepted'
+    && member.is_following
+    && member.character.hp > 0
+    && (member.character.current_node_id === input.leaderNodeId
+      || (input.acknowledged?.partyId === input.partyId
+        && input.acknowledged.destinationNodeId === input.leaderNodeId
+        && input.acknowledged.movedMemberIds.has(member.character_id))));
+}
+
 /** Selects the coordinated RPC only for a real party leader with eligible followers. */
 export function createPartyAwareDepartureAdapter(client: {
   rpc(name: string, args: Record<string, string>): PromiseLike<{ data: unknown; error: { message?: string } | null }>;

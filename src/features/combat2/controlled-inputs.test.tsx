@@ -41,6 +41,13 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('controlled input and display boundary', () => {
+  it('uses the shared movement owner instead of starting a second departure recovery lifecycle',async()=>{
+    const {result}=renderHook(()=>useCombat2ClientSession({...options,departurePending:true}));
+    await waitFor(()=>expect(result.current.pendingFlee).toBe(true));
+    expect(result.current.actionsReady).toBe(false);
+    expect(vi.mocked(supabase.rpc).mock.calls.some(([name])=>name==='combat2_departure_state')).toBe(false);
+  });
+
   it('routes supported abilities and stance activate/drop through the installed adapter exactly once per action', async () => {
     const { result, rerender } = renderHook(() => useCombat2ClientSession(options), { wrapper: StrictMode });
     await waitFor(()=>expect(result.current.actionsReady).toBe(true));

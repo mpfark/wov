@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCharacter, type Character } from './useCharacter';
 
 const CHARACTER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const base = (hp: number, userId = 'user-a'): Character => ({
+const base = (hp: number, userId = 'user-a', nodeId = 'node'): Character => ({
   id: CHARACTER, user_id: userId, name: 'Tester', gender: 'male', race: 'human', class: 'warrior',
   level: 1, xp: 0, hp, max_hp: 20, gold: 0, str: 10, dex: 10, con: 10, int: 10, wis: 10,
-  cha: 10, ac: 10, current_node_id: 'node', unspent_stat_points: 0, cp: hp, max_cp: 20,
+  cha: 10, ac: 10, current_node_id: nodeId, unspent_stat_points: 0, cp: hp, max_cp: 20,
   mp: hp, max_mp: 20, respec_points: 0, bhp: 0, bhp_trained: {}, rp_total_earned: 0,
 });
 
@@ -88,6 +88,24 @@ describe('authoritative character resource delivery', () => {
     });
     expect(result.current.characters[0]?.user_id).toBe('user-b');
     expect(result.current.character?.hp).toBe(11);
+    unmount();
+  });
+
+  it('does not let an older refresh overwrite a later acknowledged movement',async()=>{
+    let resolveOld!:(value:unknown)=>void;
+    mocks.query.mockReset()
+      .mockResolvedValueOnce({data:[base(5,'user-a','A')],error:null})
+      .mockImplementationOnce(()=>new Promise(resolve=>{resolveOld=resolve;}))
+      .mockResolvedValueOnce({data:[base(5,'user-a','D')],error:null});
+    const {result,unmount}=renderHook(()=>useCharacter({id:'user-a'} as any));
+    await act(async()=>{});
+    act(()=>result.current.updateCharacterLocal({current_node_id:'B'}));
+    act(()=>result.current.refetchCharacters());
+    act(()=>result.current.updateCharacterLocal({current_node_id:'C'}));
+    await act(async()=>{resolveOld({data:[base(5,'user-a','B')],error:null});await Promise.resolve();});
+    expect(result.current.character?.current_node_id).toBe('C');
+    await act(async()=>{result.current.refetchCharacters();await Promise.resolve();await Promise.resolve();});
+    expect(result.current.character?.current_node_id).toBe('D');
     unmount();
   });
 });

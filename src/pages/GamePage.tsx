@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, MessageCircle, Users } from 'lucide-react';
 
-import { useKeyboardMovement } from '@/features/world';
+import { useKeyboardMovement, type Direction } from '@/features/world';
 
 import { useChat, parseCommand } from '@/features/chat';
 import { getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
@@ -94,7 +94,7 @@ import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
 import type { CharacterResourceDeliveryState } from '@/features/character/hooks/useCharacter';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
-import { createPartyAwareDepartureAdapter } from '@/features/combat2/party-departure';
+import { createPartyAwareDepartureAdapter, shouldUseCoordinatedDeparture } from '@/features/combat2/party-departure';
 import { presentCombat2Departure } from '@/features/combat2/movement-presentation';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
@@ -241,6 +241,67 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
+  const {
+    party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
+    createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite,
+    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
+  } = useParty(character.id);
+  const acknowledgedPartyMoveRef = useRef<{
+    partyId: string;
+    destinationNodeId: string;
+    movedMemberIds: Set<string>;
+  } | null>(null);
+  const coordinatedDeparture = useMemo(() => createPartyAwareDepartureAdapter({
+    rpc: (name, args) => supabase.rpc(name as never, args as never),
+  }, () => shouldUseCoordinatedDeparture({
+    partyId: party?.id ?? null,
+    isLeader,
+    leaderCharacterId: character.id,
+    leaderNodeId: character.current_node_id,
+    members: partyMembers,
+    acknowledged: acknowledgedPartyMoveRef.current,
+  })), [party?.id, isLeader, partyMembers, character.id, character.current_node_id]);
+  const reconcileAuthoritativeDeparture = useCallback((movement: {
+    destinationNodeId: string;
+    members?: Array<{ characterId: string; status: string }>;
+  }) => {
+    // The departure RPC has already committed. Project that authoritative
+    // destination immediately instead of waiting for an unrelated Realtime
+    // delivery before rebuilding node connections.
+    if (party && movement.members) {
+      acknowledgedPartyMoveRef.current = {
+        partyId: party.id,
+        destinationNodeId: movement.destinationNodeId,
+        movedMemberIds: new Set(movement.members
+          .filter(member => member.status === 'moved')
+          .map(member => member.characterId)),
+      };
+    }
+    writeCharacterLocal?.({ current_node_id: movement.destinationNodeId });
+    refetchCharacters?.();
+    void fetchParty();
+  }, [fetchParty, party, refetchCharacters, writeCharacterLocal]);
+  useEffect(() => {
+    const acknowledged = acknowledgedPartyMoveRef.current;
+    if (!acknowledged) return;
+    if (!party || !isLeader || party.id !== acknowledged.partyId
+      || character.current_node_id !== acknowledged.destinationNodeId) {
+      acknowledgedPartyMoveRef.current = null;
+      return;
+    }
+    const reflected = [...acknowledged.movedMemberIds].every(memberId => memberId === character.id
+      || partyMembers.some(member => member.character_id === memberId
+        && member.character.current_node_id === acknowledged.destinationNodeId));
+    if (reflected) acknowledgedPartyMoveRef.current = null;
+  }, [character.current_node_id, character.id, isLeader, party, partyMembers]);
+  const authoritativeDeparture = useCombat2DepartureSession({
+    enabled: true,
+    canSubmit: character.hp > 0 && !ownership.locked,
+    characterId: character.id,
+    nodeId: character.current_node_id,
+    adapter: coordinatedDeparture,
+    onMoved: reconcileAuthoritativeDeparture,
+  });
   const combat2 = useCombat2ClientSession({
     enabled: combat2OwnsSession,
     controlled: true,
@@ -249,6 +310,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     classKey: character.class,
     nodeId: ownership.origin.nodeId,
     hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
+    departurePending: authoritativeDeparture.pending,
   });
   const handleCombat2Respawn = useCallback(async () => {
     const result=await combat2.respawn.submit();
@@ -307,32 +369,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const equipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyEquipItem);
   const unequipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUnequipItem);
   const useConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUseConsumable);
-  const {
-    party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
-    createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite,
-    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
-  } = useParty(character.id);
-  const coordinatedDeparture = useMemo(() => createPartyAwareDepartureAdapter({
-    rpc: (name, args) => supabase.rpc(name as never, args as never),
-  }, () => !!party && isLeader && partyMembers.some(member => member.character_id !== character.id
-    && member.status === 'accepted' && member.is_following && member.character.hp > 0
-    && member.character.current_node_id === character.current_node_id)), [party, isLeader, partyMembers, character.id, character.current_node_id]);
-  const reconcileAuthoritativeDeparture = useCallback((movement: { destinationNodeId: string }) => {
-    // The departure RPC has already committed. Project that authoritative
-    // destination immediately instead of waiting for an unrelated Realtime
-    // delivery before rebuilding node connections.
-    writeCharacterLocal?.({ current_node_id: movement.destinationNodeId });
-    refetchCharacters?.();
-    void fetchParty();
-  }, [fetchParty, refetchCharacters, writeCharacterLocal]);
-  const authoritativeDeparture = useCombat2DepartureSession({
-    enabled: true,
-    canSubmit: character.hp > 0 && !ownership.locked,
-    characterId: character.id,
-    nodeId: character.current_node_id,
-    adapter: coordinatedDeparture,
-    onMoved: reconcileAuthoritativeDeparture,
-  });
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
   useEffect(() => {
@@ -959,6 +995,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);
 
   const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections } = movementActions;
+  const movementInputDisabled = isDead || authoritativeDeparture.pending || authoritativeDeparture.recovering;
+  const handleMovementInput = useCallback((nodeId: string, direction?: Direction) => {
+    if (movementInputDisabled) return;
+    void handleMove(nodeId, direction);
+  }, [handleMove, movementInputDisabled]);
   const movementCurrentNode = useMemo(() => currentNode ? ({
     ...currentNode,
     connections: [
@@ -1227,7 +1268,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
             (c: any) => c.direction?.toUpperCase() === cmd.direction && !c.hidden
           );
           if (conn) {
-            handleMove(conn.node_id, cmd.direction as any);
+            handleMovementInput(conn.node_id, cmd.direction as any);
           } else {
             addLocalLogEvent(buildErrorEvent("You can't go that way."));
           }
@@ -1283,7 +1324,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     // Fallthrough to chat
     const sayText = text.replace(/^\/say\s+/i, '');
     sendSay(sayText);
-  }, [chatInput, sendSay, sendWhisper, currentNode, movementCurrentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea, combat2BlocksLegacy]);
+  }, [chatInput, sendSay, sendWhisper, currentNode, movementCurrentNode, creatures, groundLoot, handleMovementInput, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLogEvent, getNodeArea, combat2BlocksLegacy]);
 
   const handleOpenChat = useCallback(() => {
     chatInputRef.current?.focus();
@@ -1291,7 +1332,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const keyboardMovement = useKeyboardMovement({
     currentNode: movementCurrentNode, nodes,
-    onMove: handleMove, disabled: isDead,
+    onMove: handleMovementInput, disabled: movementInputDisabled,
     onAttackFirst: handleAttackFirst, onSearch: handleSearch,
     onUseAbility: handleAbilityKey,
     onPickUpLoot: handlePickUpFirst, onOpenChat: handleOpenChat,
@@ -1433,7 +1474,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     currentNodeId: character.current_node_id,
     currentRegionId: currentNode?.region_id ?? '',
     characterLevel: character.level,
-    onNodeClick: handleMove,
+    onNodeClick: handleMovementInput,
     partyMembers: combat2BlocksLegacy
       ? mergedPartyMembers.flatMap(member => {
         const ally = activeCombat2Presentation?.allies.find(candidate =>
@@ -1506,7 +1547,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     onOpenGuide: openGuide,
     guideNeedsAttention: guide.needsAttention,
   }), [
-    regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
+    regions, nodes, areas, character, currentNode, handleMovementInput, mergedPartyMembers,
     combat2BlocksLegacy, activeCombat2Presentation,
     party, pendingInvites, outgoingInvites, partyOperationMessage, isLeader, isTank, myMembership, playersHere,
     createParty, invitePlayer, acceptInvite, declineInvite, cancelInvite, leaveParty, kickMember,
@@ -2015,7 +2056,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       {isAdmin && <CombatTimingPanel />}
 
       {/* Movement Pad — tablet only */}
-      {isTablet && <MovementPad currentNode={movementCurrentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
+      {isTablet && <MovementPad currentNode={movementCurrentNode} onMove={handleMovementInput} disabled={movementInputDisabled} unlockedConnections={unlockedConnections} />}
 
       {/* First-time hint pointing at the keyboard shortcuts button */}
       {!isMobile && !isTablet && character && (

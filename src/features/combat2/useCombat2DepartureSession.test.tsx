@@ -11,6 +11,28 @@ const queued = { status: 'queued', classification: 'queued', originNodeId: A, de
 const moved = { status: 'moved', classification: 'moved', originNodeId: A, destinationNodeId: B, cost: 5 } as const;
 
 describe('useCombat2DepartureSession', () => {
+  it('separates recovery from a genuine pending movement',async()=>{
+    let release!:(value:{status:'none'})=>void;
+    const adapter:Combat2DepartureAdapter={depart:vi.fn(),state:vi.fn(()=>new Promise<{status:'none'}>(resolve=>{release=resolve;}))};
+    const {result}=renderHook(()=>useCombat2DepartureSession({enabled:true,canSubmit:true,characterId:C,nodeId:A,adapter}));
+    expect(result.current).toMatchObject({pending:false,recovering:true});
+    await expect(result.current.move(B)).resolves.toMatchObject({status:'local_refusal',classification:'no_session'});
+    expect(adapter.depart).not.toHaveBeenCalled();
+    await act(async()=>{release({status:'none'});await Promise.resolve();});
+    expect(result.current).toMatchObject({pending:false,recovering:false});
+  });
+
+  it('does not reopen recovery when refreshed party data replaces the adapter',async()=>{
+    const first:Combat2DepartureAdapter={depart:vi.fn(),state:vi.fn().mockResolvedValue({status:'none'})};
+    const second:Combat2DepartureAdapter={depart:vi.fn(),state:vi.fn().mockResolvedValue({status:'none'})};
+    const {result,rerender}=renderHook(({adapter})=>useCombat2DepartureSession({enabled:true,canSubmit:true,characterId:C,nodeId:A,adapter}),{initialProps:{adapter:first}});
+    await act(async()=>{await Promise.resolve();});
+    expect(result.current.recovering).toBe(false);
+    rerender({adapter:second});
+    expect(result.current).toMatchObject({pending:false,recovering:false});
+    expect(second.state).not.toHaveBeenCalled();
+  });
+
   it('queues once and blocks duplicate movement', async () => {
     const adapter: Combat2DepartureAdapter = { depart: vi.fn().mockResolvedValue(queued),state:vi.fn().mockResolvedValue({status:'none'}) };
     const { result } = renderHook(() => useCombat2DepartureSession({ enabled: true, canSubmit: true, characterId: C, nodeId: A, adapter, generateRequestId: () => R }));
@@ -42,6 +64,7 @@ describe('useCombat2DepartureSession', () => {
     await act(async()=>{await result.current.move(B);});
     rerender({node:nodeId});
     expect(result.current.pending).toBe(false);
+    expect(adapter.state).toHaveBeenCalledTimes(1);
     await act(async()=>{expect(await result.current.move(C2)).toMatchObject({status:'moved',originNodeId:B,destinationNodeId:C2});});
     expect(adapter.depart).toHaveBeenCalledTimes(2);
   });

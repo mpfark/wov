@@ -31,6 +31,14 @@ describe('controlled test movement lock', () => {
     expect(page).toContain('if(current&&!allowed)ownership.lock()');
     expect(page).not.toContain('if (combat2BlocksLegacy && (party || myMembership?.is_following)) ownership.lock()');
   });
+  it('shares the authoritative lifecycle across pointer, map and keyboard entry points',()=>{
+    const page=fs.readFileSync('src/pages/GamePage.tsx','utf8');
+    expect(page).toContain('departurePending: authoritativeDeparture.pending');
+    expect(page).toContain('if (movementInputDisabled) return');
+    expect(page).toContain('onMove: handleMovementInput, disabled: movementInputDisabled');
+    expect(page).toContain('onNodeClick: handleMovementInput');
+    expect(page).toContain('onMove={handleMovementInput} disabled={movementInputDisabled}');
+  });
   it('routes ordinary movement authoritatively while active-combat teleport remains refused', async () => {
     const { options, write, log } = params();
     const flee = vi.fn();

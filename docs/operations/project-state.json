@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-30T21:10:00Z",
-  "based_on_source_sha": "8013c7ad08e0d3b066ea10af046d6356628af7ec",
+  "updated_at": "2026-10-01T00:25:00Z",
+  "based_on_source_sha": "40f378a990ce90ba77b46a846da943b8a15e6a9e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -232,11 +232,21 @@
       "identity": "combat2-authoritative-movement-client-reconciliation-2026-09-30",
       "status": "ready_for_manual_publish",
       "sha": null,
-      "timestamp": "2026-09-30T21:10:00Z",
+      "timestamp": "2026-10-01T00:25:00Z",
       "evidence_type": "tests",
-      "evidence": "Source tracing proved the visible movement delay and quick-follow-up invalid_destination refusal shared one frontend cause: combat2_depart/combat2_party_depart committed immediately, but GamePage only logged success and waited for unrelated Realtime/poll delivery before character.current_node_id and current-node connections changed. The frontend now projects only the RPC's authoritative moved/already_moved destination, refreshes character and party state, preserves single-flight and request replay semantics, and fences late node/character/session responses. Recovered queued movement can reconcile from durable terminal state when Realtime is missing. No optimistic destination, browser location/MP write, SQL, heartbeat, scheduler or server movement behavior was added or changed. Manual frontend publication and bounded live verification remain pending.",
+      "evidence": "The first reconciliation projected only the RPC's authoritative moved/already_moved destination and Mik operator-reports that its published solo path reaches the destination without the former fixed wait. Follow-up source tracing proved the occasional false finalizing state and flicker were frontend races: GamePage and Combat2ClientSession owned separate departure sessions; recovery was presented as real pending movement; older character/party refreshes could overwrite newer acknowledged location; and stale party rows could briefly misroute a rapid leader follow-up. The correction establishes one lifecycle, separates fail-closed recovery from genuine pending/queued state, skips stale recovery after an acknowledged terminal destination, generation/revision-fences character and party reads, bridges only acknowledged party members until refresh, and shares one input guard across command, pointer/map and keyboard movement. Focused tests cover duplicate input, stale recovery/reads, immediate A-to-B-to-C, absent Realtime recovery, character/session switch, party routing and Combat2 transition ownership. No optimistic destination, browser location/MP write, SQL, heartbeat, scheduler or server movement behavior was added or changed. The latest frontend correction requires Mik's manual publication; coordinated party/multiplayer and bounded live race verification remain pending.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "identity": "combat2-movement-projection-operator-observation-2026-10-01",
+      "status": "manually_published",
+      "sha": null,
+      "timestamp": "2026-10-01T00:25:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that the previously published immediate-destination reconciliation works and the former fixed wait is gone. Mik also observed occasional Movement is being finalized presentation and location flicker, which this source correction addresses. The exact published frontend revision is unavailable and is not guessed. This is not direct verification of the latest correction, coordinated party movement, multiplayer races or installed server concurrency.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
     },
     {
       "identity": "eng-hb-003-two-second-schedule-phase-correction",

@@ -4,7 +4,6 @@ import { useCombat2EntrySession } from './useCombat2EntrySession';
 import { useCombat2FleeSession } from './useCombat2FleeSession';
 import { useCombat2IntentSession } from './useCombat2IntentSession';
 import { useCombat2Presentation } from './useCombat2Presentation';
-import { useCombat2DepartureSession } from './useCombat2DepartureSession';
 import { useCombat2RespawnSession } from './useCombat2RespawnSession';
 import { deriveCombat2ActionReadiness } from './action-readiness';
 
@@ -16,6 +15,7 @@ export interface Combat2ClientSessionProps {
   classKey?: string;
   nodeId: string | null;
   hasLivingCreatures: boolean | null;
+  departurePending?: boolean;
 }
 
 /** Shared client session: entry owns the identity consumed by delivery and intents. */
@@ -62,14 +62,7 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
   });
   const pendingFleeFromServer = !!enteredSessionKey && (pendingFleeKey === enteredSessionKey || model?.fighterExitState === 'pending');
   const fighter = delivery.snapshot?.fighter as Record<string, unknown> | null | undefined;
-  const departure = useCombat2DepartureSession({
-    enabled: props.enabled,
-    canSubmit: props.controlled ? !props.inputLocked && !dead && !pendingFleeFromServer : true,
-    characterId: props.characterId,
-    nodeId: props.nodeId,
-    onQueued: () => setPendingFleeKey(enteredSessionKey),
-  });
-  const pendingFlee = pendingFleeFromServer || departure.pending;
+  const pendingFlee = pendingFleeFromServer || !!props.departurePending;
   const actionReadiness = deriveCombat2ActionReadiness({
     inputLocked: !!props.inputLocked,
     encounterId,
@@ -116,7 +109,6 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     entry,
     intents,
     flee,
-    departure,
     respawn,
     delivery,
     presentation,
