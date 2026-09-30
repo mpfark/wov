@@ -62,3 +62,9 @@ Backward compatibility requires nullable new fields and unchanged existing RPC r
 ## Approved operational decisions
 
 Every actual scheduler-wrapper invocation receives an id, including an invocation that proves maintenance or a sleeping world ineligible. No invocation means no row. Run rows are retained for 24 hours with indexed, bounded cleanup. These are observability decisions only: cadence, encounter order, settlement formulas, movement immediacy and client authority remain unchanged.
+
+## Observed encounter cadence (2026-09-30, read-only finding)
+
+Retained evidence for encounter `68b73567…` (heartbeats 94–106, 10:13:04–10:13:28 UTC) shows the scheduler firing every ~2.016 s while the encounter committed on every second heartbeat (~4 s). The intermediate heartbeats (96, 98, 102, 104) were eligible, settled and dispatched with zero candidates; heartbeat 100 selected one candidate that was not this encounter. No overlap, live-claim or failure evidence exists. Cause (source-proven and consistent with the live rows): commit sets `next_due_at = greatest(now(), next_due_at) + 2 s`, where `now()` is the commit transaction's start, roughly 0.4–0.5 s after the heartbeat started because of `pg_net` and Edge latency. The next fire, 2.016 s after the previous one, therefore runs about 0.5 s before the due time, and the encounter becomes due on the following fire. Effective encounter cadence is therefore ~4 s through phase drift, not a scheduler gap.
+
+Product preference (Mik): a deliberate three- or four-second combat cadence is acceptable if it improves stability or load; the observed pace felt comfortable. This is an accepted design option awaiting evaluation, not an approved cadence change. World heartbeat, encounter cadence, DoT/effect timing and regeneration remain separate decisions.
