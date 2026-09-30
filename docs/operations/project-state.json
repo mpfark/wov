@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-30T19:30:00Z",
-  "based_on_source_sha": "325d9cdbca142342246548a067513a7a40de74ca",
+  "updated_at": "2026-09-30T20:10:00Z",
+  "based_on_source_sha": "c5c2e0de49b8c16a08afa5f294508e5123d79c11",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20260930130000_combat2_encounter_schedule_drift.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": null,
-      "evidence_type": "tests",
-      "evidence": "ENG-HB-003 source correction, SHA-256 7f7aaaa87a35ade39559b3e494a5e034aed62bd7a8aa61fb5dd7c0bc94ada05e. It patches only node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb), advancing next_due_at from its previous two-second server phase and skipping obsolete deadlines after delay. No schema, signature, resolver, CP, effect, boss, claim, movement or wrapper contract changes. Not installed; PostgreSQL rollback compilation and installed predecessor/owner/ACL verification remain mandatory Lovable gates.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "c5c2e0de49b8c16a08afa5f294508e5123d79c11",
+      "timestamp": "2026-09-30T20:10:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-HB-003 installed exactly once through the migration runner from repository bytes SHA-256 7f7aaaa87a35ade39559b3e494a5e034aed62bd7a8aa61fb5dd7c0bc94ada05e (source c5c2e0de49b8c16a08afa5f294508e5123d79c11). Ledger version 20260930130000 name 64121eb8-2f09-4dc4-8d83-28e91615ceb4; the runner reused the repository filename version, so no separate generated artifact file was created. Full-file rollback-only compilation (every guard, replacement, COMMENT and a stop-marker verification) passed before install and left the definition md5 d9eae40350c2f0096f7a12a6c1c0e2d5 unchanged. Installed inner node_tick_commit_without_bounded_failure md5 8c029b931fa2f55eee791a9f320a7e74 contains exactly one prior-phase assignment and zero greatest(now(), next_due_at) assignments; owner postgres, SECURITY DEFINER, volatile, search_path=public, ACL postgres/service_role/sandbox_exec unchanged. Wrappers node_tick_commit, _without_authoritative_arrival, _without_boss_timing, node_tick_claim and combat2_due_nodes definition md5s and ACLs unchanged; delegation chain unchanged. Encounter scheduling, character, intent, effect, event and fighter fingerprints identical before and after. No schema or signature change, so types were not regenerated. Live two-second cadence remains unverified pending Mik's bounded test.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -230,12 +230,12 @@
   "combat2_operational_work": [
     {
       "identity": "eng-hb-003-two-second-schedule-phase-correction",
-      "status": "committed",
-      "sha": null,
-      "timestamp": "2026-09-30T19:30:00Z",
-      "evidence_type": "tests",
-      "evidence": "Authored source preserves the approved two-second encounter cadence. A deterministic model reproduces Lovable's measured 2.016-second fires plus 0.45-second worker latency: the installed formula commits on alternating fires, while the corrected prior-deadline formula commits on consecutive eligible fires without cumulative drift. Delayed fires skip obsolete phases without burst catch-up. Existing claim/token/tick/state-version fences, even-tick CP regeneration, resolver mechanics, entry/reactivation, completion, immediate departure and Test Arena shared path remain unchanged. The forward migration is not installed and live correction is not claimed.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "c5c2e0de49b8c16a08afa5f294508e5123d79c11",
+      "timestamp": "2026-09-30T20:10:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Correction installed (ledger 20260930130000). Installation checks are direct; live consecutive two-second commits, absence of refusals/duplicate ticks, even-tick CP regeneration and normal completion are not yet observed and remain pending Mik's bounded live test.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
