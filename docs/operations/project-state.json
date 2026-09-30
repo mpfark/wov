@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-30T20:10:00Z",
-  "based_on_source_sha": "c5c2e0de49b8c16a08afa5f294508e5123d79c11",
+  "updated_at": "2026-09-30T21:10:00Z",
+  "based_on_source_sha": "8013c7ad08e0d3b066ea10af046d6356628af7ec",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -228,6 +228,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-authoritative-movement-client-reconciliation-2026-09-30",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-09-30T21:10:00Z",
+      "evidence_type": "tests",
+      "evidence": "Source tracing proved the visible movement delay and quick-follow-up invalid_destination refusal shared one frontend cause: combat2_depart/combat2_party_depart committed immediately, but GamePage only logged success and waited for unrelated Realtime/poll delivery before character.current_node_id and current-node connections changed. The frontend now projects only the RPC's authoritative moved/already_moved destination, refreshes character and party state, preserves single-flight and request replay semantics, and fences late node/character/session responses. Recovered queued movement can reconcile from durable terminal state when Realtime is missing. No optimistic destination, browser location/MP write, SQL, heartbeat, scheduler or server movement behavior was added or changed. Manual frontend publication and bounded live verification remain pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "eng-hb-003-two-second-schedule-phase-correction",
       "status": "installed",
@@ -642,16 +652,26 @@
     }
   ],
   "next_approved_task": {
-    "status": "authored",
-    "artifact": "Guarded Lovable installation and bounded live verification of ENG-HB-003; a three-/four-second cadence remains a separate unapproved future option.",
+    "status": "ready_for_manual_publish",
+    "artifact": "Mik manually publishes the authoritative movement client-reconciliation correction, followed by a separately authorized bounded movement observation. ENG-HB-003 cadence verification remains a separate pending observation.",
     "sha": null,
-    "timestamp": "2026-09-30T19:30:00Z",
+    "timestamp": "2026-09-30T21:10:00Z",
     "evidence_type": "repository",
-    "evidence": "Install only migration 20260930130000_combat2_encounter_schedule_drift.sql after byte/hash, predecessor composition, safety-state and rollback-only compilation gates. Post-install verify the inner function authority and phase expression while all wrappers, claims, due selection, lock order and gameplay fingerprints remain unchanged. Then observe at least six eligible heartbeats with consecutive near-two-second encounter commits, no refusals/duplicates, even-tick CP behavior, completion/release and post-combat regeneration. No Edge or frontend deployment is expected.",
+    "evidence": "Publish the frontend source only; no migration or Edge deployment is required. Then verify ordinary solo and party-leader moves update the destination immediately, a prompt second move uses the new node's connections, missing/delayed Realtime does not reintroduce stale origin controls, and refusals/death/uncertain outcomes never move the display. Keep the separately installed ENG-HB-003 cadence verification scoped to heartbeat/tick evidence rather than using it to infer movement latency.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-movement-symptom-diagnostic-window-2026-09-30",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-30T20:28:06Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports approximately two seconds before a successful move became visible, followed by intermittent invalid-destination refusals when moving again quickly. Diagnostic session 77253087-e3f0-4cf5-a83a-998c664472bd covered 20:27:21-20:28:06 UTC and recorded ten successful Combat2 commits at encounter ticks 1891-1900, correlated with heartbeats 11319-11328 at approximately two-second cadence, with no claim or commit refusals. It recorded no movement request/response events and therefore verifies combat cadence only, not movement latency or refusal causality. The client cause is separately proven from source and focused tests.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-heartbeat-cadence-readonly-window-2026-09-30",
       "status": "unknown",

@@ -317,12 +317,21 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   }, () => !!party && isLeader && partyMembers.some(member => member.character_id !== character.id
     && member.status === 'accepted' && member.is_following && member.character.hp > 0
     && member.character.current_node_id === character.current_node_id)), [party, isLeader, partyMembers, character.id, character.current_node_id]);
+  const reconcileAuthoritativeDeparture = useCallback((movement: { destinationNodeId: string }) => {
+    // The departure RPC has already committed. Project that authoritative
+    // destination immediately instead of waiting for an unrelated Realtime
+    // delivery before rebuilding node connections.
+    writeCharacterLocal?.({ current_node_id: movement.destinationNodeId });
+    refetchCharacters?.();
+    void fetchParty();
+  }, [fetchParty, refetchCharacters, writeCharacterLocal]);
   const authoritativeDeparture = useCombat2DepartureSession({
     enabled: true,
     canSubmit: character.hp > 0 && !ownership.locked,
     characterId: character.id,
     nodeId: character.current_node_id,
     adapter: coordinatedDeparture,
+    onMoved: reconcileAuthoritativeDeparture,
   });
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
