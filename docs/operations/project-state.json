@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-29T21:25:00Z",
-  "based_on_source_sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
+  "updated_at": "2026-09-30T07:29:40Z",
+  "based_on_source_sha": "443330a14d8b0f99b87ef06359897176642df01c",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "ee1b4f7fefc19e45517a0b975aecb5860c13ce20",
-    "timestamp": "2026-09-29T12:30:00Z",
+    "sha": "443330a14d8b0f99b87ef06359897176642df01c",
+    "timestamp": "2026-09-30T07:29:40Z",
     "evidence_type": "repository",
-    "evidence": "Local main was safely fast-forwarded to origin/main at ee1b4f7fefc19e45517a0b975aecb5860c13ce20; required checkpoint 188e86c23260e034e2746c4b3079b8bcf1670ff6 is in its ancestry. The synchronized history preserves Lovable's exact immediate-departure ledger artifact, regenerated Supabase types and installation/deployment evidence without rewriting history.",
+    "evidence": "Local main was clean and safely fast-forwarded to origin/main at 443330a14d8b0f99b87ef06359897176642df01c; required ENG-HB-001 checkpoint e4f539038eb18ce165f8dcd11fe7ffe3d090f82e is in its ancestry. The synchronized history preserves Lovable's exact heartbeat ledger artifact, regenerated official Supabase types and installation/deployment evidence without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -37,7 +37,7 @@
     {
       "identity": "20260924110000_combat2_intent_spendable_cp_preflight.sql",
       "status": "installed",
-      "sha": null,
+      "sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
       "timestamp": "2026-09-24T22:25:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Applied exactly once from repository bytes SHA-256 aeb009491e54e43bb899c7d43fd33519ff38af1a947e864799b396f9d216440f; rejected SHA-256 e12b1cca4d96e68530adb49d752a1b3f9d93cb30dc33fcb68dc573ab71993ccd never installed. Ledger row version 20260924110000 name cef50f98-6796-4b0f-b6cb-b366f9f5fe6d; no separate ledger file generated. All migration guards passed. Installed public.combat_intent(8 args): owner postgres, SECURITY DEFINER, VOLATILE, search_path public,pg_temp, EXECUTE authenticated+service_role (no PUBLIC/anon); body reads v_character.max_cp, never v_fighter.max_cp, fighter identity-matched to v_character.id before resource calculation. Internal combat_intent_without_spendable_cp_preflight: postgres, SECURITY DEFINER, EXECUTE service_role only. No table, grant or Realtime publication change; types not regenerated (no shape change). plpgsql_check not installed; rollback-only behavioral verification not performed (no inert present-fighter fixture exists without inserting gameplay rows) - behavior pending live verification. All protected fingerprints identical before and after. No Edge deployment (mirror parity clean).",
@@ -147,10 +147,10 @@
     {
       "identity": "20260929130000_combat2_world_heartbeat_identity.sql",
       "status": "installed",
-      "sha": null,
+      "sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
       "timestamp": "2026-09-29T21:18:04Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "ENG-HB-001 installed exactly once through the migration runner from repository bytes SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd (source e4f539038eb18ce165f8dcd11fe7ffe3d090f82e; rejected b763f723... never installed). Ledger version 20260929211804 name 761d0556-953f-4c59-92d2-da56eca4b29e; generated artifact SHA-256 f66ae5f784b3adafd499227d302c12afb0e1e51697b4e7722e9246f3baa35eae (repository bytes without final newline), retained separately. Pre-install: guard block ran byte-exact against Cloud and accepted the compact body:='{}'::jsonb (exactly one match); rollback-only run of guard, table/column creation, dispatcher body patch and wrapper rename reached a deliberate stop marker with no residue. Post-install: world_heartbeat_run RLS on, no anon/authenticated grants, not in Realtime, 0 rows; wrapper chain combat2_dispatch_scheduler_fire -> settle_out_of_combat_resources + combat2_dispatch_scheduler_fire_without_resource_settlement (patched body with heartbeat_id, one match) with isolated settlement_error/scheduler_error branches; renamed predecessor kept; 24h retention, cleanup LIMIT 2048; all six affected functions postgres-owned SECURITY DEFINER VOLATILE, service_role-only execute. Fingerprints identical before/after (characters 4438d1a2..., encounters fd54f5af..., fighters f0378e62..., settlement cursor 88680be7..., schedule state 78eb245d..., 223 diagnostic rows), world asleep, maintenance, soak off, 0 cron jobs. No scheduler/settlement/dispatcher/gameplay call; live heartbeat correlation unverified.",
+      "evidence": "ENG-HB-001 installed exactly once through the migration runner from repository bytes SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd (source e4f539038eb18ce165f8dcd11fe7ffe3d090f82e; rejected and never-installed SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11). Ledger version 20260929211804 name 761d0556-953f-4c59-92d2-da56eca4b29e; generated artifact supabase/migrations/20260929211804_761d0556-953f-4c59-92d2-da56eca4b29e.sql has Git-blob SHA-256 f66ae5f784b3adafd499227d302c12afb0e1e51697b4e7722e9246f3baa35eae and is normalized-identical to the source apart from its absent final newline; both are retained separately and unchanged. Pre-install: the guard ran byte-exact against Cloud and accepted compact body:='{}'::jsonb exactly once. The rollback-only practice run compiled the guard, table/column creation, dispatcher body patch and wrapper rename before a deliberate stop with no residue; remaining statements first compiled during successful atomic installation. Post-install Lovable inspection reported world_heartbeat_run RLS on, no anon/authenticated grants, no Realtime publication and 0 rows; the wrapper chain retained isolated settlement_error/scheduler_error branches, renamed predecessor and 24h/LIMIT 2048 retention; all six affected functions were postgres-owned SECURITY DEFINER VOLATILE and service_role-only. Protected fingerprints were unchanged. World remained asleep, maintenance enabled, soak off and schedules absent. No scheduler, settlement, dispatcher, worker or gameplay call occurred; live heartbeat correlation remains unverified. These Cloud observations are attributed to Lovable's handoff and were not directly rechecked in this repository reconciliation.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -158,10 +158,10 @@
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "51ae2512d395988528786651a22f8e46edcc4f6c",
-    "timestamp": "2026-09-29T09:34:45Z",
+    "sha": "d9506c89379af680a1dc60870745307647b3c661",
+    "timestamp": "2026-09-29T21:18:11Z",
     "evidence_type": "cloud_inspection",
-    "evidence": "Lovable regenerated the official types from the installed schema and committed the 24-line immediate-departure function surface in 51ae2512d395988528786651a22f8e46edcc4f6c together with the exact ledger artifact. This reconciliation reads the committed evidence only and does not independently inspect Cloud.",
+    "evidence": "Lovable regenerated the official types from the installed ENG-HB-001 schema and committed them with the ledger artifact in d9506c89379af680a1dc60870745307647b3c661. The committed diff contains world_heartbeat_run, combat2_diagnostic_server_event.heartbeat_id, combat2_diagnostic_record_server_event_with_heartbeat, combat2_dispatch_scheduler_fire_without_heartbeat_identity and combat2_heartbeat_record_dispatch. This reconciliation verifies the committed type surface only and does not independently inspect Cloud.",
     "reporting_actor": "Lovable",
     "directly_verified": true
   },
@@ -209,22 +209,22 @@
   ],
   "frontend_publication": {
     "status": "manually_published",
-    "artifact": "ENG-COMBAT-002 authoritative arrival/hostile initiation and ENG-MOVE-001 immediate departure frontend",
+    "artifact": "Current frontend including the ENG-HB-001-compatible diagnostic source and previously published ENG-COMBAT-002/ENG-MOVE-001 work",
     "sha": null,
-    "timestamp": "2026-09-29T12:30:00Z",
+    "timestamp": "2026-09-30T07:29:40Z",
     "evidence_type": "operator_reported",
-    "evidence": "Mik reports the dependent frontend manually published after the ENG-COMBAT-002 and immediate-departure installations. This records publication only: live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
+    "evidence": "Mik explicitly reports that he manually published the frontend after ENG-HB-001 installation/deployment. The exact published revision is unavailable and is therefore not guessed. This records publication only: live heartbeat correlation, movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
     "reporting_actor": "Mik",
     "directly_verified": false
   },
   "combat2_operational_work": [
     {
       "identity": "eng-hb-001-source-checkpoint",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-09-29T17:04:23Z",
-      "evidence_type": "tests",
-      "evidence": "The scheduler wrapper, settlement composition and dispatcher dependency were traced from installed-evidence source before authoring. Focused contracts cover allocation before ineligibility, zero/multiple node correlation, retry identity separation, four-second settlement phase, independent settlement/dispatch failures, encounter-local tick independence, immediate transaction independence, 24-hour bounded cleanup, runner-compatible SQL, RLS/browser/Realtime closure and optional backward-compatible dispatcher bodies. The only changed Edge entry point is combat2-dispatch-once/handler.ts; shared generator output remains unchanged. Installation, official type regeneration, deployment and bounded live observation remain pending Lovable/operator work.",
+      "status": "pushed",
+      "sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
+      "timestamp": "2026-09-30T07:29:40Z",
+      "evidence_type": "repository",
+      "evidence": "Focused source contracts cover allocation before ineligibility, zero/multiple node correlation, retry identity separation, four-second settlement phase, independent settlement/dispatch failures, encounter-local tick independence, immediate transaction independence, 24-hour bounded cleanup, runner-compatible SQL, RLS/browser/Realtime closure and optional backward-compatible dispatcher bodies. Repository evidence now retains Lovable's installed migration/ledger/type records and the combat2-dispatch-once deployment record; Mik reports frontend publication. No installation-time scheduler or gameplay invocation occurred, so bounded live heartbeat correlation remains pending.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -623,11 +623,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Install and verify ENG-HB-001, regenerate official Supabase types and deploy only combat2-dispatch-once; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
+    "artifact": "Separately authorized bounded ENG-HB-001 heartbeat observation; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
     "sha": null,
-    "timestamp": "2026-09-29T17:04:23Z",
+    "timestamp": "2026-09-30T07:29:40Z",
     "evidence_type": "repository",
-    "evidence": "ENG-HB-001 is implemented in source only. Lovable must install the exact migration once, verify the guarded table/function/grant/composition/retention contract, regenerate official types and deploy the changed combat2-dispatch-once handler. A separately authorized bounded observation must establish live correlation. No Cloud operation occurred in source work; live movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
+    "evidence": "Lovable reports ENG-HB-001 installed exactly once, official types regenerated and only combat2-dispatch-once deployed; Mik reports the frontend manually published. Installation deliberately invoked no scheduler or gameplay and left zero heartbeat rows. The next step is bounded observation of the installed correlation chain, not another implementation change. Live movement, arrival, hostile initiation and multiplayer tank order remain independently unverified.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

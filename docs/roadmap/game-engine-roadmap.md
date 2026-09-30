@@ -36,11 +36,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-HB-001 — Explicit global heartbeat identity
 
-- **Engine area / status / priority:** scheduling; `implemented_source`; 2.
+- **Engine area / status / priority:** scheduling; `live_verification_pending`; 2.
 - **Problem or decision:** current two-second scheduler is semantically shared, but encounter ticks and settlement buckets lack a common observable heartbeat identity.
 - **Intended outcome:** a durable monotonic scheduler-invocation identity carried as correlation metadata to settlement, selected nodes, claims, commits and bounded diagnostics without changing local encounter tick semantics or delaying immediate transactions.
-- **Dependencies:** install the forward migration, regenerate official schema types, deploy the changed `combat2-dispatch-once` Edge consumer, then perform bounded installed/live verification.
-- **Evidence/current state:** [the approved design note](../design/world-heartbeat-identity.md) maps the distinct identities. Source migration `20260929130000_combat2_world_heartbeat_identity.sql` authors a database-generated `bigint` run identity for every actual wrapper call, including ineligible calls, with 24-hour bounded retention. The dispatcher accepts and records the optional correlation id while encounter ticks, settlement buckets, request UUIDs and delivery cursors remain independent. This source is not installed or live-verified.
+- **Dependencies:** separately authorized bounded live observation; no further implementation dependency.
+- **Evidence/current state:** [the approved design note](../design/world-heartbeat-identity.md) maps the distinct identities. Project state records migration `20260929130000_combat2_world_heartbeat_identity.sql` installed exactly once, official types regenerated, only `combat2-dispatch-once` deployed and Mik's frontend publication as operator-reported. Installation invoked no scheduler/gameplay path and left zero run rows, so correlation remains live-unverified. Encounter ticks, settlement buckets, request UUIDs and delivery cursors remain independent.
 - **Acceptance criteria:** strictly increasing durable ids with documented gaps; one fire can correlate zero/many nodes and zero/many settlement steps; retries get new ids while existing domain fences prevent duplicate effects; commits advance only local ticks; immediate transactions remain immediate; maintenance/sleep do not bank work; fields and retention are bounded; installed and diagnostic proof.
 - **Specification sections:** One authoritative world heartbeat; Failure, diagnostics and verification.
 
