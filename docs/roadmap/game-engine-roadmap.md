@@ -39,14 +39,24 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Engine area / status / priority:** scheduling; `live_verification_pending`; 2.
 - **Problem or decision:** current two-second scheduler is semantically shared, but encounter ticks and settlement buckets lack a common observable heartbeat identity.
 - **Intended outcome:** a durable monotonic scheduler-invocation identity carried as correlation metadata to settlement, selected nodes, claims, commits and bounded diagnostics without changing local encounter tick semantics or delaying immediate transactions.
-- **Dependencies:** separately authorized bounded live observation; no further implementation dependency.
-- **Evidence/current state:** [the approved design note](../design/world-heartbeat-identity.md) maps the distinct identities. Project state records migration `20260929130000_combat2_world_heartbeat_identity.sql` installed exactly once, official types regenerated, only `combat2-dispatch-once` deployed and Mik's frontend publication as operator-reported. Installation invoked no scheduler/gameplay path and left zero run rows, so correlation remains live-unverified. Encounter ticks, settlement buckets, request UUIDs and delivery cursors remain independent.
+- **Dependencies:** bounded observation of the remaining ineligible, retry, failure and catch-up branches; no further source implementation dependency.
+- **Evidence/current state:** [the approved design note](../design/world-heartbeat-identity.md) maps the distinct identities. Project state records migration `20260929130000_combat2_world_heartbeat_identity.sql` installed exactly once, official types regenerated, only `combat2-dispatch-once` deployed and Mik's frontend publication as operator-reported. Lovable's bounded read-only window correlated heartbeats 94–106 with settlement, dispatch and encounter ticks 526–531; it did not exercise every acceptance branch. Encounter ticks, settlement buckets, request UUIDs and delivery cursors remain independent.
 - **Acceptance criteria:** strictly increasing durable ids with documented gaps; one fire can correlate zero/many nodes and zero/many settlement steps; retries get new ids while existing domain fences prevent duplicate effects; commits advance only local ticks; immediate transactions remain immediate; maintenance/sleep do not bank work; fields and retention are bounded; installed and diagnostic proof.
 - **Specification sections:** One authoritative world heartbeat; Failure, diagnostics and verification.
 
+### ENG-HB-003 — Deliberate heartbeat-aligned encounter cadence
+
+- **Engine area / status / priority:** combat timing; `decision_needed`; 3.
+- **Problem or decision:** commit-time `next_due_at` progression drifts behind the two-second scheduler and currently makes an encounter resolve on roughly every second fire by accident.
+- **Intended outcome:** if approved, an explicit four-second encounter cadence anchored to durable heartbeat identity, with first resolution on the next actual heartbeat, no wall-clock phase drift and no combat catch-up burst.
+- **Dependencies:** Mik approval of the four-second gameplay quantum, CP on every encounter tick, sub-four-second pulse quantization, boss/effect duration conversion, live-effect rollout and claim-lease budget.
+- **Evidence/current state:** Lovable's read-only 10:13:03–10:13:59 UTC window found healthy ~2.016-second heartbeats but ticks 526–531 only on alternating fires. Source proves `greatest(now(), next_due_at) + 2 seconds` plus dispatch latency as the cause. The design note contains the full timing-dependency audit and recommends an explicit per-encounter heartbeat phase; no runtime or schema change exists.
+- **Acceptance criteria:** both anchor parities and simultaneous encounters; next-heartbeat first resolution; deterministic retry of one candidate tick; delayed/missed fires skip debt; at most one commit per encounter per heartbeat; CP/effect/boss timing golden cases; lease safety; Test Arena parity; installed and bounded live proof.
+- **Specification sections:** One authoritative world heartbeat; Resources and attributes; Effects and stances; Combat resolution.
+
 ### ENG-DIAG-001 — Limited latency and jitter measurement
 
-- **Engine area / status / priority:** diagnostics; `ready`; 3.
+- **Engine area / status / priority:** diagnostics; `ready`; 4.
 - **Problem or decision:** small intermittent delay is operator-reported but not separated into scheduler, claim, commit, delivery and render latency.
 - **Intended outcome:** bounded, sanitized measurements with no gameplay mutation beyond a controlled run.
 - **Dependencies:** existing bounded diagnostics.
@@ -56,7 +66,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-DIAG-002 — Distinguish world heartbeat and encounter tick
 
-- **Engine area / status / priority:** diagnostics/presentation; `planned`; 4.
+- **Engine area / status / priority:** diagnostics/presentation; `planned`; 5.
 - **Problem or decision:** local tick labels can be mistaken for global scheduler time.
 - **Intended outcome:** diagnostics and admin presentation label both concepts unambiguously.
 - **Dependencies:** ENG-HB-001.
@@ -66,7 +76,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-LEGACY-001 — Remaining gameplay-writer audit
 
-- **Engine area / status / priority:** authority boundaries; `planned`; 5.
+- **Engine area / status / priority:** authority boundaries; `planned`; 6.
 - **Problem or decision:** legacy hooks and temporary rollout surfaces may still contain dormant mutation paths.
 - **Intended outcome:** inventory of every HP/CP/MP/position/effect/reward writer, with active paths fenced to authoritative contracts.
 - **Dependencies:** none.
@@ -76,7 +86,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-VERIFY-001 — Complete installed-schema execution coverage
 
-- **Engine area / status / priority:** verification; `planned`; 6.
+- **Engine area / status / priority:** verification; `planned`; 7.
 - **Problem or decision:** static SQL tests do not prove installed functions, grants and deferred constraints execute together.
 - **Intended outcome:** reproducible executable-schema and bounded installed verification for critical chains.
 - **Dependencies:** safe non-production fixture policy.
@@ -87,7 +97,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 ## Next — complete core ownership
 
 ### ENG-STANCE-001 — Character-scoped stance authority
-- **Engine area / status / priority:** effects; `decision_needed`; 7.
+- **Engine area / status / priority:** effects; `decision_needed`; 8.
 - **Problem or decision:** stances and reservations are encounter-scoped, but desired persistence crosses encounters/movement.
 - **Intended outcome:** one authoritative character lifecycle for stance effect plus reservation.
 - **Dependencies:** ownership model and migration design.
@@ -96,7 +106,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Effects and stances; Character ownership and lifecycle.
 
 ### ENG-STANCE-002 — Appropriate stance activation outside combat
-- **Engine area / status / priority:** effects/UI; `planned`; 8.
+- **Engine area / status / priority:** effects/UI; `planned`; 9.
 - **Problem or decision:** eligible persistent stances cannot be safely prepared out of combat.
 - **Intended outcome:** explicit per-stance eligibility using ENG-STANCE-001 authority.
 - **Dependencies:** ENG-STANCE-001.
@@ -105,7 +115,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Effects and stances.
 
 ### ENG-FOOD-001 — Authoritative food effects
-- **Engine area / status / priority:** resources/effects; `planned`; 9.
+- **Engine area / status / priority:** resources/effects; `planned`; 10.
 - **Problem or decision:** browser-local food lacks persistent amount and expiry and is excluded from settlement/Combat2.
 - **Intended outcome:** durable server-owned food effect consumed consistently by both owners.
 - **Dependencies:** effect ownership schema.
@@ -114,7 +124,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Resources and attributes; Effects and stances.
 
 ### ENG-PARTY-001 — Coordinated party movement release verification
-- **Engine area / status / priority:** movement/party; `live_verification_pending`; 10.
+- **Engine area / status / priority:** movement/party; `live_verification_pending`; 11.
 - **Problem or decision:** source encodes follower-first/leader-last movement, but ordinary installed/live release evidence is incomplete.
 - **Intended outcome:** prove per-member outcomes, lifecycle release and reconnect without changing semantics.
 - **Dependencies:** safe bounded party scenario.
@@ -123,7 +133,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Movement and party movement.
 
 ### ENG-REWARD-001 — Complete ADM-025B reward channels
-- **Engine area / status / priority:** rewards; `blocked`; 11.
+- **Engine area / status / priority:** rewards; `blocked`; 12.
 - **Problem or decision:** pending migration preflight conflicts with existing authored data; it is not installed.
 - **Intended outcome:** exclusive item source, independent gold/salvage and exactly-once materialization without data loss.
 - **Dependencies:** ENG-REWARD-002 decisions and explicit installation preflight.
@@ -132,7 +142,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Rewards and unique items.
 
 ### ENG-REWARD-002 — Unique-item authoring decisions
-- **Engine area / status / priority:** rewards/content contract; `decision_needed`; 12.
+- **Engine area / status / priority:** rewards/content contract; `decision_needed`; 13.
 - **Problem or decision:** King Aldric needs key plus weapon/multiple unique candidates; Rusty Key is gate access and must not silently become global-unique.
 - **Intended outcome:** explicit ordered multi-unique schema and authoring validation with no source fallback.
 - **Dependencies:** product decision by Mik.
@@ -141,7 +151,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Rewards and unique items.
 
 ### ENG-LIFECYCLE-001 — Inactive-character return-home
-- **Engine area / status / priority:** lifecycle/movement; `decision_needed`; 13.
+- **Engine area / status / priority:** lifecycle/movement; `decision_needed`; 14.
 - **Problem or decision:** inactive characters should return to a verified default city/start node, not an assumed literal coordinate.
 - **Intended outcome:** idempotent authoritative transition after the same configured inactivity duration used by unique-item policy, with future bind-point extension.
 - **Dependencies:** authoritative activity evidence; verified destination; party/transaction rules.
@@ -152,7 +162,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 ## Later — refinement
 
 ### ENG-HB-002 — Heartbeat performance and scaling
-- **Engine area / status / priority:** scheduling; `deferred`; 14.
+- **Engine area / status / priority:** scheduling; `deferred`; 15.
 - **Problem or decision:** future load must not turn one heartbeat into an all-world scan.
 - **Intended outcome:** measured bounded due-work scaling while retaining one authority.
 - **Dependencies:** ENG-HB-001 and production metrics.
@@ -161,7 +171,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** One authoritative world heartbeat.
 
 ### ENG-DELIVERY-001 — Reduce fallback polling
-- **Engine area / status / priority:** delivery; `deferred`; 15.
+- **Engine area / status / priority:** delivery; `deferred`; 16.
 - **Problem or decision:** fallback polling adds load/latency but protects against unproven Realtime gaps.
 - **Intended outcome:** reduce it only after reliability evidence.
 - **Dependencies:** measured Realtime recovery and gap visibility.
@@ -170,7 +180,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Failure, diagnostics and verification.
 
 ### ENG-UX-001 — Combat feedback refinement
-- **Engine area / status / priority:** presentation; `deferred`; 16.
+- **Engine area / status / priority:** presentation; `deferred`; 17.
 - **Problem or decision:** queued/live/sync/historical feedback can be clearer without inventing authority.
 - **Intended outcome:** concise state and timing feedback grounded in projections.
 - **Dependencies:** ENG-COMBAT-001, ENG-DIAG-002.
@@ -179,7 +189,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Creatures, targeting and initiation; Failure, diagnostics and verification.
 
 ### ENG-BALANCE-001 — Broader ability and balance audit
-- **Engine area / status / priority:** combat/content; `deferred`; 17.
+- **Engine area / status / priority:** combat/content; `deferred`; 18.
 - **Problem or decision:** formula correctness precedes balance changes.
 - **Intended outcome:** evidence-based review without mixing engine repairs and tuning.
 - **Dependencies:** stabilized heartbeat/targeting/rewards.
@@ -188,7 +198,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Combat resolution; Effects and stances.
 
 ### ENG-ADMIN-001 — Admin Roadmap presentation integration
-- **Engine area / status / priority:** admin governance; `planned`; 18.
+- **Engine area / status / priority:** admin governance; `planned`; 19.
 - **Problem or decision:** Admin Roadmap is Cloud `roadmap_items` CRUD and would duplicate this backlog.
 - **Intended outcome:** read-only build/import presentation keyed by stable ENG IDs while preserving product/content items.
 - **Dependencies:** source/Cloud schema and publication design.
@@ -197,7 +207,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Information layers.
 
 ### ENG-MANUAL-001 — Admin Game Manual integration
-- **Engine area / status / priority:** admin documentation; `planned`; 19.
+- **Engine area / status / priority:** admin documentation; `planned`; 20.
 - **Problem or decision:** hard-coded React prose can drift from engine rules.
 - **Intended outcome:** present selected repository-backed specification sections with revision/date; keep authoring guidance distinct.
 - **Dependencies:** safe build-time content pipeline and admin access review.
@@ -206,7 +216,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Information layers.
 
 ### ENG-LEGACY-002 — Remove obsolete legacy runtime surfaces
-- **Engine area / status / priority:** authority cleanup; `deferred`; 20.
+- **Engine area / status / priority:** authority cleanup; `deferred`; 21.
 - **Problem or decision:** obsolete surfaces increase ambiguity after authoritative coverage is proven.
 - **Intended outcome:** remove only paths proven unreferenced and superseded.
 - **Dependencies:** ENG-LEGACY-001 and installed/live parity.

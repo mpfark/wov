@@ -99,7 +99,7 @@ This project description summarizes those layers. It must not become a parallel 
 
 ### Design intent or incomplete boundaries
 
-- A durable shared `heartbeat_id` is installed and its dispatcher consumer is deployed; live heartbeat correlation remains unverified.
+- A durable shared `heartbeat_id` is installed and its dispatcher consumer is deployed; a bounded ordinary-flow window is live-correlated, while ineligible, retry, failure and catch-up branches remain unverified.
 - Stances are encounter-scoped; character-scoped persistence and appropriate out-of-combat activation remain decisions/work.
 - Some ability behavior outside active combat remains intentionally constrained by current encounter authority.
 - Food effects are not yet authoritative durable effects used consistently by settlement and combat.

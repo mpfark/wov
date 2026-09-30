@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-30T07:29:40Z",
-  "based_on_source_sha": "443330a14d8b0f99b87ef06359897176642df01c",
+  "updated_at": "2026-09-30T10:30:00Z",
+  "based_on_source_sha": "37492f079b008ffd0827f75c1b4e70ec80100406",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "443330a14d8b0f99b87ef06359897176642df01c",
-    "timestamp": "2026-09-30T07:29:40Z",
+    "sha": "37492f079b008ffd0827f75c1b4e70ec80100406",
+    "timestamp": "2026-09-30T10:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Local main was clean and safely fast-forwarded to origin/main at 443330a14d8b0f99b87ef06359897176642df01c; required ENG-HB-001 checkpoint e4f539038eb18ce165f8dcd11fe7ffe3d090f82e is in its ancestry. The synchronized history preserves Lovable's exact heartbeat ledger artifact, regenerated official Supabase types and installation/deployment evidence without rewriting history.",
+    "evidence": "Local main was clean and safely fast-forwarded from required checkpoint 7033042d6d4c80e033585e05f4b2faf06060026f to origin/main at 37492f079b008ffd0827f75c1b4e70ec80100406. The synchronized history preserves the Lovable-authored read-only cadence note and all earlier ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -623,15 +623,35 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Separately authorized bounded ENG-HB-001 heartbeat observation; live verification of ENG-MOVE-001 and ENG-COMBAT-002 remains separate.",
+    "artifact": "Mik decision on ENG-HB-003 timing consequences, followed only if approved by a guarded heartbeat-phase implementation; remaining ENG-HB-001 branch verification stays separate.",
     "sha": null,
-    "timestamp": "2026-09-30T07:29:40Z",
+    "timestamp": "2026-09-30T10:30:00Z",
     "evidence_type": "repository",
-    "evidence": "Lovable reports ENG-HB-001 installed exactly once, official types regenerated and only combat2-dispatch-once deployed; Mik reports the frontend manually published. Installation deliberately invoked no scheduler or gameplay and left zero heartbeat rows. The next step is bounded observation of the installed correlation chain, not another implementation change. Live movement, arrival, hostile initiation and multiplayer tank order remain independently unverified.",
+    "evidence": "ENG-HB-003 is design-only and pending approval. The recommended candidate is an explicit four-second encounter cadence anchored per encounter to actual heartbeat identities, with next-heartbeat first resolution and no burst catch-up. Approval is still required for CP-on-every-tick, sub-four-second pulse quantization, boss/effect timing conversion, existing-effect rollout and lease budget. No schema or runtime implementation is authorized by this record. ENG-HB-001 ineligible/retry/failure/catch-up observation and live movement/multiplayer verification remain separate.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-heartbeat-cadence-readonly-window-2026-09-30",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-30T10:13:59Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Lovable reports a read-only observation of diagnostic session 3d23c6a3-b8b8-41aa-b41f-93fc5686839a and encounter 68b73567-113e-4528-bc26-b811240ec268 from 10:13:03 through 10:13:59 UTC. Heartbeats 94-106 started about 2.016 seconds apart; all were eligible/queued and every dispatch completed. Encounter ticks 526-531 committed on heartbeats 95,97,99,101,103,105, while intervening fires found no due work for this encounter or processed another encounter. No live claims, refusals, overlap or failures were observed. Source `greatest(now(), next_due_at) + 2 seconds` and approximately 0.4-0.5 seconds of dispatch latency explain the alternating-fire pace. Per-node commit-log rows were unavailable and scheduler jobs were not permission-visible. This task records Lovable's evidence and did not access Cloud.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "peaceful-initiation-release-regeneration-operator-report-2026-09-30",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-09-30T10:30:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that deliberate initiation against a peaceful creature works and that out-of-combat regeneration resumes after encounter release. This is operator-visible evidence only; exact rows, timing and rare concurrency branches were not directly verified.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-completion-resource-delivery-operator-report-2026-09-24",
       "status": "unknown",
