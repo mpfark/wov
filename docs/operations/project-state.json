@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T21:20:21Z",
+  "updated_at": "2026-10-01T21:40:00Z",
   "based_on_source_sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
   "status_vocabulary": [
     "authored",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20261001130000_combat2_character_persistent_stances.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-10-01T12:00:00Z",
-      "evidence_type": "repository",
-      "evidence": "ENG-STANCE-001/002 remains authored and uninstalled. Original authored hash d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb was superseded by rejected, uninstalled hash 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7. Corrected candidate SHA-256 is 71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923. One joined catalogue lookup now assigns ability ID, percentage and cost to typed scalar targets instead of three whole-row targets, preserving matching, null handling and ability/base override precedence. Full-file assignment audit found no other composite multiple-target INTO defect; later equipment bonuses are scalar integers. Approved bounded reset and all other runtime/schema/security/wrapper rules are unchanged; fixed CP reservations are not approved or implemented. No local PostgreSQL executable/infrastructure was found. Full-file rollback compilation through an external final sentinel remains required; later statements are uncompiled according to Lovable's separate reported evidence. Synthetic Cloud fixtures are unavailable, and no fake accounts/characters may be created for this gate. Official types, affected Edge deployments, Mik's publication and live verification remain pending. No Cloud operation occurred.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "09cd8934b351e15fd7044f274a444aafb1ee4dd2",
+      "timestamp": "2026-10-01T21:40:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-STANCE-001/002 installed once from SHA-256 71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923 (source 09cd8934). Ledger 20261001213148 / dec8975a-1fb3-43c9-b5a8-73620bd1e0e8; generated artifact SHA-256 08675990dbf72370cd68f60cf0a77a1ea151da6961084a98b68b8e5de01773f8 differs only by the missing trailing newline. Full-file rollback-only run reached the external sentinel (stance_rows=0, requests=0, node_effect=0) and rollback restored every function/data fingerprint with no ledger entry. Approved reset removed exactly 3 self-owned stance effects (holy_shield x2, shield_wall x1) and their 3 CP reservations; 0 legacy effects, 0 legacy JSON entries, 0 unclassifiable rows. New character_stance and character_stance_request are empty, RLS on, service_role-only, not in Realtime. Raw HP/CP/MP/location/max_cp, inventory, encounter/fighter/pending-event fingerprints unchanged. Definition inspection only: PL/pgSQL bodies were not behaviourally executed. ACL findings as authored: drop_stance(uuid,text) keeps PUBLIC and anon EXECUTE (only authenticated was revoked), and combat2_test_reset_without_character_stances keeps authenticated EXECUTE; not changed.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -233,6 +233,16 @@
       "timestamp": "2026-10-01T08:09:00Z",
       "evidence_type": "cloud_inspection",
       "evidence": "Deployed from 07206094e after ENG-COMBAT-003 install, containing the present-fighter resolver fence; Edge mirror parity, 53 focused tests and both TypeScript checks passed. Not invoked; processing remained disabled.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "combat2-tick-once, combat2-dispatch-once",
+      "status": "deployed",
+      "sha": "09cd8934b351e15fd7044f274a444aafb1ee4dd2",
+      "timestamp": "2026-10-01T21:40:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Deployed after ENG-STANCE install from source 09cd8934; neither invoked. Processing remains disabled.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }

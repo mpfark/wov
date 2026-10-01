@@ -1173,6 +1173,102 @@ export type Database = {
           },
         ]
       }
+      character_stance: {
+        Row: {
+          ability_key: string
+          activated_at: string
+          character_id: string
+          reserve_pct: number
+          state: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ability_key: string
+          activated_at?: string
+          character_id: string
+          reserve_pct: number
+          state?: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          ability_key?: string
+          activated_at?: string
+          character_id?: string
+          reserve_pct?: number
+          state?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_stance_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_stance_request: {
+        Row: {
+          ability_key: string
+          action: string
+          character_id: string
+          committed_at: string | null
+          created_at: string
+          encounter_id: string | null
+          intent_id: string | null
+          request_id: string
+          result: Json
+        }
+        Insert: {
+          ability_key: string
+          action: string
+          character_id: string
+          committed_at?: string | null
+          created_at?: string
+          encounter_id?: string | null
+          intent_id?: string | null
+          request_id: string
+          result: Json
+        }
+        Update: {
+          ability_key?: string
+          action?: string
+          character_id?: string
+          committed_at?: string | null
+          created_at?: string
+          encounter_id?: string | null
+          intent_id?: string | null
+          request_id?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_stance_request_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_stance_request_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "node_encounter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_stance_request_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "node_intent"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_visited_nodes: {
         Row: {
           character_id: string
@@ -2650,6 +2746,77 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combat2_test_arena_stance_snapshot: {
+        Row: {
+          ability_key: string
+          activated_at: string
+          arena_id: string
+          character_id: string
+          reserve_pct: number
+          state: Json
+          version: number
+        }
+        Insert: {
+          ability_key: string
+          activated_at: string
+          arena_id: string
+          character_id: string
+          reserve_pct: number
+          state: Json
+          version: number
+        }
+        Update: {
+          ability_key?: string
+          activated_at?: string
+          arena_id?: string
+          character_id?: string
+          reserve_pct?: number
+          state?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_arena_stance_snapshot_arena_id_character_id_fkey"
+            columns: ["arena_id", "character_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena_stance_snapshot_header"
+            referencedColumns: ["arena_id", "character_id"]
+          },
+        ]
+      }
+      combat2_test_arena_stance_snapshot_header: {
+        Row: {
+          arena_id: string
+          captured_at: string
+          character_id: string
+        }
+        Insert: {
+          arena_id: string
+          captured_at?: string
+          character_id: string
+        }
+        Update: {
+          arena_id?: string
+          captured_at?: string
+          character_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat2_test_arena_stance_snapshot_header_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "combat2_test_arena"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat2_test_arena_stance_snapshot_header_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
@@ -6319,6 +6486,19 @@ export type Database = {
         }
         Returns: Json
       }
+      combat_intent_without_character_stances: {
+        Args: {
+          _ability_key: string
+          _character_id: string
+          _encounter_id: string
+          _intent_kind: string
+          _request_id: string
+          _stance_key: string
+          _target_character_id: string
+          _target_creature_id: string
+        }
+        Returns: Json
+      }
       combat_intent_without_global_lock_order: {
         Args: {
           _ability_key: string
@@ -6352,6 +6532,19 @@ export type Database = {
       }
       combat2_arrive_after_relocation: {
         Args: { _character_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_change_stance: {
+        Args: {
+          _ability_key: string
+          _action: string
+          _character_id: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      combat2_character_stances: {
+        Args: { _character_id: string }
         Returns: Json
       }
       combat2_delivery_authorized: {
@@ -6549,6 +6742,10 @@ export type Database = {
         Args: { _encounter_id: string }
         Returns: string
       }
+      combat2_regenerate_force_shields: {
+        Args: { _now: string; _settlement_steps: number }
+        Returns: number
+      }
       combat2_respawn: {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
@@ -6556,6 +6753,10 @@ export type Database = {
       combat2_respawn_without_canary_gate: {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
+      }
+      combat2_restore_arena_stances: {
+        Args: { _arena_id: string }
+        Returns: undefined
       }
       combat2_seed_spawns: {
         Args: { _encounter_id: string; _node_id: string }
@@ -6568,6 +6769,10 @@ export type Database = {
       combat2_special_transition_conflict: {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
+      }
+      combat2_stance_reserved_cp: {
+        Args: { _character_id: string; _max_cp: number }
+        Returns: number
       }
       combat2_sync: {
         Args: {
@@ -6662,6 +6867,14 @@ export type Database = {
         }
         Returns: Json
       }
+      combat2_test_reset_without_character_stances: {
+        Args: {
+          _arena_id: string
+          _confirm_destroy_diagnostics: boolean
+          _request_id: string
+        }
+        Returns: Json
+      }
       combat2_test_reset_without_presence_gate: {
         Args: {
           _arena_id: string
@@ -6702,6 +6915,10 @@ export type Database = {
       }
       combat2_test_status: { Args: { _arena_id: string }; Returns: Json }
       combat2_test_stop: {
+        Args: { _arena_id: string; _request_id: string }
+        Returns: Json
+      }
+      combat2_test_stop_without_character_stances: {
         Args: { _arena_id: string; _request_id: string }
         Returns: Json
       }
@@ -7197,6 +7414,10 @@ export type Database = {
         Args: { _lease_ms?: number; _node_id: string }
         Returns: Json
       }
+      node_tick_claim_without_character_stances: {
+        Args: { _lease_ms?: number; _node_id: string }
+        Returns: Json
+      }
       node_tick_commit: {
         Args: {
           _candidate_tick: number
@@ -7234,6 +7455,18 @@ export type Database = {
         Returns: Json
       }
       node_tick_commit_without_bounded_failure: {
+        Args: {
+          _candidate_tick: number
+          _claim_token: string
+          _encounter_id: string
+          _expected_last_tick: number
+          _expected_state_version: number
+          _intent_ids: string[]
+          _proposed: Json
+        }
+        Returns: Json
+      }
+      node_tick_commit_without_character_stances: {
         Args: {
           _candidate_tick: number
           _claim_token: string
@@ -7372,6 +7605,10 @@ export type Database = {
         Returns: Json
       }
       settle_out_of_combat_resources: { Args: { _now?: string }; Returns: Json }
+      settle_out_of_combat_resources_without_character_stances: {
+        Args: { _now?: string }
+        Returns: Json
+      }
       shutdown_world: { Args: never; Returns: undefined }
       sim_note_progress: { Args: never; Returns: undefined }
       sim_note_resume: { Args: never; Returns: undefined }
