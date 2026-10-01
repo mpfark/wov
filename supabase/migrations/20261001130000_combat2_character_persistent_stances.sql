@@ -2,7 +2,9 @@
 -- projections only; they never own a reservation or persistent ward.
 
 DO $$
-DECLARE node_rows bigint; legacy_rows bigint;
+DECLARE node_rows bigint; active_rows bigint; legacy_rows bigint; unknown_rows bigint;
+ counts jsonb; relation_name text; before_hash text; after_hash text;
+ protected_hashes jsonb:='{}'::jsonb; old_trusted text; old_timeout text;
 BEGIN
   IF to_regprocedure('public.node_tick_claim(uuid,integer)') IS NULL
      OR to_regprocedure('public.node_tick_commit(uuid,uuid,integer,integer,bigint,uuid[],jsonb)') IS NULL
@@ -12,14 +14,161 @@ BEGIN
      OR to_regprocedure('public.combat2_test_reset(uuid,uuid,boolean)') IS NULL THEN
     RAISE EXCEPTION 'ENG-STANCE-001 predecessor functions missing';
   END IF;
-  SELECT count(*) INTO node_rows FROM public.node_effect
-   WHERE is_reservation OR ability_key IN ('envenom','eagle_eye','holy_shield','shield_wall','battle_cry','arcane_surge','force_shield','ignite');
-  SELECT count(*) INTO legacy_rows FROM public.characters
-   WHERE coalesce(reserved_buffs,'{}'::jsonb) <> '{}'::jsonb
-      OR coalesce(stance_state,'{}'::jsonb) ?| ARRAY['force_shield_hp','force_shield_updated_at'];
-  IF node_rows <> 0 OR legacy_rows <> 0 THEN
-    RAISE EXCEPTION 'ENG-STANCE-001 ambiguous existing stance state: node_effect_rows=%, legacy_character_rows=%', node_rows, legacy_rows;
+  IF to_regclass('public.character_stance') IS NOT NULL THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 already installed: refusing repeated reset';
   END IF;
+  IF public.world_state_is_awake() OR public.combat_mode_is_open()
+     OR EXISTS(SELECT 1 FROM public.combat_config WHERE key='combat_soak' AND value='on')
+     OR EXISTS(SELECT 1 FROM cron.job WHERE active AND command ILIKE '%combat%')
+     OR EXISTS(SELECT 1 FROM public.node_encounter WHERE claim_token IS NOT NULL AND claim_expires_at>clock_timestamp())
+     OR EXISTS(SELECT 1 FROM public.combat2_test_run WHERE status='recording') THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 reset requires asleep/maintenance, soak off, schedules disabled, no live claims or recording runs';
+  END IF;
+
+  -- Exact authored identities, mechanic kinds and effect types. A poison/ignite
+  -- stack on a creature is an offscreen effect, not the self-owned stance.
+  CREATE TEMP TABLE eng_stance_reset_manifest(key text PRIMARY KEY,kind text,effect_type text) ON COMMIT DROP;
+  INSERT INTO pg_temp.eng_stance_reset_manifest VALUES
+    ('envenom','stack_source','poison'),('eagle_eye','offense','eagle_eye'),
+    ('holy_shield','reactive','holy_shield'),('shield_wall','block','shield_wall'),
+    ('battle_cry','mitigation','battle_cry'),('arcane_surge','offense','arcane_surge'),
+    ('force_shield','absorb','force_shield'),('ignite','stack_source','ignite');
+  old_timeout:=current_setting('lock_timeout');
+  PERFORM set_config('lock_timeout','5s',true);
+  LOCK TABLE public.node_effect,public.active_effects,public.characters IN SHARE ROW EXCLUSIVE MODE;
+  -- No deletion cascade or unknown DELETE trigger may widen the reset scope.
+  IF EXISTS(SELECT 1 FROM pg_trigger WHERE NOT tgisinternal AND tgenabled<>'D'
+      AND tgrelid IN('public.node_effect'::regclass,'public.active_effects'::regclass) AND (tgtype::integer & 8)<>0)
+     OR EXISTS(SELECT 1 FROM pg_constraint WHERE contype='f'
+      AND confrelid IN('public.node_effect'::regclass,'public.active_effects'::regclass)) THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 reset has unexpected effect deletion trigger/dependency';
+  END IF;
+  -- Deferred general character UPDATE triggers cannot be checked before commit.
+  -- The known death trigger is UPDATE OF hp and does not fire for this update.
+  IF EXISTS(SELECT 1 FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgenabled<>'D' AND t.tgdeferrable
+      AND t.tgrelid='public.characters'::regclass AND (t.tgtype::integer & 16)<>0
+      AND (cardinality(t.tgattr::smallint[])=0 OR EXISTS(SELECT 1 FROM pg_attribute a
+        WHERE a.attrelid=t.tgrelid AND a.attnum=ANY(t.tgattr::smallint[])
+          AND a.attname IN('reserved_buffs','stance_state')))) THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 reset has unexpected deferred character trigger';
+  END IF;
+  IF EXISTS(SELECT 1 FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgenabled<>'D'
+      AND t.tgrelid='public.characters'::regclass AND (t.tgtype::integer & 16)<>0
+      AND (cardinality(t.tgattr::smallint[])=0 OR EXISTS(SELECT 1 FROM pg_attribute a
+        WHERE a.attrelid=t.tgrelid AND a.attnum=ANY(t.tgattr::smallint[])
+          AND a.attname IN('reserved_buffs','stance_state')))
+      AND t.tgfoid NOT IN('public.update_updated_at()'::regprocedure,
+        'public.restrict_party_leader_updates()'::regprocedure,'public.sync_stance_effects()'::regprocedure)) THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 reset has unexpected character update trigger';
+  END IF;
+  SELECT count(*) INTO unknown_rows FROM public.characters
+   WHERE (reserved_buffs IS NOT NULL AND jsonb_typeof(reserved_buffs)<>'object')
+      OR (stance_state IS NOT NULL AND jsonb_typeof(stance_state)<>'object');
+  IF unknown_rows<>0 THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 unclassifiable legacy JSON: characters=%',unknown_rows;
+  END IF;
+  CREATE TEMP TABLE eng_stance_reset_node ON COMMIT DROP AS
+    SELECT e.id,e.ability_key,e.is_reservation FROM public.node_effect e
+    JOIN pg_temp.eng_stance_reset_manifest m ON m.key=e.ability_key
+    WHERE e.target_character_id IS NOT NULL AND e.target_creature_id IS NULL
+      AND e.source_character_id=e.target_character_id AND e.source_creature_id IS NULL
+      AND ((e.is_reservation AND e.kind='reservation' AND e.effect_type='cp_reservation')
+        OR (NOT e.is_reservation AND e.kind=m.kind AND e.effect_type=m.effect_type));
+  SELECT count(*) INTO unknown_rows FROM public.node_effect e
+   WHERE (e.is_reservation OR (e.target_character_id IS NOT NULL
+     AND e.ability_key IN(SELECT key FROM pg_temp.eng_stance_reset_manifest)))
+     AND NOT EXISTS(SELECT 1 FROM pg_temp.eng_stance_reset_node r WHERE r.id=e.id);
+  IF unknown_rows<>0 THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 unclassifiable node stance/reservation rows=%',unknown_rows;
+  END IF;
+  -- Historical active_effects: exact self-owned key and lifetime marker; older
+  -- timed self rows require the explicit source ability identity as well.
+  CREATE TEMP TABLE eng_stance_reset_active ON COMMIT DROP AS
+    SELECT e.id,m.key FROM public.active_effects e
+    JOIN pg_temp.eng_stance_reset_manifest m ON m.key=e.effect_type
+    JOIN public.characters c ON c.id=e.target_id
+    WHERE e.source_id=e.target_id AND (e.source_ability_key IS NULL OR e.source_ability_key=m.key)
+      AND (e.lifetime='stance' OR (e.lifetime='timed' AND e.source_ability_key=m.key));
+  SELECT count(*) INTO unknown_rows FROM public.active_effects e
+   WHERE (e.lifetime='stance' OR (e.source_id=e.target_id AND EXISTS(SELECT 1 FROM public.characters c WHERE c.id=e.target_id)
+     AND (e.source_ability_key IN(SELECT key FROM pg_temp.eng_stance_reset_manifest)
+       OR e.effect_type IN(SELECT key FROM pg_temp.eng_stance_reset_manifest))))
+     AND NOT EXISTS(SELECT 1 FROM pg_temp.eng_stance_reset_active r WHERE r.id=e.id);
+  IF unknown_rows<>0 THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 unclassifiable legacy stance effects=%',unknown_rows;
+  END IF;
+  CREATE TEMP TABLE eng_stance_reset_characters ON COMMIT DROP AS
+    SELECT id,reserved_buffs,stance_state,
+      coalesce(reserved_buffs,'{}'::jsonb)-ARRAY(SELECT key FROM pg_temp.eng_stance_reset_manifest) AS remaining_reservations,
+      coalesce(stance_state,'{}'::jsonb)-ARRAY['force_shield_hp','force_shield_updated_at'] AS remaining_state
+    FROM public.characters WHERE coalesce(reserved_buffs,'{}'::jsonb) ?| ARRAY(SELECT key FROM pg_temp.eng_stance_reset_manifest)
+      OR coalesce(stance_state,'{}'::jsonb) ?| ARRAY['force_shield_hp','force_shield_updated_at'];
+  SELECT count(*) INTO node_rows FROM pg_temp.eng_stance_reset_node;
+  SELECT count(*) INTO active_rows FROM pg_temp.eng_stance_reset_active;
+  SELECT count(*) INTO legacy_rows FROM pg_temp.eng_stance_reset_characters;
+  IF node_rows+active_rows+legacy_rows>10000 THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 bounded reset exceeds 10000 affected rows: node=%, legacy_effects=%, characters=%',node_rows,active_rows,legacy_rows;
+  END IF;
+  SELECT jsonb_build_object('node_mechanics',(SELECT count(*) FROM pg_temp.eng_stance_reset_node WHERE NOT is_reservation),
+    'node_reservations',(SELECT count(*) FROM pg_temp.eng_stance_reset_node WHERE is_reservation),
+    'legacy_effects',active_rows,'characters',legacy_rows,
+    'legacy_reservation_entries',(SELECT count(*) FROM pg_temp.eng_stance_reset_characters c
+      CROSS JOIN LATERAL jsonb_object_keys(c.reserved_buffs) AS entries(key) WHERE key IN(SELECT key FROM pg_temp.eng_stance_reset_manifest)),
+    'force_shield_ward_fields',(SELECT count(*) FROM pg_temp.eng_stance_reset_characters c
+      CROSS JOIN LATERAL jsonb_object_keys(c.stance_state) AS entries(key) WHERE key IN('force_shield_hp','force_shield_updated_at')))
+    INTO counts;
+  RAISE NOTICE 'ENG-STANCE-001 reset preflight: %',counts;
+
+  -- Fingerprint protected surfaces, including unaffected effects and complete
+  -- character rows with only the expected JSON edits and normal updated_at. Locks and
+  -- a mismatch exception make unexpected immediate trigger effects roll back.
+  FOREACH relation_name IN ARRAY ARRAY['characters','character_inventory','node_effect','active_effects',
+    'node_encounter','node_fighter','node_creature','node_participation','node_reward_claim','node_ground_loot',
+    'node_intent','node_pending_event','combat2_departure_request','combat2_party_departure_request',
+    'combat2_party_departure_member'] || ARRAY(SELECT c.relname::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relkind='r' AND c.relname LIKE 'combat2_test_%' ORDER BY c.relname) LOOP
+    EXECUTE format('LOCK TABLE public.%I IN SHARE ROW EXCLUSIVE MODE',relation_name);
+    IF relation_name='characters' THEN
+      SELECT md5(coalesce(string_agg(md5((CASE WHEN r.id IS NULL THEN to_jsonb(c) ELSE to_jsonb(c)||jsonb_build_object(
+        'reserved_buffs',CASE WHEN r.reserved_buffs IS NULL THEN NULL ELSE r.remaining_reservations END,
+        'stance_state',CASE WHEN r.stance_state IS NULL THEN NULL ELSE r.remaining_state END,
+        'updated_at',now()) END)::text),'' ORDER BY c.id),''))
+        INTO before_hash FROM public.characters c LEFT JOIN pg_temp.eng_stance_reset_characters r ON r.id=c.id;
+    ELSE
+      EXECUTE format('SELECT md5(coalesce(string_agg(md5(to_jsonb(t)::text),'''' ORDER BY md5(to_jsonb(t)::text)),'''')) FROM public.%I t %s',
+        relation_name,CASE relation_name WHEN 'node_effect' THEN 'WHERE id NOT IN(SELECT id FROM pg_temp.eng_stance_reset_node)'
+          WHEN 'active_effects' THEN 'WHERE id NOT IN(SELECT id FROM pg_temp.eng_stance_reset_active)' ELSE '' END) INTO before_hash;
+    END IF;
+    protected_hashes:=protected_hashes||jsonb_build_object(relation_name,before_hash);
+  END LOOP;
+  DELETE FROM public.node_effect WHERE id IN(SELECT id FROM pg_temp.eng_stance_reset_node);
+  DELETE FROM public.active_effects WHERE id IN(SELECT id FROM pg_temp.eng_stance_reset_active);
+  old_trusted:=current_setting('app.trusted_rpc',true);
+  PERFORM set_config('app.trusted_rpc','true',true);
+  UPDATE public.characters c SET reserved_buffs=CASE WHEN c.reserved_buffs IS NULL THEN NULL ELSE r.remaining_reservations END,
+    stance_state=CASE WHEN c.stance_state IS NULL THEN NULL ELSE r.remaining_state END
+    FROM pg_temp.eng_stance_reset_characters r WHERE r.id=c.id;
+  PERFORM set_config('app.trusted_rpc',coalesce(old_trusted,''),true);
+  IF EXISTS(SELECT 1 FROM public.characters c JOIN pg_temp.eng_stance_reset_characters r ON r.id=c.id
+    WHERE c.reserved_buffs IS DISTINCT FROM CASE WHEN r.reserved_buffs IS NULL THEN NULL ELSE r.remaining_reservations END
+       OR c.stance_state IS DISTINCT FROM CASE WHEN r.stance_state IS NULL THEN NULL ELSE r.remaining_state END)
+     OR EXISTS(SELECT 1 FROM public.node_effect WHERE id IN(SELECT id FROM pg_temp.eng_stance_reset_node))
+     OR EXISTS(SELECT 1 FROM public.active_effects WHERE id IN(SELECT id FROM pg_temp.eng_stance_reset_active)) THEN
+    RAISE EXCEPTION 'ENG-STANCE-001 reset postflight mismatch';
+  END IF;
+  FOR relation_name,before_hash IN SELECT key,value FROM jsonb_each_text(protected_hashes) LOOP
+    IF relation_name='characters' THEN
+      SELECT md5(coalesce(string_agg(md5(to_jsonb(c)::text),'' ORDER BY c.id),''))
+        INTO after_hash FROM public.characters c;
+    ELSE
+      EXECUTE format('SELECT md5(coalesce(string_agg(md5(to_jsonb(t)::text),'''' ORDER BY md5(to_jsonb(t)::text)),'''')) FROM public.%I t',relation_name) INTO after_hash;
+    END IF;
+    IF before_hash IS DISTINCT FROM after_hash THEN
+      RAISE EXCEPTION 'ENG-STANCE-001 reset changed protected surface: %',relation_name;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'ENG-STANCE-001 reset postflight: reset=%, remaining_identified_node=0, remaining_identified_legacy_effects=0, remaining_identified_JSON=0; protected fingerprints unchanged; new authority initializes empty',counts;
+  PERFORM set_config('lock_timeout',old_timeout,true);
 END $$;
 
 CREATE TABLE public.character_stance (

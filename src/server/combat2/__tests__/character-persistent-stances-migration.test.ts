@@ -1,11 +1,29 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import inventory from '@/shared/combat/inventory/active-abilities.json';
+import { buildAbilityCatalog, type AuthoredAbilityInventory } from '@/shared/combat2/catalog';
 
 const file = 'supabase/migrations/20261001130000_combat2_character_persistent_stances.sql';
 const sql = readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
 const stances = ['envenom','eagle_eye','holy_shield','shield_wall','battle_cry','arcane_surge','force_shield','ignite'];
 
 describe('ENG-STANCE-001 persistent stance migration', () => {
+  it('derives reset identities from the current authored catalogue and historical lifetime contract', () => {
+    const authored = inventory as AuthoredAbilityInventory;
+    const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
+    const kinds: Record<string, string> = { stack_apply: 'stack_source', offense_buff: 'offense',
+      reactive_damage: 'reactive', block_buff: 'block', mitigation_buff: 'mitigation', absorb_buff: 'absorb' };
+    const records = authored.abilities.filter(row => row.activationMode === 'stance');
+    expect(records.map(row => row.abilityKey).sort()).toEqual([...stances].sort());
+    for (const record of records) {
+      const spec = catalog.specs.get(record.abilityKey)!;
+      expect(spec).toBeDefined();
+      expect(sql).toContain(`('${spec.abilityKey}','${kinds[spec.mechanic]}','${spec.effectType ?? spec.abilityKey}')`);
+    }
+    const historical = readFileSync('supabase/migrations/20260814211437_349710ba-d2f7-4ce6-b863-de46a0ad946b.sql', 'utf8');
+    expect(historical).toContain('ae.lifetime = \'stance\'');
+    for (const key of stances) expect(historical).toContain(`'${key}'`);
+  });
   it('defines one private character owner and durable replay surface', () => {
     expect(sql).toContain('CREATE TABLE public.character_stance (');
     expect(sql).toContain('PRIMARY KEY(character_id,ability_key)');
@@ -25,11 +43,106 @@ describe('ENG-STANCE-001 persistent stance migration', () => {
     expect(sql).toContain('reserved:=public.combat2_stance_reserved_cp(c.id,c.max_cp)');
   });
 
-  it('fails installation on ambiguous legacy or encounter stance state', () => {
-    expect(sql).toContain('ambiguous existing stance state');
-    expect(sql).toContain("coalesce(reserved_buffs,'{}'::jsonb) <> '{}'::jsonb");
-    expect(sql).toContain('node_effect_rows=%');
-    expect(sql).toContain('legacy_character_rows=%');
+  it('resets exact supported self-owned representations, never broad effect categories', () => {
+    const manifest = [
+      ['envenom','stack_source','poison'], ['eagle_eye','offense','eagle_eye'],
+      ['holy_shield','reactive','holy_shield'], ['shield_wall','block','shield_wall'],
+      ['battle_cry','mitigation','battle_cry'], ['arcane_surge','offense','arcane_surge'],
+      ['force_shield','absorb','force_shield'], ['ignite','stack_source','ignite'],
+    ];
+    for (const row of manifest) expect(sql).toContain(`('${row.join("','")}')`);
+    expect(sql).toContain('m.key=e.ability_key');
+    expect(sql).toContain('e.source_character_id=e.target_character_id AND e.source_creature_id IS NULL');
+    expect(sql).toContain('e.target_creature_id IS NULL');
+    expect(sql).toContain("e.kind='reservation' AND e.effect_type='cp_reservation'");
+    expect(sql).toContain('e.kind=m.kind AND e.effect_type=m.effect_type');
+    expect(sql).toContain('m.key=e.effect_type');
+    expect(sql).toContain('e.source_id=e.target_id');
+    expect(sql).toContain("e.lifetime='stance' OR (e.lifetime='timed' AND e.source_ability_key=m.key)");
+    expect(sql).toContain('unclassifiable node stance/reservation rows=%');
+    expect(sql).toContain('unclassifiable legacy stance effects=%');
+    expect(sql).not.toMatch(/DELETE FROM public\.(node_effect|active_effects) WHERE (kind|effect_type)/);
+  });
+
+  it('subtracts only exact stance keys/ward fields from mixed JSON, preserving resources', () => {
+    expect(sql).toContain("-ARRAY(SELECT key FROM pg_temp.eng_stance_reset_manifest) AS remaining_reservations");
+    expect(sql).toContain("-ARRAY['force_shield_hp','force_shield_updated_at'] AS remaining_state");
+    // JSON subtraction fixtures model the SQL operators; they do not execute PostgreSQL.
+    const reservations: Record<string, unknown> = { unrelated: { reserved: 3 } };
+    for (const key of stances) reservations[key] = { reserved: 10, tier: 1 };
+    const before = { hp: 83, cp: 17, mp: 91, reserved_buffs: reservations,
+      stance_state: { force_shield_hp: 4, force_shield_updated_at: 100, unrelated: { value: 9 } } };
+    const after = structuredClone(before);
+    for (const key of stances) delete after.reserved_buffs[key];
+    const state = after.stance_state as Record<string, unknown>;
+    delete state.force_shield_hp; delete state.force_shield_updated_at;
+    expect(after.reserved_buffs).toEqual({ unrelated: { reserved: 3 } });
+    expect(after.stance_state).toEqual({ unrelated: { value: 9 } });
+    expect([after.hp, after.cp, after.mp]).toEqual([83, 17, 91]);
+    const reset = sql.slice(0, sql.indexOf('CREATE TABLE public.character_stance ('));
+    expect(reset).not.toMatch(/\bSET\s+(hp|cp|mp|current_node_id)\s*=/i);
+    expect(reset).toContain("'updated_at',now()");
+    expect(reset).toContain('reset changed protected surface: %');
+  });
+
+  it('covers all known effect representations and preserves unrelated/offscreen fixture rows', () => {
+    // Predicate fixtures complement the SQL contract assertions above, not SQL execution.
+    const rows = [...sql.matchAll(/\('([^']+)','([^']+)','([^']+)'\)/g)]
+      .filter(match => stances.includes(match[1]));
+    const manifest = new Map(rows.map(match => [match[1], { kind: match[2], type: match[3] }]));
+    expect(manifest.size).toBe(8);
+    for (const key of stances) {
+      const mechanic = manifest.get(key)!;
+      const nodeMatch = (row: { source: string; target: string | null; creature: string | null;
+        key: string; kind: string; type: string; reservation: boolean }) => {
+        const entry = manifest.get(row.key);
+        return !!entry && row.target !== null && row.source === row.target && row.creature === null
+          && (row.reservation ? row.kind === 'reservation' && row.type === 'cp_reservation'
+            : row.kind === entry.kind && row.type === entry.type);
+      };
+      const own = { source: 'character', target: 'character', creature: null, key,
+        kind: mechanic.kind, type: mechanic.type, reservation: false };
+      expect(nodeMatch(own)).toBe(true);
+      expect(nodeMatch({ ...own, reservation: true, kind: 'reservation', type: 'cp_reservation' })).toBe(true);
+      expect(nodeMatch({ ...own, target: null, creature: 'creature' })).toBe(false);
+      expect(nodeMatch({ ...own, source: 'other-character' })).toBe(false);
+      expect(nodeMatch({ ...own, key: 'unrelated' })).toBe(false);
+      expect(nodeMatch({ ...own, type: 'unrelated' })).toBe(false);
+      const legacyMatch = (lifetime: string, sourceKey: string | null) =>
+        (sourceKey === null || sourceKey === key)
+          && (lifetime === 'stance' || lifetime === 'timed' && sourceKey === key);
+      expect(legacyMatch('stance', null)).toBe(true);
+      expect(legacyMatch('stance', key)).toBe(true);
+      expect(legacyMatch('timed', key)).toBe(true);
+      expect(legacyMatch('timed', null)).toBe(false);
+      expect(legacyMatch('stance', 'unrelated')).toBe(false);
+    }
+  });
+
+  it('bounds and atomically guards reset with empty new authority and preserved histories', () => {
+    expect(sql).toContain('node_rows+active_rows+legacy_rows>10000');
+    expect(sql).toContain("set_config('lock_timeout','5s',true)");
+    expect(sql).toContain('asleep/maintenance, soak off, schedules disabled, no live claims or recording runs');
+    expect(sql).toContain('reset preflight: %');
+    expect(sql).toContain('reset postflight: reset=%');
+    expect(sql).toContain('unexpected effect deletion trigger/dependency');
+    expect(sql).toContain('unexpected deferred character trigger');
+    expect(sql).toContain('unexpected character update trigger');
+    expect(sql).toContain('unclassifiable legacy JSON: characters=%');
+    for (const surface of ['character_inventory','node_encounter','node_fighter','node_participation',
+      'node_reward_claim','node_ground_loot','node_intent','node_pending_event','combat2_departure_request']) {
+      expect(sql).toContain(`'${surface}'`);
+    }
+    expect(sql).toContain("c.relname LIKE 'combat2_test_%'");
+    expect(sql.indexOf('DELETE FROM public.active_effects')).toBeLessThan(sql.indexOf('UPDATE public.characters c SET reserved_buffs'));
+    expect(sql.indexOf('reset postflight mismatch')).toBeLessThan(sql.indexOf('CREATE TABLE public.character_stance ('));
+    expect(sql).toContain('refusing repeated reset');
+    // Reset DML and DDL share the runner transaction: no commits or exception swallowing.
+    // Actual rollback on a later DDL failure is an explicit installed-schema gate.
+    const reset = sql.slice(0, sql.indexOf('CREATE TABLE public.character_stance ('));
+    expect(reset).not.toContain('EXCEPTION WHEN');
+    expect(reset).not.toMatch(/\b(COMMIT|ROLLBACK)\s*;/);
+    expect(reset).not.toContain('INSERT INTO public.character_stance');
   });
 
   it('makes combat stance changes immediate while consuming exactly one intent slot', () => {

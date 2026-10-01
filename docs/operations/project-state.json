@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T09:08:38Z",
-  "based_on_source_sha": "b74421308efe788ad39d73ca81f9d2e4fc1e0e92",
+  "updated_at": "2026-10-01T13:19:15Z",
+  "based_on_source_sha": "f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "b74421308efe788ad39d73ca81f9d2e4fc1e0e92",
-    "timestamp": "2026-10-01T09:08:38Z",
+    "sha": "f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a",
+    "timestamp": "2026-10-01T13:19:15Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and synchronized at b74421308efe788ad39d73ca81f9d2e4fc1e0e92 for the ability-availability and persistent-stance design audit. Required checkpoint 07206094e851b2869dd5d6a6a5d401b4b9759dff remains in ancestry. Subsequent Lovable commits and their installation/deployment evidence were preserved without rewriting history.",
+    "evidence": "Local main and origin/main were clean and synchronized at f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a before the approved one-time stance installation-reset correction. That required checkpoint remains in ancestry. Existing Codex/Lovable work and installation evidence are preserved; no history rewrite or Cloud operation occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -30,7 +30,7 @@
       "sha": null,
       "timestamp": "2026-10-01T12:00:00Z",
       "evidence_type": "repository",
-      "evidence": "ENG-STANCE-001/002 forward source SHA-256 d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb is authored but not installed. It introduces private character-owned stance and replay state, authenticated projection/change RPCs, claim/commit version fencing, death cleanup, dynamic current-max-CP reservations, settlement-owned Force Shield refill, Test Arena snapshot/restore, and disables competing authenticated legacy stance writers. Installation must first pass the aggregate no-ambiguous-existing-state preflight and full rollback compilation; official types must then be regenerated. No Cloud operation or live verification occurred.",
+      "evidence": "ENG-STANCE-001/002 remains authored, not reported installed; no ledger artifact is present. Previous authored SHA-256 d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb is superseded by 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7. Mik approves a one-time reset of the eight exactly identified old stance mechanics/reservations and Force Shield ward fields, with empty new authority, no activation-cost refund and unchanged raw HP/CP/MP or protected gameplay/history. Aggregate pre/postflight counts, a 10000-row mutation cap, lock timeout, unknown-state/dependency guards and protected fingerprints are authored. The normal character updated_at trigger remains active. Reset and full schema DDL must install atomically with processing disabled. Full PostgreSQL compilation, fixture execution and injected-later-failure rollback proof are explicit Lovable gates: no local PostgreSQL executable is available. See the stance design installation checklist. All schema/runtime/wrapper/security behavior after the first block is unchanged. Official types, proven Edge deployments, manual publication and live verification remain pending; no Cloud operation occurred.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -254,7 +254,7 @@
       "sha": null,
       "timestamp": "2026-10-01T12:00:00Z",
       "evidence_type": "repository",
-      "evidence": "Source implements the approved eight-stance character authority and out-of-combat UI routing. The migration is not installed, generated official Cloud types are unchanged, affected Combat2 Edge consumers are not deployed, and Mik has not yet manually published this frontend revision. Installation, deployment, publication and bounded solo/multiplayer verification remain distinct pending steps.",
+      "evidence": "Source implements the approved eight-stance character authority and out-of-combat UI routing. Mik additionally approves resetting positively identified existing stance state once during atomic installation, not migrating it. Unknown/mixed unclassifiable rows still stop; unrelated JSON/effects, raw resources and histories survive. This reset does not alter runtime stance rules or lock ordering. The migration is not reported installed, generated official Cloud types are unchanged, affected Combat2 Edge consumers are not deployed, and Mik has not yet manually published this frontend revision. Installation, PostgreSQL rollback verification, deployment, publication and bounded solo/multiplayer verification remain distinct pending steps.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },

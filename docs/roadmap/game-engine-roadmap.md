@@ -112,6 +112,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Intended outcome:** one authoritative character lifecycle for stance effect plus reservation.
 - **Dependencies:** migration installation, official type regeneration, affected Edge deployment, Mik's manual publication and bounded live verification.
 - **Evidence/current state:** source migration `20261001130000_combat2_character_persistent_stances.sql`, claim/resolver/commit integration and frontend projection/RPC routing implement the approved eight-stance character authority. Installation and live behavior are not claimed.
+- **Installation policy:** Mik approved one-time reset of exactly identified old stance mechanics/reservations/ward state, with empty new authority and no raw-resource refund. Unknown state fails closed; aggregate bounded cleanup and protected-state checks share the installation transaction. Full PostgreSQL compilation and injected-failure rollback proof remain installation gates; runtime rules/deployment requirements are unchanged.
 - **Acceptance criteria:** atomic activate/drop, no double reservation, movement/reconnect/death rules, migration and live proof.
 - **Specification sections:** Effects and stances; Character ownership and lifecycle.
 
