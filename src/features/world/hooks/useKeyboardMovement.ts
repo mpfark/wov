@@ -112,10 +112,8 @@ interface UseKeyboardMovementOptions {
 export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onPickUpLoot, onOpenChat, onCycleTarget }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
   const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
-  const [moveCooldown, setMoveCooldown] = useState(false);
   const bindingsRef = useRef(bindings);
   const actionBindingsRef = useRef(actionBindings);
-  const moveCooldownRef = useRef(false);
   const currentNodeRef = useRef(currentNode);
   const onMoveRef = useRef(onMove);
   const disabledRef = useRef(disabled);
@@ -127,7 +125,6 @@ export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabl
   const onCycleTargetRef = useRef(onCycleTarget);
 
   useEffect(() => { bindingsRef.current = bindings; }, [bindings]);
-  useEffect(() => { moveCooldownRef.current = moveCooldown; }, [moveCooldown]);
   useEffect(() => { actionBindingsRef.current = actionBindings; }, [actionBindings]);
   useEffect(() => { currentNodeRef.current = currentNode; }, [currentNode]);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
@@ -177,16 +174,17 @@ export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabl
         }
       }
       if (matchedDirection && node) {
-        // Movement cooldown — prevent spam
-        if (moveCooldownRef.current) return;
+        // One deliberate press owns one movement attempt. Native key repeat must
+        // not queue later nodes while the authoritative request is in flight.
+        if (e.repeat) {
+          e.preventDefault();
+          return;
+        }
         const conn = node.connections?.find(
           c => c.direction === matchedDirection && !c.hidden
         );
         if (conn) {
           e.preventDefault();
-          setMoveCooldown(true);
-          moveCooldownRef.current = true;
-          setTimeout(() => { setMoveCooldown(false); moveCooldownRef.current = false; }, 500);
           onMoveRef.current(conn.node_id, matchedDirection);
           return;
         }
@@ -250,7 +248,6 @@ export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabl
     actionBindings, setActionBindings,
     DIRECTIONS, DIRECTION_LABELS,
     ACTION_NAMES, ACTION_LABELS,
-    moveCooldown,
   };
 }
 

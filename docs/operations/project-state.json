@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T00:25:00Z",
-  "based_on_source_sha": "40f378a990ce90ba77b46a846da943b8a15e6a9e",
+  "updated_at": "2026-10-01T06:32:41Z",
+  "based_on_source_sha": "05f57228d6fafaf783075df93bc02e41beae7077",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -244,9 +244,19 @@
       "sha": null,
       "timestamp": "2026-10-01T00:25:00Z",
       "evidence_type": "operator_reported",
-      "evidence": "Mik reports that the previously published immediate-destination reconciliation works and the former fixed wait is gone. Mik also observed occasional Movement is being finalized presentation and location flicker, which this source correction addresses. The exact published frontend revision is unavailable and is not guessed. This is not direct verification of the latest correction, coordinated party movement, multiplayer races or installed server concurrency.",
+      "evidence": "Mik reports after publication that minimap mouse movement is immediate and no longer reports errors, while keyboard movement still has noticeable delay. Earlier he also observed occasional Movement is being finalized presentation and location flicker, addressed by the prior source correction. The exact published frontend revision is unavailable and is not guessed. This operator evidence verifies the minimap-visible path only; it is not direct verification of the latest keyboard correction, coordinated party movement, multiplayer races or installed server concurrency.",
       "reporting_actor": "Mik",
       "directly_verified": false
+    },
+    {
+      "identity": "combat2-keyboard-movement-input-correction-2026-10-01",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-10-01T06:32:41Z",
+      "evidence_type": "tests",
+      "evidence": "Source comparison proved keyboard and minimap already converge on GamePage.handleMovementInput, but keyboard alone retained a 500 ms local cooldown from historical commit fc3c9d6e. The timer never delayed the first RPC; it silently discarded a prompt later deliberate press even after authoritative completion and coherent destination rendering. The correction removes the fixed timer and explicitly ignores native held-key repeat, while the shared departure lifecycle continues to own single-flight, pending/recovery, authoritative connection selection, uncertain retry UUID reuse, stale response/session fencing and solo/party routing. Focused tests prove immediate first submission with zero timer, latest acknowledged origin on the next deliberate press, held-repeat suppression, disabled pending suppression and input/dialog exclusions. No SQL, Edge, Cloud or gameplay authority changed. Mik must publish manually; keyboard and multiplayer live verification remain pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     },
     {
       "identity": "eng-hb-003-two-second-schedule-phase-correction",
@@ -663,11 +673,11 @@
   ],
   "next_approved_task": {
     "status": "ready_for_manual_publish",
-    "artifact": "Mik manually publishes the authoritative movement client-reconciliation correction, followed by a separately authorized bounded movement observation. ENG-HB-003 cadence verification remains a separate pending observation.",
+    "artifact": "Mik manually publishes the keyboard movement input correction, followed by a bounded keyboard-versus-minimap and party-leader observation. ENG-HB-003 cadence verification remains separate.",
     "sha": null,
-    "timestamp": "2026-09-30T21:10:00Z",
+    "timestamp": "2026-10-01T06:32:41Z",
     "evidence_type": "repository",
-    "evidence": "Publish the frontend source only; no migration or Edge deployment is required. Then verify ordinary solo and party-leader moves update the destination immediately, a prompt second move uses the new node's connections, missing/delayed Realtime does not reintroduce stale origin controls, and refusals/death/uncertain outcomes never move the display. Keep the separately installed ENG-HB-003 cadence verification scoped to heartbeat/tick evidence rather than using it to infer movement latency.",
+    "evidence": "Publish the frontend source only; no migration or Edge deployment is required. Compare one minimap click and one fresh keyboard press: each should submit immediately, update to the authoritative destination, and allow a deliberate next press to use that destination's connections after acknowledgement. Holding a key must not auto-walk, and pressing again while genuinely pending must not create another request. Repeat as party leader when safely available. Keep ENG-HB-003 cadence verification separate from movement input latency.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -824,6 +834,16 @@
     }
   ],
   "product_backlog": [
+    {
+      "identity": "single-creature-admin-reset-despawn",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T06:32:41Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Future admin tool request only; no implementation or Cloud inspection occurred. Require server-derived admin authorization, transactional claim/state-version fencing, explicit effects/targets/engagement handling and audited idempotent outcomes. Reset and despawn must remain distinct; neither may grant kill credit, XP, loot or death effects, and unrelated creatures, characters, participation and reward history must be preserved. Mik reports an unstartable creature at node prefix f974068d / encounter prefix ca32f2fb. Full UUIDs and cause are unknown and must be established by a separately authorized read-only Cloud investigation before design or repair.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "inactive-character-return-home",
       "status": "authored",
