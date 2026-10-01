@@ -147,12 +147,13 @@ Equipment is a tick dependency only for fighters who are `present` at the frozen
 - Transient effects expire/tick inside the encounter resolver.
 - Persistent effects need explicit durable ownership and lifecycle rules.
 - A CP reservation is an authoritative reservation effect; spendable CP is total CP minus active reservations.
-- Current stances are encounter-scoped intents/effects. Desired character-scoped stances, including safe activation outside combat and persistence across movement/encounters, are not implemented (`ENG-STANCE-001`, `ENG-STANCE-002`).
+- Source now defines one character-owned lifecycle for the eight authored stances (`ENG-STANCE-001/002`), pending migration installation, affected Edge deployment, Mik's publication and live verification. Activation/drop is an immediate idempotent transaction; in combat it also consumes exactly one action slot. Claim freezes stance versions, resolver derives encounter mechanics without a second reservation owner, and commit fences/persists ward changes or death cleanup.
+- Reservation is `floor(current effective max CP × authored percentage)`. Cap/equipment changes dynamically resize it without charge/refund; excess reservation clamps spendable CP to zero and never auto-drops the stance. Movement, completion and reconnect retain living-character stance state; death clears it and respawn does not restore it.
 - Presentation may group multiple authoritative rows into one semantic stance but cannot merge their mechanics.
 
 Holy Shield currently consists of a retaliation effect plus its reservation effect and is presented as one semantic stance. Repeated activation is refused. Dropping a stance removes the reservation and does not refund the original activation cost.
 
-The audited ability-availability matrix, recommended character-scoped stance authority, unresolved product decisions and bounded implementation sequence are in [combat2-ability-availability-and-persistent-stances.md](combat2-ability-availability-and-persistent-stances.md). That document is design, not an installed contract; this specification and project state remain authoritative for approved rules and operational evidence.
+The audited ability-availability matrix, approved character-scoped stance authority and release sequence are in [combat2-ability-availability-and-persistent-stances.md](combat2-ability-availability-and-persistent-stances.md). Project state remains authoritative for installation and verification evidence.
 
 ## Movement and party movement
 
@@ -207,7 +208,7 @@ Detailed volatile facts belong in [project state](../operations/project-state.md
 | Party movement | immediate coordinated transition, follower-first/leader-last | implemented | ENG-MOVE-001 installed; frontend operator-reported published | bounded installed/live verification |
 | Logs/diagnostics | bounded authoritative delivery/recording | implemented | see project state | world-vs-encounter tick label |
 | Targeting/initiation | immediate intention, next-heartbeat outcome | implemented for ENG-COMBAT-002 | installed; frontend operator-reported published | live arrival/hostile/tank-order verification |
-| Stances | authoritative reservation/effects | encounter-scoped | partial | character scope/out-of-combat |
+| Stances | character-owned reservation/state; encounter-derived mechanics | implemented in pending ENG-STANCE-001/002 source | not installed/published/live-verified | install, deploy affected Edge, regenerate types, publish and verify |
 | Food | authoritative amount/expiry | not complete | not claimed | `ENG-FOOD-001` |
 | Rewards/ADM-025B | exclusive item source, exactly once | pending | not installed | `ENG-REWARD-001/002` |
 | Inactive return-home | safe authoritative inactivity transition | not designed | not installed | `ENG-LIFECYCLE-001` |

@@ -25,6 +25,16 @@
   },
   "database_migrations": [
     {
+      "identity": "20261001130000_combat2_character_persistent_stances.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T12:00:00Z",
+      "evidence_type": "repository",
+      "evidence": "ENG-STANCE-001/002 forward source SHA-256 d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb is authored but not installed. It introduces private character-owned stance and replay state, authenticated projection/change RPCs, claim/commit version fencing, death cleanup, dynamic current-max-CP reservations, settlement-owned Force Shield refill, Test Arena snapshot/restore, and disables competing authenticated legacy stance writers. Installation must first pass the aggregate no-ambiguous-existing-state preflight and full rollback compilation; official types must then be regenerated. No Cloud operation or live verification occurred.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "20261001100000_combat2_present_equipment_fencing.sql",
       "status": "installed",
       "sha": "07206094e851b2869dd5d6a6a5d401b4b9759dff",
@@ -238,6 +248,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-character-persistent-stances-source-2026-10-01",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-10-01T12:00:00Z",
+      "evidence_type": "repository",
+      "evidence": "Source implements the approved eight-stance character authority and out-of-combat UI routing. The migration is not installed, generated official Cloud types are unchanged, affected Combat2 Edge consumers are not deployed, and Mik has not yet manually published this frontend revision. Installation, deployment, publication and bounded solo/multiplayer verification remain distinct pending steps.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-present-equipment-fencing-2026-10-01",
       "status": "installed",

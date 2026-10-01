@@ -118,6 +118,42 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   const rng = new TickRandom({ encounterId: encounter.id, candidateTick: tick });
   const proposed = emptyProposedTick(tick);
   proposed.equipment_fence.push(...claimedEquipment);
+  // Character stance rows are the sole durable owner. Materialize their
+  // mechanics only inside this frozen snapshot; these synthetic rows are never
+  // inserted into node_effect and therefore cannot duplicate reservations.
+  const stanceEffects: SnapshotEffect[] = [];
+  for (const stance of snapshot.character_stances ?? []) {
+    const fighter = snapshot.fighters.find(row => row.character_id === stance.character_id && row.present);
+    const spec = fighter ? deps.abilities.get(`${fighter.class}:${stance.ability_key}`)
+      ?? deps.abilities.get(stance.ability_key) : undefined;
+    if (!fighter || !spec || spec.activation !== 'stance' || spec.cpReservePct !== stance.reserve_pct) continue;
+    proposed.stance_fence.push({ character_id: stance.character_id, ability_key: stance.ability_key,
+      version: stance.version });
+    stanceEffects.push({ id: `stance:${stance.character_id}:${stance.ability_key}:reservation`,
+      kind: 'reservation', effect_type: 'cp_reservation', ability_key: stance.ability_key,
+      target_character_id: stance.character_id, target_creature_id: null,
+      source_character_id: stance.character_id, source_creature_id: null, stacks: 1,
+      magnitude: Math.floor(Math.max(0, fighter.max_cp) * stance.reserve_pct),
+      config: { reserve_pct: stance.reserve_pct, character_stance_version: stance.version,
+        target_fighter_id: fighter.id, target_entry_seq: fighter.entry_seq, persistent_stance: true }, expires_at: null,
+      next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: true });
+    const outcome = MECHANIC_HANDLERS[spec.mechanic]({ rng, nowMs, tick, actor: fighter,
+      weaponProgression: deps.weaponProgression }, spec);
+    outcome.effects.forEach((effect, index) => {
+      const id = `stance:${stance.character_id}:${stance.ability_key}:${index}`;
+      stanceEffects.push({ id, kind: effect.kind, effect_type: effect.effect_type,
+        ability_key: stance.ability_key, target_character_id: stance.character_id,
+        target_creature_id: effect.target_creature_id ?? null, source_character_id: stance.character_id,
+        source_creature_id: effect.source_creature_id ?? null, stacks: effect.stacks ?? 1,
+        magnitude: stance.ability_key === 'force_shield' && typeof stance.state.ward_remaining === 'number'
+          ? Math.max(0, stance.state.ward_remaining) : effect.magnitude ?? null,
+        config: { ...(effect.config ?? {}), character_stance_version: stance.version,
+          target_fighter_id: fighter.id, target_entry_seq: fighter.entry_seq, persistent_stance: true }, expires_at: null,
+        next_due_at: effect.next_due_at ?? null, interval_ms: effect.interval_ms ?? null,
+        last_pulse_tick: effect.last_pulse_tick ?? null, is_reservation: false });
+    });
+  }
+  snapshot = { ...snapshot, effects: [...snapshot.effects, ...stanceEffects] };
   let seq = 0;
   const emit = (event: Omit<TickEvent, 'seq'>): void => {
     proposed.events.push({ ...event, seq: seq++ });
@@ -703,6 +739,15 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const actor = chars.get(intent.character_id);
     if (!actor || actor.hp <= 0 || !actor.present) {
       emit({ kind: 'action_rejected', outcomeReason: 'not_present_or_dead', abilityKey: intentKey });
+      continue;
+    }
+
+    const stanceTransition = (snapshot.stance_transitions ?? []).find(row => row.intent_id === intent.id);
+    if (stanceTransition) {
+      emit({ kind: stanceTransition.action === 'activate' ? 'stance_activated' : 'stance_dropped',
+        abilityKey: stanceTransition.ability_key,
+        actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
+        meta: { characterPersistent: true, refunded: false } });
       continue;
     }
 
@@ -1663,11 +1708,22 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     for (const effect of character.absorbEffects) {
       if (effect.remaining === effect.initial) continue;
       if (effect.remaining === 0) {
-        if (!proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
+        if (effect.id.startsWith('stance:')) {
+          const [, characterId, abilityKey] = effect.id.split(':');
+          const stance = (snapshot.character_stances ?? []).find(row => row.character_id === characterId && row.ability_key === abilityKey);
+          if (stance) proposed.stance_updates.push({ character_id: characterId, ability_key: abilityKey,
+            version: stance.version, state: { ...stance.state, ward_remaining: 0 } });
+        } else if (!proposed.effects_delete.includes(effect.id)) proposed.effects_delete.push(effect.id);
       } else {
-        proposed.effects_update.push({ id: effect.id, magnitude: effect.remaining });
+        if (effect.id.startsWith('stance:')) {
+          const [, characterId, abilityKey] = effect.id.split(':');
+          const stance = (snapshot.character_stances ?? []).find(row => row.character_id === characterId && row.ability_key === abilityKey);
+          if (stance) proposed.stance_updates.push({ character_id: characterId, ability_key: abilityKey,
+            version: stance.version, state: { ...stance.state, ward_remaining: effect.remaining } });
+        } else proposed.effects_update.push({ id: effect.id, magnitude: effect.remaining });
       }
     }
+    if (character.died) proposed.stance_clear_character_ids.push(character.fighter.character_id);
   }
 
   // Legacy timing: once per participant that landed at least one weapon hit in
@@ -1729,6 +1785,10 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     snapshot.effects.some((e) => !['autoattack', 'stack_source'].includes(e.kind)
       && e.config?.persistent_stance !== true && !expiredIds.has(e.id) && !e.is_reservation);
   if (!anythingPending) proposed.status = 'ended';
+
+  // Synthetic character-stance projections never address node_effect rows.
+  proposed.effects_delete = proposed.effects_delete.filter(id => !id.startsWith('stance:'));
+  proposed.effects_update = proposed.effects_update.filter(effect => !effect.id.startsWith('stance:'));
 
   return proposed;
 }

@@ -61,23 +61,24 @@ describe('Combat2 deliberate action routing', () => {
     expect(h.legacy).not.toHaveBeenCalled();
   });
 
-  it('routes stance activation and drop without an ability or creature target', async () => {
-    const activate = harness({ ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }) });
+  it('routes stance activation and drop through the persistent authority, including outside combat', async () => {
+    const changeStance = vi.fn().mockResolvedValue({ status: 'accepted', classification: 'activated' });
+    const activate = harness({ sessionReady: false,
+      readiness: { ready: false, reason: 'requires_active_combat', message: 'Requires active combat' },
+      changeStance, ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }) });
     await routeCombat2Action(activate.options);
-    expect(activate.submit).toHaveBeenCalledWith(
-      { kind: 'stance_activate', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
-      { message: 'You prepare to activate Force Shield.' },
-    );
+    expect(changeStance).toHaveBeenCalledExactlyOnceWith('force_shield', 'activate');
+    expect(activate.submit).not.toHaveBeenCalled();
 
+    changeStance.mockResolvedValue({ status: 'accepted', classification: 'dropped' });
     const drop = harness({
       ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }),
       reservedBuffs: { force_shield: { reserved_cp: 10 } },
+      changeStance,
     });
     await routeCombat2Action(drop.options);
-    expect(drop.submit).toHaveBeenCalledWith(
-      { kind: 'stance_drop', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
-      { message: 'You prepare to drop Force Shield.' },
-    );
+    expect(changeStance).toHaveBeenLastCalledWith('force_shield', 'drop');
+    expect(drop.submit).not.toHaveBeenCalled();
   });
 
   it('fails closed for unsupported and non-authoritative targets', async () => {
@@ -179,16 +180,16 @@ describe('Combat2 deliberate action routing', () => {
   });
 
   it('still permits dropping an active stance when spendable CP is zero', async () => {
+    const changeStance = vi.fn().mockResolvedValue({ status: 'accepted', classification: 'dropped' });
     const h = harness({
       availableCp: 0,
       ability: ability({ abilityKey: 'force_shield', type: 'absorb_buff', targetType: 'self' }),
       reservedBuffs: { force_shield: { reserved_cp: 10 } },
+      changeStance,
     });
     await routeCombat2Action(h.options);
-    expect(h.submit).toHaveBeenCalledWith(
-      { kind: 'stance_drop', abilityKey: null, stanceKey: 'force_shield', targetCreatureId: null },
-      expect.anything(),
-    );
+    expect(changeStance).toHaveBeenCalledWith('force_shield', 'drop');
+    expect(h.submit).not.toHaveBeenCalled();
   });
 
   it('surfaces structured refusal without legacy fallback', async () => {

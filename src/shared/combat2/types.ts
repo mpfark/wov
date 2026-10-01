@@ -239,6 +239,25 @@ export interface SnapshotEffect {
   is_reservation: boolean;
 }
 
+/** Canonical character-owned stance captured and version-fenced by claim. */
+export interface SnapshotCharacterStance {
+  character_id: string;
+  ability_key: string;
+  reserve_pct: number;
+  version: number;
+  state: Record<string, unknown>;
+  activated_at: string;
+}
+
+/** Immediate stance mutation whose intent consumes the next combat action slot. */
+export interface SnapshotStanceTransition {
+  request_id: string;
+  intent_id: string;
+  character_id: string;
+  ability_key: string;
+  action: 'activate' | 'drop';
+}
+
 /** Queued intent kinds, mirroring `node_intent_kind_chk`. */
 export type IntentKind = 'ability' | 'stance_activate' | 'stance_drop' | 'basic_attack';
 
@@ -327,6 +346,8 @@ export interface NodeSnapshot {
   creatures: SnapshotCreature[];
   fighters: SnapshotFighter[];
   effects: SnapshotEffect[];
+  character_stances?: SnapshotCharacterStance[];
+  stance_transitions?: SnapshotStanceTransition[];
   intents: SnapshotIntent[];
   /** Resolver-ready abilities produced only from `boss_configurations`. */
   boss_abilities: SnapshotBossAbility[];
@@ -393,6 +414,16 @@ export interface ProposedEffectUpdate {
   expires_at?: string | null;
   next_due_at?: string | null;
   last_pulse_tick?: number | null;
+}
+
+export interface ProposedStanceFence {
+  character_id: string;
+  ability_key: string;
+  version: number;
+}
+
+export interface ProposedStanceUpdate extends ProposedStanceFence {
+  state: Record<string, unknown>;
 }
 
 export interface ProposedFighterState {
@@ -487,6 +518,9 @@ export interface ProposedTick {
   effects_insert: ProposedEffectInsert[];
   effects_update: ProposedEffectUpdate[];
   effects_delete: string[];
+  stance_fence: ProposedStanceFence[];
+  stance_updates: ProposedStanceUpdate[];
+  stance_clear_character_ids: string[];
   fighters: ProposedFighterState[];
   departures: ProposedDeparture[];
   rewards: ProposedReward[];
@@ -511,6 +545,9 @@ export function emptyProposedTick(tick: number): ProposedTick {
     effects_insert: [],
     effects_update: [],
     effects_delete: [],
+    stance_fence: [],
+    stance_updates: [],
+    stance_clear_character_ids: [],
     fighters: [],
     departures: [],
     rewards: [],

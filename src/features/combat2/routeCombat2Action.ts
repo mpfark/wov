@@ -17,12 +17,17 @@ export interface RouteCombat2ActionOptions {
   authoritativeAllies?: readonly { characterId: string; name: string; present: boolean; hp: number }[];
   /** Latest authoritative total CP less authoritative active reservations. */
   availableCp?: number;
+  /** Activation cost plus the new dynamic reservation; ignored when dropping. */
+  stanceActivationRequiredCp?: number;
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction, feedback?: { message: string }): Promise<Combat2IntentResult>;
   initiateHostile?(targetCreatureId: string, abilityKey: string): Promise<{ status: 'entered' | 'refused'; reason?: string | null }>;
   resolveInitiationTarget?(): { ok: true; target: { creatureId: string; name: string } } | { ok: false; reason: string };
   diagnose(message: string | null): void;
+  changeStance?(abilityKey: string, action: 'activate' | 'drop'): Promise<{
+    status: 'accepted' | 'refused' | 'stale' | 'uncertain' | 'error'; classification?: string; reason?: string;
+  }>;
 }
 
 /** The single deliberate-action switch: legacy when off, Combat2-only when it owns the session. */
@@ -44,8 +49,25 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
 
   const stance = resolveStanceForAbility(ability);
   const stanceActive = !!stance && isStanceActive(options.reservedBuffs as ReservedBuffsMap, stance.key);
-  if (!stanceActive && options.availableCp !== undefined && ability.cpCost > options.availableCp) {
-    options.diagnose(`Requires ${ability.cpCost} CP — ${options.availableCp} available`);
+  const requiredCp = stance && !stanceActive
+    ? options.stanceActivationRequiredCp ?? ability.cpCost
+    : ability.cpCost;
+  if (!stanceActive && options.availableCp !== undefined && requiredCp > options.availableCp) {
+    options.diagnose(`Requires ${requiredCp} CP — ${options.availableCp} available`);
+    return;
+  }
+
+  if (stance && options.changeStance) {
+    if (options.readiness && 'message' in options.readiness
+        && !['requires_active_combat', 'no_authoritative_snapshot'].includes(options.readiness.reason)) {
+      options.diagnose(options.readiness.message);
+      return;
+    }
+    const action = stanceActive ? 'drop' : 'activate';
+    const result = await options.changeStance(stance.key, action);
+    if (result.status === 'stale') return;
+    if (result.status === 'accepted') { options.diagnose(null); return; }
+    options.diagnose(`Combat2 refused ${ability.label}${result.classification ? `: ${result.classification}` : ''}`);
     return;
   }
 

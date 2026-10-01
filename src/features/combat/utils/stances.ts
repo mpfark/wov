@@ -5,7 +5,7 @@
  * Pure data + tiny helpers so that combat hooks, ability tooltips, and the
  * CP bar overlay all derive from the same source.
  *
- * Reservation cost = ceil(maxCp * tier%), minimum 5 CP.
+ * Reservation presentation mirrors floor(maxCp × authored percentage).
  *   T1 = 10%  (Eagle Eye, Force Shield, Holy Shield)
  *   T2 = 15%  (Arcane Surge, Battle Cry)
  *   T3 = 20%  (Orbs of Fire, Envenom)
@@ -93,7 +93,7 @@ const TIER_PCT: Record<1 | 2 | 3, number> = { 1: 0.10, 2: 0.15, 3: 0.20 };
 /** Compute the CP that would be reserved for a stance given the character's max CP. */
 export function getStanceReserveCost(tier: 1 | 2 | 3, maxCp: number): number {
   const safeMax = Math.max(0, maxCp);
-  return Math.max(5, Math.ceil(safeMax * TIER_PCT[tier]));
+  return Math.floor(safeMax * TIER_PCT[tier]);
 }
 
 export interface ReservedBuffEntry {
@@ -105,9 +105,8 @@ export interface ReservedBuffEntry {
 export type ReservedBuffsMap = Record<string, ReservedBuffEntry>;
 
 // ── Authority ─────────────────────────────────────────────────
-// Stances reserve CP and are persisted in characters.reserved_buffs.
-// They replace timed buffs for long-term effects. Server RPCs activate_stance
-// and drop_stance are authoritative; clients only mirror the returned map.
+// Combat2 stances are persisted in character_stance and mutated through
+// combat2_change_stance. reserved_buffs is legacy compatibility only.
 
 import { sumReservedCp } from '@/shared/cp/cp-math';
 

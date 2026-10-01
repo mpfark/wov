@@ -87,11 +87,12 @@ import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { deriveCombat2AbilityReadiness, type ActionReadiness } from '@/features/combat2/action-readiness';
 import type { Combat2IntentAction } from '@/features/combat2/intent';
-import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
+import { getStanceReserveCost, isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
 import { selectCombat2Reservations } from '@/features/combat2/presentation';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
 import { useCombat2VisibleLog } from '@/features/combat2/useCombat2VisibleLog';
+import { useCombat2StanceSession } from '@/features/combat2/useCombat2StanceSession';
 import type { CharacterResourceDeliveryState } from '@/features/character/hooks/useCharacter';
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
 import { createPartyAwareDepartureAdapter, shouldUseCoordinatedDeparture } from '@/features/combat2/party-departure';
@@ -312,6 +313,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
     departurePending: authoritativeDeparture.pending,
   });
+  const combat2Stances = useCombat2StanceSession({
+    enabled: combat2BlocksLegacy,
+    characterId: character.id,
+    refreshKey: combat2.presentation.model?.stateVersion ?? combat2.sessionStatus,
+  });
   const handleCombat2Respawn = useCallback(async () => {
     const result=await combat2.respawn.submit();
     if(result.status==='respawned') {
@@ -329,14 +335,21 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     previousCombat2SessionStatus.current = combat2.sessionStatus;
     if (previous === 'active' && combat2.sessionStatus === 'exited') refetchCharacters?.();
   }, [combat2.sessionStatus, refetchCharacters]);
-  const authoritativeCombat2ReservationState = useMemo(() => selectCombat2Reservations(
-    activeCombat2Presentation?.characterEffects ?? [],
-  ), [activeCombat2Presentation]);
+  const authoritativeCombat2ReservationState = useMemo(() => combat2Stances.projection ? {
+    reservedCp: combat2Stances.projection.reservedCp,
+    reservedBuffs: Object.fromEntries(combat2Stances.projection.stances.map(stance => [
+      stance.abilityKey, { reserved: stance.reservedCp },
+    ])),
+  } : selectCombat2Reservations(activeCombat2Presentation?.characterEffects ?? []),
+  [activeCombat2Presentation, combat2Stances.projection]);
   const authoritativeCombat2Reservations = authoritativeCombat2ReservationState.reservedBuffs;
   const authoritativeCombat2ReservedCp = authoritativeCombat2ReservationState.reservedCp;
-  const presentedCharacter = useMemo(() => selectCombat2Character(
-    combat2BlocksLegacy, activeCombat2Presentation, character,
-  ), [activeCombat2Presentation, character]);
+  const presentedCharacter = useMemo(() => {
+    const selected = selectCombat2Character(combat2BlocksLegacy, activeCombat2Presentation, character);
+    return combat2BlocksLegacy && combat2Stances.projection
+      ? { ...selected, cp: combat2Stances.projection.rawCp, max_cp: combat2Stances.projection.maxCp }
+      : selected;
+  }, [activeCombat2Presentation, character, combat2BlocksLegacy, combat2Stances.projection]);
   // The node roster is the only source of creature visibility. Encounter
   // membership refines runtime values but never removes a living creature from
   // ordinary presentation, so peaceful creatures stay listed while Combat2 owns
@@ -1046,7 +1059,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         && (action.targetCreatureId ?? null) === targetCreatureId
         && (action.targetCharacterId ?? null) === targetCharacterId);
     const availableCp = Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp);
-    const sessionReadiness = !combat2.actionsReady && ability.targetType === 'enemy'
+    const sessionReadiness = stance
+      ? combat2Stances.ready
+        ? { ready: true as const }
+        : { ready: false as const, reason: 'no_authoritative_snapshot' as const,
+            message: 'Waiting for authoritative stance state.' }
+      : !combat2.actionsReady && ability.targetType === 'enemy'
       && 'reason' in combat2.actionReadiness
       && ['requires_active_combat', 'no_authoritative_snapshot'].includes(combat2.actionReadiness.reason)
       ? { ready: true as const }
@@ -1058,17 +1076,21 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       inFlight: matchesAbility(combat2.intents.inFlightAction) || matchesAbility(combat2.intents.pending?.action),
       targetValid,
       stanceActive,
-      requiredCp: ability.cpCost,
+      requiredCp: stance && !stanceActive
+        ? ability.cpCost + getStanceReserveCost(stance.tier, presentedCharacter.max_cp)
+        : ability.cpCost,
       availableCp,
     });
   }, [character.class, character.id, character.level, authoritativeCombat2Reservations,
     authoritativeCombat2ReservedCp, combat2.actionReadiness, combat2.intents.inFlightAction,
     combat2.intents.pending, combat2Targets, combat2.actionsReady, activeCombat2Presentation?.allies,
-    abilityTargetId, presentedCharacter.cp, creatures, selectedTargetId]);
+    abilityTargetId, presentedCharacter.cp, presentedCharacter.max_cp, creatures, selectedTargetId, combat2Stances.ready]);
 
   const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (combat2BlocksLegacy && actionEpochRef.current !== actionEpoch) return;
     const ability = (CLASS_ABILITIES[character.class] || [])[abilityIndex];
+    const stance = ability ? resolveStanceForAbility(ability) : null;
+    const stanceActive = !!stance && isStanceActive(authoritativeCombat2Reservations as ReservedBuffsMap, stance.key);
     await routeCombat2Action({
       enabled: combat2BlocksLegacy,
       sessionReady: combat2.actionsReady && !ownership.locked,
@@ -1081,10 +1103,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       availableCp: combat2BlocksLegacy
         ? Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp)
         : undefined,
+      stanceActivationRequiredCp: stance && !stanceActive
+        ? ability.cpCost + getStanceReserveCost(stance.tier, presentedCharacter.max_cp)
+        : undefined,
       reservedBuffs: combat2BlocksLegacy
         ? authoritativeCombat2Reservations
         : (character as { reserved_buffs?: Record<string, unknown> | null }).reserved_buffs ?? {},
       legacy: () => handleUseAbility(abilityIndex, targetId),
+      changeStance: combat2BlocksLegacy ? combat2Stances.change : undefined,
       submit: combat2.intents.submit,
       initiateHostile: (targetCreatureId, abilityKey) => combat2.entry.engageAction(targetCreatureId, abilityKey),
       resolveInitiationTarget: () => {
@@ -1100,7 +1126,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         else addLocalLogEvent(buildErrorEvent(message));
       },
     });
-  }, [handleUseAbility, combat2, addLocalLogEvent, character, rosterActionable, creatures, selectedTargetId, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, ownership.locked, actionEpoch, getCombat2AbilityReadiness]);
+  }, [handleUseAbility, combat2, combat2Stances.change, addLocalLogEvent, character, rosterActionable, creatures, selectedTargetId, combat2BlocksLegacy, combat2Targets, activeCombat2Presentation, authoritativeCombat2Reservations, authoritativeCombat2ReservedCp, presentedCharacter.cp, presentedCharacter.max_cp, ownership.locked, actionEpoch, getCombat2AbilityReadiness]);
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
   const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLogEvent });

@@ -1,8 +1,8 @@
 # Combat2 ability availability and persistent stances
 
-Status: audited design proposal; no schema or gameplay change is installed by this document. Detailed engine invariants remain owned by [game-engine.md](game-engine.md), while operational evidence remains owned by [project-state.json](../operations/project-state.json).
+Status: approved design with source implementation pending installation. Detailed engine invariants remain owned by [game-engine.md](game-engine.md), while operational evidence remains owned by [project-state.json](../operations/project-state.json).
 
-## Current implementation
+## Pre-implementation audit baseline
 
 The generated inventory in `src/shared/combat/inventory/active-abilities.json` contains 36 authored abilities. `src/shared/combat2/ability-support.ts` excludes none of them, and `src/shared/combat2/catalog.ts` derives support from authored mechanic, activation and target fields rather than labels.
 
@@ -59,7 +59,7 @@ Periodic and reactive execution does not change activation authority: Rend and e
 
 ## Recommended character stance authority
 
-Use one normalized server-only `character_stance` relation keyed by `(character_id, ability_key)`. Store the authored identity, activation request, frozen reservation amount and percentage, authoritative state needed by that stance (for example Force Shield's remaining ward), activation/version timestamps and an optimistic state version. Do not copy labels or formulas as authority. RLS is enabled, browser table writes are absent, and client state comes from a bounded authenticated projection/RPC.
+Use one normalized server-only `character_stance` relation keyed by `(character_id, ability_key)`. Store the authored identity and percentage, activation evidence, authoritative state needed by that stance (for example Force Shield's remaining ward), activation/version timestamps and an optimistic state version. The integer reservation is always derived from current effective maximum CP rather than frozen. Do not copy labels or formulas as authority. RLS is enabled, browser table writes are absent, and client state comes from a bounded authenticated projection/RPC.
 
 Do not make encounter rows co-own a stance. Claim reads the character stance rows for claim-present fighters and freezes them into the snapshot with character/stance version fences. Resolver derives the existing mechanic projections in memory. Any encounter-local rows needed for a pulse, target-specific debuff or event carry stance provenance and a uniqueness fence; they do not create another reservation. Commit validates the frozen character-stance version. The UI groups the authoritative stance plus its derived mechanics into one badge.
 
@@ -71,10 +71,10 @@ When the character is in an active encounter, the transaction fences any live cl
 
 - **Movement and completion:** character stance rows survive; departure removes only encounter-derived projections. Entry claims the same stance state. No activation depends on a heartbeat.
 - **Tick first / departure first:** common node/encounter-before-character lock order and stance version fencing make one transaction win. A committed tick uses its frozen stance; otherwise the stale proposal refuses and retries from the new state.
-- **Death and respawn:** recommended rule is atomic clearing of all active stances, reservations and stance-owned persistent state on authoritative death, with respawn observing the cleared state. This needs Mik's approval because current legacy cleanup is inconsistent.
+- **Death and respawn:** authoritative death atomically clears all active stances, reservations and stance-owned persistent state; respawn observes the cleared state and never restores it.
 - **Logout/reconnect:** no change; state persists and is re-projected by character identity. Late client responses are fenced by character/session/request/version.
-- **Class or loadout change:** the mutation must refuse while an incompatible stance is active or explicitly drop it in the same transaction. Silent retention of an unusable stance is forbidden; which policy applies needs approval.
-- **Maximum CP/equipment change:** recommended rule freezes the integer reservation calculated at activation. A lower later cap can make spendable CP zero but does not silently drop the stance. Re-activation recalculates. This needs approval.
+- **Class or loadout change:** the mutation refuses while an incompatible stance is active; compatible changes remain allowed. Silent retention of an unusable stance is forbidden.
+- **Maximum CP/equipment change:** the integer reservation is recalculated atomically from current effective maximum CP without charge or refund. A lower cap can make spendable CP zero but does not silently drop the stance.
 - **Party/node eligibility:** an active character stance has no effect on absent or ineligible participants. Claim/resolver evaluates present fighter, party and node eligibility at the frozen tick. No out-of-combat aura pulse is introduced.
 - **Test Arena:** snapshot/restore or arena-scoped isolation must include character stance rows and their request/version state. Reset restores the exact pre-run state; arena actions cannot leak a stance into ordinary play.
 - **Existing state:** installation occurs with processing disabled. Preflight aggregates active `node_effect` stance/reservation rows and legacy JSON state. Valid active encounter pairs may be migrated once into character rows only under an explicit mapping and fingerprint; ambiguity or disagreement stops installation. Encounter rows are removed only in that same transaction. Legacy fields remain read-only compatibility data until all consumers are removed; they are not merged heuristically.
@@ -103,11 +103,6 @@ Design a separate authoritative owner for immediate self heals and for timed sel
 
 After installed and live verification, prove no runtime consumer remains, then remove or freeze `reserved_buffs`, `stance_state`, legacy stance RPCs and browser Force Shield regeneration through a separately guarded migration/source change. Preserve historical evidence and avoid data cleanup without an approved policy.
 
-## Decisions required from Mik
+## Approved lifecycle decisions
 
-1. Confirm that activation/drop during combat continues to consume the player's action slot, while the stance mutation itself becomes immediate and idempotent.
-2. Confirm that authoritative death clears every stance/reservation/ward and respawn never restores them.
-3. Choose class/loadout behavior: refuse the change while an incompatible stance is active (recommended), or drop incompatible stances atomically with explicit evidence.
-4. Confirm frozen integer reservation at activation across later maximum-CP/equipment changes (recommended), rather than dynamically resizing or auto-dropping.
-
-Everything else above follows existing authority, timing and replay boundaries and does not require a new gameplay rule.
+Mik approved immediate, idempotent stance activation/drop with one combat action slot consumed when an encounter is active. Authoritative death clears every stance, reservation and persistent ward; respawn never restores them. Class/loadout changes that would invalidate a stance refuse until it is dropped, while compatible changes remain allowed. Reservations dynamically follow current effective maximum CP using the authored percentage and rounding. Cap changes neither charge nor refund CP; if reservations exceed raw CP the stance remains active and spendable CP is zero, and dropping remains possible at zero spendable CP.

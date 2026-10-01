@@ -280,6 +280,31 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
   };
 }
 
+function decodeCharacterStance(r: Reader, path: string, raw: unknown): NodeSnapshot['character_stances'][number] {
+  const o = r.object(path, raw);
+  return {
+    character_id: r.str(`${path}.character_id`, o.character_id),
+    ability_key: r.str(`${path}.ability_key`, o.ability_key),
+    reserve_pct: r.num(`${path}.reserve_pct`, o.reserve_pct),
+    version: r.num(`${path}.version`, o.version),
+    state: (o.state ?? {}) as Record<string, unknown>,
+    activated_at: r.str(`${path}.activated_at`, o.activated_at),
+  };
+}
+
+function decodeStanceTransition(r: Reader, path: string, raw: unknown): NodeSnapshot['stance_transitions'][number] {
+  const o = r.object(path, raw);
+  const action = r.str(`${path}.action`, o.action);
+  if (!['activate', 'drop'].includes(action)) r.errors.push(`${path}.action: expected activate or drop`);
+  return {
+    request_id: r.str(`${path}.request_id`, o.request_id),
+    intent_id: r.str(`${path}.intent_id`, o.intent_id),
+    character_id: r.str(`${path}.character_id`, o.character_id),
+    ability_key: r.str(`${path}.ability_key`, o.ability_key),
+    action: action as 'activate' | 'drop',
+  };
+}
+
 function decodeIntent(r: Reader, path: string, raw: unknown): SnapshotIntent {
   const o = r.object(path, raw);
   const kind = r.str(`${path}.intent_kind`, o.intent_kind);
@@ -452,6 +477,12 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
     effects: r
       .array('snapshot.effects', root.effects)
       .map((row, i) => decodeEffect(r, `snapshot.effects[${i}]`, row)),
+    character_stances: root.character_stances === undefined ? [] : r
+      .array('snapshot.character_stances', root.character_stances)
+      .map((row, i) => decodeCharacterStance(r, `snapshot.character_stances[${i}]`, row)),
+    stance_transitions: root.stance_transitions === undefined ? [] : r
+      .array('snapshot.stance_transitions', root.stance_transitions)
+      .map((row, i) => decodeStanceTransition(r, `snapshot.stance_transitions[${i}]`, row)),
     intents: r
       .array('snapshot.intents', root.intents)
       .map((row, i) => decodeIntent(r, `snapshot.intents[${i}]`, row)),

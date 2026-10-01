@@ -107,20 +107,20 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 ## Next — complete core ownership
 
 ### ENG-STANCE-001 — Character-scoped stance authority
-- **Engine area / status / priority:** effects; `decision_needed`; 8.
+- **Engine area / status / priority:** effects; `implemented_source`; 8.
 - **Problem or decision:** stances and reservations are encounter-scoped, but desired persistence crosses encounters/movement.
 - **Intended outcome:** one authoritative character lifecycle for stance effect plus reservation.
-- **Dependencies:** Mik decisions on combat action-slot use, death cleanup, incompatible class/loadout changes and reservation resizing; design in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
-- **Evidence/current state:** all eight authored stances are supported inside encounters; Holy Shield grouping and repeated-activation refusal work there. Audit proves `node_effect` is encounter authority while legacy character JSON/browser Force Shield regeneration remains a competing model. No persistent stance schema is implemented.
+- **Dependencies:** migration installation, official type regeneration, affected Edge deployment, Mik's manual publication and bounded live verification.
+- **Evidence/current state:** source migration `20261001130000_combat2_character_persistent_stances.sql`, claim/resolver/commit integration and frontend projection/RPC routing implement the approved eight-stance character authority. Installation and live behavior are not claimed.
 - **Acceptance criteria:** atomic activate/drop, no double reservation, movement/reconnect/death rules, migration and live proof.
 - **Specification sections:** Effects and stances; Character ownership and lifecycle.
 
 ### ENG-STANCE-002 — Appropriate stance activation outside combat
-- **Engine area / status / priority:** effects/UI; `planned`; 9.
+- **Engine area / status / priority:** effects/UI; `implemented_source`; 9.
 - **Problem or decision:** eligible persistent stances cannot be safely prepared out of combat.
 - **Intended outcome:** explicit per-stance eligibility using ENG-STANCE-001 authority.
 - **Dependencies:** ENG-STANCE-001 and its approved lifecycle decisions; ability matrix in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
-- **Evidence/current state:** not implemented.
+- **Evidence/current state:** source routes the eight stances through the authenticated character projection/change RPC outside combat; installation, publication and live verification remain pending.
 - **Acceptance criteria:** fail-closed RPC, visible authoritative state, no browser reservation writes, combat entry preserves it.
 - **Specification sections:** Effects and stances.
 
