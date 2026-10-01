@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T07:45:58Z",
-  "based_on_source_sha": "d29202fd3f478e8c84fd98905463908fb360359c",
+  "updated_at": "2026-10-01T09:08:38Z",
+  "based_on_source_sha": "b74421308efe788ad39d73ca81f9d2e4fc1e0e92",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "d29202fd3f478e8c84fd98905463908fb360359c",
-    "timestamp": "2026-10-01T07:45:58Z",
+    "sha": "b74421308efe788ad39d73ca81f9d2e4fc1e0e92",
+    "timestamp": "2026-10-01T09:08:38Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were both clean and synchronized at required checkpoint d29202fd3f478e8c84fd98905463908fb360359c before ENG-COMBAT-003 source work. Its ancestry preserves all earlier Lovable/Codex changes, ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
+    "evidence": "Local main and origin/main were clean and synchronized at b74421308efe788ad39d73ca81f9d2e4fc1e0e92 for the ability-availability and persistent-stance design audit. Required checkpoint 07206094e851b2869dd5d6a6a5d401b4b9759dff remains in ancestry. Subsequent Lovable commits and their installation/deployment evidence were preserved without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -247,6 +247,16 @@
       "evidence": "Source tracing proved the stale_equipment loop: the installed claim projects current equipment for every historical fighter, resolver fences every projected item, and commit correctly demands each fenced fighter generation remain present. The correction limits both projection and resolver derivation/fencing to fighters present at the frozen claim boundary. A fighter who dies or departs during resolution remains fenced; absent-source offscreen effects keep frozen magnitudes and attribution; historical participation and qualified rewards remain. Focused resolver, worker, dispatcher, migration and durability tests cover the corrected boundary. The generated Combat2 resolver mirror changes transitively for combat2-tick-once and combat2-dispatch-once. Migration installed and combat2-tick-once plus combat2-dispatch-once deployed by Lovable on 2026-10-01 with processing disabled; neither invoked. Live recovery on f974068d-c8e6-4224-a3c9-d7b066ae1b8d and prefixes f45a8b21/f7c5881a is pending Mik reopening processing.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "combat2-present-equipment-recovery-operator-observation-2026-10-01",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-10-01T09:08:38Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that the previously stuck creature on node f974068d-c8e6-4224-a3c9-d7b066ae1b8d died after processing resumed, and that starting a fight, leaving the node and returning worked. This is operator-visible recovery evidence only. Recovery on the other affected nodes, exact persisted lifecycle rows, concurrency boundaries and multiplayer behavior remain unverified.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
     },
     {
       "identity": "combat2-authoritative-movement-client-reconciliation-2026-09-30",
@@ -864,6 +874,16 @@
     }
   ],
   "product_backlog": [
+    {
+      "identity": "max-level-xp-award-verification",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T09:08:38Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports that a maximum-level Warrior appeared to receive XP from a kill. The intended rule is that a character at the configured maximum level receives no additional persisted XP. It is not yet known whether the observation was only a combat-log/display message or an actual persisted XP increase. Cause is uninvestigated; no reward, XP or presentation behavior was changed in this documentation task. Tracked as ENG-XP-001.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "single-creature-admin-reset-despawn",
       "status": "authored",

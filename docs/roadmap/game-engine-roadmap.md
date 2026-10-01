@@ -110,8 +110,8 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Engine area / status / priority:** effects; `decision_needed`; 8.
 - **Problem or decision:** stances and reservations are encounter-scoped, but desired persistence crosses encounters/movement.
 - **Intended outcome:** one authoritative character lifecycle for stance effect plus reservation.
-- **Dependencies:** ownership model and migration design.
-- **Evidence/current state:** Holy Shield grouping and repeated-activation refusal work in encounters.
+- **Dependencies:** Mik decisions on combat action-slot use, death cleanup, incompatible class/loadout changes and reservation resizing; design in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
+- **Evidence/current state:** all eight authored stances are supported inside encounters; Holy Shield grouping and repeated-activation refusal work there. Audit proves `node_effect` is encounter authority while legacy character JSON/browser Force Shield regeneration remains a competing model. No persistent stance schema is implemented.
 - **Acceptance criteria:** atomic activate/drop, no double reservation, movement/reconnect/death rules, migration and live proof.
 - **Specification sections:** Effects and stances; Character ownership and lifecycle.
 
@@ -119,10 +119,19 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Engine area / status / priority:** effects/UI; `planned`; 9.
 - **Problem or decision:** eligible persistent stances cannot be safely prepared out of combat.
 - **Intended outcome:** explicit per-stance eligibility using ENG-STANCE-001 authority.
-- **Dependencies:** ENG-STANCE-001.
+- **Dependencies:** ENG-STANCE-001 and its approved lifecycle decisions; ability matrix in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
 - **Evidence/current state:** not implemented.
 - **Acceptance criteria:** fail-closed RPC, visible authoritative state, no browser reservation writes, combat entry preserves it.
 - **Specification sections:** Effects and stances.
+
+### ENG-XP-001 — Max-level XP award verification and correction
+- **Engine area / status / priority:** progression/rewards; `planned`; 10.
+- **Problem or decision:** Mik reports that a maximum-level Warrior appeared to receive XP from a kill. It is unknown whether this was only a combat-log/presentation message or persisted XP growth.
+- **Intended outcome:** characters at the configured maximum level receive no additional persisted XP, and presentation accurately reflects the authoritative result.
+- **Dependencies:** separately authorized read-only evidence distinguishing emitted log data from the persisted character row; no reward change is part of the stance design.
+- **Evidence/current state:** operator report only; cause and affected boundary are uninvestigated.
+- **Acceptance criteria:** source path traced, persisted-versus-presented result proven, focused cap/replay/reward tests, guarded correction if required and bounded installed/live verification.
+- **Specification sections:** Progression and rewards; Failure, diagnostics and verification.
 
 ### ENG-FOOD-001 — Authoritative food effects
 - **Engine area / status / priority:** resources/effects; `planned`; 10.

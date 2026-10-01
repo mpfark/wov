@@ -140,7 +140,7 @@ The resolver's effective order is:
 
 The commit RPC validates frozen fields, consumes intentions/events, applies resources/effects/deaths/durability/rewards and advances the local tick atomically. Claim leases, state versions, cutoff sequences and request ledgers fence stale work. A rejected or transport-uncertain proposal cannot be treated as committed.
 
-Equipment is a tick dependency only for fighters who are `present` at the frozen claim boundary. Their complete equipped loadout is projected, used for effective stats and fenced through commit; a fighter who then dies or departs during resolution remains protected for that tick. Absent historical fighters remain available for durable participation, reward attribution and already-frozen offscreen effects, but their mutable current/off-node equipment is neither read by the resolver nor included in the proposal fence. Commit still rejects changed, forged or omitted equipment for every claim-present fighter. Migration `20261001100000_combat2_present_equipment_fencing.sql` authors this correction but is not installed or live-verified.
+Equipment is a tick dependency only for fighters who are `present` at the frozen claim boundary. Their complete equipped loadout is projected, used for effective stats and fenced through commit; a fighter who then dies or departs during resolution remains protected for that tick. Absent historical fighters remain available for durable participation, reward attribution and already-frozen offscreen effects, but their mutable current/off-node equipment is neither read by the resolver nor included in the proposal fence. Commit still rejects changed, forged or omitted equipment for every claim-present fighter. Project state records installation and deployment of `20261001100000_combat2_present_equipment_fencing.sql`; recovery evidence is operator-reported and multiplayer coverage remains pending.
 
 ## Effects and stances
 
@@ -151,6 +151,8 @@ Equipment is a tick dependency only for fighters who are `present` at the frozen
 - Presentation may group multiple authoritative rows into one semantic stance but cannot merge their mechanics.
 
 Holy Shield currently consists of a retaliation effect plus its reservation effect and is presented as one semantic stance. Repeated activation is refused. Dropping a stance removes the reservation and does not refund the original activation cost.
+
+The audited ability-availability matrix, recommended character-scoped stance authority, unresolved product decisions and bounded implementation sequence are in [combat2-ability-availability-and-persistent-stances.md](combat2-ability-availability-and-persistent-stances.md). That document is design, not an installed contract; this specification and project state remain authoritative for approved rules and operational evidence.
 
 ## Movement and party movement
 
