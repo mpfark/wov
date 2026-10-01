@@ -253,7 +253,7 @@ GRANT EXECUTE ON FUNCTION public.combat2_character_stances(uuid) TO authenticate
 CREATE FUNCTION public.combat2_change_stance(_character_id uuid,_ability_key text,_action text,_request_id uuid)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE prior public.character_stance_request; c public.characters; e public.node_encounter; f public.node_fighter;
- a public.abilities; ba public.base_abilities; ca public.class_ability_assignments; pct numeric; cost integer;
+ catalogue_ability_id public.abilities.id%TYPE; pct numeric; cost integer;
  reserved integer; new_reserved integer; conflict text; intent_id uuid; result jsonb; arena uuid;
  bonus_wis integer:=0; wis_mod integer; ward integer;
 BEGIN
@@ -284,17 +284,17 @@ BEGIN
  IF e.id IS NOT NULL AND EXISTS(SELECT 1 FROM public.node_intent ni WHERE ni.encounter_id=e.id AND ni.character_id=c.id AND ni.status='pending') THEN
    RETURN jsonb_build_object('ok',false,'kind','action_in_flight');
  END IF;
- SELECT caa,ab,base INTO ca,a,ba FROM public.class_ability_assignments caa
+ SELECT ab.id,coalesce(ab.cp_reserve_pct,base.cp_reserve_pct,0),greatest(0,coalesce(ab.cp_cost,base.cp_cost,0))
+  INTO catalogue_ability_id,pct,cost FROM public.class_ability_assignments caa
   JOIN public.abilities ab ON ab.id=caa.ability_id LEFT JOIN public.base_abilities base ON base.id=ab.base_ability_id
   WHERE caa.class_key=c.class AND caa.status='active' AND ab.status='active'
     AND (caa.class_ability_key=_ability_key OR ab.ability_key=_ability_key)
     AND coalesce(ab.activation_mode,base.activation_mode)='stance' LIMIT 1;
- IF a.id IS NULL THEN RETURN jsonb_build_object('ok',false,'kind','ability_unavailable'); END IF;
+ IF catalogue_ability_id IS NULL THEN RETURN jsonb_build_object('ok',false,'kind','ability_unavailable'); END IF;
  IF _action='activate' AND _ability_key='shield_wall' AND NOT EXISTS(
    SELECT 1 FROM public.character_inventory ci JOIN public.items i ON i.id=ci.item_id
     WHERE ci.character_id=c.id AND ci.equipped_slot='off_hand' AND ci.current_durability>0 AND i.weapon_tag='shield'
  ) THEN RETURN jsonb_build_object('ok',false,'kind','ability_requirement_unmet','reason','shield_required'); END IF;
- pct:=coalesce(a.cp_reserve_pct,ba.cp_reserve_pct,0); cost:=greatest(0,coalesce(a.cp_cost,ba.cp_cost,0));
  IF _action='activate' THEN
    IF EXISTS(SELECT 1 FROM public.character_stance WHERE character_id=c.id AND ability_key=_ability_key) THEN
      RETURN jsonb_build_object('ok',false,'kind','stance_already_active');

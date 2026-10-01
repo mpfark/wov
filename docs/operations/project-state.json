@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T13:19:15Z",
-  "based_on_source_sha": "f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a",
+  "updated_at": "2026-10-01T21:20:21Z",
+  "based_on_source_sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a",
-    "timestamp": "2026-10-01T13:19:15Z",
+    "sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
+    "timestamp": "2026-10-01T21:20:21Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and synchronized at f7be8595d7291d98b7ba7dae76f1a9cc362a2b3a before the approved one-time stance installation-reset correction. That required checkpoint remains in ancestry. Existing Codex/Lovable work and installation evidence are preserved; no history rewrite or Cloud operation occurred.",
+    "evidence": "Local main and origin/main were clean and synchronized at 7fb47d6e4d4d71c1f560848414361805a027536f before the unapplied stance migration catalogue lookup correction. The required checkpoint remains in ancestry. Existing work is preserved without history rewrite; no Cloud operation occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -30,7 +30,7 @@
       "sha": null,
       "timestamp": "2026-10-01T12:00:00Z",
       "evidence_type": "repository",
-      "evidence": "ENG-STANCE-001/002 remains authored, not reported installed; no ledger artifact is present. Previous authored SHA-256 d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb is superseded by 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7. Mik approves a one-time reset of the eight exactly identified old stance mechanics/reservations and Force Shield ward fields, with empty new authority, no activation-cost refund and unchanged raw HP/CP/MP or protected gameplay/history. Aggregate pre/postflight counts, a 10000-row mutation cap, lock timeout, unknown-state/dependency guards and protected fingerprints are authored. The normal character updated_at trigger remains active. Reset and full schema DDL must install atomically with processing disabled. Full PostgreSQL compilation, fixture execution and injected-later-failure rollback proof are explicit Lovable gates: no local PostgreSQL executable is available. See the stance design installation checklist. All schema/runtime/wrapper/security behavior after the first block is unchanged. Official types, proven Edge deployments, manual publication and live verification remain pending; no Cloud operation occurred.",
+      "evidence": "ENG-STANCE-001/002 remains authored and uninstalled. Original authored hash d10b06848d2c6719fbc0049d86fe4167dbff4503a1afe2e55bfeea6f401816eb was superseded by rejected, uninstalled hash 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7. Corrected candidate SHA-256 is 71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923. One joined catalogue lookup now assigns ability ID, percentage and cost to typed scalar targets instead of three whole-row targets, preserving matching, null handling and ability/base override precedence. Full-file assignment audit found no other composite multiple-target INTO defect; later equipment bonuses are scalar integers. Approved bounded reset and all other runtime/schema/security/wrapper rules are unchanged; fixed CP reservations are not approved or implemented. No local PostgreSQL executable/infrastructure was found. Full-file rollback compilation through an external final sentinel remains required; later statements are uncompiled according to Lovable's separate reported evidence. Synthetic Cloud fixtures are unavailable, and no fake accounts/characters may be created for this gate. Official types, affected Edge deployments, Mik's publication and live verification remain pending. No Cloud operation occurred.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -248,6 +248,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-character-stances-rollback-compilation-2026-10-01",
+      "status": "blocked",
+      "sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
+      "timestamp": "2026-10-01T21:20:21Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable's handoff supplied by Mik reports complete rollback-only compilation of hash 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7 failed before the final sentinel around line 287 in combat2_change_stance: SELECT caa,ab,base INTO ca,a,ba; SQLSTATE 42601, record variable cannot be part of multiple-item INTO list. Later statements remain uncompiled. Cleanup rolled back; six supported node_effect rows eligible for approved reset remain, character_stance does not exist and no ledger entry was created. No installation, deployment or gameplay mutation occurred. Synthetic Cloud fixtures are unavailable through the sandbox connection. These observations are attributed to Lovable, not direct Cloud verification by Codex. The corrected candidate requires a new complete rollback-only compilation; inspecting the real six rows is allowed in that transaction, but manufacturing auth accounts or fake characters is prohibited. Synthetic behavioral verification remains a limitation.",
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-character-persistent-stances-source-2026-10-01",
       "status": "ready_for_manual_publish",

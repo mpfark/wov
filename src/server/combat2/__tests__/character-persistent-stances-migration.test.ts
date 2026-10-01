@@ -7,7 +7,40 @@ const file = 'supabase/migrations/20261001130000_combat2_character_persistent_st
 const sql = readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
 const stances = ['envenom','eagle_eye','holy_shield','shield_wall','battle_cry','arcane_surge','force_shield','ignite'];
 
+function compositeIntoViolations(source: string): string[] {
+  const code = source.replace(/--[^\n]*|\/\*[\s\S]*?\*\//g, '').replace(/'(?:''|[^'])*'/g, "''");
+  const composites = new Set([...code.matchAll(/\b(\w+)\s+(?:record|public\.\w+(?:%ROWTYPE)?)\s*;/gi)]
+    .map(match => match[1].toLowerCase()));
+  return [...code.matchAll(/\bINTO\s+(?:STRICT\s+)?(\w+(?:\s*,\s*\w+)+)/gi)]
+    .map(match => match[1]).filter(list => list.split(',').some(name => composites.has(name.trim().toLowerCase())));
+}
+
 describe('ENG-STANCE-001 persistent stance migration', () => {
+  it('rejects composite multiple-target INTO throughout the complete migration', () => {
+    expect(compositeIntoViolations('DECLARE ca public.class_ability_assignments; a public.abilities; ba public.base_abilities;\nSELECT caa,ab,base INTO ca,a,ba FROM catalogue;'))
+      .toEqual(['ca,a,ba']);
+    expect(compositeIntoViolations('DECLARE result record; cost integer; SELECT x,y INTO STRICT result,cost FROM source;'))
+      .toEqual(['result,cost']);
+    expect(compositeIntoViolations(sql)).toEqual([]);
+    // The other multi-target assignment is the two scalar equipment bonuses.
+    expect(sql).toContain('bonus_int integer; bonus_wis integer;');
+    expect(sql).toContain('INTO bonus_int,bonus_wis FROM');
+  });
+
+  it('gets matched identity and scalar costs from one unchanged catalogue join', () => {
+    const lookup = sql.slice(sql.indexOf(' SELECT ab.id,coalesce(ab.cp_reserve_pct'), sql.indexOf(" IF _action='activate' AND _ability_key='shield_wall'"));
+    expect(sql).toContain('catalogue_ability_id public.abilities.id%TYPE; pct numeric; cost integer;');
+    expect(lookup).toContain('coalesce(ab.cp_reserve_pct,base.cp_reserve_pct,0)');
+    expect(lookup).toContain('greatest(0,coalesce(ab.cp_cost,base.cp_cost,0))');
+    expect(lookup).toContain('INTO catalogue_ability_id,pct,cost FROM public.class_ability_assignments caa');
+    expect(lookup).toContain('JOIN public.abilities ab ON ab.id=caa.ability_id LEFT JOIN public.base_abilities base ON base.id=ab.base_ability_id');
+    expect(lookup).toContain("caa.class_key=c.class AND caa.status='active' AND ab.status='active'");
+    expect(lookup).toContain('(caa.class_ability_key=_ability_key OR ab.ability_key=_ability_key)');
+    expect(lookup).toContain("coalesce(ab.activation_mode,base.activation_mode)='stance' LIMIT 1");
+    expect(lookup).toContain("IF catalogue_ability_id IS NULL THEN RETURN jsonb_build_object('ok',false,'kind','ability_unavailable')");
+    expect((lookup.match(/\bSELECT\b/g) ?? []).length).toBe(1);
+    expect(sql).not.toContain('SELECT caa,ab,base INTO ca,a,ba');
+  });
   it('derives reset identities from the current authored catalogue and historical lifetime contract', () => {
     const authored = inventory as AuthoredAbilityInventory;
     const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
