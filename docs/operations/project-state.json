@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20261001100000_combat2_present_equipment_fencing.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-10-01T07:45:58Z",
-      "evidence_type": "tests",
-      "evidence": "ENG-COMBAT-003 source migration SHA-256 66a7bc34f40553e8e59d572fdfcaaaeaf963844be6e8dabd33d9ec56d0a492ff patches only the installed inner claim projection so current equipment is captured for claim-present fighters. Outer claim wrappers, commit logic and schema signatures are unchanged. Existing commit checks continue to reject stale, forged or omitted required loadouts. The migration is authored only: no PostgreSQL compiler was available locally, no Cloud access occurred, and installation/live recovery are unverified.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "07206094e851b2869dd5d6a6a5d401b4b9759dff",
+      "timestamp": "2026-10-01T08:09:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-COMBAT-003 installed exactly once through the migration runner from repository bytes SHA-256 66a7bc34f40553e8e59d572fdfcaaaeaf963844be6e8dabd33d9ec56d0a492ff (source 07206094e). Ledger version 20261001100000 name 8cb5bd61-7edf-41d2-b2b4-81795b694768; ledger statement SHA-256 equals the source; runner reused the repository version so no separate generated artifact file exists. Preflight at 08:05Z: world asleep, combat_mode maintenance, soak off, zero active Combat2 cron jobs, live claims, present fighters, recording Test Arena runs, active diagnostic sessions and queued/finalizing departures; 3 expired claims and 10 unconsumed pending events left untouched as evidence. Full-file rollback-only compilation (every guard, the patch, COMMENT and a stop sentinel) reached the deliberate P0001 stop with the patch applied (md5 e15d6896...) and rollback restored inner md5 cded16cd5963a2cf9978ca8c85f6a335, no comment, no ledger entry. Installed inner node_tick_claim_without_canary_gate md5 e15d6896b599d8b4177a1b94e2c8975a contains the present-filtered equipment projection; the fighters list itself is not filtered, so historical fighters stay in the snapshot. Owner postgres, SECURITY DEFINER, volatile, search_path=public, ACL postgres/service_role/sandbox_exec unchanged. Wrappers node_tick_claim (md5 b30c2349...) and node_tick_claim_without_boss_timing (md5 961ca790...), each with search_path=public, pg_temp, are definition-identical. Encounter, fighter, creature, character resource, inventory/durability, intent, pending-event, reward and departure fingerprints identical before and after. No signature change; types not regenerated. Live recovery is unverified.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -189,10 +189,10 @@
     {
       "identity": "combat2-tick-once",
       "status": "deployed",
-      "sha": "2d754dbf816bf8edf83ebd6434f8cd17f0dd2634",
-      "timestamp": "2026-09-22T21:03:00Z",
+      "sha": "07206094e851b2869dd5d6a6a5d401b4b9759dff",
+      "timestamp": "2026-10-01T08:09:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Redeployed from source 2d754dbf816bf8edf83ebd6434f8cd17f0dd2634 and reported successful. Dependency containment justifies exactly this function: it imports the shared Combat2 node-tick worker, which imports the shared resolver changed by this checkpoint, where encounter completion now counts living engaged creatures (c.hp > 0 && c.row.is_alive && c.engaged) instead of all living bystanders. Canonical/Edge mirror generation produced no diff, proving exact parity between src/shared/combat2/resolver.ts and supabase/functions/_shared/combat2/resolver.ts. No unrelated function was deployed and neither deployed function was invoked. No cadence, cron, claim-lease, movement-timing, combat-rule or world-state change accompanied the deployment.",
+      "evidence": "Deployed from 07206094e after ENG-COMBAT-003 install, containing the present-fighter resolver fence; Edge mirror parity, 53 focused tests and both TypeScript checks passed. Not invoked; processing remained disabled.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     },
@@ -219,10 +219,10 @@
     {
       "identity": "combat2-dispatch-once",
       "status": "deployed",
-      "sha": "e4f539038eb18ce165f8dcd11fe7ffe3d090f82e",
-      "timestamp": "2026-09-29T21:22:00Z",
+      "sha": "07206094e851b2869dd5d6a6a5d401b4b9759dff",
+      "timestamp": "2026-10-01T08:09:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Deployed from the verified checkpoint after ENG-HB-001 install; Edge mirror parity, focused tests and both TypeScript checks passed. Not invoked; no other function deployed.",
+      "evidence": "Deployed from 07206094e after ENG-COMBAT-003 install, containing the present-fighter resolver fence; Edge mirror parity, 53 focused tests and both TypeScript checks passed. Not invoked; processing remained disabled.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -240,12 +240,12 @@
   "combat2_operational_work": [
     {
       "identity": "combat2-present-equipment-fencing-2026-10-01",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-10-01T07:45:58Z",
-      "evidence_type": "tests",
-      "evidence": "Source tracing proved the stale_equipment loop: the installed claim projects current equipment for every historical fighter, resolver fences every projected item, and commit correctly demands each fenced fighter generation remain present. The correction limits both projection and resolver derivation/fencing to fighters present at the frozen claim boundary. A fighter who dies or departs during resolution remains fenced; absent-source offscreen effects keep frozen magnitudes and attribution; historical participation and qualified rewards remain. Focused resolver, worker, dispatcher, migration and durability tests cover the corrected boundary. The generated Combat2 resolver mirror changes transitively for combat2-tick-once and combat2-dispatch-once. Nothing is installed, deployed, published or live-verified.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "07206094e851b2869dd5d6a6a5d401b4b9759dff",
+      "timestamp": "2026-10-01T08:09:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Source tracing proved the stale_equipment loop: the installed claim projects current equipment for every historical fighter, resolver fences every projected item, and commit correctly demands each fenced fighter generation remain present. The correction limits both projection and resolver derivation/fencing to fighters present at the frozen claim boundary. A fighter who dies or departs during resolution remains fenced; absent-source offscreen effects keep frozen magnitudes and attribution; historical participation and qualified rewards remain. Focused resolver, worker, dispatcher, migration and durability tests cover the corrected boundary. The generated Combat2 resolver mirror changes transitively for combat2-tick-once and combat2-dispatch-once. Migration installed and combat2-tick-once plus combat2-dispatch-once deployed by Lovable on 2026-10-01 with processing disabled; neither invoked. Live recovery on f974068d-c8e6-4224-a3c9-d7b066ae1b8d and prefixes f45a8b21/f7c5881a is pending Mik reopening processing.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -693,11 +693,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Lovable performs a bounded ENG-COMBAT-003 installation preflight, installs the present-equipment claim correction while processing is disabled, then deploys the proven Combat2 Edge consumers before bounded recovery observation.",
+    "artifact": "Mik reopens processing and observes bounded ENG-COMBAT-003 recovery.",
     "sha": null,
-    "timestamp": "2026-10-01T07:45:58Z",
+    "timestamp": "2026-10-01T08:09:00Z",
     "evidence_type": "repository",
-    "evidence": "Do not repair encounter rows manually. With world asleep and Combat2 processing disabled, hash and rollback-compile the exact migration; verify the inner claim predecessor, metadata, ACLs and wrapper composition; install once; inspect the presence-filtered projection; regenerate official types only if tooling reports a type-surface change; deploy combat2-tick-once and combat2-dispatch-once from the same verified source; then restore the prior safe processing state and observe normal recovery for the full known node plus prefixes f45a8b21 and f7c5881a. Confirm no stale_equipment loop, exactly-once ticks/durability/resources/rewards and legitimate pending-event consumption. Frontend publication is not required for this correction.",
+    "evidence": "Installation and both Combat2 Edge deployments are done with world asleep, maintenance enabled and schedules disabled. After Mik reopens processing, observe f974068d-c8e6-4224-a3c9-d7b066ae1b8d and prefixes f45a8b21/f7c5881a for normal ticks without repeated stale_equipment, exactly-once ticks/durability/resources/rewards and legitimate pending-event consumption. Do not repair encounters manually.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
