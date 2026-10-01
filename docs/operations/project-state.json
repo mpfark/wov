@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T21:40:00Z",
-  "based_on_source_sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
+  "updated_at": "2026-10-01T21:50:00Z",
+  "based_on_source_sha": "6490ec1f199539190076a28e0852af3897687f13",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,23 +16,33 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
+    "sha": "6490ec1f199539190076a28e0852af3897687f13",
     "timestamp": "2026-10-01T21:20:21Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were clean and synchronized at 7fb47d6e4d4d71c1f560848414361805a027536f before the unapplied stance migration catalogue lookup correction. The required checkpoint remains in ancestry. Existing work is preserved without history rewrite; no Cloud operation occurred.",
+    "evidence": "Clean local main safely fast-forwarded from 09cd8934b351e15fd7044f274a444aafb1ee4dd2 to 6490ec1f199539190076a28e0852af3897687f13, preserving five intervening Lovable commits, generated types and installed ledger artifact. Required checkpoint is an ancestor. Initial project-state check found Lovable's generated Markdown out of sync; regeneration repairs it. No Cloud access occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
     {
+      "identity": "20261001230000_combat2_stance_helper_privileges.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T21:50:00Z",
+      "evidence_type": "repository",
+      "evidence": "ACL-only forward correction SHA-256 deae78d14dc3474d44e83450beafc903dddb96d6c36b2dcc715e3c335ef71a5c closes PUBLIC/anon/authenticated access to drop_stance(uuid,text) and inherited browser access to both combat2_test_stop_without_character_stances(uuid,uuid) and combat2_test_reset_without_character_stances(uuid,uuid,boolean). Exact overload/metadata/wrapper guards, required postgres/service_role access and unchanged canonical authenticated access are checked. activate_stance and apply_force_shield_regen already had PUBLIC/anon revoked historically; authenticated was revoked by the installed stance migration, so this correction checks their denial rather than changing their bodies/ACLs. Other renamed helpers were explicitly hardened in the installed migration. No runtime source, installed migration bytes or gameplay data changed. No local PostgreSQL infrastructure is available: Lovable must compile the entire file rollback-only and inspect installed effective role privileges/signatures/metadata and wrapper chain, without gameplay invocation. No new Edge deployment is required for this ACL-only correction; stance frontend publication/live checks remain pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
       "identity": "20261001130000_combat2_character_persistent_stances.sql",
       "status": "installed",
       "sha": "09cd8934b351e15fd7044f274a444aafb1ee4dd2",
       "timestamp": "2026-10-01T21:40:00Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "evidence": "ENG-STANCE-001/002 installed once from SHA-256 71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923 (source 09cd8934). Ledger 20261001213148 / dec8975a-1fb3-43c9-b5a8-73620bd1e0e8; generated artifact SHA-256 08675990dbf72370cd68f60cf0a77a1ea151da6961084a98b68b8e5de01773f8 differs only by the missing trailing newline. Full-file rollback-only run reached the external sentinel (stance_rows=0, requests=0, node_effect=0) and rollback restored every function/data fingerprint with no ledger entry. Approved reset removed exactly 3 self-owned stance effects (holy_shield x2, shield_wall x1) and their 3 CP reservations; 0 legacy effects, 0 legacy JSON entries, 0 unclassifiable rows. New character_stance and character_stance_request are empty, RLS on, service_role-only, not in Realtime. Raw HP/CP/MP/location/max_cp, inventory, encounter/fighter/pending-event fingerprints unchanged. Definition inspection only: PL/pgSQL bodies were not behaviourally executed. ACL findings as authored: drop_stance(uuid,text) keeps PUBLIC and anon EXECUTE (only authenticated was revoked), and combat2_test_reset_without_character_stances keeps authenticated EXECUTE; not changed.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
+      "directly_verified": false
     },
     {
       "identity": "20261001100000_combat2_present_equipment_fencing.sql",
@@ -188,12 +198,12 @@
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "d9506c89379af680a1dc60870745307647b3c661",
-    "timestamp": "2026-09-29T21:18:11Z",
-    "evidence_type": "cloud_inspection",
-    "evidence": "Lovable regenerated the official types from the installed ENG-HB-001 schema and committed them with the ledger artifact in d9506c89379af680a1dc60870745307647b3c661. The committed diff contains world_heartbeat_run, combat2_diagnostic_server_event.heartbeat_id, combat2_diagnostic_record_server_event_with_heartbeat, combat2_dispatch_scheduler_fire_without_heartbeat_identity and combat2_heartbeat_record_dispatch. This reconciliation verifies the committed type surface only and does not independently inspect Cloud.",
-    "reporting_actor": "Lovable",
-    "directly_verified": true
+    "sha": "6490ec1f199539190076a28e0852af3897687f13",
+    "timestamp": "2026-10-01T21:40:00Z",
+    "evidence_type": "operator_reported",
+    "evidence": "Preserved prior official ENG-HB-001 types and Lovable's subsequent stance-generated type update in ancestry through 6490ec1f. Committed types now include character_stance, character_stance_request, Arena stance snapshots and stance projection/change/internal helper contracts. Codex verifies the Git type surface only; regeneration/installed provenance is attributed to Lovable, not direct Cloud verification.",
+    "reporting_actor": "Lovable (handoff supplied by Mik)",
+    "directly_verified": false
   },
   "edge_function_deployments": [
     {
@@ -241,10 +251,10 @@
       "status": "deployed",
       "sha": "09cd8934b351e15fd7044f274a444aafb1ee4dd2",
       "timestamp": "2026-10-01T21:40:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Deployed after ENG-STANCE install from source 09cd8934; neither invoked. Processing remains disabled.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable reports both functions deployed after ENG-STANCE installation from 09cd8934b351e15fd7044f274a444aafb1ee4dd2; neither invoked. Processing remains disabled. This task did not verify Cloud directly.",
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
+      "directly_verified": false
     }
   ],
   "frontend_publication": {
@@ -253,18 +263,18 @@
     "sha": null,
     "timestamp": "2026-09-30T07:29:40Z",
     "evidence_type": "operator_reported",
-    "evidence": "Mik explicitly reports that he manually published the frontend after ENG-HB-001 installation/deployment. The exact published revision is unavailable and is therefore not guessed. This records publication only: live heartbeat correlation, movement, arrival, hostile initiation and multiplayer tank order remain unverified.",
+    "evidence": "Mik previously reports frontend publication after ENG-HB-001; its exact revision is unknown. Preserve later bounded heartbeat/cadence evidence and Mik's reported stuck-creature recovery plus successful fight/leave/return movement. These do not verify other nodes or multiplayer/concurrency branches. The new character-persistent stance frontend remains unpublished and live-unverified.",
     "reporting_actor": "Mik",
     "directly_verified": false
   },
   "combat2_operational_work": [
     {
       "identity": "combat2-character-stances-rollback-compilation-2026-10-01",
-      "status": "blocked",
-      "sha": "7fb47d6e4d4d71c1f560848414361805a027536f",
+      "status": "installed",
+      "sha": "09cd8934b351e15fd7044f274a444aafb1ee4dd2",
       "timestamp": "2026-10-01T21:20:21Z",
       "evidence_type": "operator_reported",
-      "evidence": "Lovable's handoff supplied by Mik reports complete rollback-only compilation of hash 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7 failed before the final sentinel around line 287 in combat2_change_stance: SELECT caa,ab,base INTO ca,a,ba; SQLSTATE 42601, record variable cannot be part of multiple-item INTO list. Later statements remain uncompiled. Cleanup rolled back; six supported node_effect rows eligible for approved reset remain, character_stance does not exist and no ledger entry was created. No installation, deployment or gameplay mutation occurred. Synthetic Cloud fixtures are unavailable through the sandbox connection. These observations are attributed to Lovable, not direct Cloud verification by Codex. The corrected candidate requires a new complete rollback-only compilation; inspecting the real six rows is allowed in that transaction, but manufacturing auth accounts or fake characters is prohibited. Synthetic behavioral verification remains a limitation.",
+      "evidence": "Historical rejected hash 9042e18d0f7c4bfd90eafd901e7a7d61466656dc0484814f239eaa28c0c34cc7 failed SQLSTATE 42601 in composite INTO and rolled back. Lovable subsequently reports corrected hash 71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923 compiled completely through the final sentinel, rolled back with all data restored, then installed once as ledger 20261001213148/dec8975a-1fb3-43c9-b5a8-73620bd1e0e8. Three old stance effects and three reservations reset; protected resources/equipment/combat history preserved. Source/ledger Git hashes are independently verified by Codex, while Cloud observations are Lovable-reported only. Synthetic behavior fixtures remain unavailable through the sandbox; no fake auth accounts or characters are authorized. Stance live verification remains pending.",
       "reporting_actor": "Lovable (handoff supplied by Mik)",
       "directly_verified": false
     },
@@ -274,7 +284,7 @@
       "sha": null,
       "timestamp": "2026-10-01T12:00:00Z",
       "evidence_type": "repository",
-      "evidence": "Source implements the approved eight-stance character authority and out-of-combat UI routing. Mik additionally approves resetting positively identified existing stance state once during atomic installation, not migrating it. Unknown/mixed unclassifiable rows still stop; unrelated JSON/effects, raw resources and histories survive. This reset does not alter runtime stance rules or lock ordering. The migration is not reported installed, generated official Cloud types are unchanged, affected Combat2 Edge consumers are not deployed, and Mik has not yet manually published this frontend revision. Installation, PostgreSQL rollback verification, deployment, publication and bounded solo/multiplayer verification remain distinct pending steps.",
+      "evidence": "Eight-stance character authority is now Lovable-reported installed with official type update retained and both Combat2 Edge consumers reported deployed from 09cd8934. Frontend publication by Mik and stance live verification remain pending. Browser Force Shield regeneration writer is absent in production; its obsolete test is replaced with out-of-combat, ownership/location and character-session transition denial coverage. Related legacy drop/renamed Arena helper ACL correction is authored separately and still uninstalled. Percentage reservations, activation costs, action-slot/lock/lifecycle rules remain unchanged; fixed reservations are an unapproved future option. Preserve earlier operator recovery/movement and bounded cadence evidence without promoting untested nodes or multiplayer branches.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -743,11 +753,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Mik reopens processing and observes bounded ENG-COMBAT-003 recovery.",
+    "artifact": "Separately authorized Lovable full-file rollback compilation and installation of the stance-helper ACL correction; then Mik's manual stance frontend publication and bounded live verification.",
     "sha": null,
     "timestamp": "2026-10-01T08:09:00Z",
     "evidence_type": "repository",
-    "evidence": "Installation and both Combat2 Edge deployments are done with world asleep, maintenance enabled and schedules disabled. After Mik reopens processing, observe f974068d-c8e6-4224-a3c9-d7b066ae1b8d and prefixes f45a8b21/f7c5881a for normal ticks without repeated stale_equipment, exactly-once ticks/durability/resources/rewards and legitimate pending-event consumption. Do not repair encounters manually.",
+    "evidence": "Installed stance source and ledger plus both Edge deployments are Lovable-reported; processing remained disabled. Compile the entire new ACL migration rollback-only, inspect role/signature/security/wrapper contracts, then install only when separately authorized. No new Edge deployment or frontend change is needed for the ACL-only correction. Mik's stance publication and new stance behavior verification remain pending. Preserve prior operator-observed f974068d recovery and fight/leave/return success and bounded cadence evidence; other nodes and untested multiplayer/concurrency branches are not verified. Do not replay the installed reset or repair live encounters.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

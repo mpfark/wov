@@ -30,7 +30,7 @@ describe('pre-page legacy resource suppression', () => {
     expect(await screen.findByText('Game mounted')).toBeInTheDocument();
     expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual(['clear_stances', 'sync_character_resources']);
   });
-  it('suspends Force Shield regen but retains character loading and selection', async () => {
+  it('never runs browser Force Shield regeneration outside combat or across ownership/session transitions', async () => {
     vi.useFakeTimers();
     sessionStorage.setItem('selectedCharacterId', 'test-character');
     const user = { id: 'user' } as Parameters<typeof useCharacter>[0];
@@ -42,7 +42,20 @@ describe('pre-page legacy resource suppression', () => {
     mocks.restricted = false;
     rerender();
     await act(async () => {});
-    expect(mocks.rpc).toHaveBeenCalledWith('apply_force_shield_regen', { _character_id: 'test-character' });
+    await act(async () => { await vi.advanceTimersByTimeAsync(12000); });
+    expect(mocks.rpc.mock.calls.filter(([name]) => name === 'apply_force_shield_regen')).toEqual([]);
+    act(() => result.current.updateCharacterLocal({ current_node_id: 'encounter-node' }));
+    mocks.restricted = true;
+    rerender();
+    await act(async () => { await vi.advanceTimersByTimeAsync(12000); });
+    act(() => result.current.clearSelectedCharacter());
+    expect(result.current.character).toBeNull();
+    act(() => result.current.selectCharacter('test-character'));
+    mocks.restricted = false;
+    rerender();
+    await act(async () => { await vi.advanceTimersByTimeAsync(12000); });
+    expect(result.current.character?.id).toBe('test-character');
+    expect(mocks.rpc.mock.calls.filter(([name]) => name === 'apply_force_shield_regen')).toEqual([]);
     unmount();
     expect(vi.getTimerCount()).toBe(0);
   });
