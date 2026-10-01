@@ -285,6 +285,41 @@ describe('combat2 resolver', () => {
     expect(result.events.filter(event => event.kind === 'durability_lost')).toHaveLength(1);
   });
 
+  it('excludes historical absent equipment while preserving offscreen effect attribution and rewards', () => {
+    const absentGear = equipped({ base_stats: { cha: 90 }, durability: 10 });
+    const input = snapshot({
+      creatures: [creature({ hp: 4 })],
+      fighters: [fighter({ character_id: 'ch-1', present: false, equipment: [absentGear] })],
+      effects: [{
+        id: 'offscreen-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend',
+        target_character_id: null, target_creature_id: 'cr-1', source_character_id: 'ch-1',
+        source_creature_id: null, stacks: 1, magnitude: 9, config: {},
+        expires_at: nowPlus(60_000), next_due_at: nowPlus(-1), interval_ms: 2000,
+        last_pulse_tick: 5, is_reservation: false,
+      }],
+    });
+    const out = resolveNodeTick(input, { abilities });
+    expect(out.equipment_fence).toEqual([]);
+    expect(out.events).toContainEqual(expect.objectContaining({ kind: 'effect_pulse', amount: 4 }));
+    expect(out.rewards).toEqual([expect.objectContaining({ character_id: 'ch-1', is_killer: true })]);
+  });
+
+  it('keeps equipment fenced when a claim-present fighter departs during resolution', () => {
+    const input = snapshot({
+      fighters: [fighter({ character_id: 'ch-1', equipment: [equipped()] })],
+      creatures: [],
+      pending_events: [{
+        id: 'depart-equipped', event_type: 'fighter_depart_requested', actor_character_id: 'ch-1',
+        actor_creature_id: null, target_character_id: null, target_creature_id: null,
+        payload: { fighter_id: 'f-ch-1', entry_seq: 1, departure_request_id: 'request-equipped',
+          origin_node_id: 'node-1', destination_node_id: 'node-2', cost: 1 }, occurred_at: NOW,
+      }],
+    });
+    const out = resolveNodeTick(input, { abilities });
+    expect(out.equipment_fence).toEqual([expect.objectContaining({ inventory_id: 'inv-1', fighter_id: 'f-ch-1', entry_seq: 1 })]);
+    expect(out.fighters).toContainEqual({ id: 'f-ch-1', present: false });
+  });
+
   it('supports only deterministic authored lifesteal/burst procs without recursion and broken gear grants nothing', () => {
     const proc = { type: 'burst_damage' as const, chance: 1, value: 7, weight: 1, damage_type: 'fire', text: null, trigger: 'on_hit' as const };
     const live = snapshot({ fighters: [fighter({ character_id: 'ch-1', equipment: [equipped({ procs: [proc] })] })],

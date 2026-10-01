@@ -140,6 +140,8 @@ The resolver's effective order is:
 
 The commit RPC validates frozen fields, consumes intentions/events, applies resources/effects/deaths/durability/rewards and advances the local tick atomically. Claim leases, state versions, cutoff sequences and request ledgers fence stale work. A rejected or transport-uncertain proposal cannot be treated as committed.
 
+Equipment is a tick dependency only for fighters who are `present` at the frozen claim boundary. Their complete equipped loadout is projected, used for effective stats and fenced through commit; a fighter who then dies or departs during resolution remains protected for that tick. Absent historical fighters remain available for durable participation, reward attribution and already-frozen offscreen effects, but their mutable current/off-node equipment is neither read by the resolver nor included in the proposal fence. Commit still rejects changed, forged or omitted equipment for every claim-present fighter. Migration `20261001100000_combat2_present_equipment_fencing.sql` authors this correction but is not installed or live-verified.
+
 ## Effects and stances
 
 - Transient effects expire/tick inside the encounter resolver.

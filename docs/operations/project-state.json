@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T06:32:41Z",
-  "based_on_source_sha": "05f57228d6fafaf783075df93bc02e41beae7077",
+  "updated_at": "2026-10-01T07:45:58Z",
+  "based_on_source_sha": "d29202fd3f478e8c84fd98905463908fb360359c",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,14 +16,24 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "325d9cdbca142342246548a067513a7a40de74ca",
-    "timestamp": "2026-09-30T19:30:00Z",
+    "sha": "d29202fd3f478e8c84fd98905463908fb360359c",
+    "timestamp": "2026-10-01T07:45:58Z",
     "evidence_type": "repository",
-    "evidence": "Local main and origin/main were both clean and synchronized at required checkpoint 325d9cdbca142342246548a067513a7a40de74ca before ENG-HB-003 source work. Its ancestry preserves the Lovable-authored read-only cadence evidence and all earlier ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
+    "evidence": "Local main and origin/main were both clean and synchronized at required checkpoint d29202fd3f478e8c84fd98905463908fb360359c before ENG-COMBAT-003 source work. Its ancestry preserves all earlier Lovable/Codex changes, ledger artifacts, generated types and installation/deployment evidence without rewriting history.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20261001100000_combat2_present_equipment_fencing.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T07:45:58Z",
+      "evidence_type": "tests",
+      "evidence": "ENG-COMBAT-003 source migration SHA-256 66a7bc34f40553e8e59d572fdfcaaaeaf963844be6e8dabd33d9ec56d0a492ff patches only the installed inner claim projection so current equipment is captured for claim-present fighters. Outer claim wrappers, commit logic and schema signatures are unchanged. Existing commit checks continue to reject stale, forged or omitted required loadouts. The migration is authored only: no PostgreSQL compiler was available locally, no Cloud access occurred, and installation/live recovery are unverified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20260930130000_combat2_encounter_schedule_drift.sql",
       "status": "installed",
@@ -228,6 +238,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-present-equipment-fencing-2026-10-01",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-01T07:45:58Z",
+      "evidence_type": "tests",
+      "evidence": "Source tracing proved the stale_equipment loop: the installed claim projects current equipment for every historical fighter, resolver fences every projected item, and commit correctly demands each fenced fighter generation remain present. The correction limits both projection and resolver derivation/fencing to fighters present at the frozen claim boundary. A fighter who dies or departs during resolution remains fenced; absent-source offscreen effects keep frozen magnitudes and attribution; historical participation and qualified rewards remain. Focused resolver, worker, dispatcher, migration and durability tests cover the corrected boundary. The generated Combat2 resolver mirror changes transitively for combat2-tick-once and combat2-dispatch-once. Nothing is installed, deployed, published or live-verified.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-authoritative-movement-client-reconciliation-2026-09-30",
       "status": "ready_for_manual_publish",
@@ -672,16 +692,26 @@
     }
   ],
   "next_approved_task": {
-    "status": "ready_for_manual_publish",
-    "artifact": "Mik manually publishes the keyboard movement input correction, followed by a bounded keyboard-versus-minimap and party-leader observation. ENG-HB-003 cadence verification remains separate.",
+    "status": "authored",
+    "artifact": "Lovable performs a bounded ENG-COMBAT-003 installation preflight, installs the present-equipment claim correction while processing is disabled, then deploys the proven Combat2 Edge consumers before bounded recovery observation.",
     "sha": null,
-    "timestamp": "2026-10-01T06:32:41Z",
+    "timestamp": "2026-10-01T07:45:58Z",
     "evidence_type": "repository",
-    "evidence": "Publish the frontend source only; no migration or Edge deployment is required. Compare one minimap click and one fresh keyboard press: each should submit immediately, update to the authoritative destination, and allow a deliberate next press to use that destination's connections after acknowledgement. Holding a key must not auto-walk, and pressing again while genuinely pending must not create another request. Repeat as party leader when safely available. Keep ENG-HB-003 cadence verification separate from movement input latency.",
+    "evidence": "Do not repair encounter rows manually. With world asleep and Combat2 processing disabled, hash and rollback-compile the exact migration; verify the inner claim predecessor, metadata, ACLs and wrapper composition; install once; inspect the presence-filtered projection; regenerate official types only if tooling reports a type-surface change; deploy combat2-tick-once and combat2-dispatch-once from the same verified source; then restore the prior safe processing state and observe normal recovery for the full known node plus prefixes f45a8b21 and f7c5881a. Confirm no stale_equipment loop, exactly-once ticks/durability/resources/rewards and legitimate pending-event consumption. Frontend publication is not required for this correction.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-stale-equipment-departed-fighters-2026-10-01",
+      "status": "blocked",
+      "sha": null,
+      "timestamp": "2026-10-01T07:45:58Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Lovable's supplied read-only investigation observed node f974068d-c8e6-4224-a3c9-d7b066ae1b8d / encounter ca32f2fb-7d4c-4504-b889-ef5cd0e3d8c8 active and stuck at tick 48 with repeated stale_equipment commit refusals. Historical spawns 1-4 were dead; spawn 5 was alive 335/335, engaged and without a tank. Two absent off-node historical fighters held nine and eight equipped items; eight fighter-entered events were unconsumed; no pending intents, unfinished departures, effects or reservations were reported. Node prefixes f45a8b21 and f7c5881a reportedly show the same refusal; full IDs are unknown. The actual failed Attack request was not observed. This source task did not access Cloud or mutate/repair any row; automatic recovery after release remains unproven.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-movement-symptom-diagnostic-window-2026-09-30",
       "status": "unknown",

@@ -4,6 +4,16 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ## Now — engine stabilization
 
+### ENG-COMBAT-003 — Present-fighter equipment fencing
+
+- **Engine area / status / priority:** combat snapshot/commit; `implemented_source`; 1.
+- **Problem or decision:** installed claims include current equipment for absent historical fighters while commit requires every fenced owner to be present, causing permanent `stale_equipment` refusals after equipped fighters depart.
+- **Intended outcome:** project and derive equipment only for fighters present at the frozen claim boundary; retain the complete fence for any such fighter who later dies or departs in the same resolution; preserve historical participation, frozen offscreen effects and qualified rewards.
+- **Dependencies:** install `20261001100000_combat2_present_equipment_fencing.sql`, regenerate official types only if the installed tool reports a type-surface change, deploy every proven Edge consumer of the regenerated resolver mirror, then perform bounded live recovery checks.
+- **Evidence/current state:** Lovable's read-only investigation reports node `f974068d-c8e6-4224-a3c9-d7b066ae1b8d` / encounter `ca32f2fb-7d4c-4504-b889-ef5cd0e3d8c8` stuck at tick 48 plus the same symptom at node prefixes `f45a8b21` and `f7c5881a`. Source correction and focused tests are authored; no Cloud action or manual repair occurred.
+- **Acceptance criteria:** rollback-only full migration compilation; installed claim projection/owner/security/search-path/ACL and wrapper-chain inspection; changed/forged/omitted present equipment still refuses; absent equipment no longer fences; normal processing recovers all three reported nodes without manual row repair; exactly-once tick/durability/resource/reward evidence; Test Arena parity.
+- **Specification sections:** Combat resolution; Movement and party movement; Failure, diagnostics and verification.
+
 ### ENG-MOVE-001 — Immediate serialized Combat2 departure
 
 - **Engine area / status / priority:** movement/concurrency; `live_verification_pending`; 1.

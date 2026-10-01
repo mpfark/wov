@@ -78,13 +78,18 @@ function effectsFor(effects: SnapshotEffect[], characterId: string, kind: string
 }
 
 export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): ProposedTick {
-  const claimedEquipment = snapshot.fighters.flatMap(fighter => fighter.equipment.map(item => ({
+  const claimedEquipment = snapshot.fighters.filter(fighter => fighter.present).flatMap(fighter => fighter.equipment.map(item => ({
     ...item, fighter_id: fighter.id, entry_seq: fighter.entry_seq,
   }))).sort((a, b) => a.inventory_id.localeCompare(b.inventory_id));
   // Character columns are the persisted/base boundary. Equipment is applied
   // exactly once here from the immutable claimed instances; broken gear grants
   // no stats, shield tag, weapon die, or proc.
   snapshot = { ...snapshot, fighters: snapshot.fighters.map((fighter) => {
+    // Historical/off-node fighters remain in the encounter for attribution and
+    // rewards, but their mutable current loadout is not a dependency of this
+    // tick. A fighter present at claim stays fenced even if this resolution
+    // later kills or departs that fighter.
+    if (!fighter.present) return { ...fighter, equipment: [] };
     // Persisted maxima/AC are authoritative for an unequipped fighter and are
     // already maintained by sync_character_resources. Re-derive only when an
     // equipment loadout is actually present, avoiding a second base-stat path.
