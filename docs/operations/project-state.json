@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-01T21:50:00Z",
+  "updated_at": "2026-10-01T22:05:00Z",
   "based_on_source_sha": "6490ec1f199539190076a28e0852af3897687f13",
   "status_vocabulary": [
     "authored",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20261001230000_combat2_stance_helper_privileges.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-10-01T21:50:00Z",
-      "evidence_type": "repository",
-      "evidence": "ACL-only forward correction SHA-256 deae78d14dc3474d44e83450beafc903dddb96d6c36b2dcc715e3c335ef71a5c closes PUBLIC/anon/authenticated access to drop_stance(uuid,text) and inherited browser access to both combat2_test_stop_without_character_stances(uuid,uuid) and combat2_test_reset_without_character_stances(uuid,uuid,boolean). Exact overload/metadata/wrapper guards, required postgres/service_role access and unchanged canonical authenticated access are checked. activate_stance and apply_force_shield_regen already had PUBLIC/anon revoked historically; authenticated was revoked by the installed stance migration, so this correction checks their denial rather than changing their bodies/ACLs. Other renamed helpers were explicitly hardened in the installed migration. No runtime source, installed migration bytes or gameplay data changed. No local PostgreSQL infrastructure is available: Lovable must compile the entire file rollback-only and inspect installed effective role privileges/signatures/metadata and wrapper chain, without gameplay invocation. No new Edge deployment is required for this ACL-only correction; stance frontend publication/live checks remain pending.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "9980d8956b60e29d55ad117b216291dc9ad7edbe",
+      "timestamp": "2026-10-01T22:05:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-STANCE ACL correction installed exactly once from SHA-256 deae78d14dc3474d44e83450beafc903dddb96d6c36b2dcc715e3c335ef71a5c (source 9980d895). Ledger 20261001230000 / a3948e08-1268-407e-9c3b-d822731eb7b0; no separate generated artifact file. Preflight: world asleep, combat_mode maintenance, combat_soak off, 0 active cron jobs, 0 live claims, 0 recording Arena runs, 0 open diagnostic sessions, 0 queued/finalizing solo or party departures. Before: drop_stance executable by PUBLIC and anon (inherited by authenticated); combat2_test_reset_without_character_stances executable by authenticated. Full file compiled in one rollback-only transaction to a final sentinel; rollback restored original ACLs/bodies, ledger stayed at 509. After install: drop_stance, both *_without_character_stances helpers, activate_stance, apply_force_shield_regen and combat2_restore_arena_stances are postgres+service_role only (no PUBLIC/anon/authenticated); combat2_change_stance, combat2_character_stances, combat2_test_stop, combat2_test_reset remain authenticated+service_role, not anon. Bodies (md5), owner postgres, SECURITY DEFINER, volatility and search paths unchanged; Arena wrapper composition intact. Gameplay fingerprint a14e4fb3a16991cc3fd1201d22c1eea2 (97 rows: characters HP/CP/MP/location/reserved_buffs, encounters, inventory durability/slot, character_stance, node_effect) identical before and after. No gameplay/stance/Arena/scheduler calls, no Edge deployment, no type regeneration, no frontend publication.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
@@ -748,6 +748,16 @@
       "evidence_type": "repository",
       "evidence": "Resolved: cb64048305ba49e923e82c4cdf9093d7de67d3dc, 5cecd97a2ad0080a46a5f43972a9db7452d14157 and 415893f6bb8b336d99791c58a673e2dd24f946af are all retained unchanged in origin/main ancestry through merge commit 68a14cf226b1d0f3e9123ba8a8abaf1cc9db2f73. The ledger artifact, official generated types and installation evidence are present on origin/main; no reconstruction or history rewrite occurred.",
       "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "stance-parent-resource-guards-test",
+      "status": "committed",
+      "sha": "9980d8956b60e29d55ad117b216291dc9ad7edbe",
+      "timestamp": "2026-10-01T22:05:00Z",
+      "evidence_type": "repository",
+      "evidence": "RESOLVED. Previously failing src/features/combat2/parent-resource-guards.test.tsx (Force Shield) passes 3/3 at 9980d895 together with stance-helper-privileges-migration (4/4) and project-state (3/3) tests.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     }
   ],
