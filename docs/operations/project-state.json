@@ -938,7 +938,9 @@
       "sha": null,
       "timestamp": "2026-10-02T08:15:02Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Read-only investigation, not fixed. Character Cithra d0c1b29a: world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z: persisted cp=300/300 constant, characters.updated_at advancing about every 4s, reserved_buffs={}; character_stance has force_shield 0.1, arcane_surge 0.15, ignite 0.2 (version 1, activated 08:12:00-08:12:02Z). Operator UI showed 89/300 with 135 reserved. Verdict A (server regenerates, client stale). Boundary: src/pages/GamePage.tsx presentedCharacter overrides live character cp/max_cp with combat2Stances.projection.rawCp, a snapshot taken at stance change; useCombat2StanceSession refreshKey is combat2 stateVersion ?? sessionStatus, which does not change out of combat. Proposed correction: take cp/max_cp from the live character row and use the projection only for reservations, or refresh the projection on character resource updates."
+      "evidence": "Read-only investigation, not fixed. Character Cithra d0c1b29a: world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z: persisted cp=300/300 constant, characters.updated_at advancing about every 4s, reserved_buffs={}; character_stance has force_shield 0.1, arcane_surge 0.15, ignite 0.2 (version 1, activated 08:12:00-08:12:02Z). Operator UI showed 89/300 with 135 reserved. Verdict A (server regenerates, client stale). Boundary: src/pages/GamePage.tsx presentedCharacter overrides live character cp/max_cp with combat2Stances.projection.rawCp, a snapshot taken at stance change; useCombat2StanceSession refreshKey is combat2 stateVersion ?? sessionStatus, which does not change out of combat. Proposed correction: take cp/max_cp from the live character row and use the projection only for reservations, or refresh the projection on character resource updates.",
+      "reporting_actor": "lovable",
+      "directly_verified": true
     }
   ],
   "product_backlog": [
