@@ -792,7 +792,13 @@
     },
     {
       "id": "STALE-TEST-BUILD-ID",
-      "summary": "src/test/combat/c3/edge-build-identity.test.ts still asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers; needs repository test update."
+      "summary": "src/test/combat/c3/edge-build-identity.test.ts still asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers; needs repository test update.",
+      "status": "open",
+      "evidence": "src/test/combat/c3/edge-build-identity.test.ts still asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers; needs repository test update.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true,
+      "timestamp": "2026-10-02T14:58:00Z",
+      "evidence_type": "repository_inspection"
     }
   ],
   "next_approved_task": {
