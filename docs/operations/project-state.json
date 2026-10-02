@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T14:58:00Z",
-  "based_on_source_sha": "d72024b9e80271f9854b725f4488e8da36a82c7a",
+  "updated_at": "2026-10-02T15:06:00Z",
+  "based_on_source_sha": "d77cc40064b2922a31afdda2699dab99b6111a13",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "d72024b9e80271f9854b725f4488e8da36a82c7a",
-    "timestamp": "2026-10-02T12:57:00Z",
+    "sha": "d77cc40064b2922a31afdda2699dab99b6111a13",
+    "timestamp": "2026-10-02T15:06:00Z",
     "evidence_type": "repository",
-    "evidence": "ENG-LEGACY-002 batch A starts from clean main at d72024b9e80271f9854b725f4488e8da36a82c7a; fetch/fast-forward was already up to date and required checkpoint remains an ancestor. Earlier commits, generated types, ledger artifacts and unrelated evidence are preserved. Only two retired Edge tails, focused tests and canonical documentation/state change; no shared runtime, SQL or browser change.",
+    "evidence": "Clean starting source 2e202d043d2169efdf81462c00337b65bd3b5a8f fast-forwarded to d77cc40064b2922a31afdda2699dab99b6111a13, retaining four subsequent Lovable commits and their deployment records. Required checkpoint and recorded baseline remain ancestors. Initial project-state check found generated Markdown out of sync; regenerated from canonical JSON in this tests/documentation-only reconciliation. No production, schema, validator or Cloud changes.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -221,9 +221,9 @@
       "status": "deployed",
       "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
       "timestamp": "2026-10-02T14:58:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 2ef662df4fe422e1ef90a17f4fb50e0fcd0d1b29c1be29962b4cf0a086e5c447; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
-      "reporting_actor": "Lovable",
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable reports successful deployment of the retained refusal shell from 2e202d043d2169efdf81462c00337b65bd3b5a8f; only combat-tick and combat-catchup deployed, neither invoked, configuration including verify_jwt=false preserved. No deployment version IDs returned and deployed source could not be inspected; runtime HTTP behavior remains untested. Reported repository entry SHA-256 2ef662df4fe422e1ef90a17f4fb50e0fcd0d1b29c1be29962b4cf0a086e5c447 is independently verified by Codex against committed Git blob bytes at the synchronized source and deployment checkpoint, not against a deployed artifact. Local repository dependency closure is _shared/http.ts and _shared/combat/build-identity.ts (http retains its external Supabase package import). Deployment proceeded despite two failing edge-build-identity assertions expecting the removed unreachable rawJson helper, one per handler. Subsequent tests-only reconciliation replaces those obsolete expectations with retained-shell contracts; 13 build-identity, 16 executable refusal and 2 packaging tests pass locally. This is source verification, not live response/deployed-source verification. No new deployment required for these tests/documentation-only edits. Browser/SQL retirement remains pending.",
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
       "directly_verified": false
     },
     {
@@ -231,9 +231,9 @@
       "status": "deployed",
       "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
       "timestamp": "2026-10-02T14:58:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 785e3ed41c458e746a4438be83c88c523a5740a1c0a74c17933b4f44997c456a; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
-      "reporting_actor": "Lovable",
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable reports successful deployment of the retained refusal shell from 2e202d043d2169efdf81462c00337b65bd3b5a8f; only combat-tick and combat-catchup deployed, neither invoked, configuration including verify_jwt=false preserved. No deployment version IDs returned and deployed source could not be inspected; runtime HTTP behavior remains untested. Reported repository entry SHA-256 785e3ed41c458e746a4438be83c88c523a5740a1c0a74c17933b4f44997c456a is independently verified by Codex against committed Git blob bytes at the synchronized source and deployment checkpoint, not against a deployed artifact. Local repository dependency closure is _shared/http.ts and _shared/combat/build-identity.ts (http retains its external Supabase package import). Deployment proceeded despite two failing edge-build-identity assertions expecting the removed unreachable rawJson helper, one per handler. Subsequent tests-only reconciliation replaces those obsolete expectations with retained-shell contracts; 13 build-identity, 16 executable refusal and 2 packaging tests pass locally. This is source verification, not live response/deployed-source verification. No new deployment required for these tests/documentation-only edits. Browser/SQL retirement remains pending.",
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
       "directly_verified": false
     },
     {
@@ -268,6 +268,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "retired-combat1-deployment-test-reconciliation-2026-10-02",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-02T15:06:00Z",
+      "evidence_type": "repository",
+      "evidence": "ENG-LEGACY-002 evidence-only reconciliation preserves incoming Lovable deployment records and reattributes the two retired endpoint deployments as operator_reported, reporting actor Lovable via Mik, directly_verified false. No evidence-schema/validator change: existing fields distinguish reported deployment, direct Git source/hash checks and unavailable runtime/deployed inspection. Corrected obsolete rawJson build-identity expectations; general shared stamping helper coverage retained and legacy_retired added, with OPTIONS/410/body/stamp/header/no-execution shell contracts. 31 focused tests pass. Generator --check still reports the pre-existing pure/resolver.ts mixed-line-ending mismatch; Git content is identical after newline/import transformation. No mirrors/generators changed. Initial generated state synchronization failure repaired by regeneration. No Cloud, migration, deployment, publication or endpoint/gameplay invocation; no broad suite, TypeScript or build needed.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "combat1-retired-edge-tail-cleanup-2026-10-02",
       "status": "authored",
@@ -803,11 +813,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Separately authorize deployment/inspection of the two retained refusal shells, or bounded read-only installed dependency verification for later retirement.",
+    "artifact": "Separately authorize bounded deployed-source/runtime refusal verification or installed dependency review before further legacy retirement.",
     "sha": null,
-    "timestamp": "2026-10-02T12:57:00Z",
+    "timestamp": "2026-10-02T15:06:00Z",
     "evidence_type": "repository",
-    "evidence": "ENG-LEGACY-002 batch A source cleanup is complete; combat-tick and combat-catchup alone need separately authorized deployment. This record does not authorize Cloud access or further cleanup. Preserve shared dependencies, historical migrations, browser fences and SQL wrapper chains. Full browser/SQL/endpoint retirement requires its remaining audit gates. Prior operator recovery, movement, cadence and stance/resource evidence remains unchanged.",
+    "evidence": "Both retired shells are Lovable-reported deployed at 2e202d04; do not redeploy for tests/documentation-only reconciliation. Deployment identities/readback and runtime responses remain unavailable/unverified. Further browser retirement, SQL/column changes or endpoint deletion require separate authorization and positive dependency evidence. Preserve shared modules and all prior gameplay/stance/resource/movement/cadence evidence.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

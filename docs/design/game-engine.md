@@ -23,7 +23,7 @@ The Admin Roadmap currently reads and mutates `roadmap_items` directly in `src/c
 - Maintenance, world sleep or scheduler absence stops progression and must not create unbounded banked work.
 - Presentation state is evidence, not ownership.
 
-The bounded [legacy runtime retirement audit](combat2-legacy-runtime-retirement-audit.md) maps remaining conditional browser writers, unreachable retired Edge code, shared utilities and active SQL predecessor composition. `ENG-LEGACY-002` batch A has removed only unreachable retired Edge tails while retaining identical refusal shells; deployed revisions are unchanged/unverified. Further browser, SQL and endpoint retirement remains a proposal, not authorization to remove historical/database dependencies. No engine rule changes. Repository non-use is not installed-catalogue or external-caller proof.
+The bounded [legacy runtime retirement audit](combat2-legacy-runtime-retirement-audit.md) maps remaining conditional browser writers, unreachable retired Edge code, shared utilities and active SQL predecessor composition. `ENG-LEGACY-002` batch A has removed only unreachable retired Edge tails while retaining identical refusal shells; both shells are Lovable-reported deployed, while deployed-source and runtime verification remain unavailable. Further browser, SQL and endpoint retirement remains a proposal, not authorization to remove historical/database dependencies. No engine rule changes. Repository non-use is not installed-catalogue or external-caller proof.
 
 The engine keeps these concepts distinct:
 
