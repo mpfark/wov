@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T18:14:37Z",
-  "based_on_source_sha": "a7c9ba31f155f39d1db9aa4924e820989216e09b",
+  "updated_at": "2026-10-02T21:54:15Z",
+  "based_on_source_sha": "a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,14 +16,24 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "a7c9ba31f155f39d1db9aa4924e820989216e09b",
-    "timestamp": "2026-10-02T17:20:00Z",
+    "sha": "a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb",
+    "timestamp": "2026-10-02T21:54:15Z",
     "evidence_type": "repository",
-    "evidence": "Started clean at a7c9ba31f155f39d1db9aa4924e820989216e09b; fetched origin/main and remained synchronized at the same checkpoint, preserving prior Lovable deployment/evidence commits. Required checkpoint and recorded baseline are ancestors. ENG-LEGACY-002 bounded browser isolation authored locally; no schema, official types, Edge, Cloud or gameplay change.",
+    "evidence": "Clean starting 724cde8dff94ea0ab57cf5df4d3837526dd54362 fast-forwarded safely to a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb, retaining Lovable commits bee61e05, 7c73e725 and merge a77d0804, SQL audit and prior state/evidence. Checkpoint remains ancestor. Incoming project-state Markdown was out of sync; regenerated from JSON. Batch C authors one ACL-only migration, focused source tests and documentation; no Cloud, installed/type/Edge/frontend/gameplay change.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "database_migrations": [
+    {
+      "identity": "20261002190000_combat2_legacy_browser_privileges.sql",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-02T21:54:15Z",
+      "evidence_type": "repository",
+      "evidence": "ENG-LEGACY-002 batch C candidate SHA-256 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f; not installed. Exact public effects_catchup_send(uuid,uuid,bigint,uuid,integer), effects_catchup_dispatch_one(uuid), effects_catchup_reconcile(integer), effects_catchup_credential_health(), clear_stances(uuid). Revoke only PUBLIC/anon/authenticated; preserve owner/service_role and every non-browser explicit ACL grant/grantor/grant option. All five missing/overload/metadata/audit-MD5-prefix/schedule/RLS-visibility/role-inheritance guards precede revokes; NOWAIT SHARE cron lock fences concurrent job creation during installation only. Inline denial and full catalogue/definition/internal-ACL preservation assertions in a single complete statement, no swallowed exception or DML. Audit supplies eight-character MD5 prefixes only; full predecessor definition comparison and rollback-only complete PostgreSQL compilation remain mandatory Lovable gates. No local psql/postgres/docker or executable schema harness available; tests are source/lexer contracts, not PostgreSQL execution. No bodies, active dependencies, rows, roles or schedules changed; wake/watchdog rearming remains unresolved. No Edge/types/frontend release required.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "20261001230000_combat2_stance_helper_privileges.sql",
       "status": "installed",
@@ -822,12 +832,12 @@
     }
   ],
   "next_approved_task": {
-    "status": "ready_for_manual_publish",
-    "artifact": "Mik manually publishes the browser-isolation frontend, then performs bounded solo and party acceptance; separately authorize installed SQL/deployed-endpoint dependency review before further retirement.",
+    "status": "authored",
+    "artifact": "Separately authorize Lovable full-file rollback compilation, exact predecessor/role/schedule checks and then one atomic batch-C installation if every gate passes.",
     "sha": null,
-    "timestamp": "2026-10-02T17:20:00Z",
+    "timestamp": "2026-10-02T21:54:15Z",
     "evidence_type": "repository",
-    "evidence": "Only frontend publication is required by this source diff: no changed Edge-transitive file, SQL or official type. Solo: retained log/stance/ward/resources through entry, completion, movement, reconnect and character switching. Party: delivered membership/HP/location, coordinated movement and combat logs/rewards without peer resource/follower writes. These remain live-unverified. Preserve all earlier operator movement, recovery, CP-presentation and cadence evidence, plus Lovable-reported retired shell deployments. No full legacy retirement or Cloud verification claimed.",
+    "evidence": "Follow docs/design/combat2-legacy-sql-dependency-audit.md checklist and verify candidate full hash. Use the real catalogue, no function/gameplay invocations or fixtures; inherited access, drift or catch-up schedule is a stop condition. After rollback restores ACLs and data, install only if separately authorized, then verify browser denial plus unchanged internal grants/bodies/metadata/protected data and record actual ledger evidence. No Edge deployment/type regeneration/frontend publication for batch C. Browser-isolation publication/live acceptance remains pending as previously recorded; wake/watchdog rearming and later SQL/trigger/column retirement remain separate tasks.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -1014,13 +1024,13 @@
     },
     {
       "identity": "ENG-LEGACY-002 installed SQL dependency audit",
-      "status": "authored",
+      "status": "unknown",
       "sha": "724cde8dff94ea0ab57cf5df4d3837526dd54362",
       "timestamp": "2026-10-02T18:14:37Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Read-only catalogue inspection: effects_catchup_send/dispatch_one/reconcile/credential_health executable by anon and authenticated; clear_stances executable by PUBLIC/anon/authenticated; activate_stance/drop_stance/apply_force_shield_regen service_role only; cron.job empty; wake_world/world_watchdog can schedule effects-catchup when legacy due scopes exist; 0 legacy reserved_buffs/stance_state/active_effects rows. No writes or invocations. Vault, pg_net history and deployed logs unavailable. See docs/design/combat2-legacy-sql-dependency-audit.md.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable reports read-only snapshot 2026-10-02T18:14:37Z: all five batch-C functions had effective browser access; clear_stances also PUBLIC. No effects-catchup schedule or queued legacy dispatch rows; legacy reserved_buffs/stance_state/active_effects empty; current character_stance/request 5/19 and 179 historical catch-up logs retained. Active/shared functions and composed predecessors retained. World asleep, maintenance, soak off were observations, not settings changed by Codex. wake_world/world_watchdog can rearm old schedules when legacy due scopes exist. Dynamic SQL, external callers, deployed code/logs and restricted Vault/HTTP history incompletely observable. No candidate invocation or mutation. This is supplied Cloud observation, not source authoring or direct Codex Cloud inspection; volatile and requires a fresh preflight. Audit document is committed separately; batch C candidate is authored, not installed. Frontend publication/live tests are not inferred.",
+      "reporting_actor": "Lovable (handoff supplied by Mik; Codex repository reconciliation)",
+      "directly_verified": false
     }
   ],
   "product_backlog": [

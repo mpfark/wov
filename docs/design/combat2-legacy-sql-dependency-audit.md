@@ -52,14 +52,30 @@ No legacy stance state coexists with current authority; no record currently bloc
 
 Unchanged from the canonical audit and not re-audited here: `combat_intent`, `node_tick_claim`, `node_tick_commit`, departure, arrival, settlement and Arena `*_without_*` chains; `combat2_dispatch_scheduler_fire` and its resource-settlement predecessor; stance class/equipment refusal triggers. They are composed by current wrappers.
 
-## Recommended next batch (not authored)
+## Batch C — authored privilege isolation, not installed
 
 **ENG-LEGACY-002 batch C — privilege isolation of the old catch-up transport and entry clear.** Privilege revocation only; no function, trigger, column or data change.
 
 1. Revoke `EXECUTE` from PUBLIC, anon and authenticated on, by exact signature: `effects_catchup_send(uuid,uuid,bigint,uuid,integer)`, `effects_catchup_dispatch_one(uuid)`, `effects_catchup_reconcile(integer)`, `effects_catchup_credential_health()`, `clear_stances(uuid)`. Keep service_role and postgres.
 2. Guards: preflight asserts the exact signatures and the fingerprints above, and that `cron.job` has no `effects-catchup` row; abort on drift. In-transaction assertions use `has_function_privilege` for each role, including inherited PUBLIC.
-3. Compatibility: `clear_stances` is only called from flag-off `GameRoute`; with Combat2 on, browsers no longer call it. A flag-off client would receive a permission error, which is acceptable only if Mik confirms flag-off is not a supported production mode; otherwise defer that one revoke. No current caller of the four `effects_catchup_*` functions is a browser role.
+3. Compatibility decision now approved by Mik: Combat1 is retired as a supported execution path; the remaining flag-off `GameRoute.clear_stances` caller is not a reason to preserve browser execution. Revocation includes that exact overload. Source callers are not removed/restored in this privilege-only batch.
 4. Verification: rollback-only full-file run with a final sentinel, then one install; repeat effective access checks; bodies/owners/definer/search paths unchanged; protected gameplay fingerprint unchanged; focused privilege test in `src/server/combat2/__tests__`.
+
+### Authored migration and installation gate
+
+Candidate: `20261002190000_combat2_legacy_browser_privileges.sql`, SHA-256 `1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f`. Source authoring and contract tests are not installed PostgreSQL proof. The eight-character MD5 values supplied above are abbreviated drift markers; no full installed hash is fabricated. Guards use those exact prefixes plus signature, result type, owner postgres, PL/pgSQL, SECURITY DEFINER, volatility and exact search-path metadata, not formatting-sensitive function-body substitutions.
+
+All five preflights complete before any REVOKE. Missing functions/roles, additional overloads, metadata/definition drift, cron-table absence or incomplete RLS visibility, schedule presence and inherited browser access fail closed. A NOWAIT SHARE lock fences concurrent cron-job creation only during this transaction; no jobs are changed. Effective inheritance and conservative membership/SET ROLE paths to owner, superuser or retained grantees refuse and require a separate decision; no memberships or unrelated ACLs are altered. Inline postconditions deny PUBLIC/anon/authenticated and retain postgres/service_role plus every non-browser explicit ACL grant, grantor and grant option. Full catalogue metadata (excluding the intended ACL change) and complete definitions compare exactly before/after. Any error rolls back all five revocations. No gameplay/legacy-state cleanup or encounter-absence requirement is added.
+
+Expected privilege matrix: send/dispatch_one/reconcile/credential_health had effective anon/authenticated access at the reported snapshot (PUBLIC ACL status is not asserted for these four); clear_stances had PUBLIC/anon/authenticated. After installation all five deny PUBLIC/anon/authenticated, retaining postgres/service_role and existing trusted grants, including credential-health read-only access where present. Service-role/body-guarded internal calls remain possible; this is not function retirement.
+
+**Lovable checklist — requires separate installation authorization:**
+
+1. Verify the full candidate hash and absent ledger version; fresh read-only catalogue/schedule checks with complete cron RLS visibility. Keep processing disabled through compilation/installation; do not change mode/schedules or invoke functions to prepare this task. Do not delete active encounter/gameplay rows.
+2. Inspect all five exact signatures, full definitions/MD5s, return types, owner, language, security, volatility, search paths, ACLs and role memberships. Compare full bodies with the actual repository predecessors linked by the focused test; resolve any difference, rather than accepting abbreviated MD5 agreement alone. Confirm no named or aliased-command effects-catchup job exists. Capture trusted role access, including any read-only/internal grant. Inherited browser access is a stop condition, not authority to change roles.
+3. Compile the **entire file** in one rollback-only transaction, reach an external final sentinel after its single complete DO statement, and inspect effective PUBLIC/anon/authenticated denial, postgres/service_role access, unchanged other grants and exact full definitions/metadata. Do not call the five functions, create fixtures, or invoke wake/scheduler/gameplay. These local lexer/static tests are not compilation.
+4. Roll back and prove original ACLs and protected data/metadata restored. Only after that passes and installation is separately authorized, install once atomically; repeat exact signature/role/body/metadata checks, unchanged protected resource/location/effect/encounter/stance/log/history fingerprints and no effects-catchup schedule. Record actual ledger/source identities and limitations; do not fabricate a ledger artifact.
+5. No Edge deployment, type regeneration or frontend publication is required for this ACL-only diff. Earlier browser isolation publication/live checks remain pending. `wake_world`, `world_watchdog` and `arm_effects_catchup_for_node` can still recreate the obsolete schedule: this remains a separately approved task, not solved by batch C.
 
 **Separate later decisions, in order:**
 
