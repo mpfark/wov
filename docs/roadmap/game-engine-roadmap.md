@@ -86,11 +86,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-LEGACY-001 — Remaining gameplay-writer audit
 
-- **Engine area / status / priority:** authority boundaries; `planned`; 6.
+- **Engine area / status / priority:** authority boundaries; `implemented_source`; 6.
 - **Problem or decision:** legacy hooks and temporary rollout surfaces may still contain dormant mutation paths.
 - **Intended outcome:** inventory of every HP/CP/MP/position/effect/reward writer, with active paths fenced to authoritative contracts.
 - **Dependencies:** none.
-- **Evidence/current state:** known browser regeneration writers were removed; no broad final audit is recorded.
+- **Evidence/current state:** [bounded runtime retirement audit](../design/combat2-legacy-runtime-retirement-audit.md) records current production ownership gates, conditional Combat1 writers, legacy entry/ward/broadcast presentation, retired Edge control-flow proof, shared content imports, active SQL predecessors and installed-only uncertainties. Passive browser regeneration and Force Shield writer removals are source-proven; Mik operator-reports the OOC CP presentation fix works. This does not establish other stance, death, Arena or multiplayer behavior. Installed catalogue/schedule/external-caller verification remains pending; this is not a general security or inventory audit.
 - **Acceptance criteria:** static guard plus manual trace; every writer classified active/dormant/obsolete; removals separately approved.
 - **Specification sections:** Engine principles and authority; Character ownership and lifecycle.
 
@@ -240,8 +240,8 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Engine area / status / priority:** authority cleanup; `deferred`; 21.
 - **Problem or decision:** obsolete surfaces increase ambiguity after authoritative coverage is proven.
 - **Intended outcome:** remove only paths proven unreferenced and superseded.
-- **Dependencies:** ENG-LEGACY-001 and installed/live parity.
-- **Evidence/current state:** removal scope not yet proven.
+- **Dependencies:** ENG-LEGACY-001, separate implementation authorization, and installed/live dependency proof for SQL or endpoint retirement.
+- **Evidence/current state:** [the audit](../design/combat2-legacy-runtime-retirement-audit.md) recommends first removing only unreachable code after the existing HTTP 410 returns in combat-tick/combat-catchup, retaining the refusal endpoints and shared modules. That source-only batch needs focused refusal/import/packaging proof and separately authorized deployment. Conditional frontend paths, SQL ACL changes, function/trigger removal and eventual column/data retirement are distinct later scopes. No cleanup is implemented or authorized by the audit.
 - **Acceptance criteria:** reference audit, rollback plan, focused/full boundary tests and no loss of content/admin functionality.
 - **Specification sections:** Engine principles and authority.
 

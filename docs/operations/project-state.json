@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T10:49:15Z",
-  "based_on_source_sha": "bb108b4ab72d4c5b5c235dc4a988f893cc8fa60a",
+  "updated_at": "2026-10-02T12:24:17Z",
+  "based_on_source_sha": "3f13a091eb0e7e3b6dd8684c8388fa0d521d8e16",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "6490ec1f199539190076a28e0852af3897687f13",
-    "timestamp": "2026-10-01T21:20:21Z",
+    "sha": "3f13a091eb0e7e3b6dd8684c8388fa0d521d8e16",
+    "timestamp": "2026-10-02T12:24:17Z",
     "evidence_type": "repository",
-    "evidence": "Clean local main safely fast-forwarded from 09cd8934b351e15fd7044f274a444aafb1ee4dd2 to 6490ec1f199539190076a28e0852af3897687f13, preserving five intervening Lovable commits, generated types and installed ledger artifact. Required checkpoint is an ancestor. Initial project-state check found Lovable's generated Markdown out of sync; regeneration repairs it. No Cloud access occurred.",
+    "evidence": "Legacy audit starts from clean main at 3f13a091eb0e7e3b6dd8684c8388fa0d521d8e16; origin/main fetched and already identical. Required checkpoint and recorded baseline are ancestors. All previous Lovable commits, generated types and ledger artifacts remain intact. Initial project-state check passed. Only audit/specification links, canonical roadmap and project-state records change; no Cloud access or executable source change occurred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -268,6 +268,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-legacy-runtime-retirement-audit-2026-10-02",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-02T12:24:17Z",
+      "evidence_type": "repository",
+      "evidence": "Documentation-only ENG-LEGACY-001/002 audit at clean synchronized 3f13a091. Current production flag reserves Combat2 before access; legacy hooks are mounted but fenced. Retired combat-tick/combat-catchup HTTP tails are control-flow unreachable, but imports/endpoints/shared utilities and many renamed SQL predecessors remain dependencies. Legacy entry clear_stances and OOC ward/broadcast presentation require separate isolation; installed triggers, schedules, data and external callers require separately authorized read-only Cloud verification. Proposed first removal batch preserves both Edge refusal shells and removes only dead resolver tails, with no SQL/type/data change; not implemented or authorized here. Existing cadence, resource, movement, stance percentage and commit rules are unchanged. No Cloud, gameplay, build, TypeScript, runtime tests or Edge generator invocation occurred in this documentation-only task; project-state Markdown alone is regenerated.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-ooc-stance-resource-presentation-2026-10-02",
       "status": "ready_for_manual_publish",
@@ -773,15 +783,25 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "Separately authorized Lovable full-file rollback compilation and installation of the stance-helper ACL correction; then Mik's manual stance frontend publication and bounded live verification.",
+    "artifact": "Review the ENG-LEGACY-001/002 removal plan; separately authorize a bounded source cleanup or read-only installed dependency verification before any retirement.",
     "sha": null,
-    "timestamp": "2026-10-01T08:09:00Z",
+    "timestamp": "2026-10-02T12:24:17Z",
     "evidence_type": "repository",
-    "evidence": "Installed stance source and ledger plus both Edge deployments are Lovable-reported; processing remained disabled. Compile the entire new ACL migration rollback-only, inspect role/signature/security/wrapper contracts, then install only when separately authorized. No new Edge deployment or frontend change is needed for the ACL-only correction. Mik's stance publication and new stance behavior verification remain pending. Preserve prior operator-observed f974068d recovery and fight/leave/return success and bounded cadence evidence; other nodes and untested multiplayer/concurrency branches are not verified. Do not replay the installed reset or repair live encounters.",
+    "evidence": "The stance-helper ACL installation is already recorded; do not repeat it. Mik now operator-reports successful OOC CP presentation after the frontend correction, with no exact publication revision supplied. Other stance/death/Force Shield/Arena/multiplayer verification remains pending. The legacy audit recommends dead Edge-tail cleanup with refusal contracts retained; SQL/column retirement requires positive installed dependency/data evidence. No removal, migration, deployment or Cloud inspection is authorized by this plan. Preserve earlier recovery, movement and cadence evidence within its existing limits.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "ooc-stance-cp-presentation-fix-operator-report-2026-10-02",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-10-02T12:24:17Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik reports the frontend correction fixed out-of-combat CP presentation after stance activation. Source checkpoint is 3f13a091, but exact published revision and live observation time are not supplied. This is operator-visible symptom verification only, not direct Codex Cloud/browser inspection or an observed persisted CP recovery trajectory. Do not infer death/respawn, Force Shield ward regeneration, Arena, max-cap races or multiplayer verification. Prior installation/deployment/movement/cadence evidence remains unchanged.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
+    },
     {
       "identity": "combat2-stale-equipment-departed-fighters-2026-10-01",
       "status": "blocked",
