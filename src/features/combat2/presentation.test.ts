@@ -425,6 +425,11 @@ describe('Combat2 authoritative presentation model', () => {
     expect(selectCombat2Creatures(false, model, [creature])[0]).toBe(creature);
     expect(selectCombat2Events(false, model, events)).toBe(events);
     expect(selectCombat2Character(true, model, character)).toMatchObject({ hp: 16, cp: 7, mp: 6, level: 3, xp: 120, gold: 45 });
+    const acknowledgement = { characterId: CHARACTER, cp: 50, maxCp: 100 };
+    expect(selectCombat2Character(true, model, character, acknowledgement)).toMatchObject({ hp: 16, cp: 7, mp: 6 });
+    expect(selectCombat2Character(true, null, character, acknowledgement).cp).toBe(50);
+    expect(selectCombat2Character(true, null, character)).toBe(character);
+    expect(selectCombat2Character(true, null, character, { ...acknowledgement, characterId: 'old-character' })).toBe(character);
     expect(selectCombat2Creatures(true, model, [creature])[0]).toMatchObject({ hp: 8, max_hp: 10, is_alive: true });
   });
 

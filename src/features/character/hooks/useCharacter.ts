@@ -82,6 +82,8 @@ export interface Character {
 export interface CharacterResourceDeliveryState {
   status: 'connecting' | 'current' | 'refreshing' | 'stale' | 'disconnected';
   lastAuthoritativeAt: number | null;
+  /** Start of the authoritative read, or receipt of a realtime row (not its arrival after a slow fetch). */
+  readStartedAt?: number | null;
   source: 'initial' | 'realtime' | 'poll' | 'focus' | 'reconnect' | null;
 }
 
@@ -116,6 +118,8 @@ export function useCharacter(user: User | null) {
   const fetchSourceRef = useRef<CharacterResourceDeliveryState['source']>('initial');
   const locationRevisionCounterRef = useRef(0);
   const locationRevisionRef = useRef<Map<string, number>>(new Map());
+  const resourceRevisionRef = useRef(new Map<string, number>());
+  const resourceRevisionCounterRef = useRef(0);
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
@@ -139,6 +143,8 @@ export function useCharacter(user: User | null) {
     }
     fetchInFlightRef.current = true;
     const fetchStartedAtLocationRevision = locationRevisionCounterRef.current;
+    const fetchStartedAtResourceRevision = resourceRevisionCounterRef.current;
+    const readStartedAt = Date.now();
     const source = fetchSourceRef.current;
     setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'refreshing' : 'connecting' }));
     const { data, error } = await supabase
@@ -182,11 +188,21 @@ export function useCharacter(user: User | null) {
 
       setCharacters(previous => rows.map(incoming => {
         const locationChangedAfterFetchStarted = (locationRevisionRef.current.get(incoming.id) ?? 0) > fetchStartedAtLocationRevision;
-        if (!locationChangedAfterFetchStarted) return incoming;
         const current = previous.find(character => character.id === incoming.id);
-        return current ? { ...incoming, current_node_id: current.current_node_id } : incoming;
+        if (!current) return incoming;
+        const resourceChangedAfterFetchStarted = (resourceRevisionRef.current.get(incoming.id) ?? 0) > fetchStartedAtResourceRevision;
+        return { ...incoming,
+          ...(locationChangedAfterFetchStarted ? { current_node_id: current.current_node_id } : {}),
+          // A read begun before a newer realtime delivery cannot roll resources back.
+          ...(resourceChangedAfterFetchStarted ? {
+            hp: current.hp, max_hp: current.max_hp, cp: current.cp, max_cp: current.max_cp,
+            mp: current.mp, max_mp: current.max_mp,
+          } : {}),
+        };
       }));
-      setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), source });
+      setResourceDelivery(previous => ({ status: 'current', lastAuthoritativeAt: Date.now(), source,
+        readStartedAt: (resourceRevisionRef.current.get(selectedCharacterIdRef.current ?? '') ?? 0) > fetchStartedAtResourceRevision
+          ? previous.readStartedAt : readStartedAt }));
     } else if (activeUserIdRef.current === userId && error) {
       setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'stale' : 'disconnected' }));
     }
@@ -220,6 +236,7 @@ export function useCharacter(user: User | null) {
       pendingWritesRef.current = new Map();
       heldFieldsRef.current = new Map();
       locationRevisionRef.current = new Map();
+      resourceRevisionRef.current = new Map();
       fetchQueuedRef.current = false;
       setResourceDelivery({ status: 'disconnected', lastAuthoritativeAt: null, source: null });
 
@@ -246,6 +263,7 @@ export function useCharacter(user: User | null) {
         table: 'characters',
         filter: `user_id=eq.${user.id}`,
       }, (payload) => {
+        if (activeUserIdRef.current !== user.id) return;
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as any).id;
           setCharacters(prev => prev.filter(c => c.id !== deletedId));
@@ -254,6 +272,7 @@ export function useCharacter(user: User | null) {
           setCharacters(prev => [...prev, payload.new as Character]);
         } else {
           const incoming = payload.new as Character;
+          resourceRevisionRef.current.set(incoming.id, ++resourceRevisionCounterRef.current);
           const pendingFields = pendingWritesRef.current.get(incoming.id);
           const heldFields = heldFieldsRef.current.get(incoming.id);
           setCharacters(prev => prev.map(c => {
@@ -272,7 +291,10 @@ export function useCharacter(user: User | null) {
           }));
 
         }
-        setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), source: 'realtime' });
+        const deliveredId = (payload.eventType === 'DELETE' ? payload.old : payload.new as Character).id;
+        if (!selectedCharacterIdRef.current || deliveredId === selectedCharacterIdRef.current) {
+          setResourceDelivery({ status: 'current', lastAuthoritativeAt: Date.now(), readStartedAt: Date.now(), source: 'realtime' });
+        }
       })
       .subscribe((status) => {
         if (activeUserIdRef.current !== user.id) return;

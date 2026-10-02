@@ -316,7 +316,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const combat2Stances = useCombat2StanceSession({
     enabled: combat2BlocksLegacy,
     characterId: character.id,
-    refreshKey: combat2.presentation.model?.stateVersion ?? combat2.sessionStatus,
+    refreshKey: `${combat2.sessionStatus}:${combat2.encounterId ?? ''}:${combat2.presentation.model?.stateVersion ?? ''}`,
+    resourceRevision: `${character.id}:${resourceDelivery?.lastAuthoritativeAt}:${character.cp}:${character.max_cp}`,
+    resourceReadStartedAt: resourceDelivery?.readStartedAt,
+    maxCp: combat2.sessionStatus === 'active' && combat2.presentation.model?.character.id === character.id
+      ? combat2.presentation.model.character.maxCp : character.max_cp,
   });
   const handleCombat2Respawn = useCallback(async () => {
     const result=await combat2.respawn.submit();
@@ -345,11 +349,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const authoritativeCombat2Reservations = authoritativeCombat2ReservationState.reservedBuffs;
   const authoritativeCombat2ReservedCp = authoritativeCombat2ReservationState.reservedCp;
   const presentedCharacter = useMemo(() => {
-    const selected = selectCombat2Character(combat2BlocksLegacy, activeCombat2Presentation, character);
-    return combat2BlocksLegacy && combat2Stances.projection
-      ? { ...selected, cp: combat2Stances.projection.rawCp, max_cp: combat2Stances.projection.maxCp }
-      : selected;
-  }, [activeCombat2Presentation, character, combat2BlocksLegacy, combat2Stances.projection]);
+    return selectCombat2Character(combat2BlocksLegacy,
+      combat2.sessionStatus === 'active' ? activeCombat2Presentation : null, character,
+      combat2Stances.acknowledgedResources);
+  }, [activeCombat2Presentation, character, combat2BlocksLegacy, combat2.sessionStatus, combat2Stances.acknowledgedResources]);
   // The node roster is the only source of creature visibility. Encounter
   // membership refines runtime values but never removes a living creature from
   // ordinary presentation, so peaceful creatures stay listed while Combat2 owns

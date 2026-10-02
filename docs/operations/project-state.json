@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T08:16:00Z",
-  "based_on_source_sha": "6490ec1f199539190076a28e0852af3897687f13",
+  "updated_at": "2026-10-02T10:49:15Z",
+  "based_on_source_sha": "bb108b4ab72d4c5b5c235dc4a988f893cc8fa60a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -268,6 +268,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-ooc-stance-resource-presentation-2026-10-02",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-10-02T10:49:15Z",
+      "evidence_type": "repository",
+      "evidence": "Source correction removes GamePage's indefinite cached stance rawCp/maxCp override. Identity-matched active Combat2 snapshots own combat resources; current character delivery owns OOC resources. Accepted stance costs are displayed only until newer delivery or session/max-CP change, and delayed responses cannot overwrite newer resources. Stance projection remains the reservation/identity authority and refreshes through the existing RPC when effective max CP changes; no client percentage calculation was added. Character reads overtaken by realtime delivery preserve newer resource fields. Focused frontend regressions cover OOC recovery, multiple reservations, drop, max CP, session/character transitions and stale reads/responses. Server calculations, costs, percentage reservations, settlement and ownership rules are unchanged. No Edge dependency changes, migrations or Cloud operations. Mik must manually publish and observe OOC activation followed by CP recovery without entering combat or switching tabs; live verification remains pending. ENG-STANCE-001/002 and resource ownership specification rules are preserved.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "combat2-character-stances-rollback-compilation-2026-10-01",
       "status": "installed",
@@ -938,9 +948,9 @@
       "sha": null,
       "timestamp": "2026-10-02T08:15:02Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Read-only investigation, not fixed. Character Cithra d0c1b29a: world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z: persisted cp=300/300 constant, characters.updated_at advancing about every 4s, reserved_buffs={}; character_stance has force_shield 0.1, arcane_surge 0.15, ignite 0.2 (version 1, activated 08:12:00-08:12:02Z). Operator UI showed 89/300 with 135 reserved. Verdict A (server regenerates, client stale). Boundary: src/pages/GamePage.tsx presentedCharacter overrides live character cp/max_cp with combat2Stances.projection.rawCp, a snapshot taken at stance change; useCombat2StanceSession refreshKey is combat2 stateVersion ?? sessionStatus, which does not change out of combat. Proposed correction: take cp/max_cp from the live character row and use the projection only for reservations, or refresh the projection on character resource updates.",
-      "reporting_actor": "lovable",
-      "directly_verified": true
+      "evidence": "Lovable-reported read-only investigation: Cithra d0c1b29a, world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z showed persisted CP constant at 300/300 and character updates about every four seconds; active force_shield, arcane_surge and ignite reservations totalled 135 CP. Mik reportedly saw 89/300. Lovable did not inspect the browser and did not capture CP increasing from the activation value: this is not a directly observed regeneration trajectory. Repository source independently proves the cached stance-response override in GamePage; its frontend correction is separately recorded as ready for manual publication, not live-verified. No Cloud access or new live observation was performed by Codex.",
+      "reporting_actor": "Lovable (handoff supplied by Mik)",
+      "directly_verified": false
     }
   ],
   "product_backlog": [

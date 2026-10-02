@@ -10,8 +10,11 @@ export function selectCombat2Character(
   enabled: boolean,
   model: Combat2PresentationModel | null,
   legacy: Character,
+  acknowledgement?: { characterId: string; cp: number; maxCp: number } | null,
 ): Character {
-  if (!enabled || !model || model.character.id !== legacy.id) return legacy;
+  if (!enabled) return legacy;
+  if (!model || model.character.id !== legacy.id) return acknowledgement?.characterId === legacy.id
+    ? { ...legacy, cp: acknowledgement.cp, max_cp: acknowledgement.maxCp } : legacy;
   return {
     ...legacy,
     level: model.character.level, xp: model.character.xp, gold: model.character.gold,

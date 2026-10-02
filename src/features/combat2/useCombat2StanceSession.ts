@@ -45,13 +45,21 @@ export function useCombat2StanceSession(options: {
   enabled: boolean;
   characterId: string | null;
   refreshKey?: string | number | null;
+  resourceRevision?: string | number | null;
+  resourceReadStartedAt?: number | null;
+  maxCp?: number;
   generateRequestId?: () => string;
 }) {
-  const { enabled, characterId, refreshKey, generateRequestId = () => crypto.randomUUID() } = options;
+  const { enabled, characterId, refreshKey, resourceRevision, resourceReadStartedAt, maxCp, generateRequestId = () => crypto.randomUUID() } = options;
+  const currentResources = useRef({ revision: resourceRevision, readStartedAt: resourceReadStartedAt });
+  currentResources.current = { revision: resourceRevision, readStartedAt: resourceReadStartedAt };
   const generation = useRef(0);
   const attempt = useRef<{ key: string; requestId: string; action: 'activate' | 'drop'; inFlight: boolean } | null>(null);
   const [projection, setProjection] = useState<Combat2StanceProjection | null>(null);
   const [loading, setLoading] = useState(false);
+  const [acknowledgedResources, setAcknowledgedResources] = useState<{
+    characterId: string; revision: typeof resourceRevision; submittedAt: number; sessionKey: typeof refreshKey; cp: number; maxCp: number;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     if (!enabled || !characterId) { setProjection(null); return; }
@@ -65,7 +73,12 @@ export function useCombat2StanceSession(options: {
     setProjection(decoded?.characterId === characterId ? decoded : null);
   }, [characterId, enabled]);
 
-  useEffect(() => { void refresh(); return () => { generation.current += 1; }; }, [refresh, refreshKey]);
+  useEffect(() => { attempt.current = null; setProjection(null); setAcknowledgedResources(null); }, [characterId, enabled]);
+  useEffect(() => {
+    setAcknowledgedResources(null);
+    void refresh();
+    return () => { generation.current += 1; };
+  }, [refresh, refreshKey, maxCp]);
 
   const change = useCallback(async (abilityKey: string, action: 'activate' | 'drop'): Promise<Combat2StanceResult> => {
     if (!enabled || !characterId || !projection || projection.characterId !== characterId) {
@@ -76,7 +89,10 @@ export function useCombat2StanceSession(options: {
     const next = existing && existing.key === abilityKey && existing.action === action
       ? existing : { key: abilityKey, action, requestId: generateRequestId(), inFlight: false };
     attempt.current = next; next.inFlight = true;
-    const current = generation.current;
+    const current = ++generation.current; // Fence reads started before this deliberate mutation.
+    const resourcesAtSubmission = currentResources.current;
+    const submittedAt = Date.now();
+    setLoading(false);
     try {
       const { data, error } = await supabase.rpc('combat2_change_stance' as never, {
         _character_id: characterId, _ability_key: abilityKey, _action: action, _request_id: next.requestId,
@@ -95,12 +111,23 @@ export function useCombat2StanceSession(options: {
         return { status: 'error', reason: 'Malformed stance projection' };
       }
       setProjection(decoded); attempt.current = null;
+      const delivered = currentResources.current;
+      const hasNewerDelivery = delivered.readStartedAt != null
+        ? delivered.readStartedAt > submittedAt : delivered.revision !== resourcesAtSubmission.revision;
+      setAcknowledgedResources(!hasNewerDelivery
+        ? { characterId, revision: resourcesAtSubmission.revision, submittedAt, sessionKey: refreshKey, cp: decoded.rawCp, maxCp: decoded.maxCp } : null);
       return { status: 'accepted', classification: row.kind as 'activated' | 'dropped' };
     } catch {
       next.inFlight = false;
       return { status: 'uncertain', reason: 'Stance request outcome is uncertain' };
     }
-  }, [characterId, enabled, generateRequestId, projection]);
+  }, [characterId, enabled, generateRequestId, projection, refreshKey]);
 
-  return { projection, loading, ready: !!projection && projection.characterId === characterId, refresh, change };
+  return { projection: projection?.characterId === characterId && enabled ? projection : null, loading,
+    acknowledgedResources: enabled && acknowledgedResources?.characterId === characterId
+      && (resourceReadStartedAt != null ? resourceReadStartedAt <= acknowledgedResources.submittedAt
+        : acknowledgedResources.revision === resourceRevision) && acknowledgedResources.sessionKey === refreshKey
+      && (maxCp === undefined || acknowledgedResources.maxCp === maxCp) ? acknowledgedResources : null,
+    ready: enabled && !!projection && projection.characterId === characterId
+      && (maxCp === undefined || projection.maxCp === maxCp), refresh, change };
 }

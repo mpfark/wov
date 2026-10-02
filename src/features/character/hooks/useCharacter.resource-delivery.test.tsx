@@ -44,6 +44,30 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('authoritative character resource delivery', () => {
+  it('preserves newer realtime resources when an older read finishes afterward', async () => {
+    let release!: (value: unknown) => void;
+    mocks.query.mockReset().mockResolvedValueOnce({ data: [base(5)], error: null })
+      .mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    act(() => result.current.refetchCharacters());
+    await act(async () => { mocks.change?.({ eventType: 'UPDATE', new: base(17) }); });
+    const newerReadStartedAt = result.current.resourceDelivery.readStartedAt;
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    await act(async () => { release({ data: [base(9)], error: null }); });
+    expect(result.current.character).toMatchObject({ hp: 17, cp: 17, mp: 17 });
+    expect(result.current.resourceDelivery.readStartedAt).toBe(newerReadStartedAt);
+    unmount();
+  });
+
+  it('does not use another character realtime update as selected-character resource delivery', async () => {
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    const delivered = result.current.resourceDelivery;
+    await act(async () => { mocks.change?.({ eventType: 'UPDATE', new: { ...base(17), id: 'other-character' } }); });
+    expect(result.current.resourceDelivery).toBe(delivered);
+    unmount();
+  });
   it('renders a server update while the document remains focused and idle', async () => {
     const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
     await act(async () => {});
