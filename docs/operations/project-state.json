@@ -1014,7 +1014,7 @@
     },
     {
       "identity": "ENG-LEGACY-002 installed SQL dependency audit",
-      "status": "observed",
+      "status": "authored",
       "sha": "724cde8dff94ea0ab57cf5df4d3837526dd54362",
       "timestamp": "2026-10-02T18:14:37Z",
       "evidence_type": "cloud_inspection",
