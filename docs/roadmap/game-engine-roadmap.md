@@ -237,11 +237,11 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Specification sections:** Information layers.
 
 ### ENG-LEGACY-002 — Remove obsolete legacy runtime surfaces
-- **Engine area / status / priority:** authority cleanup; `deferred`; 21.
+- **Engine area / status / priority:** authority cleanup; `implemented_source`; 21.
 - **Problem or decision:** obsolete surfaces increase ambiguity after authoritative coverage is proven.
 - **Intended outcome:** remove only paths proven unreferenced and superseded.
 - **Dependencies:** ENG-LEGACY-001, separate implementation authorization, and installed/live dependency proof for SQL or endpoint retirement.
-- **Evidence/current state:** [the audit](../design/combat2-legacy-runtime-retirement-audit.md) recommends first removing only unreachable code after the existing HTTP 410 returns in combat-tick/combat-catchup, retaining the refusal endpoints and shared modules. That source-only batch needs focused refusal/import/packaging proof and separately authorized deployment. Conditional frontend paths, SQL ACL changes, function/trigger removal and eventual column/data retirement are distinct later scopes. No cleanup is implemented or authorized by the audit.
+- **Evidence/current state:** [the audit](../design/combat2-legacy-runtime-retirement-audit.md) recommends first removing only unreachable code after the existing HTTP 410 returns in combat-tick/combat-catchup, retaining the refusal endpoints and shared modules. Batch A now removes those unreachable tails only, with exact refusal/boot behavior proven by focused executable tests and retained-dependency checks. Root/application and Edge-shell TypeScript pass; Combat2 packaging passes. C3 exact parity has an unchanged baseline line-ending failure; normalized committed content agrees. Deployment of combat-tick and combat-catchup remains separately authorized and unverified. Conditional frontend paths, SQL ACL changes, function/trigger removal and eventual column/data retirement are distinct later scopes. Browser and SQL retirement, endpoint deletion and full legacy retirement remain pending; no Cloud operation or deployment occurred.
 - **Acceptance criteria:** reference audit, rollback plan, focused/full boundary tests and no loss of content/admin functionality.
 - **Specification sections:** Engine principles and authority.
 
