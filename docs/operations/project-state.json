@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T21:54:15Z",
+  "updated_at": "2026-10-02T22:50:00Z",
   "based_on_source_sha": "a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb",
   "status_vocabulary": [
     "authored",
@@ -829,6 +829,16 @@
       "evidence_type": "repository_inspection",
       "identity": "edge-build-identity-stale-test",
       "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f"
+    },
+    {
+      "status": "blocked",
+      "evidence": "OPEN. Batch C rollback-only practice run of 20261002190000_combat2_legacy_browser_privileges.sql (SHA-256 1fc13140...b762f, verified) failed SQLSTATE 42501 permission denied for table job at LOCK TABLE cron.job IN SHARE MODE NOWAIT (DO block line 20). Executing role postgres (not superuser) holds only SELECT (r*) on cron.job; owner supabase_admin. The normal migration runner uses the same role, so installation would fail identically. Not installed; migration not modified; ledger unchanged (510). Needs a source correction (e.g. a lock mode permitted with SELECT, or another schedule fence) and a new hash.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true,
+      "timestamp": "2026-10-02T22:50:00Z",
+      "evidence_type": "cloud_inspection",
+      "identity": "eng-legacy-002-batch-c-cron-lock-permission",
+      "sha": "2910080df9a4dcd7fa154512ae0b776914639a9d"
     }
   ],
   "next_approved_task": {
@@ -1031,6 +1041,16 @@
       "evidence": "Lovable reports read-only snapshot 2026-10-02T18:14:37Z: all five batch-C functions had effective browser access; clear_stances also PUBLIC. No effects-catchup schedule or queued legacy dispatch rows; legacy reserved_buffs/stance_state/active_effects empty; current character_stance/request 5/19 and 179 historical catch-up logs retained. Active/shared functions and composed predecessors retained. World asleep, maintenance, soak off were observations, not settings changed by Codex. wake_world/world_watchdog can rearm old schedules when legacy due scopes exist. Dynamic SQL, external callers, deployed code/logs and restricted Vault/HTTP history incompletely observable. No candidate invocation or mutation. This is supplied Cloud observation, not source authoring or direct Codex Cloud inspection; volatile and requires a fresh preflight. Audit document is committed separately; batch C candidate is authored, not installed. Frontend publication/live tests are not inferred.",
       "reporting_actor": "Lovable (handoff supplied by Mik; Codex repository reconciliation)",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-LEGACY-002 batch C installation preflight",
+      "status": "blocked",
+      "sha": "2910080df9a4dcd7fa154512ae0b776914639a9d",
+      "timestamp": "2026-10-02T22:50:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Fresh Lovable preflight: world asleep, combat_mode maintenance, soak off; cron.job 0 rows (0 effects-catchup); no ledger entry for 20261002190000 or legacy_browser (510 entries). All five exact signatures single-overload, postgres-owned, SECURITY DEFINER, volatile, plpgsql, search_path=public; full pg_get_functiondef MD5 prefixes match; full prosrc MD5s equal repository predecessor bodies (send 237ddf89, dispatch_one aab8c425, reconcile 8b962417, credential_health e83dcb99, clear_stances 024c143b). Effective access: all five anon/authenticated/service_role/postgres; clear_stances also PUBLIC; credential_health also supabase_read_only_user; all also sandbox_exec role. Practice run aborted at cron lock (42501) before any REVOKE; post-abort ACLs unchanged and no ledger entry. Not installed.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "product_backlog": [
