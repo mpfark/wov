@@ -2,7 +2,7 @@
 # WoV project state
 
 Based on source SHA: `a7c9ba31f155f39d1db9aa4924e820989216e09b`
-Last recorded update: 2026-10-02T17:20:00Z
+Last recorded update: 2026-10-02T18:14:37Z
 
 GitHub `origin/main` is authoritative for source. Repository presence does not prove installation, deployment, or frontend publication. A descendant SHA is valid when ancestry is verified. Only Mik manually publishes the frontend.
 
@@ -107,6 +107,7 @@ GitHub `origin/main` is authoritative for source. Repository presence does not p
 | combat2-commit-evidence-2026-09-21 | unknown | — | cloud_inspection | direct | Observed read-only from preserved session c84328c9 (encounter 2e7249d4, node f45a8b21): automatic dispatcher attempts reached commit_attempted every cycle; ticks 23, 24 and 25 committed only on the retry following an accepted ability intent, and every no-new-intent retry ended commit_refused/commit_transport_error. Duplicate correlation IDs are retries of the same uncommitted tick. Postgres and edge logs for the window have expired. Volatile; preserved and untouched. |
 | post-completion-ownership-install-2026-09-24 | blocked | — | cloud_inspection | direct | Post-combat HP/CP/MP regeneration awaits Mik's bounded live verification. At install: maintenance, asleep, soak off, 0 cron jobs, 0 live claims, 0 unconsumed events, 0 queued departures, 0 active recordings; 4 encounters (2 active), 4 fighters, 0 present. |
 | ooc-cp-regen-after-stance-investigation-2026-10-02 | blocked | — | cloud_inspection | reported/unknown | Lovable-reported read-only investigation: Cithra d0c1b29a, world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z showed persisted CP constant at 300/300 and character updates about every four seconds; active force_shield, arcane_surge and ignite reservations totalled 135 CP. Mik reportedly saw 89/300. Lovable did not inspect the browser and did not capture CP increasing from the activation value: this is not a directly observed regeneration trajectory. Repository source independently proves the cached stance-response override in GamePage; its frontend correction is separately recorded as ready for manual publication, not live-verified. No Cloud access or new live observation was performed by Codex. |
+| ENG-LEGACY-002 installed SQL dependency audit | authored | 724cde8dff94ea0ab57cf5df4d3837526dd54362 | cloud_inspection | direct | Read-only catalogue inspection: effects_catchup_send/dispatch_one/reconcile/credential_health executable by anon and authenticated; clear_stances executable by PUBLIC/anon/authenticated; activate_stance/drop_stance/apply_force_shield_regen service_role only; cron.job empty; wake_world/world_watchdog can schedule effects-catchup when legacy due scopes exist; 0 legacy reserved_buffs/stance_state/active_effects rows. No writes or invocations. Vault, pg_net history and deployed logs unavailable. See docs/design/combat2-legacy-sql-dependency-audit.md. |
 
 ## Next approved task
 

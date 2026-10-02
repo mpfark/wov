@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T17:20:00Z",
+  "updated_at": "2026-10-02T18:14:37Z",
   "based_on_source_sha": "a7c9ba31f155f39d1db9aa4924e820989216e09b",
   "status_vocabulary": [
     "authored",
@@ -1011,6 +1011,16 @@
       "evidence": "Lovable-reported read-only investigation: Cithra d0c1b29a, world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z showed persisted CP constant at 300/300 and character updates about every four seconds; active force_shield, arcane_surge and ignite reservations totalled 135 CP. Mik reportedly saw 89/300. Lovable did not inspect the browser and did not capture CP increasing from the activation value: this is not a directly observed regeneration trajectory. Repository source independently proves the cached stance-response override in GamePage; its frontend correction is separately recorded as ready for manual publication, not live-verified. No Cloud access or new live observation was performed by Codex.",
       "reporting_actor": "Lovable (handoff supplied by Mik)",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-LEGACY-002 installed SQL dependency audit",
+      "status": "authored",
+      "sha": "724cde8dff94ea0ab57cf5df4d3837526dd54362",
+      "timestamp": "2026-10-02T18:14:37Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Read-only catalogue inspection: effects_catchup_send/dispatch_one/reconcile/credential_health executable by anon and authenticated; clear_stances executable by PUBLIC/anon/authenticated; activate_stance/drop_stance/apply_force_shield_regen service_role only; cron.job empty; wake_world/world_watchdog can schedule effects-catchup when legacy due scopes exist; 0 legacy reserved_buffs/stance_state/active_effects rows. No writes or invocations. Vault, pg_net history and deployed logs unavailable. See docs/design/combat2-legacy-sql-dependency-audit.md.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "product_backlog": [
