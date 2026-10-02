@@ -2,7 +2,7 @@
 # WoV project state
 
 Based on source SHA: `6490ec1f199539190076a28e0852af3897687f13`
-Last recorded update: 2026-10-01T22:05:00Z
+Last recorded update: 2026-10-02T08:16:00Z
 
 GitHub `origin/main` is authoritative for source. Repository presence does not prove installation, deployment, or frontend publication. A descendant SHA is valid when ancestry is verified. Only Mik manually publishes the frontend.
 
@@ -99,6 +99,7 @@ GitHub `origin/main` is authoritative for source. Repository presence does not p
 | combat2-live-latency | unknown | — | none | reported/unknown | Still unmeasured. The 2026-09-21 live attempts produced no usable timing. The installed claim contract is now corrected in Cloud, but no live tick has been observed and no recording was authorized, so live Combat2 behaviour remains unproven. |
 | combat2-commit-evidence-2026-09-21 | unknown | — | cloud_inspection | direct | Observed read-only from preserved session c84328c9 (encounter 2e7249d4, node f45a8b21): automatic dispatcher attempts reached commit_attempted every cycle; ticks 23, 24 and 25 committed only on the retry following an accepted ability intent, and every no-new-intent retry ended commit_refused/commit_transport_error. Duplicate correlation IDs are retries of the same uncommitted tick. Postgres and edge logs for the window have expired. Volatile; preserved and untouched. |
 | post-completion-ownership-install-2026-09-24 | blocked | — | cloud_inspection | direct | Post-combat HP/CP/MP regeneration awaits Mik's bounded live verification. At install: maintenance, asleep, soak off, 0 cron jobs, 0 live claims, 0 unconsumed events, 0 queued departures, 0 active recordings; 4 encounters (2 active), 4 fighters, 0 present. |
+| ooc-cp-regen-after-stance-investigation-2026-10-02 | blocked | — | cloud_inspection | direct | Read-only investigation, not fixed. Character Cithra d0c1b29a: world awake, combat_mode open, soak off. Samples 08:14:40-08:15:02Z: persisted cp=300/300 constant, characters.updated_at advancing about every 4s, reserved_buffs={}; character_stance has force_shield 0.1, arcane_surge 0.15, ignite 0.2 (version 1, activated 08:12:00-08:12:02Z). Operator UI showed 89/300 with 135 reserved. Verdict A (server regenerates, client stale). Boundary: src/pages/GamePage.tsx presentedCharacter overrides live character cp/max_cp with combat2Stances.projection.rawCp, a snapshot taken at stance change; useCombat2StanceSession refreshKey is combat2 stateVersion ?? sessionStatus, which does not change out of combat. Proposed correction: take cp/max_cp from the live character row and use the projection only for reservations, or refresh the projection on character resource updates. |
 
 ## Next approved task
 
