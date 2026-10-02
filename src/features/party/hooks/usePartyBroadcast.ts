@@ -63,6 +63,15 @@ interface PartyInspireBuffEvent {
  * Hybrid Broadcast channels for party-level events.
  */
 export function usePartyBroadcast(partyId: string | null, characterId: string | null) {
+  const identity = useRef({ partyId, characterId, generation: 0 });
+  if (identity.current.partyId !== partyId || identity.current.characterId !== characterId) {
+    identity.current = { partyId, characterId, generation: identity.current.generation + 1 };
+  }
+  const generation = identity.current.generation;
+  const current = useCallback(() => !!partyId && !!characterId
+    && identity.current.partyId === partyId && identity.current.characterId === characterId
+    && identity.current.generation === generation,
+  [partyId, characterId, generation]);
   const [hpOverrides, setHpOverrides] = useState<Record<string, { hp: number; max_hp: number }>>({});
   const [moveEvents, setMoveEvents] = useState<PartyMoveEvent[]>([]);
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
@@ -78,7 +87,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     setRewardEvents([]);
     setIncomingPartyRegenBuff(null);
     setIncomingInspireBuff(null);
-  }, [partyId]);
+  }, [partyId, characterId]);
 
   useEffect(() => {
     if (!partyId || !characterId) return;
@@ -88,6 +97,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
 
     channel
       .on('broadcast', { event: 'party_hp' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyHpEvent;
         if (!data?.character_id || data.character_id === characterId) return;
         logBroadcast('in', `party`, 'party_hp');
@@ -97,12 +107,14 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         }));
       })
       .on('broadcast', { event: 'party_move' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyMoveEvent;
         if (!data?.character_id || data.character_id === characterId) return;
         logBroadcast('in', `party`, 'party_move');
         setMoveEvents(prev => [...prev.slice(-20), data]);
       })
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyCombatMsgEvent;
         if (!data?.id) return;
         // Source player already has a first-person log line from the HTTP path
@@ -112,18 +124,21 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
       })
       .on('broadcast', { event: 'party_reward' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyRewardEvent;
         if (!data?.character_id || data.character_id !== characterId) return;
         logBroadcast('in', `party`, 'party_reward');
         setRewardEvents(prev => [...prev.slice(-9), data]);
       })
       .on('broadcast', { event: 'party_regen_buff' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyRegenBuffEvent;
         if (!data || data.caster_id === characterId) return;
         logBroadcast('in', `party`, 'party_regen_buff');
         setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source, abilityKey: data.abilityKey, label: data.label, durationMs: data.durationMs, tickText: data.tickText });
       })
       .on('broadcast', { event: 'party_inspire_buff' }, (payload) => {
+        if (!current()) return;
         const data = payload.payload as PartyInspireBuffEvent;
         if (!data || data.caster_id === characterId) return;
         logBroadcast('in', `party`, 'party_inspire_buff');
@@ -141,30 +156,30 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [partyId, characterId]);
+  }, [partyId, characterId, current]);
 
   const broadcastHp = useCallback((charId: string, hp: number, maxHp: number, source: string) => {
-    if (!channelRef.current) return;
+    if (!current() || !channelRef.current) return;
     logBroadcast('out', `party`, 'party_hp');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_hp',
       payload: { character_id: charId, hp, max_hp: maxHp, source } satisfies PartyHpEvent,
     });
-  }, []);
+  }, [current]);
 
   const broadcastMove = useCallback((charId: string, charName: string, nodeId: string, fromNodeId: string) => {
-    if (!channelRef.current) return;
+    if (!current() || !channelRef.current) return;
     logBroadcast('out', `party`, 'party_move');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_move',
       payload: { character_id: charId, character_name: charName, node_id: nodeId, from_node_id: fromNodeId, timestamp: Date.now() } satisfies PartyMoveEvent,
     });
-  }, []);
+  }, [current]);
 
   const broadcastCombatMsg = useCallback((event: GameLogEvent, nodeId: string | null, characterName: string | null) => {
-    if (!channelRef.current) return;
+    if (!current() || !channelRef.current) return;
     logBroadcast('out', `party`, 'party_combat_msg');
     channelRef.current.send({
       type: 'broadcast',
@@ -177,30 +192,30 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         character_name: characterName,
       } satisfies PartyCombatMsgEvent,
     });
-  }, []);
+  }, [current]);
 
   const broadcastPartyRegenBuff = useCallback((
     healPerTick: number, expiresAt: number, source: string, casterId: string,
     identity?: { abilityKey?: string; label?: string; durationMs?: number; tickText?: string },
   ) => {
-    if (!channelRef.current) return;
+    if (!current() || !channelRef.current) return;
     logBroadcast('out', `party`, 'party_regen_buff');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_regen_buff',
       payload: { healPerTick, expiresAt, source, ...identity, caster_id: casterId } satisfies PartyRegenBuffEvent,
     });
-  }, []);
+  }, [current]);
 
   const broadcastInspireBuff = useCallback((hpPerTick: number, cpPerTick: number, expiresAt: number, durationMs: number, casterId: string) => {
-    if (!channelRef.current) return;
+    if (!current() || !channelRef.current) return;
     logBroadcast('out', `party`, 'party_inspire_buff');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_inspire_buff',
       payload: { hpPerTick, cpPerTick, expiresAt, durationMs, caster_id: casterId } satisfies PartyInspireBuffEvent,
     });
-  }, []);
+  }, [current]);
 
   // NOTE: party_reward events are server-originated (combat-tick edge function).
   // No client-side broadcastReward sender is needed.

@@ -19,6 +19,23 @@ const projection = (characterId: string, keys: string[] = []) => ({ ok: true, ki
 describe('useCombat2StanceSession', () => {
   beforeEach(() => rpc.mockReset());
 
+  it('refreshes OOC persistent ward from authoritative delivery without a timer or changing raw resources', async () => {
+    const ward = (remaining: number) => ({ ...projection(A, ['force_shield']),
+      stances: [{ ...projection(A, ['force_shield']).stances[0], state: { ward_remaining: remaining } }] });
+    rpc.mockResolvedValueOnce({ data: ward(3), error: null })
+      .mockResolvedValueOnce({ data: ward(7), error: null });
+    const { result, rerender } = renderHook(({ revision }) => useCombat2StanceSession({
+      enabled: true, characterId: A, resourceRevision: revision, refreshWardOnDelivery: true,
+    }), { initialProps: { revision: 1 } });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.projection?.stances[0].state.ward_remaining).toBe(3);
+    rerender({ revision: 2 });
+    await waitFor(() => expect(result.current.projection?.stances[0].state.ward_remaining).toBe(7));
+    expect(result.current.acknowledgedResources).toBeNull();
+    expect(result.current.projection?.reservedCp).toBe(10);
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual(['combat2_character_stances', 'combat2_character_stances']);
+  });
+
   it('does not let a pre-activation read arriving late replace an acknowledged cost', async () => {
     rpc.mockResolvedValueOnce({ data: projection(A), error: null })
       .mockResolvedValueOnce({ data: { ok: true, kind: 'activated', projection: projection(A, ['force_shield']) }, error: null });

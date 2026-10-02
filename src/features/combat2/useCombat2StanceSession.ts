@@ -48,12 +48,15 @@ export function useCombat2StanceSession(options: {
   resourceRevision?: string | number | null;
   resourceReadStartedAt?: number | null;
   maxCp?: number;
+  /** Refresh persistent ward state from the existing RPC after OOC resource delivery. */
+  refreshWardOnDelivery?: boolean;
   generateRequestId?: () => string;
 }) {
-  const { enabled, characterId, refreshKey, resourceRevision, resourceReadStartedAt, maxCp, generateRequestId = () => crypto.randomUUID() } = options;
+  const { enabled, characterId, refreshKey, resourceRevision, resourceReadStartedAt, maxCp, refreshWardOnDelivery = false, generateRequestId = () => crypto.randomUUID() } = options;
   const currentResources = useRef({ revision: resourceRevision, readStartedAt: resourceReadStartedAt });
   currentResources.current = { revision: resourceRevision, readStartedAt: resourceReadStartedAt };
   const generation = useRef(0);
+  const wardDeliveryRevision = useRef(resourceRevision);
   const attempt = useRef<{ key: string; requestId: string; action: 'activate' | 'drop'; inFlight: boolean } | null>(null);
   const [projection, setProjection] = useState<Combat2StanceProjection | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,6 +82,16 @@ export function useCombat2StanceSession(options: {
     void refresh();
     return () => { generation.current += 1; };
   }, [refresh, refreshKey, maxCp]);
+
+  useEffect(() => {
+    // Resource delivery is a wake-up hint, never a browser regeneration clock.
+    // Do not overtake a deliberate mutation or clear its acknowledged cost.
+    const changed = wardDeliveryRevision.current !== resourceRevision;
+    wardDeliveryRevision.current = resourceRevision;
+    if (changed && refreshWardOnDelivery && projection?.characterId === characterId
+        && projection.stances.some(stance => stance.abilityKey === 'force_shield')
+        && !attempt.current?.inFlight) void refresh();
+  }, [resourceRevision, refreshWardOnDelivery, refresh, characterId]);
 
   const change = useCallback(async (abilityKey: string, action: 'activate' | 'drop'): Promise<Combat2StanceResult> => {
     if (!enabled || !characterId || !projection || projection.characterId !== characterId) {

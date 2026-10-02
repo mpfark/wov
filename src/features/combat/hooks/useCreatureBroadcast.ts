@@ -13,6 +13,8 @@ interface CreatureDamageEvent {
 
 /** How long a broadcast-only kill hint hides a creature before server truth must take over. */
 const SOFT_DEAD_TTL_MS = 8000;
+const NO_HP_OVERRIDES: Record<string, number> = {};
+const NO_SOFT_DEAD = new Set<string>();
 
 /**
  * Hybrid Broadcast channel for instant creature HP sync at a node.
@@ -28,7 +30,18 @@ export function useCreatureBroadcast(
   characterId: string | null,
   onOtherPlayerDamage?: (message: string) => void,
   creatureNameResolver?: (creatureId: string) => string | undefined,
+  enabled = true,
 ) {
+  const currentIdentity = useRef({ enabled, nodeId, characterId, generation: 0 });
+  if (currentIdentity.current.enabled !== enabled || currentIdentity.current.nodeId !== nodeId
+      || currentIdentity.current.characterId !== characterId) {
+    currentIdentity.current = { enabled, nodeId, characterId, generation: currentIdentity.current.generation + 1 };
+  }
+  const generation = currentIdentity.current.generation;
+  const current = useCallback(() => currentIdentity.current.enabled
+    && currentIdentity.current.nodeId === nodeId && currentIdentity.current.characterId === characterId
+    && currentIdentity.current.generation === generation,
+  [nodeId, characterId, generation]);
   const [broadcastOverrides, setBroadcastOverrides] = useState<Record<string, number>>({});
   const [softDeadIds, setSoftDeadIds] = useState<Set<string>>(() => new Set());
   const softDeadTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -58,6 +71,7 @@ export function useCreatureBroadcast(
   }, []);
 
   const markSoftDead = useCallback((id: string) => {
+    if (!current()) return;
     // Reset any existing timer
     const existing = softDeadTimersRef.current.get(id);
     if (existing) clearTimeout(existing);
@@ -69,20 +83,22 @@ export function useCreatureBroadcast(
       next.add(id);
       return next;
     });
-  }, [removeSoftDead]);
+  }, [removeSoftDead, current]);
 
   // Reset overrides when node changes
   useEffect(() => {
     setBroadcastOverrides({});
     clearAllSoftDead();
-  }, [nodeId, clearAllSoftDead]);
+  }, [nodeId, characterId, enabled, clearAllSoftDead]);
 
   // Cleanup all timers on unmount
   useEffect(() => () => clearAllSoftDead(), [clearAllSoftDead]);
 
   // Register callback for incoming creature damage events
   useEffect(() => {
+    if (!enabled) return;
     handle.onCreatureDamage.current = (payload: any) => {
+      if (!current()) return;
       const data = payload.payload as CreatureDamageEvent;
       if (!data || !data.creature_id) return;
       // Self-filter
@@ -105,7 +121,7 @@ export function useCreatureBroadcast(
       }
     };
     return () => { handle.onCreatureDamage.current = null; };
-  }, [handle, nodeId, characterId, markSoftDead]);
+  }, [handle, nodeId, characterId, markSoftDead, enabled, current]);
 
   // Clean up overrides for creatures that no longer exist
   const cleanupOverrides = useCallback((activeCreatureIds: string[]) => {
@@ -142,7 +158,7 @@ export function useCreatureBroadcast(
     attackerName: string,
     killed: boolean,
   ) => {
-    if (!handle.channelRef.current) return;
+    if (!current() || !handle.channelRef.current) return;
     logBroadcast('out', `node`, 'creature_damage');
     handle.channelRef.current.send({
       type: 'broadcast',
@@ -156,7 +172,7 @@ export function useCreatureBroadcast(
         sender_id: characterId,
       } as CreatureDamageEvent,
     });
-  }, [handle, characterId]);
+  }, [handle, characterId, current]);
 
-  return { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead };
+  return { broadcastOverrides: enabled ? broadcastOverrides : NO_HP_OVERRIDES, softDeadIds: enabled ? softDeadIds : NO_SOFT_DEAD, broadcastDamage, cleanupOverrides, markSoftDead };
 }

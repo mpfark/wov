@@ -6,6 +6,7 @@ import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp 
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
 import type { Combat2PresentationEffect } from '@/features/combat2/presentation';
+import type { Combat2CharacterStance } from '@/features/combat2/useCombat2StanceSession';
 
 
 // Duration constants for buff background calculation (in ms).
@@ -46,8 +47,11 @@ export interface StatusBarsStripProps {
   stanceReservedCp?: number;
   /** Active stance map keyed by stance key. Used to render stance pips. */
   reservedBuffs?: Record<string, { tier?: number; reserved: number; activated_at?: number }> | null;
-  /** Defined only while Combat2 owns the active presentation session. */
+  /** Defined throughout Combat2 ownership, including authoritative OOC absence. */
   authoritativeEffects?: readonly Combat2PresentationEffect[];
+  /** Undefined is legacy mode; null is authoritative absence, never a fallback. */
+  authoritativeWard?: number | null;
+  authoritativeStances?: readonly Combat2CharacterStance[];
 }
 
 function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
@@ -207,6 +211,8 @@ export default function StatusBarsStrip({
   stanceReservedCp = 0,
   reservedBuffs = null,
   authoritativeEffects,
+  authoritativeWard,
+  authoritativeStances,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
@@ -235,6 +241,7 @@ export default function StatusBarsStrip({
   // lets the bar render and visibly fill back up while OOC, instead of
   // being driven by a timed local absorb buff.
   const forceShieldStance: { shieldHp: number; shieldCap: number; inCombat: boolean } | null = (() => {
+    if (authoritativeEffects !== undefined || authoritativeWard !== undefined) return null;
     if (!reservedBuffs || !reservedBuffs.force_shield) return null;
     const wisTotal = (character.wis ?? 10) + (equipmentBonuses.wis ?? 0);
     const wisMod = Math.max(0, Math.floor((wisTotal - 10) / 2));
@@ -253,6 +260,7 @@ export default function StatusBarsStrip({
   // Castable absorb shield with no timer — persists until depleted.
   // Only render when Force Shield isn't already showing on the bar.
   const aegisWard: { shieldHp: number; shieldCap: number } | null = (() => {
+    if (authoritativeEffects !== undefined || authoritativeWard !== undefined) return null;
     if (forceShieldStance) return null;
     if (!absorbBuff || absorbBuff.shieldHp <= 0) return null;
     if (Date.now() >= absorbBuff.expiresAt) return null;
@@ -280,6 +288,11 @@ export default function StatusBarsStrip({
             <span className="flex items-center gap-0.5">
               {regenTick && <span className="text-[9px] text-elvish animate-fade-in font-display">+</span>}
               <span className="t-numeric text-blood text-[10px]">{character.hp}/{effectiveMaxHp}</span>
+              {authoritativeWard != null && (
+                <span className="ml-1 tabular-nums text-primary" title="Force Shield — authoritative remaining ward; capacity is not supplied by this projection.">
+                  {authoritativeWard} ward HP
+                </span>
+              )}
               {wardOverlay && (() => {
                 const isFS = wardOverlay.kind === 'force_shield';
                 const colorVar = isFS ? 'var(--primary)' : 'var(--elvish)';
@@ -429,6 +442,15 @@ export default function StatusBarsStrip({
 
       {/* Buffs (stances now render as active state on the ability buttons themselves) */}
       <div className="flex flex-wrap gap-1 justify-center items-center min-h-[22px]">
+        {authoritativeEffects !== undefined && (isAtInn || (foodBuff && Date.now() < foodBuff.expiresAt)) && (
+          <ActiveBuffs isAtInn={isAtInn} foodBuff={foodBuff} />
+        )}
+        {authoritativeStances?.map(stance => (
+          <span key={stance.abilityKey} className="text-[10px] border border-primary/50 bg-primary/10 text-primary rounded px-1"
+            title={`${stance.reservedCp} CP reserved`}>
+            {stance.abilityKey.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase())}
+          </span>
+        ))}
         {authoritativeEffects !== undefined ? <Combat2EffectPills effects={authoritativeEffects} /> : <ActiveBuffs
           isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
           battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}

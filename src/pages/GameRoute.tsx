@@ -6,6 +6,7 @@ import GamePage from './GamePage';
 import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { combat2ArenaReservesLegacy } from '@/features/combat2/test-config';
+import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters, resourceDelivery } = useGameContext();
@@ -22,6 +23,18 @@ export default function GameRoute() {
   const restrictedTester = combat2ArenaReservesLegacy(character?.current_node_id);
   const restrictedRef = useRef(restrictedTester);
   restrictedRef.current = restrictedTester;
+  const characterIdRef = useRef(character?.id);
+  characterIdRef.current = character?.id;
+  const entryIdentity = useRef({ characterId: character?.id, restrictedTester, generation: 0 });
+  if (entryIdentity.current.characterId !== character?.id || entryIdentity.current.restrictedTester !== restrictedTester) {
+    entryIdentity.current = { characterId: character?.id, restrictedTester, generation: entryIdentity.current.generation + 1 };
+  }
+  const entryGeneration = entryIdentity.current.generation;
+  const routeActive = useRef(true);
+  useEffect(() => {
+    routeActive.current = true;
+    return () => { routeActive.current = false; };
+  }, []);
 
   // On world entry, recalculate gear-adjusted max_hp/max_cp/max_mp on the
   // server so the persisted row matches the gear baseline. Prevents the
@@ -36,11 +49,12 @@ export default function GameRoute() {
     const entryKey = `wov:entrySynced:${character.id}`;
     const firstEntryThisSession = sessionStorage.getItem(entryKey) !== '1';
     // The existing once-per-character entry attempt must survive Strict Mode replay.
-    const current = () => !restrictedRef.current;
+    const current = () => routeActive.current && !restrictedRef.current && characterIdRef.current === character.id
+      && entryIdentity.current.generation === entryGeneration;
     (async () => {
       try {
         if (!current()) return;
-        if (firstEntryThisSession) {
+        if (firstEntryThisSession && !COMBAT2_CLIENT_ENABLED) {
           // Wipe leftover stance reservations from a previous session.
           await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
           if (!current()) return;
@@ -55,7 +69,7 @@ export default function GameRoute() {
         if (current()) setSyncedCharId(character.id);
       }
     })();
-  }, [character?.id, refetchCharacters, restrictedTester]);
+  }, [character?.id, refetchCharacters, restrictedTester, entryGeneration]);
 
 
   const isSyncedForCurrent = !!character?.id && syncedCharId === character.id;

@@ -97,6 +97,7 @@ import type { CharacterResourceDeliveryState } from '@/features/character/hooks/
 import { useCombat2DepartureSession } from '@/features/combat2/useCombat2DepartureSession';
 import { createPartyAwareDepartureAdapter, shouldUseCoordinatedDeparture } from '@/features/combat2/party-departure';
 import { presentCombat2Departure } from '@/features/combat2/movement-presentation';
+import { combat2BrowserBlocksLegacy, selectCombat2PartyMembers, selectCombat2Ward } from '@/features/combat2/browser-presentation';
 
 import { buildBuffEvent, buildErrorEvent, buildLootEvent, buildMovementEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 
@@ -134,7 +135,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     return()=>{active=false;clearInterval(timer);};
   },[combat2OwnsSession,character.id,character.current_node_id]);
   // Reservation suspends legacy execution even before solo preflight/entry resolves.
-  const combat2BlocksLegacy = ownership.blocksLegacy;
+  // Rollout authority is not relaxed by idle/loading/error/detached or node-less state.
+  const combat2BlocksLegacy = combat2BrowserBlocksLegacy(COMBAT2_CLIENT_ENABLED, ownership.blocksLegacy);
   const legacyExecution = useExecutionFence(!combat2BlocksLegacy);
   const [combat2Diagnostic, setCombat2Diagnostic] = useState<string | null>(null);
   const [combat2RespawnAccepted, setCombat2RespawnAccepted] = useState<string | null>(null);
@@ -240,7 +242,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     return creaturesRef.current.find(c => c.id === creatureId)?.name;
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
-  const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
+  const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver, !combat2BlocksLegacy);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   const {
     party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
@@ -319,6 +321,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     refreshKey: `${combat2.sessionStatus}:${combat2.encounterId ?? ''}:${combat2.presentation.model?.stateVersion ?? ''}`,
     resourceRevision: `${character.id}:${resourceDelivery?.lastAuthoritativeAt}:${character.cp}:${character.max_cp}`,
     resourceReadStartedAt: resourceDelivery?.readStartedAt,
+    refreshWardOnDelivery: combat2.sessionStatus !== 'active',
     maxCp: combat2.sessionStatus === 'active' && combat2.presentation.model?.character.id === character.id
       ? combat2.presentation.model.character.maxCp : character.max_cp,
   });
@@ -399,7 +402,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     broadcastLogEntries, rewardEvents: partyRewardEvents,
     incomingPartyRegenBuff, incomingInspireBuff,
     broadcastHp, broadcastMove, broadcastCombatMsg, broadcastPartyRegenBuff, broadcastInspireBuff,
-  } = usePartyBroadcast(party?.id ?? null, character.id);
+  } = usePartyBroadcast(combat2BlocksLegacy ? null : party?.id ?? null, character.id);
+
+  // Existing delivered resource/snapshot changes invalidate the authoritative
+  // party projection. No peer broadcast values and no additional gameplay timer.
+  useEffect(() => {
+    if (combat2BlocksLegacy && party) void fetchParty();
+  }, [combat2BlocksLegacy, party?.id, resourceDelivery?.lastAuthoritativeAt,
+    activeCombat2Presentation?.stateVersion, fetchParty]);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
@@ -407,15 +417,16 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // Login top-up removed — resources now capped at authoritative base max to prevent snap-down
   const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);
   useEffect(() => {
-    if (!party || !character) return;
+    if (combat2BlocksLegacy || !party || !character) return;
     const last = lastBroadcastedHpRef.current;
     if (last && last.hp === character.hp && last.max_hp === effectiveMaxHp) return;
     lastBroadcastedHpRef.current = { hp: character.hp, max_hp: effectiveMaxHp };
     broadcastHp(character.id, character.hp, effectiveMaxHp, 'sync');
-  }, [party, character?.hp, effectiveMaxHp, broadcastHp]);
+  }, [combat2BlocksLegacy, party, character?.hp, effectiveMaxHp, broadcastHp]);
 
   // Merge broadcast HP/movement overrides into party members
   const mergedPartyMembers = useMemo(() => {
+    if (combat2BlocksLegacy) return selectCombat2PartyMembers(character.id, partyMembers, activeCombat2Presentation);
     if (!partyHpOverrides && partyMoveEvents.length === 0) return partyMembers;
     return partyMembers.map(m => {
       const hpOvr = partyHpOverrides[m.character_id];
@@ -430,7 +441,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         },
       };
     });
-  }, [partyMembers, partyHpOverrides, partyMoveEvents]);
+  }, [combat2BlocksLegacy, character.id, activeCombat2Presentation, partyMembers, partyHpOverrides, partyMoveEvents]);
 
 
   const [eventLog, setEventLog] = useState<GameLogEvent[]>([]);
@@ -712,14 +723,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (!party) return;
+    if (combat2BlocksLegacy || !party) return;
     for (const entry of broadcastLogEntries) {
       if (seenIdsRef.current.has(entry.id)) continue;
       seenIdsRef.current.add(entry.id);
       if (ownLogIdsRef.current.has(entry.id)) continue;
       processIncomingLog(entry, entry.character_name, entry.node_id);
     }
-  }, [broadcastLogEntries, party, processIncomingLog]);
+  }, [combat2BlocksLegacy, broadcastLogEntries, party, processIncomingLog]);
 
 
   // Update last_online periodically — but only while the tab is visible,
@@ -759,17 +770,18 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // When a party reward broadcast arrives for this character, refetch character data
   const lastRewardCountRef = useRef(0);
   useEffect(() => {
-    if (partyRewardEvents.length === 0 || partyRewardEvents.length === lastRewardCountRef.current) return;
+    if (combat2BlocksLegacy || partyRewardEvents.length === 0 || partyRewardEvents.length === lastRewardCountRef.current) return;
+    const current = legacyExecution.capture();
     lastRewardCountRef.current = partyRewardEvents.length;
     (async () => {
       const { data } = await supabase.from('characters').select('*').eq('id', character.id).single();
-      if (data) {
+      if (data && current()) {
         await updateCharacter({ gold: data.gold, xp: data.xp, level: data.level, hp: data.hp, max_hp: data.max_hp,
           str: data.str, dex: data.dex, con: data.con, int: data.int, wis: data.wis, cha: data.cha,
           cp: data.cp, max_cp: data.max_cp });
       }
     })();
-  }, [partyRewardEvents, character.id, updateCharacter]);
+  }, [combat2BlocksLegacy, legacyExecution, partyRewardEvents, character.id, updateCharacter]);
 
   // ── Forward-declared refs for circular deps ────────────────────
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
@@ -804,15 +816,15 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   // Apply incoming party regen buff from another party member
   useEffect(() => {
-    if (!incomingPartyRegenBuff) return;
+    if (combat2BlocksLegacy || !incomingPartyRegenBuff) return;
     buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
-  }, [incomingPartyRegenBuff, buffSetters]);
+  }, [combat2BlocksLegacy, incomingPartyRegenBuff, buffSetters]);
 
   // Apply incoming Inspire buff from a party Bard (same party channel — listener
   // already filters caster self-echo). Recast policy mirrors the caster path:
   // refresh the timer to the new caster's duration; keep the best-of HP/CP regen.
   useEffect(() => {
-    if (!incomingInspireBuff) return;
+    if (combat2BlocksLegacy || !incomingInspireBuff) return;
     buffSetters.setInspireBuff(prev => {
       const now = Date.now();
       const stillActive = !!(prev && prev.expiresAt > now);
@@ -825,7 +837,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         casterId: incomingInspireBuff.casterId,
       };
     });
-  }, [incomingInspireBuff, buffSetters]);
+  }, [combat2BlocksLegacy, incomingInspireBuff, buffSetters]);
 
   // Follower movement is handled server-side by leader's moveFollowers() —
   // no duplicate broadcast-based movement needed here.
@@ -833,7 +845,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // Broadcast party regen buff when caster sets it
   const prevPartyRegenBuffRef = useRef<typeof partyRegenBuff>(null);
   useEffect(() => {
-    if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
+    if (combat2BlocksLegacy || !party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(
       partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || partyRegenBuff.abilityKey || 'party_regen', character.id,
@@ -844,14 +856,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         tickText: partyRegenBuff.tickText,
       },
     );
-  }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
+  }, [combat2BlocksLegacy, party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // Broadcast Inspire when this character casts it (only the caster's
   // setInspireBuff produces a buff with `casterId === character.id`; allies
   // receive the buff via the broadcast listener above and won't re-broadcast).
   const prevInspireBuffRef = useRef<typeof inspireBuff>(null);
   useEffect(() => {
-    if (!party || !inspireBuff || inspireBuff === prevInspireBuffRef.current) return;
+    if (combat2BlocksLegacy || !party || !inspireBuff || inspireBuff === prevInspireBuffRef.current) return;
     prevInspireBuffRef.current = inspireBuff;
     if (inspireBuff.casterId !== character.id) return;
     broadcastInspireBuff(
@@ -861,7 +873,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       inspireBuff.durationMs,
       character.id,
     );
-  }, [party, inspireBuff, broadcastInspireBuff, character.id]);
+  }, [combat2BlocksLegacy, party, inspireBuff, broadcastInspireBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const effectiveAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, false);
@@ -891,7 +903,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   // Telegraph feed. Created before the driver so committed cast transitions can
   // be handed straight to it as each batch is applied.
-  const bossCastFeed = useBossCasts(character.current_node_id);
+  const bossCastFeed = useBossCasts(combat2BlocksLegacy ? null : character.current_node_id);
   const bossCasts = bossCastFeed.casts;
 
   const combat = useCombatDriver({
@@ -1438,7 +1450,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   );
 
   const charPanelProps = useMemo(() => ({
-    character,
+    character: combat2BlocksLegacy ? { ...presentedCharacter, reserved_buffs: authoritativeCombat2Reservations } : character,
     abilityLoadout,
     equipped,
     unequipped,
@@ -1469,7 +1481,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     soulringGlow,
     // Stat allocation moved to TrainerPanel; CharacterPanel only displays balances now.
   }), [
-    character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
+    character, combat2BlocksLegacy, presentedCharacter, authoritativeCombat2Reservations,
+    equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
     regenTick,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
@@ -1504,14 +1517,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     currentRegionId: currentNode?.region_id ?? '',
     characterLevel: character.level,
     onNodeClick: handleMovementInput,
-    partyMembers: combat2BlocksLegacy
-      ? mergedPartyMembers.flatMap(member => {
-        const ally = activeCombat2Presentation?.allies.find(candidate =>
-          candidate.characterId === member.character_id && candidate.present && candidate.hp > 0);
-        return ally ? [{ ...member, character: { ...member.character, name: ally.name,
-          hp: ally.hp, max_hp: ally.maxHp, cp: ally.cp, max_cp: ally.maxCp, mp: ally.mp, max_mp: ally.maxMp } }] : [];
-      })
-      : mergedPartyMembers,
+    partyMembers: mergedPartyMembers,
     myCharacterId: character.id,
     character,
     party,
@@ -1726,7 +1732,11 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
                 reservedBuffs: combat2BlocksLegacy
                   ? authoritativeCombat2Reservations
                   : (character as any).reserved_buffs ?? null,
-                authoritativeEffects: activeCombat2Presentation?.characterEffects,
+                authoritativeEffects: combat2BlocksLegacy ? activeCombat2Presentation?.characterEffects ?? [] : undefined,
+                authoritativeWard: combat2BlocksLegacy ? selectCombat2Ward(character.id, combat2Stances.projection,
+                  combat2.sessionStatus === 'active' ? activeCombat2Presentation : null) : undefined,
+                authoritativeStances: combat2BlocksLegacy && combat2.sessionStatus !== 'active'
+                  ? combat2Stances.projection?.stances : undefined,
               }}
             />
           </div>

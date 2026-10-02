@@ -51,6 +51,31 @@ function renderBars(character: Character, equipmentBonuses: Record<string, numbe
 }
 
 describe('StatusBarsStrip — login display', () => {
+  it('retains shared food/inn presentation without reviving legacy combat buffs during Combat2 ownership', () => {
+    render(<TooltipProvider><StatusBarsStrip character={makeCithrawielLike()} equipmentBonuses={{}}
+      isAtInn foodBuff={{ flatRegen: 2, expiresAt: Date.now() + 30_000 }}
+      poisonBuff={{ expiresAt: Date.now() + 30_000 }} authoritativeEffects={[]} authoritativeWard={null}
+    /></TooltipProvider>);
+    expect(screen.getByText('Food')).toBeInTheDocument();
+    expect(screen.getByText('Inn Rest')).toBeInTheDocument();
+    expect(screen.queryByText('Envenom')).not.toBeInTheDocument();
+  });
+  it('uses delivered persistent ward and stance identity, never legacy JSON/local absorbs or a fabricated full ward', () => {
+    const character = { ...makeCithrawielLike(), stance_state: { force_shield_hp: 99 } } as Character;
+    const props = { character, equipmentBonuses: {}, reservedBuffs: { force_shield: { reserved: 10 } },
+      absorbBuff: { shieldHp: 88, shieldCap: 88, expiresAt: Date.now() + 30_000 },
+      authoritativeEffects: [], authoritativeWard: 3 as number | null,
+      authoritativeStances: [{ abilityKey: 'force_shield', reservePct: 0.1, reservedCp: 10, state: { ward_remaining: 3 }, version: 1 }],
+    };
+    const { rerender } = render(<TooltipProvider><StatusBarsStrip {...props} /></TooltipProvider>);
+    expect(screen.getByText('3 ward HP')).toBeInTheDocument();
+    expect(screen.getByText('Force Shield')).toBeInTheDocument();
+    expect(screen.queryByText(/99|88\/88|regenerating/)).not.toBeInTheDocument();
+    rerender(<TooltipProvider><StatusBarsStrip {...props} authoritativeWard={7} /></TooltipProvider>);
+    expect(screen.getByText('7 ward HP')).toBeInTheDocument();
+    rerender(<TooltipProvider><StatusBarsStrip {...props} authoritativeWard={null} authoritativeStances={[]} /></TooltipProvider>);
+    expect(screen.queryByText(/ward HP|Force Shield/)).not.toBeInTheDocument();
+  });
   it('uses gear-boosted effective max HP, not base max_hp', () => {
     const character = makeCithrawielLike();
     const baseMax = getEffectiveMaxHp(character.class, character.con, character.level, {});

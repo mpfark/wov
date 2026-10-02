@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T15:06:00Z",
-  "based_on_source_sha": "d77cc40064b2922a31afdda2699dab99b6111a13",
+  "updated_at": "2026-10-02T17:20:00Z",
+  "based_on_source_sha": "a7c9ba31f155f39d1db9aa4924e820989216e09b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "d77cc40064b2922a31afdda2699dab99b6111a13",
-    "timestamp": "2026-10-02T15:06:00Z",
+    "sha": "a7c9ba31f155f39d1db9aa4924e820989216e09b",
+    "timestamp": "2026-10-02T17:20:00Z",
     "evidence_type": "repository",
-    "evidence": "Clean starting source 2e202d043d2169efdf81462c00337b65bd3b5a8f fast-forwarded to d77cc40064b2922a31afdda2699dab99b6111a13, retaining four subsequent Lovable commits and their deployment records. Required checkpoint and recorded baseline remain ancestors. Initial project-state check found generated Markdown out of sync; regenerated from canonical JSON in this tests/documentation-only reconciliation. No production, schema, validator or Cloud changes.",
+    "evidence": "Started clean at a7c9ba31f155f39d1db9aa4924e820989216e09b; fetched origin/main and remained synchronized at the same checkpoint, preserving prior Lovable deployment/evidence commits. Required checkpoint and recorded baseline are ancestors. ENG-LEGACY-002 bounded browser isolation authored locally; no schema, official types, Edge, Cloud or gameplay change.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -268,6 +268,16 @@
     "directly_verified": false
   },
   "combat2_operational_work": [
+    {
+      "identity": "combat2-browser-legacy-isolation-batch-b-2026-10-02",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-10-02T17:20:00Z",
+      "evidence_type": "repository",
+      "evidence": "ENG-LEGACY-002 frontend source isolation: Combat2 rollout blocks legacy even node-less/idle/loading/detached/unhealthy; GameRoute skips clear_stances but preserves authoritative resource sync/Arena skip and character-generation fencing. Legacy party/creature combat broadcasts, peer reward/resource/buff effects and C3 boss hydration are disabled, with saved callback fences. Party RPC membership/location plus attached ally HP and existing delivered-resource/snapshot refresh hints remain authoritative. Persistent stance/reservation/Force Shield uses existing projections; OOC ward refreshes on resource delivery, no timer or guessed capacity. Combat/OOC resources and activation acknowledgements keep existing ownership; food/inn, log archive, movement/party router and shared/flag-off scaffolding remain. 176 focused frontend tests and 157 canonical readiness tests pass, root/app TypeScript and build pass; 17 generator output files compared exactly through read-only in-memory interception (generator --check itself still writes). Combat2 dependency containment passes; unchanged C3 resolver mixed-newline baseline is normalized-equivalent and untouched. Build-generated MCP artifact restored to committed contents. No Cloud, migration, Edge deployment, frontend publication or gameplay. Mik manual frontend publication and bounded solo/party/ward acceptance pending; not full legacy retirement.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
     {
       "identity": "retired-combat1-deployment-test-reconciliation-2026-10-02",
       "status": "authored",
@@ -812,12 +822,12 @@
     }
   ],
   "next_approved_task": {
-    "status": "authored",
-    "artifact": "Separately authorize bounded deployed-source/runtime refusal verification or installed dependency review before further legacy retirement.",
+    "status": "ready_for_manual_publish",
+    "artifact": "Mik manually publishes the browser-isolation frontend, then performs bounded solo and party acceptance; separately authorize installed SQL/deployed-endpoint dependency review before further retirement.",
     "sha": null,
-    "timestamp": "2026-10-02T15:06:00Z",
+    "timestamp": "2026-10-02T17:20:00Z",
     "evidence_type": "repository",
-    "evidence": "Both retired shells are Lovable-reported deployed at 2e202d04; do not redeploy for tests/documentation-only reconciliation. Deployment identities/readback and runtime responses remain unavailable/unverified. Further browser retirement, SQL/column changes or endpoint deletion require separate authorization and positive dependency evidence. Preserve shared modules and all prior gameplay/stance/resource/movement/cadence evidence.",
+    "evidence": "Only frontend publication is required by this source diff: no changed Edge-transitive file, SQL or official type. Solo: retained log/stance/ward/resources through entry, completion, movement, reconnect and character switching. Party: delivered membership/HP/location, coordinated movement and combat logs/rewards without peer resource/follower writes. These remain live-unverified. Preserve all earlier operator movement, recovery, CP-presentation and cadence evidence, plus Lovable-reported retired shell deployments. No full legacy retirement or Cloud verification claimed.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

@@ -459,7 +459,7 @@ describe('Combat2 authoritative presentation model', () => {
     expect(page).toContain('creatures={presentedCreatures}');
     expect(page).toContain('creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}');
     expect(page).toContain('authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}');
-    expect(page).toContain('authoritativeEffects: activeCombat2Presentation?.characterEffects');
+    expect(page).toContain('authoritativeEffects: combat2BlocksLegacy ? activeCombat2Presentation?.characterEffects ?? [] : undefined');
     expect(page).toContain('authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}');
     expect(page).toContain('filteredEventLog={presentedEventLog}');
     expect(page).toMatch(/useCombatActions\(\{\s*enabled: !combat2BlocksLegacy,/);
