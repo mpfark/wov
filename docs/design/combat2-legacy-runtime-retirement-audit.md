@@ -93,6 +93,8 @@ Implemented from clean synchronized `a7c9ba31f155f39d1db9aa4924e820989216e09b` u
 
 ## Separate database retirement gates
 
+Installed read-only findings for gates 1-4 (2026-10-02 18:14 UTC) are recorded in the [legacy SQL dependency audit](combat2-legacy-sql-dependency-audit.md); gate 5 and the vault/pg_net/deployed-log parts of gate 4 remain open.
+
 Obtain separately authorized read-only evidence, reporting definitions/aggregates rather than secrets or gameplay payloads:
 
 1. Exact `pg_proc` signatures, `pg_get_functiondef`, owner, SECURITY DEFINER, volatility, search paths and effective PUBLIC/anon/authenticated/service_role ACLs for obsolete stance RPCs, `clear_stances`, resource sync, current wrappers and every proposed predecessor. Include inherited/default grants and `pg_depend`, but do not treat `pg_depend` alone as a complete PL/pgSQL/dynamic-call graph.
