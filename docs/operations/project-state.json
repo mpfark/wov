@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T12:57:00Z",
+  "updated_at": "2026-10-02T14:58:00Z",
   "based_on_source_sha": "d72024b9e80271f9854b725f4488e8da36a82c7a",
   "status_vocabulary": [
     "authored",
@@ -219,22 +219,22 @@
     {
       "identity": "combat-tick",
       "status": "deployed",
-      "sha": "188e86c23260e034e2746c4b3079b8bcf1670ff6",
-      "timestamp": "2026-09-29T09:45:00Z",
+      "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
+      "timestamp": "2026-10-02T14:58:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Deployed for the committed CP-mirror correction (resolver.ts getEffectiveMaxCp with INT+WIS, commit e72f20471). Transitive import analysis of every Edge entry point proved combat-tick and combat-catchup are the only functions reaching supabase/functions/_shared/combat/pure/resolver.ts. No Combat2 Edge function deployed; functions not invoked.",
+      "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 2ef662df4fe422e1ef90a17f4fb50e0fcd0d1b29c1be29962b4cf0a086e5c447; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
       "reporting_actor": "Lovable",
-      "directly_verified": true
+      "directly_verified": false
     },
     {
       "identity": "combat-catchup",
       "status": "deployed",
-      "sha": "188e86c23260e034e2746c4b3079b8bcf1670ff6",
-      "timestamp": "2026-09-29T09:45:00Z",
+      "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
+      "timestamp": "2026-10-02T14:58:00Z",
       "evidence_type": "cloud_inspection",
-      "evidence": "Deployed for the committed CP-mirror correction (resolver.ts getEffectiveMaxCp with INT+WIS, commit e72f20471). Transitive import analysis of every Edge entry point proved combat-tick and combat-catchup are the only functions reaching supabase/functions/_shared/combat/pure/resolver.ts. No Combat2 Edge function deployed; functions not invoked.",
+      "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 785e3ed41c458e746a4438be83c88c523a5740a1c0a74c17933b4f44997c456a; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
       "reporting_actor": "Lovable",
-      "directly_verified": true
+      "directly_verified": false
     },
     {
       "identity": "combat2-dispatch-once",
@@ -789,6 +789,16 @@
       "evidence": "RESOLVED. Previously failing src/features/combat2/parent-resource-guards.test.tsx (Force Shield) passes 3/3 at 9980d895 together with stance-helper-privileges-migration (4/4) and project-state (3/3) tests.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "status": "blocked",
+      "evidence": "OPEN. src/test/combat/c3/edge-build-identity.test.ts asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers (2 failures); the removed tail is intended. Needs repository test update.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true,
+      "timestamp": "2026-10-02T14:58:00Z",
+      "evidence_type": "repository_inspection",
+      "identity": "edge-build-identity-stale-test",
+      "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f"
     }
   ],
   "next_approved_task": {
