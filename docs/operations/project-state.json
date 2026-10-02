@@ -221,7 +221,7 @@
       "status": "deployed",
       "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
       "timestamp": "2026-10-02T14:58:00Z",
-      "evidence_type": "repository_inspection",
+      "evidence_type": "cloud_inspection",
       "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 2ef662df4fe422e1ef90a17f4fb50e0fcd0d1b29c1be29962b4cf0a086e5c447; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
       "reporting_actor": "Lovable",
       "directly_verified": false
@@ -231,7 +231,7 @@
       "status": "deployed",
       "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f",
       "timestamp": "2026-10-02T14:58:00Z",
-      "evidence_type": "repository_inspection",
+      "evidence_type": "cloud_inspection",
       "evidence": "Deployed cleaned refusal shell (OPTIONS + unconditional HTTP 410 legacy_retired, build stamp r8-bosscast-lifecycle-respawn-buildid) from 2e202d04; entry SHA-256 785e3ed41c458e746a4438be83c88c523a5740a1c0a74c17933b4f44997c456a; dependency closure only _shared/http.ts and _shared/combat/build-identity.ts, unchanged since checkpoint. Deploy tool returned success only (no deployment version ID or deployed-source readback available). Focused: legacy-cutover-edge and edge-packaging passed; edge-build-identity has 2 stale assertions expecting the removed rawJson helper. Not invoked; no other function deployed. Browser and SQL legacy retirement still pending.",
       "reporting_actor": "Lovable",
       "directly_verified": false
@@ -791,14 +791,14 @@
       "directly_verified": true
     },
     {
-      "id": "STALE-TEST-BUILD-ID",
-      "summary": "src/test/combat/c3/edge-build-identity.test.ts still asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers; needs repository test update.",
-      "status": "open",
-      "evidence": "src/test/combat/c3/edge-build-identity.test.ts still asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers; needs repository test update.",
+      "status": "blocked",
+      "evidence": "OPEN. src/test/combat/c3/edge-build-identity.test.ts asserts 'return rawJson(stampCombatBuild(data));' in both retired handlers (2 failures); the removed tail is intended. Needs repository test update.",
       "reporting_actor": "Lovable",
       "directly_verified": true,
       "timestamp": "2026-10-02T14:58:00Z",
-      "evidence_type": "repository_inspection"
+      "evidence_type": "repository_inspection",
+      "identity": "edge-build-identity-stale-test",
+      "sha": "2e202d043d2169efdf81462c00337b65bd3b5a8f"
     }
   ],
   "next_approved_task": {
