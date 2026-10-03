@@ -139,6 +139,8 @@ export interface MitigationParams {
   mode: 'percent' | 'flat';
   shieldDrBonus: number;
   critSofteningPct: number | null;
+  /** Percentage points removed from incoming enemy crit chance (fraction 0..1). */
+  critChanceReductionPct: number | null;
   mitigationCeilingPct: number | null;
   isTaunt: boolean;
 }
@@ -153,6 +155,7 @@ export function readMitigationParams(config: Record<string, unknown> | null | un
     mode: cfg.mitigation_mode === 'flat' ? 'flat' : 'percent',
     shieldDrBonus: num('shield_dr_bonus') ?? 0,
     critSofteningPct: num('crit_softening_pct'),
+    critChanceReductionPct: num('crit_chance_reduction_pct'),
     mitigationCeilingPct: num('mitigation_ceiling_pct'),
     isTaunt: cfg.is_taunt === true,
   };

@@ -4,6 +4,14 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ## Now — engine stabilization
 
+### ENG-ABILITY-001 — Ability publication and semantic parity
+
+- **Engine area / status:** ability authority; `implemented_source`.
+- **Outcome:** publish configured abilities through shared composition and validated assignment overrides; retain ratio precision and consume authored next-hit effects. Preserve resource formulas, costs, unlocks and percentage stance lifecycle.
+- **Evidence:** [publication contract](../design/ability-publication-and-semantics.md), deterministic generated source/Edge catalogues and seven-class regression coverage. Fresh read-only configured export replaces the reconstruction, with classified differences and eight-stance source-SQL parity. No deployment.
+- **Remaining gates:** installed SQL/bundle parity; synchronization of the approved local numeric/presentation edits to configured authoring before release; deferred Rend initial weapon-hit balance formula; separate review/publication/deployment. Battle Cry chance reduction, no Grand Finale die and Consecrate node scope are decided and implemented locally.
+- **Specification sections:** Effects and stances; One authoritative world heartbeat; Resources and attributes. No CP-economy redesign.
+
 ### ENG-COMBAT-003 — Present-fighter equipment fencing
 
 - **Engine area / status / priority:** combat snapshot/commit; `implemented_source`; 1.
@@ -254,3 +262,5 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Evidence/current state:** request recorded only. Mik reports one unstartable creature at node prefix `f974068d` / encounter prefix `ca32f2fb`; full identities and cause are unknown and await a separately authorized read-only Cloud investigation. No repair or mutation is authorized here.
 - **Acceptance criteria:** explicit supported/refused states; admin identity derived server-side; deterministic locks/fences and replay; no rewards/death side effects; effects, targets and engagement resolved explicitly; unrelated state preserved; auditable result; focused installed and bounded live proof.
 - **Specification sections:** Engine principles and authority; Creatures, targeting and initiation; Failure, diagnostics and verification.
+
+ENG-ABILITY-001 follow-up: fresh configured export and eight-stance source-SQL comparison completed locally; installed SQL definitions remain unverified. Battle Cry removes 10 percentage points of incoming enemy crit chance (separate from critical damage softening); Grand Finale has no bonus die; Consecrate keeps eligible hostile living node scope; Rend initial weapon hit awaits balance design. No CP cost/reservation/resource formula or heartbeat change. See [ability publication contract](../design/ability-publication-and-semantics.md).

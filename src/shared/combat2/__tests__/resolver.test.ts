@@ -1,10 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { TickRandom } from '../rng';
 import { resolveNodeTick } from '../resolver';
 import { buildAbilitySpec } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
 import type { NodeSnapshot, SnapshotCreature, SnapshotEffect, SnapshotFighter, SnapshotIntent } from '../types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
+describe('authored incoming critical chance reduction', () => {
+  it('subtracts percentage points, retains natural-20 hit, and ignores expired effects', () => {
+    const rolls = vi.spyOn(TickRandom.prototype, 'd20').mockReturnValue(20);
+    try {
+      const mitigation = { id: 'cry', kind: 'mitigation', effect_type: 'battle_cry', ability_key: 'battle_cry',
+        target_character_id: 'ch-1', target_creature_id: null, source_character_id: 'ch-1', source_creature_id: null,
+        stacks: 1, magnitude: .10, config: { mitigation_mode: 'percent', crit_chance_reduction_pct: .10 },
+        expires_at: null, next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: true } as SnapshotEffect;
+      const input = snapshot({ fighters: [fighter({ character_id: 'ch-1', ac: 999 })] });
+      const attack = (effects: SnapshotEffect[]) => resolveNodeTick({ ...input, effects }, { abilities }).events
+        .find(e => e.kind === 'creature_attack')!;
+      expect(attack([]).meta?.isCrit).toBe(true);
+      const protectedHit = attack([mitigation]);
+      expect(protectedHit.meta?.isCrit).toBe(false);
+      expect(protectedHit.hitQuality).toBe('normal');
+      expect(protectedHit.meta?.critSoftened).toBe(0);
+      expect(attack([{ ...mitigation, is_reservation: false, expires_at: nowPlus(-1000) }]).meta?.isCrit).toBe(true);
+    } finally { rolls.mockRestore(); }
+  });
+});
 const nowPlus = (msOffset: number): string => new Date(Date.parse(NOW) + msOffset).toISOString();
 
 function fighter(overrides: Partial<SnapshotFighter> & { character_id: string }): SnapshotFighter {

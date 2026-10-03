@@ -33,7 +33,8 @@ describe('mitigation_buff consolidation', () => {
   it('mode and identity knobs live in effect_config', () => {
     const cry = byKey('battle_cry').effect_config;
     expect(cry.mitigation_mode).toBe('percent');
-    expect(cry.applies_crit_reduction).toBe(true);
+    expect(cry.crit_chance_reduction_pct).toBe(0.10);
+    expect(cry.applies_crit_reduction).toBeUndefined();
     expect(cry.shield_dr_bonus).toBe(0.05);
 
     const challenge = byKey('divine_challenge').effect_config;

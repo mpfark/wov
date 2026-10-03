@@ -261,7 +261,11 @@ export function resolveAmount(
   context?: Partial<Record<CalcContextKey, number>>,
 ): number | null {
   if (!spec.amountCalc) return null;
-  return Math.max(0, Math.floor(evaluateCalc(spec.amountCalc, calcInputs(ctx, spec, stream, weaponDie, context))));
+  const value = evaluateCalc(spec.amountCalc, calcInputs(ctx, spec, stream, weaponDie, context));
+  // HP/count/flat quantities keep integer settlement. Ratios must retain the
+  // precision authored by the evaluator until their semantic consumer uses it.
+  const fractional = ['percent', 'multiplier'].includes(spec.amountCalc.unit ?? '');
+  return Math.max(0, fractional ? value : Math.floor(value));
 }
 
 /** Evaluate the authored `duration_calc` in milliseconds. */
@@ -403,7 +407,10 @@ function offensiveHit(
     .reduce((best, effect) => Math.max(best, effect.magnitude ?? 1), 1);
   const stealth = effects.find((effect) => effect.kind === 'stealth');
   const stealthMultiplier = stealth ? Math.max(1, stealth.magnitude ?? 1) : 1;
-  const base = authored * (options.multiplier ?? 1) * offenseMultiplier * stealthMultiplier;
+  const nextHit = effects.find(effect => effect.kind === 'offense' && effect.config?.offense_mode === 'next_hit_mult');
+  const nextHitMultiplier = nextHit ? Math.max(1, nextHit.magnitude ?? 1) : 1;
+  const base = authored * (options.multiplier ?? 1) * offenseMultiplier * stealthMultiplier * nextHitMultiplier;
+  if (nextHit) outcome.consumeEffectIds.push(nextHit.id);
   if (stealth) outcome.consumeEffectIds.push(stealth.id);
   const qualityMult = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
   const normal = Math.max(1, Math.floor(base * qualityMult));
@@ -435,6 +442,7 @@ function offensiveHit(
       ...(critEdge > 0 ? { criticalEdge: critEdge } : {}),
       ...(offenseMultiplier > 1 ? { offenseMultiplier } : {}),
       ...(stealth ? { ambushMultiplier: stealthMultiplier } : {}),
+      ...(nextHit ? { nextHitMultiplier } : {}),
     },
   });
   return outcome;
@@ -471,8 +479,11 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
     .reduce((best, e) => Math.max(best, e.magnitude ?? 1), 1);
   const stealth = effects.find(e => e.kind === 'stealth');
   const stealthMultiplier = stealth ? Math.max(1, stealth.magnitude ?? 1) : 1;
+  const nextHit = effects.find(effect => effect.kind === 'offense' && effect.config?.offense_mode === 'next_hit_mult');
+  const nextHitMultiplier = nextHit ? Math.max(1, nextHit.magnitude ?? 1) : 1;
   const raw = Math.max(1, Math.floor((rolled + getStatModifier(ctx.actor.str)) * affinity.damageMult
-    * offenseMultiplier * stealthMultiplier));
+    * offenseMultiplier * stealthMultiplier * nextHitMultiplier));
+  if (nextHit) outcome.consumeEffectIds.push(nextHit.id);
   if (stealth) outcome.consumeEffectIds.push(stealth.id);
   const quality = HIT_QUALITY_MULT[decision.quality as keyof typeof HIT_QUALITY_MULT] ?? 1;
   const normal = Math.max(1, Math.floor(raw * quality));
@@ -486,7 +497,8 @@ export function resolveBasicAttack(ctx: MechanicContext): MechanicOutcome {
     amount: breakdown.applied, meta: { basicAttack: true, isCrit: decision.isCrit, damageType: 'physical', weaponDie: weapon.die,
       ...(critEdge > 0 ? { criticalEdge: critEdge } : {}),
       ...(offenseMultiplier > 1 ? { offenseMultiplier } : {}),
-      ...(stealth ? { ambushMultiplier: stealthMultiplier } : {}) } });
+      ...(stealth ? { ambushMultiplier: stealthMultiplier } : {}),
+      ...(nextHit ? { nextHitMultiplier } : {}) } });
   return outcome;
 }
 
@@ -532,6 +544,14 @@ function characterBuff(ctx: MechanicContext, spec: AbilitySpec, kind: string): M
     spec.targetType === 'ally' && ctx.ally ? [ctx.ally] : [ctx.actor];
   for (const target of targets) {
     outcome.effects.push(buffEffect(ctx, spec, kind, target.character_id, magnitude));
+    // A configured evasion effect can also author an independent next-hit
+    // multiplier/window. Evading must not consume this offensive charge.
+    const window = Number(spec.config.next_hit_window_ms ?? 0);
+    if (kind === 'evasion' && window > 0 && magnitude > 1) {
+      outcome.effects.push(buffEffect(ctx, { ...spec, activation: 'instant',
+        durationCalc: { base: window, terms: [], unit: 'ms' } },
+      'offense', target.character_id, magnitude, { offense_mode: 'next_hit_mult', consumed_on_hit: true }));
+    }
     outcome.events.push({
       kind: 'buff_applied',
       abilityKey: spec.abilityKey,
@@ -635,14 +655,18 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     // Authored attack count (Barrage: `arrow_count`), never a hard-coded number.
     const count = Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'arrow_count') ?? 1));
     let total = 0;
+    const consumed = new Set<string>();
     for (let i = 0; i < count; i++) {
-      const single = offensiveHit(ctx, spec, `multi_attack:${i}`);
+      const single = offensiveHit({ ...ctx,
+        activeEffects: ctx.activeEffects?.filter(effect => !consumed.has(effect.id)) }, spec, `multi_attack:${i}`);
       if (single.rejected) return single;
       total += single.creatureDamage ?? 0;
       merged.landedHits = (merged.landedHits ?? 0) + (single.landedHits ?? 0);
       merged.events.push(...single.events);
+      for (const id of single.consumeEffectIds) consumed.add(id);
     }
     merged.creatureDamage = total;
+    merged.consumeEffectIds.push(...consumed);
     merged.events.push({
       kind: 'multi_attack_summary',
       abilityKey: spec.abilityKey,
@@ -774,6 +798,7 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
         shield_dr_bonus: params.shieldDrBonus,
         // Authored only: a missing magnitude means no softening, never a default.
         ...(params.critSofteningPct === null ? {} : { crit_softening_pct: params.critSofteningPct }),
+        ...(params.critChanceReductionPct === null ? {} : { crit_chance_reduction_pct: params.critChanceReductionPct }),
         ...(params.mitigationCeilingPct === null
           ? {}
           : { mitigation_ceiling_pct: params.mitigationCeilingPct }),

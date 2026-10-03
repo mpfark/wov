@@ -1,113 +1,33 @@
-/**
- * C3a — Authoritative active-ability inventory dump.
- *
- * Derives the inventory from the LIVE configuration (class_ability_assignments
- * joined to abilities and base_abilities), never from a hand-maintained list.
- *
- * Usage: bun scripts/dump-active-ability-inventory.ts
- * Output: src/shared/combat/inventory/active-abilities.json
- */
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-
-const URL_ = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
-const KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
-if (!URL_ || !KEY) throw new Error('missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY');
-
+/** Read-only authoring export. Then run node scripts/publish-abilities.mjs. */
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const outputIndex = process.argv.indexOf('--output');
+const outputPath = outputIndex < 0
+  ? resolve(import.meta.dirname, '../src/shared/combat/inventory/ability-publication-source.json')
+  : resolve(process.argv[outputIndex + 1]);
+const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+if (!url || !key) throw new Error('Missing Supabase export configuration');
 async function rest(path: string): Promise<any[]> {
-  const res = await fetch(`${URL_}/rest/v1/${path}`, {
-    headers: { apikey: KEY!, Authorization: `Bearer ${KEY!}` },
-  });
-  if (!res.ok) throw new Error(`${path}: ${res.status} ${await res.text()}`);
+  const res = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key!, Authorization: `Bearer ${key!}` } });
+  if (!res.ok) throw new Error(`Configuration export failed: ${res.status}`);
   return res.json();
 }
-
-const [assignments, abilities, bases, statuses] = await Promise.all([
-  rest('class_ability_assignments?select=*&status=eq.active&order=class_key,unlock_level'),
-  rest('abilities?select=*'),
-  rest('base_abilities?select=*'),
-  rest('applied_statuses?select=*&order=key'),
+const [assignments, abilities, bases, statuses, roles, classes] = await Promise.all([
+  rest('class_ability_assignments?select=*&status=eq.active&order=class_key,class_ability_key'),
+  rest('abilities?select=*'), rest('base_abilities?select=*'),
+  rest('applied_statuses?select=*&order=key'), rest('class_ability_roles?select=*'), rest('classes?select=*'),
 ]);
-
-const abilityById = new Map(abilities.map((a) => [a.id, a]));
-const baseById = new Map(bases.map((b) => [b.id, b]));
-
-const rows = assignments
-  .map((caa) => {
-    const a = abilityById.get(caa.ability_id);
-    if (!a || a.status !== 'active') return null;
-    const base = a.base_ability_id ? baseById.get(a.base_ability_id) : undefined;
-    const pick = <T>(k: string, ...src: any[]): T | null => {
-      for (const s of src) if (s && s[k] !== null && s[k] !== undefined) return s[k] as T;
-      return null;
-    };
-    return {
-      classKey: caa.class_key,
-      classAbilityKey: caa.class_ability_key,
-      abilityKey: a.ability_key,
-      label: a.label,
-      unlockLevel: caa.unlock_level,
-      isDefault: caa.is_default ?? false,
-      baseKey: base?.base_key ?? null,
-      mechanic: pick<string>('mechanic_key', a, base),
-      abilityType: a.ability_type ?? null,
-      targetType: pick<string>('target_type', a, base) ?? base?.default_target_type ?? null,
-      damageType: a.damage_type ?? null,
-      activationMode: pick<string>('activation_mode', a, base),
-      cpCost: pick<number>('cp_cost', a, base) ?? 0,
-      cpReservePct: pick<number>('cp_reserve_pct', a, base),
-      intervalMs: pick<number>('interval_ms', a, base),
-      primaryAttribute: a.primary_attribute ?? null,
-      secondaryAttribute: a.secondary_attribute ?? null,
-      classScale: a.class_scale ?? null,
-      appliedStatus: a.applied_status ?? null,
-      statusTrigger: a.status_trigger ?? null,
-      statusChancePct: a.status_chance_pct ?? null,
-      statusApplicationEnabled: a.status_application_enabled ?? null,
-      onHitEffect: a.on_hit_effect ?? null,
-      amountCalc: pick('amount_calc', a, base),
-      durationCalc: pick('duration_calc', a, base),
-      mechanicCalcs: pick('mechanic_calcs', a, base) ?? {},
-      effectConfig: pick('effect_config', a, base) ?? {},
-      overrides: caa.overrides ?? {},
-      triggerType: base?.trigger_type ?? null,
-      capabilities: base?.capabilities ?? {},
-    };
-  })
-  .filter(Boolean)
-  .sort((x: any, y: any) =>
-    x.classKey === y.classKey
-      ? x.classAbilityKey.localeCompare(y.classAbilityKey)
-      : x.classKey.localeCompare(y.classKey),
-  );
-
-const mechanics = [...new Set(rows.map((r: any) => r.mechanic))].sort();
-const statusRows = statuses.map((status) => ({
-  key: status.key,
-  effect_type: status.effect_type,
-  classification: status.classification,
-  stack_noun: status.stack_noun,
-  is_periodic: status.is_periodic,
-  tick_interval_ms: status.tick_interval_ms,
-  magnitude: status.magnitude,
-  duration: status.duration,
-  stacks: status.stacks,
-  modifier: status.modifier,
-  default_damage_type: status.default_damage_type,
-}));
-
-const out = {
-  generatedBy: 'scripts/dump-active-ability-inventory.ts',
-  source: 'class_ability_assignments x abilities x base_abilities (status=active) + applied_statuses',
-  abilityCount: rows.length,
-  statusCount: statusRows.length,
-  mechanics,
-  statuses: statusRows,
-  abilities: rows,
+const byId = (rows: any[]) => new Map(rows.map(row => [row.id, row]));
+const abilityById = byId(abilities), baseById = byId(bases), roleById = byId(roles);
+const source = {
+  provenance: 'Read-only database authoring export; publication uses shared composition', classes, statuses,
+  assignments: assignments.map(row => {
+    const ability = abilityById.get(row.ability_id);
+    if (!ability) throw new Error(`Missing ability for ${row.class_ability_key}`);
+    return { ...row, role: roleById.get(row.role_id), ability: { ...ability, base: baseById.get(ability.base_ability_id) } };
+  }),
 };
-
-const target = resolve(import.meta.dir ?? '.', '../src/shared/combat/inventory/active-abilities.json');
-mkdirSync(dirname(target), { recursive: true });
-writeFileSync(target, JSON.stringify(out, null, 2) + '\n');
-console.log(`wrote ${target}: ${rows.length} abilities, ${mechanics.length} mechanics`);
-console.log(mechanics.join(', '));
+writeFileSync(outputPath,
+  JSON.stringify(source, null, 2) + '\n');
+console.log(`Exported ${assignments.length} assignments. Run publication and review the diff.`);

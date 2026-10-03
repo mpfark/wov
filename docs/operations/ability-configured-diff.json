@@ -1,0 +1,1764 @@
+[
+  {
+    "ability": "assassin:backstab",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Vital strike. Rolls weapon damage + DEX + bonus.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.effectConfig.stat",
+    "before": "str",
+    "fresh": "dex",
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.combatText.hit_text",
+    "before": null,
+    "fresh": "{caster}'s blade finds a vital point on {target} from behind. [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "backstabs",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "{caster}'s blade slips wide — {target} is untouched.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:backstab",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "lunges at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:cloak_of_shadows",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:cloak_of_shadows",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Chance to dodge attacks. Dodge scales with CHA, duration with DEX.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:cloak_of_shadows",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:cloak_of_shadows",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Cloak of Shadows! {dodge_pct}% dodge chance for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.effectConfig.status_label",
+    "before": "poison",
+    "fresh": "Poison",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.combatText.proc_text",
+    "before": null,
+    "fresh": "{attacker}'s attack poisons {target}!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.combatText.stack_text",
+    "before": null,
+    "fresh": "{attacker}'s venom seeps into {target} (poison x{stacks}).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:envenom",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Envenom! Your weapons drip with poison.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.combatText.hit_text",
+    "before": null,
+    "fresh": "eviscerates {target}, detonating {stacks} poison stack{plural}! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "Eviscerate misses {target}{stacknote}!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:eviscerate",
+    "path": "record.combatText.hit_no_stacks_text",
+    "before": null,
+    "fresh": "eviscerates {target} (no poison stacks). [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:shadowstep",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:shadowstep",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "assassin:shadowstep",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "assassin:shadowstep",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "{ability}! You vanish into the shadows for {seconds}s (ambush x{mult}).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Heal nearby allies over time. Heal scales with CHA, duration with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.effectConfig.source",
+    "before": "bard",
+    "fresh": "healer",
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.combatText.cast_text",
+    "before": null,
+    "fresh": "Crescendo! A rising melody heals {who} every 3s for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:crescendo",
+    "path": "record.combatText.tick_text",
+    "before": null,
+    "fresh": "Crescendo heals {who} for {amount} HP!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:cutting_words",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Unleash a barbed insult that wounds your target, scaling with CHA",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:cutting_words",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Damage one target. Scales with CHA.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:cutting_words",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "bard:cutting_words",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "mocks",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:cutting_words",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "jeers at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Reduce target's damage. Reduction scales with CHA, duration with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.amountCalc.note",
+    "before": "CHA-scaled outgoing-damage reduction",
+    "fresh": "scaling stat = INT for bards",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.amountCalc.terms",
+    "before": [
+      {
+        "mult": 1,
+        "stat": "cha",
+        "source": "stat",
+        "transform": {
+          "cap": 0.15,
+          "kind": "diminishing_float",
+          "perPoint": 0.02
+        },
+        "clampAtZero": true,
+        "role": "primary"
+      }
+    ],
+    "fresh": [
+      {
+        "mult": 1,
+        "stat": "int",
+        "source": "stat",
+        "transform": {
+          "cap": 0.15,
+          "kind": "diminishing_float",
+          "perPoint": 0.02
+        },
+        "clampAtZero": true,
+        "role": "secondary"
+      }
+    ],
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.effectConfig.magnitude_stat",
+    "before": "cha",
+    "fresh": null,
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "bard:dissonance",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:grand_finale",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:grand_finale",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Burst damage on one target. Damage scales with CHA, crit-edge with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:grand_finale",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "bard:grand_finale",
+    "path": "record.combatText.hit_text",
+    "before": null,
+    "fresh": "{ability}!{crit} {caster} unleashes a devastating blast of sound at {target}! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:grand_finale",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "{caster}'s {ability} falls flat — {target} is untouched!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:inspire",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s). Recasting refreshes the duration and keeps the stronger regen values.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:inspire",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Grant party HP & CP regen. Regen scales with CHA, duration with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:inspire",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "bard:inspire",
+    "path": "record.combatText.renew_text",
+    "before": null,
+    "fresh": "{caster} renews the inspiring song! ({seconds}s remaining)",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "bard:inspire",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "{caster} plays an inspiring song for {seconds}s!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:divine_aegis",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:divine_aegis",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:divine_aegis",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "healer:divine_aegis",
+    "path": "record.combatText.ally_text",
+    "before": null,
+    "fresh": "Divine Aegis! You shield {target} for up to {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:divine_aegis",
+    "path": "record.combatText.self_text",
+    "before": null,
+    "fresh": "Divine Aegis! An absorb shield wraps you for up to {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:heal",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Restore HP based on your Wisdom",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:heal",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Restore your HP. Scales with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:heal",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "healer:heal",
+    "path": "record.combatText.self_text",
+    "before": null,
+    "fresh": "You cast Heal and mend your wounds!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:heal",
+    "path": "record.combatText.self_full_text",
+    "before": null,
+    "fresh": "You cast Heal but you're already at full health.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:purifying_light",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:purifying_light",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Heal nearby allies over time. Heal scales with WIS, duration with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:purifying_light",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "healer:purifying_light",
+    "path": "record.combatText.cast_text",
+    "before": null,
+    "fresh": "Purifying Light! Divine radiance heals {who} every 3s for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:purifying_light",
+    "path": "record.combatText.tick_text",
+    "before": null,
+    "fresh": "Purifying Light heals {who} for {amount} HP!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:smite",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Channel a burst of divine light at your target, scaling with WIS",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:smite",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Damage one target. Scales with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:smite",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "healer:smite",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "smites",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:smite",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "calls down light upon",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:transfer_health",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:transfer_health",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Sacrifice HP to heal an ally. Scales with WIS; CON sets your safety floor.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:transfer_health",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "healer:transfer_health",
+    "path": "record.combatText.no_hp_text",
+    "before": null,
+    "fresh": "You don't have enough HP to transfer! (need to keep {reserve} HP)",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "healer:transfer_health",
+    "path": "record.combatText.transfer_text",
+    "before": null,
+    "fresh": "{caster} sacrifices life to heal {target}!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Careful shot. Rolls weapon damage + DEX + bonus.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.effectConfig.stat",
+    "before": "str",
+    "fresh": "dex",
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "looses an aimed shot at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:aimed_shot",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "looses an arrow at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.combatText.hit_text",
+    "before": null,
+    "fresh": "Arrow {index}/{count} strikes {target}! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.combatText.cast_text",
+    "before": null,
+    "fresh": "{caster} unleashes Barrage of {count} arrows!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:barrage",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "Arrow {index}/{count} misses {target}.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:disengage",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:disengage",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:disengage",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:disengage",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Disengage! You leap back — dodging all attacks for {seconds}s. Your next strike deals +{bonus_pct}% bonus damage!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:eagle_eye",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:eagle_eye",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Widen your crit range. Scales with DEX and WIS. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:eagle_eye",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:eagle_eye",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Eagle Eye! Your crit range is now {crit_low}-20 for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Reduce target's damage. Reduction scales with DEX, duration with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.amountCalc.note",
+    "before": "DEX-scaled outgoing-damage reduction",
+    "fresh": "WIS-scaled damage reduction (live formula uses the scaling stat)",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.amountCalc.terms",
+    "before": [
+      {
+        "mult": 1,
+        "stat": "dex",
+        "source": "stat",
+        "transform": {
+          "cap": 0.15,
+          "kind": "diminishing_float",
+          "perPoint": 0.02
+        },
+        "clampAtZero": true,
+        "role": "primary"
+      }
+    ],
+    "fresh": [
+      {
+        "mult": 1,
+        "stat": "wis",
+        "source": "stat",
+        "transform": {
+          "cap": 0.15,
+          "kind": "diminishing_float",
+          "perPoint": 0.02
+        },
+        "clampAtZero": true,
+        "role": "secondary"
+      }
+    ],
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.effectConfig.magnitude_stat",
+    "before": "dex",
+    "fresh": null,
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "ranger:natures_snare",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "{ability}! {target}'s damage reduced by {pct}% for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Hallow the ground you stand upon — holy light mends every ally on the node and sears the creatures fighting you. Healing and holy burn scale with WIS (35% reduced); how long the sanctity endures scales with CON (6s base, up to 10s).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Hallowed ground mends allies and burns enemies. Power scales with WIS, endurance with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.combatText.burn_text",
+    "before": null,
+    "fresh": "Holy fire sears {target}! [{amount}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.combatText.cast_text",
+    "before": null,
+    "fresh": "You consecrate the ground — hallowed light wells up beneath your feet for {duration}s, mending allies and searing the unholy.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:consecrate",
+    "path": "record.combatText.heal_text",
+    "before": null,
+    "fresh": "Consecrated ground soothes {ally}. [{amount}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.effectConfig.is_taunt",
+    "before": null,
+    "fresh": true,
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.combatText.self_text",
+    "before": null,
+    "fresh": "Divine Challenge! You mitigate incoming blows for {seconds}s. [{amount}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:divine_challenge",
+    "path": "record.combatText.mitigate_text",
+    "before": null,
+    "fresh": "{target}'s Divine Challenge mitigates the strike! [{amount}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:holy_shield",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:holy_shield",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Attackers take holy damage in return. WIS scaling reduced 20%, CON adds a kicker. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:holy_shield",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "templar:holy_shield",
+    "path": "record.combatText.retaliate_text",
+    "before": null,
+    "fresh": "{caster}'s Holy Shield burns {target}! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Pass divine judgment, dealing holy damage scaling with WIS",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Holy damage to one target. Scales with WIS.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.amountCalc.note",
+    "before": "5 + 2× soft stat + level/3, ×0.8 ability rider",
+    "fresh": "5 + 2× soft stat + level/3",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.amountCalc.finalMult",
+    "before": 0.8,
+    "fresh": null,
+    "classification": "stale committed bundle"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.combatText.hit",
+    "before": null,
+    "fresh": "{attacker} passes divine judgment upon {target}!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.combatText.miss",
+    "before": null,
+    "fresh": "{attacker}'s {ability} pronounces sentence, but {target} is spared.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "passes divine judgment upon",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:judgment",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "pronounces sentence on",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:shield_wall",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Dual-primary: WIS adds bonus block chance (+25.5% floor, up to +46.75% at high WIS), CON adds bonus block amount (+~4 floor, up to +~9 at high CON). Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:shield_wall",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "templar:shield_wall",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:battle_cry",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Reduces incoming damage and softens crits — magnitude scales with STR (with a small shield bonus), duration with DEX. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:battle_cry",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Reduce incoming damage and soften crits. Magnitude scales with STR, duration with DEX. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:battle_cry",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:battle_cry",
+    "path": "record.combatText.mitigate_text",
+    "before": null,
+    "fresh": "{target}'s war cry softens the blow! [{amount}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:power_strike",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:power_strike",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Heavy blow. Rolls weapon damage + STR + bonus.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:power_strike",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:power_strike",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "delivers a crushing blow to",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:power_strike",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "swings at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Slice your target, applying a bleed that ticks every 2s. Per-tick damage scales with your equipped weapon (bigger swords bleed harder) and STR. Duration scales with DEX (precision keeps the wound open).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Bleed your target over time. Per-tick scales with weapon + STR, duration with DEX.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.effectConfig.status_label",
+    "before": "bleed",
+    "fresh": "Bleed",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "Rend glances off {target} — no wound opens.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:rend",
+    "path": "record.combatText.apply_text",
+    "before": null,
+    "fresh": "rends {target} — blood weeps from the gash! [{damage}/tick]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Catch your breath and recover HP based on CON",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Recover your HP. Scales with CON.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.amountCalc.note",
+    "before": "CON magnitude",
+    "fresh": "WIS magnitude",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.combatText.self_text",
+    "before": null,
+    "fresh": "You use Second Wind and catch your breath!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:second_wind",
+    "path": "record.combatText.self_full_text",
+    "before": null,
+    "fresh": "You use Second Wind but you're already at full health.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:sunder_armor",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:sunder_armor",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Reduce target's AC. Amount scales with STR, duration with DEX.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "warrior:sunder_armor",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "warrior:sunder_armor",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "{ability}! {target}'s AC reduced by {amount} for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:arcane_surge",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:arcane_surge",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Increase all your damage. Bonus scales with INT. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:arcane_surge",
+    "path": "record.roleSlot",
+    "before": 2,
+    "fresh": 3,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:arcane_surge",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Arcane Surge! Your damage is amplified (x{mult}).",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Consume burn stacks for bonus damage. Per-stack scales with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.roleSlot",
+    "before": 4,
+    "fresh": 5,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.combatText.hit_text",
+    "before": null,
+    "fresh": "detonates {stacks} burn stack{plural} on {target}! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.combatText.miss_text",
+    "before": null,
+    "fresh": "Conflagrate gutters out against {target}{stacknote}!",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:conflagrate",
+    "path": "record.combatText.hit_no_stacks_text",
+    "before": null,
+    "fresh": "blasts {target} (no burn stacks). [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Hurl a ball of arcane flame at your target, scaling with INT",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Damage one target. Scales with INT.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.effectConfig.status_label",
+    "before": "scorched",
+    "fresh": "Scorched",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.combatText.hit_verb",
+    "before": null,
+    "fresh": "hurls a fireball at",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:fireball",
+    "path": "record.combatText.miss_verb",
+    "before": null,
+    "fresh": "hurls a fireball past",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.description",
+    "before": "",
+    "fresh": " Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.roleSlot",
+    "before": 1,
+    "fresh": 2,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.effectConfig.stat",
+    "before": "wis",
+    "fresh": null,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.combatText.ally_text",
+    "before": null,
+    "fresh": "Force Shield! You ward {target} for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:force_shield",
+    "path": "record.combatText.self_text",
+    "before": null,
+    "fresh": "Force Shield! An arcane ward wraps you for {seconds}s.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.description",
+    "before": "",
+    "fresh": "A bolt of frost that damages and chills the enemy, causing them to take more damage.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "A bolt of frost that damages and chills the enemy, causing them to take more damage.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.roleSlot",
+    "before": 0,
+    "fresh": 1,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.effectConfig.status_label",
+    "before": "chilled",
+    "fresh": "Chilled",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.effectConfig.amp_label",
+    "before": "chilled",
+    "fresh": "Chilled",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.effectConfig.resolved_by",
+    "before": null,
+    "fresh": "combat-tick",
+    "classification": "configured DB difference"
+  },
+  {
+    "ability": "wizard:frostbolt",
+    "path": "record.effectConfig.stat",
+    "before": null,
+    "fresh": "int",
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.description",
+    "before": "",
+    "fresh": "Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.tooltip",
+    "before": "",
+    "fresh": "Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.roleSlot",
+    "before": 3,
+    "fresh": 4,
+    "classification": "expected correction"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.effectConfig.status_label",
+    "before": "ignite",
+    "fresh": "Ignite",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.combatText.pulse_text",
+    "before": null,
+    "fresh": "A flaming orb leaps from {attacker} and sears {target} (burn x{stacks})! [{damage}]",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.combatText.stack_text",
+    "before": null,
+    "fresh": "{attacker}'s orb of fire seared {target} with Ignite.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "wizard:orbs_of_fire",
+    "path": "record.combatText.activate_text",
+    "before": null,
+    "fresh": "Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb may strike your target.",
+    "classification": "presentation-only difference"
+  },
+  {
+    "ability": "statuses",
+    "path": "statuses",
+    "before": [
+      {
+        "key": "bleed",
+        "effect_type": "bleed",
+        "classification": "dot",
+        "stack_noun": "bleed",
+        "is_periodic": true,
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "stat_mult": 1,
+          "global_mult": 0.67,
+          "role": "primary"
+        },
+        "duration": {
+          "base_ms": 20000
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 5,
+            "terms": [],
+            "unit": "count"
+          }
+        },
+        "modifier": null,
+        "default_damage_type": "physical"
+      },
+      {
+        "key": "chilled",
+        "effect_type": "chilled",
+        "classification": "damage_amp",
+        "stack_noun": "chill",
+        "is_periodic": false,
+        "tick_interval_ms": null,
+        "magnitude": {},
+        "duration": {
+          "duration_ticks": 3,
+          "role": null
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 1,
+            "terms": [],
+            "unit": "count"
+          }
+        },
+        "modifier": {
+          "kind": "damage_taken_pct",
+          "value": 10,
+          "eligible_sources": [
+            "weapon",
+            "ability",
+            "stance",
+            "dot",
+            "proc"
+          ]
+        },
+        "default_damage_type": null
+      },
+      {
+        "key": "ignite",
+        "effect_type": "ignite",
+        "classification": "dot",
+        "stack_noun": "burn",
+        "is_periodic": true,
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "stat_mult": 0.7,
+          "global_mult": 0.67,
+          "role": "secondary"
+        },
+        "duration": {
+          "base_ms": 30000,
+          "per_point_ms": 1000,
+          "cap_ms": 45000,
+          "role": "secondary"
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 5,
+            "terms": [],
+            "unit": "count"
+          }
+        },
+        "modifier": null,
+        "default_damage_type": "fire"
+      },
+      {
+        "key": "poison",
+        "effect_type": "poison",
+        "classification": "dot",
+        "stack_noun": "poison",
+        "is_periodic": true,
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "stat_mult": 1.2,
+          "global_mult": 0.67,
+          "role": "primary"
+        },
+        "duration": {
+          "base_ms": 25000,
+          "role": null
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 3,
+            "terms": [
+              {
+                "source": "stat",
+                "stat": "cha",
+                "role": "secondary",
+                "clampAtZero": true,
+                "transform": {
+                  "kind": "diminishing",
+                  "cap": 4
+                }
+              }
+            ],
+            "unit": "count"
+          },
+          "role": "secondary"
+        },
+        "modifier": null,
+        "default_damage_type": "poison"
+      },
+      {
+        "key": "scorched",
+        "effect_type": "scorched",
+        "classification": "dot",
+        "stack_noun": "scorch",
+        "is_periodic": true,
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "flat": 3
+        },
+        "duration": {
+          "base_ms": 6000
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 3,
+            "terms": [],
+            "unit": "count"
+          }
+        },
+        "modifier": null,
+        "default_damage_type": "fire"
+      }
+    ],
+    "fresh": [
+      {
+        "key": "bleed",
+        "label": "Bleed",
+        "effect_type": "bleed",
+        "classification": "dot",
+        "stack_noun": "bleed",
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "role": "primary",
+          "stat_mult": 1,
+          "global_mult": 0.67
+        },
+        "duration": {
+          "role": null,
+          "base_ms": 20000
+        },
+        "stacks": {
+          "role": null,
+          "max_stacks_calc": {
+            "base": 5,
+            "unit": "count",
+            "terms": []
+          }
+        },
+        "default_damage_type": "physical",
+        "admin_notes": "Enemy-side physical DoT used by on-hit effects and Rend.",
+        "created_at": "2026-08-15T13:33:35.369969+00:00",
+        "updated_at": "2026-08-15T13:33:35.369969+00:00",
+        "modifier": null,
+        "is_periodic": true
+      },
+      {
+        "key": "chilled",
+        "label": "Chilled",
+        "effect_type": "chilled",
+        "classification": "damage_amp",
+        "stack_noun": "chill",
+        "tick_interval_ms": null,
+        "magnitude": {},
+        "duration": {
+          "role": null,
+          "duration_ticks": 3
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 1,
+            "unit": "count",
+            "terms": []
+          }
+        },
+        "default_damage_type": null,
+        "admin_notes": "Reusable damage-amplification debuff. Duration is authoritative as combat ticks.",
+        "created_at": "2026-08-15T13:33:35.369969+00:00",
+        "updated_at": "2026-08-15T13:33:35.369969+00:00",
+        "modifier": {
+          "kind": "damage_taken_pct",
+          "value": 10,
+          "eligible_sources": [
+            "weapon",
+            "ability",
+            "stance",
+            "dot",
+            "proc"
+          ]
+        },
+        "is_periodic": false
+      },
+      {
+        "key": "ignite",
+        "label": "Ignite",
+        "effect_type": "ignite",
+        "classification": "dot",
+        "stack_noun": "burn",
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "role": "secondary",
+          "stat_mult": 0.7,
+          "global_mult": 0.67
+        },
+        "duration": {
+          "role": "secondary",
+          "cap_ms": 45000,
+          "base_ms": 30000,
+          "per_point_ms": 1000
+        },
+        "stacks": {
+          "role": null,
+          "max_stacks_calc": {
+            "base": 5,
+            "unit": "count",
+            "terms": []
+          }
+        },
+        "default_damage_type": "fire",
+        "admin_notes": "Enemy-side fire DoT. Applied by successful Orbs of Fire orb attacks.",
+        "created_at": "2026-08-15T13:33:35.369969+00:00",
+        "updated_at": "2026-08-15T13:33:35.369969+00:00",
+        "modifier": null,
+        "is_periodic": true
+      },
+      {
+        "key": "poison",
+        "label": "Poison",
+        "effect_type": "poison",
+        "classification": "dot",
+        "stack_noun": "poison",
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "role": "primary",
+          "stat_mult": 1.2,
+          "global_mult": 0.67
+        },
+        "duration": {
+          "role": null,
+          "base_ms": 25000
+        },
+        "stacks": {
+          "role": "secondary",
+          "max_stacks_calc": {
+            "base": 3,
+            "unit": "count",
+            "terms": [
+              {
+                "role": "secondary",
+                "stat": "cha",
+                "source": "stat",
+                "transform": {
+                  "cap": 4,
+                  "kind": "diminishing"
+                },
+                "clampAtZero": true
+              }
+            ]
+          }
+        },
+        "default_damage_type": "poison",
+        "admin_notes": "Enemy-side DoT. Applied by the Assassin On-Hit Stance (Envenom).",
+        "created_at": "2026-08-15T13:33:35.369969+00:00",
+        "updated_at": "2026-08-15T13:33:35.369969+00:00",
+        "modifier": null,
+        "is_periodic": true
+      },
+      {
+        "key": "scorched",
+        "label": "Scorched",
+        "effect_type": "scorched",
+        "classification": "dot",
+        "stack_noun": "scorch",
+        "tick_interval_ms": 2000,
+        "magnitude": {
+          "flat": 3
+        },
+        "duration": {
+          "base_ms": 6000
+        },
+        "stacks": {
+          "max_stacks_calc": {
+            "base": 3,
+            "unit": "count",
+            "terms": []
+          }
+        },
+        "default_damage_type": "fire",
+        "admin_notes": "Light, flat burn with no attribute scaling. Preserves Fireball's legacy on-hit burn exactly (25% / 3 per tick / 6s / 3 stacks).",
+        "created_at": "2026-08-15T13:33:35.369969+00:00",
+        "updated_at": "2026-08-15T13:33:35.369969+00:00",
+        "modifier": null,
+        "is_periodic": true
+      }
+    ],
+    "classification": "presentation-only difference"
+  }
+]

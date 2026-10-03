@@ -1,6 +1,7 @@
 {
-  "generatedBy": "scripts/dump-active-ability-inventory.ts",
-  "source": "class_ability_assignments x abilities x base_abilities (status=active) + applied_statuses",
+  "schemaVersion": 2,
+  "source": "Read-only class_ability_assignments x abilities x base_abilities + applied_statuses/classes export at 2026-10-03T20:44:01.843Z from configured Supabase REST endpoint; local approved Battle Cry/Grand Finale/Consecrate/Rend edits follow; database unchanged.",
+  "generatedBy": "scripts/publish-abilities.mjs",
   "abilityCount": 36,
   "statusCount": 5,
   "mechanics": [
@@ -28,68 +29,172 @@
   "statuses": [
     {
       "key": "bleed",
+      "label": "Bleed",
       "effect_type": "bleed",
       "classification": "dot",
       "stack_noun": "bleed",
-      "is_periodic": true,
       "tick_interval_ms": 2000,
-      "magnitude": { "stat_mult": 1, "global_mult": 0.67, "role": "primary" },
-      "duration": { "base_ms": 20000 },
-      "stacks": { "max_stacks_calc": { "base": 5, "terms": [], "unit": "count" } },
+      "magnitude": {
+        "role": "primary",
+        "stat_mult": 1,
+        "global_mult": 0.67
+      },
+      "duration": {
+        "role": null,
+        "base_ms": 20000
+      },
+      "stacks": {
+        "role": null,
+        "max_stacks_calc": {
+          "base": 5,
+          "unit": "count",
+          "terms": []
+        }
+      },
+      "default_damage_type": "physical",
+      "admin_notes": "Enemy-side physical DoT used by on-hit effects and Rend.",
+      "created_at": "2026-08-15T13:33:35.369969+00:00",
+      "updated_at": "2026-08-15T13:33:35.369969+00:00",
       "modifier": null,
-      "default_damage_type": "physical"
+      "is_periodic": true
     },
     {
       "key": "chilled",
+      "label": "Chilled",
       "effect_type": "chilled",
       "classification": "damage_amp",
       "stack_noun": "chill",
-      "is_periodic": false,
       "tick_interval_ms": null,
       "magnitude": {},
-      "duration": { "duration_ticks": 3, "role": null },
-      "stacks": { "max_stacks_calc": { "base": 1, "terms": [], "unit": "count" } },
-      "modifier": { "kind": "damage_taken_pct", "value": 10, "eligible_sources": ["weapon", "ability", "stance", "dot", "proc"] },
-      "default_damage_type": null
+      "duration": {
+        "role": null,
+        "duration_ticks": 3
+      },
+      "stacks": {
+        "max_stacks_calc": {
+          "base": 1,
+          "unit": "count",
+          "terms": []
+        }
+      },
+      "default_damage_type": null,
+      "admin_notes": "Reusable damage-amplification debuff. Duration is authoritative as combat ticks.",
+      "created_at": "2026-08-15T13:33:35.369969+00:00",
+      "updated_at": "2026-08-15T13:33:35.369969+00:00",
+      "modifier": {
+        "kind": "damage_taken_pct",
+        "value": 10,
+        "eligible_sources": [
+          "weapon",
+          "ability",
+          "stance",
+          "dot",
+          "proc"
+        ]
+      },
+      "is_periodic": false
     },
     {
       "key": "ignite",
+      "label": "Ignite",
       "effect_type": "ignite",
       "classification": "dot",
       "stack_noun": "burn",
-      "is_periodic": true,
       "tick_interval_ms": 2000,
-      "magnitude": { "stat_mult": 0.7, "global_mult": 0.67, "role": "secondary" },
-      "duration": { "base_ms": 30000, "per_point_ms": 1000, "cap_ms": 45000, "role": "secondary" },
-      "stacks": { "max_stacks_calc": { "base": 5, "terms": [], "unit": "count" } },
+      "magnitude": {
+        "role": "secondary",
+        "stat_mult": 0.7,
+        "global_mult": 0.67
+      },
+      "duration": {
+        "role": "secondary",
+        "cap_ms": 45000,
+        "base_ms": 30000,
+        "per_point_ms": 1000
+      },
+      "stacks": {
+        "role": null,
+        "max_stacks_calc": {
+          "base": 5,
+          "unit": "count",
+          "terms": []
+        }
+      },
+      "default_damage_type": "fire",
+      "admin_notes": "Enemy-side fire DoT. Applied by successful Orbs of Fire orb attacks.",
+      "created_at": "2026-08-15T13:33:35.369969+00:00",
+      "updated_at": "2026-08-15T13:33:35.369969+00:00",
       "modifier": null,
-      "default_damage_type": "fire"
+      "is_periodic": true
     },
     {
       "key": "poison",
+      "label": "Poison",
       "effect_type": "poison",
       "classification": "dot",
       "stack_noun": "poison",
-      "is_periodic": true,
       "tick_interval_ms": 2000,
-      "magnitude": { "stat_mult": 1.2, "global_mult": 0.67, "role": "primary" },
-      "duration": { "base_ms": 25000, "role": null },
-      "stacks": { "max_stacks_calc": { "base": 3, "terms": [{ "source": "stat", "stat": "cha", "role": "secondary", "clampAtZero": true, "transform": { "kind": "diminishing", "cap": 4 } }], "unit": "count" }, "role": "secondary" },
+      "magnitude": {
+        "role": "primary",
+        "stat_mult": 1.2,
+        "global_mult": 0.67
+      },
+      "duration": {
+        "role": null,
+        "base_ms": 25000
+      },
+      "stacks": {
+        "role": "secondary",
+        "max_stacks_calc": {
+          "base": 3,
+          "unit": "count",
+          "terms": [
+            {
+              "role": "secondary",
+              "stat": "cha",
+              "source": "stat",
+              "transform": {
+                "cap": 4,
+                "kind": "diminishing"
+              },
+              "clampAtZero": true
+            }
+          ]
+        }
+      },
+      "default_damage_type": "poison",
+      "admin_notes": "Enemy-side DoT. Applied by the Assassin On-Hit Stance (Envenom).",
+      "created_at": "2026-08-15T13:33:35.369969+00:00",
+      "updated_at": "2026-08-15T13:33:35.369969+00:00",
       "modifier": null,
-      "default_damage_type": "poison"
+      "is_periodic": true
     },
     {
       "key": "scorched",
+      "label": "Scorched",
       "effect_type": "scorched",
       "classification": "dot",
       "stack_noun": "scorch",
-      "is_periodic": true,
       "tick_interval_ms": 2000,
-      "magnitude": { "flat": 3 },
-      "duration": { "base_ms": 6000 },
-      "stacks": { "max_stacks_calc": { "base": 3, "terms": [], "unit": "count" } },
+      "magnitude": {
+        "flat": 3
+      },
+      "duration": {
+        "base_ms": 6000
+      },
+      "stacks": {
+        "max_stacks_calc": {
+          "base": 3,
+          "unit": "count",
+          "terms": []
+        }
+      },
+      "default_damage_type": "fire",
+      "admin_notes": "Light, flat burn with no attribute scaling. Preserves Fireball's legacy on-hit burn exactly (25% / 3 per tick / 6s / 3 stacks).",
+      "created_at": "2026-08-15T13:33:35.369969+00:00",
+      "updated_at": "2026-08-15T13:33:35.369969+00:00",
       "modifier": null,
-      "default_damage_type": "fire"
+      "is_periodic": true
     }
   ],
   "abilities": [
@@ -98,8 +203,12 @@
       "classAbilityKey": "backstab",
       "abilityKey": "backstab",
       "label": "Backstab",
+      "description": "Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).",
+      "tooltip": "Vital strike. Rolls weapon damage + DEX + bonus.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "weapon_attack",
       "mechanic": "weapon_attack",
       "abilityType": "damage",
@@ -108,15 +217,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "dex",
       "amountCalc": {
         "cap": null,
         "base": 3,
@@ -134,14 +240,14 @@
           {
             "mult": 1,
             "role": "primary",
-            "stat": "str",
+            "stat": "dex",
             "label": "raw modifier",
             "source": "stat"
           },
           {
             "mult": 1,
             "role": "primary",
-            "stat": "str",
+            "stat": "dex",
             "source": "stat",
             "rounding": "round",
             "transform": {
@@ -162,32 +268,35 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
-        "accuracy_stat": "dex",
-        "weapon_scaled": true
+        "weapon_scaled": true,
+        "stat": "dex",
+        "accuracy_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "on_hit_effect"
-      ]
+      "combatText": {
+        "hit_text": "{caster}'s blade finds a vital point on {target} from behind. [{damage}]",
+        "hit_verb": "backstabs",
+        "miss_text": "{caster}'s blade slips wide — {target} is untouched.",
+        "miss_verb": "lunges at"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "assassin",
       "classAbilityKey": "cloak_of_shadows",
       "abilityKey": "cloak_of_shadows",
       "label": "Cloak of Shadows",
+      "description": "Wrap yourself in shadow. Dodge chance scales with CHA (theatrical misdirection), duration scales with DEX.",
+      "tooltip": "Chance to dodge attacks. Dodge scales with CHA, duration with DEX.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "evasion_dodge",
       "mechanic": "evasion_buff",
       "abilityType": "buff",
@@ -196,15 +305,12 @@
       "activationMode": "instant",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "cha",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.4,
@@ -221,7 +327,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.03
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -234,7 +341,8 @@
           {
             "mult": 500,
             "stat": "dex",
-            "source": "stat"
+            "source": "stat",
+            "role": "primary"
           }
         ]
       },
@@ -242,24 +350,26 @@
       "effectConfig": {
         "evasion_source": "cloak"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "Cloak of Shadows! {dodge_pct}% dodge chance for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "assassin",
       "classAbilityKey": "envenom",
       "abilityKey": "envenom",
       "label": "Envenom",
+      "description": " Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Orbs of Fire. Click again to drop.",
+      "tooltip": "Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "on_hit_stance",
       "mechanic": "stack_apply",
       "abilityType": "buff",
@@ -268,15 +378,12 @@
       "activationMode": "stance",
       "cpCost": 50,
       "cpReservePct": 0.2,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "cha",
-      "classScale": 1,
-      "appliedStatus": "poison",
-      "statusTrigger": "weapon_hit",
-      "statusChancePct": null,
-      "statusApplicationEnabled": true,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.25,
@@ -293,7 +400,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.04
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ]
       },
@@ -311,26 +419,38 @@
                 "cap": 4,
                 "kind": "diminishing"
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "secondary"
             }
           ]
         }
       },
       "effectConfig": {
         "trigger": "on_hit",
-        "dot_stat": "dex",
-        "stack_noun": "poison",
-        "effect_type": "poison",
         "resolved_by": "combat-tick",
-        "dot_stat_mult": 1.2,
         "consumes_all_cp": true,
-        "dot_duration_ms": 25000,
+        "mutually_exclusive_with": [
+          "ignite"
+        ],
+        "status_key": "poison",
+        "status_label": "Poison",
+        "status_classification": "dot",
+        "status_trigger": "weapon_hit",
+        "status_chance_pct": null,
+        "status_enabled": true,
+        "effect_type": "poison",
+        "stack_noun": "poison",
+        "tick_rate_ms": 2000,
+        "dot_stat_mult": 1.2,
         "dot_global_mult": 0.67,
+        "dot_stat": "dex",
+        "dot_duration_ms": 25000,
         "max_stacks_calc": {
           "base": 3,
           "unit": "count",
           "terms": [
             {
+              "role": "secondary",
               "stat": "cha",
               "source": "stat",
               "transform": {
@@ -340,31 +460,30 @@
               "clampAtZero": true
             }
           ]
-        },
-        "mutually_exclusive_with": [
-          "ignite"
-        ]
+        }
       },
-      "overrides": {},
-      "triggerType": "on_hit",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "applied_status",
-        "scaling",
-        "duration",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {
+        "proc_text": "{attacker}'s attack poisons {target}!",
+        "stack_text": "{attacker}'s venom seeps into {target} (poison x{stacks}).",
+        "activate_text": "Envenom! Your weapons drip with poison."
+      },
+      "appliedStatus": "poison",
+      "statusTrigger": "weapon_hit",
+      "statusChancePct": null,
+      "statusApplicationEnabled": true,
+      "onHitEffect": null
     },
     {
       "classKey": "assassin",
       "classAbilityKey": "eviscerate",
       "abilityKey": "eviscerate",
       "label": "Eviscerate",
+      "description": "A vicious finisher. Rolls your equipped weapon damage + DEX + ability bonus, then multiplied by consumed poison stacks (per-stack bonus scales with CHA showmanship). Unarmed falls back to 1d4.",
+      "tooltip": "Rolls weapon damage + DEX + bonus, multiplied by poison stacks (CHA).",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "stack_consume_weapon",
       "mechanic": "stack_consume",
       "abilityType": "damage",
@@ -373,15 +492,12 @@
       "activationMode": "queued",
       "cpCost": 40,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "cha",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "dex",
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -400,7 +516,8 @@
             "mult": 1,
             "stat": "dex",
             "label": "raw modifier",
-            "source": "stat"
+            "source": "stat",
+            "role": "primary"
           },
           {
             "mult": 1,
@@ -410,7 +527,8 @@
               "kind": "soft",
               "profile": "damage"
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           },
           {
             "mult": 0.3333333333333333,
@@ -438,44 +556,47 @@
                 "kind": "soft",
                 "profile": "stacking"
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "secondary"
             }
           ],
           "version": 2
         }
       },
       "effectConfig": {
-        "stat": "dex",
         "consumes": "poison_stacks",
         "stack_noun": "poison",
         "stack_type": "poison",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
         "weapon_based": true,
-        "accuracy_stat": "dex",
         "weapon_scaled": true,
-        "per_stack_stat": "cha"
+        "stat": "dex",
+        "per_stack_stat": "cha",
+        "accuracy_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "applied_status",
-        "combat_text"
-      ]
+      "combatText": {
+        "hit_text": "eviscerates {target}, detonating {stacks} poison stack{plural}! [{damage}]",
+        "miss_text": "Eviscerate misses {target}{stacknote}!",
+        "hit_no_stacks_text": "eviscerates {target} (no poison stacks). [{damage}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "assassin",
       "classAbilityKey": "shadowstep",
       "abilityKey": "shadowstep",
       "label": "Shadowstep",
+      "description": "Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).",
+      "tooltip": "Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "stealth_buff",
       "mechanic": "stealth_buff",
       "abilityType": "buff",
@@ -484,15 +605,12 @@
       "activationMode": "instant",
       "cpCost": 15,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "cha",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": 2.5,
         "base": 2,
@@ -504,7 +622,8 @@
             "mult": 0.05,
             "stat": "cha",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -517,34 +636,37 @@
           {
             "mult": 1000,
             "stat": "dex",
-            "source": "stat"
+            "source": "stat",
+            "role": "primary"
           }
         ]
       },
       "mechanicCalcs": {},
       "effectConfig": {
+        "consumed_on_attack": true,
         "ambush_stat": "cha",
-        "duration_stat": "dex",
-        "consumed_on_attack": true
+        "duration_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "{ability}! You vanish into the shadows for {seconds}s (ambush x{mult})."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "bard",
       "classAbilityKey": "crescendo",
       "abilityKey": "crescendo",
       "label": "Crescendo",
+      "description": "A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.",
+      "tooltip": "Heal nearby allies over time. Heal scales with CHA, duration with INT.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "party_regen",
       "mechanic": "party_regen",
       "abilityType": "heal",
@@ -553,15 +675,14 @@
       "activationMode": "instant",
       "cpCost": 40,
       "cpReservePct": null,
-      "intervalMs": 3000,
+      "authoredIntervalMs": 3000,
+      "intervalMs": 2000,
+      "runtimeTransformations": [
+        "party_presence_interval_is_one_combat2_heartbeat"
+      ],
       "primaryAttribute": "cha",
       "secondaryAttribute": "int",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -594,31 +715,33 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "cha",
-        "source": "bard",
+        "source": "healer",
         "resolved_by": "client-loop",
-        "duration_stat": "int",
-        "ticking_party_heal": true
+        "ticking_party_heal": true,
+        "stat": "cha",
+        "duration_stat": "int"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "interval",
-        "combat_text"
-      ]
+      "combatText": {
+        "cast_text": "Crescendo! A rising melody heals {who} every 3s for {seconds}s.",
+        "tick_text": "Crescendo heals {who} for {amount} HP!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "bard",
       "classAbilityKey": "cutting_words",
       "abilityKey": "cutting_words",
       "label": "Cutting Words",
+      "description": "Unleash a barbed insult that wounds your target, scaling with CHA",
+      "tooltip": "Damage one target. Scales with CHA.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "spell_attack",
       "mechanic": "spell_attack",
       "abilityType": "damage",
@@ -627,15 +750,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "cha",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "cha",
       "amountCalc": {
         "cap": null,
         "base": 5,
@@ -667,30 +787,31 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "cha",
         "resolved_by": "combat-tick",
+        "stat": "cha",
         "accuracy_stat": "cha"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "status_application"
-      ]
+      "combatText": {
+        "hit_verb": "mocks",
+        "miss_verb": "jeers at"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "bard",
       "classAbilityKey": "dissonance",
       "abilityKey": "dissonance",
       "label": "Dissonance",
+      "description": "A discordant note that reduces your target's damage. Reduction magnitude scales with CHA (cutting cadence), duration scales with INT.",
+      "tooltip": "Reduce target's damage. Reduction scales with CHA, duration with INT.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "control_reduction_light",
       "mechanic": "control_debuff",
       "abilityType": "debuff",
@@ -699,32 +820,30 @@
       "activationMode": "instant",
       "cpCost": 25,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "cha",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.25,
-        "note": "CHA-scaled outgoing-damage reduction",
+        "note": "scaling stat = INT for bards",
         "unit": "percent",
         "floor": null,
         "terms": [
           {
             "mult": 1,
-            "stat": "cha",
+            "stat": "int",
             "source": "stat",
             "transform": {
               "cap": 0.15,
               "kind": "diminishing_float",
               "perPoint": 0.02
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -738,34 +857,35 @@
             "mult": 1000,
             "stat": "int",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "control_mode": "damage_reduction",
-        "magnitude_stat": "cha"
+        "control_mode": "damage_reduction"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "{ability}! {target}'s damage reduced by {pct}% for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "bard",
       "classAbilityKey": "grand_finale",
       "abilityKey": "grand_finale",
       "label": "Grand Finale",
+      "description": "Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.",
+      "tooltip": "Burst damage on one target. Damage scales with CHA, crit-edge with INT.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "burst_damage",
       "mechanic": "burst_damage",
       "abilityType": "damage",
@@ -774,19 +894,16 @@
       "activationMode": "queued",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "cha",
       "secondaryAttribute": "int",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "cha",
       "amountCalc": {
         "cap": null,
         "base": 0,
-        "note": "CHA burst base (the CHA-sided bonus die stays mechanic-owned)",
+        "note": "CHA-scaled burst; no additional bonus die",
         "unit": "hp",
         "floor": 8,
         "terms": [
@@ -799,7 +916,8 @@
               "kind": "soft",
               "profile": "burst"
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           },
           {
             "mult": 1.5,
@@ -824,38 +942,41 @@
               "stat": "int",
               "source": "stat",
               "rounding": "floor",
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "secondary"
             }
           ],
           "version": 2
         }
       },
       "effectConfig": {
-        "stat": "cha",
         "resolved_by": "combat-tick",
-        "accuracy_stat": "cha",
+        "crit_threshold_floor": 17,
+        "stat": "cha",
         "crit_edge_stat": "int",
-        "crit_threshold_floor": 17
+        "accuracy_stat": "cha"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {
+        "hit_text": "{ability}!{crit} {caster} unleashes a devastating blast of sound at {target}! [{damage}]",
+        "miss_text": "{caster}'s {ability} falls flat — {target} is untouched!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "bard",
       "classAbilityKey": "inspire",
       "abilityKey": "inspire",
       "label": "Inspire",
+      "description": "A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s). Recasting refreshes the duration and keeps the stronger regen values.",
+      "tooltip": "Grant party HP & CP regen. Regen scales with CHA, duration with INT.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "regen_buff",
       "mechanic": "regen_buff",
       "abilityType": "buff",
@@ -864,15 +985,14 @@
       "activationMode": "instant",
       "cpCost": 15,
       "cpReservePct": null,
-      "intervalMs": null,
+      "authoredIntervalMs": null,
+      "intervalMs": 2000,
+      "runtimeTransformations": [
+        "party_presence_interval_is_one_combat2_heartbeat"
+      ],
       "primaryAttribute": "cha",
       "secondaryAttribute": "int",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -884,7 +1004,8 @@
             "mult": 1,
             "stat": "cha",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ]
       },
@@ -899,7 +1020,8 @@
             "mult": 8000,
             "stat": "int",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -915,7 +1037,8 @@
               "stat": "cha",
               "source": "stat",
               "rounding": "ceil",
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "primary"
             }
           ]
         }
@@ -936,31 +1059,33 @@
             }
           ]
         },
+        "refresh_policy": "best_of",
+        "min_cp_per_tick": 1,
         "cp_stat": "cha",
         "hp_stat": "cha",
-        "duration_stat": "int",
-        "refresh_policy": "best_of",
-        "min_cp_per_tick": 1
+        "duration_stat": "int"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "interval",
-        "combat_text"
-      ]
+      "combatText": {
+        "renew_text": "{caster} renews the inspiring song! ({seconds}s remaining)",
+        "activate_text": "{caster} plays an inspiring song for {seconds}s!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "healer",
       "classAbilityKey": "divine_aegis",
       "abilityKey": "divine_aegis",
       "label": "Divine Aegis",
+      "description": "Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.",
+      "tooltip": "Shield an ally with an absorb pool. Pool scales with WIS, duration with CON.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "absorb_ally",
       "mechanic": "absorb_buff",
       "abilityType": "buff",
@@ -969,15 +1094,12 @@
       "activationMode": "instant",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0,
@@ -1015,29 +1137,32 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "wis",
         "resolved_by": "client-cast",
         "absorb_shield": true,
+        "stat": "wis",
         "duration_stat": "con"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "ally_text": "Divine Aegis! You shield {target} for up to {seconds}s.",
+        "self_text": "Divine Aegis! An absorb shield wraps you for up to {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "healer",
       "classAbilityKey": "heal",
       "abilityKey": "heal",
       "label": "Heal",
+      "description": "Restore HP based on your Wisdom",
+      "tooltip": "Restore your HP. Scales with WIS.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "heal",
       "mechanic": "heal",
       "abilityType": "heal",
@@ -1046,15 +1171,12 @@
       "activationMode": "instant",
       "cpCost": 15,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0,
@@ -1077,23 +1199,27 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {},
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {
+        "self_text": "You cast Heal and mend your wounds!",
+        "self_full_text": "You cast Heal but you're already at full health."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "healer",
       "classAbilityKey": "purifying_light",
       "abilityKey": "purifying_light",
       "label": "Purifying Light",
+      "description": "A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).",
+      "tooltip": "Heal nearby allies over time. Heal scales with WIS, duration with CON.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "party_regen",
       "mechanic": "party_regen",
       "abilityType": "heal",
@@ -1102,15 +1228,14 @@
       "activationMode": "instant",
       "cpCost": 40,
       "cpReservePct": null,
-      "intervalMs": 3000,
+      "authoredIntervalMs": 3000,
+      "intervalMs": 2000,
+      "runtimeTransformations": [
+        "party_presence_interval_is_one_combat2_heartbeat"
+      ],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -1143,31 +1268,33 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "wis",
         "source": "healer",
         "resolved_by": "client-loop",
-        "duration_stat": "con",
-        "ticking_party_heal": true
+        "ticking_party_heal": true,
+        "stat": "wis",
+        "duration_stat": "con"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "interval",
-        "combat_text"
-      ]
+      "combatText": {
+        "cast_text": "Purifying Light! Divine radiance heals {who} every 3s for {seconds}s.",
+        "tick_text": "Purifying Light heals {who} for {amount} HP!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "healer",
       "classAbilityKey": "smite",
       "abilityKey": "smite",
       "label": "Smite",
+      "description": "Channel a burst of divine light at your target, scaling with WIS",
+      "tooltip": "Damage one target. Scales with WIS.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "spell_attack",
       "mechanic": "spell_attack",
       "abilityType": "damage",
@@ -1176,15 +1303,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "wis",
       "amountCalc": {
         "cap": null,
         "base": 5,
@@ -1216,30 +1340,31 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "wis",
         "resolved_by": "combat-tick",
+        "stat": "wis",
         "accuracy_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "status_application"
-      ]
+      "combatText": {
+        "hit_verb": "smites",
+        "miss_verb": "calls down light upon"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "healer",
       "classAbilityKey": "transfer_health",
       "abilityKey": "transfer_health",
       "label": "Transfer Health",
+      "description": "Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.",
+      "tooltip": "Sacrifice HP to heal an ally. Scales with WIS; CON sets your safety floor.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "hp_transfer",
       "mechanic": "hp_transfer",
       "abilityType": "heal",
@@ -1248,15 +1373,12 @@
       "activationMode": "instant",
       "cpCost": 25,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0,
@@ -1267,7 +1389,8 @@
           {
             "mult": 2,
             "stat": "wis",
-            "source": "stat"
+            "source": "stat",
+            "role": "primary"
           },
           {
             "mult": 0.5,
@@ -1286,14 +1409,13 @@
           "terms": [
             {
               "stat": "con",
-              "source": "stat"
+              "source": "stat",
+              "role": "secondary"
             }
           ]
         }
       },
       "effectConfig": {
-        "reserve_stat": "con",
-        "magnitude_stat": "wis",
         "min_reserve_hp": 1,
         "reserve_hp_calc": {
           "base": 0,
@@ -1306,25 +1428,31 @@
               "source": "stat"
             }
           ]
-        }
+        },
+        "reserve_stat": "con",
+        "magnitude_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {
+        "no_hp_text": "You don't have enough HP to transfer! (need to keep {reserve} HP)",
+        "transfer_text": "{caster} sacrifices life to heal {target}!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "ranger",
       "classAbilityKey": "aimed_shot",
       "abilityKey": "aimed_shot",
       "label": "Aimed Shot",
+      "description": "A careful shot. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).",
+      "tooltip": "Careful shot. Rolls weapon damage + DEX + bonus.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "weapon_attack",
       "mechanic": "weapon_attack",
       "abilityType": "damage",
@@ -1333,15 +1461,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "dex",
       "amountCalc": {
         "cap": null,
         "base": 3,
@@ -1359,14 +1484,14 @@
           {
             "mult": 1,
             "role": "primary",
-            "stat": "str",
+            "stat": "dex",
             "label": "raw modifier",
             "source": "stat"
           },
           {
             "mult": 1,
             "role": "primary",
-            "stat": "str",
+            "stat": "dex",
             "source": "stat",
             "rounding": "round",
             "transform": {
@@ -1387,32 +1512,33 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
-        "accuracy_stat": "dex",
-        "weapon_scaled": true
+        "weapon_scaled": true,
+        "stat": "dex",
+        "accuracy_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "on_hit_effect"
-      ]
+      "combatText": {
+        "hit_verb": "looses an aimed shot at",
+        "miss_verb": "looses an arrow at"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "ranger",
       "classAbilityKey": "barrage",
       "abilityKey": "barrage",
       "label": "Barrage",
+      "description": "Fire a volley of arrows. Each arrow rolls your equipped weapon damage (unarmed: 1d4) + half DEX. Arrow count scales with WIS: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).",
+      "tooltip": "Volley of arrows. Each rolls weapon damage + half DEX; count scales with WIS.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "multi_attack",
       "mechanic": "multi_attack",
       "abilityType": "damage",
@@ -1421,15 +1547,12 @@
       "activationMode": "queued",
       "cpCost": 25,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "wis",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "dex",
       "amountCalc": {
         "cap": null,
         "base": 0,
@@ -1449,7 +1572,8 @@
             "stat": "dex",
             "source": "stat",
             "rounding": "floor",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ],
         "version": 2,
@@ -1471,7 +1595,8 @@
                   "add": 1
                 }
               ],
-              "source": "stat_threshold"
+              "source": "stat_threshold",
+              "role": "primary"
             },
             {
               "stat": "wis",
@@ -1481,16 +1606,15 @@
                   "add": 1
                 }
               ],
-              "source": "stat_threshold"
+              "source": "stat_threshold",
+              "role": "secondary"
             }
           ]
         }
       },
       "effectConfig": {
-        "attack_stat": "dex",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
-        "accuracy_stat": "dex",
         "weapon_scaled": true,
         "arrow_count_calc": {
           "cap": 4,
@@ -1518,28 +1642,32 @@
               "source": "stat_threshold"
             }
           ]
-        }
+        },
+        "attack_stat": "dex",
+        "accuracy_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "on_hit_effect"
-      ]
+      "combatText": {
+        "hit_text": "Arrow {index}/{count} strikes {target}! [{damage}]",
+        "cast_text": "{caster} unleashes Barrage of {count} arrows!",
+        "miss_text": "Arrow {index}/{count} misses {target}."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "ranger",
       "classAbilityKey": "disengage",
       "abilityKey": "disengage",
       "label": "Disengage",
+      "description": "Leap backward — dodge all attacks briefly. Dodge duration scales with DEX, next-strike bonus damage scales with WIS (calm aim).",
+      "tooltip": "Dodge briefly; next strike deals bonus damage. Bonus scales with WIS, duration with DEX.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "evasion_next_hit",
       "mechanic": "evasion_buff",
       "abilityType": "buff",
@@ -1548,15 +1676,12 @@
       "activationMode": "instant",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": "wis",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 1.3,
@@ -1573,7 +1698,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.05
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -1586,7 +1712,8 @@
           {
             "mult": 500,
             "stat": "dex",
-            "source": "stat"
+            "source": "stat",
+            "role": "primary"
           }
         ]
       },
@@ -1596,24 +1723,26 @@
         "evasion_source": "disengage",
         "next_hit_window_ms": 15000
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "Disengage! You leap back — dodging all attacks for {seconds}s. Your next strike deals +{bonus_pct}% bonus damage!"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "ranger",
       "classAbilityKey": "eagle_eye",
       "abilityKey": "eagle_eye",
       "label": "Eagle Eye",
+      "description": " Stance. Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop.",
+      "tooltip": "Widen your crit range. Scales with DEX and WIS. Stance.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "offense_crit",
       "mechanic": "offense_buff",
       "abilityType": "buff",
@@ -1622,15 +1751,12 @@
       "activationMode": "stance",
       "cpCost": 15,
       "cpReservePct": 0.1,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": 5,
         "base": 0,
@@ -1642,13 +1768,15 @@
             "mult": 0.5,
             "stat": "dex",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           },
           {
             "mult": 0.5,
             "stat": "wis",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ],
         "rounding": "floor"
@@ -1664,25 +1792,26 @@
       "effectConfig": {
         "offense_mode": "crit_edge"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "Eagle Eye! Your crit range is now {crit_low}-20 for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "ranger",
       "classAbilityKey": "natures_snare",
       "abilityKey": "natures_snare",
       "label": "Nature's Snare",
+      "description": "Entangle your target. Damage-reduction magnitude scales with DEX (precise binding), duration scales with WIS.",
+      "tooltip": "Reduce target's damage. Reduction scales with DEX, duration with WIS.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "control_reduction",
       "mechanic": "control_debuff",
       "abilityType": "debuff",
@@ -1691,32 +1820,30 @@
       "activationMode": "instant",
       "cpCost": 40,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "dex",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.25,
-        "note": "DEX-scaled outgoing-damage reduction",
+        "note": "WIS-scaled damage reduction (live formula uses the scaling stat)",
         "unit": "percent",
         "floor": null,
         "terms": [
           {
             "mult": 1,
-            "stat": "dex",
+            "stat": "wis",
             "source": "stat",
             "transform": {
               "cap": 0.15,
               "kind": "diminishing_float",
               "perPoint": 0.02
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -1730,34 +1857,35 @@
             "mult": 1000,
             "stat": "wis",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "control_mode": "damage_reduction",
-        "magnitude_stat": "dex"
+        "control_mode": "damage_reduction"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "{ability}! {target}'s damage reduced by {pct}% for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "templar",
       "classAbilityKey": "consecrate",
       "abilityKey": "consecrate",
       "label": "Consecrate",
+      "description": "Node-wide pulses heal eligible allies and damage all eligible hostile living creatures on the node, including creatures not currently fighting the Templar.",
+      "tooltip": "Heal eligible allies and damage eligible hostile living creatures across the node.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "aura_pulse",
       "mechanic": "aura_pulse",
       "abilityType": "heal",
@@ -1766,15 +1894,12 @@
       "activationMode": "instant",
       "cpCost": 40,
       "cpReservePct": null,
+      "authoredIntervalMs": 2000,
       "intervalMs": 2000,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -1786,7 +1911,8 @@
             "mult": 1,
             "stat": "wis",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ],
         "version": 2,
@@ -1812,7 +1938,8 @@
                 "add": 1
               }
             ],
-            "source": "stat_threshold"
+            "source": "stat_threshold",
+            "role": "secondary"
           }
         ]
       },
@@ -1820,30 +1947,32 @@
       "effectConfig": {
         "resolved_by": "combat-tick",
         "heals_allies": true,
-        "magnitude_stat": "wis",
         "damages_enemies": true,
-        "magnitude_reduction": 0.35
+        "magnitude_reduction": 0.35,
+        "magnitude_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "interval",
-        "combat_text"
-      ]
+      "combatText": {
+        "burn_text": "Holy fire sears {target}! [{amount}]",
+        "cast_text": "You consecrate the ground — hallowed light wells up beneath your feet for {duration}s, mending allies and searing the unholy.",
+        "heal_text": "Consecrated ground soothes {ally}. [{amount}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "templar",
       "classAbilityKey": "divine_challenge",
       "abilityKey": "divine_challenge",
       "label": "Divine Challenge",
+      "description": "Reduces each incoming hit by a flat amount. Mitigation scales with WIS (min 6, up to ~24 at high WIS), duration scales with CON.",
+      "tooltip": "Flat damage reduction per hit. Min 6, up to ~24 at high WIS; duration scales with CON.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "mitigation_flat",
       "mechanic": "mitigation_buff",
       "abilityType": "buff",
@@ -1852,15 +1981,12 @@
       "activationMode": "instant",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 6,
@@ -1877,7 +2003,8 @@
               "kind": "diminishing_float",
               "perPoint": 1.8
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ],
         "rounding": "round"
@@ -1892,34 +2019,38 @@
             "mult": 1000,
             "stat": "con",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
       "mechanicCalcs": {},
       "effectConfig": {
+        "is_taunt": true,
         "resolved_by": "combat-tick",
         "mitigation_mode": "flat"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "self_text": "Divine Challenge! You mitigate incoming blows for {seconds}s. [{amount}]",
+        "mitigate_text": "{target}'s Divine Challenge mitigates the strike! [{amount}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "templar",
       "classAbilityKey": "holy_shield",
       "abilityKey": "holy_shield",
       "label": "Holy Shield",
+      "description": " Stance. Attackers who strike you take holy damage in return — WIS scaling reduced 20%, with a CON kicker (CON adds to retaliation damage). Once per attacker per tick. Click again to drop.",
+      "tooltip": "Attackers take holy damage in return. WIS scaling reduced 20%, CON adds a kicker. Stance.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "reactive_holy",
       "mechanic": "reactive_holy",
       "abilityType": "buff",
@@ -1928,15 +2059,12 @@
       "activationMode": "stance",
       "cpCost": 15,
       "cpReservePct": 0.1,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": null,
       "durationCalc": {
         "cap": null,
@@ -1962,7 +2090,8 @@
                 "kind": "soft",
                 "profile": "damage"
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "primary"
             },
             {
               "mult": 1,
@@ -1972,7 +2101,8 @@
                 "kind": "soft",
                 "profile": "damage"
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "secondary"
             },
             {
               "mult": 0.25,
@@ -1985,30 +2115,31 @@
         }
       },
       "effectConfig": {
-        "kicker_stat": "con",
         "resolved_by": "combat-tick",
-        "magnitude_stat": "wis",
-        "once_per_attacker_per_tick": true
+        "once_per_attacker_per_tick": true,
+        "kicker_stat": "con",
+        "magnitude_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "retaliate_text": "{caster}'s Holy Shield burns {target}! [{damage}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "templar",
       "classAbilityKey": "judgment",
       "abilityKey": "judgment",
       "label": "Judgment",
+      "description": "Pass divine judgment, dealing holy damage scaling with WIS",
+      "tooltip": "Holy damage to one target. Scales with WIS.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "spell_attack",
       "mechanic": "spell_attack",
       "abilityType": "damage",
@@ -2017,19 +2148,16 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "wis",
       "amountCalc": {
         "cap": null,
         "base": 5,
-        "note": "5 + 2× soft stat + level/3, ×0.8 ability rider",
+        "note": "5 + 2× soft stat + level/3",
         "unit": "hp",
         "floor": 1,
         "terms": [
@@ -2052,36 +2180,38 @@
           }
         ],
         "version": 2,
-        "rounding": "floor",
-        "finalMult": 0.8
+        "rounding": "floor"
       },
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "wis",
         "resolved_by": "combat-tick",
+        "stat": "wis",
         "accuracy_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "status_application"
-      ]
+      "combatText": {
+        "hit": "{attacker} passes divine judgment upon {target}!",
+        "miss": "{attacker}'s {ability} pronounces sentence, but {target} is spared.",
+        "hit_verb": "passes divine judgment upon",
+        "miss_verb": "pronounces sentence on"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "templar",
       "classAbilityKey": "shield_wall",
       "abilityKey": "shield_wall",
       "label": "Shield Wall",
+      "description": " Stance. Dual-primary: WIS adds bonus block chance (+25.5% floor, up to +46.75% at high WIS), CON adds bonus block amount (+~4 floor, up to +~9 at high CON). Final block chance capped at 95%. Requires a shield equipped to benefit. Click again to drop.",
+      "tooltip": "Boost block chance and amount. Chance scales with WIS, amount with CON. Stance.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "block_buff",
       "mechanic": "block_buff",
       "abilityType": "buff",
@@ -2090,15 +2220,12 @@
       "activationMode": "stance",
       "cpCost": 25,
       "cpReservePct": 0.15,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "wis",
       "secondaryAttribute": "con",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": null,
       "durationCalc": null,
       "mechanicCalcs": {
@@ -2117,7 +2244,8 @@
                 "cap": 5.1,
                 "kind": "diminishing"
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "secondary"
             }
           ],
           "version": 2
@@ -2138,37 +2266,38 @@
                 "kind": "diminishing_float",
                 "perPoint": 0.0425
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "primary"
             }
           ],
           "version": 2
         }
       },
       "effectConfig": {
-        "amount_stat": "con",
-        "chance_stat": "wis",
         "resolved_by": "combat-tick",
         "requires_shield": true,
-        "block_chance_cap": 0.95
+        "block_chance_cap": 0.95,
+        "amount_stat": "con",
+        "chance_stat": "wis"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "scaling",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {},
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "warrior",
       "classAbilityKey": "battle_cry",
       "abilityKey": "battle_cry",
       "label": "Battle Cry",
+      "description": "Stance. Reduces incoming damage, with a small shield bonus, and reduces enemy critical-hit chance against you by 10 percentage points. Click again to drop.",
+      "tooltip": "Damage reduction plus 10 percentage points less enemy crit chance. Stance.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "mitigation_percent",
       "mechanic": "mitigation_buff",
       "abilityType": "buff",
@@ -2177,15 +2306,12 @@
       "activationMode": "stance",
       "cpCost": 25,
       "cpReservePct": 0.15,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "str",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.1,
@@ -2202,7 +2328,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.02
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ]
       },
@@ -2212,27 +2339,28 @@
         "resolved_by": "combat-tick",
         "mitigation_mode": "percent",
         "shield_dr_bonus": 0.05,
-        "applies_crit_reduction": true
+        "crit_chance_reduction_pct": 0.1
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "mitigate_text": "{target}'s war cry softens the blow! [{amount}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "warrior",
       "classAbilityKey": "power_strike",
       "abilityKey": "power_strike",
       "label": "Power Strike",
+      "description": "A heavy, focused blow. Rolls your equipped weapon damage + STR + ability bonus (unarmed falls back to 1d4).",
+      "tooltip": "Heavy blow. Rolls weapon damage + STR + bonus.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "weapon_attack",
       "mechanic": "weapon_attack",
       "abilityType": "damage",
@@ -2241,15 +2369,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "str",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "dex",
       "amountCalc": {
         "cap": null,
         "base": 3,
@@ -2295,32 +2420,33 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "str",
         "resolved_by": "combat-tick",
         "unarmed_die": "1d4",
-        "accuracy_stat": "dex",
-        "weapon_scaled": true
+        "weapon_scaled": true,
+        "stat": "str",
+        "accuracy_stat": "dex"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "on_hit_effect"
-      ]
+      "combatText": {
+        "hit_verb": "delivers a crushing blow to",
+        "miss_verb": "swings at"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "warrior",
       "classAbilityKey": "rend",
       "abilityKey": "rend",
       "label": "Rend",
+      "description": "Apply stackable Bleed that ticks every 2s. Per-tick damage scales with STR; duration scales with DEX. An initial weapon-based physical hit is deferred until its damage formula is designed.",
+      "tooltip": "Stackable STR-scaled Bleed; DEX duration. No initial weapon hit yet.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "dot_debuff",
       "mechanic": "dot_debuff",
       "abilityType": "debuff",
@@ -2329,15 +2455,12 @@
       "activationMode": "instant",
       "cpCost": 40,
       "cpReservePct": null,
+      "authoredIntervalMs": 2000,
       "intervalMs": 2000,
+      "runtimeTransformations": [],
       "primaryAttribute": "str",
       "secondaryAttribute": "dex",
-      "classScale": 1,
-      "appliedStatus": "bleed",
-      "statusTrigger": "ability_hit",
-      "statusChancePct": 100,
-      "statusApplicationEnabled": true,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -2353,7 +2476,8 @@
               "kind": "soft",
               "profile": "dot"
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ],
         "postMult": 0.67,
@@ -2369,7 +2493,8 @@
             "mult": 1000,
             "stat": "dex",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -2377,32 +2502,49 @@
       "effectConfig": {
         "max_stacks": 5,
         "effect_noun": "bleed",
-        "effect_type": "bleed",
         "weapon_based": true,
         "duration_stat": "dex",
-        "magnitude_stat": "str"
+        "magnitude_stat": "str",
+        "status_key": "bleed",
+        "status_label": "Bleed",
+        "status_classification": "dot",
+        "status_trigger": "ability_hit",
+        "status_chance_pct": 100,
+        "status_enabled": true,
+        "effect_type": "bleed",
+        "stack_noun": "bleed",
+        "tick_rate_ms": 2000,
+        "dot_stat_mult": 1,
+        "dot_global_mult": 0.67,
+        "dot_stat": "str",
+        "dot_duration_ms": 20000,
+        "max_stacks_calc": {
+          "base": 5,
+          "unit": "count",
+          "terms": []
+        }
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "applied_status",
-        "combat_text"
-      ]
+      "combatText": {
+        "miss_text": "Rend glances off {target} — no wound opens.",
+        "apply_text": "rends {target} — blood weeps from the gash! [{damage}/tick]"
+      },
+      "appliedStatus": "bleed",
+      "statusTrigger": "ability_hit",
+      "statusChancePct": 100,
+      "statusApplicationEnabled": true,
+      "onHitEffect": null
     },
     {
       "classKey": "warrior",
       "classAbilityKey": "second_wind",
       "abilityKey": "second_wind",
       "label": "Second Wind",
+      "description": "Catch your breath and recover HP based on CON",
+      "tooltip": "Recover your HP. Scales with CON.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "heal",
       "mechanic": "heal",
       "abilityType": "heal",
@@ -2411,26 +2553,23 @@
       "activationMode": "instant",
       "cpCost": 15,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "str",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0,
-        "note": "CON magnitude",
+        "note": "WIS magnitude",
         "unit": "hp",
         "floor": 3,
         "terms": [
           {
             "mult": 3,
             "role": "primary",
-            "stat": "con",
+            "stat": "str",
             "source": "stat"
           },
           {
@@ -2442,23 +2581,27 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {},
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "combat_text"
-      ]
+      "combatText": {
+        "self_text": "You use Second Wind and catch your breath!",
+        "self_full_text": "You use Second Wind but you're already at full health."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "warrior",
       "classAbilityKey": "sunder_armor",
       "abilityKey": "sunder_armor",
       "label": "Sunder Armor",
+      "description": "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).",
+      "tooltip": "Reduce target's AC. Amount scales with STR, duration with DEX.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "control_armor",
       "mechanic": "control_debuff",
       "abilityType": "debuff",
@@ -2467,15 +2610,12 @@
       "activationMode": "instant",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "str",
       "secondaryAttribute": "dex",
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 2,
@@ -2491,7 +2631,8 @@
               "kind": "soft",
               "profile": "utility"
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ],
         "rounding": "round"
@@ -2506,7 +2647,8 @@
             "mult": 1000,
             "stat": "dex",
             "source": "stat",
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "secondary"
           }
         ]
       },
@@ -2514,25 +2656,26 @@
       "effectConfig": {
         "control_mode": "ac_reduction"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "damage_type",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "{ability}! {target}'s AC reduced by {amount} for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "arcane_surge",
       "abilityKey": "arcane_surge",
       "label": "Arcane Surge",
+      "description": " Stance. All your damage is increased — bonus magnitude scales with INT. Click again to drop.",
+      "tooltip": "Increase all your damage. Bonus scales with INT. Stance.",
       "unlockLevel": 10,
       "isDefault": true,
+      "roleSlot": 3,
+      "roleName": "Doctrine",
       "baseKey": "offense_damage",
       "mechanic": "offense_buff",
       "abilityType": "buff",
@@ -2541,15 +2684,12 @@
       "activationMode": "stance",
       "cpCost": 25,
       "cpReservePct": 0.15,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 1.1,
@@ -2566,7 +2706,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.02
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ]
       },
@@ -2575,25 +2716,26 @@
       "effectConfig": {
         "offense_mode": "damage_mult"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "activate_text": "Arcane Surge! Your damage is amplified (x{mult})."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "conflagrate",
       "abilityKey": "conflagrate",
       "label": "Conflagrate",
+      "description": "Consume all burn stacks on your target for bonus damage per stack. Per-stack bonus scales with INT; stack count scales with WIS via Orbs of Fire.",
+      "tooltip": "Consume burn stacks for bonus damage. Per-stack scales with INT.",
       "unlockLevel": 20,
       "isDefault": true,
+      "roleSlot": 5,
+      "roleName": "Mastery",
       "baseKey": "stack_consume_spell",
       "mechanic": "stack_consume",
       "abilityType": "damage",
@@ -2602,15 +2744,12 @@
       "activationMode": "queued",
       "cpCost": 60,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": "int",
       "amountCalc": {
         "cap": null,
         "base": 4,
@@ -2627,7 +2766,8 @@
               "kind": "soft",
               "profile": "burst"
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           },
           {
             "mult": 0.3333333333333333,
@@ -2656,40 +2796,43 @@
                 "kind": "diminishing_float",
                 "perPoint": 0.05
               },
-              "clampAtZero": true
+              "clampAtZero": true,
+              "role": "primary"
             }
           ]
         }
       },
       "effectConfig": {
-        "stat": "int",
         "consumes": "burn_stacks",
         "stack_noun": "burn",
         "stack_type": "ignite",
         "resolved_by": "combat-tick",
         "weapon_based": false,
+        "stat": "int",
         "accuracy_stat": "int"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "applied_status",
-        "combat_text"
-      ]
+      "combatText": {
+        "hit_text": "detonates {stacks} burn stack{plural} on {target}! [{damage}]",
+        "miss_text": "Conflagrate gutters out against {target}{stacknote}!",
+        "hit_no_stacks_text": "blasts {target} (no burn stacks). [{damage}]"
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "fireball",
       "abilityKey": "fireball",
       "label": "Fireball",
+      "description": "Hurl a ball of arcane flame at your target, scaling with INT",
+      "tooltip": "Damage one target. Scales with INT.",
       "unlockLevel": 1,
       "isDefault": true,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "spell_attack",
       "mechanic": "spell_attack",
       "abilityType": "damage",
@@ -2698,15 +2841,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": "scorched",
-      "statusTrigger": "ability_hit",
-      "statusChancePct": 25,
-      "statusApplicationEnabled": true,
-      "onHitEffect": null,
+      "accuracyAttribute": "int",
       "amountCalc": {
         "cap": null,
         "base": 5,
@@ -2738,30 +2878,47 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "int",
         "resolved_by": "combat-tick",
-        "accuracy_stat": "int"
+        "stat": "int",
+        "accuracy_stat": "int",
+        "status_key": "scorched",
+        "status_label": "Scorched",
+        "status_classification": "dot",
+        "status_trigger": "ability_hit",
+        "status_chance_pct": 25,
+        "status_enabled": true,
+        "effect_type": "scorched",
+        "stack_noun": "scorch",
+        "tick_rate_ms": 2000,
+        "dot_flat_damage": 3,
+        "dot_duration_ms": 6000,
+        "max_stacks_calc": {
+          "base": 3,
+          "unit": "count",
+          "terms": []
+        }
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "status_application"
-      ]
+      "combatText": {
+        "hit_verb": "hurls a fireball at",
+        "miss_verb": "hurls a fireball past"
+      },
+      "appliedStatus": "scorched",
+      "statusTrigger": "ability_hit",
+      "statusChancePct": 25,
+      "statusApplicationEnabled": true,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "force_shield",
       "abilityKey": "force_shield",
       "label": "Force Shield",
+      "description": " Stance. Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop.",
+      "tooltip": "Maintain an arcane absorb shield. Pool scales with WIS, regen with INT. Stance.",
       "unlockLevel": 5,
       "isDefault": true,
+      "roleSlot": 2,
+      "roleName": "Discipline",
       "baseKey": "absorb_self",
       "mechanic": "absorb_buff",
       "abilityType": "buff",
@@ -2770,15 +2927,12 @@
       "activationMode": "stance",
       "cpCost": 15,
       "cpReservePct": 0.1,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": null,
-      "statusTrigger": null,
-      "statusChancePct": null,
-      "statusApplicationEnabled": false,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0,
@@ -2789,7 +2943,7 @@
           {
             "mult": 1,
             "role": "primary",
-            "stat": "wis",
+            "stat": "int",
             "source": "stat"
           },
           {
@@ -2815,31 +2969,33 @@
       },
       "mechanicCalcs": {},
       "effectConfig": {
-        "stat": "wis",
-        "regen_stat": "int",
         "resolved_by": "client-cast",
         "absorb_shield": true,
-        "duration_stat": "int",
-        "reforms_out_of_combat": true
+        "reforms_out_of_combat": true,
+        "regen_stat": "int",
+        "duration_stat": "int"
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "scaling",
-        "amount",
-        "duration",
-        "combat_text"
-      ]
+      "combatText": {
+        "ally_text": "Force Shield! You ward {target} for {seconds}s.",
+        "self_text": "Force Shield! An arcane ward wraps you for {seconds}s."
+      },
+      "appliedStatus": null,
+      "statusTrigger": null,
+      "statusChancePct": null,
+      "statusApplicationEnabled": false,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "frostbolt",
       "abilityKey": "frostbolt",
       "label": "Frostbolt",
+      "description": "A bolt of frost that damages and chills the enemy, causing them to take more damage.",
+      "tooltip": "A bolt of frost that damages and chills the enemy, causing them to take more damage.",
       "unlockLevel": 1,
       "isDefault": false,
+      "roleSlot": 1,
+      "roleName": "Signature",
       "baseKey": "spell_attack",
       "mechanic": "spell_attack",
       "abilityType": "damage",
@@ -2848,15 +3004,12 @@
       "activationMode": "queued",
       "cpCost": 10,
       "cpReservePct": null,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": null,
-      "classScale": 1,
-      "appliedStatus": "chilled",
-      "statusTrigger": "ability_hit",
-      "statusChancePct": 100,
-      "statusApplicationEnabled": true,
-      "onHitEffect": null,
+      "accuracyAttribute": "int",
       "amountCalc": {
         "cap": null,
         "base": 5,
@@ -2888,28 +3041,47 @@
       "durationCalc": null,
       "mechanicCalcs": {},
       "effectConfig": {
-        "accuracy_stat": "int"
+        "resolved_by": "combat-tick",
+        "stat": "int",
+        "accuracy_stat": "int",
+        "status_key": "chilled",
+        "status_label": "Chilled",
+        "status_classification": "damage_amp",
+        "status_trigger": "ability_hit",
+        "status_chance_pct": 100,
+        "status_enabled": true,
+        "amp_status_key": "chilled",
+        "amp_effect_type": "chilled",
+        "amp_label": "Chilled",
+        "amp_kind": "damage_taken_pct",
+        "amp_pct": 10,
+        "amp_eligible_sources": [
+          "weapon",
+          "ability",
+          "stance",
+          "dot",
+          "proc"
+        ],
+        "amp_duration_ticks": 3
       },
-      "overrides": {},
-      "triggerType": "none",
-      "capabilities": [
-        "identity",
-        "activation",
-        "damage",
-        "scaling",
-        "damage_type",
-        "amount",
-        "combat_text",
-        "status_application"
-      ]
+      "combatText": {},
+      "appliedStatus": "chilled",
+      "statusTrigger": "ability_hit",
+      "statusChancePct": 100,
+      "statusApplicationEnabled": true,
+      "onHitEffect": null
     },
     {
       "classKey": "wizard",
       "classAbilityKey": "orbs_of_fire",
       "abilityKey": "ignite",
       "label": "Orbs of Fire",
+      "description": "Stance. While in combat, an orb of fire pulses each heartbeat at your target — proc chance and spark damage scale with INT, and each spark applies the Ignite burn (stacks/duration scale with WIS). Mutually exclusive with Envenom. Click again to drop.",
+      "tooltip": "Orbs strike your target and apply Ignite burn. Proc/spark scale with INT, burn with WIS. Stance.",
       "unlockLevel": 15,
       "isDefault": true,
+      "roleSlot": 4,
+      "roleName": "Pressure",
       "baseKey": "orb_stance",
       "mechanic": "stack_apply",
       "abilityType": "buff",
@@ -2918,15 +3090,12 @@
       "activationMode": "stance",
       "cpCost": 50,
       "cpReservePct": 0.2,
+      "authoredIntervalMs": null,
       "intervalMs": null,
+      "runtimeTransformations": [],
       "primaryAttribute": "int",
       "secondaryAttribute": "wis",
-      "classScale": 1,
-      "appliedStatus": "ignite",
-      "statusTrigger": "successful_pulse_hit",
-      "statusChancePct": null,
-      "statusApplicationEnabled": true,
-      "onHitEffect": null,
+      "accuracyAttribute": null,
       "amountCalc": {
         "cap": null,
         "base": 0.25,
@@ -2943,7 +3112,8 @@
               "kind": "diminishing_float",
               "perPoint": 0.04
             },
-            "clampAtZero": true
+            "clampAtZero": true,
+            "role": "primary"
           }
         ]
       },
@@ -2958,40 +3128,47 @@
       },
       "effectConfig": {
         "trigger": "pulse",
-        "dot_stat": "wis",
-        "stack_noun": "burn",
-        "effect_type": "ignite",
         "resolved_by": "combat-tick",
-        "dot_stat_mult": 0.7,
         "engages_target": true,
         "consumes_all_cp": true,
-        "dot_duration_ms": 30000,
-        "dot_global_mult": 0.67,
-        "dot_duration_stat": "wis",
         "pulse_damage_base": 2,
-        "pulse_damage_stat": "int",
-        "dot_duration_cap_ms": 45000,
         "mutually_exclusive_with": [
           "envenom"
         ],
-        "dot_duration_per_point_ms": 1000
+        "pulse_damage_stat": "int",
+        "status_key": "ignite",
+        "status_label": "Ignite",
+        "status_classification": "dot",
+        "status_trigger": "successful_pulse_hit",
+        "status_chance_pct": null,
+        "status_enabled": true,
+        "effect_type": "ignite",
+        "stack_noun": "burn",
+        "tick_rate_ms": 2000,
+        "dot_stat_mult": 0.7,
+        "dot_global_mult": 0.67,
+        "dot_stat": "wis",
+        "dot_duration_ms": 30000,
+        "dot_duration_per_point_ms": 1000,
+        "dot_duration_cap_ms": 45000,
+        "dot_duration_stat": "wis",
+        "max_stacks_calc": {
+          "base": 5,
+          "unit": "count",
+          "terms": []
+        }
       },
-      "overrides": {
-        "label": "Orbs of Fire"
+      "combatText": {
+        "pulse_text": "A flaming orb leaps from {attacker} and sears {target} (burn x{stacks})! [{damage}]",
+        "stack_text": "{attacker}'s orb of fire seared {target} with Ignite.",
+        "activate_text": "Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb may strike your target."
       },
-      "triggerType": "pulse",
-      "capabilities": [
-        "identity",
-        "activation",
-        "stance",
-        "applied_status",
-        "scaling",
-        "duration",
-        "interval",
-        "amount",
-        "damage_type",
-        "combat_text"
-      ]
+      "appliedStatus": "ignite",
+      "statusTrigger": "successful_pulse_hit",
+      "statusChancePct": null,
+      "statusApplicationEnabled": true,
+      "onHitEffect": null
     }
-  ]
+  ],
+  "sourceHash": "ae4cb1d2021a9b818a5d19385e8b8caee8031406a768b73b842de2d6ed289e63"
 }

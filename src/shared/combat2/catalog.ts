@@ -314,6 +314,7 @@ export function buildAbilityCatalog(
       continue;
     }
     specs.set(`${result.spec.classKey}:${result.spec.abilityKey}`, result.spec);
+    specs.set(`${result.spec.classKey}:${result.spec.classAbilityKey}`, result.spec);
     if (!specs.has(result.spec.abilityKey)) specs.set(result.spec.abilityKey, result.spec);
   }
   return { specs, rejected };

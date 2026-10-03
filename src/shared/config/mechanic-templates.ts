@@ -203,7 +203,7 @@ export const MECHANIC_TEMPLATES: MechanicTemplate[] = [
   // Consolidation Group D: ONE reusable incoming-damage mitigation buff.
   // Whether it shaves a percentage of each hit or a flat amount
   // (`effect_config.mitigation_mode`), whether it also softens crits
-  // (`effect_config.applies_crit_reduction`), the shield kicker
+  // (`effect_config.crit_chance_reduction_pct`), the shield kicker
   // (`effect_config.shield_dr_bonus`) and whether it taunts
   // (`effect_config.is_taunt`) are all configuration — Battle Cry (percent
   // stance) and Divine Challenge (flat, timed taunt) are class identities of

@@ -266,7 +266,7 @@ describe('per-arrow parity — Barrage', () => {
 });
 
 describe('burst parity — Grand Finale', () => {
-  it('CHA burst base, floor 8 (the CHA-sided bonus die stays mechanic-owned)', () => {
+  it('CHA burst base, floor 8 (no additional bonus die)', () => {
     sweepPlain(
       amountOf('grand_finale'),
       (l, m) => Math.max(8, Math.round(getEffectiveCombatMod(Math.max(0, m), 'burst') * 4 + Math.floor(l * 1.5))),

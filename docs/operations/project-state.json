@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-03T10:34:36Z",
+  "updated_at": "2026-10-03T20:54:27.272Z",
   "based_on_source_sha": "b2afa063c75d5e03d6afce5fb76751a2317cb85b",
   "status_vocabulary": [
     "authored",
@@ -725,6 +725,16 @@
       "timestamp": "2026-09-23T09:56:53Z",
       "evidence_type": "tests",
       "evidence": "Source implementation complete and installation pending. The corrected ownership relation is node_creature.encounter_id=node_encounter.id; generated-type-backed schema compilation covers every qualified table alias/column in the settlement function and executable fixtures cover active ownership, peaceful co-location and inert shells. Settlement failure no longer suppresses dispatch, dispatch failure no longer rolls back a successful settlement, both return bounded domain evidence, and the locked four-second cursor prevents double regeneration on retry. Source-of-truth matrix remains unchanged: active-combat HP/CP ownership is node_tick_commit/Combat2; active-combat MP changes only through authoritative departure; Combat2 passive CP remains effective-WIS plus milestone every second encounter tick; passive HP and MP remain disabled in combat and Inspire remains a separate authoritative Combat2 effect. Out of combat, settle_out_of_combat_resources owns persisted characters.hp/cp/mp on a four-second cadence. HP uses effective CON, durable gear, milestone and Inn; CP uses effective WIS, milestone and Inn; MP uses the canonical effective-DEX rate and Inn. Browser food is excluded. Movement, death/respawn and Test Arena exclusions and all browser-writer removals remain unchanged. No Edge consumer changed; the SQL scheduler wrapper is the only consumer. Live verification pending.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ENG-ABILITY-001-local-authority-cleanup",
+      "status": "authored",
+      "sha": "8916a34dbe09d7e41d6d36318e5a5fe675d5cebc",
+      "timestamp": "2026-10-03T20:54:27.272Z",
+      "evidence_type": "repository",
+      "evidence": "Local uncommitted canonical ability cleanup, fresh read-only Supabase configuration export (36 assignments), reviewed 199 field/group differences and approved Battle Cry/presentation edits. Eight stances match source SQL cost/reservation/identity/requirements; installed SQL function bodies not verified. Final focused 184/184; root/app typecheck and build passed; full suite 2636/2653, 17 failures reproduced at HEAD baseline: 10 Windows/line-ending/path issues, 5 retired-endpoint stale expectations, 2 existing report-formatting failures. No database writes, resource/CP-economy redesign, commit, push or deployment. Configured DB still needs approved local numeric/presentation edits before release; Rend initial hit remains deferred.",
       "reporting_actor": "Codex",
       "directly_verified": true
     }

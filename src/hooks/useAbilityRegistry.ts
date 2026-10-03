@@ -4,8 +4,9 @@
  *
  * Until the fetch resolves (or when `USE_CONFIG_ABILITIES` is off), the
  * hardcoded fallback lists in `@/features/combat/utils/class-abilities` remain
- * in effect. They are balance-identical to the seeded rows, so there is no
- * flash of wrong CP costs or unlock levels.
+ * in effect. These are bootstrap presentation defaults, not proof of current
+ * configured costs, alternatives or status applications. Combat2 resolves from
+ * its separately published catalogue; callers can inspect `source` below.
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,7 @@ import { getClassScaling } from '@/shared/formulas/classes';
 
 let started = false;
 
-export function useAbilityRegistry(): { loaded: boolean } {
+export function useAbilityRegistry(): { loaded: boolean; source: 'configured' | 'bootstrap-fallback' } {
   const [loaded, setLoaded] = useState(isAbilityRegistryLoaded());
 
   useEffect(() => {
@@ -112,5 +113,5 @@ export function useAbilityRegistry(): { loaded: boolean } {
     return () => { cancelled = true; };
   }, []);
 
-  return { loaded };
+  return { loaded, source: loaded ? 'configured' : 'bootstrap-fallback' };
 }

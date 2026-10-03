@@ -15,7 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "combat2:tick-once": "node scripts/combat2-tick-once.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "abilities:publish": "node scripts/publish-abilities.mjs",
+    "abilities:check": "node scripts/publish-abilities.mjs --check"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.2.8",

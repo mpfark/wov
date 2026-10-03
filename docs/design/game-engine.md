@@ -146,6 +146,8 @@ Equipment is a tick dependency only for fighters who are `present` at the frozen
 
 ## Effects and stances
 
+Ability publication uses shared configured composition and assignment overrides before producing versioned Combat2 records (`ENG-ABILITY-001`). Ratios/multipliers retain precision until consumption; HP/count settlement remains integer. Party-presence regeneration uses one two-second heartbeat with authored intervals and explicit normalization in publication metadata. A configured next-hit multiplier/window is an independent offensive charge consumed by the first landed hit. Resource formulas and percentage stance reservation are unchanged. See [Ability publication and semantics](ability-publication-and-semantics.md) for publication, fallback provenance and unresolved authored/prose discrepancies.
+
 - Transient effects expire/tick inside the encounter resolver.
 - Persistent effects need explicit durable ownership and lifecycle rules.
 - A CP reservation is an authoritative reservation effect; spendable CP is total CP minus active reservations.
@@ -225,3 +227,5 @@ Detailed volatile facts belong in [project state](../operations/project-state.md
 - Delivery/presentation: `src/features/combat2/`
 - Movement: `src/features/combat2/departure.ts`, `src/features/combat2/party-departure.ts`
 - Operational evidence: `docs/operations/project-state.json` (canonical) and generated `project-state.md`
+
+ENG-ABILITY-001 follow-up: fresh configured export and eight-stance source-SQL comparison completed locally; installed SQL definitions remain unverified. Battle Cry removes 10 percentage points of incoming enemy crit chance (separate from critical damage softening); Grand Finale has no bonus die; Consecrate keeps eligible hostile living node scope; Rend initial weapon hit awaits balance design. No CP cost/reservation/resource formula or heartbeat change. See [ability publication contract](ability-publication-and-semantics.md).

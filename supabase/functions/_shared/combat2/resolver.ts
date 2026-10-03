@@ -1388,8 +1388,17 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const bonus = getCreatureAttackBonus(creature.row.level);
     const total = roll + bonus;
     const isNat1 = roll === 1;
-    const isCrit = roll === 20;
-    if (isNat1 || (total < targetFighter.ac && !isCrit)) {
+    const isNatural20 = roll === 20;
+    const critChanceReduction = effectsFor(snapshot.effects, targetFighter.character_id, 'mitigation')
+      .filter(effect => !expiredIds.has(effect.id) && !proposed.effects_delete.includes(effect.id))
+      .reduce((reduction, effect) => Math.max(reduction,
+        readMitigationParams(effect.config).critChanceReductionPct ?? 0), 0);
+    // Creature criticals currently occur only on natural 20 (5%). Subtract
+    // authored percentage points, clamped at zero; natural 20 still lands.
+    const critChance = Math.max(0, .05 - Math.max(0, critChanceReduction));
+    const isCrit = isNatural20 && (critChanceReduction <= 0 ||
+      (critChance > 0 && rng.sample(`${stream}:crit_chance`, targetFighter.character_id, tick) < critChance / .05));
+    if (isNat1 || (total < targetFighter.ac && !isNatural20)) {
       emit({
         kind: 'creature_attack',
         abilityKey: abilityKey ?? undefined,
