@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 const path = 'supabase/migrations/20261002190000_combat2_legacy_browser_privileges.sql';
@@ -115,16 +117,38 @@ describe('legacy browser ACL batch C source contracts (not PostgreSQL execution)
     expect(() => statements("DO $$ BEGIN RAISE NOTICE 'text;'; END; $$;")).not.toThrow();
     expect(() => statements("SELECT 'unfinished")).toThrow();
   });
-  it('keeps Lovable observations separate from source authoring and does not claim installation/publication', () => {
+  it('separates reported installation from unreconciled database history and preserves rejected evidence', () => {
     const state = JSON.parse(readFileSync('docs/operations/project-state.json', 'utf8'));
     const observed = state.volatile_runtime_observations.find((row: { identity: string }) => row.identity === 'ENG-LEGACY-002 installed SQL dependency audit');
     expect(observed).toMatchObject({ status: 'unknown', timestamp: '2026-10-02T18:14:37Z',
       evidence_type: 'operator_reported', directly_verified: false });
     expect(observed.reporting_actor).toContain('Lovable');
     const candidate = state.database_migrations.find((row: { identity: string }) => row.identity === path.split('/').at(-1));
-    expect(candidate).toMatchObject({ status: 'authored', evidence_type: 'repository', directly_verified: true });
-    expect(candidate.evidence).toContain('not installed');
+    expect(candidate).toMatchObject({ status: 'installed', evidence_type: 'operator_reported', directly_verified: false });
+    expect(candidate.reporting_actor).toContain('Lovable');
+    for (const fact of ['rollback-only', 'restored original ACLs', 'browser execution denied',
+      'non-browser grants retained', 'bodies and security metadata unchanged', '510', '20261001230000',
+      'database journal unverified', 'history unreconciled']) expect(candidate.evidence).toContain(fact);
+    const rejected = state.known_blockers.find((row: { identity: string }) => row.identity === 'eng-legacy-002-batch-c-cron-lock-permission');
+    expect(rejected.evidence).toContain('42501');
+    const history = state.known_blockers.find((row: { identity: string }) => row.identity === 'eng-legacy-002-batch-c-history-reconciliation');
+    expect(history).toMatchObject({ status: 'blocked', directly_verified: false });
+    expect(history.evidence).toContain('before the next migration');
+    expect(audit).toContain('1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f');
     expect(state.combat2_operational_work.find((row: { identity: string }) => row.identity === 'combat2-browser-legacy-isolation-batch-b-2026-10-02').status)
       .toBe('ready_for_manual_publish');
+  });
+  it('verifies unchanged source/artifact Git blobs and local journal without claiming a database journal', () => {
+    const artifact = 'drizzle/migrations/0000_combat2_legacy_browser_privileges.sql';
+    const blob = (file: string) => execFileSync('git', ['show', `HEAD:${file}`]);
+    const source = blob(path);
+    expect(source.equals(blob(artifact))).toBe(true);
+    const hash = createHash('sha256').update(source).digest('hex');
+    expect(hash).toBe('73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65');
+    const state = JSON.parse(readFileSync('docs/operations/project-state.json', 'utf8'));
+    expect(state.database_migrations.find((row: { identity: string }) => row.identity === path.split('/').at(-1)).evidence).toContain(hash);
+    const journal = JSON.parse(readFileSync('drizzle/migrations/meta/_journal.json', 'utf8'));
+    expect(journal.entries.filter((row: { tag: string }) => row.tag === '0000_combat2_legacy_browser_privileges')).toHaveLength(1);
+    expect(audit).toContain('Local file journal is not database journal proof');
   });
 });
