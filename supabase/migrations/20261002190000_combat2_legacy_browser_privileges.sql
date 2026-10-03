@@ -20,8 +20,8 @@ BEGIN
         OR (c.relowner = r.oid AND NOT c.relforcerowsecurity))) THEN
     RAISE EXCEPTION 'ENG-LEGACY-002 incomplete schedule visibility under RLS';
   END IF;
-  -- Fence concurrent schedule creation for this transaction, never change jobs.
-  LOCK TABLE cron.job IN SHARE MODE NOWAIT;
+  -- Read-only installation precondition, not a concurrent-creation fence.
+  -- Owner-rights internal calls can still rearm schedules after this observation.
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'effects-catchup'
       OR command ~* '\m(effects_due_dispatch|effects_catchup_send|effects_catchup_dispatch_one|effects_catchup_reconcile|schedule_effects_catchup)\M') THEN
     RAISE EXCEPTION 'ENG-LEGACY-002 effects-catchup schedule exists';

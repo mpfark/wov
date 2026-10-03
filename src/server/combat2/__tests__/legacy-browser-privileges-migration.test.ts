@@ -72,12 +72,17 @@ describe('legacy browser ACL batch C source contracts (not PostgreSQL execution)
       "p.proconfig = ARRAY['search_path=public']", 'left(md5(pg_get_functiondef(p.oid)), 8)']) expect(preflight).toContain(metadata);
     expect(sql.match(/REVOKE EXECUTE ON FUNCTION/g)).toHaveLength(5);
   });
-  it('refuses named or aliased-command catch-up schedules and fences concurrent job creation without modifying jobs', () => {
+  it('observes schedule absence without unsupported locking or claiming concurrent exclusion', () => {
     expect(sql).toContain("to_regclass('cron.job') IS NULL");
     expect(sql).toContain('incomplete schedule visibility under RLS');
     expect(sql).toContain('r.rolbypassrls');
-    expect(sql).toContain('LOCK TABLE cron.job IN SHARE MODE NOWAIT;');
+    expect(sql).not.toMatch(/LOCK\s+TABLE|pg_(?:try_)?advisory/i);
+    expect(sql).toContain('Read-only installation precondition, not a concurrent-creation fence.');
+    expect(sql).toContain('Owner-rights internal calls can still rearm schedules after this observation.');
+    expect(audit).toContain('does not prevent concurrent schedule creation');
     expect(sql).toContain("jobname = 'effects-catchup'");
+    expect(sql).toContain("IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'effects-catchup'");
+    expect(sql).toContain("OR command ~* '\\m(effects_due_dispatch|effects_catchup_send|effects_catchup_dispatch_one|effects_catchup_reconcile|schedule_effects_catchup)\\M'");
     expect(sql).toContain('effects-catchup schedule exists');
     expect(sql.indexOf('effects-catchup schedule exists')).toBeLessThan(sql.indexOf('  REVOKE EXECUTE'));
     expect(sql).not.toMatch(/cron\.(?:schedule|unschedule)\s*\(/);

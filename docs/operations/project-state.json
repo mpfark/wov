@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-02T22:50:00Z",
-  "based_on_source_sha": "a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb",
+  "updated_at": "2026-10-03T09:42:31Z",
+  "based_on_source_sha": "58aeeeef471b291cd6ec47a66a10e013d7f21277",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb",
-    "timestamp": "2026-10-02T21:54:15Z",
+    "sha": "58aeeeef471b291cd6ec47a66a10e013d7f21277",
+    "timestamp": "2026-10-03T09:42:31Z",
     "evidence_type": "repository",
-    "evidence": "Clean starting 724cde8dff94ea0ab57cf5df4d3837526dd54362 fast-forwarded safely to a77d0804c7bc7c5c9a584a64ec01b0c0d03bb7fb, retaining Lovable commits bee61e05, 7c73e725 and merge a77d0804, SQL audit and prior state/evidence. Checkpoint remains ancestor. Incoming project-state Markdown was out of sync; regenerated from JSON. Batch C authors one ACL-only migration, focused source tests and documentation; no Cloud, installed/type/Edge/frontend/gameplay change.",
+    "evidence": "Started clean at 2910080df9a4dcd7fa154512ae0b776914639a9d; safely fast-forwarded to 58aeeeef471b291cd6ec47a66a10e013d7f21277 preserving Lovable evidence. Batch C correction removes unsupported cron locking plus matching tests/records; incoming stale Markdown regenerated. No Cloud operations.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -28,9 +28,9 @@
       "identity": "20261002190000_combat2_legacy_browser_privileges.sql",
       "status": "authored",
       "sha": null,
-      "timestamp": "2026-10-02T21:54:15Z",
+      "timestamp": "2026-10-03T09:42:31Z",
       "evidence_type": "repository",
-      "evidence": "ENG-LEGACY-002 batch C candidate SHA-256 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f; not installed. Exact public effects_catchup_send(uuid,uuid,bigint,uuid,integer), effects_catchup_dispatch_one(uuid), effects_catchup_reconcile(integer), effects_catchup_credential_health(), clear_stances(uuid). Revoke only PUBLIC/anon/authenticated; preserve owner/service_role and every non-browser explicit ACL grant/grantor/grant option. All five missing/overload/metadata/audit-MD5-prefix/schedule/RLS-visibility/role-inheritance guards precede revokes; NOWAIT SHARE cron lock fences concurrent job creation during installation only. Inline denial and full catalogue/definition/internal-ACL preservation assertions in a single complete statement, no swallowed exception or DML. Audit supplies eight-character MD5 prefixes only; full predecessor definition comparison and rollback-only complete PostgreSQL compilation remain mandatory Lovable gates. No local psql/postgres/docker or executable schema harness available; tests are source/lexer contracts, not PostgreSQL execution. No bodies, active dependencies, rows, roles or schedules changed; wake/watchdog rearming remains unresolved. No Edge/types/frontend release required.",
+      "evidence": "ENG-LEGACY-002 batch C candidate SHA-256 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65; not installed. Exact public effects_catchup_send(uuid,uuid,bigint,uuid,integer), effects_catchup_dispatch_one(uuid), effects_catchup_reconcile(integer), effects_catchup_credential_health(), clear_stances(uuid). Revoke only PUBLIC/anon/authenticated; preserve owner/service_role and every non-browser explicit ACL grant/grantor/grant option. All five missing/overload/metadata/audit-MD5-prefix/schedule/RLS-visibility/role-inheritance guards precede revokes; Read-only schedule absence is an installation precondition, not concurrent exclusion; unsupported lock removed. Owner-rights rearming remains possible. Rejected uninstalled hash 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f failed Lovable practice SQLSTATE 42501 before REVOKE; ledger 510 and ACLs unchanged. Inline denial and full catalogue/definition/internal-ACL preservation assertions in a single complete statement, no swallowed exception or DML. Audit supplies eight-character MD5 prefixes only; full predecessor definition comparison and rollback-only complete PostgreSQL compilation remain mandatory Lovable gates. No local psql/postgres/docker or executable schema harness available; tests are source/lexer contracts, not PostgreSQL execution. No bodies, active dependencies, rows, roles or schedules changed; wake/watchdog rearming remains unresolved. No Edge/types/frontend release required.",
       "reporting_actor": "Codex",
       "directly_verified": true
     },
@@ -832,11 +832,11 @@
     },
     {
       "status": "blocked",
-      "evidence": "OPEN. Batch C rollback-only practice run of 20261002190000_combat2_legacy_browser_privileges.sql (SHA-256 1fc13140...b762f, verified) failed SQLSTATE 42501 permission denied for table job at LOCK TABLE cron.job IN SHARE MODE NOWAIT (DO block line 20). Executing role postgres (not superuser) holds only SELECT (r*) on cron.job; owner supabase_admin. The normal migration runner uses the same role, so installation would fail identically. Not installed; migration not modified; ledger unchanged (510). Needs a source correction (e.g. a lock mode permitted with SELECT, or another schedule fence) and a new hash.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true,
+      "evidence": "SOURCE-CORRECTED; PostgreSQL retry pending. Batch C rollback-only practice run of 20261002190000_combat2_legacy_browser_privileges.sql (SHA-256 1fc13140...b762f, verified) failed SQLSTATE 42501 permission denied for table job at LOCK TABLE cron.job IN SHARE MODE NOWAIT (DO block line 20). Executing role postgres (not superuser) holds only SELECT (r*) on cron.job; owner supabase_admin. The normal migration runner uses the same role, so installation would fail identically. Not installed; migration not modified; ledger unchanged (510). Unsupported lock removed; corrected candidate 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65. Read-only absence does not exclude concurrent rearming. Entire corrected file still requires Lovable rollback execution and separately authorized installation.",
+      "reporting_actor": "Lovable (handoff; Codex repository reconciliation)",
+      "directly_verified": false,
       "timestamp": "2026-10-02T22:50:00Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "identity": "eng-legacy-002-batch-c-cron-lock-permission",
       "sha": "2910080df9a4dcd7fa154512ae0b776914639a9d"
     }
@@ -845,9 +845,9 @@
     "status": "authored",
     "artifact": "Separately authorize Lovable full-file rollback compilation, exact predecessor/role/schedule checks and then one atomic batch-C installation if every gate passes.",
     "sha": null,
-    "timestamp": "2026-10-02T21:54:15Z",
+    "timestamp": "2026-10-03T09:42:31Z",
     "evidence_type": "repository",
-    "evidence": "Follow docs/design/combat2-legacy-sql-dependency-audit.md checklist and verify candidate full hash. Use the real catalogue, no function/gameplay invocations or fixtures; inherited access, drift or catch-up schedule is a stop condition. After rollback restores ACLs and data, install only if separately authorized, then verify browser denial plus unchanged internal grants/bodies/metadata/protected data and record actual ledger evidence. No Edge deployment/type regeneration/frontend publication for batch C. Browser-isolation publication/live acceptance remains pending as previously recorded; wake/watchdog rearming and later SQL/trigger/column retirement remain separate tasks.",
+    "evidence": "Follow docs/design/combat2-legacy-sql-dependency-audit.md checklist and verify candidate full hash. Use the real catalogue, no function/gameplay invocations or fixtures; inherited access, drift or catch-up schedule is a stop condition. After rollback restores ACLs and data, install only if separately authorized, then verify browser denial plus unchanged internal grants/bodies/metadata/protected data and record actual ledger evidence. No Edge deployment/type regeneration/frontend publication for batch C. Browser-isolation publication/live acceptance remains pending as previously recorded; wake/watchdog rearming and later SQL/trigger/column retirement remain separate tasks. Corrected hash 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65; fresh read-only schedule inspection before execution and after rollback/installation. Absence does not prevent concurrent rearming; no invented fence or schedule changes. Require full rollback-only run to final sentinel, restoration proof, then separately authorized exactly-once installation and post-install privilege checks.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -1047,10 +1047,10 @@
       "status": "blocked",
       "sha": "2910080df9a4dcd7fa154512ae0b776914639a9d",
       "timestamp": "2026-10-02T22:50:00Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "evidence": "Fresh Lovable preflight: world asleep, combat_mode maintenance, soak off; cron.job 0 rows (0 effects-catchup); no ledger entry for 20261002190000 or legacy_browser (510 entries). All five exact signatures single-overload, postgres-owned, SECURITY DEFINER, volatile, plpgsql, search_path=public; full pg_get_functiondef MD5 prefixes match; full prosrc MD5s equal repository predecessor bodies (send 237ddf89, dispatch_one aab8c425, reconcile 8b962417, credential_health e83dcb99, clear_stances 024c143b). Effective access: all five anon/authenticated/service_role/postgres; clear_stances also PUBLIC; credential_health also supabase_read_only_user; all also sandbox_exec role. Practice run aborted at cron lock (42501) before any REVOKE; post-abort ACLs unchanged and no ledger entry. Not installed.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "reporting_actor": "Lovable (handoff; Codex repository reconciliation)",
+      "directly_verified": false
     }
   ],
   "product_backlog": [
