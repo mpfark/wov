@@ -100,3 +100,15 @@ Resolve this operational blocker **before the next migration**: pending duplicat
 - Column/data retirement of `reserved_buffs` / `stance_state` only under an approved compatibility policy.
 
 No `DROP CASCADE` and no edits to historical migrations are recommended.
+
+### Journal discovery (read-only Cloud inspection, 2026-10-03T10:24:58Z)
+
+Fresh installed evidence, not handoff memory:
+
+- Execution route: Lovable's `lov_database--migration` tool. Its contract creates a Drizzle Kit custom migration, writes the SQL verbatim and applies it with Drizzle's migrator; journal recording is automatic and goes only to the Drizzle database journal. The exact internal command line is not recoverable beyond that contract.
+- Journal tables found: `drizzle.__drizzle_migrations`, `supabase_migrations.schema_migrations` (plus unrelated `auth`, `realtime`, `storage` journals).
+- `drizzle.__drizzle_migrations`: exactly one row, id 1, hash `73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65`, created_at 1791021613818 (2026-10-03T10:00:13.818Z), equal to the local `_journal.json` `when`. Batch C **is** represented here.
+- `supabase_migrations.schema_migrations`: 510 rows, newest `20261001230000`; no `20261002*` version. Batch C is **not** represented. The only rows containing REVOKE and `effects_catchup_credential_health` are the August predecessors.
+- Applied effects: all five targets keep owner postgres, SECURITY DEFINER, volatile, `search_path=public` and fingerprints ecea10b2 / 6aabce3e / 867305d4 / b9fc05d8 / b45bbfa4. No PUBLIC ACL entry; anon and authenticated cannot execute; postgres and service_role can; sandbox_exec and supabase_read_only_user (credential_health) grants retained. This proves current state, not the precise execution moment.
+
+Reconciliation route: earlier migrations in this project reached the Supabase ledger, batch C reached only the Drizzle journal, so two journals now diverge. The Lovable migration tool is the only runner available to agents and treats batch C as applied (matching hash), so it will not replay it. A Supabase CLI push would see `20261002190000` as pending. The supported Supabase metadata-only repair is `supabase migration repair --status applied 20261002190000` (journal-only effect: one ledger row; verify by recount to 511 and unchanged ACL/fingerprints). Lovable has no CLI or credential for it and no tool that writes that ledger without executing SQL, so this is a missing capability, not a step to improvise. Hand-inserting ledger rows is not supported. Further migrations should stay paused until Mik decides which runner is canonical. Repository tooling cleanup (Drizzle config vs `supabase/migrations/`) is a separate decision; nothing was removed.
