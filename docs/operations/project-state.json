@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-03T09:42:31Z",
-  "based_on_source_sha": "58aeeeef471b291cd6ec47a66a10e013d7f21277",
+  "updated_at": "2026-10-03T10:00:00Z",
+  "based_on_source_sha": "aede3281ea0b0a03d8f0c6212b647321b0499400",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -26,12 +26,12 @@
   "database_migrations": [
     {
       "identity": "20261002190000_combat2_legacy_browser_privileges.sql",
-      "status": "authored",
-      "sha": null,
-      "timestamp": "2026-10-03T09:42:31Z",
-      "evidence_type": "repository",
-      "evidence": "ENG-LEGACY-002 batch C candidate SHA-256 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65; not installed. Exact public effects_catchup_send(uuid,uuid,bigint,uuid,integer), effects_catchup_dispatch_one(uuid), effects_catchup_reconcile(integer), effects_catchup_credential_health(), clear_stances(uuid). Revoke only PUBLIC/anon/authenticated; preserve owner/service_role and every non-browser explicit ACL grant/grantor/grant option. All five missing/overload/metadata/audit-MD5-prefix/schedule/RLS-visibility/role-inheritance guards precede revokes; Read-only schedule absence is an installation precondition, not concurrent exclusion; unsupported lock removed. Owner-rights rearming remains possible. Rejected uninstalled hash 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f failed Lovable practice SQLSTATE 42501 before REVOKE; ledger 510 and ACLs unchanged. Inline denial and full catalogue/definition/internal-ACL preservation assertions in a single complete statement, no swallowed exception or DML. Audit supplies eight-character MD5 prefixes only; full predecessor definition comparison and rollback-only complete PostgreSQL compilation remain mandatory Lovable gates. No local psql/postgres/docker or executable schema harness available; tests are source/lexer contracts, not PostgreSQL execution. No bodies, active dependencies, rows, roles or schedules changed; wake/watchdog rearming remains unresolved. No Edge/types/frontend release required.",
-      "reporting_actor": "Codex",
+      "status": "installed",
+      "sha": "aede3281ea0b0a03d8f0c6212b647321b0499400",
+      "timestamp": "2026-10-03T10:00:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Installed once 2026-10-03 from SHA-256 73df81b1...2b65 via the Drizzle migration tool (artifact drizzle/migrations/0000_combat2_legacy_browser_privileges.sql, identical SHA-256; supabase_migrations ledger count unchanged at 510, so ledger identity is the Drizzle journal). Rollback-only full-file practice reached the external sentinel and restored original ACLs/definitions. Post-install: PUBLIC/anon/authenticated denied on all five targets; postgres, service_role, sandbox_exec and supabase_read_only_user grants retained; definitions md5, owner postgres, SECURITY DEFINER, volatile, search_path=public unchanged; 0 cron jobs; world asleep, maintenance, soak off. Schedule gate is an observation, not a concurrency fence; wake_world/world_watchdog rearming remains separate pending work.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     },
     {
