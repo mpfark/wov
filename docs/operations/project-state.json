@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-03T10:25:00Z",
-  "based_on_source_sha": "a425f742113770b2688f007ea0dcf6c859ac89e1",
+  "updated_at": "2026-10-03T10:34:36Z",
+  "based_on_source_sha": "b2afa063c75d5e03d6afce5fb76751a2317cb85b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -16,10 +16,10 @@
   "repository": {
     "status": "pushed",
     "artifact": "origin/main",
-    "sha": "707804addda01af21b28179e9c01d2f7a4d5b945",
-    "timestamp": "2026-10-03T10:13:17Z",
+    "sha": "b2afa063c75d5e03d6afce5fb76751a2317cb85b",
+    "timestamp": "2026-10-03T10:34:36Z",
     "evidence_type": "repository",
-    "evidence": "Started clean at aede3281ea0b0a03d8f0c6212b647321b0499400; safely fast-forwarded to 707804addda01af21b28179e9c01d2f7a4d5b945 retaining Lovable commits/tooling/artifacts. Ancestry confirmed. Tests/docs only; stale incoming Markdown regenerated. No Cloud access.",
+    "evidence": "Started clean at a425f742113770b2688f007ea0dcf6c859ac89e1; safely fast-forwarded to b2afa063c75d5e03d6afce5fb76751a2317cb85b preserving Lovable journal evidence commits. Required ancestry confirmed. Documentation/evidence only; incoming stale Markdown regenerated. SQL files/tooling unchanged; no Cloud access.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -30,8 +30,8 @@
       "sha": "aede3281ea0b0a03d8f0c6212b647321b0499400",
       "timestamp": "2026-10-03T10:00:00Z",
       "evidence_type": "operator_reported",
-      "evidence": "Lovable reports batch C installed once from SHA-256 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65. Full rollback-only practice passed and restored original ACLs. Post-install browser execution denied for all five targets; postgres/service_role and existing non-browser grants retained; bodies and security metadata unchanged. No schedules or gameplay data changed. Supabase ledger stayed 510 entries, newest 20261001230000; history unreconciled. Drizzle tool reported; actual database journal unverified. Git artifact drizzle/migrations/0000_combat2_legacy_browser_privileges.sql byte-identical/hash verified; local _journal tag exists but is not database journal proof. Rejected 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f failed 42501 before REVOKE. No ledger artifact invented or reapplication authorized. UPDATE: Read-only Cloud inspection 2026-10-03T10:24:58Z: drizzle.__drizzle_migrations row id=1, hash=73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at=1791021613818 (2026-10-03T10:00:13.818Z, equal to local _journal 'when'); this is the only Drizzle row. supabase_migrations.schema_migrations: 510 rows, newest 20261001230000, no 20261002* version; the two rows matching REVOKE+credential_health are 20260817212400/20260817212436 (predecessor definitions), not batch C. Five targets: owner postgres, SECURITY DEFINER, volatile, search_path=public, fingerprints ecea10b2/6aabce3e/867305d4/b9fc05d8/b45bbfa4 match recorded predecessors; ACLs have no PUBLIC entry; anon/authenticated EXECUTE false; postgres/service_role true; sandbox_exec and (credential_health) supabase_read_only_user grants retained. Execution route: Lovable lov_database--migration tool (Drizzle Kit custom migration applied by Drizzle's migrator per tool contract); journal recording automatic into drizzle schema only. Exact command line not recoverable beyond the tool contract. Supabase history still unreconciled; Drizzle database journal now proven.",
-      "reporting_actor": "Lovable (handoff; Codex repository reconciliation)",
+      "evidence": "Lovable reports batch C installed once from source/artifact SHA-256 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65. Full rollback-only practice passed and restored original ACLs; post-install browser execution denied for all five targets; postgres/service_role and existing non-browser grants retained; bodies and security metadata unchanged. No schedules or gameplay data changed. Earlier reconciliation: database journal unverified; superseded by Lovable read-only inspection at 2026-10-03T10:24:58Z reporting drizzle.__drizzle_migrations one row id 1 matching hash and journal timestamp 2026-10-03T10:00:13.818Z/local when 1791021613818 (not a recovered execution timestamp). Supabase 510 entries/newest 20261001230000, batch C absent: history unreconciled against selected Supabase target. Tool description delegates to Drizzle; exact internal command not recovered. No replay/mutation during inspection. Both committed SQL copies retained unchanged. Rejected 1fc1314088a3b48184c354f568046abadfc795c50f15c5a753f01088affb762f / 42501 history retained. Further Cloud migrations paused for history/routing reconciliation; no blind replay.",
+      "reporting_actor": "Lovable (read-only inspection handoff); Codex repository reconciliation",
       "directly_verified": false
     },
     {
@@ -735,10 +735,10 @@
       "status": "blocked",
       "sha": "a425f742113770b2688f007ea0dcf6c859ac89e1",
       "timestamp": "2026-10-03T10:25:00Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Read-only Cloud inspection 2026-10-03T10:24:58Z: drizzle.__drizzle_migrations row id=1, hash=73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at=1791021613818 (2026-10-03T10:00:13.818Z, equal to local _journal 'when'); this is the only Drizzle row. supabase_migrations.schema_migrations: 510 rows, newest 20261001230000, no 20261002* version; the two rows matching REVOKE+credential_health are 20260817212400/20260817212436 (predecessor definitions), not batch C. Five targets: owner postgres, SECURITY DEFINER, volatile, search_path=public, fingerprints ecea10b2/6aabce3e/867305d4/b9fc05d8/b45bbfa4 match recorded predecessors; ACLs have no PUBLIC entry; anon/authenticated EXECUTE false; postgres/service_role true; sandbox_exec and (credential_health) supabase_read_only_user grants retained. Execution route: Lovable lov_database--migration tool (Drizzle Kit custom migration applied by Drizzle's migrator per tool contract); journal recording automatic into drizzle schema only. Exact command line not recoverable beyond the tool contract. Remaining: two journals now diverge (Supabase ledger lacks 20261002190000). Supported Supabase metadata repair is `supabase migration repair --status applied 20261002190000`; no such CLI/credential is available to Lovable in this sandbox and no Lovable tool writes supabase_migrations without executing SQL - missing capability. Further migrations stay paused until Mik chooses the canonical runner; do not replay batch C, do not hand-insert ledger rows.",
-      "reporting_actor": "Lovable (read-only Cloud inspection)",
-      "directly_verified": true
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable 2026-10-03T10:24:58Z confirms matching Drizzle database journal row and retained privilege effects; Supabase ledger 510/newest 20261001230000 still lacks batch C. Mik selected Supabase history as canonical target. Resolve alignment and actual tool routing before the next migration; further Cloud migrations paused. Exact internal command remains unrecovered. Capable operator must verify identity, installed CLI metadata-only repair semantics, full local/remote history including prior source/generated version differences, then separately authorized proposed repair for 20261002190000; only intended history record may change, ACLs/bodies/other journals unchanged and no second-path replay. Lovable reports no CLI/credential or metadata-only tool capability in sandbox. No tooling removal or ledger INSERT authorized.",
+      "reporting_actor": "Lovable (inspection handoff); Mik (policy); Codex reconciliation",
+      "directly_verified": false
     },
     {
       "identity": "authoritative-arrival-and-hostile-first-action",
@@ -853,11 +853,11 @@
   ],
   "next_approved_task": {
     "status": "blocked",
-    "artifact": "Separately authorize read-only batch C tool/database-journal and Supabase-history discovery before the next migration.",
+    "artifact": "Capable operator reviews deferred Supabase metadata-only batch C history alignment and future runner routing; Cloud migrations remain paused.",
     "sha": null,
-    "timestamp": "2026-10-03T10:13:17Z",
+    "timestamp": "2026-10-03T10:34:36Z",
     "evidence_type": "repository",
-    "evidence": "Installed effects reported, history unreconciled. Follow SQL audit plan: identify actual command/tool/version/database and both journals, current effective privileges/metadata and source/artifact hashes. Branch on verified journal, missing journal, later Supabase entry, mismatch or inaccessible evidence. Supported metadata-only repair requires proven applied effects, intended runner, no conflicting history and separate Mik authorization. No blind reapplication or invented ledger rows. Verify unchanged privileges/bodies/data/schedules and pending discovery before further installation.",
+    "evidence": "Read-only reconfirm project/database identity, exact hash/applied privileges, both database histories and earlier source/generated-version differences. Verify installed Supabase CLI and exact metadata-only repair semantics; proposed migration repair --status applied 20261002190000 is not executed here and requires separate authorization. Only intended ledger record may change; prove ACL/body/metadata/other journal preservation and no second-path replay before resuming. Supabase canonical target does not automatically change Lovable's Drizzle tool. Keep tooling/dependencies/artifacts unchanged; no blind reapplication. Ability/admin design may proceed locally; scheduler rearming/further SQL retirement deferred.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -1067,10 +1067,10 @@
       "status": "unknown",
       "sha": "a425f742113770b2688f007ea0dcf6c859ac89e1",
       "timestamp": "2026-10-03T10:24:58Z",
-      "evidence_type": "cloud_inspection",
-      "evidence": "Read-only Cloud inspection 2026-10-03T10:24:58Z: drizzle.__drizzle_migrations row id=1, hash=73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at=1791021613818 (2026-10-03T10:00:13.818Z, equal to local _journal 'when'); this is the only Drizzle row. supabase_migrations.schema_migrations: 510 rows, newest 20261001230000, no 20261002* version; the two rows matching REVOKE+credential_health are 20260817212400/20260817212436 (predecessor definitions), not batch C. Five targets: owner postgres, SECURITY DEFINER, volatile, search_path=public, fingerprints ecea10b2/6aabce3e/867305d4/b9fc05d8/b45bbfa4 match recorded predecessors; ACLs have no PUBLIC entry; anon/authenticated EXECUTE false; postgres/service_role true; sandbox_exec and (credential_health) supabase_read_only_user grants retained. Execution route: Lovable lov_database--migration tool (Drizzle Kit custom migration applied by Drizzle's migrator per tool contract); journal recording automatic into drizzle schema only. Exact command line not recoverable beyond the tool contract.",
-      "reporting_actor": "Lovable (read-only Cloud inspection)",
-      "directly_verified": true
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable-reported read-only Cloud inspection 2026-10-03T10:24:58Z: drizzle.__drizzle_migrations row id=1, hash=73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at=1791021613818 (2026-10-03T10:00:13.818Z, equal to local _journal 'when'); this is the only Drizzle row. supabase_migrations.schema_migrations: 510 rows, newest 20261001230000, no 20261002* version; the two rows matching REVOKE+credential_health are 20260817212400/20260817212436 (predecessor definitions), not batch C. Five targets: owner postgres, SECURITY DEFINER, volatile, search_path=public, fingerprints ecea10b2/6aabce3e/867305d4/b9fc05d8/b45bbfa4 match recorded predecessors; ACLs have no PUBLIC entry; anon/authenticated EXECUTE false; postgres/service_role true; sandbox_exec and (credential_health) supabase_read_only_user grants retained. Execution route: Lovable lov_database--migration tool (Drizzle Kit custom migration applied by Drizzle's migrator per tool contract); journal recording automatic into drizzle schema only. Exact command line not recoverable beyond the tool contract. Journal timestamp is not recovered SQL execution time; tool description and database row evidence are distinct. No SQL replay or mutation occurred during that inspection. Codex did not access Cloud.",
+      "reporting_actor": "Lovable (read-only Cloud inspection handoff; reconciled by Codex)",
+      "directly_verified": false
     }
   ],
   "product_backlog": [
