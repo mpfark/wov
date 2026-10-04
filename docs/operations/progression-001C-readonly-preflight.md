@@ -1,0 +1,46 @@
+# ENG-PROGRESSION-001C — Narrow installed dependency preflight
+
+Historical dependency STOP request. The supplied [installed preflight](progression-001C-installed-preflight.md) completed the required reads on 2026-10-04; Mik's resume resolved the four gameplay/configuration decisions. This request is retained as evidence, superseded for current status, and must not be redispatched. H0 remains closed. Local dormant preparation is complete; no migration/application approval is inferred. See the [prepared application handoff](progression-001C-lovable-application.md).
+
+## Checkpoint and boundaries
+
+Local task_start_sha `4f766ccbc61c494ccc6b65370d25e621452bb0e2`, normally fast-forwarded from2600f52352aaf0de0047cb4d567f645cb1ca5407. H0-FINAL report: read-only2026-10-04 22:33:30UTC; accepted by Mik22:39UTC; no pending Drizzle entries and legacy route operationally frozen. Fetch/clean/synchronize normally on an authorized future task, record full SHA, verify reviewed001A/B2/H0 ancestry and approved preflight checkpoint. Stop on relevant unexpected change; do not reset history.
+
+Use only approved hosted read-only catalog tools and nonsecret project metadata. Expected historical project ref gpclaklkaolyzfnooajt is a cross-check, not credentials. Record principal/UTC window/source/platform visibility. Do not execute a mutation or function/RPC, even rollback-only; no SQL/migration runner probe, SET ROLE/trusted flag, DDL, grants, row repair, type regeneration, Edge deployment or publication. No Vault/env/credentials/player-identifying records. Missing permissions: report and STOP, no alternate credential discovery.
+
+## Why the reads are required
+
+Generated TypeScript numbers do not establish PostgreSQL widths/defaults/constraints. 001B recorded hashes and summaries, not full installed trigger/resource definitions. Historical20260728070225 is a sync_character_resources replacement without a source; later source20260922100000 also replaces that function, so the missing historical file is not itself proof that the current body lacks source. Need current body comparison, not replay or origin reconstruction.
+
+The September source aggregates usable equipment/gems with NULLIF(stat_override,'{}'), hardcodes class baseHP, applies maxHP10000/maxCP5000/maxMP5000 bounds and updates current resources. The pure001A resource policy accepts already validated final maxima and does not implement that SQL derivation. Engine specification explicitly leaves equipment empty-override/effective-AC semantics uncontracted; do not silently choose a resolution. Current owner protection and HP lifecycle triggers may change/undo or side-effect an UPDATE. Exact definitions are required to construct a private dormant writer safely.
+
+## Exact read set
+
+1. **Columns/constraints and safe schema shape.** Return formatted PostgreSQL types (including widths/domains), NOT NULL/default/generated properties, primary/unique/FK/check constraints for characters fields id/user_id, six stats, level/xp, class/is_classless/race, unspent_stat_points/respec_points, bhp/bhp_trained/rp_total_earned, hp/cp/mp/max_hp/max_cp/max_mp/ac, reserved_buffs/stance_state and updated_at. Include constraint definitions involving these fields, FK cascade behavior, and whether integer/stat pool bounds can represent canonical transitions. Inventory only character_id/item_id/equipped_slot/current_durability/stat_override/applied_gems and items.stats plus any additional field actually read by the resource implementation. No character data export.
+2. **Resource dependency.** Full safe pg_get_functiondef-equivalent for public.sync_character_resources(uuid) and owns_character(uuid), exact overload/signature/result, full definition SHA-256 with algorithm, owner/volatility/definer-invoker/search_path, direct and inherited effective EXECUTE by PUBLIC/anon/authenticated/service_role and retained internal roles. Compare actual resource body to20260922100000/its generated mirror and identify exact differences. Follow only direct helper calls needed to understand capacity calculation/authorization/update side effects; if no safe body read, report missing fact instead of reconstructing from hash. Identify source of baseHP, equipment/gem/empty-override handling, caps/clamp/refill, trusted flag scope and whether AC is persisted/read/derived. No invocation or recomputation.
+3. **Character UPDATE triggers.** List exact trigger timing/events/WHEN/order/enabled/constraint/deferred status and function identity for changes to stats, level/xp, pools and hp/cp/mp/maxima. Include full safe bodies of restrict_party_leader_updates, update_characters_updated_at and any triggered HP/lifecycle/stance functions (especially trg_characters_encounter_lifecycle and deferred death-stance release). Recursively follow only direct functions that these relevant bodies require. Confirm what app.trusted_rpc bypasses, how auth.uid/service/postgres affect writes, and whether any side effect could write old progression authority. Do not change flag/role/triggers. Unrelated location-only/insertion triggers need listing, not a global audit.
+4. **Class configuration.** Actual types/constraints for classes.class_key, level_bonuses, base_hp/base_ac, status and updated_at; safe nonpersonal active config rows for those fields; any existing revision identity mechanism. Confirm JSON shape and missing/unknown stat key/null rules. Do not assume updated_at alone uniquely versions config; snapshot concrete values plus fingerprint is a possible later design, not installed behavior. No class edits.
+5. **Private dormancy feasibility.** Read schema USAGE/CREATE and relevant effective defaults/role membership for a proposed owner-only function/table family. Confirm intended owner can execute internal functions without service_role/browser grants; default function rights to anon/authenticated must be explicitly removed in any future migration. Identify pre-existing progression_* / character_sync_derived_internal and candidate provenance/receipt names to avoid collisions. Report existing request/receipt patterns only where needed (node_reward_claim stable identity column types/unique constraints; nearby request tables' identity/receipt/version field types), not reward rows or consumer execution.
+
+Return safe definitions (not only hashes) and catalog metadata as committed evidence linked to observed source SHA. If a definition contains secrets, do not expose them; redact with precise limitation and identify the smallest controlled provisioning/inspection needed. No migration or bootstrap export, no full schema audit, no data backfill or anomaly repair.
+
+## Design questions to answer from these reads
+
+- Can dormant private functions own checked arithmetic and future character-row locking without owner triggers silently reverting committed results or unrelated lifecycle side effects? Confirm exact field widths/constraints before choosing receipts/version types.
+- Can existing resource derivation be reused safely without relying on owner browser auth or importing its clamp/refill semantics? If not, which exact verified formula/equipment dependency must be mirrored? Resource caps/class defaults/empty-override/AC differences requiring a gameplay decision must be stated, not silently resolved.
+- Can provenance be sidecar/lazily captured at actual authority boundary with zero new refundable counters, preserving every current value? No character rewrite/backfill that attributes historic stats. Legacy writers remain active; capturing an installed-time snapshot cannot silently become the future cutover baseline.
+- Can receipt uniqueness and same-key payload conflict/replay be transactional under a single locked character, with durable character/milestone uniqueness and no activation triggers? Do not implement or simulate concurrency in this read-only pass.
+
+## After evidence / migration route
+
+Return evidence and STOP. Codex can then resume local dormant-authority SQL/tests against exact dependencies. Lovable's standard tool later creates the numbered custom migration and journal; no local journal edit or second discoverable pending migration file. A future reviewed exact SQL payload/handoff must be prepared only after blockers clear, separately authorized for application. No service-role/browser mutation grants unless separately justified; preferred dormant intent is owner-only tables/functions with explicit default-grant revocation, no new RPC/wrapper/trigger or live callers. This is provisional design, not finalized SQL.
+
+## Handoff record
+
+- Starting/synchronized/final local SHA in001C audit:4f766ccbc61c494ccc6b65370d25e621452bb0e2; resolve current remote at execution.
+- Ancestry:2600f523,31dc3bec,611081f6 and H0 closure present; recheck full refs.
+- Worktree: local documentation-only preparation, no SQL. Files/tests/status: external001C report.
+- Migrations authored/installed: none. Generated types/Edge/frontend: unchanged; no new publication claim.
+- Cloud/gameplay operations: none locally; future task only authorized catalog reads.
+- Blocker: exact resource/trigger/schema/security dependency bodies/widths unavailable locally; H0 remains CLOSED.
+- Next safe action: Mik reviews and separately dispatches these reads; no automatic contact or001D.

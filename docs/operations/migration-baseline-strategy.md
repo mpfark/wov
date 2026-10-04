@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001B — Baseline strategy reconciled with Lovable (B2)
 
+**Current status:** the final read-only check below has since passed and Mik accepted H0 closure, per [H0-FINAL](progression-001B-h0-evidence-report.md),2026-10-04 22:33:30UTC/read and22:39UTC/acceptance. B2 verdict B and pending-gate statements below are historical preparation, not current blockers. The canonical Drizzle model remains accepted; all mutations require per-task authorization. The separate 001C [installed dependency preflight](progression-001C-installed-preflight.md) and Mik's four resume decisions resolve its dependency STOP. Local dormant preparation is complete; [application handoff](progression-001C-lovable-application.md) is prepared and undispatched. This does not reopen H0 or authorize migration execution.
+
 Current B2 source baseline: `e5913a7dc0a90a53bebc3a0b0b94851882710ea6`, 2026-10-05. Mik approved B1's architectural direction at checkpoint, including abandoning historical Supabase normalization as a future-authority prerequisite. **Architecture approval is not mutation or 001C authorization.** B2 recommends the platform-native existing Drizzle lane rather than a new namespace/history. Verdict **B: one final narrowly scoped read-only hosted integrity check**, not a migration/tool probe; H0 remains paused pending that evidence and review. Gameplay Progression and rewards and one-world-heartbeat rules are unchanged.
 
 ## Current B2 model and evidence attribution

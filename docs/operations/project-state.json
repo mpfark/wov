@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T22:55:06Z",
-  "based_on_source_sha": "2600f52352aaf0de0047cb4d567f645cb1ca5407",
+  "updated_at": "2026-10-04T23:25:52.204Z",
+  "based_on_source_sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001B-B2 local documentation reconciliation",
-    "sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
-    "timestamp": "2026-10-04T22:23:05.246Z",
+    "artifact": "ENG-PROGRESSION-001C dormant authority preparation",
+    "sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
+    "timestamp": "2026-10-04T23:25:52.204Z",
     "evidence_type": "repository",
-    "evidence": "Started clean, fetched origin and verified HEAD=origin/main=e5913a7dc0a90a53bebc3a0b0b94851882710ea6; reviewed H0/R1 ancestry present, no unexpected divergence. B1 architectural direction approved by Mik. B2 documentation/state changes local and uncommitted; SQL/runtime/migrations/config/tooling unchanged, no Cloud operations.",
+    "evidence": "Fast-forwarded normally to reviewed installed preflight source; H0 CLOSED and four resume decisions resolved by Mik. Local owner-only SQL payload, actual-engine tests and exact application handoff prepared; no discoverable migration, journal edit, runtime reroute, hosted operation, deployment, publication, commit or push. See external WoV-ENG-PROGRESSION-001C-Report.md.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -817,6 +817,16 @@
       "evidence": "Read-only catalog inspection 22:54:17-22:55:06 UTC as supabase_read_only_user. sync_character_resources installed body identical to 20260922100000 (sha d6a9e468...); requires auth.uid ownership, hard-coded base HP, clamp-only pools, no AC. restrict_party_leader_updates is a no-op outside owner JWT. No name collisions; default privileges grant EXECUTE to anon/authenticated. Open gameplay decisions: level-up refill, base HP source, AC scope, class revision. See docs/operations/progression-001C-installed-preflight.md. No invocation, mutation, migration, deployment or publication.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001C dormant authority local preparation",
+      "status": "authored",
+      "sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
+      "timestamp": "2026-10-04T23:25:52.204Z",
+      "evidence_type": "repository",
+      "evidence": "Three empty-at-install RLS sidecars; owner-only XP/permanent/resource primitives and helpers; lazy opaque baseline, zero refundable counters, stable historical receipts, unique milestones, canonical growth/resources and semantic config fingerprint. 16 local PGlite SQL tests and 67 existing 001A tests pass; root/app TypeScript and build pass. Full suite 2701/19 versus baseline 2698/22, no new failure identities. Hosted lifecycle/multi-session tests remain future application gates. Prepared handoff undispatched; no installed authority or 001D.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
@@ -942,12 +952,12 @@
     }
   ],
   "next_approved_task": {
-    "status": "blocked",
-    "artifact": "Review/checkpoint B2, then separately authorize final read-only Drizzle integrity/legacy-route-freeze verification. No migration or 001C authorization.",
+    "status": "unknown",
+    "artifact": "Review prepared ENG-PROGRESSION-001C payload/report. Source checkpoint and exact hosted application require separate approval; handoff undispatched.",
     "sha": null,
-    "timestamp": "2026-10-04T22:23:05.246Z",
+    "timestamp": "2026-10-04T23:25:52.204Z",
     "evidence_type": "repository",
-    "evidence": "Verdict B: confirm current committed journal/SQL matches all hosted Drizzle rows as one executed prefix, with no unexplained pending entries/hash mismatch; record standard Drizzle-only future route and no active separately configured legacy executor. Platform routing statements accepted as attributed documentation; native dry-run is unavailable and not required. No Supabase Batch C insertion, new history/namespace/registration, cosmetic normalization or global bootstrap prerequisite. Task-specific catalog/data/privilege gates continue after reviewed H0 closure. 001C remains dormant/additive, active writer cutover belongs001D.",
+    "evidence": "Authorized local resume completed. No subsequent task authorized. H0 remains CLOSED; supplied installed preflight and four decisions resolved the prior dependency STOP. Owner-only authority remains dormant and uninstalled. No migration, database mutation, activation, repair, deployment/publication or 001D is authorized.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
