@@ -280,7 +280,7 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
   };
 }
 
-function decodeCharacterStance(r: Reader, path: string, raw: unknown): NodeSnapshot['character_stances'][number] {
+function decodeCharacterStance(r: Reader, path: string, raw: unknown): NonNullable<NodeSnapshot['character_stances']>[number] {
   const o = r.object(path, raw);
   return {
     character_id: r.str(`${path}.character_id`, o.character_id),
@@ -292,7 +292,7 @@ function decodeCharacterStance(r: Reader, path: string, raw: unknown): NodeSnaps
   };
 }
 
-function decodeStanceTransition(r: Reader, path: string, raw: unknown): NodeSnapshot['stance_transitions'][number] {
+function decodeStanceTransition(r: Reader, path: string, raw: unknown): NonNullable<NodeSnapshot['stance_transitions']>[number] {
   const o = r.object(path, raw);
   const action = r.str(`${path}.action`, o.action);
   if (!['activate', 'drop'].includes(action)) r.errors.push(`${path}.action: expected activate or drop`);
