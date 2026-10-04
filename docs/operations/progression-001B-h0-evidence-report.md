@@ -75,3 +75,13 @@ None is available. The available tooling exposes no documented operation that re
 ## Limitations
 
 Statement text was compared in the sandbox and not committed. Function bodies were not re-fingerprinted in this pass. Deployed Edge revisions, Vault and dynamic or external callers were out of scope.
+
+## H0-FINAL — Drizzle prefix integrity and legacy-route freeze (2026-10-04 22:33:30 UTC)
+
+- Repository inspected: `2600f52352aaf0de0047cb4d567f645cb1ca5407` (HEAD = origin/main, clean). Actor: Lovable, read-only Cloud query tool (SELECT only). No migration tool invocation.
+- Committed journal: 1 entry, idx 0, tag `0000_combat2_legacy_browser_privileges`, when `1791021613818`. Only SQL file `drizzle/migrations/0000_combat2_legacy_browser_privileges.sql`, SHA-256 `73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65` (identical to the Supabase source copy).
+- Hosted `drizzle.__drizzle_migrations`: 1 row, 1 distinct hash: id 1, hash `73df81b1…2b65`, created_at `1791021613818`.
+- Comparison: one-to-one with journal idx 0; hash equal; created_at equals journal `when`; no unknown hosted rows; no unrepresented journal entries; no pending Drizzle migrations; no duplicates or gaps.
+- Legacy route: Supabase ledger unchanged at 510 rows, newest `20261001230000` (no new writes since the earlier H0 pass). `cron.job` has 0 rows. Repository has no `.github` workflows and no non-doc scripts invoking `supabase db push`, Supabase migration commands or `drizzle-kit migrate/push`.
+- Limitation: Lovable platform-side automation outside the project database and repository is not visible; none is identified. The freeze rests on that plus the platform statements recorded in `migration-baseline-strategy.md`.
+- **Verdict: A — H0 FINAL CHECK PASSED.** Evidence requirements for H0 closure are satisfied; the legacy Supabase route is recorded as operationally frozen. Migration execution still requires per-task authorization; 001C not started.

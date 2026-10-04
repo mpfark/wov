@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T22:23:05.246Z",
-  "based_on_source_sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
+  "updated_at": "2026-10-04T22:33:56Z",
+  "based_on_source_sha": "2600f52352aaf0de0047cb4d567f645cb1ca5407",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -797,18 +797,28 @@
       "evidence": "Mik supplied Lovable platform statements on 2026-10-05 (exact conversation timestamp/tool version unavailable): standard custom-SQL Drizzle uses existing journal/Drizzle ledger, excludes Supabase files/history, implicit installed-state baseline, intentionally blank schema, no native dry-run, no direct CLI lifecycle management, additive preflight and automatic type regeneration. Repository corroborates config/journal/SQL hash, not current hosted integrity. B1 approved direction preserved; new wov_b1 namespace/history/registration and universal dry-run/full-bootstrap gates superseded. Existing 0000 is first forward event, not full-schema snapshot. H0 verdict B: separately authorized final read-only current executed-prefix/hash/pending check and recorded operational legacy-route freeze; no tool probe. Historical discrepancies tracked separately; task-specific data/privilege safety remains mandatory. See migration-baseline-strategy.md and external WoV-ENG-PROGRESSION-001B-B2-Drizzle-Reconciliation.md. Migration execution paused, no 001C or task dispatched.",
       "reporting_actor": "Lovable platform statements supplied by Mik; Codex local reconciliation",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001B-H0-FINAL Drizzle prefix and legacy-route freeze",
+      "status": "authored",
+      "sha": "2600f52352aaf0de0047cb4d567f645cb1ca5407",
+      "timestamp": "2026-10-04T22:33:30Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Read-only. Hosted drizzle.__drizzle_migrations 1 row (id 1, hash 73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at 1791021613818) matches journal idx 0 exactly; no unknown, pending, duplicate or gap. Supabase ledger frozen at 510/20261001230000; cron.job 0 rows; no repo CI or legacy executor scripts. Platform-side automation not visible, none identified. Verdict A: H0 evidence requirements satisfied. No migration, mutation, deployment, publication or 001C.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
     {
       "identity": "eng-legacy-002-batch-c-history-reconciliation",
-      "status": "blocked",
-      "sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
-      "timestamp": "2026-10-04T22:23:05.246Z",
-      "evidence_type": "operator_reported",
-      "evidence": "Current B2 verdict B, superseding historical Supabase-recognition requirement: standard Drizzle route excludes Supabase files/history according to Lovable statements supplied by Mik on2026-10-05. Batch C remains first Drizzle forward entry hash73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, not schema bootstrap. No metadata-only Supabase repair or native dry-run needed. One final authorized read-only hosted journal/ledger prefix/hash/pending consistency and operational legacy-route-freeze acceptance remains before reviewed H0 closure. Repository verifies only local metadata; earlier hosted reports retain historical evidence. Migration execution paused; no 001C. Task-specific persistent-data/privilege safety still required.",
+      "status": "committed",
+      "sha": "2600f52352aaf0de0047cb4d567f645cb1ca5407",
+      "timestamp": "2026-10-04T22:33:30Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "RESOLVED by H0-FINAL (verdict A): hosted Drizzle prefix equals committed journal (1 row, hash 73df81b1...2b65); legacy Supabase route frozen. Further migrations need per-task authorization.",
       "reporting_actor": "Lovable via Mik (platform behavior); Codex (local audit)",
-      "directly_verified": false
+      "directly_verified": true
     },
     {
       "identity": "authoritative-arrival-and-hostile-first-action",
