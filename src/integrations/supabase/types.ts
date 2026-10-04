@@ -5640,6 +5640,121 @@ export type Database = {
         }
         Relationships: []
       }
+      progression_character_state: {
+        Row: {
+          cha_invested: number
+          character_id: string
+          con_invested: number
+          dex_invested: number
+          int_invested: number
+          opaque_baseline: Json
+          str_invested: number
+          version: number
+          wis_invested: number
+        }
+        Insert: {
+          cha_invested?: number
+          character_id: string
+          con_invested?: number
+          dex_invested?: number
+          int_invested?: number
+          opaque_baseline: Json
+          str_invested?: number
+          version?: number
+          wis_invested?: number
+        }
+        Update: {
+          cha_invested?: number
+          character_id?: string
+          con_invested?: number
+          dex_invested?: number
+          int_invested?: number
+          opaque_baseline?: Json
+          str_invested?: number
+          version?: number
+          wis_invested?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_character_state_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progression_receipt: {
+        Row: {
+          character_id: string
+          event_id: string
+          operation: string
+          receipt: Json
+          request: Json
+          source: string
+        }
+        Insert: {
+          character_id: string
+          event_id: string
+          operation: string
+          receipt: Json
+          request: Json
+          source: string
+        }
+        Update: {
+          character_id?: string
+          event_id?: string
+          operation?: string
+          receipt?: Json
+          request?: Json
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_receipt_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "progression_character_state"
+            referencedColumns: ["character_id"]
+          },
+        ]
+      }
+      progression_respec_milestone: {
+        Row: {
+          character_id: string
+          event_id: string
+          level: number
+          source: string
+        }
+        Insert: {
+          character_id: string
+          event_id: string
+          level: number
+          source: string
+        }
+        Update: {
+          character_id?: string
+          event_id?: string
+          level?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_respec_milestone_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "progression_character_state"
+            referencedColumns: ["character_id"]
+          },
+          {
+            foreignKeyName: "progression_respec_milestone_character_id_source_event_id_fkey"
+            columns: ["character_id", "source", "event_id"]
+            isOneToOne: false
+            referencedRelation: "progression_receipt"
+            referencedColumns: ["character_id", "source", "event_id"]
+          },
+        ]
+      }
       races: {
         Row: {
           admin_notes: string | null
@@ -6405,6 +6520,14 @@ export type Database = {
           _destination_node_id: string
           _kind: string
           _request_id: string
+        }
+        Returns: Json
+      }
+      character_sync_derived_internal: {
+        Args: {
+          _character: string
+          _level_gained: boolean
+          _was_alive: boolean
         }
         Returns: Json
       }
@@ -7505,6 +7628,35 @@ export type Database = {
         Returns: boolean
       }
       player_world_nodes: { Args: never; Returns: Json }
+      progression_apply_permanent_delta_internal: {
+        Args: {
+          _character: string
+          _deltas: Json
+          _event: string
+          _expected_version: number
+          _metadata?: Json
+          _source: string
+        }
+        Returns: Json
+      }
+      progression_apply_xp_internal: {
+        Args: {
+          _character: string
+          _event: string
+          _metadata?: Json
+          _offered: number
+          _source: string
+        }
+        Returns: Json
+      }
+      progression_class_config_internal: {
+        Args: { _class: string; _classless: boolean }
+        Returns: Json
+      }
+      progression_snapshot_internal: {
+        Args: { _character: string }
+        Returns: Json
+      }
       prune_combat_audit_log: { Args: never; Returns: undefined }
       prune_cron_history: { Args: never; Returns: undefined }
       prune_effects_catchup_log: { Args: { _keep?: number }; Returns: number }
