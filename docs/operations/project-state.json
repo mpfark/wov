@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T10:55:00Z",
-  "based_on_source_sha": "8f07262429846399faab987156532294662b5228",
+  "updated_at": "2026-10-04T12:26:46.195Z",
+  "based_on_source_sha": "b0a1feb19e009f16ecb899fe7cae94f5940f446e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -14,12 +14,12 @@
     "unknown"
   ],
   "repository": {
-    "status": "pushed",
-    "artifact": "origin/main",
-    "sha": "b2afa063c75d5e03d6afce5fb76751a2317cb85b",
-    "timestamp": "2026-10-03T10:34:36Z",
+    "status": "authored",
+    "artifact": "ENG-PROGRESSION-001B-R1 local reconciliation on origin/main",
+    "sha": "b0a1feb19e009f16ecb899fe7cae94f5940f446e",
+    "timestamp": "2026-10-04T12:26:46.195Z",
     "evidence_type": "repository",
-    "evidence": "Started clean at a425f742113770b2688f007ea0dcf6c859ac89e1; safely fast-forwarded to b2afa063c75d5e03d6afce5fb76751a2317cb85b preserving Lovable journal evidence commits. Required ancestry confirmed. Documentation/evidence only; incoming stale Markdown regenerated. SQL files/tooling unchanged; no Cloud access.",
+    "evidence": "Started clean at c6c63fc20fc5b6c6ebdaa73e5dd9bbae7e3a4f1c; fetched and fast-forwarded normally to b0a1feb19e009f16ecb899fe7cae94f5940f446e (Verified ENG-PROGRESSION-001B). Approved 001A ancestry verified. R1 audit/docs/state changes local and uncommitted; no push or Cloud action.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -757,6 +757,16 @@
       "evidence": "Read-only Cloud inspection; see docs/operations/progression-001B-evidence-report.md. H0 pause_resolution remains_blocked: Supabase history 510 rows without batch C; Drizzle history 1 row (batch C hash 73df81b1); 40 repository versions not version-attributable. H1: Combat2 commit adds XP without level advancement; apply_crafting_xp/join_order/switch_order PUBLIC+anon and train_renown_stat anon executable; postgres default ACL grants new public functions to anon/authenticated. No repair, DDL, grants, RPC calls, deployment or publication; 001C not started.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001B-R1 local migration reconciliation plan",
+      "status": "authored",
+      "sha": "b0a1feb19e009f16ecb899fe7cae94f5940f446e",
+      "timestamp": "2026-10-04T12:26:46.195Z",
+      "evidence_type": "repository",
+      "evidence": "Pinned deterministic inventory: 545 Supabase + 4 pending + 1 Drizzle SQL files, 6 specifically reported ledger-only identities. 001B unmatched label 40 expands to 36; 279+230+36=545, original partition still unverified. Named unmatched: 9 attributed generated aliases (3 fresh/6 historical), 22 source-only duplicate aliases, 1 installed Batch C candidate, 1 explicitly excluded repository-only, 3 ambiguous. Full 510 ledger export and 230 pair membership/content/distribution unavailable. Batch C sole metadata candidate version 20261002190000; no repair authorization or executable mutation supplied. Prepared docs/operations/progression-001B-h0-readonly-followup.md remains undispatched; repair handoff not ready. H0 remains_blocked, migrations paused, 001C not started. Runtime/migrations/tooling/SQL unchanged. Engine Progression and rewards rules preserved; privilege invariant recorded in operating guide. See migration-reconciliation/README.md and external WoV-ENG-PROGRESSION-001B-R1-Report.md.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
@@ -883,11 +893,11 @@
   ],
   "next_approved_task": {
     "status": "blocked",
-    "artifact": "Capable operator reviews deferred Supabase metadata-only batch C history alignment and future runner routing; Cloud migrations remain paused.",
+    "artifact": "Review local 001B-R1 plan; separately authorize prepared read-only H0 follow-up after source checkpoint. No repair task authorized.",
     "sha": null,
-    "timestamp": "2026-10-03T10:34:36Z",
+    "timestamp": "2026-10-04T12:26:46.195Z",
     "evidence_type": "repository",
-    "evidence": "Read-only reconfirm project/database identity, exact hash/applied privileges, both database histories and earlier source/generated-version differences. Verify installed Supabase CLI and exact metadata-only repair semantics; proposed migration repair --status applied 20261002190000 is not executed here and requires separate authorization. Only intended ledger record may change; prove ACL/body/metadata/other journal preservation and no second-path replay before resuming. Supabase canonical target does not automatically change Lovable's Drizzle tool. Keep tooling/dependencies/artifacts unchanged; no blind reapplication. Ability/admin design may proceed locally; scheduler rearming/further SQL retirement deferred.",
+    "evidence": "Complete Supabase ledger and exact/nearby matching pairs, statement-content attribution/collision decisions and actual hosted runner/tool semantics still required. H0 remains blocked; further Cloud migrations paused. Prepared read-only handoff undispatched; Batch C version 20261002190000 only possible future metadata candidate, not permission. No 001C, Cloud mutations or frontend publication.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

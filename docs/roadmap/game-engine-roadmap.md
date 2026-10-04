@@ -147,7 +147,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 | Checkpoint | Objective/status | Dependency and coherent stopping point |
 |---|---|---|
 | ENG-PROGRESSION-001A | Contract and decisions; source/reference only | Contracts/tests/handoff ready; all runtime writers/fences unchanged |
-| ENG-PROGRESSION-001B | Installed preflight and runner gate; planned, not started | Read-only H0/H1 evidence; installs nothing; ambiguous histories/objects stop work |
+| ENG-PROGRESSION-001B | Installed read-only preflight completed; blocked at H0 | 001B-R1 local reconciliation prepared; complete ledger attribution and no-replay runner proof still required; migrations paused; read-only follow-up undispatched |
 | ENG-PROGRESSION-001C | Dormant authority/provenance; planned | B evidence and migration pause resolved; additive dormant DB authority, no new active writer |
 | ENG-PROGRESSION-001D | Coordinated core XP cutover; planned | C; all reachable XP writers activate coherently, no combat-new/craft-admin-old dual ownership |
 | ENG-PROGRESSION-001E | Trainer and forward class history; planned | D; verified narrow allocation and future history; unsafe old respec remains fenced |

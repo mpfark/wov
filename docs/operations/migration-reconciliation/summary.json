@@ -1,0 +1,489 @@
+{
+  "taskStartSha": "b0a1feb19e009f16ecb899fe7cae94f5940f446e",
+  "schemaVersion": 1,
+  "inputs": [
+    {
+      "path": "docs/operations/progression-001B-evidence-report.md",
+      "blobOid": "de4d54e79255de5dd9a4eab054873174e0baf212",
+      "sha256": "48f5c3b40c85f9c7fd2fb2d6316376cccf4760f268a07aa4a1009d8e4be250e8"
+    },
+    {
+      "path": "docs/operations/project-state.json",
+      "blobOid": "fb56f6a4ba7a50c5dc51543f69cb8286337db4e7",
+      "sha256": "935c8545274e39c0c0a58b24e6881aac13f120bf9162ac1168b6fc64cd02caa1"
+    },
+    {
+      "path": "drizzle/migrations/meta/_journal.json",
+      "blobOid": "bcc9e9b0152a391ec6df2317fccd37238cf6c2a7",
+      "sha256": "35f9e4adaa39d60f7707187ab565fc973fe588dc2bd382466eb7577689bbb27f"
+    }
+  ],
+  "repositoryCounts": {
+    "drizzle": 1,
+    "supabase": 545,
+    "supabase_pending": 4
+  },
+  "classifications": {
+    "ambiguous": 477,
+    "duplicate_content_alias": 46,
+    "exact_match": 15,
+    "generated_alias": 9,
+    "installed_but_unrecorded_canonical": 2,
+    "ledger_only": 6,
+    "repository_only": 1
+  },
+  "actions": {
+    "metadata_repair_candidate": 1,
+    "no_action": 16,
+    "recognize_alias_only": 9,
+    "requires_installed_inspection": 529,
+    "requires_separate_migration_analysis": 1
+  },
+  "rows": 556,
+  "repositoryRows": 550,
+  "additionalLedgerEvidenceRows": 6,
+  "reported001B": {
+    "repositoryFiles": 545,
+    "ledgerRows": 510,
+    "exact": 279,
+    "drifted": 230,
+    "unmatchedLabel": 40
+  },
+  "evidenceQuality": {
+    "namedUnmatchedActual": 36,
+    "namedUnmatchedDuplicates": 0,
+    "correctedArithmetic": "279 + 230 + 36 = 545",
+    "full510LedgerRowsProvided": false,
+    "all279ExactMembersProvided": false,
+    "all230DriftMembersProvided": false,
+    "correctionMeaning": "40 label contradicts explicit 36-member expansion and 545 total; raw ledger needed to verify matching partition"
+  },
+  "normalizedDuplicateGroups": [
+    {
+      "hash": "73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65",
+      "paths": [
+        "drizzle/migrations/0000_combat2_legacy_browser_privileges.sql",
+        "supabase/migrations/20261002190000_combat2_legacy_browser_privileges.sql"
+      ],
+      "byteIdentical": true
+    },
+    {
+      "hash": "48d52874fa585fc2f39340679848d20fbcfd66b7d99c4d53db9a2b3cc2db929a",
+      "paths": [
+        "supabase/migrations/20260905082334_5d50f67c-0c25-4ac3-a726-a6aeaaee583b.sql",
+        "supabase/migrations/20260905090000_combat2_continued_basic_attack.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "dd495174f8f47272f8ddc5fd60c6cc3c77d41f0ab1bf7fc3d1a4db700081a3bd",
+      "paths": [
+        "supabase/migrations/20260908210000_inventory_character_authority.sql",
+        "supabase/migrations/20260908213420_bbfa1b05-0000-4dbf-b662-1ab7e37699c9.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "b177733a79ac0a18d2aa4308e5b18ab4aafbd1de7d2c5bb40336dfcbd23adfae",
+      "paths": [
+        "supabase/migrations/20260909055849_0c556823-d241-4047-af69-e45a508523a5.sql",
+        "supabase/migrations/20260909090000_authoritative_hidden_path_search.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "604967d973e196a3da1107452c127a6f78a974cc03bbbcb2642d7b96d5358506",
+      "paths": [
+        "supabase/migrations/20260909120000_combat2_authoritative_rewards_loot.sql",
+        "supabase/migrations/20260909133041_4e1b901d-4adc-4ce3-a8fa-9efd960d88b3.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "1af6121524af31580dd9ba250bdb1f1fa4b089b72045d540cf9f12ac582fb75f",
+      "paths": [
+        "supabase/migrations/20260909150000_combat2_equipment_durability.sql",
+        "supabase/migrations/20260909195259_2f0ee956-21cb-4eeb-94ff-2be48319b7af.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "3890c38964baea546e50be4bda422e238e3ae75cd68323571fabb35d18a763e1",
+      "paths": [
+        "supabase/migrations/20260909210000_combat2_node_canary_control.sql",
+        "supabase/migrations/20260909220525_d15f854b-107c-4813-b8c6-be58bc5b8c1d.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "bae1315f898febd5d84ca34beeaefa8d0dab35b5e88fe7a47b9d73e6019b614a",
+      "paths": [
+        "supabase/migrations/20260910090000_combat2_test_arena_lifecycle_repair.sql",
+        "supabase/migrations/20260910220826_bacf628a-c62f-4890-9694-58494a7d6614.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "503f8dbbf22e89db74b568cd7cdf80b2f63d9e23032c9bd8100035a2be7b8672",
+      "paths": [
+        "supabase/migrations/20260911100000_combat2_test_arena_runtime_repair.sql",
+        "supabase/migrations/20260911211108_ba48e45e-1b5c-44bb-9f50-db8e70180936.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "e01ec2a2069d15da785e4a57f827b722d7fc80478227b8c88aede7b21d1a4e98",
+      "paths": [
+        "supabase/migrations/20260911222513_76362b2d-cdb0-4f60-82e3-52754aacfde6.sql",
+        "supabase/migrations/20260912100000_combat2_commit_and_automatic_arena_lifecycle.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "5ef99efb653b54f31578931e204266ceb7fb720c6f0f9ddaec532d0cf89b3795",
+      "paths": [
+        "supabase/migrations/20260912140000_combat2_departure_state_projection.sql",
+        "supabase/migrations/20260913212845_6e9e221b-672b-4dd5-a804-1d657ab3b6bc.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "0e3c94c2a5c5256f50c3146509f3ae9d7223e96877ee185813194e77c3491c84",
+      "paths": [
+        "supabase/migrations/20260913100000_combat2_production_cutover.sql",
+        "supabase/migrations/20260913212930_792138d6-ff33-4dd1-868c-85d0e930f112.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "bebea55e28a28b5cfc2d5ff006d0126545048e3b730785c66d64a19a3382cd81",
+      "paths": [
+        "supabase/migrations/20260914080422_2363a563-fe6c-4a67-b49e-ef6531184c23.sql",
+        "supabase/migrations/20260914100000_combat2_boss_catalogue_normalization.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "61376b6e5867b7141375d9319d43c4cbcc62ccae8dbbd00e2401240c95f2fdbd",
+      "paths": [
+        "supabase/migrations/20260914080520_a3a5b23b-ef86-4820-a67e-98eb1bb760cd.sql",
+        "supabase/migrations/20260914110000_combat2_boss_tick_timing.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "9d3cedba46f5ecd90fc8976301737cb3a1bc76bfd9f59862c18bad9966535f0e",
+      "paths": [
+        "supabase/migrations/20260914122540_257e8c25-12a0-4b99-8139-46b6fa17fa8f.sql",
+        "supabase/migrations/20260915100000_combat2_special_transition_fences.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "c37982ac2324822438551846d62e4c5f8989019569875d696d1ecdcb7467f4e0",
+      "paths": [
+        "supabase/migrations/20260914125929_4019a56a-54d2-49dd-b46f-6c2edd93a2a9.sql",
+        "supabase/migrations/20260915120000_combat2_inactive_fighter_lifecycle.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "b79065a66f315c1d95364f5786cf49f5e892de39ed9525a1cc3a8c720cd5c986",
+      "paths": [
+        "supabase/migrations/20260915130000_admin_area_type_rename.sql",
+        "supabase/migrations/20260917132836_8fd4df86-2c59-4bd2-aa64-5f841b37e46c.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "02d70a6174bc775dce3f5dea1fe2ae314204134f2a0577bb05324f6fb93b6366",
+      "paths": [
+        "supabase/migrations/20260915140000_admin_reciprocal_node_connections.sql",
+        "supabase/migrations/20260917132943_e13f0804-89c2-43b5-88d1-0a5cc88c8af9.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "a93342093adb1b38fa9273b25efe441defb08fd6136af71c89ddc2f3e24b9b1e",
+      "paths": [
+        "supabase/migrations/20260915150000_admin_region_initial_node_creation.sql",
+        "supabase/migrations/20260917133016_34f930e7-7795-4fbd-99aa-f5a87b390b84.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "d823e4b3c8813197767181fa10b457087464ae23e184139f9d030943cc1bc771",
+      "paths": [
+        "supabase/migrations/20260915160000_admin_adjacent_node_creation.sql",
+        "supabase/migrations/20260917133107_c49ddc4a-c27a-4973-bb3e-5acb29d39b5d.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "076155947198a8aa0dfa9d8b13ad27350cb374e533b4681c08f0b37c72b841ad",
+      "paths": [
+        "supabase/migrations/20260915170000_admin_batch_node_mutation.sql",
+        "supabase/migrations/20260917133154_c5911ee4-a930-431e-831c-c22a31fbf8ba.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "44dd9e9411d0614e516810614bc10a80227e1dbdb66fa68e133115fd9d196351",
+      "paths": [
+        "supabase/migrations/20260915180000_admin_loot_table_mutation.sql",
+        "supabase/migrations/20260917133256_dc1edbc9-46cd-4f57-a839-66e427769cb2.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "229374a259d7e91837c4a0901c676d584dba1cb0c96cb3836fe822391a68adb2",
+      "paths": [
+        "supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql",
+        "supabase/migrations/20260917133413_fc7e672e-18b4-4103-9e8a-40f493fa167f.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "044fea76b743580be495669a642fa2d6dedfdb396bb84b807b5bb00347e67c64",
+      "paths": [
+        "supabase/migrations/20260920234050_6123eb9c-3809-4694-8c05-52c9442d80ef.sql",
+        "supabase/migrations/20260921100000_combat2_bounded_diagnostics.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "a91116e4c0a634fa5b61807e9fb29ef37742a0a5d4ac495c1eafd64101ab65fe",
+      "paths": [
+        "supabase/migrations/20260920234117_97de82ce-f036-4d99-b390-82a4872aa0ed.sql",
+        "supabase/migrations/20260921110000_combat2_diagnostic_dispatch_integration.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "5adfadf9e624671091da03487cc1d240f81c34338214b98ca0f954cc943d69b7",
+      "paths": [
+        "supabase/migrations/20260921223049_274ba4d5-ba04-41c3-90fd-ab79cd77b566.sql",
+        "supabase/pending/20260922000000_combat2_claim_reward_channel_contract.sql"
+      ],
+      "byteIdentical": true
+    },
+    {
+      "hash": "3d2b99b1e08a9ed9b50c677ae1ca130580c6c9c7657395beb9ddefc4011d14f2",
+      "paths": [
+        "supabase/migrations/20260922100000_int_wis_max_cp_and_combat2_regen.sql",
+        "supabase/migrations/20260922112544_a2d63b3d-4f07-4641-a911-f6cf25ee1b45.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "c23bd4a47beea002241e542529cccbf39d36f69adacb3bf9535cd4c976b31501",
+      "paths": [
+        "supabase/migrations/20260922140000_combat2_engagement_release_lifecycle.sql",
+        "supabase/migrations/20260922210004_378f1214-3c89-404b-a8f9-49642fc2a46a.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "b973e4fe9cbc7b8c787c12ac6e623e65c3ffe7a5ea8937446fc58f90acbae6b9",
+      "paths": [
+        "supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql",
+        "supabase/migrations/20260923101233_3c56c1fc-a209-492b-a3ec-7eb752390f4c.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "540e2d44d853e641bc5b3f04db3067e3e459d3815f575c057b2ffb7ce4c63095",
+      "paths": [
+        "supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql",
+        "supabase/migrations/20260928213905_bbf754d1-f039-447c-8b43-eacf987b77eb.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "11b2778c84de0fde6714a06e0d5c8da549365afe6365b669aa1f60f859677fdb",
+      "paths": [
+        "supabase/migrations/20260929093442_8b9ada16-f768-4652-9a47-5fd1c147699d.sql",
+        "supabase/migrations/20260929100000_combat2_immediate_authoritative_departure.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd",
+      "paths": [
+        "supabase/migrations/20260929130000_combat2_world_heartbeat_identity.sql",
+        "supabase/migrations/20260929211804_761d0556-953f-4c59-92d2-da56eca4b29e.sql"
+      ],
+      "byteIdentical": false
+    },
+    {
+      "hash": "71cac9fb25698507f591f76aa93c72071f0edd8b59ddde125c3d2feee290c923",
+      "paths": [
+        "supabase/migrations/20261001130000_combat2_character_persistent_stances.sql",
+        "supabase/migrations/20261001213148_dec8975a-1fb3-43c9-b5a8-73620bd1e0e8.sql"
+      ],
+      "byteIdentical": false
+    }
+  ],
+  "unmatched": {
+    "count": 36,
+    "classifications": {
+      "ambiguous": 3,
+      "duplicate_content_alias": 22,
+      "generated_alias": 9,
+      "installed_but_unrecorded_canonical": 1,
+      "repository_only": 1
+    },
+    "sourceCounterpartCount": 32,
+    "noSourceCounterpart": [
+      "20260831133000",
+      "20260906160000",
+      "20260907110000",
+      "20260915200000"
+    ]
+  },
+  "timestampDrift": {
+    "claimedAffected": 230,
+    "actualPairMembershipAndDeltaDistribution": "not_reconstructible_without_complete_ledger",
+    "supportedGeneratedAliasDeltas": [
+      {
+        "repositoryVersion": "20260921100000",
+        "ledgerVersion": "20260920234050",
+        "deltaSeconds": -37150,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260921110000",
+        "ledgerVersion": "20260920234117",
+        "deltaSeconds": -40723,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260922100000",
+        "ledgerVersion": "20260922112544",
+        "deltaSeconds": 5144,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260922140000",
+        "ledgerVersion": "20260922210004",
+        "deltaSeconds": 25204,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260923100000",
+        "ledgerVersion": "20260923101233",
+        "deltaSeconds": 753,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260928100000",
+        "ledgerVersion": "20260928213905",
+        "deltaSeconds": 41945,
+        "currentLedgerVerified": false
+      },
+      {
+        "repositoryVersion": "20260929100000",
+        "ledgerVersion": "20260929093442",
+        "deltaSeconds": -1518,
+        "currentLedgerVerified": true
+      },
+      {
+        "repositoryVersion": "20260929130000",
+        "ledgerVersion": "20260929211804",
+        "deltaSeconds": 29884,
+        "currentLedgerVerified": true
+      },
+      {
+        "repositoryVersion": "20261001130000",
+        "ledgerVersion": "20261001213148",
+        "deltaSeconds": 30708,
+        "currentLedgerVerified": true
+      }
+    ],
+    "sixLedgerOnlyNearbyCandidates": [
+      {
+        "ledgerVersion": "20260219140203",
+        "repositoryVersion": "20260219140123",
+        "deltaSeconds": 40
+      },
+      {
+        "ledgerVersion": "20260219140203",
+        "repositoryVersion": "20260219140204",
+        "deltaSeconds": -1
+      },
+      {
+        "ledgerVersion": "20260329075051",
+        "repositoryVersion": "20260329075004",
+        "deltaSeconds": 47
+      },
+      {
+        "ledgerVersion": "20260329075051",
+        "repositoryVersion": "20260329075052",
+        "deltaSeconds": -1
+      },
+      {
+        "ledgerVersion": "20260430152859",
+        "repositoryVersion": "20260430152828",
+        "deltaSeconds": 31
+      },
+      {
+        "ledgerVersion": "20260430152859",
+        "repositoryVersion": "20260430152900",
+        "deltaSeconds": -1
+      },
+      {
+        "ledgerVersion": "20260511100550",
+        "repositoryVersion": "20260511100538",
+        "deltaSeconds": 12
+      },
+      {
+        "ledgerVersion": "20260511100550",
+        "repositoryVersion": "20260511100551",
+        "deltaSeconds": -1
+      },
+      {
+        "ledgerVersion": "20260629080343",
+        "repositoryVersion": "20260629080249",
+        "deltaSeconds": 54
+      },
+      {
+        "ledgerVersion": "20260629080343",
+        "repositoryVersion": "20260629080345",
+        "deltaSeconds": -2
+      }
+    ],
+    "nearbyCandidateDistribution": {
+      "12": 1,
+      "31": 1,
+      "40": 1,
+      "47": 1,
+      "54": 1,
+      "-1": 4,
+      "-2": 1
+    },
+    "nearbyMatchesAreNotProvenAliases": true
+  },
+  "namespaces": {
+    "generatedUuidNames": 502,
+    "descriptiveNames": 43,
+    "renames": "055f64213ce5a72d8101ef94f4e4cff8b1bc7599 2026-09-07T15:06:59+02:00\n\nR058\tsupabase/migrations/20260907160000_combat2_ability_support_gate.sql\tsupabase/migrations/20260907170000_combat2_stack_ability_support_gate.sql",
+    "drizzleJournal": {
+      "version": "7",
+      "dialect": "postgresql",
+      "entries": [
+        {
+          "idx": 0,
+          "version": "7",
+          "when": 1791021613818,
+          "tag": "0000_combat2_legacy_browser_privileges",
+          "breakpoints": true
+        }
+      ]
+    }
+  },
+  "gate": "remains_blocked",
+  "candidateMetadataVersions": [
+    "20261002190000"
+  ],
+  "permittedMutationsInR1": []
+}
