@@ -843,7 +843,7 @@
       "status": "installed",
       "sha": "b79f92532e4490b180eba2a4d53dca5e618af902",
       "timestamp": "2026-10-04T23:53:00Z",
-      "evidence_type": "handoff",
+      "evidence_type": "operator_reported",
       "evidence": "ENG-PROGRESSION-001C = COMPLETE / INSTALLED / DORMANT. Hosted installation report reviewed and accepted by Mik 2026-10-04: Drizzle 0001_progression_001c_dormant_authority (SHA-256 e9526a64e166fc8ca84ee80a8397ebec9c919922078e84563aa2ef83b239557a) is the canonical installed 001C checkpoint; journal and hosted history match 0000/0001; Supabase ledger unchanged; objects postgres-owned and private; no trigger, schedule, wrapper or caller; fingerprints unchanged; tables empty; level CHECK 1..100; no 001D integration. Hosted multi-session contention/retry/rollback validation remains unproven and is a mandatory ENG-PROGRESSION-001D pre-activation gate. Next task ENG-PROGRESSION-001D is not authorized.",
       "reporting_actor": "Mik",
       "directly_verified": false
