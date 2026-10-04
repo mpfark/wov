@@ -85,6 +85,8 @@ Local file journal is not database journal proof. The empty snapshot is not the 
 
 ### Deferred Supabase history alignment checklist
 
+**Historical checklist, superseded for future migration ownership by [B2](../operations/migration-baseline-strategy.md).** Mik approved abandoning historical Supabase normalization as a prerequisite. Lovable states the standard Drizzle route excludes that history; Batch C is already its first forward entry. Do not execute this checklist or require Supabase recognition. Preserve its evidence and both SQL artifacts. H0 now awaits only the B2 final read-only integrity/operational-freeze check and review; native dry-run/new-history registration are not requirements. Current operating guide governs future work.
+
 Mik selected Supabase history as the canonical target; see the [operating policy](../operations/ai-operating-guide.md). Drizzle recording is now Lovable-reported confirmed, but Supabase alignment and actual future runner routing are unresolved. **Further Cloud migrations stay paused**. Ability/admin design without Cloud changes may proceed. Retain Drizzle tooling, journals and both SQL files; no cleanup authorization is implied.
 
 For a capable operator, under separate authorization:

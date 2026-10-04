@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T13:17:07.020Z",
-  "based_on_source_sha": "0e09cb6733868d7ff50aa14ecef66f2c8f5f949a",
+  "updated_at": "2026-10-04T22:23:05.246Z",
+  "based_on_source_sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001B-B1 local baseline strategy on reviewed H0 checkpoint",
-    "sha": "0e09cb6733868d7ff50aa14ecef66f2c8f5f949a",
-    "timestamp": "2026-10-04T13:17:07.020Z",
+    "artifact": "ENG-PROGRESSION-001B-B2 local documentation reconciliation",
+    "sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
+    "timestamp": "2026-10-04T22:23:05.246Z",
     "evidence_type": "repository",
-    "evidence": "Started clean at c50cbb6568ffc5f48575f9d2bb2f811a37536efe; fetched and fast-forwarded normally to expected reviewed checkpoint 0e09cb6733868d7ff50aa14ecef66f2c8f5f949a. R1 and approved 001A ancestry verified; incoming changes are hosted H0 report/CSV evidence and state only. Local B1 documentation/state changes uncommitted; no runtime/SQL/config/tooling changes, commit or push.",
+    "evidence": "Started clean, fetched origin and verified HEAD=origin/main=e5913a7dc0a90a53bebc3a0b0b94851882710ea6; reviewed H0/R1 ancestry present, no unexpected divergence. B1 architectural direction approved by Mik. B2 documentation/state changes local and uncommitted; SQL/runtime/migrations/config/tooling unchanged, no Cloud operations.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -787,17 +787,27 @@
       "evidence": "Local architecture/source audit only, see docs/operations/migration-baseline-strategy.md and external WoV-ENG-PROGRESSION-001B-B1-Baseline-Strategy.md. Latest hosted H0 content export locally recounted: 278 same-version + 258 other-version + 9 unmatched sources, 505/510 ledger rows matched and 31 duplicate source pairs. Recommends verified actual-state snapshot boundary plus one isolated Drizzle-based forward lane, contingent on Mik approval to change prior Supabase-canonical policy and on hosted capability proof. Not adopted or implemented. Preserve production data and historical files/ledgers; no cosmetic identity repair or Batch C replay. No full installed-schema representation or safe plan/boundary-registration/old-route isolation proven. Proposed next task is separately authorized read-only capability/catalog coverage feasibility, undispatched. H0 remains_blocked, migrations paused, 001C not started; H1/dormant-scope review still required before 001C. Runtime/data preservation policy and future invariants added to existing operating guide; engine rules preserved.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001B-B2 Lovable Drizzle model reconciliation",
+      "status": "authored",
+      "sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
+      "timestamp": "2026-10-04T22:23:05.246Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik supplied Lovable platform statements on 2026-10-05 (exact conversation timestamp/tool version unavailable): standard custom-SQL Drizzle uses existing journal/Drizzle ledger, excludes Supabase files/history, implicit installed-state baseline, intentionally blank schema, no native dry-run, no direct CLI lifecycle management, additive preflight and automatic type regeneration. Repository corroborates config/journal/SQL hash, not current hosted integrity. B1 approved direction preserved; new wov_b1 namespace/history/registration and universal dry-run/full-bootstrap gates superseded. Existing 0000 is first forward event, not full-schema snapshot. H0 verdict B: separately authorized final read-only current executed-prefix/hash/pending check and recorded operational legacy-route freeze; no tool probe. Historical discrepancies tracked separately; task-specific data/privilege safety remains mandatory. See migration-baseline-strategy.md and external WoV-ENG-PROGRESSION-001B-B2-Drizzle-Reconciliation.md. Migration execution paused, no 001C or task dispatched.",
+      "reporting_actor": "Lovable platform statements supplied by Mik; Codex local reconciliation",
+      "directly_verified": false
     }
   ],
   "known_blockers": [
     {
       "identity": "eng-legacy-002-batch-c-history-reconciliation",
       "status": "blocked",
-      "sha": "a425f742113770b2688f007ea0dcf6c859ac89e1",
-      "timestamp": "2026-10-04T13:17:07.020Z",
+      "sha": "e5913a7dc0a90a53bebc3a0b0b94851882710ea6",
+      "timestamp": "2026-10-04T22:23:05.246Z",
       "evidence_type": "operator_reported",
-      "evidence": "Lovable 2026-10-03T10:24:58Z confirms matching Drizzle database journal row and retained privilege effects; Supabase ledger 510/newest 20261001230000 still lacks batch C. Mik selected Supabase history as canonical target. Resolve alignment and actual tool routing before the next migration; further Cloud migrations paused. Exact internal command remains unrecovered. Capable operator must verify identity, installed CLI metadata-only repair semantics, full local/remote history including prior source/generated version differences, then separately authorized proposed repair for 20261002190000; only intended history record may change, ACLs/bodies/other journals unchanged and no second-path replay. Lovable reports no CLI/credential or metadata-only tool capability in sandbox. No tooling removal or ledger INSERT authorized. B1 update: latest hosted H0 content export explains 536/545 source mappings without cosmetic normalization; no metadata-only capability or migration preview is exposed. A verified actual-state baseline and isolated forward lane is proposed, not approved/implemented. Supabase canonical policy remains current pending Mik decision; all migration execution paused. Batch C remains recorded through Drizzle, no replay or history repair. See migration-baseline-strategy.md.",
-      "reporting_actor": "Lovable (inspection handoff); Mik (policy); Codex reconciliation",
+      "evidence": "Current B2 verdict B, superseding historical Supabase-recognition requirement: standard Drizzle route excludes Supabase files/history according to Lovable statements supplied by Mik on2026-10-05. Batch C remains first Drizzle forward entry hash73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, not schema bootstrap. No metadata-only Supabase repair or native dry-run needed. One final authorized read-only hosted journal/ledger prefix/hash/pending consistency and operational legacy-route-freeze acceptance remains before reviewed H0 closure. Repository verifies only local metadata; earlier hosted reports retain historical evidence. Migration execution paused; no 001C. Task-specific persistent-data/privilege safety still required.",
+      "reporting_actor": "Lovable via Mik (platform behavior); Codex (local audit)",
       "directly_verified": false
     },
     {
@@ -913,11 +923,11 @@
   ],
   "next_approved_task": {
     "status": "blocked",
-    "artifact": "Review/checkpoint B1 design; decide canonical mechanism, then separately authorize read-only baseline feasibility. No baseline activation or 001C authorized.",
+    "artifact": "Review/checkpoint B2, then separately authorize final read-only Drizzle integrity/legacy-route-freeze verification. No migration or 001C authorization.",
     "sha": null,
-    "timestamp": "2026-10-04T13:17:07.020Z",
+    "timestamp": "2026-10-04T22:23:05.246Z",
     "evidence_type": "repository",
-    "evidence": "H0 hosted follow-up is completed and committed at 0e09cb6733868d7ff50aa14ecef66f2c8f5f949a; R1 missing content evidence is superseded by its CSVs/report. Safe discovery/preview/history registration remain unproven. Proposed isolated Drizzle lane is not adopted; existing Supabase choice remains current until Mik approves a change. Complete actual-schema coverage/exception disposition, data recovery proof and single-runner exclusion/activation evidence required before H0 exit. No automatic Lovable task, migration/history changes or publication.",
+    "evidence": "Verdict B: confirm current committed journal/SQL matches all hosted Drizzle rows as one executed prefix, with no unexplained pending entries/hash mismatch; record standard Drizzle-only future route and no active separately configured legacy executor. Platform routing statements accepted as attributed documentation; native dry-run is unavailable and not required. No Supabase Batch C insertion, new history/namespace/registration, cosmetic normalization or global bootstrap prerequisite. Task-specific catalog/data/privilege gates continue after reviewed H0 closure. 001C remains dormant/additive, active writer cutover belongs001D.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

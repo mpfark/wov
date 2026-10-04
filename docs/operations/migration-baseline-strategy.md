@@ -1,6 +1,68 @@
-# ENG-PROGRESSION-001B-B1 — Proposed canonical baseline strategy
+# ENG-PROGRESSION-001B — Baseline strategy reconciled with Lovable (B2)
 
-Design/source audit only, based on `0e09cb6733868d7ff50aa14ecef66f2c8f5f949a`. **Not adopted or implemented. H0 remains blocked.** No baseline, SQL, migration, history edit, runtime change or 001C work is authorized by this document. Engine Progression and rewards rules and one-world-heartbeat semantics are preserved.
+Current B2 source baseline: `e5913a7dc0a90a53bebc3a0b0b94851882710ea6`, 2026-10-05. Mik approved B1's architectural direction at checkpoint, including abandoning historical Supabase normalization as a future-authority prerequisite. **Architecture approval is not mutation or 001C authorization.** B2 recommends the platform-native existing Drizzle lane rather than a new namespace/history. Verdict **B: one final narrowly scoped read-only hosted integrity check**, not a migration/tool probe; H0 remains paused pending that evidence and review. Gameplay Progression and rewards and one-world-heartbeat rules are unchanged.
+
+## Current B2 model and evidence attribution
+
+Mik supplied fourteen statements from Lovable on 2026-10-05; the exact platform conversation timestamp/version was not supplied. These are operator-supplied platform evidence, not new Codex Cloud verification:
+
+- Lovable moved agent migrations from the historical Supabase ledger to custom SQL through Drizzle Kit. Batch C is already the first `0000` forward entry.
+- Its runner uses `drizzle/migrations/meta/_journal.json` with `drizzle.__drizzle_migrations`, does not discover `supabase/migrations/` and does not consult the Supabase history.
+- Mature projects start from the current installed database implicitly; no old migration registration/replay is needed. Blank `drizzle/schema.ts` is intentional because custom SQL, not declarative ORM diff generation, supplies changes.
+- Supabase artifacts can remain archival. Operational freeze prohibits legacy migration execution, including `supabase db push`. Future schema migration tasks use Lovable's standard Drizzle tool, not direct CLI lifecycle management.
+- No true nonmutating migration dry-run is exposed. Review precedes tool invocation. Platform constraints also include additive-change preflight and automatic Supabase type regeneration after successful migrations; exact preflight rules need task-specific clarification, not invented semantics.
+
+Repository independently corroborates config output directory, blank schema placeholder, the `0000` SQL and one journal tuple (idx0, tag0000_combat2_legacy_browser_privileges, when1791021613818, version7). Committed Batch C byte SHA-256 is `73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65`. Earlier hosted reports supply one matching Drizzle row; neither repository files nor platform statements alone prove today's hosted pending state, metadata integrity or effective ACLs. No hosted reads occur in B2.
+
+Recommended model: historical Supabase files/ledger → frozen evidence; existing installed database → implicit schema base; existing Drizzle `0000`/Batch C → first actual forward-history event; subsequent standard-tool entries `0001`, `0002`, etc. → one canonical forward sequence. Keep real tool identities/journal metadata, protect their immutable executed prefix, and record exact SQL hashes in evidence; do not invent a custom version generator or manage the CLI directly.
+
+No new `database/baselines/wov-b1/`, `database/migrations/wov-b1/`, `wov_b1` history, production baseline migration or explicit baseline-registration operation is necessary in this model. The current one-entry journal is forward history, **not** a reconstruction or full-schema snapshot of production. A complete snapshot/catalog manifest remains useful for audit, fresh bootstrap and recovery; it is not a second production authority or a global prerequisite for every additive migration. Unknown definitions affecting a proposed migration still require focused inspection.
+
+## B2 H0 blocker matrix
+
+Classifications distinguish acceptance of documented platform behavior from direct operational verification. An item labelled resolved is resolved at the stated evidence level, not freshly exercised in production.
+
+| Earlier blocker | B2 classification | Reason / remaining obligation |
+|---|---|---|
+| Unknown future discovery | RESOLVED | Lovable explicitly identifies journal/Drizzle-ledger routing and exclusion of Supabase; independently corroborated config. Current source-to-hosted executed prefix/pending consistency still needs the narrow check below |
+| Metadata-only Batch C Supabase recognition | SUPERSEDED BY PLATFORM MODEL | Batch C already recorded in canonical candidate Drizzle route; no Supabase insertion needed |
+| Scheduler table creating history unattributed | SEPARATE HISTORICAL/RECONCILIATION ISSUE | No old replay; inspect actual object only if a later task touches it, privileges/dependencies or bootstrap |
+| Four edited historical source files | SEPARATE HISTORICAL/RECONCILIATION ISSUE | Freeze retained source/Git/ledger evidence; differing old bytes are not forward pending work |
+| Two test migration mismatches | SEPARATE HISTORICAL/RECONCILIATION ISSUE | No historic file execution; actual test functions matter only to affected future work/reconstruction |
+| Ledger-only20260728070225 | SEPARATE HISTORICAL/RECONCILIATION ISSUE | Preserve actual history; inspect sync_character_resources before dependent progression changes |
+|258alternate-version identities /31duplicate pairs | SUPERSEDED BY PLATFORM MODEL | Supabase is not consulted by forward discovery; no renaming/rekeying |
+| No native Drizzle dry-run | ACCEPTED PLATFORM CONSTRAINT | Exact source review, pending-prefix/catalog preflight and post-apply checks replace the missing capability; never probe with migration tool |
+| Old Supabase route coexistence | STILL BLOCKING | Close through recorded operational freeze/sole-route acceptance and confirmation no separately scheduled/authorized legacy route is active. Repository prohibition is documented, not a claim of technical platform disabling |
+| Journal contains only Batch C | RESOLVED | Valid first forward entry, not incomplete schema baseline; current row/hash/prefix consistency must still be checked |
+| Blank drizzle/schema.ts | ACCEPTED PLATFORM CONSTRAINT | Custom SQL is intended; leave placeholder blank, no schema push/diff generation |
+| Full schema/bootstrap reproducibility | SEPARATE HISTORICAL/RECONCILIATION ISSUE | Needed for reconstruction/recovery scope, not new production history. Do not bootstrap production; task-specific recoverability remains mandatory |
+| Current Drizzle executed-prefix/pending integrity | STILL BLOCKING | Latest source hash/journal locally verified, hosted row evidence older; require current match, no duplicate/unexplained entries or unrecorded pending file |
+| B1 new namespace/history/registration capability | SUPERSEDED BY PLATFORM MODEL | Existing platform boundary removes the capability requirement |
+| Persistent-data/privilege drift for next task | STILL BLOCKING | Task-specific gate, not demand for global historical cleanup. Inspect affected objects/data and approve safe SQL before each invocation |
+
+## Safety without native preview and minimal containment
+
+Before any mutating task: clean synchronized source checkpoint; standard Lovable Drizzle route declared; reviewed exact custom SQL/change set and protected-data outcome; current journal/ledger prefix comparison by reads; no unexplained pending Drizzle SQL; focused catalog/privilege/dependency inspection; explicit Mik authorization. Review tool-created migration/journal mapping and preserve exact artifact/evidence hashes. `drizzle-kit check` is a platform step, not a native database execution dry-run or proof of data safety. Do not require a nonexistent preview endpoint.
+
+Use deterministic local SQL/containment tests where meaningful. Additive preflight must be satisfied as the platform defines it; clarify exact limitations before approving risky/nonadditive tasks. Same-migration explicit PUBLIC/anon/authenticated/service_role/internal caller, owner, definer/invoker and search_path policy remains mandatory. Static review cannot prove effective inherited rights or dynamic SQL behavior. Risky/destructive work requires available disposable rehearsal and recovery evidence; if unavailable, block that task rather than block every safe additive task permanently. Fail loudly and preserve persistent data; no compatibility/dual-write shortcut.
+
+Post-apply: record actual new SQL/journal/history identity/hash, verify intended catalog changes/effective ACLs and persistent-data invariants, and inspect automatically regenerated Supabase type diff as an expected platform side effect. Generated types are derived evidence, not schema authority. Type regeneration does not deploy Edge or publish frontend. Verify failure/transaction/recovery semantics per task rather than assume rollback. On unexpected extra migrations, replay, data/security delta or failure, STOP; no fallback runner or historical repair.
+
+Recommended subsequent small containment task, **not implemented here**: freeze Supabase migration and pending paths by reviewed baseline blob manifest (reject additions/edits/deletions except explicit archival exception); prohibit new executable legacy-route scripts/instructions without treating historical quoted evidence as a runnable instruction; protect Drizzle executed SQL and journal tuples while permitting legitimate append-only standard-tool entries; reject new migration SQL in other directories; flag routing/config/placeholder changes; require explicit privilege intent/reviewer verification. Repository checks cannot revoke platform capabilities, so operator/task policy must forbid all legacy routes. Preserve existing history/journals rather than reset them.
+
+## Verdict B: exact final read-only questions
+
+On a separately authorized hosted read-only task, synchronize/verify the reviewed source checkpoint and project identity using safe metadata. Read the entire current Drizzle ledger and compare each row/hash/time to committed journal and SQL; establish the one-to-one executed prefix, no duplicates, no unknown row/source and no pending unrecorded Drizzle entry. At the B2 checkpoint the expected prefix is only Batch C id1/hash73df…/created_at1791021613818; do not interpret that timestamp as recovered execution time. If legitimate later source/rows exist, stop for review rather than repair or assume the old expected count. Use reads/comparison, not a native runner plan or migration-tool invocation.
+
+Record that the current authorized future route is Lovable standard custom-SQL Drizzle, and operationally freeze every legacy Supabase route: no future db push/legacy migration task, script or scheduled external migration executor. Ask only whether any separately configured legacy automation/operator path is active; do not demand platform-wide capability revocation or runner execution as proof. Missing visibility means explicit STOP/owner confirmation, not secret search. Platform routing statements suffice for documented behavior; the final check tests concrete current metadata integrity.
+
+If integrity and operational freeze are confirmed, H0 can be recorded resolved after review, with unavailable native dry-run/blank schema/automatic types/additive rules explicitly accepted. No baseline activation/migration/metadata operation is needed. Historical origin imperfections and fresh-bootstrap incompleteness remain tracked separately. If an unexplained pending migration, hash mismatch or actual legacy executor remains, H0 stays blocked. Task-specific data/privilege checks continue even after H0 closure.
+
+Shortest path: review/checkpoint B2 → authorize only this final read-only check → review H0 result → separately authorize001C dormant/additive preparation and its eventual exact hosted SQL. Refresh only relevant H1 writers/triggers/ACLs/config/column widths/dependencies, including installed sync_character_resources where affected. Protect opaque character baseline; no cap normalization, XP writer activation or old-source replay. Active cutover remains001D. No task is dispatched and001C is untouched here.
+
+## Historical B1 rationale — superseded requirements are not instructions
+
+The sections below retain B1's reviewed reasoning from checkpoint `e5913a7d…` for traceability. Mik has since approved its architectural direction. B2 above supersedes its proposed new directories/history/registration, universal native-plan/full-bootstrap prerequisites, CLI/executor management suggestions and retirement of the existing Drizzle lane. Data preservation, immutable evidence, explicit privileges and production-versus-bootstrap separation remain binding. Use the current B2 model and operating guide for future work; do not execute the historical transition plan below.
 
 ## Evidence boundary
 
