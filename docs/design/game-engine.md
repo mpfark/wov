@@ -97,6 +97,50 @@ Effective attributes include only valid equipped durable gear. Gems contribute e
 
 Movement cost is computed and charged atomically by the departure RPC from authoritative route/character state; the client only presents the returned cost. Death/respawn resources are owned by the respawn contract, not client recovery code.
 
+## Progression and rewards
+
+Approved ENG-PROGRESSION-001 rules, encoded by **001A contract/reference work only**. These rules define the future authority; they do not assert that current runtime writers implement them. Installed SQL, deployed consumers and historical character state remain separate verification gates. The reference under `src/shared/progression/` has no runtime importers and must not be used as a browser mutation authority.
+
+### XP and advancement
+
+- Gameplay levels are 1–42. Ordinary progression cannot produce levels above 42; historical/admin exceptions require reconciliation.
+- The threshold from L to L+1 is `T(L)=floor(50×L²)`, using `formulas/xp.ts:getXpForLevel` in the pure reference. XP is remainder toward the next level, not lifetime XP. The old admin `100×L` formula is not canonical.
+- A legitimate award processes **all** affordable transitions atomically, up to 42. L1 XP0 +250 becomes L3 XP0; +260 becomes L3 XP10. Each destination level grants one unspent discretionary point; no L1 grant. Ordinary L1→ 42 grants 41 points.
+- At arrival at 42, playable XP becomes0 and overflow is discarded. Canonical L42 XP0 accepts no further usable XP/rewards. Receipts distinguish offered, applied and discarded XP; `offered=applied+discarded` and `oldXP+applied=thresholdsPaid+finalXP`. Cap presentation reflects applied XP, not merely a proposed award.
+- Reject negative, fractional, null, nonfinite or out-of-envelope awards and unsafe arithmetic. Zero awards produce no transition or refill. The initial parity reference uses the current signed-integer envelope (2,147,483,647 for award/current XP and their pre-transition sum); the future DB must confirm column widths/checked arithmetic before installation.
+- Historical negative/null/out-of-range level/XP, below-cap XP already at/above its threshold, or nonzero XP at 42 require separate reconciliation; unrelated awards, including zero, never normalize them. Validation does not authorize a repair.
+- Future trusted callers supply a validated domain event and stable identity. Same identity+payload replays the original historical receipt; conflicting reuse is refused. A pure calculation is not replay protection or proof of a committed award.
+
+### Class growth and level milestones
+
+At each crossed destination level 3/6/…/42, apply the captured `classes.level_bonuses` configuration of the class held at that transition. Validate six-stat nonnegative integer deltas and retain class/config revision plus concrete deltas. No hardcoded CASE growth owner. Current reference fixture: Warrior STR/DEX; Wizard INT/WIS; Ranger DEX/WIS; Assassin DEX/CHA; Healer WIS/CON; Bard CHA/INT; Templar WIS/CON, +1 each. These are configuration evidence/golden fixtures, not fixed runtime balance.
+
+Classless characters gain normal levels/discretionary points but no automatic class growth. Joining later does not backfill missed classless installments. Switching is forward-only: Warrior L3 STR/DEX remains after switching atL4; Wizard L6 grants INT/WIS. Never reconstruct history from current class×current level.
+
+One respec token is earned once at each destination milestone 10/20/30/40, including all previously unclaimed milestones crossed by one event. Durable character/milestone uniqueness is required independently of the XP receipt. Exceptional admin token grants are separate. Historical crafting L40 `soulmarked_ember` and L42 `corebound_fragment` are **not canonical level rewards**; their current crafting-specific behavior awaits a later explicit decision. Do not universalize or silently remove them during 001A. Regen tier benefits remain derived highest-eligible tiers; ring claims/reforges, utility actions, titles and kill-specific prestige keep their own eligibility/authority, not automatic inventory grants here.
+
+### Resources, provenance and trainer
+
+After all level transitions and permanent growth, recalculate final maxima using the existing resource formulas. Refill living HP once to final MaxHP; dead HP stays0. Preserve CP/MP and clamp to final maxima; never refill them for a level. XP without level does not heal. This is fixed event policy, not a caller-selectable refill flag. Capacity calculation and refill are separate. Equipment aggregation/parity and effective AC persistence must be inspected before future consolidation; 001A does not settle the empty-override discrepancy or change formulas.
+
+Existing characters retain exact materialized attributes, level/XP, class, Renown/ranks, point pools, equipment and resources as an opaque baseline. No inferred historical composition or automatic rewrite. From cutover forward, six counters record currently invested provably refundable discretionary points. Compact event receipts record identity/source, class/config, permanent deltas, allocation/refund, Renown outcome, milestone identity and before/after progression version. This B+C hybrid is not full event sourcing.
+
+Future allocation/respec use narrow server-authoritative owner RPCs; no broad browser UPDATE reopening. Both are prohibited during active combat and require current trainer/location, ownership, safe lifecycle, positive valid six-stat allocation, sufficient pool, locks/version fencing, atomic resource sync and replay checks. Respec refunds only recorded discretionary investment: subtract counters from attributes, return their total to unspent, clear counters and consume one token only for a valid nonzero refund. Empty refund consumes nothing; inconsistent provenance refuses. Preserve racial/opaque base, automatic mixed-class growth, Renown attributes/ranks, permanent rewards, gear and class history. Unproven pre-cutover spending is not refundable without later independent proof.
+
+**OPEN DESIGN DECISION:** whether an allowed respec must first drop/clean active stances through the canonical stance lifecycle. Do not invent cleanup or CP refunds; this does not block 001A. Destructive/downward admin override semantics and historical repairs remain separate decisions.
+
+### Future transactional authority and integration
+
+A small private PostgreSQL function family owns one XP advancement contract, one trusted permanent-attribute primitive and shared derived-resource synchronization. Narrow domain entries validate combat/craft/admin/trainer/Renown events. Browser clients cannot submit arbitrary trusted deltas. Permanent sources include creation/race, class growth, discretionary investment, Renown, explicit admin overrides and future permanent rewards.
+
+Renown balance is unchanged: L30+, cost `10×(rank+1)`, chance `max(5,95−10×rank)` percent, one stochastic roll per stable request; failure spends RP without rank/stat gain. Success grants rank+1 and actual stat+1. Eligibility, roll, spending, rank/stat, sync and receipt commit atomically; transaction failure spends nothing; replay never rerolls. No runtime Renown repair is part of001A.
+
+Combat2 invokes progression **inside** its accepted exactly-once reward transaction, only for a newly accepted claim. Duplicate claims apply no XP/levels/points/growth/milestones. Preserve frozen tick/lifecycle ordering, offscreen qualification, party semantics and rollback; a progression refill cannot resurrect a dead recipient or be overwritten by a later stale proposal.
+
+Crafting/fusion determines a legitimate XP amount but does not own thresholds, levels, growth, resource formulas or ordinary milestones. Prefer atomic completion+XP; a durable outbox written in the completion transaction is the fallback, with pending delivery represented honestly. Admin XP grants/normal upward advancement consume canonical progression; raw set/lower/reconstruct are explicit privileged overrides, with semantics decided separately.
+
+No intentional dual XP authority during cutover: preparation can be split, activation must coordinate all reachable combat/crafting/admin XP writers. Invariant protection must reject invalid transitions rather than silently partially undo a successful-looking RPC. Local Codex never discovers credentials or administers hosted Supabase; Lovable handles later expressly authorized operations. 001B is read-only installed/runner preflight and installs nothing; the existing Cloud migration pause remains until evidence supports resolution. See the [001B handoff](../operations/progression-001B-lovable-preflight.md) and roadmap001A–H sequence.
+
 ## Creatures, targeting and initiation
 
 Visible node creatures are a location projection. Peaceful co-location does not itself create Combat2 ownership; a deliberate authoritative engage is required. Living aggressive creatures may cause automatic entry. Engaged encounter creatures, not browser list order, define viable combat targets. Client target/session responses are fenced by node, character, encounter and creature identity.

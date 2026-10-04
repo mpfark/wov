@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-03T20:54:27.272Z",
-  "based_on_source_sha": "b2afa063c75d5e03d6afce5fb76751a2317cb85b",
+  "updated_at": "2026-10-04T10:35:12.368Z",
+  "based_on_source_sha": "8f07262429846399faab987156532294662b5228",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -735,6 +735,16 @@
       "timestamp": "2026-10-03T20:54:27.272Z",
       "evidence_type": "repository",
       "evidence": "Local uncommitted canonical ability cleanup, fresh read-only Supabase configuration export (36 assignments), reviewed 199 field/group differences and approved Battle Cry/presentation edits. Eight stances match source SQL cost/reservation/identity/requirements; installed SQL function bodies not verified. Final focused 184/184; root/app typecheck and build passed; full suite 2636/2653, 17 failures reproduced at HEAD baseline: 10 Windows/line-ending/path issues, 5 retired-endpoint stale expectations, 2 existing report-formatting failures. No database writes, resource/CP-economy redesign, commit, push or deployment. Configured DB still needs approved local numeric/presentation edits before release; Rend initial hit remains deferred.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001A canonical contract checkpoint",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-04T10:35:12.368Z",
+      "evidence_type": "repository",
+      "evidence": "Local uncommitted contract/reference checkpoint only: approved progression rules in game-engine.md, roadmap 001A-H, closed TypeScript contracts, pure XP/resource-policy reference and literal golden vectors. 67 focused tests including import containment pass; root/app TypeScript and local build pass. Baseline full suite: 2636 passed, 17 failed in 10 files; final: 2703 passed, same 17 failures in same 10 files, no new failures. Failure identities compared exactly. Existing runtime writers/fences and SQL/migrations/types unchanged; no Cloud reads/writes, RPCs, deployment or publication. Build-generated MCP artifact and two test-touched snapshots restored to checkpoint; no net existing runtime source/test changes. Lovable read-only 001B H0/H1 package prepared, not dispatched; B-H not started. Existing Cloud migration-history/runner pause retained. Initial sandbox Git fetch failed; authorized network retry succeeded, origin/main matches requested 8f072624 checkpoint; HEAD unchanged and recorded ancestry verified.",
       "reporting_actor": "Codex",
       "directly_verified": true
     }

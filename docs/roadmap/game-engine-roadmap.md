@@ -134,12 +134,35 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Acceptance criteria:** fail-closed RPC, visible authoritative state, no browser reservation writes, combat entry preserves it.
 - **Specification sections:** Effects and stances.
 
+### ENG-PROGRESSION-001 — Canonical character progression authority
+
+- **Engine area / status / priority:** progression; `implemented_source` for 001A contract/reference only; runtime authority remains planned; 10.
+- **Problem or decision:** Combat2 raw XP, crafting/admin level math, fenced trainer/respec and conditional Renown/protection interactions have competing ownership. Approved rules now live in the canonical specification's Progression and rewards section.
+- **Intended outcome:** one private transactional PostgreSQL progression family with narrow domain entries, future provenance and shared resource synchronization, preserving existing opaque permanent state.
+- **Evidence/current state:** 001A types, non-persisting reference, literal golden vectors, contract tests and [read-only Lovable package](../operations/progression-001B-lovable-preflight.md). No runtime writer, SQL, fence, deployed behavior or Cloud state changed. Local test/build evidence belongs in project state; source is uncommitted until explicitly approved.
+- **Dependencies:** 001B installed inventory and migration-runner/history gate; later authorized SQL, role/concurrency/rollback verification and coordinated consumer activation. No local direct SQL access.
+- **Acceptance criteria:** exactly-once XP→all affordable levels, configured forward growth, proven-only refunds, atomic Renown/resource state, no dual XP authority and no guessed historical reconstruction. Installed/live proof required after later tasks.
+- **Specification sections:** Progression and rewards; Resources and attributes; Character ownership and lifecycle; Effects and stances; Failure, diagnostics and verification. Shared heartbeat and current resource formulas are preserved; approved multi-level/cap/refund policy is target behavior, not a runtime release.
+
+| Checkpoint | Objective/status | Dependency and coherent stopping point |
+|---|---|---|
+| ENG-PROGRESSION-001A | Contract and decisions; source/reference only | Contracts/tests/handoff ready; all runtime writers/fences unchanged |
+| ENG-PROGRESSION-001B | Installed preflight and runner gate; planned, not started | Read-only H0/H1 evidence; installs nothing; ambiguous histories/objects stop work |
+| ENG-PROGRESSION-001C | Dormant authority/provenance; planned | B evidence and migration pause resolved; additive dormant DB authority, no new active writer |
+| ENG-PROGRESSION-001D | Coordinated core XP cutover; planned | C; all reachable XP writers activate coherently, no combat-new/craft-admin-old dual ownership |
+| ENG-PROGRESSION-001E | Trainer and forward class history; planned | D; verified narrow allocation and future history; unsafe old respec remains fenced |
+| ENG-PROGRESSION-001F | Renown and safe respec; planned | D/E, explicit stance-respec decision before release; proven refunds and roll/spend/stat atomicity |
+| ENG-PROGRESSION-001G | Reconciliation/admin/creation safety; planned | D and explicit exceptional policy approval; bounded proven repairs, no blanket reconstruction |
+| ENG-PROGRESSION-001H | Legacy retirement/final acceptance; planned | D–G verified; dependency inventory before removal, restricted wrappers retained if uncertain |
+
+B–H are not implemented or authorized by 001A. Later task preparation may be divided, but activation cannot leave competing live XP algorithms. H0/H1 package is ready for a separately authorized Lovable task; do not send or begin it from 001A.
+
 ### ENG-XP-001 — Max-level XP award verification and correction
 - **Engine area / status / priority:** progression/rewards; `planned`; 10.
 - **Problem or decision:** Mik reports that a maximum-level Warrior appeared to receive XP from a kill. It is unknown whether this was only a combat-log/presentation message or persisted XP growth.
 - **Intended outcome:** characters at the configured maximum level receive no additional persisted XP, and presentation accurately reflects the authoritative result.
 - **Dependencies:** separately authorized read-only evidence distinguishing emitted log data from the persisted character row; no reward change is part of the stance design.
-- **Evidence/current state:** operator report only; cause and affected boundary are uninvestigated.
+- **Evidence/current state:** source audits identify Combat2's increment-only XP path and divergent legacy/craft/admin behavior; installed additional consumers and persisted-versus-presented cap incident remain unverified. ENG-PROGRESSION-001A encodes the approved target cap/receipt contract without correcting runtime behavior. 001B must obtain installed evidence before cutover.
 - **Acceptance criteria:** source path traced, persisted-versus-presented result proven, focused cap/replay/reward tests, guarded correction if required and bounded installed/live verification.
 - **Specification sections:** Progression and rewards; Failure, diagnostics and verification.
 
