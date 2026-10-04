@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T23:25:52.204Z",
+  "updated_at": "2026-10-04T23:47:00Z",
   "based_on_source_sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
   "status_vocabulary": [
     "authored",
@@ -201,6 +201,16 @@
       "timestamp": "2026-09-29T21:18:04Z",
       "evidence_type": "cloud_inspection",
       "evidence": "ENG-HB-001 installed exactly once through the migration runner from repository bytes SHA-256 5b07923d158ea30c297b8acdd3767e6e5a0fac1f49db2f2f1ff080daf44887cd (source e4f539038eb18ce165f8dcd11fe7ffe3d090f82e; rejected and never-installed SHA-256 b763f7235a65ca2aa1aa9942af8716842f04851bf3bcbebb414b92e6537b9f11). Ledger version 20260929211804 name 761d0556-953f-4c59-92d2-da56eca4b29e; generated artifact supabase/migrations/20260929211804_761d0556-953f-4c59-92d2-da56eca4b29e.sql has Git-blob SHA-256 f66ae5f784b3adafd499227d302c12afb0e1e51697b4e7722e9246f3baa35eae and is normalized-identical to the source apart from its absent final newline; both are retained separately and unchanged. Pre-install: the guard ran byte-exact against Cloud and accepted compact body:='{}'::jsonb exactly once. The rollback-only practice run compiled the guard, table/column creation, dispatcher body patch and wrapper rename before a deliberate stop with no residue; remaining statements first compiled during successful atomic installation. Post-install Lovable inspection reported world_heartbeat_run RLS on, no anon/authenticated grants, no Realtime publication and 0 rows; the wrapper chain retained isolated settlement_error/scheduler_error branches, renamed predecessor and 24h/LIMIT 2048 retention; all six affected functions were postgres-owned SECURITY DEFINER VOLATILE and service_role-only. Protected fingerprints were unchanged. World remained asleep, maintenance enabled, soak off and schedules absent. No scheduler, settlement, dispatcher, worker or gameplay call occurred; live heartbeat correlation remains unverified. These Cloud observations are attributed to Lovable's handoff and were not directly rechecked in this repository reconciliation.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
+    },
+    {
+      "identity": "drizzle 0001_progression_001c_dormant_authority",
+      "status": "installed",
+      "sha": "d5c6f8287eab8416320c46ee6fe98c7258cf49e9",
+      "timestamp": "2026-10-04T23:47:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "ENG-PROGRESSION-001C installed once via the standard Drizzle migration tool from approved payload docs/operations/progression-001C-authority.sql (checkpoint 2dde9872d6f31a99b0470e005ab5ecea4d43c062), SHA-256 e9526a64e166fc8ca84ee80a8397ebec9c919922078e84563aa2ef83b239557a; generated file byte-identical. Hosted drizzle.__drizzle_migrations: id 1 (Batch C 73df81b1...) and id 2 (e9526a64..., created_at 1791157594307) match the journal 0000/0001 one-to-one. Supabase ledger unchanged (510). Pre-install dependency hashes, checks, triggers, classes and default ACLs matched the 001C installed preflight; no collisions. Post-install: 3 tables postgres-owned, RLS on, 0 policies, 0 triggers, 0 rows, ACL owner-only; 5 functions postgres-owned SECURITY DEFINER, search_path=pg_catalog, public, ACL owner-only; anon/authenticated/service_role/sandbox_exec have no EXECUTE or table access. No cron jobs; no repository caller. Character/class/item/inventory/node aggregate hashes identical before and after; level CHECK 1..100 unchanged; runtime writer hashes unchanged. Authority dormant; not invoked.",
       "reporting_actor": "Lovable",
       "directly_verified": true
     }
@@ -949,6 +959,16 @@
       "evidence_type": "operator_reported",
       "identity": "eng-legacy-002-batch-c-cron-lock-permission",
       "sha": "2910080df9a4dcd7fa154512ae0b776914639a9d"
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D pre-activation gate",
+      "status": "authored",
+      "sha": "d5c6f8287eab8416320c46ee6fe98c7258cf49e9",
+      "timestamp": "2026-10-04T23:47:00Z",
+      "evidence_type": "handoff",
+      "evidence": "Hosted multi-session contention/retry/rollback validation remains unproven and is a mandatory ENG-PROGRESSION-001D pre-activation gate. Before the first production caller: real PostgreSQL multi-session proof of row-lock serialization, same-request retry after commit, conflicting same-key refusal, rollback atomicity and no partial receipt/provenance/milestone/character mutation. Local PGlite tests do not prove this. If 001D cannot prove it without production-character experimentation, STOP for a new decision.",
+      "reporting_actor": "Mik",
+      "directly_verified": false
     }
   ],
   "next_approved_task": {

@@ -43,3 +43,9 @@ The SQL representation is private durable storage, not an exported browser DTO. 
 ## Next safe action
 
 Mik reviews the local payload, test evidence and report. Separate approval is needed for a source checkpoint and separately for the exact hosted application. This handoff remains undispatched. Successful installation still leaves every authority dormant; 001D requires its own authorization and coordinated integration design.
+
+## Revised gate and installation record (2026-10-04)
+
+Mik chose option (b): installation of the dormant authority does not require unavailable hosted multi-session mutation testing. Installed once as Drizzle `0001_progression_001c_dormant_authority` (byte-identical to the approved payload, SHA-256 `e9526a64…7a`); see project state for evidence.
+
+Hosted multi-session contention/retry/rollback validation remains unproven and is a mandatory ENG-PROGRESSION-001D pre-activation gate. Before any production caller: real PostgreSQL multi-session proof of row-lock serialization, same-request retry after commit, conflicting same-key refusal, rollback atomicity and no partial receipt/provenance/milestone/character mutation. If 001D cannot prove this without production-character experimentation, STOP for a new decision.
