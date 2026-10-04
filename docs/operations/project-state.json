@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T10:35:12.368Z",
+  "updated_at": "2026-10-04T10:55:00Z",
   "based_on_source_sha": "8f07262429846399faab987156532294662b5228",
   "status_vocabulary": [
     "authored",
@@ -746,6 +746,16 @@
       "evidence_type": "repository",
       "evidence": "Local uncommitted contract/reference checkpoint only: approved progression rules in game-engine.md, roadmap 001A-H, closed TypeScript contracts, pure XP/resource-policy reference and literal golden vectors. 67 focused tests including import containment pass; root/app TypeScript and local build pass. Baseline full suite: 2636 passed, 17 failed in 10 files; final: 2703 passed, same 17 failures in same 10 files, no new failures. Failure identities compared exactly. Existing runtime writers/fences and SQL/migrations/types unchanged; no Cloud reads/writes, RPCs, deployment or publication. Build-generated MCP artifact and two test-touched snapshots restored to checkpoint; no net existing runtime source/test changes. Lovable read-only 001B H0/H1 package prepared, not dispatched; B-H not started. Existing Cloud migration-history/runner pause retained. Initial sandbox Git fetch failed; authorized network retry succeeded, origin/main matches requested 8f072624 checkpoint; HEAD unchanged and recorded ancestry verified.",
       "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001B installed preflight and runner gate",
+      "status": "blocked",
+      "sha": "c6c63fc20fc5b6c6ebdaa73e5dd9bbae7e3a4f1c",
+      "timestamp": "2026-10-04T10:51:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Read-only Cloud inspection; see docs/operations/progression-001B-evidence-report.md. H0 pause_resolution remains_blocked: Supabase history 510 rows without batch C; Drizzle history 1 row (batch C hash 73df81b1); 40 repository versions not version-attributable. H1: Combat2 commit adds XP without level advancement; apply_crafting_xp/join_order/switch_order PUBLIC+anon and train_renown_stat anon executable; postgres default ACL grants new public functions to anon/authenticated. No repair, DDL, grants, RPC calls, deployment or publication; 001C not started.",
+      "reporting_actor": "Lovable",
       "directly_verified": true
     }
   ],
