@@ -767,6 +767,16 @@
       "evidence": "Pinned deterministic inventory: 545 Supabase + 4 pending + 1 Drizzle SQL files, 6 specifically reported ledger-only identities. 001B unmatched label 40 expands to 36; 279+230+36=545, original partition still unverified. Named unmatched: 9 attributed generated aliases (3 fresh/6 historical), 22 source-only duplicate aliases, 1 installed Batch C candidate, 1 explicitly excluded repository-only, 3 ambiguous. Full 510 ledger export and 230 pair membership/content/distribution unavailable. Batch C sole metadata candidate version 20261002190000; no repair authorization or executable mutation supplied. Prepared docs/operations/progression-001B-h0-readonly-followup.md remains undispatched; repair handoff not ready. H0 remains_blocked, migrations paused, 001C not started. Runtime/migrations/tooling/SQL unchanged. Engine Progression and rewards rules preserved; privilege invariant recorded in operating guide. See migration-reconciliation/README.md and external WoV-ENG-PROGRESSION-001B-R1-Report.md.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001B-H0 read-only hosted evidence follow-up",
+      "status": "blocked",
+      "sha": "c50cbb6568ffc5f48575f9d2bb2f811a37536efe",
+      "timestamp": "2026-10-04T12:47:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Read-only Cloud export (supabase_read_only_user) of all 510 Supabase ledger rows with per-row statement SHA-256; content mapping of 545 sources: 278 same-version equal, 258 equal under another version, 9 no equal content; 505/510 ledger rows matched, 31 shared by duplicate pairs. 001B 279/~230/40 were timestamp-only; R1 36 confirmed (31 match R1 alternates, 5 no content). 4 mismatches are post-install repository edits (emoji strip / comment); 20260728070225 ledger-only; scheduler-foundation table creation unattributable; test-environment-controls and test-runs not content-equal. Runner discovery unproven, no preview and no metadata-only recognition capability available; Batch C repair handoff not prepared. H0 remains_blocked; no mutation, SQL execution, deployment, publication or 001C. See docs/operations/progression-001B-h0-evidence-report.md.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
