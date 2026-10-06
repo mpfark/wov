@@ -328,70 +328,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true });
     }
 
-    // GRANT XP
-    if (action === "grant-xp" && req.method === "POST") {
-      const { character_id, amount } = await req.json();
-      if (!character_id || !amount || amount <= 0) throw new Error("character_id and positive amount required");
-      
-      // Fetch character
-      const { data: char, error: charErr } = await adminClient.from("characters").select("*").eq("id", character_id).single();
-      if (charErr || !char) throw new Error("Character not found");
-
-      let newXp = char.xp + amount;
-      let newLevel = char.level;
-      let newMaxHp = char.max_hp;
-      let newHp = char.hp;
-
-      // Track stat increases during level-ups
-      const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      const statIncreases: Record<string, number> = {};
-      for (const s of statKeys) statIncreases[s] = 0;
-      let statPoints = 0;
-
-      // Process multiple level-ups (cap at level 42)
-      let xpForNext = newLevel * 100;
-      while (newXp >= xpForNext && newLevel < 42) {
-        newXp -= xpForNext;
-        newLevel++;
-        newMaxHp += 5;
-        newHp = newMaxHp; // Full heal on level up
-
-        // Grant 1 unspent stat point per level
-        statPoints++;
-
-        // Class bonus every 3 levels (uncapped)
-        if (newLevel % 3 === 0) {
-          const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
-          for (const s of statKeys) {
-            if (bonuses[s]) statIncreases[s] += bonuses[s];
-          }
-        }
-
-        xpForNext = newLevel * 100;
-      }
-
-      // CP/MP caps via canonical shared helpers, using final stats after level-ups.
-      const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
-      const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
-      const grantMaxCp = getMaxCp(newLevel, grantFinalWis);
-      const grantMaxMp = getMaxMp(newLevel, grantFinalDex);
-      const updates: Record<string, any> = {
-        xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
-        max_cp: grantMaxCp, cp: grantMaxCp,
-        max_mp: grantMaxMp, mp: grantMaxMp,
-        unspent_stat_points: (char as any).unspent_stat_points + statPoints,
-      };
-
-      // Apply accumulated stat increases
-      for (const stat of statKeys) {
-        if (statIncreases[stat] > 0) {
-          updates[stat] = (char as any)[stat] + statIncreases[stat];
-        }
-      }
-
-      const { error } = await adminClient.from("characters").update(updates).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true, levels_gained: newLevel - char.level });
+    // GRANT XP — paused pending canonical validated admin award integration.
+    if (action === "grant-xp") {
+      return jsonResponse({ code: "progression_awards_paused", error: "XP awards are temporarily unavailable." }, 503);
     }
 
     // REVIVE CHARACTER

@@ -148,8 +148,8 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 |---|---|---|
 | ENG-PROGRESSION-001A | Contract and decisions; source/reference only | Contracts/tests/handoff ready; all runtime writers/fences unchanged |
 | ENG-PROGRESSION-001B | H0 CLOSED; final read-only integrity/freeze evidence accepted by Mik | Existing Drizzle forward lane accepted; no new history/registration or historical repair; each hosted migration separately authorized |
-| ENG-PROGRESSION-001C | Dormant authority/provenance payload and deterministic local SQL tests prepared for review | Installed dependency preflight supplied; four resume decisions resolved. Owner-only sidecars/receipts/resource primitive remain uninstalled; application handoff prepared and undispatched. No caller rerouted; 001D not started |
-| ENG-PROGRESSION-001D | Coordinated core XP cutover; planned | C; all reachable XP writers activate coherently, no combat-new/craft-admin-old dual ownership |
+| ENG-PROGRESSION-001C | COMPLETE / INSTALLED / DORMANT, per accepted evidence | Drizzle 0001 unchanged; private functions/no caller confirmed. Current sidecar counts unreadable, not evidence of mutation |
+| ENG-PROGRESSION-001D | Local D1–D3 READY FOR REVIEW; uninstalled/undeployed/inactive | Five exact hosted exports verified; new-claim UUID canonical integration, complete guarded payload, preserved craft/admin pauses and legacy/internal capability fences, actual wrapper rollback/identity tests prepared. Hosted multi-session UNPROVEN accepted limitation. No migration/journal/0001 edit or hosted operation; separately reviewed coordinated denied-window cutover required; E/F/G/H not begun |
 | ENG-PROGRESSION-001E | Trainer and forward class history; planned | D; verified narrow allocation and future history; unsafe old respec remains fenced |
 | ENG-PROGRESSION-001F | Renown and safe respec; planned | D/E, explicit stance-respec decision before release; proven refunds and roll/spend/stat atomicity |
 | ENG-PROGRESSION-001G | Reconciliation/admin/creation safety; planned | D and explicit exceptional policy approval; bounded proven repairs, no blanket reconstruction |

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-04T23:53:00Z",
-  "based_on_source_sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
+  "updated_at": "2026-10-06T12:45:33.562Z",
+  "based_on_source_sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001C dormant authority preparation",
-    "sha": "e8d94acafa6558cb33268a51dcf48102348ab16a",
-    "timestamp": "2026-10-04T23:25:52.204Z",
+    "artifact": "ENG-PROGRESSION-001D local D1–D3 READY FOR REVIEW; not installed/deployed/active",
+    "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+    "timestamp": "2026-10-06T12:45:33.562Z",
     "evidence_type": "repository",
-    "evidence": "Fast-forwarded normally to reviewed installed preflight source; H0 CLOSED and four resume decisions resolved by Mik. Local owner-only SQL payload, actual-engine tests and exact application handoff prepared; no discoverable migration, journal edit, runtime reroute, hosted operation, deployment, publication, commit or push. See external WoV-ENG-PROGRESSION-001C-Report.md.",
+    "evidence": "Exact five supplied installed definitions verified bytes/SHA256/signature/security; source b3950cbb, sandbox_exec 2026-10-06 12:17:05–12:17:15UTC (operator evidence, no Codex Cloud). Preserved D2, added new-claim canonical private adapter and complete guarded operations payload SHA256 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Nine actual-chain SQL/six containment/307 focused tests pass; root/app tsc and build pass. Full suite 2703 pass/18 fail vs baseline2701/19; no new failure identities. Unchanged001C SQL15pass/known generated-type static scan1fail. No commit/push/install/deploy/activation/0001/history/journal/package edit. HOSTED MULTI-SESSION UNPROVEN accepted limitation.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -847,6 +847,46 @@
       "evidence": "ENG-PROGRESSION-001C = COMPLETE / INSTALLED / DORMANT. Hosted installation report reviewed and accepted by Mik 2026-10-04: Drizzle 0001_progression_001c_dormant_authority (SHA-256 e9526a64e166fc8ca84ee80a8397ebec9c919922078e84563aa2ef83b239557a) is the canonical installed 001C checkpoint; journal and hosted history match 0000/0001; Supabase ledger unchanged; objects postgres-owned and private; no trigger, schedule, wrapper or caller; fingerprints unchanged; tables empty; level CHECK 1..100; no 001D integration. Hosted multi-session contention/retry/rollback validation remains unproven and is a mandatory ENG-PROGRESSION-001D pre-activation gate. Next task ENG-PROGRESSION-001D is not authorized.",
       "reporting_actor": "Mik",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D local audit and activation-gate preparation",
+      "status": "authored",
+      "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+      "timestamp": "2026-10-05T14:40:35.339Z",
+      "evidence_type": "repository",
+      "evidence": "Hosted report reconciled: exact five-layer reward transaction/exception/write/lock anatomy supports atomic new-claim progression. Conditional harness cannot be safely run with supported tools; not implemented. Mik revised acceptance to local engine coverage, exact transaction proof, stable identity, atomic fail-closed mutations, competing XP fences, negative containment and retained hosted UNPROVEN limitation. D1 adapter/tests, D2 temporary craft/admin ordinary XP fences, D3 acceptance locally first; D4 separately approved hosted cutover. No runtime changes or activation.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D hosted read-only feasibility reconciliation",
+      "status": "authored",
+      "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+      "timestamp": "2026-10-05T14:30:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Lovable read-only sandbox_exec inspection 14:17:26 to approximately14:30 UTC, source97c00415; report progression-001D-readonly-feasibility.md. Five-layer chain, new claim XP/gold only, no RETURNING; observed stance/node/encounter/departure/character/inventory locks and resource-before-reward order; two handlers rollback protected mutation. PUBLIC ownerless/unbounded apply_crafting_xp confirmed; admin steward/overlord raw/ordinary capabilities; class no level/XP, Renown permanent stat. Five 001C functions unchanged/postgres-only/no caller; sidecar counts permission-denied UNKNOWN, not mutation. No safe retained owner sessions/Auth fixture/residue cleanup. No hosted mutation occurred; Codex did not operate Cloud.",
+      "reporting_actor": "Lovable (evidence supplied by Mik; reconciled by Codex)",
+      "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D partial local D2 implementation checkpoint",
+      "status": "authored",
+      "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+      "timestamp": "2026-10-05T16:50:25.207Z",
+      "evidence_type": "repository",
+      "evidence": "forge-craft-base/forge-apply-gem/stonebinder-fuse are preflight+HTTP503 pause-only (preview also paused), no client/economic/best-effort path. Admin grant-xp rejection preserves admin auth and raw overrides. D2-only SQL revokes PUBLIC/all nonowner target grants for old crafting/fuse/unused legacy overloads with owner/inventory checks and atomic abort. Local PGlite ACL/inherited-denial/body-preservation/rollback tests and executed handlers pass; installed containment not claimed. D1 adapter/current wrapper proof remains missing; no full migration payload. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN; accepted limitation unchanged.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D local D1–D3 exact-body completion",
+      "status": "authored",
+      "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+      "timestamp": "2026-10-06T12:45:33.562Z",
+      "evidence_type": "repository",
+      "evidence": "LOCAL READY FOR REVIEW only. The prepared writer resets a per-recipient UUID, uses INSERT ... ON CONFLICT DO NOTHING RETURNING id, and checks FOUND immediately. Only a new accepted claim calls postgres-owned combat2_apply_claim_progression_internal(uuid,uuid). The adapter locks/reads that claim, derives character and XP, and invokes unchanged 001C with source combat2_reward, event UUID = claim.id and metadata.rewardClaimId = claim.id. A refusal or error raises; no legacy XP add, fallback, random retry event, backfill or historical conflict award. Gold remains in the same new-claim branch. Four wrappers, lock ordering, search_path difference and every other writer statement remain unchanged. Replacement writer pg_get_functiondef SHA-256: 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. The preserved D2 fragment fences apply_crafting_xp(uuid,integer), stonebinder_commit_fuse(uuid,uuid,uuid,uuid,integer), commit_encounter_tick_v2(uuid,bigint,uuid,uuid,integer,integer,jsonb,jsonb,jsonb), and both award_party_member overloads (three/five arguments). Bodies and postgres ownership remain. The complete payload additionally removes every nonowner ACL grant/default-derived grant on the new adapter and all five commit-chain functions; only the validated outer node_tick_commit regains service_role EXECUTE. All four predecessors and the adapter remain owner-only, as do unchanged 001C primitives. No table/column UPDATE privilege is added. Administrative owner-role inheritance/superuser access is not an ordinary API grant. The actual exact chain calls only its owner-internal predecessors, not the fenced obsolete APIs; private composition works locally. Deployed external callers still require affected-entry verification. Validation: nine actual-chain and six executed containment tests,307 focused pass; root/app typecheck and build pass. Final full Vitest suite: 2,703 pass / 18 fail (exit 1), versus synchronized baseline 2,701 pass / 19 fail. No new failure identities. One additional passing assertion is the new unknown-level regression; the baseline-only spendable-CP migration composite/schema check is not claimed as fixed by this work. JSON evidence: D-local-baseline.json and D-resume-full.json under the external 001C-local-db-tests directory. Root and application TypeScript pass; production build passes with the existing large-chunk warning. Focused progression/shared Combat2: 307 pass / 0 fail. Local actual-chain SQL: 9 pass / 0 fail; containment: 6 pass / 0 fail. Unchanged 001C SQL: 15 pass / 1 known generated-type static scan failure. Project-state consistency, whitespace, source ancestry, protected paths, exact five evidence files and approved 001C Git-blob digest checks pass. Known test-generated snapshots/MCP changes were restored; nothing staged. Supplied export provenance is operator-reported; bytes/identity/patch/local execution directly verified. Historical body STOP resolved; generic001C remains private, no live reachability inferred. HOSTED MULTI-SESSION UNPROVEN. No hosted operation or install.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
@@ -973,21 +1013,21 @@
     {
       "identity": "ENG-PROGRESSION-001D pre-activation gate",
       "status": "authored",
-      "sha": "d5c6f8287eab8416320c46ee6fe98c7258cf49e9",
-      "timestamp": "2026-10-04T23:47:00Z",
-      "evidence_type": "handoff",
-      "evidence": "Hosted multi-session contention/retry/rollback validation remains unproven and is a mandatory ENG-PROGRESSION-001D pre-activation gate. Before the first production caller: real PostgreSQL multi-session proof of row-lock serialization, same-request retry after commit, conflicting same-key refusal, rollback atomicity and no partial receipt/provenance/milestone/character mutation. Local PGlite tests do not prove this. If 001D cannot prove it without production-character experimentation, STOP for a new decision.",
+      "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+      "timestamp": "2026-10-05T14:40:35.339Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik explicitly revised policy 2026-10-05: real hosted multi-session contention/retry/rollback is NO LONGER mandatory before activation because no safe supported platform mechanism exists. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN, not PASSED. Former hard gate superseded; retain as deferred validation when safe facility exists. Activation requires local PostgreSQL-engine coverage to supported limits, exact installed-body/prepared-SQL transaction proof, stable reward UUID, one atomic reward/progression transaction, fail-closed rollback, competing XP writers migrated/fenced, negative ordinary/browser generic-authority containment and explicit retained limitation. This decision does not authorize activation or mutation.",
       "reporting_actor": "Mik",
       "directly_verified": false
     }
   ],
   "next_approved_task": {
-    "status": "unknown",
-    "artifact": "Review prepared ENG-PROGRESSION-001C payload/report. Source checkpoint and exact hosted application require separate approval; handoff undispatched.",
+    "status": "authored",
+    "artifact": "STOP for Mik review of local 001D D1–D3; prepared narrow hosted handoff remains undispatched.",
     "sha": null,
-    "timestamp": "2026-10-04T23:25:52.204Z",
+    "timestamp": "2026-10-06T12:45:33.562Z",
     "evidence_type": "repository",
-    "evidence": "Authorized local resume completed. No subsequent task authorized. H0 remains CLOSED; supplied installed preflight and four decisions resolved the prior dependency STOP. Owner-only authority remains dormant and uninstalled. No migration, database mutation, activation, repair, deployment/publication or 001D is authorized.",
+    "evidence": "Local READY FOR REVIEW; exact body dependency satisfied. Complete payload 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f is prepared outside discovery. A future one narrow standard-tool DB install requires separate authorization plus a verified denied/drained worker window and deployed crafting/admin pauses; no SQL-only activation claim. Nothing installed/deployed/active. No commit/push/Cloud/publication/activation permission; later E/F/G/H not begun.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

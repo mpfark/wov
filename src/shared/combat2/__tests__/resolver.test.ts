@@ -734,6 +734,21 @@ describe('combat2 resolver', () => {
     expect(out.events.some((event) => event.kind === 'creature_attack')).toBe(false);
   });
 
+  it('does not invent XP for a qualified recipient whose level is absent from the snapshot', () => {
+    const out = resolveNodeTick(snapshot({
+      creatures: [creature({ hp: 1 })],
+      participation: [{ creature_id: 'cr-1', spawn_seq: 3, character_id: 'unknown-recipient',
+        qualification: 'qualified', qualified_by: 'damage', party_id_at_qualification: null }],
+      effects: [{ id: 'unknown-level-dot', kind: 'dot', effect_type: 'rend', ability_key: 'rend',
+        target_character_id: null, target_creature_id: 'cr-1', source_character_id: 'unknown-recipient',
+        source_creature_id: null, stacks: 1, magnitude: 9, config: {}, expires_at: nowPlus(60_000),
+        next_due_at: nowPlus(-1), interval_ms: 2000, last_pulse_tick: 5, is_reservation: false }],
+    }), { abilities });
+    expect(out.events.some(event => event.kind === 'creature_died')).toBe(true);
+    expect(out.rewards.some(reward => reward.character_id === 'unknown-recipient')).toBe(false);
+    expect(out.events.some(event => event.kind === 'xp_reward' && event.actor?.id === 'unknown-recipient')).toBe(false);
+  });
+
   it('pays only characters durably qualified for this spawn, exactly once each', () => {
     const out = resolveNodeTick(
       snapshot({
