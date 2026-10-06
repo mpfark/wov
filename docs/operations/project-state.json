@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-06T12:45:33.562Z",
+  "updated_at": "2026-10-06T15:06:00Z",
   "based_on_source_sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
   "status_vocabulary": [
     "authored",
@@ -275,6 +275,16 @@
       "evidence": "Lovable reports both functions deployed after ENG-STANCE installation from 09cd8934b351e15fd7044f274a444aafb1ee4dd2; neither invoked. Processing remains disabled. This task did not verify Cloud directly.",
       "reporting_actor": "Lovable (handoff supplied by Mik)",
       "directly_verified": false
+    },
+    {
+      "identity": "forge-craft-base, forge-apply-gem, stonebinder-fuse, admin-users (001D pauses)",
+      "status": "deployed",
+      "sha": "91b65a84ccdca61c22a12e1aa4572a477631b215",
+      "timestamp": "2026-10-06T14:56:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "Deployed only these four from source byte-identical to 91b65a84 (HEAD c966f73f). Deploy tool returned no revision ID; identity is repository-source plus live behaviour. Live: the three crafting functions return 503 crafting_paused; admin-users returns 401 to non-admin callers; grant-xp returns 503 progression_awards_paused (source-verified, admin path not invoked live). combat-tick/combat-catchup not deployed.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "frontend_publication": {
@@ -1019,6 +1029,16 @@
       "evidence": "Mik explicitly revised policy 2026-10-05: real hosted multi-session contention/retry/rollback is NO LONGER mandatory before activation because no safe supported platform mechanism exists. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN, not PASSED. Former hard gate superseded; retain as deferred validation when safe facility exists. Activation requires local PostgreSQL-engine coverage to supported limits, exact installed-body/prepared-SQL transaction proof, stable reward UUID, one atomic reward/progression transaction, fail-closed rollback, competing XP writers migrated/fenced, negative ordinary/browser generic-authority containment and explicit retained limitation. This decision does not authorize activation or mutation.",
       "reporting_actor": "Mik",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D pre-install readiness",
+      "status": "authored",
+      "sha": "c966f73f9c729a443282fab47ffa2d13596b39d8",
+      "timestamp": "2026-10-06T15:06:00Z",
+      "evidence_type": "cloud_inspection",
+      "evidence": "READY FOR SEPARATELY AUTHORIZED 001D DB INSTALLATION, with explicit pre-install exceptions accepted by Mik 2026-10-06: (1) manual combat2-tick-once TECHNICALLY CALLABLE / OPERATOR-PROHIBITED DURING CUTOVER (database entry path NOT technically fenced; node_tick_claim NOT maintenance-aware; not an architecture decision); (2) admin set-level and update-character are PRIVILEGED NONCANONICAL OVERRIDES / OPERATOR-PROHIBITED DURING CUTOVER, not evidence canonical progression is active, reconciliation deferred to 001G; ordinary admin grant-xp paused; (3) public.apply_crafting_xp(uuid,integer) is a KNOWN PRE-EXISTING ORDINARY PROGRESSION BYPASS, PUBLICLY CALLABLE PRE-INSTALL ONLY; exception EXPIRES with the 001D installation, which must atomically revoke it; post-install verification must prove PUBLIC, anon, authenticated, service_role and every other nonowner/custom/inherited role cannot execute it, otherwise keep all entries paused and STOP; no separate preliminary revoke. 001D INSTALLATION MUST NOT BE FOLLOWED BY ACTIVATION unless hosted post-install verification proves apply_crafting_xp and all other reviewed legacy XP entry points are effectively fenced. Read-only scan 2026-10-06 15:05 UTC of public functions updating characters level/xp: only apply_crafting_xp is browser-reachable; award_party_member (2 overloads), commit_encounter_tick_v2, node_tick_commit_without_bounded_failure are postgres/service_role only; progression_apply_xp_internal postgres only. join_order/switch_order and train_renown_stat left unchanged (train_renown_stat deferred to 001F; neither is canonical progression authority). HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. Current state: automatic Combat2 paused, crafting paused, 001D SQL uninstalled, canonical 001D progression inactive.",
+      "reporting_actor": "Lovable",
+      "directly_verified": true
     }
   ],
   "next_approved_task": {
