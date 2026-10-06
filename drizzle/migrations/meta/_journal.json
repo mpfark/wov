@@ -15,6 +15,13 @@
       "when": 1791157594307,
       "tag": "0001_progression_001c_dormant_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791299913981,
+      "tag": "0002_progression_001d_canonical_xp_cutover",
+      "breakpoints": true
     }
   ]
 }
