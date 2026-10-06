@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-06T16:34:15.527Z",
-  "based_on_source_sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
+  "updated_at": "2026-10-06T20:45:43.625Z",
+  "based_on_source_sha": "5437da1a8a1f6b424c0eeafcf204ae8ae986e1c8",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001D CLOSED — local activation reconciliation and closure checkpoint",
-    "sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
-    "timestamp": "2026-10-06T16:34:15.527Z",
+    "artifact": "ENG-PROGRESSION-001E trainer and class-history audit/design prepared",
+    "sha": "5437da1a8a1f6b424c0eeafcf204ae8ae986e1c8",
+    "timestamp": "2026-10-06T20:45:43.625Z",
     "evidence_type": "repository",
-    "evidence": "Clean source-start 91b65a84ccdca61c22a12e1aa4572a477631b215; normal fast-forward to 6e4ffb1d0f21a4ed2fe8af7215365beea2b76151; ten platform commits/eight changed files classified, no unexpected semantics. Committed 0002 byte-identical to reviewed payload; snapshot/journal 0→1→2 coherent. Aligned the two retired-shell source assertions with the unconditional refusal after the existing OPTIONS return. This is the one required closure test change; no endpoint/runtime code changed. The initial closure suite (2700 pass/21 fail) exposed two stale string assertions plus the known spendable-CP baseline check; executable and strict-TypeScript verification proved the platform fixes semantic-neutral before the assertions were aligned. Final full suite: 2702 pass / 19 fail (exit 1), versus reviewed 001D 2703/18 and synchronized baseline 2701/19. No new failure identities against the established baseline union. The spendable-CP composite/schema check fails as it did in the synchronized baseline; no fix is claimed. Focused progression/shared/server Combat2 plus retired-shell source tests: 797 pass / 2 known baseline failures. Nine existing local actual-chain SQL tests and six existing containment tests pass. Root/app TypeScript and build pass; existing large-chunk warning. Both retired shells pass isolated strict TypeScript (noImplicitReturns) and actual execution: two empty CORS preflights, twelve GET/POST/PUT/PATCH/DELETE/HEAD 410 legacy_retired/build-stamp refusals, no client/env/network/DB/progression access. No Deno or hosted deployment/typecheck claim. Prepared-generator --check, project-state consistency, whitespace, reviewed evidence, ancestry and protected-migration checks pass. Hosted state is operator-reported: INSTALLED/VERIFIED/ACTIVATED; naturalruntime notobserved, multisessionUNPROVEN. No hosted work, migration edit, deployment, activation or E/F/G/H implementation by Codex. Closure documentation only plus one stale source assertion alignment. Final core progression/shared Combat2/retired-shell focused run: 320 pass / 0 fail.",
+    "evidence": "Clean main at 001D closure checkpoint, fetched origin/main equal; ancestry verified, recovery stash retained. Docs/state-only audit and plan prepared; no runtime/test/type/migration changes, Cloud work, deployment, activation or publication. Existing six 001C investment counters and captured XP config/growth receipts reused; narrow command and unique future growth milestone design proposed. Focused progression/class/loadout/UI/Combat2 tests 118 pass/0 fail; additional Combat2 ownership/legacy-execution 24 pass/0 fail; project-state tests 3 pass/0 fail; generator/state/whitespace checks pass; 001D SQL integration 9 pass/0 fail, containment 6 pass/0 fail. 001C SQL 15 pass/1 stale dormant assertion failure rejecting existing generated private function declarations; executable SQL cases pass, no baseline repair. Narrow installed dependency/ACL/lock preflight remains before implementation. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -917,6 +917,16 @@
       "evidence": "ENG-PROGRESSION-001D CLOSED locally after exact source/tool-output reconciliation and acceptance. INSTALLED / VERIFIED / ACTIVATED. Activation window 2026-10-06 15:46:49–15:47:36 UTC: only combat_config.combat_mode maintenance→open; combat_soak off; world intentionally asleep. Automatic dispatch is allowed when normal presence/world conditions permit; while asleep, world_asleep refusal is normal. No manual wake requirement. Zero schedules/claims at observation; no natural tick. NATURAL RUNTIME PATH NOT YET OBSERVED. The three crafting pauses and ordinary admin grant-xp pause remain; apply_crafting_xp is fenced owner-only. Privileged admin set-level/update-character remain noncanonical overrides deferred to 001G; train_renown_stat remains deferred to 001F. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. See progression-001D-closure.md for direct local proof and limits. No 001E/F/G/H authorization.",
       "reporting_actor": "Mik supplied hosted result; Codex local closure",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001E local trainer and class-history audit/design",
+      "status": "authored",
+      "sha": "5437da1a8a1f6b424c0eeafcf204ae8ae986e1c8",
+      "timestamp": "2026-10-06T20:45:43.625Z",
+      "evidence_type": "repository",
+      "evidence": "Audit and plan prepared only: docs/operations/progression-001E-audit.md and progression-001E-plan.md. Preserve exact opaque materialized baseline and existing counters; no inferred old class or refundable allocation history. Propose service-mediated narrow allocation and Order commands, atomic clamp-only resource sync, request/version/character locking, Order receipts and unique future class-growth decisions in XP transaction. Trainer direct UPDATE persistence remains fenced; join/switch require replacement and explicit combat/hall/stance restrictions; full respec stays unavailable until 001F. Renown deferred 001F, overrides/admin/creation 001G, physical retirement 001H. Minimum hosted read-only facts specified; no hosted inspection performed, no implementation or installation authorized by this design.",
+      "reporting_actor": "Codex",
+      "directly_verified": true
     }
   ],
   "known_blockers": [
@@ -1073,11 +1083,11 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "STOP — ENG-PROGRESSION-001D CLOSED; 001E/F/G/H not authorized.",
+    "artifact": "STOP — ENG-PROGRESSION-001E audit/design prepared; narrow read-only preflight recommended, not performed.",
     "sha": null,
-    "timestamp": "2026-10-06T16:34:15.527Z",
+    "timestamp": "2026-10-06T20:45:43.625Z",
     "evidence_type": "repository",
-    "evidence": "Local closure checkpoint authorized only. Hosted installation/activation reconciled as supplied operator evidence; no new hosted work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Normal player presence may wake the sleeping world; no manual wake or manufactured tick. Later domain work requires a separate request.",
+    "evidence": "Current request authorizes local audit/design documentation only, including normal docs commit/push. Recommended separately authorized next task: ENG-PROGRESSION-001E-PREFLIGHT, scoped installed trainer/Order dependencies, ACLs, provenance aggregates and lock predicates from progression-001E-plan.md B1-B4 (B5 only if needed); no mutation or RPC calls. Runtime cutover, migration, hosted work, deployment, respec/Renown/admin/creation and 001F/G/H remain outside this task. Retain 001D natural runtime unobserved and hosted multi-session unproven limitations.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
