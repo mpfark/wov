@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001D — Prepared narrow hosted installation handoff
 
+> Historical D1–D3 preparation/handoff, now completed. Current status: [001D closure](progression-001D-closure.md), INSTALLED / VERIFIED / ACTIVATED per supplied operator evidence; CLOSED locally. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Do not redispatch or reinstall this historical handoff.
+
+
 UNDISPATCHED / NOT AUTHORIZED FOR EXECUTION. Local D1–D3 READY FOR REVIEW. The former exact-byte STOP is resolved; all five exports match. This current block supersedes the retained historical read/session proposals below. It does not grant commit, deployment, migration or activation authority.
 
 ## Current handoff state

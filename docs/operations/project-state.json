@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-06T15:06:00Z",
-  "based_on_source_sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
+  "updated_at": "2026-10-06T16:34:15.527Z",
+  "based_on_source_sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001D local D1–D3 READY FOR REVIEW; not installed/deployed/active",
-    "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
-    "timestamp": "2026-10-06T12:45:33.562Z",
+    "artifact": "ENG-PROGRESSION-001D CLOSED — local activation reconciliation and closure checkpoint",
+    "sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
+    "timestamp": "2026-10-06T16:34:15.527Z",
     "evidence_type": "repository",
-    "evidence": "Exact five supplied installed definitions verified bytes/SHA256/signature/security; source b3950cbb, sandbox_exec 2026-10-06 12:17:05–12:17:15UTC (operator evidence, no Codex Cloud). Preserved D2, added new-claim canonical private adapter and complete guarded operations payload SHA256 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Nine actual-chain SQL/six containment/307 focused tests pass; root/app tsc and build pass. Full suite 2703 pass/18 fail vs baseline2701/19; no new failure identities. Unchanged001C SQL15pass/known generated-type static scan1fail. No commit/push/install/deploy/activation/0001/history/journal/package edit. HOSTED MULTI-SESSION UNPROVEN accepted limitation.",
+    "evidence": "Clean source-start 91b65a84ccdca61c22a12e1aa4572a477631b215; normal fast-forward to 6e4ffb1d0f21a4ed2fe8af7215365beea2b76151; ten platform commits/eight changed files classified, no unexpected semantics. Committed 0002 byte-identical to reviewed payload; snapshot/journal 0→1→2 coherent. Aligned the two retired-shell source assertions with the unconditional refusal after the existing OPTIONS return. This is the one required closure test change; no endpoint/runtime code changed. The initial closure suite (2700 pass/21 fail) exposed two stale string assertions plus the known spendable-CP baseline check; executable and strict-TypeScript verification proved the platform fixes semantic-neutral before the assertions were aligned. Final full suite: 2702 pass / 19 fail (exit 1), versus reviewed 001D 2703/18 and synchronized baseline 2701/19. No new failure identities against the established baseline union. The spendable-CP composite/schema check fails as it did in the synchronized baseline; no fix is claimed. Focused progression/shared/server Combat2 plus retired-shell source tests: 797 pass / 2 known baseline failures. Nine existing local actual-chain SQL tests and six existing containment tests pass. Root/app TypeScript and build pass; existing large-chunk warning. Both retired shells pass isolated strict TypeScript (noImplicitReturns) and actual execution: two empty CORS preflights, twelve GET/POST/PUT/PATCH/DELETE/HEAD 410 legacy_retired/build-stamp refusals, no client/env/network/DB/progression access. No Deno or hosted deployment/typecheck claim. Prepared-generator --check, project-state consistency, whitespace, reviewed evidence, ancestry and protected-migration checks pass. Hosted state is operator-reported: INSTALLED/VERIFIED/ACTIVATED; naturalruntime notobserved, multisessionUNPROVEN. No hosted work, migration edit, deployment, activation or E/F/G/H implementation by Codex. Closure documentation only plus one stale source assertion alignment. Final core progression/shared Combat2/retired-shell focused run: 320 pass / 0 fail.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },
@@ -213,16 +213,26 @@
       "evidence": "ENG-PROGRESSION-001C installed once via the standard Drizzle migration tool from approved payload docs/operations/progression-001C-authority.sql (checkpoint 2dde9872d6f31a99b0470e005ab5ecea4d43c062), SHA-256 e9526a64e166fc8ca84ee80a8397ebec9c919922078e84563aa2ef83b239557a; generated file byte-identical. Hosted drizzle.__drizzle_migrations: id 1 (Batch C 73df81b1...) and id 2 (e9526a64..., created_at 1791157594307) match the journal 0000/0001 one-to-one. Supabase ledger unchanged (510). Pre-install dependency hashes, checks, triggers, classes and default ACLs matched the 001C installed preflight; no collisions. Post-install: 3 tables postgres-owned, RLS on, 0 policies, 0 triggers, 0 rows, ACL owner-only; 5 functions postgres-owned SECURITY DEFINER, search_path=pg_catalog, public, ACL owner-only; anon/authenticated/service_role/sandbox_exec have no EXECUTE or table access. No cron jobs; no repository caller. Character/class/item/inventory/node aggregate hashes identical before and after; level CHECK 1..100 unchanged; runtime writer hashes unchanged. Authority dormant; not invoked.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "0002_progression_001d_canonical_xp_cutover.sql",
+      "status": "installed",
+      "sha": "91b65a84ccdca61c22a12e1aa4572a477631b215",
+      "timestamp": "2026-10-06T15:20:00Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. Journal when is tool metadata, not independently recovered wall-clock execution time. Local committed bytes/forward metadata directly verified; no installation performed in closure task.",
+      "reporting_actor": "Mik supplied Lovable installation/verification result; Codex local reconciliation",
+      "directly_verified": false
     }
   ],
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "6490ec1f199539190076a28e0852af3897687f13",
-    "timestamp": "2026-10-01T21:40:00Z",
+    "sha": "ca6f12295788e431d9856074f04142c3f6a35f26",
+    "timestamp": "2026-10-06T15:20:00Z",
     "evidence_type": "operator_reported",
-    "evidence": "Preserved prior official ENG-HB-001 types and Lovable's subsequent stance-generated type update in ancestry through 6490ec1f. Committed types now include character_stance, character_stance_request, Arena stance snapshots and stance projection/change/internal helper contracts. Codex verifies the Git type surface only; regeneration/installed provenance is attributed to Lovable, not direct Cloud verification.",
-    "reporting_actor": "Lovable (handoff supplied by Mik)",
+    "evidence": "Standard001D migration tool reports type regeneration. Local diff adds only combat2_apply_claim_progression_internal Args{_claim:string,_encounter:string},Returns Json; no other generated surface change and no runtime call or EXECUTE grant. Declaration does not make private adapter browser-accessible. Existing earlier generated type provenance retained in prior Git history.",
+    "reporting_actor": "Lovable generation result supplied by Mik; Codex verifies source diff",
     "directly_verified": false
   },
   "edge_function_deployments": [
@@ -281,10 +291,10 @@
       "status": "deployed",
       "sha": "91b65a84ccdca61c22a12e1aa4572a477631b215",
       "timestamp": "2026-10-06T14:56:00Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "evidence": "Deployed only these four from source byte-identical to 91b65a84 (HEAD c966f73f). Deploy tool returned no revision ID; identity is repository-source plus live behaviour. Live: the three crafting functions return 503 crafting_paused; admin-users returns 401 to non-admin callers; grant-xp returns 503 progression_awards_paused (source-verified, admin path not invoked live). combat-tick/combat-catchup not deployed.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "reporting_actor": "Lovable platform record supplied by Mik; locally reconciled by Codex",
+      "directly_verified": false
     }
   ],
   "frontend_publication": {
@@ -897,6 +907,16 @@
       "evidence": "LOCAL READY FOR REVIEW only. The prepared writer resets a per-recipient UUID, uses INSERT ... ON CONFLICT DO NOTHING RETURNING id, and checks FOUND immediately. Only a new accepted claim calls postgres-owned combat2_apply_claim_progression_internal(uuid,uuid). The adapter locks/reads that claim, derives character and XP, and invokes unchanged 001C with source combat2_reward, event UUID = claim.id and metadata.rewardClaimId = claim.id. A refusal or error raises; no legacy XP add, fallback, random retry event, backfill or historical conflict award. Gold remains in the same new-claim branch. Four wrappers, lock ordering, search_path difference and every other writer statement remain unchanged. Replacement writer pg_get_functiondef SHA-256: 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. The preserved D2 fragment fences apply_crafting_xp(uuid,integer), stonebinder_commit_fuse(uuid,uuid,uuid,uuid,integer), commit_encounter_tick_v2(uuid,bigint,uuid,uuid,integer,integer,jsonb,jsonb,jsonb), and both award_party_member overloads (three/five arguments). Bodies and postgres ownership remain. The complete payload additionally removes every nonowner ACL grant/default-derived grant on the new adapter and all five commit-chain functions; only the validated outer node_tick_commit regains service_role EXECUTE. All four predecessors and the adapter remain owner-only, as do unchanged 001C primitives. No table/column UPDATE privilege is added. Administrative owner-role inheritance/superuser access is not an ordinary API grant. The actual exact chain calls only its owner-internal predecessors, not the fenced obsolete APIs; private composition works locally. Deployed external callers still require affected-entry verification. Validation: nine actual-chain and six executed containment tests,307 focused pass; root/app typecheck and build pass. Final full Vitest suite: 2,703 pass / 18 fail (exit 1), versus synchronized baseline 2,701 pass / 19 fail. No new failure identities. One additional passing assertion is the new unknown-level regression; the baseline-only spendable-CP migration composite/schema check is not claimed as fixed by this work. JSON evidence: D-local-baseline.json and D-resume-full.json under the external 001C-local-db-tests directory. Root and application TypeScript pass; production build passes with the existing large-chunk warning. Focused progression/shared Combat2: 307 pass / 0 fail. Local actual-chain SQL: 9 pass / 0 fail; containment: 6 pass / 0 fail. Unchanged 001C SQL: 15 pass / 1 known generated-type static scan failure. Project-state consistency, whitespace, source ancestry, protected paths, exact five evidence files and approved 001C Git-blob digest checks pass. Known test-generated snapshots/MCP changes were restored; nothing staged. Supplied export provenance is operator-reported; bytes/identity/patch/local execution directly verified. Historical body STOP resolved; generic001C remains private, no live reachability inferred. HOSTED MULTI-SESSION UNPROVEN. No hosted operation or install.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "identity": "ENG-PROGRESSION-001D closure and active canonical XP boundary",
+      "status": "installed",
+      "sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
+      "timestamp": "2026-10-06T16:34:15.527Z",
+      "evidence_type": "operator_reported",
+      "evidence": "ENG-PROGRESSION-001D CLOSED locally after exact source/tool-output reconciliation and acceptance. INSTALLED / VERIFIED / ACTIVATED. Activation window 2026-10-06 15:46:49–15:47:36 UTC: only combat_config.combat_mode maintenance→open; combat_soak off; world intentionally asleep. Automatic dispatch is allowed when normal presence/world conditions permit; while asleep, world_asleep refusal is normal. No manual wake requirement. Zero schedules/claims at observation; no natural tick. NATURAL RUNTIME PATH NOT YET OBSERVED. The three crafting pauses and ordinary admin grant-xp pause remain; apply_crafting_xp is fenced owner-only. Privileged admin set-level/update-character remain noncanonical overrides deferred to 001G; train_renown_stat remains deferred to 001F. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. See progression-001D-closure.md for direct local proof and limits. No 001E/F/G/H authorization.",
+      "reporting_actor": "Mik supplied hosted result; Codex local closure",
+      "directly_verified": false
     }
   ],
   "known_blockers": [
@@ -1035,29 +1055,29 @@
       "status": "authored",
       "sha": "c966f73f9c729a443282fab47ffa2d13596b39d8",
       "timestamp": "2026-10-06T15:06:00Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "evidence": "READY FOR SEPARATELY AUTHORIZED 001D DB INSTALLATION, with explicit pre-install exceptions accepted by Mik 2026-10-06: (1) manual combat2-tick-once TECHNICALLY CALLABLE / OPERATOR-PROHIBITED DURING CUTOVER (database entry path NOT technically fenced; node_tick_claim NOT maintenance-aware; not an architecture decision); (2) admin set-level and update-character are PRIVILEGED NONCANONICAL OVERRIDES / OPERATOR-PROHIBITED DURING CUTOVER, not evidence canonical progression is active, reconciliation deferred to 001G; ordinary admin grant-xp paused; (3) public.apply_crafting_xp(uuid,integer) is a KNOWN PRE-EXISTING ORDINARY PROGRESSION BYPASS, PUBLICLY CALLABLE PRE-INSTALL ONLY; exception EXPIRES with the 001D installation, which must atomically revoke it; post-install verification must prove PUBLIC, anon, authenticated, service_role and every other nonowner/custom/inherited role cannot execute it, otherwise keep all entries paused and STOP; no separate preliminary revoke. 001D INSTALLATION MUST NOT BE FOLLOWED BY ACTIVATION unless hosted post-install verification proves apply_crafting_xp and all other reviewed legacy XP entry points are effectively fenced. Read-only scan 2026-10-06 15:05 UTC of public functions updating characters level/xp: only apply_crafting_xp is browser-reachable; award_party_member (2 overloads), commit_encounter_tick_v2, node_tick_commit_without_bounded_failure are postgres/service_role only; progression_apply_xp_internal postgres only. join_order/switch_order and train_renown_stat left unchanged (train_renown_stat deferred to 001F; neither is canonical progression authority). HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. SUPERSEDED 2026-10-06 15:20 UTC: ENG-PROGRESSION-001D INSTALLED / VERIFIED / NOT YET ACTIVATED. Payload docs/operations/progression-001D-cutover.sql SHA-256 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f installed once via standard Drizzle tool as 0002_progression_001d_canonical_xp_cutover (journal idx 2, when 1791299913981, drizzle row id 3, hash identical; 0000/0001 unchanged). apply_crafting_xp exception EXPIRED: ACL {postgres=X/postgres}, no PUBLIC/anon/authenticated/service_role/custom role EXECUTE. stonebinder_commit_fuse, commit_encounter_tick_v2, award_party_member x2 and four predecessors owner-only; only outer node_tick_commit retains service_role. Adapter combat2_apply_claim_progression_internal postgres/SECURITY DEFINER/pg_catalog,public/owner-only. Reward path INSERT..ON CONFLICT DO NOTHING RETURNING id, FOUND -> adapter; no direct XP increment. 001C private and unchanged. characters/inventory/reward-claim/encounters fingerprints identical before/after. READY FOR SEPARATELY AUTHORIZED 001D ACTIVATION. Still paused: automatic Combat2, crafting, ordinary grant-xp; manual tick and set-level/update-character operator-prohibited. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "reporting_actor": "Lovable platform record supplied by Mik; locally reconciled by Codex",
+      "directly_verified": false
     },
     {
       "identity": "ENG-PROGRESSION-001D controlled Combat2 activation",
       "status": "authored",
       "sha": null,
       "timestamp": "2026-10-06T15:47:35Z",
-      "evidence_type": "cloud_inspection",
+      "evidence_type": "operator_reported",
       "evidence": "ENG-PROGRESSION-001D ACTIVATED / NATURAL RUNTIME PATH NOT YET OBSERVED. Window 2026-10-06 15:46:49-15:47:36 UTC. Pre-activation invariants held read-only: Drizzle rows 1-3 (0002 hash 680915c6...637f current); combat2_apply_claim_progression_internal postgres/SECURITY DEFINER/pg_catalog,public/{postgres=X}; node_tick_commit_without_bounded_failure SHA-256 6beb54b1...42fe (reviewed replacement); only node_tick_commit has service_role in the five-function chain; apply_crafting_xp and all 001C primitives {postgres=X/postgres}; 0 cron jobs, 0 claim tokens, one stale active encounter last changed 2026-10-02 12:29:58. Only operational change: combat_config.combat_mode maintenance -> open. combat_soak unchanged (off). world_state unchanged (asleep since 2026-10-02 12:30:00); waking stays on the normal player-presence path, not forced. Dispatcher is no longer refused for maintenance; while asleep it is refused as world_asleep by normal design. No natural Combat2 tick occurred; runtime execution of the newly installed path has NOT yet been naturally observed. Post-activation: apply_crafting_xp ACL {postgres=X/postgres}; Drizzle still 3 rows; no ACL/function/migration change; no Edge deployment; forge-craft-base, forge-apply-gem, stonebinder-fuse and ordinary admin grant-xp pauses untouched; set-level/update-character not invoked; no rollback. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN.",
-      "reporting_actor": "Lovable",
-      "directly_verified": true
+      "reporting_actor": "Lovable platform record supplied by Mik; locally reconciled by Codex",
+      "directly_verified": false
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "STOP for Mik review of local 001D D1–D3; prepared narrow hosted handoff remains undispatched.",
+    "artifact": "STOP — ENG-PROGRESSION-001D CLOSED; 001E/F/G/H not authorized.",
     "sha": null,
-    "timestamp": "2026-10-06T12:45:33.562Z",
+    "timestamp": "2026-10-06T16:34:15.527Z",
     "evidence_type": "repository",
-    "evidence": "Local READY FOR REVIEW; exact body dependency satisfied. Complete payload 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f is prepared outside discovery. A future one narrow standard-tool DB install requires separate authorization plus a verified denied/drained worker window and deployed crafting/admin pauses; no SQL-only activation claim. Nothing installed/deployed/active. No commit/push/Cloud/publication/activation permission; later E/F/G/H not begun.",
+    "evidence": "Local closure checkpoint authorized only. Hosted installation/activation reconciled as supplied operator evidence; no new hosted work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Normal player presence may wake the sleeping world; no manual wake or manufactured tick. Later domain work requires a separate request.",
     "reporting_actor": "Codex",
     "directly_verified": true
   },

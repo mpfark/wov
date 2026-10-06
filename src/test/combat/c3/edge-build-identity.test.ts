@@ -69,7 +69,9 @@ describe('edge combat build identity', () => {
       // The old rawJson helper belonged only to the unreachable resolver tail.
       // Executable method/body/header coverage lives in legacy-cutover-edge.test.ts.
       expect(src).toContain("if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });");
-      expect(src).toContain("if (req.method !== 'OPTIONS') return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'legacy_retired' })), {");
+      // OPTIONS returned above; the unconditional refusal keeps the handler
+      // total under strict TypeScript without changing any request behavior.
+      expect(src).toContain("return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'legacy_retired' })), {");
       expect(src).toContain("status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' }");
       expect(src).not.toMatch(/rawJson|orchestrateCombatResolution|buildAbilityCatalog|createClient|Deno\.env|\.rpc\(/);
     });

@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001D — Core XP cutover preparation
 
+> Historical D1–D3 preparation/handoff, now completed. Current status: [001D closure](progression-001D-closure.md), INSTALLED / VERIFIED / ACTIVATED per supplied operator evidence; CLOSED locally. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Do not redispatch or reinstall this historical handoff.
+
+
 LOCAL D1–D3 READY FOR REVIEW, 2026-10-06. Prepared adapter, complete SQL and tests exist locally; no installed privilege change, migration discovery, deployment or activation. Affects engine specification Progression and rewards / transactional integration and roadmap ENG-PROGRESSION-001D; preserves approved rules and one world heartbeat.
 
 ## Baseline and evidence limits
