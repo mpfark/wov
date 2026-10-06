@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { pendingAllocation } from '../progression-command';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Character } from '@/features/character';
@@ -25,7 +26,7 @@ const STAT_FULL_NAMES: Record<string, string> = {
 interface BodyProps {
   character: Character;
   equipmentBonuses: Record<string, number>;
-  onCommit: (allocations: Record<string, number>) => void;
+  onCommit: (allocations: Record<string, number>) => Promise<boolean>;
   /** Fired after a successful commit so callers can dismiss outer container. */
   onAfterCommit?: () => void;
   /** Layout mode: 'stacked' (default, preview below) or 'split' (preview to the right). */
@@ -41,7 +42,9 @@ interface BodyProps {
  * service shell). Use <StatPlannerDialog> for the standalone modal version.
  */
 export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit, layout = 'stacked', respecAvailable, respecPoints, onRequestRespec }: BodyProps) {
-  const [planned, setPlanned] = useState<Record<string, number>>({});
+  const [planned, setPlanned] = useState<Record<string, number>>(() => pendingAllocation(character.id));
+  const [committing, setCommitting] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
 
   const totalSpent = Object.values(planned).reduce((s, v) => s + v, 0);
   const pointsAvailable = character.unspent_stat_points;
@@ -109,15 +112,21 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
     return { current: calc(currentStats), planned: calc(plannedStats) };
   }, [currentStats, plannedStats, equipmentBonuses, character]);
 
-  const handleCommit = () => {
-    if (totalSpent === 0) return;
+  const handleCommit = async () => {
+    if (totalSpent === 0 || committing) return;
     const allocations: Record<string, number> = {};
     for (const [k, v] of Object.entries(planned)) {
       if (v > 0) allocations[k] = v;
     }
-    onCommit(allocations);
-    setPlanned({});
-    onAfterCommit?.();
+    setCommitting(true);
+    setCommitError(null);
+    try {
+      if (await onCommit(allocations)) {
+        setPlanned({});
+        onAfterCommit?.();
+      } else setCommitError('Allocation was not confirmed. Your plan is retained.');
+    } catch { setCommitError('Command outcome is uncertain. Retry the same plan.'); }
+    finally { setCommitting(false); }
   };
 
   const CompRow = ({ label, currentVal, plannedVal, format, lowerIsBetter }: {
@@ -171,7 +180,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => removePoint(stat)}
-                  disabled={add <= 0}
+                  disabled={committing || add <= 0}
                   className="w-5 h-5 flex items-center justify-center rounded bg-accent/50 hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <Minus className="w-3 h-3" />
@@ -181,7 +190,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
                 </span>
                 <button
                   onClick={() => addPoint(stat)}
-                  disabled={pointsRemaining <= 0}
+                  disabled={committing || pointsRemaining <= 0}
                   className="w-5 h-5 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <Plus className="w-3 h-3" />
@@ -198,13 +207,15 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       {/* Footer actions */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={totalSpent === 0}>
+        <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={committing || totalSpent === 0}>
           <RotateCcw className="w-3 h-3 mr-1" /> Reset
         </Button>
-        <Button size="sm" onClick={handleCommit} disabled={totalSpent === 0}>
+        <Button size="sm" onClick={handleCommit} disabled={committing || totalSpent === 0}>
           <Check className="w-3 h-3 mr-1" /> Commit {totalSpent} Point{totalSpent !== 1 ? 's' : ''}
         </Button>
       </div>
+
+      {commitError && <p role="alert" className="text-xs text-destructive">{commitError}</p>}
 
       {/* Respec section (optional) */}
       {onRequestRespec && (
@@ -289,7 +300,7 @@ interface DialogProps {
   onOpenChange: (open: boolean) => void;
   character: Character;
   equipmentBonuses: Record<string, number>;
-  onCommit: (allocations: Record<string, number>) => void;
+  onCommit: (allocations: Record<string, number>) => Promise<boolean>;
 }
 
 /**

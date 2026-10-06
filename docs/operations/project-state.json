@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-06T20:45:43.625Z",
-  "based_on_source_sha": "5437da1a8a1f6b424c0eeafcf204ae8ae986e1c8",
+  "updated_at": "2026-10-06T21:33:18.059Z",
+  "based_on_source_sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "artifact": "ENG-PROGRESSION-001E trainer and class-history audit/design prepared",
-    "sha": "5437da1a8a1f6b424c0eeafcf204ae8ae986e1c8",
-    "timestamp": "2026-10-06T20:45:43.625Z",
+    "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
+    "timestamp": "2026-10-06T21:33:18.059Z",
     "evidence_type": "repository",
-    "evidence": "Clean main at 001D closure checkpoint, fetched origin/main equal; ancestry verified, recovery stash retained. Docs/state-only audit and plan prepared; no runtime/test/type/migration changes, Cloud work, deployment, activation or publication. Existing six 001C investment counters and captured XP config/growth receipts reused; narrow command and unique future growth milestone design proposed. Focused progression/class/loadout/UI/Combat2 tests 118 pass/0 fail; additional Combat2 ownership/legacy-execution 24 pass/0 fail; project-state tests 3 pass/0 fail; generator/state/whitespace checks pass; 001D SQL integration 9 pass/0 fail, containment 6 pass/0 fail. 001C SQL 15 pass/1 stale dormant assertion failure rejecting existing generated private function declarations; executable SQL cases pass, no baseline repair. Narrow installed dependency/ACL/lock preflight remains before implementation. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN.",
     "reporting_actor": "Codex",
-    "directly_verified": true
+    "directly_verified": true,
+    "artifact": "ENG-PROGRESSION-001E IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE",
+    "evidence": "Local trainer/Order service-only authority, private future growth proof in canonical XP, authenticated Edge and browser retry/acknowledgment prepared from fetched clean fc370869. Existing opaque state/counters retained; no backfill. Single acting-node-before-character lock with changed-location refusal, no second node/encounter lock. Atomic legacy Order/bond/Renown revocation and temporary SECURITY INVOKER raw service/admin progression fence. SQL 22 pass, E actual Combat2 chain 11 pass, C SQL 16 pass, D integration/containment 9/6 pass; focused 252 pass; root/app/node/strict Edge typechecks and build pass. Full suite 2730 pass/18 identical baseline failures versus 2703 pass/18 fail, no new failure. Exact SQL SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266,40840 bytes,451 LF lines; deterministic release manifest. No hosted access/install/deploy/activation/publication; F/G/H not implemented. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Final commit/push identity is reported separately from this based-on source SHA."
   },
   "database_migrations": [
     {
@@ -223,6 +223,16 @@
       "evidence": "Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. Journal when is tool metadata, not independently recovered wall-clock execution time. Local committed bytes/forward metadata directly verified; no installation performed in closure task.",
       "reporting_actor": "Mik supplied Lovable installation/verification result; Codex local reconciliation",
       "directly_verified": false
+    },
+    {
+      "status": "authored",
+      "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
+      "timestamp": "2026-10-06T21:33:18.059Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "docs/operations/progression-001E-cutover.sql (prepared operations artifact)",
+      "evidence": "PREPARED / NOT INSTALLED. One standard Drizzle transaction only, later separately authorized. SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266;40840 bytes;451 LF lines. Guarded XP extension, private destination-growth relation, receipt order check, narrow command/projection, old Order/bond/Renown ACL fences and raw progression override fence. New command control disabled. No numbered migration/journal/snapshot/frozen migration edit, no character mutation/gameplay call/backfill. Source and exact release hashes in progression-001E-manifest.json."
     }
   ],
   "generated_supabase_types": {
@@ -295,6 +305,16 @@
       "evidence": "Deployed only these four from source byte-identical to 91b65a84 (HEAD c966f73f). Deploy tool returned no revision ID; identity is repository-source plus live behaviour. Live: the three crafting functions return 503 crafting_paused; admin-users returns 401 to non-admin callers; grant-xp returns 503 progression_awards_paused (source-verified, admin path not invoked live). combat-tick/combat-catchup not deployed.",
       "reporting_actor": "Lovable platform record supplied by Mik; locally reconciled by Codex",
       "directly_verified": false
+    },
+    {
+      "status": "authored",
+      "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
+      "timestamp": "2026-10-06T21:33:18.059Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "progression-command (001E prepared source only)",
+      "evidence": "PREPARED / NOT DEPLOYED. Verified JWT subject via getClaims, strict six-stat allocation or join/switch schema, service-only narrow SQL, no generic primitive/service browser secret. SDK pinned 2.116.0; strict local SDK-backed typecheck and 27 pure Edge/browser/UI tests pass. Exact Edge/shared/config/browser hashes in E manifest. No hosted Edge execution/deployment or frontend publication. Official Cloud types unchanged."
     }
   ],
   "frontend_publication": {
@@ -927,6 +947,16 @@
       "evidence": "Audit and plan prepared only: docs/operations/progression-001E-audit.md and progression-001E-plan.md. Preserve exact opaque materialized baseline and existing counters; no inferred old class or refundable allocation history. Propose service-mediated narrow allocation and Order commands, atomic clamp-only resource sync, request/version/character locking, Order receipts and unique future class-growth decisions in XP transaction. Trainer direct UPDATE persistence remains fenced; join/switch require replacement and explicit combat/hall/stance restrictions; full respec stays unavailable until 001F. Renown deferred 001F, overrides/admin/creation 001G, physical retirement 001H. Minimum hosted read-only facts specified; no hosted inspection performed, no implementation or installation authorized by this design.",
       "reporting_actor": "Codex",
       "directly_verified": true
+    },
+    {
+      "status": "authored",
+      "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
+      "timestamp": "2026-10-06T21:33:18.059Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "ENG-PROGRESSION-001E local implementation and prepared atomic cutover",
+      "evidence": "IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE. Supplied preflight reconciled without hosted inspection: exact six stat columns, 0 sidecar rows, 21 characters/3 classless, PUBLIC bond helpers, ordinary read-only bond RLS, arrival character-to-destination lock exception, absent harness, unrelated disabled wake trigger. Future growth unique per character/destination with XP receipt FK/config proof; allocation reuses existing investment; Order resets bonds only and retains history/loadout/equipment. Renown unsafe and temporarily owner-only until F; raw service/admin progression changed columns technically fenced until G (boundary A), creation/old triggers unchanged. See progression-001E-implementation.md for full acceptance and DB-first disabled deployment order. Crafting/D fences unchanged. Natural runtime unobserved, hosted multi-session unproven; no F/G/H work."
     }
   ],
   "known_blockers": [
@@ -1083,13 +1113,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "artifact": "STOP — ENG-PROGRESSION-001E audit/design prepared; narrow read-only preflight recommended, not performed.",
     "sha": null,
-    "timestamp": "2026-10-06T20:45:43.625Z",
+    "timestamp": "2026-10-06T21:33:18.059Z",
     "evidence_type": "repository",
-    "evidence": "Current request authorizes local audit/design documentation only, including normal docs commit/push. Recommended separately authorized next task: ENG-PROGRESSION-001E-PREFLIGHT, scoped installed trainer/Order dependencies, ACLs, provenance aggregates and lock predicates from progression-001E-plan.md B1-B4 (B5 only if needed); no mutation or RPC calls. Runtime cutover, migration, hosted work, deployment, respec/Renown/admin/creation and 001F/G/H remain outside this task. Retain 001D natural runtime unobserved and hosted multi-session unproven limitations.",
     "reporting_actor": "Codex",
-    "directly_verified": true
+    "directly_verified": true,
+    "artifact": "STOP — 001E implemented locally/prepared. Separate authorization required for reviewed atomic DB install, narrow Edge deployment and post-install verification; activation/publication remain separate.",
+    "evidence": "Recommended next task ENG-PROGRESSION-001E-INSTALL: verify exact checkpoint/release manifest, fresh narrow dependencies and safe operational window; install one reviewed standard Drizzle tool transaction; verify legacy/bond/Renown/admin containment and preserved data/creation/trigger hashes; deploy only reviewed progression-command; verify authentication and paused fresh commands; stop with command control disabled. Current task does not authorize hosted work. Activation requires a later explicit task; Mik alone publishes frontend. No automatic F/G/H. Preserve D natural-runtime-unobserved and hosted-multi-session-unproven limitations."
   },
   "volatile_runtime_observations": [
     {
@@ -1300,6 +1330,16 @@
       "evidence_type": "operator_reported",
       "evidence": "Lovable-reported read-only Cloud inspection 2026-10-03T10:24:58Z: drizzle.__drizzle_migrations row id=1, hash=73df81b17ee54a0294e231d2f91a70ecc3a9da37508c027f00674d8181b92b65, created_at=1791021613818 (2026-10-03T10:00:13.818Z, equal to local _journal 'when'); this is the only Drizzle row. supabase_migrations.schema_migrations: 510 rows, newest 20261001230000, no 20261002* version; the two rows matching REVOKE+credential_health are 20260817212400/20260817212436 (predecessor definitions), not batch C. Five targets: owner postgres, SECURITY DEFINER, volatile, search_path=public, fingerprints ecea10b2/6aabce3e/867305d4/b9fc05d8/b45bbfa4 match recorded predecessors; ACLs have no PUBLIC entry; anon/authenticated EXECUTE false; postgres/service_role true; sandbox_exec and (credential_health) supabase_read_only_user grants retained. Execution route: Lovable lov_database--migration tool (Drizzle Kit custom migration applied by Drizzle's migrator per tool contract); journal recording automatic into drizzle schema only. Exact command line not recoverable beyond the tool contract. Journal timestamp is not recovered SQL execution time; tool description and database row evidence are distinct. No SQL replay or mutation occurred during that inspection. Codex did not access Cloud.",
       "reporting_actor": "Lovable (read-only Cloud inspection handoff; reconciled by Codex)",
+      "directly_verified": false
+    },
+    {
+      "status": "unknown",
+      "identity": "ENG-PROGRESSION-001E supplied hosted preflight 2026-10-06",
+      "sha": null,
+      "timestamp": "2026-10-06T21:33:18.059Z",
+      "evidence_type": "operator_reported",
+      "evidence": "Mik supplied PREFLIGHT COMPLETE / READY FOR LOCAL IMPLEMENTATION DESIGN RECONCILIATION. Installed B1/creation/character trigger definitions unchanged; permanent columns str/dex/con/int/wis/cha; ordinary progression UPDATE denied, authenticated preference-only. Bond helpers PUBLIC/anon/auth/service executable; ordinary table RLS read-only. All C sidecars0;21 characters/3 classless,no detected anomalies. Entry/stance/departure lock order and arrival destination-lock exception supplied; harness absent; characters_wake_world disabled unrelated. These are supplied inspection facts, not Codex direct Cloud evidence or a new current operational/activation assertion. No E install/deploy/activation observed.",
+      "reporting_actor": "Mik supplied hosted preflight; Codex local reconciliation",
       "directly_verified": false
     }
   ],

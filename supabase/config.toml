@@ -1,6 +1,8 @@
 project_id = "gpclaklkaolyzfnooajt"
 
 [functions]
+  [functions.progression-command]
+    verify_jwt = false # Handler verifies JWT claims explicitly.
   [functions.admin-users]
     verify_jwt = false
   [functions.ai-generate-service-npc]

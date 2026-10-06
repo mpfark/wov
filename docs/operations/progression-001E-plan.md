@@ -1,5 +1,10 @@
 # ENG-PROGRESSION-001E — Proposed allocation and forward class-history authority
 
+Current checkpoint: **IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE**.
+This reviewed design is preserved below. The appended reconciliation and
+[implementation report](progression-001E-implementation.md) supersede its former
+implementation/preflight next steps, without changing historical conclusions.
+
 **PREPARED DESIGN ONLY.** Read the [audit](progression-001E-audit.md) first.
 No schema/function/API below exists merely because it is proposed here.
 No migration SQL authored; no runtime cutover. Accepted engine rules unchanged.
@@ -333,3 +338,37 @@ B1–B4 (B5 only if needed), no RPC calls/mutations/migration/deployment/publica
 return hashes/ACLs/aggregate facts/differences for local design reconciliation.
 After that, separately authorize local implementation/SQL preparation and testing;
 installation and activation remain later separate gates. **STOP here.**
+
+## Resolved implementation decisions after supplied preflight
+
+PRE-FLIGHT ASSUMPTION / HOSTED VERIFIED / IMPLEMENTATION DECISION are recorded
+explicitly in the [audit reconciliation](progression-001E-audit.md#supplied-hosted-preflight-reconciliation--2026-10-06).
+In particular, the arrival lock exception requires the strict single-node-before-
+acting-character discipline. All allocation and Order operations refuse active
+canonical stances; no automatic clearing/refund is introduced.
+
+One service-only SQL command accepts fixed allocate/join/switch operations and
+verified actor/request/version, with six-stat allocations OR target class. An
+authenticated read projection supplies version without initializing state. All
+generic internals remain owner-only. A new private growth relation proves each
+future destination 3..42 in the existing XP transaction, including classless zero
+decisions. Receipt operation gains only 'order'. Existing opaque state is retained.
+
+Renown's unreceipted permanent write is unsafe after provenance exists: old RPC
+and trainer UI are temporarily unavailable until F. Raw service/admin changes to
+stats/level/XP/class/flag/U/respec are technically fenced until G (boundary A),
+using a new SECURITY INVOKER UPDATE trigger; owner-internal canonical functions
+remain effective. Creation INSERT and the two accepted trigger bodies are unchanged.
+
+The reviewed SQL contains all legacy ACL revocations atomically and installs the
+new command-control row disabled. It contains no character UPDATE/gameplay call
+at top level and no provenance backfill. The existing canonical D XP path receives
+future growth proof with its existing transaction; this does not add another XP
+entry. Activation of fresh trainer/Order commands remains separately controlled.
+
+Source, exact release hashes, verification results and safe hosted order are in
+[the report](progression-001E-implementation.md) and [manifest](progression-001E-manifest.json).
+No numbered migration, generated Cloud type change, hosted install, Edge deploy,
+activation or frontend publication occurred. Recommended next task is separately
+authorized E installation/Edge deployment/post-install verification, keeping
+trainer/Order activation and Mik's publication separate. F/G/H remain deferred.

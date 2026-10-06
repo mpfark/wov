@@ -173,7 +173,8 @@ test('outer transaction rollback restores character/provenance/receipt, queued r
 test('no ordinary source caller, no trigger or legacy-writer edit in SQL payload',()=>{
  const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(resolve(dir,e.name)):/\.[cm]?[jt]sx?$/.test(e.name)?[resolve(dir,e.name)]:[]);
  for(const file of [...walk('src'),...walk('supabase/functions')]) {
-  if(/\.(test|spec)\./.test(file))continue;
+  // Cloud-generated declarations name private functions; they are not executable callers.
+  if(/\.(test|spec)\./.test(file)||file===resolve('src/integrations/supabase/types.ts'))continue;
   assert.doesNotMatch(readFileSync(file,'utf8'),/progression_apply_(?:xp|permanent_delta)_internal|character_sync_derived_internal/);
  }
  const sql=readFileSync('docs/operations/progression-001C-authority.sql','utf8');

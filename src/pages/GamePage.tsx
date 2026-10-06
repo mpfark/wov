@@ -1149,12 +1149,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
-  const { handleFullRespec: legacyFullRespec, handleBatchAllocateStats: legacyAllocateStats } = useStatAllocation({
-    character, updateCharacter, addLogEvent,
+  const { handleBatchAllocateStats } = useStatAllocation({
+    character, addLogEvent,
     onResourcesSynced: refetchCharacters,
   });
-  const handleFullRespec = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyFullRespec);
-  const handleBatchAllocateStats = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAllocateStats);
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
@@ -1974,10 +1972,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
           onClose={() => { setTrainerOpen(false); setActiveServiceNpc(null); }}
           character={character}
           equipmentBonuses={equipmentBonuses}
-          updateCharacterLocal={updateCharacterLocal}
           addLogEvent={addLogEvent}
           onBatchAllocateStats={handleBatchAllocateStats}
-          onFullRespec={handleFullRespec}
           npcName={activeServiceNpc?.service_role === 'trainer' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'trainer' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
@@ -2054,7 +2050,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         hallClass={(currentNode as any)?.class_hall ?? null}
         characterId={character.id}
         currentClass={character.class}
-        onJoined={() => { refetchCharacters?.(); }}
+        onJoined={() => refetchCharacters?.()}
         worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}
       />
 

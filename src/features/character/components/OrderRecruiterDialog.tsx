@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { progressionClient, pendingProgressionAction } from '../progression-command';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 import { NPC } from '@/features/creatures';
 import {
@@ -20,7 +21,7 @@ interface Props {
   hallClass: string | null;
   characterId: string;
   currentClass: string;
-  onJoined?: () => void;
+  onJoined?: () => unknown;
   worldContext?: ResolverContext;
 }
 
@@ -44,6 +45,10 @@ export default function OrderRecruiterDialog({
   const [roster, setRoster] = useState<RosterRow[] | null>(null);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [rosterError, setRosterError] = useState<string | null>(null);
+  const command = useMemo(() => progressionClient(characterId), [characterId]);
+  const isClassless = currentClass === 'classless';
+  const pending = pendingProgressionAction(characterId);
+  const pendingOrder = pending && 'operation' in pending ? pending : null;
 
   const topics = useMemo(() => {
     if (!npc || !worldContext) return [];
@@ -77,14 +82,12 @@ export default function OrderRecruiterDialog({
   const handleJoin = async () => {
     setActing(true);
     try {
-      const rpc = currentClass ? 'switch_order' : 'join_order';
-      const { error } = await supabase.rpc(rpc as any, {
-        _character_id: characterId,
-        _class: hallClass as any,
-      });
-      if (error) throw error;
-      toast.success(`You have joined the ${hallLabel} order.`);
-      onJoined?.();
+      const action = pendingOrder ?? { operation: isClassless ? 'join' as const : 'switch' as const, targetClass: hallClass };
+      const result = await command.execute(action);
+      if (result.kind === 'refused') throw new Error(`Order command refused: ${result.reason}`);
+      toast.success(`You have joined the ${CLASS_LABELS[action.targetClass] || action.targetClass} order.`);
+      try { await onJoined?.(); }
+      catch { toast.error('Order change committed. Refresh character data before another command.'); }
       onClose();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to join order');
@@ -236,7 +239,7 @@ export default function OrderRecruiterDialog({
           </div>
         </div>
 
-        {currentClass && !isCurrent && (() => {
+        {!isClassless && !isCurrent && (() => {
           const oldLabel = CLASS_LABELS[currentClass] ?? currentClass;
           const oldBond = bonds.find(b => b.class === currentClass)?.bond ?? 0;
           return (
@@ -256,11 +259,11 @@ Leaving the {oldLabel} order will permanently erase your bond of {oldBond}.
           <Button variant="ghost" onClick={onClose} disabled={acting}>Leave</Button>
           <Button
             onClick={handleJoin}
-            disabled={acting || loading || isCurrent}
-            variant={currentClass && !isCurrent ? 'destructive' : 'default'}
+            disabled={acting || loading || (isCurrent && !pendingOrder)}
+            variant={!isClassless && !isCurrent ? 'destructive' : 'default'}
             className="font-display"
           >
-            {isCurrent ? `Already a ${hallLabel}` : currentClass ? `Switch to ${hallLabel}` : `Join the ${hallLabel} Order`}
+            {pendingOrder ? 'Retry pending Order change' : isCurrent ? `Already a ${hallLabel}` : isClassless ? `Join the ${hallLabel} Order` : `Switch to ${hallLabel}`}
           </Button>
         </div>
       </DialogContent>

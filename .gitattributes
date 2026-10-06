@@ -1,0 +1,14 @@
+# Exact reviewed 001E release bytes across Windows/Linux checkouts.
+docs/operations/progression-001E-cutover.sql text eol=lf
+docs/operations/progression-001E-manifest.json text eol=lf
+scripts/prepare-progression-001E.mjs text eol=lf
+scripts/progression-001E-commands.sql text eol=lf
+supabase/functions/progression-command/index.ts text eol=lf
+supabase/functions/_shared/progression-command.ts text eol=lf
+supabase/config.toml text eol=lf
+src/features/character/progression-command.ts text eol=lf
+src/features/character/hooks/useStatAllocation.ts text eol=lf
+src/features/character/components/OrderRecruiterDialog.tsx text eol=lf
+src/features/character/components/StatPlannerDialog.tsx text eol=lf
+src/features/character/components/TrainerPanel.tsx text eol=lf
+src/pages/GamePage.tsx text eol=lf

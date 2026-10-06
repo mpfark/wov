@@ -1,0 +1,78 @@
+{
+  "status": "IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE",
+  "encoding": "UTF-8, LF",
+  "artifacts": [
+    {
+      "path": "docs/operations/progression-001E-cutover.sql",
+      "sha256": "175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266",
+      "bytes": 40840,
+      "lines": 451
+    },
+    {
+      "path": "scripts/prepare-progression-001E.mjs",
+      "sha256": "88ec5e6e574c18dcff5c331e7466e2409b6ef0933dff5c222802f999e4b432c1",
+      "bytes": 14437,
+      "lines": 167
+    },
+    {
+      "path": "scripts/progression-001E-commands.sql",
+      "sha256": "7e2a0abdf122ae31f62bbef42cb90f642e5c609c06963923c77f21d999071afd",
+      "bytes": 16790,
+      "lines": 209
+    },
+    {
+      "path": "supabase/functions/progression-command/index.ts",
+      "sha256": "9e6fe90de54ad2ecb0e92af55811631798ad2f69a9e947303abf03dbb60cfc7a",
+      "bytes": 1280,
+      "lines": 20
+    },
+    {
+      "path": "supabase/functions/_shared/progression-command.ts",
+      "sha256": "15dd370b3ee6e816179c04e23d2191fd2c27d4d0a86fbdb57fc7e6c0cca9dbd4",
+      "bytes": 3265,
+      "lines": 42
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9",
+      "bytes": 869,
+      "lines": 36
+    },
+    {
+      "path": "src/features/character/progression-command.ts",
+      "sha256": "a6a8dc4f46dfcf7a15e5dd8a148eb186423c83e35ba6c4053ba8a19145580f1d",
+      "bytes": 4132,
+      "lines": 67
+    },
+    {
+      "path": "src/features/character/hooks/useStatAllocation.ts",
+      "sha256": "7cbbca30a2aade0055418c6f5c20959b2320f157708bb53f2405a8f5400e47c9",
+      "bytes": 1763,
+      "lines": 34
+    },
+    {
+      "path": "src/features/character/components/OrderRecruiterDialog.tsx",
+      "sha256": "e86d5bb984165cb502ae4ae8c1b575e918ce5681eb8dbda49b877c0ee3703fd2",
+      "bytes": 12047,
+      "lines": 272
+    },
+    {
+      "path": "src/features/character/components/StatPlannerDialog.tsx",
+      "sha256": "d02d8cae7ebf32c6a9476ede909541224e6d3a8eafa25b5bcf1af3dba749f645",
+      "bytes": 15132,
+      "lines": 332
+    },
+    {
+      "path": "src/features/character/components/TrainerPanel.tsx",
+      "sha256": "b28f0110524894e4c69ccc4e565ec808d8459323e5c29d948be267cf0e06b980",
+      "bytes": 8492,
+      "lines": 236
+    },
+    {
+      "path": "src/pages/GamePage.tsx",
+      "sha256": "9bae3fea7474ca390dc9ae87e59a7b288ef4022925c991de7804789c9be0b567",
+      "bytes": 104831,
+      "lines": 2126
+    }
+  ]
+}

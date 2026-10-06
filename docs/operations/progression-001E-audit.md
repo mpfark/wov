@@ -1,5 +1,10 @@
 # ENG-PROGRESSION-001E — Trainer and class-growth history audit
 
+Current checkpoint: **IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE**.
+The original audit below is retained as historical evidence. The reconciliation
+at the end resolves supplied preflight facts; current implementation and acceptance
+are recorded in [the implementation report](progression-001E-implementation.md).
+
 Prepared 2026-10-06. **AUDIT/DESIGN ONLY; NOT IMPLEMENTED, INSTALLED OR ACTIVE.**
 Rules preserved: engine specification, “Progression and rewards” (class growth,
 resources/provenance/trainer, transactional authority); roadmap ENG-PROGRESSION-001E.
@@ -243,3 +248,26 @@ Existing test outputs retained outside Git under `../001C-local-db-tests/E-*`.
 - Open implementation decisions and minimum hosted facts: plan sections below.
 - Next safe action: separately authorize the plan's narrow read-only preflight;
   no broad database audit or request for Lovable to design 001E. Then STOP.
+
+## Supplied hosted preflight reconciliation — 2026-10-06
+
+**HOSTED VERIFIED** here means Mik supplied the completed installed inspection;
+Codex did not independently access hosted Supabase or Lovable. Historical audit
+conclusions and evidence above remain unchanged.
+
+| PRE-FLIGHT ASSUMPTION | HOSTED VERIFIED (supplied evidence) | IMPLEMENTATION DECISION |
+|---|---|---|
+| Permanent materialized columns and ordinary write grants needed confirmation | Six real columns are str/dex/con/int/wis/cha. Table UPDATE only postgres/service_role; authenticated UPDATE only six preferences | Use these exact names; no progression grants reopened. Projection is owner-filtered and non-mutating |
+| Bond helper reachability needed inspection | Both SECURITY DEFINER helpers executable by PUBLIC/anon/authenticated/service_role; broad bond table grants contained by ordinary read-only RLS | No connected ordinary/server direct caller needs access. Fence both helpers owner-only in atomic payload; retain owner composition |
+| Stored canonical provenance might predate E | State/receipt/respec sidecars all 0; 21 characters, 3 classless; no detected pool/class anomalies | No eager initialization/backfill. First accepted event captures exact opaque state with counters0; existing future canonical state remains intact |
+| Node→character discipline needed installed lock reconciliation | Entry node→encounter/character; stance request→node→encounter→character; departure origin node→encounter→character→fighter→request. Arrival can take destination node while holding character | Acquire only initially observed acting node, then acting character; re-read location and refuse changes. Never lock a second node or an encounter after character |
+| Naive active encounter might over-block | Current ownership distinguishes actual engagement/live claims from historical shells | Check present fighter + active encounter + living positive-HP engaged creature, or live claim linked to fighter; also stance/pending intent/departure/movement/legacy combat. No active-status-only block |
+| Harness could require containment | c2_harness_run/c2_harness_run_c absent | No harness SQL or revocation |
+| World wake status might affect E | characters_wake_world disabled | Observed supplied fact, unrelated to this authority change; no wake trigger change |
+| Creation and accepted character triggers might require changes | character_create and both trigger hashes unchanged | Preserve creation and accepted trigger definitions byte-for-byte; additive invoker raw-write fence handles temporary admin boundary |
+| Renown and privileged overrides were deferred | train_renown_stat still ordinary-reachable; admin Edge uses raw service DML | Both can invalidate canonical receipts/version/counters. Fence Renown until F; choose technical boundary A for changed progression columns until G |
+
+The frozen local definitions match the five supplied legacy full-definition hash
+abbreviations, and local full-payload guards accept both supplied trigger hashes.
+This is dependency reconciliation, not hosted installation proof. Full respec,
+Renown redesign, creation/admin reconciliation and physical retirement remain F/G/H.
