@@ -6,7 +6,7 @@ console.log('[combat-catchup] boot', { serverBuild: EDGE_COMBAT_BUILD_ID });
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  if (req.method !== 'OPTIONS') return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'legacy_retired' })), {
+  return new Response(JSON.stringify(stampCombatBuild({ ok: false, kind: 'legacy_retired' })), {
     status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });
