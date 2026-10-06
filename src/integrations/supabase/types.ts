@@ -6653,6 +6653,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: boolean
       }
+      combat2_apply_claim_progression_internal: {
+        Args: { _claim: string; _encounter: string }
+        Returns: Json
+      }
       combat2_arrive_after_relocation: {
         Args: { _character_id: string; _request_id: string }
         Returns: Json
