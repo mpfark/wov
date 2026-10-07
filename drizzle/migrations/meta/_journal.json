@@ -43,6 +43,13 @@
       "when": 1791397016011,
       "tag": "0005_progression_001f_canonical_renown_respec_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791404929982,
+      "tag": "0006_progression_001f_r1_restore_unprotected_service_updates",
+      "breakpoints": true
     }
   ]
 }
