@@ -29,6 +29,13 @@
       "when": 1791363834189,
       "tag": "0003_progression_001e_command_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791366261738,
+      "tag": "0004_progression_001e_r2_xp_body_repair",
+      "breakpoints": true
     }
   ]
 }
