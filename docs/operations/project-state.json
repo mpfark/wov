@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T20:57:42.327Z",
-  "based_on_source_sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
+  "updated_at": "2026-10-07T22:00:31.952Z",
+  "based_on_source_sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
-    "timestamp": "2026-10-07T20:57:42.327Z",
+    "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+    "timestamp": "2026-10-07T22:00:31.952Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "ENG-PROGRESSION-001F-R2 PREPARED; R1 INSTALLED / VERIFIED; ACL REGRESSION REPAIRED",
-    "evidence": "ENG-PROGRESSION-001F-R2 PREPARED / READY FOR FINAL 001F EDGE DEPLOYMENT / PAUSED VERIFICATION. Source reconciled normally to cd4c109c,preserving0006/journal/snapshot/prefix; generated types and Edge dependencies unchanged. Complete two-file local Edge closure and pinned external SDK/config identity recorded in docs/operations/progression-001F-R2-edge-manifest.json; byte-identical to reviewed F atb8c18c90. Mandatory operating contract docs/operations/lovable-supabase-operating-contract.md; handoff docs/operations/progression-001F-R2-edge-handoff.md defines exact OPTIONS200/unauthPOST401/GET405 and optional authenticated pre-write400/paused200 probes. Authenticated probe may remain deferred and is not closure prerequisite. Closure follows separately authorized Edge deployment/safe refusal verification/currentfalse-control/preservation; activation/publication separate. No runtime/gameplay/schema change; no hosted access/deploy/activation/publication/G/H. Edge/browser/state51 (Edge27,Fbrowser21,state3),HTTP probes6,Fauthority39,Fchain12,R1ACL14 all pass; four typechecks/build pass; deterministic closure/0006/history/runtime preservation pass. No focused failure; full suite not rerun for unchanged runtime/documentation-only reconciliation. Prior accepted full baseline2751pass/18fail remains historical,not a new R2 result. F not CLOSED yet. Retain HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
+    "artifact": "ENG-PROGRESSION-001F CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED",
+    "evidence": "Local R2 source/config/0006/journal/snapshot/runtime identity verified against checkpoint a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c. Closure reconciles operator evidence under R2 acceptance; docs/operations/progression-001F-closure.md. No runtime changes. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
   },
   "database_migrations": [
     {
@@ -379,14 +379,14 @@
       "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Reviewed local index.ts SHA9e6fe90de54ad2ecb0e92af55811631798ad2f69a9e947303abf03dbb60cfc7a;shared handler SHA15dd370b3ee6e816179c04e23d2191fd2c27d4d0a86fbdb57fc7e6c0cca9dbd4. Full local release identities match supplied9e6fe90d…/15dd370b… abbreviations; no platform revision ID or direct deployed-source retrieval."
     },
     {
-      "identity": "progression-command 001F release NOT DEPLOYED",
-      "status": "authored",
-      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-      "timestamp": "2026-10-07T18:34:56.637Z",
+      "identity": "progression-command 001F staged deployment",
+      "status": "deployed",
+      "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+      "timestamp": "2026-10-07T21:06:27Z",
       "evidence_type": "operator_reported",
       "reporting_actor": "Mik supplied hosted evidence; Codex recording",
       "directly_verified": false,
-      "evidence": "F consumer source is prepared, but Mik explicitly reports F Edge NOT DEPLOYED. Prior E deployment evidence is historical and preserved. E/F commands remain paused; no R1 runtime/Edge source change or deployment.",
+      "evidence": "Operator-supplied deployment 2026-10-07T21:06:27Z, progression-command: Successfully deployed edge functions: progression-command. Working-tree SHA-256 index.ts 88819cab31e7a2f9695a6f8cc391fe310dd632b55caf825bf6f68b89c3e978d7; shared progression-command.ts 845401a78e02da379345e808e5aced143a9802f4f3bcefa9eba5d95013c6e178; config.toml a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9. Operator-observed OPTIONS200 empty/expected CORS, unauthenticated POST401 {\"kind\":\"refused\",\"reason\":\"unauthorized\"}, GET405 {\"kind\":\"refused\",\"reason\":\"method_not_allowed\"}; verify_jwt=false effective through handler-owned refusal. Authenticated probes intentionally skipped. Seven Drizzle entries unchanged,0005/0006 identities verified; controlfalse; service table UPDATEfalse/protected15false/unprotected38true; authenticated six preference columns only; commandservice-only/projectionauthenticated-only/private Renown+XPowner-only; six progression tablesowner-only/RLS/no policies; function identities unchanged,no key material exposed. Characters fingerprint f672ddcb4c0e4d88f21f7bc585159646/count21 before/after; sidecars0/0/0/0,keyrows1,Drizzlerows7 unchanged; no gameplay mutation,receipt,backfill,keyrotation. Supplied hosted evidence,not independent Codex verification or authenticated gameplay proof. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP.",
       "artifact": "supabase/functions/progression-command/index.ts"
     }
   ],
@@ -1080,6 +1080,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "ENG-PROGRESSION-001F-R2 PREPARED / READY FOR FINAL 001F EDGE DEPLOYMENT / PAUSED VERIFICATION. Source reconciled normally to cd4c109c,preserving0006/journal/snapshot/prefix; generated types and Edge dependencies unchanged. Complete two-file local Edge closure and pinned external SDK/config identity recorded in docs/operations/progression-001F-R2-edge-manifest.json; byte-identical to reviewed F atb8c18c90. Mandatory operating contract docs/operations/lovable-supabase-operating-contract.md; handoff docs/operations/progression-001F-R2-edge-handoff.md defines exact OPTIONS200/unauthPOST401/GET405 and optional authenticated pre-write400/paused200 probes. Authenticated probe may remain deferred and is not closure prerequisite. Closure follows separately authorized Edge deployment/safe refusal verification/currentfalse-control/preservation; activation/publication separate. No runtime/gameplay/schema change; no hosted access/deploy/activation/publication/G/H. Edge/browser/state51 (Edge27,Fbrowser21,state3),HTTP probes6,Fauthority39,Fchain12,R1ACL14 all pass; four typechecks/build pass; deterministic closure/0006/history/runtime preservation pass. No focused failure; full suite not rerun for unchanged runtime/documentation-only reconciliation. Prior accepted full baseline2751pass/18fail remains historical,not a new R2 result. F not CLOSED yet. Retain HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F final local closure",
+      "status": "authored",
+      "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+      "timestamp": "2026-10-07T22:00:31.952Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "ENG-PROGRESSION-001F CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED",
+      "evidence": "Closure record docs/operations/progression-001F-closure.md; locally verified source is distinct from operator-reported installation/deployment/HTTP observations. Commands paused; F frontend not published. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
     }
   ],
   "known_blockers": [
@@ -1246,13 +1257,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
-    "timestamp": "2026-10-07T20:57:42.327Z",
+    "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+    "timestamp": "2026-10-07T22:00:31.952Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "R2 authorizes only local reconciliation/preparation/validation/normal commit and push. Then STOP. Final progression-command Edge deployment and bounded paused verification need separate authorization under the operating contract. Do not install/replay SQL,activate,publish or begin001G/H.",
-    "artifact": "STOP — R2 prepared; ready for separately authorized final 001F Edge deployment/paused verification."
+    "evidence": "001G scope: reconciliation/admin/creation safety; D and explicit exceptional policy approval, bounded proven repairs,no blanket reconstruction. Exceptional override/repair/creation policy approval remains unresolved; separate task authorization required. No RP earning redesign,combat redesign or frontend publication implied. Do not begin001G/H,activate,publish or perform hosted work.",
+    "artifact": "STOP — F CLOSED; 001G next planned, not authorized"
   },
   "volatile_runtime_observations": [
     {
@@ -1544,6 +1555,16 @@
       "reporting_actor": "Mik supplied Lovable evidence; Codex reconciliation",
       "directly_verified": false,
       "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification. Historical observation,not a fresh current safe deployment-window assertion."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F supplied final paused deployment verification",
+      "status": "unknown",
+      "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+      "timestamp": "2026-10-07T21:06:27Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted evidence; Codex local reconciliation",
+      "directly_verified": false,
+      "evidence": "Operator-supplied deployment 2026-10-07T21:06:27Z, progression-command: Successfully deployed edge functions: progression-command. Working-tree SHA-256 index.ts 88819cab31e7a2f9695a6f8cc391fe310dd632b55caf825bf6f68b89c3e978d7; shared progression-command.ts 845401a78e02da379345e808e5aced143a9802f4f3bcefa9eba5d95013c6e178; config.toml a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9. Operator-observed OPTIONS200 empty/expected CORS, unauthenticated POST401 {\"kind\":\"refused\",\"reason\":\"unauthorized\"}, GET405 {\"kind\":\"refused\",\"reason\":\"method_not_allowed\"}; verify_jwt=false effective through handler-owned refusal. Authenticated probes intentionally skipped. Seven Drizzle entries unchanged,0005/0006 identities verified; controlfalse; service table UPDATEfalse/protected15false/unprotected38true; authenticated six preference columns only; commandservice-only/projectionauthenticated-only/private Renown+XPowner-only; six progression tablesowner-only/RLS/no policies; function identities unchanged,no key material exposed. Characters fingerprint f672ddcb4c0e4d88f21f7bc585159646/count21 before/after; sidecars0/0/0/0,keyrows1,Drizzlerows7 unchanged; no gameplay mutation,receipt,backfill,keyrotation. Supplied hosted evidence,not independent Codex verification or authenticated gameplay proof. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
     }
   ],
   "product_backlog": [

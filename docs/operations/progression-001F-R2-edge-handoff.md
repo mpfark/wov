@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001F-R2 final Edge handoff
 
+Current closure: **ENG-PROGRESSION-001F CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED**. [Final local closure](progression-001F-closure.md) records the operator-supplied deployment and probes at 2026-10-07T21:06:27Z, distinct from local source verification. Earlier prepared/blocked statuses below are historical. Activation, publication and001G/H remain separate.
+
+
 **PREPARED ONLY. READY FOR FINAL 001F EDGE DEPLOYMENT / PAUSED VERIFICATION.** This document does not authorize deployment. Execute only after Mik separately authorizes the final progression-command deployment and bounded verification. The [Lovable/Supabase operating contract](lovable-supabase-operating-contract.md) is mandatory for this work and future hosted database/backend tasks. No schema migration, activation, frontend publication or001G/H belongs to this handoff.
 
 ## Reconciled source and hosted evidence

@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001F-R1 service UPDATE repair
 
+Current closure: **ENG-PROGRESSION-001F CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED**. [Final local closure](progression-001F-closure.md) records the operator-supplied deployment and probes at 2026-10-07T21:06:27Z, distinct from local source verification. Earlier prepared/blocked statuses below are historical. Activation, publication and001G/H remain separate.
+
+
 Current R2 status supersedes historical preparation/blocked statements below: **001F INSTALLED; R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED; F EDGE NOT DEPLOYED; COMMANDS PAUSED; FRONTEND NOT PUBLISHED**. [R2 source reconciliation and final Edge handoff](progression-001F-R2-edge-handoff.md) records operator evidence for attempt2 and preserves attempt1 full rollback. F remains open pending separately authorized Edge deployment/paused verification.
 
 ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. R1 is prepared locally for a separately authorized narrow forward ACL repair. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is not F closure or installation authorization.
