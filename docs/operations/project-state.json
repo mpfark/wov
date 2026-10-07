@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T22:38:46Z",
-  "based_on_source_sha": "b4d314e63ff5ebd904bf631f4afd586cb9035610",
+  "updated_at": "2026-10-07T23:31:32Z",
+  "based_on_source_sha": "e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1101,6 +1101,16 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "ENG-PROGRESSION-001G-A AUDIT COMPLETE. docs/operations/progression-001G-A-admin-creation-audit.md and writer appendix; 12 character-affecting admin action branches and98 relevant named SQL candidates (not live-writer counts). Local source/tests only;217 passed and1 archival R1 baseline failure; current R2 preservation check passed. Creation authority/resource initialization unsafe or unverified; protected15 denied/unprotected38 allowed/browser6 preserved. Owner policy questions O1-O14 unresolved. No implementation,migration,hosted access,deployment,activation,publication or legacy normalization. F remains closed under accepted staged criteria;001G not implemented or closed. Source v3 service-definer delegation to owner-only legacy v2 remains a concrete containment risk requiring fresh metadata; no hosted exploit claimed."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-B owner-approved admin policy and contracts",
+      "status": "authored",
+      "sha": "e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1",
+      "timestamp": "2026-10-07T23:31:32Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Mik owner decisions; Codex documentation",
+      "directly_verified": true,
+      "evidence": "ENG-PROGRESSION-001G-B POLICY/CONTRACT PACKAGE COMPLETE, docs only. Canonical docs/design/progression-001G-B-admin-policy.md and command-contracts.md; docs/operations/progression-001G-B-execution-plan.md includes source evidence, O1-O14 traceability and separate C-F gates. Approved role caps/no direct level setting/clamp-only repair/atomic creation with starter gear/30-day restoration/12-month detailed audit recorded; unresolved numeric XP cap, repeated approval, creation manifest, RP lifetime, retention and scoped repair decisions remain explicit. No implementation, migration, hosted access, gameplay write, deployment, activation or publication. F closure and four retained limitations unchanged; protected15/unprotected38/browser6 preserved. 001G not implemented or closed."
     }
   ],
   "known_blockers": [
@@ -1267,13 +1277,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "b4d314e63ff5ebd904bf631f4afd586cb9035610",
-    "timestamp": "2026-10-07T22:38:46Z",
+    "sha": "e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1",
+    "timestamp": "2026-10-07T23:31:32Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Read-only audit complete; owner decisions O1-O14 and separate implementation authorization required before001G-B/C/D/E/F. No exceptional policy chosen. Preserve F closure,paused commands,opaque legacy state,executed migrations/platform history and recovery stash. No hosted work,activation or publication authorized.",
-    "artifact": "STOP — ENG-PROGRESSION-001G-A AUDIT COMPLETE; no 001G-B or implementation authorized"
+    "evidence": "001G-B docs-only owner policy and contract package complete. STOP before001G-C. C requires separate local task authorization, verified installed creation body/types/defaults/triggers/FKs/ACL metadata and approved exact creation manifest including starter gear/resources/catalog/family/delegation; hosted inspection separately authorized. D award/repair policy parameters remain unresolved. Preserve F closure/paused commands/frontend not published; no Lovable operation authorized.",
+    "artifact": "STOP — ENG-PROGRESSION-001G-B DOCUMENTED; separate 001G-C authorization and entry evidence required"
   },
   "volatile_runtime_observations": [
     {
