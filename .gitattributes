@@ -29,3 +29,7 @@ scripts/progression-001F-combat2.test.mjs text eol=lf
 scripts/progression-history-test.mjs text eol=lf
 src/features/character/progression-messages.ts text eol=lf
 src/features/character/__tests__/progression-f.test.tsx text eol=lf
+docs/operations/progression-001F-R1-service-update-repair.sql text eol=lf
+docs/operations/progression-001F-R1-manifest.json text eol=lf
+scripts/prepare-progression-001F-R1.mjs text eol=lf
+scripts/progression-001F-R1-sql.test.mjs text eol=lf

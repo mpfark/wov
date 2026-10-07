@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T12:25:43.162Z",
-  "based_on_source_sha": "448883efbbb5887e0033e4c987d153dfb8bfb7b3",
+  "updated_at": "2026-10-07T18:34:56.637Z",
+  "based_on_source_sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "sha": "448883efbbb5887e0033e4c987d153dfb8bfb7b3",
-    "timestamp": "2026-10-07T12:25:43.162Z",
+    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+    "timestamp": "2026-10-07T18:34:56.637Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "ENG-PROGRESSION-001F IMPLEMENTED LOCALLY / PREPARED — NOT INSTALLED / NOT ACTIVE",
-    "evidence": "ENG-PROGRESSION-001F IMPLEMENTED LOCALLY / PREPARED / READY FOR SEPARATELY AUTHORIZED HOSTED INSTALLATION / NOT INSTALLED / NOT ACTIVE. Accepted proven-only respec, six independent Renown ranks and retained level30 cost/chance curves; persistent private versioned HMAC-SHA256/rejection sampling, one receipt/version, no gameplay rank cap. Strict verified-JWT Edge/service-only command, retained uncertain UUID, authoritative refetch and paused trainer UI; raw bhp/bhp_trained/rp_total_earned containment and service protected-column UPDATE revoke prepared atomically. SQL c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff / 57669 bytes / 693 LF lines; outside discovery, no historical migration/journal rewrite. F authority39/F actual Combat2 chain12/browser21/focused273; C16/D9/Dcontainment6/E22/ECombat2chain11/R111/R28/audit5 pass. Typechecks/build/state pass; full2751pass/18 identical baseline failure identities. Local PGlite uses independently checked disposable HMAC fixture because pgcrypto is not bundled; no hosted cryptographic or multi-session proof. RP EARNING AUTHORITY GAP and uncalled equipment-degrade writer gap deferred. All command controls false; legacy train_renown_stat retained owner-only. E CLOSED/installed/verified/Edge deployed per supplied operator evidence,commands paused/frontend not published. Retain HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED. No hosted access/Lovable/install/deploy/activation/publication/G/H. Report docs/operations/progression-001F-implementation.md; commit/push identity in final handoff."
+    "artifact": "ENG-PROGRESSION-001F-R1 PREPARED; 001F INSTALLED / VERIFICATION BLOCKED",
+    "evidence": "ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md."
   },
   "database_migrations": [
     {
@@ -265,25 +265,36 @@
       "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification."
     },
     {
-      "identity": "ENG-PROGRESSION-001F prepared forward authority",
+      "identity": "0005_progression_001f_canonical_renown_respec_authority.sql — installed; verification blocked",
+      "status": "installed",
+      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+      "timestamp": "2026-10-07T18:34:56.637Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted evidence; Codex recording",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0005_progression_001f_canonical_renown_respec_authority.sql",
+      "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F-R1 ACL repair artifact",
       "status": "authored",
-      "sha": "448883efbbb5887e0033e4c987d153dfb8bfb7b3",
-      "timestamp": "2026-10-07T12:25:43.162Z",
+      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+      "timestamp": "2026-10-07T18:34:56.637Z",
       "evidence_type": "repository",
       "reporting_actor": "Codex",
       "directly_verified": true,
-      "artifact": "docs/operations/progression-001F-cutover.sql",
-      "evidence": "Prepared only. Reviewed UTF-8/LF SHA-256 c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff, 57669 bytes, 693 LF lines. No Drizzle migration/journal/ledger registration or hosted installation. One later separately authorized standard Drizzle transaction must reconcile reviewed file, generated ledger bytes and resulting prosrc/security identities. Controlfalse remains unchanged; server-generated key only at later install. Historical0001..0004 and Supabase files preserved."
+      "evidence": "ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md.",
+      "artifact": "docs/operations/progression-001F-R1-service-update-repair.sql"
     }
   ],
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "ca6f12295788e431d9856074f04142c3f6a35f26",
-    "timestamp": "2026-10-06T15:20:00Z",
+    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+    "timestamp": "2026-10-07T18:34:56.637Z",
     "evidence_type": "operator_reported",
-    "evidence": "Standard001D migration tool reports type regeneration. Local diff adds only combat2_apply_claim_progression_internal Args{_claim:string,_encounter:string},Returns Json; no other generated surface change and no runtime call or EXECUTE grant. Declaration does not make private adapter browser-accessible. Existing earlier generated type provenance retained in prior Git history.",
-    "reporting_actor": "Lovable generation result supplied by Mik; Codex verifies source diff",
+    "evidence": "Platform819fd123 preserves automatic Cloud-derived type declarations after0005; adds F private function/single8-argument command surface. Source diff verified locally; generated declarations confer no EXECUTE privileges. No local regeneration or deployment.",
+    "reporting_actor": "Mik supplied hosted evidence; Codex recording",
     "directly_verified": false
   },
   "edge_function_deployments": [
@@ -366,6 +377,17 @@
       "status": "deployed",
       "identity": "progression-command — 001E deployment after canonical R2 repair",
       "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Reviewed local index.ts SHA9e6fe90de54ad2ecb0e92af55811631798ad2f69a9e947303abf03dbb60cfc7a;shared handler SHA15dd370b3ee6e816179c04e23d2191fd2c27d4d0a86fbdb57fc7e6c0cca9dbd4. Full local release identities match supplied9e6fe90d…/15dd370b… abbreviations; no platform revision ID or direct deployed-source retrieval."
+    },
+    {
+      "identity": "progression-command 001F release NOT DEPLOYED",
+      "status": "authored",
+      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+      "timestamp": "2026-10-07T18:34:56.637Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted evidence; Codex recording",
+      "directly_verified": false,
+      "evidence": "F consumer source is prepared, but Mik explicitly reports F Edge NOT DEPLOYED. Prior E deployment evidence is historical and preserved. E/F commands remain paused; no R1 runtime/Edge source change or deployment.",
+      "artifact": "supabase/functions/progression-command/index.ts"
     }
   ],
   "frontend_publication": {
@@ -1200,17 +1222,27 @@
       "evidence": "ENG-PROGRESSION-001D ACTIVATED / NATURAL RUNTIME PATH NOT YET OBSERVED. Window 2026-10-06 15:46:49-15:47:36 UTC. Pre-activation invariants held read-only: Drizzle rows 1-3 (0002 hash 680915c6...637f current); combat2_apply_claim_progression_internal postgres/SECURITY DEFINER/pg_catalog,public/{postgres=X}; node_tick_commit_without_bounded_failure SHA-256 6beb54b1...42fe (reviewed replacement); only node_tick_commit has service_role in the five-function chain; apply_crafting_xp and all 001C primitives {postgres=X/postgres}; 0 cron jobs, 0 claim tokens, one stale active encounter last changed 2026-10-02 12:29:58. Only operational change: combat_config.combat_mode maintenance -> open. combat_soak unchanged (off). world_state unchanged (asleep since 2026-10-02 12:30:00); waking stays on the normal player-presence path, not forced. Dispatcher is no longer refused for maintenance; while asleep it is refused as world_asleep by normal design. No natural Combat2 tick occurred; runtime execution of the newly installed path has NOT yet been naturally observed. Post-activation: apply_crafting_xp ACL {postgres=X/postgres}; Drizzle still 3 rows; no ACL/function/migration change; no Edge deployment; forge-craft-base, forge-apply-gem, stonebinder-fuse and ordinary admin grant-xp pauses untouched; set-level/update-character not invoked; no rollback. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN.",
       "reporting_actor": "Lovable platform record supplied by Mik; locally reconciled by Codex",
       "directly_verified": false
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F service_role characters UPDATE regression",
+      "status": "blocked",
+      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+      "timestamp": "2026-10-07T18:34:56.637Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted evidence; Codex recording",
+      "directly_verified": false,
+      "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md."
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "448883efbbb5887e0033e4c987d153dfb8bfb7b3",
-    "timestamp": "2026-10-07T12:25:43.162Z",
+    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+    "timestamp": "2026-10-07T18:34:56.637Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — F locally implemented/prepared, ready for separately authorized hosted installation; no hosted next task authorized.",
-    "evidence": "Local implementation and preparation authorization is complete. Any future hosted installation, Edge deployment/verification, E/F family activation and Mik frontend publication require separate authorization. Keep progression_command_control.enabled=false through future installation and Edge verification. No G/H, RP earning or equipment redesign is authorized. Retained runtime/probe limitations remain unknown."
+    "evidence": "R1 local preparation/validation/normal commit and push only. Then STOP. Future standard hosted ACL repair and verification require separate authorization; do not install R1,deploy F Edge,activate,publish or begin001G/H.",
+    "artifact": "STOP — 001F-R1 prepared for separately authorized narrow hosted ACL repair; 001F installed/verification blocked."
   },
   "volatile_runtime_observations": [
     {
@@ -1472,6 +1504,16 @@
       "reporting_actor": "Mik supplied implementation request; Codex local recording",
       "directly_verified": false,
       "evidence": "Request supplies pgcrypto1.3 in extensions with HMAC/random bytes, no suitable owner-only key facility, raw service RP/rank/lifetime gap to contain, canonical Combat2 XP/gold only, retained legacy RP writers owner-only/unreachable ordinary/service, four historical trained-rank characters opaque and not migration targets. character_inventory_action serializes on character; service-callable degrade_party_member_equipment can unequip without character lock and has no installed SQL caller. RP EARNING AUTHORITY GAP and equipment writer gap separately deferred. This undated supplied preflight is not a fresh Codex Cloud inspection or current safe operating-window assertion."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F supplied installation/blocked verification",
+      "status": "unknown",
+      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+      "timestamp": "2026-10-07T18:34:56.637Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted evidence; Codex recording",
+      "directly_verified": false,
+      "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. Historical supplied observation,not a freshly inspected safe operating window."
     }
   ],
   "product_backlog": [

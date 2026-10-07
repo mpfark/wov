@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001F — Implementation and release plan
 
+Current status: **001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION**. [R1 corrective preparation](../operations/progression-001F-R1-service-update-repair.md) preserves the installed authority and prepares a separately authorized forward ACL repair. F Edge not deployed, commands paused, frontend not published. This plan's stages below retain historical local-preparation evidence; no rollback/rewrite or001G/H is planned or authorized.
+
 **IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE.**
 2026-10-07, task start448883ef. The ENG-PROGRESSION-001F-IMPLEMENT request
 authorizes local preparation and normal commit/push, and supplies accepted decisions

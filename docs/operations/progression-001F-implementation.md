@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001F — Canonical Renown and safe respec preparation
 
+Current state supersedes this historical preparation report: **001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED**. Supplied hosted evidence and the narrow local forward repair are recorded in [001F-R1](progression-001F-R1-service-update-repair.md). Original reviewed SQL/manifest and0005 remain frozen; the preparation statuses and validation below describe the earlier release checkpoint, not current installation state. F is not CLOSED.
+
 ENG-PROGRESSION-001F IMPLEMENTED LOCALLY / PREPARED
 READY FOR SEPARATELY AUTHORIZED HOSTED INSTALLATION
 NOT INSTALLED / NOT ACTIVE
