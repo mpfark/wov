@@ -12,3 +12,8 @@ src/features/character/components/OrderRecruiterDialog.tsx text eol=lf
 src/features/character/components/StatPlannerDialog.tsx text eol=lf
 src/features/character/components/TrainerPanel.tsx text eol=lf
 src/pages/GamePage.tsx text eol=lf
+
+# Exact R2 forward repair release bytes.
+docs/operations/progression-001E-R2-xp-body-repair.sql text eol=lf
+docs/operations/progression-001E-R2-manifest.json text eol=lf
+scripts/prepare-progression-001E-R2.mjs text eol=lf

@@ -1,10 +1,15 @@
 # ENG-PROGRESSION-001E — Local implementation and prepared cutover
 
-**ENG-PROGRESSION-001E IMPLEMENTED LOCALLY / PREPARED — NOT INSTALLED / NOT ACTIVE.**
+**CURRENT (operator-reported): INSTALLED / CONTAINMENT VERIFIED / XP BODY IDENTITY RECONCILIATION REQUIRED / EDGE NOT DEPLOYED / TRAINER-ORDER COMMANDS PAUSED.**
+
+2026-10-07 R2: [Exact XP body forward repair prepared](progression-001E-R2-reconciliation.md).
+The second R1 attempt installed with one extra leading space on line340; containment
+passed and character fingerprint was unchanged. R2 is prepared only; no hosted work
+or deployment is authorized. The earlier preparation and R1 account below is historical.
 
 2026-10-07 R1: **RECONCILED LOCALLY / READY FOR HOSTED INSTALL RETRY**. The first
 hosted attempt fully rolled back at the over-broad final sidecar assertion; no
-installation or Edge deployment remains. The [R1 reconciliation](progression-001E-R1-reconciliation.md)
+installation or Edge deployment remained after that first attempt. The [R1 reconciliation](progression-001E-R1-reconciliation.md)
 records supplied evidence, the precise repaired invariant and current acceptance.
 Hosted retry is not authorized by the local R1 task.
 
@@ -22,7 +27,8 @@ stance decision remains 001F; no automatic stance cleanup is introduced.
 
 ## Exact DB release artifact
 
-One atomic standard Lovable Drizzle transaction must apply
+Historical prepared release (now installed with the documented one-space deviation;
+do not replay). The original handoff required one atomic standard Lovable Drizzle transaction to apply
 [progression-001E-cutover.sql](progression-001E-cutover.sql).
 
 | Identity | SHA-256 | UTF-8 bytes | LF lines |

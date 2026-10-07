@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T08:43:18.960Z",
-  "based_on_source_sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
+  "updated_at": "2026-10-07T09:25:49.552Z",
+  "based_on_source_sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
-    "timestamp": "2026-10-07T08:43:18.960Z",
+    "sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
+    "timestamp": "2026-10-07T09:25:49.552Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "ENG-PROGRESSION-001E R1 RECONCILED LOCALLY / READY FOR HOSTED INSTALL RETRY / NOT INSTALLED / NOT ACTIVE",
-    "evidence": "R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately."
+    "artifact": "ENG-PROGRESSION-001E-R2 PREPARED — installed E containment operator-verified; XP identity repair required; Edge undeployed/commands paused",
+    "evidence": "R2 PREPARED / READY FOR NARROW HOSTED XP BODY RECONCILIATION / EDGE NOT DEPLOYED / COMMANDS PAUSED. Only XP function forward replacement, no full E replay. Canonical CRLF-to-LF-only prosrc SHA9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde;known deviated SHA962c01151256ab2eec3b30ed3dbd2ba449d59745cf5ca8cf760911c1f502561d. Repair SQL SHA22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF. Exact body/signature/default/language/security/search_path/owner/direct/effective ACL guards; unknown drift aborts, canonical repeat safe. R2SQL8,focused252,E SQL22/Combat2chain11,Dintegration9/containment6 pass; all four typechecks/build pass;full2730pass/18 identical baseline failure identities. No Edge/browser/gameplay change,hosted access,installation,deployment,activation,publication or F/G/H. Historical R1/0003/journal/snapshot retained; remote generated types preserved. See progression-001E-R2-reconciliation.md. Final commit/push identity reported separately."
   },
   "database_migrations": [
     {
@@ -233,6 +233,26 @@
       "directly_verified": true,
       "identity": "docs/operations/progression-001E-cutover.sql (prepared operations artifact)",
       "evidence": "R1 PREPARED / NOT INSTALLED. R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately. Historical attempted SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266,40840 bytes,451 LF lines at06c888eb fully rolled back per supplied evidence. Retry requires NEW explicit authorization; no journal/frozen migration change."
+    },
+    {
+      "status": "installed",
+      "sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
+      "timestamp": "2026-10-07T09:25:49.552Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted installation evidence; Codex local reconciliation",
+      "directly_verified": false,
+      "identity": "0003_progression_001e_command_authority.sql — installed with one-space XP body deviation",
+      "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a…9968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved."
+    },
+    {
+      "status": "authored",
+      "sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
+      "timestamp": "2026-10-07T09:25:49.552Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "docs/operations/progression-001E-R2-xp-body-repair.sql (prepared forward operations artifact)",
+      "evidence": "R2 PREPARED / READY FOR NARROW HOSTED XP BODY RECONCILIATION / EDGE NOT DEPLOYED / COMMANDS PAUSED. Only XP function forward replacement, no full E replay. Canonical CRLF-to-LF-only prosrc SHA9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde;known deviated SHA962c01151256ab2eec3b30ed3dbd2ba449d59745cf5ca8cf760911c1f502561d. Repair SQL SHA22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF. Exact body/signature/default/language/security/search_path/owner/direct/effective ACL guards; unknown drift aborts, canonical repeat safe. R2SQL8,focused252,E SQL22/Combat2chain11,Dintegration9/containment6 pass; all four typechecks/build pass;full2730pass/18 identical baseline failure identities. No Edge/browser/gameplay change,hosted access,installation,deployment,activation,publication or F/G/H. Historical R1/0003/journal/snapshot retained; remote generated types preserved. See progression-001E-R2-reconciliation.md. Final commit/push identity reported separately."
     }
   ],
   "generated_supabase_types": {
@@ -967,6 +987,16 @@
       "directly_verified": true,
       "identity": "ENG-PROGRESSION-001E-R1 local sidecar containment assertion reconciliation",
       "evidence": "R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately."
+    },
+    {
+      "status": "authored",
+      "sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
+      "timestamp": "2026-10-07T09:25:49.552Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "ENG-PROGRESSION-001E-R2 exact XP body reconciliation preparation",
+      "evidence": "R2 PREPARED / READY FOR NARROW HOSTED XP BODY RECONCILIATION / EDGE NOT DEPLOYED / COMMANDS PAUSED. Only XP function forward replacement, no full E replay. Canonical CRLF-to-LF-only prosrc SHA9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde;known deviated SHA962c01151256ab2eec3b30ed3dbd2ba449d59745cf5ca8cf760911c1f502561d. Repair SQL SHA22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF. Exact body/signature/default/language/security/search_path/owner/direct/effective ACL guards; unknown drift aborts, canonical repeat safe. R2SQL8,focused252,E SQL22/Combat2chain11,Dintegration9/containment6 pass; all four typechecks/build pass;full2730pass/18 identical baseline failure identities. No Edge/browser/gameplay change,hosted access,installation,deployment,activation,publication or F/G/H. Historical R1/0003/journal/snapshot retained; remote generated types preserved. See progression-001E-R2-reconciliation.md. Final commit/push identity reported separately."
     }
   ],
   "known_blockers": [
@@ -1124,12 +1154,12 @@
   "next_approved_task": {
     "status": "authored",
     "sha": null,
-    "timestamp": "2026-10-07T08:43:18.960Z",
+    "timestamp": "2026-10-07T09:25:49.552Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — R1 reconciled locally. Hosted install retry requires NEW explicit authorization.",
-    "evidence": "Recommended next task: verify exact R1 checkpoint/manifest and fresh dependency/role/operational evidence; separately authorize one standard Drizzle retry and installation/rollback verification. R1 authorizes no hosted access or retry. Edge deployment/verification and activation/publication remain separate; command control remains disabled. Mik alone publishes frontend. No automatic F/G/H. Retain natural-runtime-unobserved and hosted-multi-session-unproven limitations."
+    "artifact": "STOP — R2 prepared. New authorization required for narrow hosted XP body reconciliation; no Edge deployment or activation authorized.",
+    "evidence": "Recommended next separately authorized task: exact R2 artifact/manifest review and fresh known-body/security/ACL/paused-control/operational preflight; one standard Drizzle forward repair; exact canonical prosrc/security identity,ledger and untouched-object/data/control verification. No full E replay or rollback. Unknown drift stops. Edge deployment is gated on successful reconciliation and separate authorization; activation/publication remain separate;Mik alone publishes. No automatic F/G/H. Retain natural runtime unobserved and hosted multi-session unproven."
   },
   "volatile_runtime_observations": [
     {
@@ -1361,6 +1391,16 @@
       "reporting_actor": "Mik supplied hosted attempt; Codex local reconciliation",
       "directly_verified": false,
       "evidence": "One standard Lovable Drizzle attempt using historical SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266 (40840 bytes/451 LF lines). All preguards passed; final assert raised 001E effective sidecar containment failed; entire transaction rolled back. Supplied verification: new growth/control tables and command/projection absent,Drizzle exactly0000/0001/0002,no migration/journal,Edge deployment,data change or repository change. Specific matching hosted role not inspected/UNKNOWN. Pre-attempt21chars17bonds70inventory7node encounters50encounters,C sidecars0/0/0,world asleep,zero schedules/live claims,314departures moved,modeopen,soakoff,no automatic fighttick; controls unchanged. Historical supplied evidence, not a fresh operational assertion or direct Codex hosted inspection."
+    },
+    {
+      "status": "unknown",
+      "sha": "26b7a9d8924159840d79ce40e15fc8d8f1767540",
+      "timestamp": "2026-10-07T09:25:49.552Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted installation evidence; Codex local reconciliation",
+      "directly_verified": false,
+      "identity": "ENG-PROGRESSION-001E second R1 installation — supplied containment and paused controls",
+      "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a…9968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved. Supplied historical post-install evidence recorded2026-10-07;not a fresh current safe-window assertion."
     }
   ],
   "product_backlog": [

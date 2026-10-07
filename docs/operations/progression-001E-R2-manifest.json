@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "canonicalSource": {
+    "path": "docs/operations/progression-001E-cutover.sql",
+    "sha256": "734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40"
+  },
+  "normalization": "prosrc UTF-8; CRLF to LF only; no trim or whitespace collapse",
+  "canonicalProsrcSha256": "9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde",
+  "knownDeviatedProsrcSha256": "962c01151256ab2eec3b30ed3dbd2ba449d59745cf5ca8cf760911c1f502561d",
+  "modeledDeviatedMigrationSha256": "225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968",
+  "canonicalPgGetFunctiondefSha256": "aef765cf2e6432561035449883f23bde55bab494582047077cc79c4c36cd95a9",
+  "pgGetFunctiondefScope": "Local PGlite PostgreSQL renderer diagnostic only; guards use exact normalized prosrc plus full security/signature/ACL metadata",
+  "artifacts": [
+    {
+      "path": "docs/operations/progression-001E-R2-xp-body-repair.sql",
+      "sha256": "22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b",
+      "bytes": 11776,
+      "lines": 137
+    },
+    {
+      "path": "scripts/prepare-progression-001E-R2.mjs",
+      "sha256": "11c5e0ea4474866fc54a0e3bb2a884f1f0c374b79a61e71837a60504070c1d42"
+    }
+  ]
+}
