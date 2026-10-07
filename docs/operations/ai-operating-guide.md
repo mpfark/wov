@@ -6,6 +6,8 @@ Begin with the [project understanding and document map](../design/project-unders
 
 Lovable may install migrations, regenerate Cloud-derived types, or deploy Edge Functions only when explicitly authorized. Lovable and every other AI must leave frontend publication to Mik and describe it as “ready for Mik's manual publication.”
 
+Future database/backend tasks must also follow the [Lovable/Supabase operating contract](lovable-supabase-operating-contract.md): local versus hosted proof boundaries, capability-based platform-role containment, standard hosted-only operations, known verification limits and metadata-only secret verification. Never request secret material, hashes, prefixes or environment/session values from Lovable.
+
 ## Migration history and runner policy
 
 Mik approved moving away from historical Supabase-ledger normalization as a future-authority prerequisite. Preserve Supabase/Drizzle historical artifacts and production data; no replay, cosmetic rekeying or falsified execution. The accepted [B2 model](migration-baseline-strategy.md) uses Lovable's standard custom-SQL Drizzle lane, drizzle/migrations/journal and drizzle.__drizzle_migrations, excluding Supabase files/history and treating installed state as implicit base. [H0-FINAL](progression-001B-h0-evidence-report.md) confirmed prefix integrity and operational legacy-route freeze at2026-10-04 22:33:30UTC, accepted by Mik22:39UTC; H0 is CLOSED. Each hosted migration still needs scoped review and explicit authorization; closure is not mutation approval.

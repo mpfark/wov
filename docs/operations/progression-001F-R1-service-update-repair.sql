@@ -126,8 +126,18 @@ BEGIN
  AND (c.relowner<>'postgres'::regrole OR NOT c.relrowsecurity OR EXISTS(SELECT 1 FROM pg_policy WHERE polrelid=c.oid)
  OR EXISTS(SELECT 1 FROM aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a WHERE a.grantee<>c.relowner)
  OR EXISTS(SELECT 1 FROM pg_attribute col,LATERAL aclexplode(col.attacl) a WHERE col.attrelid=c.oid AND a.grantee<>c.relowner)))
- OR EXISTS(SELECT 1 FROM pg_roles r WHERE NOT r.rolsuper AND r.rolname NOT IN('postgres','pg_read_all_data','pg_write_all_data') AND
- (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES')))
+ -- 001E-R1 precedent: administrative global capabilities are not direct object ACL leaks.
+ -- Gameplay/application members are never exempt, including superuser/BYPASSRLS/global authority.
+ OR EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname<>'postgres'
+ AND (r.rolname IN('anon','authenticated','service_role')
+  OR EXISTS(WITH RECURSIVE application_members(oid) AS (
+   SELECT oid FROM pg_roles WHERE rolname IN('anon','authenticated','service_role')
+   UNION SELECT membership.member FROM pg_auth_members membership JOIN application_members application ON membership.roleid=application.oid)
+   SELECT 1 FROM application_members WHERE oid=r.oid)
+  OR (NOT r.rolsuper AND NOT r.rolbypassrls AND NOT EXISTS(
+   SELECT 1 FROM pg_roles authority WHERE authority.rolname IN('pg_read_all_data','pg_write_all_data') AND pg_has_role(r.oid,authority.oid,'USAGE'))))
+ AND (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+  OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES')))
  THEN RAISE EXCEPTION 'R1 sidecar/key containment drift'; END IF;
  IF (SELECT array_agg(attname::text||':'||format_type(atttypid,atttypmod)||':'||attnotnull::text||':'||attnum::text ORDER BY attname) FROM pg_attribute WHERE attrelid='public.progression_renown_key'::regclass AND attnum>0 AND NOT attisdropped) IS DISTINCT FROM ARRAY['active:boolean:true:2','key_material:bytea:true:3','key_version:integer:true:1']
  OR (SELECT count(*) FROM pg_constraint WHERE conrelid='public.progression_renown_key'::regclass)<>3

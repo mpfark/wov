@@ -5,7 +5,8 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {readdirSync} from 'node:fs';
 import ts from 'typescript';
-import {payload,columns,protectedColumns,unprotectedColumns,browserColumns,read,check} from './prepare-progression-001F-R1.mjs';
+import {execFileSync} from 'node:child_process';
+import {payload,columns,protectedColumns,unprotectedColumns,browserColumns,read,check,keyEffectiveLeakPredicate} from './prepare-progression-001F-R1.mjs';
 import {definition,dependencies,payload as ePayload} from './prepare-progression-001E.mjs';
 import {payload as fPayload} from './prepare-progression-001F.mjs';
 const {PGlite}=await import(pathToFileURL(resolve(process.argv[2])).href);
@@ -132,4 +133,53 @@ test('09 complete current Edge direct characters UPDATE writer inventory and rev
  for(const c of ['gold','hp','current_node_id','portrait_url','portrait_metadata','portrait_generated_at','name','max_hp','ac','gender','max_cp','cp','max_mp','mp'])assert.ok(unprotectedColumns.includes(c),c);
  const portrait=read('supabase/functions/ai-character-portrait/index.ts').match(/\.update\(\{([\s\S]*?)\}\)/)[1];
  assert.deepEqual([...portrait.matchAll(/^\s*(\w+):/gm)].map(m=>m[1]).sort(),['portrait_generated_at','portrait_metadata','portrait_url']);
+});
+const keyAssertion=`DO $$ BEGIN IF ${keyEffectiveLeakPredicate} THEN RAISE EXCEPTION 'key effective leak'; END IF; END $$;`;
+test('10 inherited global reader/writer, transitive administration and BYPASSRLS pass without object grants',async()=>{
+ await rollback(async()=>{
+  await db.exec(`CREATE ROLE platform_bridge;GRANT pg_read_all_data TO platform_bridge;
+   CREATE ROLE renamed_platform_reader BYPASSRLS;GRANT platform_bridge TO renamed_platform_reader;
+   CREATE ROLE renamed_platform_etl BYPASSRLS;GRANT pg_read_all_data TO renamed_platform_etl;
+   CREATE ROLE platform_privileged_group;GRANT platform_privileged_group TO renamed_platform_etl;
+   CREATE ROLE global_writer;GRANT pg_write_all_data TO global_writer;
+   CREATE ROLE bypass_only BYPASSRLS;CREATE ROLE platform_superuser SUPERUSER;
+   CREATE ROLE global_noinherit NOINHERIT;GRANT pg_read_all_data TO global_noinherit;`);
+  assert.equal((await q("SELECT has_table_privilege('renamed_platform_reader','progression_renown_key','SELECT') v"))[0].v,true);
+  assert.equal((await q("SELECT has_table_privilege('global_writer','progression_renown_key','UPDATE') v"))[0].v,true);
+  assert.equal((await q("SELECT has_table_privilege('bypass_only','progression_renown_key','SELECT') v"))[0].v,false);
+  assert.equal((await q("SELECT pg_has_role('global_noinherit','pg_read_all_data','USAGE') v"))[0].v,false);
+  const old=`DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles r WHERE NOT r.rolsuper AND r.rolname NOT IN('postgres','pg_read_all_data','pg_write_all_data') AND
+   (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES'))) THEN RAISE EXCEPTION 'old administrative false failure'; END IF; END $$;`;
+  await db.exec('SAVEPOINT old_role_assertion');await assert.rejects(db.exec(old),/old administrative false failure/);await db.exec('ROLLBACK TO SAVEPOINT old_role_assertion;RELEASE SAVEPOINT old_role_assertion');
+  await db.exec(keyAssertion);await db.exec(payload());
+ });
+});
+test('11 gameplay principals never exempt from inherited global read/write or administrative attributes',async()=>{
+ for(const role of ['anon','authenticated','service_role'])for(const global of ['pg_read_all_data','pg_write_all_data'])await rollback(async()=>{
+  await db.exec(`GRANT ${global} TO ${role};ALTER ROLE ${role} BYPASSRLS`);
+  await assert.rejects(db.exec(keyAssertion),/key effective leak/);
+ });
+ await rollback(async()=>{await db.exec('ALTER ROLE anon SUPERUSER');await assert.rejects(db.exec(keyAssertion),/key effective leak/);});
+});
+test('12 direct key column/table/PUBLIC grants fail for application, ordinary and administrative principals',async()=>{
+ for(const role of ['anon','authenticated','service_role','custom_default','PUBLIC','pg_read_all_data'])for(const grant of ['SELECT','SELECT(key_material)'])await rollback(async()=>{
+  await db.exec(`GRANT ${grant} ON progression_renown_key TO ${role}`);
+  await assert.rejects(db.exec(payload()),/containment drift/);
+ });
+});
+test('13 application members never exempt, including transitive global authority or BYPASSRLS',async()=>{
+ await rollback(async()=>{
+  await db.exec('CREATE ROLE app_bridge;CREATE ROLE unexpected_app_leaf BYPASSRLS;GRANT authenticated TO app_bridge;GRANT app_bridge TO unexpected_app_leaf;GRANT pg_read_all_data TO unexpected_app_leaf;');
+  await assert.rejects(db.exec(keyAssertion),/key effective leak/);
+ });
+ await rollback(async()=>{await db.exec('CREATE ROLE actual_app_superuser SUPERUSER;GRANT authenticated TO actual_app_superuser');await assert.rejects(db.exec(keyAssertion),/key effective leak/);});
+ await rollback(async()=>{await db.exec('CREATE ROLE owner_bridge;GRANT postgres TO owner_bridge');await assert.rejects(db.exec(keyAssertion),/key effective leak/);});
+});
+test('14 revision changes only the reviewed key effective-role predicate; ACL repair and partition byte-identical',()=>{
+ const old=execFileSync('git',['show','10882d087b4e9197f455ee967de6570aa7d78f37:docs/operations/progression-001F-R1-service-update-repair.sql'],{encoding:'utf8'});
+ const original=" OR EXISTS(SELECT 1 FROM pg_roles r WHERE NOT r.rolsuper AND r.rolname NOT IN('postgres','pg_read_all_data','pg_write_all_data') AND\n (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES')))";
+ const revised=` -- 001E-R1 precedent: administrative global capabilities are not direct object ACL leaks.\n -- Gameplay/application members are never exempt, including superuser/BYPASSRLS/global authority.\n OR ${keyEffectiveLeakPredicate}`;
+ assert.equal(old.split(original).length,2);assert.equal(payload().split(revised).length,2);
+ assert.equal(payload().replace(revised,'<key role predicate>'),old.replace(original,'<key role predicate>'));
+ assert.doesNotMatch(payload(),/supabase_read_only_user|supabase_etl_admin/);
 });

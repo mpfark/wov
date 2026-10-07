@@ -1,7 +1,14 @@
 {
-  "status": "prepared_only",
-  "task_start_sha": "b8c18c90b1b5a5532244b76c41568a15986a0cfe",
-  "source_baseline": "491677c891c22f81dab261b7c970dc044ad62bf3",
+  "status": "revised_prepared_only",
+  "revision": "ENG-PROGRESSION-001F-R1A",
+  "task_start_sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+  "source_baseline": "10882d087b4e9197f455ee967de6570aa7d78f37",
+  "previous_attempt": {
+    "status": "failed_precondition_full_rollback",
+    "sha256": "a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a",
+    "bytes": 21577,
+    "lf_lines": 182
+  },
   "future_migration": "progression_001f_r1_restore_unprotected_service_updates",
   "inventory_source": "src/integrations/supabase/types.ts characters.Row at source_baseline; historical broad service UPDATE covered all existing columns",
   "protectedColumns": [
@@ -126,9 +133,9 @@
   ],
   "artifact": {
     "path": "docs/operations/progression-001F-R1-service-update-repair.sql",
-    "sha256": "a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a",
-    "bytes": 21577,
-    "lf_lines": 182
+    "sha256": "04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f",
+    "bytes": 22309,
+    "lf_lines": 192
   },
   "files": [
     {
@@ -137,11 +144,11 @@
     },
     {
       "path": "scripts/prepare-progression-001F-R1.mjs",
-      "sha256": "75ea1a79fa6f1dc9816b2918cb9ebda46beaf0c18ae22bfbc9baddc10f5631b9"
+      "sha256": "3be83a33281adba17bb6675d44c834fa139e8ddded48e38758f05cf175fffc72"
     },
     {
       "path": "scripts/progression-001F-R1-sql.test.mjs",
-      "sha256": "b7307e3884bffcd9bef2d287f8a97f170c7bb55e4def6e94d8f9bb868eeada1a"
+      "sha256": "e0adaddf276392f52457e62e9a431eefd8691b1e54a377c97c28aa37e4bbc9eb"
     }
   ]
 }

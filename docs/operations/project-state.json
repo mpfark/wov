@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T18:34:56.637Z",
-  "based_on_source_sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
+  "updated_at": "2026-10-07T19:54:15.509Z",
+  "based_on_source_sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-    "timestamp": "2026-10-07T18:34:56.637Z",
+    "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+    "timestamp": "2026-10-07T19:54:15.509Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "ENG-PROGRESSION-001F-R1 PREPARED; 001F INSTALLED / VERIFICATION BLOCKED",
-    "evidence": "ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md."
+    "artifact": "ENG-PROGRESSION-001F-R1 REVISED / PREPARED; HOSTED ATTEMPT 1 ROLLED BACK CLEANLY",
+    "evidence": "ENG-PROGRESSION-001F-R1 REVISED / PREPARED under001F-R1A. Only key effective-role predicate changed using established001E-R1 authority classification; gameplay roles/transitive members never exempt,direct nonowner table/column ACLs always rejected. Actual15/38 repair and every other SQL byte unchanged. SQL 04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF. Future migration name unchanged,outside discovery. Operating contract docs/operations/lovable-supabase-operating-contract.md referenced by AI guide. No key material selected/hashed/prefixed/printed. R1 ACL14 incl inherited-admin/direct-leak/byte-preservation regressions,F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 all pass. Focused276/state3/browser21 pass; four typechecks/build pass; full maxWorkers2:2751pass/18fail,exact same failure identities as accepted R1/F baselines,no new failure. Deterministic manifest and migration/journal/types/runtime preservation pass. 001F INSTALLED / VERIFICATION BLOCKED; R1 NOT INSTALLED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. Neither F nor R1 CLOSED. No Codex hosted work/install/deploy/activation/publication/G/H."
   },
   "database_migrations": [
     {
@@ -278,12 +278,12 @@
     {
       "identity": "ENG-PROGRESSION-001F-R1 ACL repair artifact",
       "status": "authored",
-      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-      "timestamp": "2026-10-07T18:34:56.637Z",
+      "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+      "timestamp": "2026-10-07T19:54:15.509Z",
       "evidence_type": "repository",
       "reporting_actor": "Codex",
       "directly_verified": true,
-      "evidence": "ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md.",
+      "evidence": "ENG-PROGRESSION-001F-R1 REVISED / PREPARED under001F-R1A. Only key effective-role predicate changed using established001E-R1 authority classification; gameplay roles/transitive members never exempt,direct nonowner table/column ACLs always rejected. Actual15/38 repair and every other SQL byte unchanged. SQL 04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF. Future migration name unchanged,outside discovery. Operating contract docs/operations/lovable-supabase-operating-contract.md referenced by AI guide. No key material selected/hashed/prefixed/printed. R1 ACL14 incl inherited-admin/direct-leak/byte-preservation regressions,F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 all pass. Focused276/state3/browser21 pass; four typechecks/build pass; full maxWorkers2:2751pass/18fail,exact same failure identities as accepted R1/F baselines,no new failure. Deterministic manifest and migration/journal/types/runtime preservation pass. 001F INSTALLED / VERIFICATION BLOCKED; R1 NOT INSTALLED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. Neither F nor R1 CLOSED. No Codex hosted work/install/deploy/activation/publication/G/H.",
       "artifact": "docs/operations/progression-001F-R1-service-update-repair.sql"
     }
   ],
@@ -1226,23 +1226,23 @@
     {
       "identity": "ENG-PROGRESSION-001F service_role characters UPDATE regression",
       "status": "blocked",
-      "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-      "timestamp": "2026-10-07T18:34:56.637Z",
+      "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+      "timestamp": "2026-10-07T19:54:15.509Z",
       "evidence_type": "operator_reported",
       "reporting_actor": "Mik supplied hosted evidence; Codex recording",
       "directly_verified": false,
-      "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. ENG-PROGRESSION-001F-R1 PREPARED / READY FOR NARROW HOSTED ACL REPAIR. Deterministic ACL-only forward artifact outside discovery; exact53-column inventory,protected15 denied,unprotected38 restored after table revoke and protected revoke; guarded installed F identity/controlfalse/browser/private/key metadata,no secret reads or gameplay writes. Local PGlite0.3.14/PostgreSQL17.5 reproduces table REVOKE clearing preceding column UPDATE; original F tests missed positive unrelated privileges,not an observed engine semantic mismatch. Nine R1 tests including actual DML/15 protected denials and writer inventory pass; existing F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 pass. Typechecks/build pass; Focused276/state3/browser21 pass; full at maxWorkers2:2751pass/18fail,exactly the accepted F baseline18 failure identities,no new failures. SQL a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF; deterministic manifest and migration/journal/types/runtime preservation checks pass. Current F INSTALLED / VERIFICATION BLOCKED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. No hosted work,installation,deploy,activation,publication,G/H. Report docs/operations/progression-001F-R1-service-update-repair.md."
+      "evidence": "R1 HOSTED ATTEMPT 1: FAILED PRECONDITION / FULL TRANSACTION ROLLBACK. Mik supplies Lovable report at source10882d087b4e9197f455ee967de6570aa7d78f37: attempted a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF raised P0001 in sidecar/key precondition before ACL repair. Drizzle remains six entries through0005; no R1 migration file/history entry/commit or ACL repair survived. Service still lacks characters table/column UPDATE; controlfalse; no data mutation,Edge deployment,activation or frontend publication. supabase_read_only_user/supabase_etl_admin inherit pg_read_all_data and have BYPASSRLS; latter also member supabase_privileged_role. Key postgres-owned,RLS,no policies,no direct nonowner table/column grants. Over-broad inherited-global-role assertion,not an object-level leak. Execution timestamp not supplied; this is the local recording timestamp,not fresh Codex hosted inspection. ENG-PROGRESSION-001F-R1 REVISED / PREPARED under001F-R1A. Only key effective-role predicate changed using established001E-R1 authority classification; gameplay roles/transitive members never exempt,direct nonowner table/column ACLs always rejected. Actual15/38 repair and every other SQL byte unchanged. SQL 04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF. Future migration name unchanged,outside discovery. Operating contract docs/operations/lovable-supabase-operating-contract.md referenced by AI guide. No key material selected/hashed/prefixed/printed. R1 ACL14 incl inherited-admin/direct-leak/byte-preservation regressions,F39/Fchain12,C16,D9/Dcontainment6,E22/Echain11/ER111/ER28/audit5 all pass. Focused276/state3/browser21 pass; four typechecks/build pass; full maxWorkers2:2751pass/18fail,exact same failure identities as accepted R1/F baselines,no new failure. Deterministic manifest and migration/journal/types/runtime preservation pass. 001F INSTALLED / VERIFICATION BLOCKED; R1 NOT INSTALLED; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP. Neither F nor R1 CLOSED. No Codex hosted work/install/deploy/activation/publication/G/H."
     }
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-    "timestamp": "2026-10-07T18:34:56.637Z",
+    "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+    "timestamp": "2026-10-07T19:54:15.509Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "R1 local preparation/validation/normal commit and push only. Then STOP. Future standard hosted ACL repair and verification require separate authorization; do not install R1,deploy F Edge,activate,publish or begin001G/H.",
-    "artifact": "STOP — 001F-R1 prepared for separately authorized narrow hosted ACL repair; 001F installed/verification blocked."
+    "evidence": "R1A authorizes local assertion revision/validation/normal commit and push only. Hosted attempt1 rolled back completely. Any retry must be separately re-authorized. Do not install R1,deploy Edge,activate commands,publish frontend or begin001G/H.",
+    "artifact": "STOP — R1 revised/prepared; ready for RE-AUTHORIZED narrow hosted ACL repair; F verification blocked."
   },
   "volatile_runtime_observations": [
     {
@@ -1514,6 +1514,16 @@
       "reporting_actor": "Mik supplied hosted evidence; Codex recording",
       "directly_verified": false,
       "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. Historical supplied observation,not a freshly inspected safe operating window."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001F-R1 hosted attempt 1 — failed precondition/full rollback",
+      "status": "unknown",
+      "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
+      "timestamp": "2026-10-07T19:54:15.509Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied Lovable report; Codex local recording",
+      "directly_verified": false,
+      "evidence": "R1 HOSTED ATTEMPT 1: FAILED PRECONDITION / FULL TRANSACTION ROLLBACK. Mik supplies Lovable report at source10882d087b4e9197f455ee967de6570aa7d78f37: attempted a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF raised P0001 in sidecar/key precondition before ACL repair. Drizzle remains six entries through0005; no R1 migration file/history entry/commit or ACL repair survived. Service still lacks characters table/column UPDATE; controlfalse; no data mutation,Edge deployment,activation or frontend publication. supabase_read_only_user/supabase_etl_admin inherit pg_read_all_data and have BYPASSRLS; latter also member supabase_privileged_role. Key postgres-owned,RLS,no policies,no direct nonowner table/column grants. Over-broad inherited-global-role assertion,not an object-level leak. Execution timestamp not supplied; this is the local recording timestamp,not fresh Codex hosted inspection."
     }
   ],
   "product_backlog": [

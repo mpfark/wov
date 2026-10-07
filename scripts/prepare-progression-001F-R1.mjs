@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-export const baseline='491677c891c22f81dab261b7c970dc044ad62bf3';
+export const baseline='10882d087b4e9197f455ee967de6570aa7d78f37';
 export const protectedColumns=['str','dex','con','int','wis','cha','level','xp','class','is_classless','unspent_stat_points','respec_points','bhp','bhp_trained','rp_total_earned'];
 // Reviewed generated Cloud Row inventory at baseline; never expand dynamically at installation.
 export const columns=['ac','active_contract','bhp','bhp_trained','cha','class','combat_trace_enabled','con','contracts_completed','cp','created_at','crown_item_created','current_node_id','dex','family_changed_after_creation','family_id','family_name','gender','gold','hp','id','int','is_classless','king_slayer_at','last_death_at','last_death_log','last_online','level','max_cp','max_hp','max_mp','movement_locked_until','mp','name','portrait_generated_at','portrait_metadata','portrait_url','race','reserved_buffs','respec_points','rp_total_earned','soulforged_item_created','soulring_inventory_id','soulring_tier','stance_state','str','unspent_stat_points','updated_at','user_id','wimp_direction','wimp_hp_threshold','wis','xp'];
@@ -14,6 +14,18 @@ export const manifestPath='docs/operations/progression-001F-R1-manifest.json';
 export const read=p=>readFileSync(p,'utf8').replaceAll('\r\n','\n');
 export const sha=b=>createHash('sha256').update(b).digest('hex');
 const arr=a=>`ARRAY[${a.map(c=>`'${c}'`).join(',')}]`;
+// Established 001E-R1 capability classification, with application members never exempt.
+// Direct ACL checks remain independent: even administrative principals cannot have object grants.
+export const keyEffectiveLeakPredicate=`EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname<>'postgres'
+ AND (r.rolname IN('anon','authenticated','service_role')
+  OR EXISTS(WITH RECURSIVE application_members(oid) AS (
+   SELECT oid FROM pg_roles WHERE rolname IN('anon','authenticated','service_role')
+   UNION SELECT membership.member FROM pg_auth_members membership JOIN application_members application ON membership.roleid=application.oid)
+   SELECT 1 FROM application_members WHERE oid=r.oid)
+  OR (NOT r.rolsuper AND NOT r.rolbypassrls AND NOT EXISTS(
+   SELECT 1 FROM pg_roles authority WHERE authority.rolname IN('pg_read_all_data','pg_write_all_data') AND pg_has_role(r.oid,authority.oid,'USAGE'))))
+ AND (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+  OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES')))`;
 const authoritySnapshot=`SELECT jsonb_build_object(
  'functions',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.oid) FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname LIKE 'progression_%'),
  'tables',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.oid) FROM pg_class c WHERE c.relnamespace='public'::regnamespace AND c.relname LIKE 'progression_%'),
@@ -81,8 +93,9 @@ ${identity}
  AND (c.relowner<>'postgres'::regrole OR NOT c.relrowsecurity OR EXISTS(SELECT 1 FROM pg_policy WHERE polrelid=c.oid)
  OR EXISTS(SELECT 1 FROM aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a WHERE a.grantee<>c.relowner)
  OR EXISTS(SELECT 1 FROM pg_attribute col,LATERAL aclexplode(col.attacl) a WHERE col.attrelid=c.oid AND a.grantee<>c.relowner)))
- OR EXISTS(SELECT 1 FROM pg_roles r WHERE NOT r.rolsuper AND r.rolname NOT IN('postgres','pg_read_all_data','pg_write_all_data') AND
- (has_table_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR has_any_column_privilege(r.oid,'public.progression_renown_key','SELECT,INSERT,UPDATE,REFERENCES')))
+ -- 001E-R1 precedent: administrative global capabilities are not direct object ACL leaks.
+ -- Gameplay/application members are never exempt, including superuser/BYPASSRLS/global authority.
+ OR ${keyEffectiveLeakPredicate}
  THEN RAISE EXCEPTION 'R1 sidecar/key containment drift'; END IF;
  IF (SELECT array_agg(attname::text||':'||format_type(atttypid,atttypmod)||':'||attnotnull::text||':'||attnum::text ORDER BY attname) FROM pg_attribute WHERE attrelid='public.progression_renown_key'::regclass AND attnum>0 AND NOT attisdropped) IS DISTINCT FROM ARRAY['active:boolean:true:2','key_material:bytea:true:3','key_version:integer:true:1']
  OR (SELECT count(*) FROM pg_constraint WHERE conrelid='public.progression_renown_key'::regclass)<>3
@@ -117,7 +130,7 @@ ${identity}
 END $repair$;
 `;
 }
-export function manifest(){const b=Buffer.from(payload());return {status:'prepared_only',task_start_sha:'b8c18c90b1b5a5532244b76c41568a15986a0cfe',source_baseline:baseline,future_migration:'progression_001f_r1_restore_unprotected_service_updates',inventory_source:'src/integrations/supabase/types.ts characters.Row at source_baseline; historical broad service UPDATE covered all existing columns',protectedColumns,unprotectedColumns,columns,browserColumns,artifact:{path:sqlPath,sha256:sha(b),bytes:b.length,lf_lines:payload().split('\n').length-1},files:['.gitattributes','scripts/prepare-progression-001F-R1.mjs','scripts/progression-001F-R1-sql.test.mjs'].map(path=>({path,sha256:sha(read(path))}))};}
+export function manifest(){const b=Buffer.from(payload());return {status:'revised_prepared_only',revision:'ENG-PROGRESSION-001F-R1A',task_start_sha:baseline,source_baseline:baseline,previous_attempt:{status:'failed_precondition_full_rollback',sha256:'a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a',bytes:21577,lf_lines:182},future_migration:'progression_001f_r1_restore_unprotected_service_updates',inventory_source:'src/integrations/supabase/types.ts characters.Row at source_baseline; historical broad service UPDATE covered all existing columns',protectedColumns,unprotectedColumns,columns,browserColumns,artifact:{path:sqlPath,sha256:sha(b),bytes:b.length,lf_lines:payload().split('\n').length-1},files:['.gitattributes','scripts/prepare-progression-001F-R1.mjs','scripts/progression-001F-R1-sql.test.mjs'].map(path=>({path,sha256:sha(read(path))}))};}
 export function check(){
  if(read(sqlPath)!==payload()||read(manifestPath)!==JSON.stringify(manifest(),null,2)+'\n')throw Error('R1 generator/manifest drift');
  for(const path of [sqlPath,manifestPath,'scripts/prepare-progression-001F-R1.mjs','scripts/progression-001F-R1-sql.test.mjs']){const b=readFileSync(path);if(b.includes(13)||b.subarray(0,3).equals(Buffer.from([239,187,191])))throw Error('R1 UTF-8/LF encoding drift: '+path);}
