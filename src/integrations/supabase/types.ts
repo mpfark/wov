@@ -5684,6 +5684,69 @@ export type Database = {
           },
         ]
       }
+      progression_class_growth_milestone: {
+        Row: {
+          applied_deltas: Json
+          character_id: string
+          class_key: string
+          config_fingerprint: string
+          destination_level: number
+          event_id: string
+          is_classless: boolean
+          source: string
+        }
+        Insert: {
+          applied_deltas: Json
+          character_id: string
+          class_key: string
+          config_fingerprint: string
+          destination_level: number
+          event_id: string
+          is_classless: boolean
+          source: string
+        }
+        Update: {
+          applied_deltas?: Json
+          character_id?: string
+          class_key?: string
+          config_fingerprint?: string
+          destination_level?: number
+          event_id?: string
+          is_classless?: boolean
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_class_growth_mile_character_id_source_event_id_fkey"
+            columns: ["character_id", "source", "event_id"]
+            isOneToOne: false
+            referencedRelation: "progression_receipt"
+            referencedColumns: ["character_id", "source", "event_id"]
+          },
+          {
+            foreignKeyName: "progression_class_growth_milestone_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "progression_character_state"
+            referencedColumns: ["character_id"]
+          },
+        ]
+      }
+      progression_command_control: {
+        Row: {
+          enabled: boolean
+          singleton: boolean
+        }
+        Insert: {
+          enabled?: boolean
+          singleton?: boolean
+        }
+        Update: {
+          enabled?: boolean
+          singleton?: boolean
+        }
+        Relationships: []
+      }
       progression_receipt: {
         Row: {
           character_id: string
@@ -7655,6 +7718,26 @@ export type Database = {
       }
       progression_class_config_internal: {
         Args: { _class: string; _classless: boolean }
+        Returns: Json
+      }
+      progression_command: {
+        Args: {
+          _actor: string
+          _allocations?: Json
+          _character: string
+          _expected_version: number
+          _operation: string
+          _request: string
+          _target_class?: string
+        }
+        Returns: Json
+      }
+      progression_command_projection: {
+        Args: { _character: string }
+        Returns: Json
+      }
+      progression_command_projection_internal: {
+        Args: { _character: string }
         Returns: Json
       }
       progression_snapshot_internal: {
