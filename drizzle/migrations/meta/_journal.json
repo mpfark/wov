@@ -36,6 +36,13 @@
       "when": 1791366261738,
       "tag": "0004_progression_001e_r2_xp_body_repair",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791397016011,
+      "tag": "0005_progression_001f_canonical_renown_respec_authority",
+      "breakpoints": true
     }
   ]
 }
