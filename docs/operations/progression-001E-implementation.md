@@ -1,6 +1,12 @@
 # ENG-PROGRESSION-001E — Local implementation and prepared cutover
 
-**CURRENT (operator-reported): INSTALLED / CONTAINMENT VERIFIED / XP BODY IDENTITY RECONCILIATION REQUIRED / EDGE NOT DEPLOYED / TRAINER-ORDER COMMANDS PAUSED.**
+**CURRENT (operator-reported): CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED / FRONTEND NOT PUBLISHED.**
+
+2026-10-07 [Closure reconciliation](progression-001E-close.md): canonical R2 XP body
+installed and independently verified by operator; reviewed progression-command deployed.
+Missing historical 0004 final newline and absent Edge revision ID are recorded.
+Authenticated paused runtime probe was not executed; natural runtime and hosted
+multi-session behavior remain unproven. Earlier R2/R1 preparation below is historical.
 
 2026-10-07 R2: [Exact XP body forward repair prepared](progression-001E-R2-reconciliation.md).
 The second R1 attempt installed with one extra leading space on line340; containment
