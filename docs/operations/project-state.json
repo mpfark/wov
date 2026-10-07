@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T23:31:32Z",
-  "based_on_source_sha": "e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1",
+  "updated_at": "2026-10-07T23:45:51Z",
+  "based_on_source_sha": "215f91f86ec176dac8119ea208651e085dbfe1a6",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1111,6 +1111,16 @@
       "reporting_actor": "Mik owner decisions; Codex documentation",
       "directly_verified": true,
       "evidence": "ENG-PROGRESSION-001G-B POLICY/CONTRACT PACKAGE COMPLETE, docs only. Canonical docs/design/progression-001G-B-admin-policy.md and command-contracts.md; docs/operations/progression-001G-B-execution-plan.md includes source evidence, O1-O14 traceability and separate C-F gates. Approved role caps/no direct level setting/clamp-only repair/atomic creation with starter gear/30-day restoration/12-month detailed audit recorded; unresolved numeric XP cap, repeated approval, creation manifest, RP lifetime, retention and scoped repair decisions remain explicit. No implementation, migration, hosted access, gameplay write, deployment, activation or publication. F closure and four retained limitations unchanged; protected15/unprotected38/browser6 preserved. 001G not implemented or closed."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C1 character creation baseline audit and metadata preparation",
+      "status": "authored",
+      "sha": "215f91f86ec176dac8119ea208651e085dbfe1a6",
+      "timestamp": "2026-10-07T23:45:51Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "ENG-PROGRESSION-001G-C1 AUDIT / DESIGN INPUT COMPLETE; docs-only preparation, no creation implementation. docs/operations/progression-001G-C1-creation-baseline-audit.md, progression-001G-C1-hosted-metadata-request.md (not executed/not authorized) and docs/design/progression-001G-C1-creation-manifest-proposal.md (unapproved structure). Source creation trusts client stats/HP/AC/class and omits CP; conditional fallback L1 CP30 versus historical100, gold200/salvage40 versus UI100/42, removed starter gear, optional family and admin delegation gaps documented. Version0/receipt compatibility requires separate origin proof design. Installed metadata and exact owner-approved manifest remain C2 gates. No runtime/SQL/migration/fixture/test/config changes, hosted access, data writes, deployment, activation or publication. F closure/protected15/unprotected38/browser6 and four retained limitations unchanged. Fresh local validation:35 existing tests passed (26 formula parity/6 location source/3 project state),66 relative links/anchors checked,conditional formula examples verified without fixture writes; documentation-only diff."
     }
   ],
   "known_blockers": [
@@ -1277,13 +1287,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1",
-    "timestamp": "2026-10-07T23:31:32Z",
+    "sha": "215f91f86ec176dac8119ea208651e085dbfe1a6",
+    "timestamp": "2026-10-07T23:45:51Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "001G-B docs-only owner policy and contract package complete. STOP before001G-C. C requires separate local task authorization, verified installed creation body/types/defaults/triggers/FKs/ACL metadata and approved exact creation manifest including starter gear/resources/catalog/family/delegation; hosted inspection separately authorized. D award/repair policy parameters remain unresolved. Preserve F closure/paused commands/frontend not published; no Lovable operation authorized.",
-    "artifact": "STOP — ENG-PROGRESSION-001G-B DOCUMENTED; separate 001G-C authorization and entry evidence required"
+    "artifact": "STOP — ENG-PROGRESSION-001G-C1 AUDIT COMPLETE; metadata inspection and C2 separately authorized",
+    "evidence": "C1 prepared creation audit, unapproved manifest structure and minimal read-only Lovable request only. No hosted request executed or sent. Owner must separately authorize metadata intake and approve reconciled creation baseline/catalog/gear/resources/economy/family/name-quota/delegation/proof retention; then separately authorize bounded local C2. Preserve F CLOSED/INSTALLED/VERIFIED/EDGE DEPLOYED/COMMANDS PAUSED/FRONTEND NOT PUBLISHED and retained limits; no install/deploy/gameplay writes/activation/publication authorized."
   },
   "volatile_runtime_observations": [
     {
