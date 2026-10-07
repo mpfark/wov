@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001F — Canonical Renown and safe respec preparation
 
+Current R2 status supersedes historical preparation/blocked statements below: **001F INSTALLED; R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED; F EDGE NOT DEPLOYED; COMMANDS PAUSED; FRONTEND NOT PUBLISHED**. [R2 source reconciliation and final Edge handoff](progression-001F-R2-edge-handoff.md) records operator evidence for attempt2 and preserves attempt1 full rollback. F remains open pending separately authorized Edge deployment/paused verification.
+
 Current state supersedes this historical preparation report: **001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION; F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED**. Supplied hosted evidence and the narrow local forward repair are recorded in [001F-R1](progression-001F-R1-service-update-repair.md). Original reviewed SQL/manifest and0005 remain frozen; the preparation statuses and validation below describe the earlier release checkpoint, not current installation state. F is not CLOSED.
 
 ENG-PROGRESSION-001F IMPLEMENTED LOCALLY / PREPARED

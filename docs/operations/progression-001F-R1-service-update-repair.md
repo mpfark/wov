@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001F-R1 service UPDATE repair
 
+Current R2 status supersedes historical preparation/blocked statements below: **001F INSTALLED; R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED; F EDGE NOT DEPLOYED; COMMANDS PAUSED; FRONTEND NOT PUBLISHED**. [R2 source reconciliation and final Edge handoff](progression-001F-R2-edge-handoff.md) records operator evidence for attempt2 and preserves attempt1 full rollback. F remains open pending separately authorized Edge deployment/paused verification.
+
 ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. R1 is prepared locally for a separately authorized narrow forward ACL repair. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is not F closure or installation authorization.
 
 **R1A revision: ENG-PROGRESSION-001F-R1 REVISED / PREPARED. HOSTED ATTEMPT 1 FAILED PRECONDITION / FULL TRANSACTION ROLLBACK.** Revised local task start/fetched origin is `10882d087b4e9197f455ee967de6570aa7d78f37`, a verified descendant of the recorded source baseline; worktree began clean and recovery stash unchanged. No new platform commit or R1 migration exists. The original R1 checkpoint and its attempted artifact remain recoverable in Git; the prepared-only artifact is revised in place, with the same future migration name.

@@ -1,5 +1,7 @@
 # ENG-PROGRESSION-001F — Implementation and release plan
 
+Current stage4 status: F/R1 installed and R1 verified; ACL regression repaired. [R2 final Edge handoff](../operations/progression-001F-R2-edge-handoff.md) prepares the remaining separately authorized deployment and paused verification. Authenticated testing is optional when unsupported; activation remains stage5. Earlier stage/blocked statuses below are historical.
+
 Current status: **001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION**. [R1 corrective preparation](../operations/progression-001F-R1-service-update-repair.md) preserves the installed authority and prepares a separately authorized forward ACL repair. F Edge not deployed, commands paused, frontend not published. This plan's stages below retain historical local-preparation evidence; no rollback/rewrite or001G/H is planned or authorized.
 
 **IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE.**

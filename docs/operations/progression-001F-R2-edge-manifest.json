@@ -1,0 +1,52 @@
+{
+  "status": "prepared_for_final_edge_deployment_paused_verification",
+  "task_start_sha": "031b951408952c799d178b42e449b90caf8191e1",
+  "synchronized_source": "cd4c109c31f7112bc9c149773a3865e6da501f87",
+  "platform_commit": "97c1437ce5f88249db19ac0d46c98bc4e290f07a",
+  "installed_migration": {
+    "path": "drizzle/migrations/0006_progression_001f_r1_restore_unprotected_service_updates.sql",
+    "sha256": "04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f",
+    "bytes": 22309,
+    "lf_lines": 192,
+    "journal_index": 6,
+    "operator_reported_drizzle_row_id": 7
+  },
+  "reviewed_artifact": {
+    "path": "docs/operations/progression-001F-R1-service-update-repair.sql",
+    "sha256": "04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f",
+    "bytes": 22309,
+    "lf_lines": 192
+  },
+  "deployment_files": [
+    {
+      "path": "supabase/functions/progression-command/index.ts",
+      "sha256": "88819cab31e7a2f9695a6f8cc391fe310dd632b55caf825bf6f68b89c3e978d7",
+      "bytes": 1334,
+      "lf_lines": 21
+    },
+    {
+      "path": "supabase/functions/_shared/progression-command.ts",
+      "sha256": "845401a78e02da379345e808e5aced143a9802f4f3bcefa9eba5d95013c6e178",
+      "bytes": 4241,
+      "lf_lines": 56
+    }
+  ],
+  "configuration": {
+    "path": "supabase/config.toml",
+    "sha256": "a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9",
+    "bytes": 869,
+    "lf_lines": 36,
+    "progression_command_verify_jwt": false
+  },
+  "external_imports": [
+    "https://esm.sh/@supabase/supabase-js@2.116.0"
+  ],
+  "environment_names": [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "runtime": "Deno.serve, Request/Response; provider SDK external transitive dependencies, not repository-local files",
+  "commands_paused": true,
+  "frontend_published": false
+}
