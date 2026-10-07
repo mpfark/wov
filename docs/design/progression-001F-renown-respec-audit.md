@@ -1,5 +1,11 @@
 # ENG-PROGRESSION-001F — Renown and safe respec authority audit/design
 
+Historical audit checkpoint. The accepted ENG-PROGRESSION-001F-IMPLEMENT decisions
+and supplied preflight supersede this document's prospective choices and STOP gate.
+See [the implementation report](../operations/progression-001F-implementation.md) for
+the prepared release. Findings, frozen algorithms and the30 audit vectors below are
+retained as audit evidence, not a claim that F is still unimplemented.
+
 **AUDIT/DESIGN COMPLETE / NOT IMPLEMENTED / NOT INSTALLED / NOT ACTIVE.**
 2026-10-07; task_start_sha=fetched origin/main=`49ffa969180c542a770b41c20b79350e58341aa9`.
 Clean main; recorded639bb7cc ancestor verified; recovery stash0a5529d5 unchanged.

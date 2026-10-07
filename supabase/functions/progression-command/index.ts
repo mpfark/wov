@@ -13,6 +13,7 @@ Deno.serve(createProgressionCommandHandler({
       _character: request.characterId, _actor: actor, _request: request.requestId, _expected_version: request.expectedVersion,
       _operation: 'allocations' in request ? 'allocate' : request.operation,
       _allocations: 'allocations' in request ? request.allocations : null, _target_class: 'targetClass' in request ? request.targetClass : null,
+      _stat: 'stat' in request ? request.stat : null,
     });
     if (error) throw error;
     return data;

@@ -17,3 +17,15 @@ src/pages/GamePage.tsx text eol=lf
 docs/operations/progression-001E-R2-xp-body-repair.sql text eol=lf
 docs/operations/progression-001E-R2-manifest.json text eol=lf
 scripts/prepare-progression-001E-R2.mjs text eol=lf
+
+# Exact 001F prepared release bytes; historical migration rules remain unchanged.
+.gitattributes text eol=lf
+docs/operations/progression-001F-cutover.sql text eol=lf
+docs/operations/progression-001F-manifest.json text eol=lf
+scripts/prepare-progression-001F.mjs text eol=lf
+scripts/progression-001F-authority.sql text eol=lf
+scripts/progression-001F-sql.test.mjs text eol=lf
+scripts/progression-001F-combat2.test.mjs text eol=lf
+scripts/progression-history-test.mjs text eol=lf
+src/features/character/progression-messages.ts text eol=lf
+src/features/character/__tests__/progression-f.test.tsx text eol=lf

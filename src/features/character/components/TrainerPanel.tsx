@@ -6,6 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
 import { buildErrorEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
+import { Button } from '@/components/ui/button';
+import { pendingProgressionAction } from '../progression-command';
+import type { ProgressionStat } from '../../../../supabase/functions/_shared/progression-command';
 
 // NOTE: `character.bhp` is legacy storage for the current Renown balance.
 // `character.bhp_trained` is legacy storage for Renown training ranks.
@@ -26,6 +29,8 @@ interface Props {
   addLogEvent: (event: GameLogEvent) => void;
   /** Called by allocate/respec flows to commit a batch / refund. */
   onBatchAllocateStats: (allocations: Record<string, number>) => Promise<boolean>;
+  onFullRespec: () => Promise<boolean>;
+  onRenown: (stat: ProgressionStat) => Promise<boolean>;
   /** Optional NPC framing (when opened by talking to a service-role trainer). */
   npcName?: string;
   npcFlavor?: string;
@@ -35,11 +40,20 @@ type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
 
 export default function TrainerPanel({
   open, onClose, character, equipmentBonuses, addLogEvent: parentAddLogEvent,
-  onBatchAllocateStats, npcName, npcFlavor,
+  onBatchAllocateStats, onFullRespec, onRenown, npcName, npcFlavor,
 }: Props) {
   const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
   const [tab, setTab] = useState<TrainerTab>('allocate');
+  const pending = pendingProgressionAction(character.id);
+  const [selectedStat, setSelectedStat] = useState<ProgressionStat>(() => pending && 'stat' in pending ? pending.stat : 'str');
+  const [submitting, setSubmitting] = useState(false);
+  const submit = async (operation: 'respec' | 'renown') => {
+    if (submitting) return;
+    setSubmitting(true);
+    try { await (operation === 'respec' ? onFullRespec() : onRenown(selectedStat)); }
+    finally { setSubmitting(false); }
+  };
 
   const [leaders, setLeaders] = useState<LeaderRow[] | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
@@ -105,7 +119,7 @@ export default function TrainerPanel({
   );
 
   // ── Allocate tab (includes respec) ──
-  const respecAvailable = false;
+  const respecAvailable = true;
   const hasAnythingToDo = character.unspent_stat_points > 0 || respecAvailable;
 
   const allocateContent = hasAnythingToDo ? (
@@ -116,6 +130,7 @@ export default function TrainerPanel({
       layout="split"
       respecAvailable={respecAvailable}
       respecPoints={character.respec_points || 0}
+      onRequestRespec={() => { void submit('respec'); }}
     />
   ) : (
     <ServicePanelEmpty>
@@ -124,8 +139,21 @@ export default function TrainerPanel({
     </ServicePanelEmpty>
   );
 
-  // Renown stays unavailable until its roll/spend/stat receipt authority is integrated in 001F.
-  const renownContent = <ServicePanelEmpty>Renown training is temporarily unavailable.</ServicePanelEmpty>;
+  const renownContent = <div className="gap-group">
+    <p>Progression commands are paused pending authority release.</p>
+    <p>Renown balance: {character.bhp ?? 0} RP. Training requires level 30.</p>
+    <p>Training ranks: {(['str','dex','con','int','wis','cha'] as const).map(stat => {
+      const ranks = character.bhp_trained as Record<string, unknown> | null;
+      return `${stat.toUpperCase()} ${typeof ranks?.[stat] === 'number' ? ranks[stat] : 0}`;
+    }).join(' · ')}</p>
+    <label htmlFor="renown-stat">Stat to train</label>
+    <select id="renown-stat" value={selectedStat} disabled={submitting || !!(pending && 'stat' in pending)}
+      onChange={event => setSelectedStat(event.target.value as ProgressionStat)}>
+      {(['str','dex','con','int','wis','cha'] as const).map(stat => <option key={stat} value={stat}>{stat.toUpperCase()}</option>)}
+    </select>
+    <p>The server determines cost, chance and outcome. Failure spends RP.</p>
+    <Button disabled={submitting} onClick={() => { void submit('renown'); }}>Submit Renown training</Button>
+  </div>;
 
   // ── Leaderboard tab ──
   const renderLeaderRow = (row: LeaderRow, rank: number) => {
@@ -230,7 +258,7 @@ export default function TrainerPanel({
       />
 
 
-      <p className="text-xs text-muted-foreground text-center">Respec is temporarily unavailable.</p>
+      <p className="text-xs text-muted-foreground text-center">Commands are paused. Respec refunds only proven discretionary investment.</p>
     </>
   );
 }

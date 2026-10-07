@@ -48,7 +48,7 @@ export default function OrderRecruiterDialog({
   const command = useMemo(() => progressionClient(characterId), [characterId]);
   const isClassless = currentClass === 'classless';
   const pending = pendingProgressionAction(characterId);
-  const pendingOrder = pending && 'operation' in pending ? pending : null;
+  const pendingOrder = pending && 'targetClass' in pending ? pending : null;
 
   const topics = useMemo(() => {
     if (!npc || !worldContext) return [];

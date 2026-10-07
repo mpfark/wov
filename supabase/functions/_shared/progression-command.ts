@@ -1,4 +1,12 @@
-export type ProgressionAction = { allocations: Record<string, number> } | { operation: 'join' | 'switch'; targetClass: string };
+export type ProgressionStat = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
+export type ProgressionAction = { allocations: Record<string, number> } | { operation: 'join' | 'switch'; targetClass: string }
+  | { operation: 'respec' } | { operation: 'renown'; stat: ProgressionStat };
+export function progressionAction(request: ProgressionAction): ProgressionAction {
+  if ('allocations' in request) return { allocations: Object.fromEntries(['str','dex','con','int','wis','cha'].map(k => [k, request.allocations[k] ?? 0])) };
+  if ('targetClass' in request) return { operation: request.operation, targetClass: request.targetClass };
+  if (request.operation === 'renown') return { operation: 'renown', stat: request.stat };
+  return { operation: 'respec' };
+}
 export type ProgressionRequest = ProgressionAction & { characterId: string; requestId: string; expectedVersion: number };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const stats = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -8,6 +16,12 @@ export function parseProgressionRequest(value: unknown): ProgressionRequest | nu
   if (typeof v.characterId !== 'string' || !uuid.test(v.characterId) || typeof v.requestId !== 'string' || !uuid.test(v.requestId)
     || !Number.isSafeInteger(v.expectedVersion) || (v.expectedVersion as number) < 0) return null;
   const common = ['characterId', 'requestId', 'expectedVersion'];
+  if (v.operation === 'respec' || v.operation === 'renown') {
+    const allowed = [...common, 'operation', ...(v.operation === 'renown' ? ['stat'] : [])];
+    if (Object.keys(v).some(k => !allowed.includes(k))) return null;
+    if (v.operation === 'renown' && !stats.includes(v.stat as string)) return null;
+    return v as ProgressionRequest;
+  }
   if ('allocations' in v) {
     if (Object.keys(v).some(k => ![...common, 'allocations'].includes(k)) || !v.allocations || typeof v.allocations !== 'object' || Array.isArray(v.allocations)) return null;
     const a = v.allocations as Record<string, unknown>;

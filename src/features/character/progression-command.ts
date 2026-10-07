@@ -1,15 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ProgressionAction, ProgressionRequest } from '../../../supabase/functions/_shared/progression-command';
-import { parseProgressionRequest } from '../../../supabase/functions/_shared/progression-command';
+import { parseProgressionRequest, progressionAction } from '../../../supabase/functions/_shared/progression-command';
 export type { ProgressionAction };
-export interface CommandResult { kind: 'committed' | 'replayed' | 'refused'; reason?: string }
+export interface CommandResult { kind: 'committed' | 'replayed' | 'refused'; reason?: string;
+  receipt?: { outcome?: 'success' | 'failure'; cost?: number; totalRefund?: number };
+  original?: { outcome?: 'success' | 'failure'; cost?: number; totalRefund?: number } }
 interface Transport { read: () => Promise<number>; send: (request: ProgressionRequest) => Promise<CommandResult> }
 const inFlight = new Set<string>();
 export function pendingProgressionAction(characterId: string): ProgressionAction | null {
   try {
     const request = parseProgressionRequest(JSON.parse(sessionStorage.getItem(`wov:progression-request:${characterId}`) ?? 'null'));
     if (!request || request.characterId !== characterId) return null;
-    return 'allocations' in request ? { allocations: request.allocations } : { operation: request.operation, targetClass: request.targetClass };
+    return progressionAction(request);
   } catch { return null; }
 }
 export function pendingAllocation(characterId: string): Record<string, number> {
@@ -18,7 +20,7 @@ export function pendingAllocation(characterId: string): Record<string, number> {
 }
 /** Persist uncertain request identity; a retry cannot replace its payload or starting version. */
 export function createProgressionClient(characterId: string, transport: Transport,
-  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>, makeUuid = () => crypto.randomUUID()) {
+  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>, makeUuid: () => string = () => crypto.randomUUID()) {
   const key = `wov:progression-request:${characterId}`;
   let running = false;
   return {
@@ -27,14 +29,12 @@ export function createProgressionClient(characterId: string, transport: Transpor
       running = true;
       inFlight.add(key);
       try {
-        const normalized: ProgressionAction = 'allocations' in action
-          ? { allocations: Object.fromEntries(['str', 'dex', 'con', 'int', 'wis', 'cha'].map(k => [k, action.allocations[k] ?? 0])) }
-          : { operation: action.operation, targetClass: action.targetClass };
+        const normalized = progressionAction(action);
         const pending = storage.getItem(key);
         let request: ProgressionRequest;
         if (pending) {
           request = JSON.parse(pending);
-          const oldAction = 'allocations' in request ? { allocations: request.allocations } : { operation: request.operation, targetClass: request.targetClass };
+          const oldAction = progressionAction(request);
           if (JSON.stringify(oldAction) !== JSON.stringify(normalized)) throw new Error('Retry the pending progression command before changing your choices.');
         } else {
           request = { ...normalized, characterId, requestId: makeUuid(), expectedVersion: await transport.read() };
@@ -42,6 +42,7 @@ export function createProgressionClient(characterId: string, transport: Transpor
         }
         const result = await transport.send(request);
         if (!result || !['committed', 'replayed', 'refused'].includes(result.kind)) throw new Error('Command outcome is uncertain. Retry the same choices.');
+        if (result.kind === 'refused' && result.reason === 'invalid_transaction') throw new Error('Progression transaction rolled back. Retry the same command before changing your choices.');
         storage.removeItem(key);
         return result;
       } finally { running = false; inFlight.delete(key); }

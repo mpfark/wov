@@ -1,15 +1,21 @@
-# ENG-PROGRESSION-001F — Proposed implementation plan
+# ENG-PROGRESSION-001F — Implementation and release plan
 
-**AUDIT/DESIGN ONLY / NOT IMPLEMENTED / NOT INSTALLED / NOT ACTIVE.**
-2026-10-07,source49ffa969;[audit/findings/proposed vectors](progression-001F-renown-respec-audit.md)
-are authoritative evidence for this plan,not a second gameplay specification.
-No installable migration,hosted work,activation/publication or001G/H authorized.
+**IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE.**
+2026-10-07, task start448883ef. The ENG-PROGRESSION-001F-IMPLEMENT request
+authorizes local preparation and normal commit/push, and supplies accepted decisions
+and hosted preflight facts. [Implementation/evidence](../operations/progression-001F-implementation.md)
+supersedes the prospective stages below. No hosted work, activation, publication or001G/H is authorized.
 
-## Stage0 — Decisions and narrow preflight (next safe checkpoint)
+## Stage0 — Decisions and supplied preflight (complete)
 
-Mik must resolve the audit's explicit stanceA/dead/trainer/cap/RNG-key/scope choices.
-Retain six per-stat curves and accepted economy. Do not silently solve earning/party
-split contradictions. Recommend all E/F commands stay paused.
+Mik approved stance refusal, dead refusal, the same nodes.is_trainer boundary,
+pool200 overflow refusal without clipping, six independent ranks, level30 eligibility,
+private persistent HMAC with explicit version and no rotation or gameplay rank cap.
+RP earning is excluded. Supplied preflight confirms pgcrypto1.3 in extensions,
+no existing suitable key facility, the raw service RP/rank/lifetime write gap,
+canonical Combat2 XP/gold only, and an uncalled equipment degradation writer gap.
+The four historical trained characters remain opaque; no backfill is authorized.
+All E/F commands stay paused. The following inventory records the completed preflight scope.
 
 One separately authorized read-only bundled preflight,only scoped to:
 
@@ -33,9 +39,9 @@ verification,Edge/runtime limitations and history are not re-audited broadly.
 Deliver read-only evidence with timestamp,source identity,known/unknowns. STOP on
 material drift; no automatic mutation. No F code before these dependencies clear.
 
-## Stage1 — Separately authorize local authority implementation
+## Stage1 — Local authority implementation (complete)
 
-Prospective files/surfaces (none changed in this audit):
+Implemented surfaces are recorded in the release manifest and implementation report:
 
 |Surface|Required narrow change|
 |---|---|
@@ -59,7 +65,7 @@ outside discovery until standard Drizzle installation is separately approved.
 Its guards must pin actual preflight dependencies and canonical result identity;
 text-tool ledger identity remains distinct from resulting object identity.
 
-## Stage2 — Boundary/UI and containment implementation
+## Stage2 — Boundary/UI and containment implementation (complete)
 
 Extend existing progression-command Edge strict parser: verified JWT actor only;
 operation=respec with no extra payload or operation=renown with one stat; stable
@@ -81,7 +87,7 @@ Delete browser reconstruction/stale callable UI rather than compatibility fallba
 Admin resets,set-level,grant-respec/raw overrides remain fenced for001G. Creation,
 crafting,Combat2 earning/party mechanics and Arena reset are not silently redesigned.
 
-## Stage3 — Local acceptance and reviewable release
+## Stage3 — Local acceptance and reviewable release (complete)
 
 Execute all30 audit vectors plus wrong JWT/actor/schema/service/browser ACL cases,
 exact old-function denial,no inherited grants,controlfalse,receipt conflicts across
@@ -116,4 +122,5 @@ separate scoped tasks,not inferred from local tests. Mik alone publishes fronten
 No activation in audit,implementation preparation or deployment by implication.
 001G/H remain separately scoped future work.
 
-**STOP NOW: READY FOR DESIGN DECISIONS / MINIMUM HOSTED PREFLIGHT.**
+**STOP: ENG-PROGRESSION-001F IMPLEMENTED LOCALLY / PREPARED.**
+**READY FOR SEPARATELY AUTHORIZED HOSTED INSTALLATION / NOT INSTALLED / NOT ACTIVE.**

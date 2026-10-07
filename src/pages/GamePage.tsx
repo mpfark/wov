@@ -1149,7 +1149,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   useEffect(() => { wimpNotifyRef.current = wimp.notifyPlayerMoved; }, [wimp.notifyPlayerMoved]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
-  const { handleBatchAllocateStats } = useStatAllocation({
+  const { handleBatchAllocateStats, handleFullRespec, handleRenown } = useStatAllocation({
     character, addLogEvent,
     onResourcesSynced: refetchCharacters,
   });
@@ -1974,6 +1974,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
           equipmentBonuses={equipmentBonuses}
           addLogEvent={addLogEvent}
           onBatchAllocateStats={handleBatchAllocateStats}
+          onFullRespec={handleFullRespec}
+          onRenown={handleRenown}
           npcName={activeServiceNpc?.service_role === 'trainer' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'trainer' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />

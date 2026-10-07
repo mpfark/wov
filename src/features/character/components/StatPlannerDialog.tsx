@@ -232,11 +232,11 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
             onClick={onRequestRespec}
           >
             {respecAvailable
-              ? 'Spend 1 Respec Point — Refund Manual Allocations'
+              ? 'Request Proven Allocation Refund'
               : 'No Respec Points Available'}
           </Button>
           <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-            Resets all manually allocated points back into your unspent pool. Class level bonuses and Renown training are preserved.
+            The server refunds only recorded discretionary investment. A successful nonzero refund consumes one token. Historical attributes, class growth and Renown training are preserved.
           </p>
         </div>
       )}
