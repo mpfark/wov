@@ -5782,6 +5782,24 @@ export type Database = {
           },
         ]
       }
+      progression_renown_key: {
+        Row: {
+          active: boolean
+          key_material: string
+          key_version: number
+        }
+        Insert: {
+          active: boolean
+          key_material: string
+          key_version: number
+        }
+        Update: {
+          active?: boolean
+          key_material?: string
+          key_version?: number
+        }
+        Relationships: []
+      }
       progression_respec_milestone: {
         Row: {
           character_id: string
@@ -7695,6 +7713,18 @@ export type Database = {
         Returns: boolean
       }
       player_world_nodes: { Args: never; Returns: Json }
+      progression_apply_f_internal: {
+        Args: {
+          _actor: string
+          _character: string
+          _expected_version: number
+          _normalized: Json
+          _operation: string
+          _request: string
+          _stat: string
+        }
+        Returns: Json
+      }
       progression_apply_permanent_delta_internal: {
         Args: {
           _character: string
@@ -7728,6 +7758,7 @@ export type Database = {
           _expected_version: number
           _operation: string
           _request: string
+          _stat?: string
           _target_class?: string
         }
         Returns: Json
@@ -7740,8 +7771,26 @@ export type Database = {
         Args: { _character: string }
         Returns: Json
       }
+      progression_renown_draw_internal: {
+        Args: {
+          _character: string
+          _rank: number
+          _request: string
+          _stat: string
+          _version: number
+        }
+        Returns: Json
+      }
       progression_snapshot_internal: {
         Args: { _character: string }
+        Returns: Json
+      }
+      progression_validate_fresh_internal: {
+        Args: {
+          _character: string
+          _expected_version: number
+          _operation: string
+        }
         Returns: Json
       }
       prune_combat_audit_log: { Args: never; Returns: undefined }
