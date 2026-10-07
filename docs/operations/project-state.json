@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T22:00:31.952Z",
-  "based_on_source_sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
+  "updated_at": "2026-10-07T22:38:46Z",
+  "based_on_source_sha": "b4d314e63ff5ebd904bf631f4afd586cb9035610",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1091,6 +1091,16 @@
       "directly_verified": true,
       "artifact": "ENG-PROGRESSION-001F CLOSED / INSTALLED / VERIFIED / EDGE DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED",
       "evidence": "Closure record docs/operations/progression-001F-closure.md; locally verified source is distinct from operator-reported installation/deployment/HTTP observations. Commands paused; F frontend not published. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-A read-only admin/creation audit",
+      "status": "authored",
+      "sha": "b4d314e63ff5ebd904bf631f4afd586cb9035610",
+      "timestamp": "2026-10-07T22:38:46Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "ENG-PROGRESSION-001G-A AUDIT COMPLETE. docs/operations/progression-001G-A-admin-creation-audit.md and writer appendix; 12 character-affecting admin action branches and98 relevant named SQL candidates (not live-writer counts). Local source/tests only;217 passed and1 archival R1 baseline failure; current R2 preservation check passed. Creation authority/resource initialization unsafe or unverified; protected15 denied/unprotected38 allowed/browser6 preserved. Owner policy questions O1-O14 unresolved. No implementation,migration,hosted access,deployment,activation,publication or legacy normalization. F remains closed under accepted staged criteria;001G not implemented or closed. Source v3 service-definer delegation to owner-only legacy v2 remains a concrete containment risk requiring fresh metadata; no hosted exploit claimed."
     }
   ],
   "known_blockers": [
@@ -1257,13 +1267,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c",
-    "timestamp": "2026-10-07T22:00:31.952Z",
+    "sha": "b4d314e63ff5ebd904bf631f4afd586cb9035610",
+    "timestamp": "2026-10-07T22:38:46Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "001G scope: reconciliation/admin/creation safety; D and explicit exceptional policy approval, bounded proven repairs,no blanket reconstruction. Exceptional override/repair/creation policy approval remains unresolved; separate task authorization required. No RP earning redesign,combat redesign or frontend publication implied. Do not begin001G/H,activate,publish or perform hosted work.",
-    "artifact": "STOP — F CLOSED; 001G next planned, not authorized"
+    "evidence": "Read-only audit complete; owner decisions O1-O14 and separate implementation authorization required before001G-B/C/D/E/F. No exceptional policy chosen. Preserve F closure,paused commands,opaque legacy state,executed migrations/platform history and recovery stash. No hosted work,activation or publication authorized.",
+    "artifact": "STOP — ENG-PROGRESSION-001G-A AUDIT COMPLETE; no 001G-B or implementation authorized"
   },
   "volatile_runtime_observations": [
     {
