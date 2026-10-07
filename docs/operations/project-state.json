@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-06T21:33:18.059Z",
-  "based_on_source_sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
+  "updated_at": "2026-10-07T08:43:18.960Z",
+  "based_on_source_sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -15,13 +15,13 @@
   ],
   "repository": {
     "status": "authored",
-    "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
-    "timestamp": "2026-10-06T21:33:18.059Z",
+    "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
+    "timestamp": "2026-10-07T08:43:18.960Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "ENG-PROGRESSION-001E IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE",
-    "evidence": "Local trainer/Order service-only authority, private future growth proof in canonical XP, authenticated Edge and browser retry/acknowledgment prepared from fetched clean fc370869. Existing opaque state/counters retained; no backfill. Single acting-node-before-character lock with changed-location refusal, no second node/encounter lock. Atomic legacy Order/bond/Renown revocation and temporary SECURITY INVOKER raw service/admin progression fence. SQL 22 pass, E actual Combat2 chain 11 pass, C SQL 16 pass, D integration/containment 9/6 pass; focused 252 pass; root/app/node/strict Edge typechecks and build pass. Full suite 2730 pass/18 identical baseline failures versus 2703 pass/18 fail, no new failure. Exact SQL SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266,40840 bytes,451 LF lines; deterministic release manifest. No hosted access/install/deploy/activation/publication; F/G/H not implemented. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. Final commit/push identity is reported separately from this based-on source SHA."
+    "artifact": "ENG-PROGRESSION-001E R1 RECONCILED LOCALLY / READY FOR HOSTED INSTALL RETRY / NOT INSTALLED / NOT ACTIVE",
+    "evidence": "R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately."
   },
   "database_migrations": [
     {
@@ -226,13 +226,13 @@
     },
     {
       "status": "authored",
-      "sha": "fc370869cc38696ebe1e5caf4d25ac57d47892d5",
-      "timestamp": "2026-10-06T21:33:18.059Z",
+      "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
+      "timestamp": "2026-10-07T08:43:18.960Z",
       "evidence_type": "repository",
       "reporting_actor": "Codex",
       "directly_verified": true,
       "identity": "docs/operations/progression-001E-cutover.sql (prepared operations artifact)",
-      "evidence": "PREPARED / NOT INSTALLED. One standard Drizzle transaction only, later separately authorized. SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266;40840 bytes;451 LF lines. Guarded XP extension, private destination-growth relation, receipt order check, narrow command/projection, old Order/bond/Renown ACL fences and raw progression override fence. New command control disabled. No numbered migration/journal/snapshot/frozen migration edit, no character mutation/gameplay call/backfill. Source and exact release hashes in progression-001E-manifest.json."
+      "evidence": "R1 PREPARED / NOT INSTALLED. R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately. Historical attempted SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266,40840 bytes,451 LF lines at06c888eb fully rolled back per supplied evidence. Retry requires NEW explicit authorization; no journal/frozen migration change."
     }
   ],
   "generated_supabase_types": {
@@ -957,6 +957,16 @@
       "directly_verified": true,
       "identity": "ENG-PROGRESSION-001E local implementation and prepared atomic cutover",
       "evidence": "IMPLEMENTED LOCALLY / PREPARED / NOT INSTALLED / NOT ACTIVE. Supplied preflight reconciled without hosted inspection: exact six stat columns, 0 sidecar rows, 21 characters/3 classless, PUBLIC bond helpers, ordinary read-only bond RLS, arrival character-to-destination lock exception, absent harness, unrelated disabled wake trigger. Future growth unique per character/destination with XP receipt FK/config proof; allocation reuses existing investment; Order resets bonds only and retains history/loadout/equipment. Renown unsafe and temporarily owner-only until F; raw service/admin progression changed columns technically fenced until G (boundary A), creation/old triggers unchanged. See progression-001E-implementation.md for full acceptance and DB-first disabled deployment order. Crafting/D fences unchanged. Natural runtime unobserved, hosted multi-session unproven; no F/G/H work."
+    },
+    {
+      "status": "authored",
+      "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
+      "timestamp": "2026-10-07T08:43:18.960Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "identity": "ENG-PROGRESSION-001E-R1 local sidecar containment assertion reconciliation",
+      "evidence": "R1 reconciled locally / ready for hosted install retry / NOT INSTALLED / NOT ACTIVE. Final sidecar assertion alone repaired: owner-only table/column ACLs; ordinary effective table/column access including custom inheritance rejected; known anon/authenticated/service_role never exempt; other roles classified using actual superuser/BYPASSRLS/effective global read/write authority, no platform-name assumption. Exact hosted matching role UNKNOWN; global-read hypothesis unproven. SQL SHA-256 734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673 bytes,461 LF lines. R1 exact assertion 11 pass; E SQL22/actual Combat2 chain11,C SQL16,D integration9/containment6,focused252 pass; root/app/node/strict Edge typechecks and production build pass. Full suite2730 pass/18 identical starting-checkpoint failure identities, no new failure. All payload bytes outside final assertion and all Edge/browser release hashes unchanged. No hosted access/install/deploy/activation/publication or F/G/H work. NATURAL RUNTIME PATH NOT YET OBSERVED; HOSTED MULTI-SESSION BEHAVIOR UNPROVEN. See progression-001E-R1-reconciliation.md; final commit/push identity reported separately."
     }
   ],
   "known_blockers": [
@@ -1114,12 +1124,12 @@
   "next_approved_task": {
     "status": "authored",
     "sha": null,
-    "timestamp": "2026-10-06T21:33:18.059Z",
+    "timestamp": "2026-10-07T08:43:18.960Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — 001E implemented locally/prepared. Separate authorization required for reviewed atomic DB install, narrow Edge deployment and post-install verification; activation/publication remain separate.",
-    "evidence": "Recommended next task ENG-PROGRESSION-001E-INSTALL: verify exact checkpoint/release manifest, fresh narrow dependencies and safe operational window; install one reviewed standard Drizzle tool transaction; verify legacy/bond/Renown/admin containment and preserved data/creation/trigger hashes; deploy only reviewed progression-command; verify authentication and paused fresh commands; stop with command control disabled. Current task does not authorize hosted work. Activation requires a later explicit task; Mik alone publishes frontend. No automatic F/G/H. Preserve D natural-runtime-unobserved and hosted-multi-session-unproven limitations."
+    "artifact": "STOP — R1 reconciled locally. Hosted install retry requires NEW explicit authorization.",
+    "evidence": "Recommended next task: verify exact R1 checkpoint/manifest and fresh dependency/role/operational evidence; separately authorize one standard Drizzle retry and installation/rollback verification. R1 authorizes no hosted access or retry. Edge deployment/verification and activation/publication remain separate; command control remains disabled. Mik alone publishes frontend. No automatic F/G/H. Retain natural-runtime-unobserved and hosted-multi-session-unproven limitations."
   },
   "volatile_runtime_observations": [
     {
@@ -1341,6 +1351,16 @@
       "evidence": "Mik supplied PREFLIGHT COMPLETE / READY FOR LOCAL IMPLEMENTATION DESIGN RECONCILIATION. Installed B1/creation/character trigger definitions unchanged; permanent columns str/dex/con/int/wis/cha; ordinary progression UPDATE denied, authenticated preference-only. Bond helpers PUBLIC/anon/auth/service executable; ordinary table RLS read-only. All C sidecars0;21 characters/3 classless,no detected anomalies. Entry/stance/departure lock order and arrival destination-lock exception supplied; harness absent; characters_wake_world disabled unrelated. These are supplied inspection facts, not Codex direct Cloud evidence or a new current operational/activation assertion. No E install/deploy/activation observed.",
       "reporting_actor": "Mik supplied hosted preflight; Codex local reconciliation",
       "directly_verified": false
+    },
+    {
+      "status": "unknown",
+      "identity": "ENG-PROGRESSION-001E first hosted install attempt — supplied complete rollback",
+      "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
+      "timestamp": "2026-10-07T08:43:18.960Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied hosted attempt; Codex local reconciliation",
+      "directly_verified": false,
+      "evidence": "One standard Lovable Drizzle attempt using historical SHA-256 175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266 (40840 bytes/451 LF lines). All preguards passed; final assert raised 001E effective sidecar containment failed; entire transaction rolled back. Supplied verification: new growth/control tables and command/projection absent,Drizzle exactly0000/0001/0002,no migration/journal,Edge deployment,data change or repository change. Specific matching hosted role not inspected/UNKNOWN. Pre-attempt21chars17bonds70inventory7node encounters50encounters,C sidecars0/0/0,world asleep,zero schedules/live claims,314departures moved,modeopen,soakoff,no automatic fighttick; controls unchanged. Historical supplied evidence, not a fresh operational assertion or direct Codex hosted inspection."
     }
   ],
   "product_backlog": [

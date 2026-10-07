@@ -2,6 +2,12 @@
 
 **ENG-PROGRESSION-001E IMPLEMENTED LOCALLY / PREPARED — NOT INSTALLED / NOT ACTIVE.**
 
+2026-10-07 R1: **RECONCILED LOCALLY / READY FOR HOSTED INSTALL RETRY**. The first
+hosted attempt fully rolled back at the over-broad final sidecar assertion; no
+installation or Edge deployment remains. The [R1 reconciliation](progression-001E-R1-reconciliation.md)
+records supplied evidence, the precise repaired invariant and current acceptance.
+Hosted retry is not authorized by the local R1 task.
+
 Prepared 2026-10-06 from task_start_sha / synchronized origin/main
 `fc370869cc38696ebe1e5caf4d25ac57d47892d5`. Supplied hosted preflight is reconciled
 in the [audit](progression-001E-audit.md) and [plan](progression-001E-plan.md).
@@ -19,9 +25,10 @@ stance decision remains 001F; no automatic stance cleanup is introduced.
 One atomic standard Lovable Drizzle transaction must apply
 [progression-001E-cutover.sql](progression-001E-cutover.sql).
 
-| SHA-256 | UTF-8 bytes | LF lines |
-|---|---:|---:|
-| `175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266` | 40,840 | 451 |
+| Identity | SHA-256 | UTF-8 bytes | LF lines |
+|---|---|---:|---:|
+| Current R1 prepared payload | `734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40` | 41,673 | 461 |
+| Historical first attempt, fully rolled back | `175d0c15c0f82a79c9682e0dca01c17f360eff88ab48fcf9fd0fedd650930266` | 40,840 | 451 |
 
 The [release manifest](progression-001E-manifest.json) pins every SQL/generator,
 Edge/shared handler, config and affected browser source hash/bytes/lines. Explicit
@@ -38,9 +45,13 @@ ACL drift, ordinary character UPDATE or ordinary bond write policies. Both accep
 character trigger definitions are guarded by supplied full pg_get_functiondef
 hashes. Local full-definition legacy hashes match all five supplied abbreviations.
 Final assertions check effective private/legacy/narrow-command/table privileges,
-including custom/inherited roles, and disabled command control. Built-in global
-database-authority roles/superusers are outside gameplay containment; an ordinary
-or custom member inheriting their table access still fails the final assertion.
+including custom ordinary inheritance, and disabled command control. R1 separates
+owner-only direct table/column ACLs from effective gameplay access. Known anon,
+authenticated and service_role principals are never exempt. Other roles with
+superuser/BYPASSRLS attributes or effective global read/write authority are classified
+by metadata, not platform names; ordinary inherited access still fails. Explicit
+nonowner ACLs fail for authority roles too. Global read/write authority alone does
+not bypass RLS. The specific role matching the first hosted failure is unknown.
 
 Installation creates schema/functions/ACLs and one disabled singleton control row;
 it never initializes players, updates character data or invokes gameplay functions.

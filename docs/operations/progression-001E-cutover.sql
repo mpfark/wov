@@ -443,9 +443,19 @@ DO $assert$ DECLARE sig text; BEGIN
  THEN RAISE EXCEPTION '001E effective narrow-command ACL drift'; END IF;
  IF EXISTS(SELECT 1 FROM pg_class rel WHERE rel.oid IN('public.progression_class_growth_milestone'::regclass,'public.progression_command_control'::regclass)
    AND (rel.relowner<>'postgres'::regrole OR NOT rel.relrowsecurity OR EXISTS(SELECT 1 FROM pg_policy WHERE polrelid=rel.oid)
-    -- Built-in global database authority roles intrinsically bypass ACLs. Custom/ordinary members still fail this check.
-    OR EXISTS(SELECT 1 FROM pg_roles role WHERE NOT role.rolsuper AND role.rolname<>'postgres' AND role.rolname !~ '^pg_'
-      AND has_table_privilege(role.oid,rel.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))))
+    -- Direct/default/PUBLIC table and column grants must be owner-only, including authority roles.
+    OR EXISTS(SELECT 1 FROM aclexplode(COALESCE(rel.relacl,acldefault('r',rel.relowner))) a WHERE a.grantee<>rel.relowner)
+    OR EXISTS(SELECT 1 FROM pg_attribute col,LATERAL aclexplode(col.attacl) a
+      WHERE col.attrelid=rel.oid AND col.attnum>0 AND NOT col.attisdropped AND a.grantee<>rel.relowner)
+    -- Gameplay principals are never exempt, even if incorrectly assigned database authority.
+    -- Other roles are classified by actual attributes/effective global read/write membership, not names.
+    OR EXISTS(SELECT 1 FROM pg_roles role WHERE role.rolname<>'postgres'
+      AND (role.rolname IN('anon','authenticated','service_role') OR
+        (NOT role.rolsuper AND NOT role.rolbypassrls AND NOT EXISTS(
+          SELECT 1 FROM pg_roles authority WHERE authority.rolname IN('pg_read_all_data','pg_write_all_data')
+          AND pg_has_role(role.oid,authority.oid,'USAGE'))))
+      AND (has_table_privilege(role.oid,rel.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        OR has_any_column_privilege(role.oid,rel.oid,'SELECT,INSERT,UPDATE,REFERENCES')))))
  THEN RAISE EXCEPTION '001E effective sidecar containment failed'; END IF;
  IF (SELECT enabled FROM public.progression_command_control WHERE singleton) THEN RAISE EXCEPTION '001E must install inactive'; END IF;
 END $assert$;
