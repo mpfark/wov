@@ -32,7 +32,7 @@ RP EARNING AUTHORITY GAP
 | O4 class | **Only Overlord** may deliberately bypass normal class-access requirements. Unsafe runtime/lifecycle gates still apply. Preserve earned historical growth; no automatic refund. Normal class bond reset applies. | Documented bond errors need separate repair. Exact existing reset semantics and catalog admissibility must be verified before implementing the bypass. |
 | O5 tokens | Compensation/reward grants: Steward **1 token/action**, Overlord **5 tokens/action**. Durable reason, audit, UUID; preserve earned milestone uniqueness. | Consumed grants cannot be naively reversed. Repeated awards O10 and case-specific compensation. |
 | O6 Renown | RP rewards/compensation: Steward **25 RP/action**, Overlord **100 RP/action**. Only Overlord approves documented rank, lifetime or Renown-related attribute corrections. Distinguish balance, lifetime, ranks and stat provenance. Never reroll historical HMAC outcomes. | Whether each reward/compensation increases lifetime RP needs an explicit model. Gameplay earning remains deferred. |
-| O7 creation | One **server-authoritative atomic** creation covers character, initial resources and **starter gear**. Admin creation uses the same baseline. Browser submits choices, never authoritative computed values. | Exact current race/catalog/starting amounts require verification; absent starter catalog must be selected/approved. Family atomicity or optional retry remains explicit. |
+| O7 creation | One **server-authoritative atomic** creation covers character, initial resources and starting materials. **Revised C2 owner decision supersedes starter gear: no equipment or inventory items.** Admin creation uses the same baseline. Browser submits choices, never authoritative computed values. | Current revised [C2 blueprint](progression-001G-C2-creation-blueprint.md) fixes gold200/salvage40/six gems, full resources and no family at creation; staff/socket work deferred. Remaining dependency evidence and manifest versions require review. |
 | O8 deletion/restoration | **Soft delete; 30-day restoration window; only Overlord restores.** Controlled permanent deletion after the window is subject to privacy/retention. Deleted characters are excluded from gameplay; unsafe lifecycle refuses. | Evidence retained only where justified; purge authorization/process, lawful retention and restore conflicts need scoped decisions. |
 | O9 revive | Steward/Overlord controlled revive with **normal respawn semantics** for HP/CP/MP; verify source amounts. No inconsistent bare HP set; no active combat/pending-state bypass. | Source preserves CP/MP, rather than filling them. Confirm complete respawn consequences, including delay, gold loss, destination and cleanup, for the admin adapter before implementation. |
 | O10 permissions | Fixed roles/permissions, audit and extra sensitive confirmation. **Only Overlord may reward own characters**, with audit flag. Steward cannot self-reward. **Repeated awards to the same character require separate approval.** | Approval authority, expiry, repeat scope, thresholds/windows and anti-splitting policy remain undecided. Proposed race-safe machinery is not owner-approved policy. |
@@ -58,7 +58,7 @@ product role. Roles and target ownership are always derived on the server.
 | Respec-token award | No | 1/action, no self-reward | 1..5/action; own target flagged |
 | RP award | No | 1..25/action, no self-reward | 1..100/action; own target flagged |
 | Rank/lifetime/Renown-attribute correction | No | No | Approval only, documented coherent case |
-| Creation | Own normal baseline | Admin uses identical baseline; exact delegated creation permission unresolved | Admin uses identical baseline; exact delegated creation permission unresolved |
+| Creation | Own normal baseline | No creation for another account | Create for another account with reason/audit, same baseline/quota, under revised C2 |
 | Soft deletion | Current own-delete permission requires reconciliation | No new admin-delete permission decided | No new admin-delete permission decided |
 | Restore within 30 days | No | No | Yes, safe verified restore only |
 | Permanent purge | No new permission | No new permission | Controlled procedure/authorization still undecided |
@@ -78,10 +78,7 @@ owned by the same actor does not remove that flag.
 2. Identify repeated-award approvers, self-approval restrictions, expiry, repeat
    definition/window, aggregation categories and cross-actor anti-splitting scope.
    Review the concrete approval-budget proposal in the command contracts.
-3. Approve the verified creation manifest: allowed race/classless catalog, initial
-   gold/material amounts, exact starter gear/slots/durability, full initial
-   resources and optional family recovery policy. Admin creation delegation is
-   also unresolved. Historical seeds/UI/defaults are evidence, not approval.
+3. Review the current [revised C2 manifest/blueprint](progression-001G-C2-creation-blueprint.md). C2 now approves gold200/salvage40/six gems, full calculated resources, no items/family, five retained characters and Overlord-only delegated creation. These choices supersede this earlier open question; remaining exact schema/security/catalog-version evidence is not gameplay approval.
 4. Decide whether compensation versus reward RP changes lifetime, and define
    coherent corrections across RP/ranks/stats without replaying old rolls.
 5. Approve each opaque/irreversible technical repair's evidence, exact scope,

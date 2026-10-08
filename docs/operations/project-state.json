@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-07T23:45:51Z",
-  "based_on_source_sha": "215f91f86ec176dac8119ea208651e085dbfe1a6",
+  "updated_at": "2026-10-08T15:13:17Z",
+  "based_on_source_sha": "2245354612807b18d58d8f502fc2cbde3fea4b62",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1121,6 +1121,16 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "ENG-PROGRESSION-001G-C1 AUDIT / DESIGN INPUT COMPLETE; docs-only preparation, no creation implementation. docs/operations/progression-001G-C1-creation-baseline-audit.md, progression-001G-C1-hosted-metadata-request.md (not executed/not authorized) and docs/design/progression-001G-C1-creation-manifest-proposal.md (unapproved structure). Source creation trusts client stats/HP/AC/class and omits CP; conditional fallback L1 CP30 versus historical100, gold200/salvage40 versus UI100/42, removed starter gear, optional family and admin delegation gaps documented. Version0/receipt compatibility requires separate origin proof design. Installed metadata and exact owner-approved manifest remain C2 gates. No runtime/SQL/migration/fixture/test/config changes, hosted access, data writes, deployment, activation or publication. F closure/protected15/unprotected38/browser6 and four retained limitations unchanged. Fresh local validation:35 existing tests passed (26 formula parity/6 location source/3 project state),66 relative links/anchors checked,conditional formula examples verified without fixture writes; documentation-only diff."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2 revised no-equipment creation blueprint",
+      "status": "authored",
+      "sha": "2245354612807b18d58d8f502fc2cbde3fea4b62",
+      "timestamp": "2026-10-08T15:13:17Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Mik revised owner policy; Codex local design",
+      "directly_verified": true,
+      "evidence": "docs/design/progression-001G-C2-creation-blueprint.md reviewed, documentation only; owner authorized documentation commit/push on 2026-10-08 after validation. Revised C2-03 no equipment/inventory; C2-12/C2-13 staff/socket work deferred to ENG-ITEMS-001. Economy200gold/40salvage/six gems, full server-derived resources, no creationfamily, L1join/L10found, five retained characters/case-insensitive names/Overlorddelegation/origin receipt captured. Source empty-equipment basic attack uses unarmed d3; runtime entry remains unproven. Narrow creation calculation must preserve private Auth-context guard/clamp-only progression semantics. Targeted metadata/deletion containment/normalization-retention decisions and separately authorized packages remain gates. No runtime/SQL/test/config/history change, hosted access/gameplay writes/migration/deploy/activation/publication. F closure and four limitations preserved."
     }
   ],
   "known_blockers": [
@@ -1287,13 +1297,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "215f91f86ec176dac8119ea208651e085dbfe1a6",
-    "timestamp": "2026-10-07T23:45:51Z",
+    "sha": "2245354612807b18d58d8f502fc2cbde3fea4b62",
+    "timestamp": "2026-10-08T15:13:17Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — ENG-PROGRESSION-001G-C1 AUDIT COMPLETE; metadata inspection and C2 separately authorized",
-    "evidence": "C1 prepared creation audit, unapproved manifest structure and minimal read-only Lovable request only. No hosted request executed or sent. Owner must separately authorize metadata intake and approve reconciled creation baseline/catalog/gear/resources/economy/family/name-quota/delegation/proof retention; then separately authorize bounded local C2. Preserve F CLOSED/INSTALLED/VERIFIED/EDGE DEPLOYED/COMMANDS PAUSED/FRONTEND NOT PUBLISHED and retained limits; no install/deploy/gameplay writes/activation/publication authorized."
+    "artifact": "STOP — revised C2 blueprint reviewed; P0 and implementation packages require separate authorization",
+    "evidence": "Documentation only; owner approved no-equipment baseline. Recommended first separately authorized package P0 targeted evidence/contract intake, excluding item/socket work. Documentation-only review/corrections/commit/push authorized by owner on 2026-10-08, subject to validation and Git synchronization; no P0 authorization. C2 runtime/migration/install/deploy/activation/publication remains unauthorized; deletion/restore/purge separate dependency and hard-delete bypass containment required before safe activation. Preserve F closure/pausedcommands/frontendnotpublished and four accepted limitations."
   },
   "volatile_runtime_observations": [
     {
@@ -1595,6 +1605,16 @@
       "reporting_actor": "Mik supplied hosted evidence; Codex local reconciliation",
       "directly_verified": false,
       "evidence": "Operator-supplied deployment 2026-10-07T21:06:27Z, progression-command: Successfully deployed edge functions: progression-command. Working-tree SHA-256 index.ts 88819cab31e7a2f9695a6f8cc391fe310dd632b55caf825bf6f68b89c3e978d7; shared progression-command.ts 845401a78e02da379345e808e5aced143a9802f4f3bcefa9eba5d95013c6e178; config.toml a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9. Operator-observed OPTIONS200 empty/expected CORS, unauthenticated POST401 {\"kind\":\"refused\",\"reason\":\"unauthorized\"}, GET405 {\"kind\":\"refused\",\"reason\":\"method_not_allowed\"}; verify_jwt=false effective through handler-owned refusal. Authenticated probes intentionally skipped. Seven Drizzle entries unchanged,0005/0006 identities verified; controlfalse; service table UPDATEfalse/protected15false/unprotected38true; authenticated six preference columns only; commandservice-only/projectionauthenticated-only/private Renown+XPowner-only; six progression tablesowner-only/RLS/no policies; function identities unchanged,no key material exposed. Characters fingerprint f672ddcb4c0e4d88f21f7bc585159646/count21 before/after; sidecars0/0/0/0,keyrows1,Drizzlerows7 unchanged; no gameplay mutation,receipt,backfill,keyrotation. Supplied hosted evidence,not independent Codex verification or authenticated gameplay proof. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C1 hosted metadata summary supplied in C2 reconciliation",
+      "status": "unknown",
+      "sha": null,
+      "timestamp": "2026-10-08T09:19:00Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied summary of Lovable inspection",
+      "directly_verified": false,
+      "evidence": "Supplied observation window approximately2026-10-08 09:19-09:21UTC, not exact start time. Full original report unavailable/not independently retrieved. Reported one postgres SECURITY DEFINER creation overload/auth+service EXECUTE/Auth owner/startconfig/clientstatsHPAC; absentcharacter_class with retainedcast/textFK; defaults200gold/L1XP0/stats10/HP20CP100MP100AC10; no quota/case-sensitive name unique/service character+inventoryINSERT/browser6; enabled materialtrigger40salvage/sixgems; six active/selectable races/classless18HP10AC; no auto gear/creation sidecars/immutablecatalogversion established; familyfounding lacksL10; version0/opaque baseline/separatecreationreceipt. Metadata only, no creation invocation/runtime success. Deletion graph/namecollisions/overquota counts/externalwriters unproven. Original staff/socket evidence missing but now deferred outsideC2. No Codex hosted inspection. Supersedes earlier conclusion that no hosted inspection had occurred, not prior timestamped C1 source-only scope."
     }
   ],
   "product_backlog": [
