@@ -8,6 +8,16 @@ Mik reports installed `0009`, postgres ownership, fixed search path and owner-on
 
 Affected scope: ENG-PROGRESSION-001G-C2 creation in engine § progression and roadmap ENG-PROGRESSION-001G. Approved rules preserved; no new deletion/restore policy. F remains closed with all four limitations below.
 
+### Inactive installation attempt 1 and local correction
+
+P2-B source was subsequently pushed at `95d8b23517e84226f607b8587bdded7a3107dfa0`. Mik reports that installation of the original inactive SQL (`900cb8dba532a6d779073425dd0abd0f0b9f008e1abf0cde0c3dbb3d0fe9ce11`) failed with `materials inherited browser write privilege: postgres` and rolled back cleanly. **No P2-B migration installed.** Execution timestamp was not supplied; this is operator evidence, not a Codex hosted inspection. A new fetch shows HEAD=origin/main at that source checkpoint; no failed-operation source commit appeared.
+
+PostgreSQL stores the granted role in `pg_auth_members.roleid` and the recipient in `member`. `GRANT authenticated,anon TO postgres` therefore legitimately puts postgres in the descendant set. The recursive direction was correct, but classifying the database owner as a browser principal was incorrect. The correction excludes only `character_materials.relowner` from the effective browser-write assertion; the existing dependency assertion still requires that owner to be postgres. It does not exempt arbitrary superusers, BYPASSRLS roles or named platform roles. Browser roots and other descendants remain checked using unchanged effective table/column privilege predicates, including inherited and PUBLIC rights. Browser inheritance of postgres is still refused on the browser's own privileges.
+
+No grants, RLS, FK, bridge, formulas or other SQL behavior changed. Cutover SQL and preflight hashes remain unchanged. Cutover's analogous owner/member assertions are a separate activation-only readiness concern; this fix does not certify B for installation under the hosted owner-membership topology. There is no direct inactive-installation dependency requiring a cutover edit.
+
+Local correction is uncommitted/unpushed. **GO for preparation of a second inactive-only attempt** from a separately authorized corrected source checkpoint, with the new hash below and unchanged narrow pre/post-install requirements. Not authorization to execute or activate. Recovery stash and the four F limitations remain unchanged.
+
 ## A — installable while new creation stays inactive
 
 `progression-001G-C2-P2-B-inactive-integration.sql` introduces:
@@ -69,7 +79,7 @@ Post-install metadata only: bridge/internal owner, SECURITY DEFINER/path, all ap
 
 ## Validation and retained limitations
 
-- New P2-B exact SQL disposable PGlite tests: **10/10**. Actual installed `0009` plus exact A/B SQL; only a rolled-back fixture grants authenticated bridge EXECUTE. Covers JWT identity/Overlord reason, baseline, replay/conflicts/quota/name cases, grants once, late rollback, legacy/harness/direct INSERT and delete rejection, inherited grant abort, future FK/orphan refusal, origin RESTRICT and simulated shutdown→bridge grant ordering. No restoration behavior claimed.
+- Corrected P2-B exact SQL disposable PGlite tests: **16/16**. Actual installed `0009` plus exact A/B SQL; only a rolled-back fixture grants authenticated bridge EXECUTE. Original ten tests retained. Six added regression cases cover full inactive installation with postgres membership in both browser roles, removal of prior PUBLIC/browser grants, inherited parent table/column writes, ordinary browser-member direct writes, browser inheritance of postgres, and PUBLIC leaks. Original tests cover JWT identity/Overlord reason, baseline, replay/conflicts/quota/name cases, grants once, late rollback, legacy/harness/direct INSERT and delete rejection, inherited grant abort, future FK/orphan refusal, origin RESTRICT and simulated shutdown→bridge grant ordering. No restoration behavior claimed; B is not tested with the hosted owner topology.
 - Existing P2-A exact SQL tests: **21/21**, six race/resource vectors, all late failure points, no gear, version0 progression continuity, retention/replay, pinned manifest. C test fixture has older broad UPDATE rights; new tests assert preservation, not that it represents installed F-R1 ACLs.
 - Project-state validator passes; focused project-state Vitest **3/3** passes. Initial sandbox run could not resolve Vitest dependencies (EPERM); authorized local rerun passed. Existing Vitest configuration deprecation warning only. `git diff --check` passes; no full build necessary for SQL/docs-only scope. One local backend; queued calls/lock inspection are not hosted multi-session contention proof.
 - Four F limitations preserved verbatim: **HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP.**
@@ -78,7 +88,7 @@ Post-install metadata only: bridge/internal owner, SECURITY DEFINER/path, all ap
 
 | File under `docs/operations/` | SHA-256 |
 |---|---|
-| `progression-001G-C2-P2-B-inactive-integration.sql` | `900cb8dba532a6d779073425dd0abd0f0b9f008e1abf0cde0c3dbb3d0fe9ce11` |
+| `progression-001G-C2-P2-B-inactive-integration.sql` | `b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54` |
 | `progression-001G-C2-P2-B-cutover-containment.sql` | `7a8568526bcc97cc7e29a769226e0a78936e5718221e1a3e5f90602cf3eaee9f` |
 | `progression-001G-C2-P2-B-preflight.sql` | `98d92b7980adb57dba0cfd11ad8504165229298092be06af9a1a563709cfada1` |
 

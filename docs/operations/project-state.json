@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T12:36:59Z",
-  "based_on_source_sha": "f3c357a24de85e254e41893242a90996bcf43987",
+  "updated_at": "2026-10-09T12:51:15Z",
+  "based_on_source_sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -318,6 +318,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0009_progression_001g_c2_p2_a_creation_authority.sql",
       "evidence": "Mik P2-B reports installation, postgres owner, fixed path and owner-only EXECUTE. Recording timestamp only, actual execution time not supplied. Fetched generated source f3c357a2; Git blob matches reviewed SHA256785ef260b90e5255ed37055aea29414a7b352c6bbced52f52cb53a12be071174/15344UTF8-LF bytes. No independent hosted inspection/runtime proof or Codex installation; creation not activated."
+    },
+    {
+      "sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
+      "timestamp": "2026-10-09T12:51:15Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied failure and rollback confirmation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
+      "identity": "P2-B inactive integration attempt1 — assertion failure/full rollback",
+      "status": "blocked",
+      "evidence": "Original reviewed900cb8dba532a6d779073425dd0abd0f0b9f008e1abf0cde0c3dbb3d0fe9ce11 failed: materials inherited browser write privilege: postgres. Owner is a member of authenticated and anon. Clean full rollback, no migration installed. Recording timestamp only; actual execution time not supplied. Fetched source still95d8b235, no new platform commit observed. No Codex hosted operation."
     }
   ],
   "generated_supabase_types": {
@@ -1289,6 +1300,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
       "evidence": "One owner-only postgres RPC bridge to exact installed0009; choice-only inputs and ID/kind response. Future-write materials FK NOT VALID preserves orphans; browser direct material writes narrowed with reads/RLS/service writers preserved. Separate cutover-only SQL validates FK, denies legacy creation/harness/direct INSERT and hard delete; bridge remains paused. 10 local exact integration tests +21 P2-A pass; queued single backend is not multi-session proof. Full soft-delete/Overlord restore/permanent purge/account replay lifecycle and orphan disposition block activation. No frontend changes, historical migration edits, hosted operations, installation, activation, deployment, publication, commit or push. Four F limitations unchanged."
+    },
+    {
+      "sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
+      "timestamp": "2026-10-09T12:51:15Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
+      "identity": "P2-B inactive owner-membership assertion correction",
+      "status": "authored",
+      "evidence": "Only materials effective-browser assertion excludes verified table owner; all browser roots/other members retain effective inherited/PUBLIC table/column checks. Corrected SQL SHA256b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. Focused P2-B16/16 passes with exact hosted membership regression and genuine inherited leaks. Cutover/preflight unchanged; analogous cutover assertion remains a later activation-only concern. Local correction/handoff only, no hosted operations, migration/history edits, frontend changes, activation, commit or push. Recovery stash/four F limitations preserved."
     }
   ],
   "known_blockers": [
@@ -1465,15 +1487,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — P2-B local preparation complete; publication/inactive installation separately authorized",
-    "status": "authored",
-    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
-    "timestamp": "2026-10-09T12:36:59Z",
+    "sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
+    "timestamp": "2026-10-09T12:51:15Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
     "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
-    "evidence": "Review local A package, then separately authorize source checkpoint and minimum standard Lovable inactive installation. SQL outside migrations; no tool execution here. B/full activation remains gated by deletion lifecycle, orphan resolution, frontend cutover and scoped installed ACL proof. No automatic follow-on task."
+    "status": "authored",
+    "identity": "STOP — corrected P2-B inactive attempt preparation; publication/install separately authorized",
+    "evidence": "Local GO for second inactive-only attempt preparation after separately authorized corrected source publication, exact new SQL hash and unchanged scoped pre/post-install checks. No installation authorization or cutover readiness implied. Stop after correction."
   },
   "volatile_runtime_observations": [
     {

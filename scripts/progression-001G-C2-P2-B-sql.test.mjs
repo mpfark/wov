@@ -184,3 +184,36 @@ test('simulated cutover followed by fixture-only public grant creates through br
   await refused(()=>call(),/permission denied/);await refused(()=>q('SELECT character_create()'),/permission denied/);
   const r=await bridge();assert.equal(r.kind,'applied');await db.exec('RESET ROLE');assert.equal((await counts()).materials,7);
 }));
+const reinstallInactive=async()=>{
+  await db.exec('DROP FUNCTION public.character_create_c2(uuid,text,text,text,uuid,text,text); ALTER TABLE character_materials DROP CONSTRAINT character_materials_character_id_c2_fkey');
+  await db.exec(read('docs/operations/progression-001G-C2-P2-B-inactive-integration.sql'));
+};
+test('hosted owner membership in authenticated/anon is not browser authority; full inactive SQL succeeds',async()=>tx(async()=>{
+  await db.exec('GRANT authenticated,anon TO postgres; GRANT ALL ON character_materials TO PUBLIC,anon,authenticated');
+  assert.equal((await q(`SELECT count(*)::int n FROM pg_auth_members
+    WHERE member='postgres'::regrole AND roleid IN ('authenticated'::regrole,'anon'::regrole)`))[0].n,2);
+  await reinstallInactive();
+  for(const r of ['anon','authenticated']) {
+    assert.equal((await q("SELECT has_table_privilege($1,'character_materials','INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') ok",[r]))[0].ok,false);
+    assert.equal((await q("SELECT has_any_column_privilege($1,'character_materials','INSERT,UPDATE,REFERENCES') ok",[r]))[0].ok,false);
+  }
+  assert.equal((await q("SELECT has_table_privilege('postgres','character_materials','UPDATE') ok"))[0].ok,true);
+}));
+for(const [label,grant] of [
+  ['browser inherits parent table grant','GRANT INSERT ON character_materials TO custom_default; GRANT custom_default TO authenticated'],
+  ['browser inherits parent column grant','GRANT UPDATE(count) ON character_materials TO custom_default; GRANT custom_default TO anon'],
+  ['ordinary browser member has direct write','GRANT authenticated TO custom_child; GRANT DELETE ON character_materials TO custom_child'],
+  ['browser inherits database owner','GRANT postgres TO authenticated'],
+]) test('owner exemption still refuses '+label,async()=>tx(async()=>{
+  await db.exec(grant);await refused(()=>reinstallInactive(),/materials inherited browser write privilege|private authority privilege drift/);
+}));
+test('materials assertion independently catches PUBLIC table/column grants introduced after revoke',async()=>tx(async()=>{
+  const block=read('docs/operations/progression-001G-C2-P2-B-inactive-integration.sql').match(/DO \$materials_acl\$[\s\S]*?END \$materials_acl\$;/)[0];
+  // Table PUBLIC leak survives this block and is refused (outer migration removes it).
+  await db.exec('GRANT INSERT ON character_materials TO PUBLIC');
+  await refused(()=>db.exec(block),/materials inherited browser write privilege/);
+  await db.exec('REVOKE INSERT ON character_materials FROM PUBLIC; GRANT UPDATE(count) ON character_materials TO PUBLIC');
+  // Column PUBLIC grant is explicitly removed by the exact assertion block first.
+  await db.exec(block);
+  assert.equal((await q("SELECT has_any_column_privilege('anon','character_materials','INSERT,UPDATE,REFERENCES') ok"))[0].ok,false);
+}));

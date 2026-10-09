@@ -75,7 +75,12 @@ BEGIN
   FOR r IN WITH RECURSIVE app(oid) AS (
     SELECT oid FROM pg_roles WHERE rolname IN ('anon','authenticated')
     UNION SELECT m.member FROM pg_auth_members m JOIN app ON m.roleid=app.oid)
-    SELECT oid FROM app LOOP
+    -- roleid is the granted role; member is its recipient. The database owner
+    -- can be a member of browser roles without being a browser principal.
+    -- Exempt only the already-verified table owner. Browser roles inheriting
+    -- owner/global/granted/PUBLIC rights still fail their own effective checks.
+    SELECT oid FROM app WHERE oid<>(SELECT relowner FROM pg_class
+      WHERE oid='public.character_materials'::regclass) LOOP
     IF has_table_privilege(r,'public.character_materials','INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
       OR has_any_column_privilege(r,'public.character_materials','INSERT,UPDATE,REFERENCES')
     THEN RAISE EXCEPTION 'materials inherited browser write privilege: %',pg_get_userbyid(r); END IF;
