@@ -57,6 +57,13 @@
       "when": 1791533074337,
       "tag": "0007_progression_001g_c2_private_creation_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791537721654,
+      "tag": "0008_progression_001g_c2_s2_name_identity",
+      "breakpoints": true
     }
   ]
 }
