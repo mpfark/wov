@@ -15,13 +15,15 @@ const mocks = vi.hoisted(() => ({
   rows: [] as Character[][],
   query: vi.fn(),
   rpc: vi.fn(),
+  readCreated: vi.fn(),
   change: null as null | ((payload: any) => void),
   status: null as null | ((status: string) => void),
   remove: vi.fn(),
 }));
 
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
-  from: () => ({ select: () => ({ eq: () => ({ order: mocks.query }) }) }),
+  from: () => ({ select: () => ({ eq: () => ({ order: mocks.query,
+    eq: () => ({ single: mocks.readCreated }) }) }) }),
   channel: () => {
     const channel = {
       on: vi.fn((_type, _filter, callback) => { mocks.change = callback; return channel; }),
@@ -43,6 +45,45 @@ beforeEach(() => {
   mocks.status = null;
   mocks.remove.mockReset();
   mocks.rpc.mockReset().mockResolvedValue({ data: null, error: null });
+  mocks.readCreated.mockReset().mockResolvedValue({ data: base(20), error: null });
+});
+
+describe('C2 authoritative creation delivery', () => {
+  const choices = { name: 'Tester', race: 'human', gender: 'male' as const };
+  it('reads authoritative row, deduplicates replay and waits for explicit selection', async () => {
+    sessionStorage.removeItem('selectedCharacterId'); mocks.rows = [[]];
+    mocks.rpc.mockResolvedValue({ data: { kind: 'applied', characterId: CHARACTER }, error: null });
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await act(async () => { await result.current.createCharacter(choices); });
+    expect(result.current.characters).toHaveLength(1);
+    expect(result.current.characters[0].hp).toBe(20); expect(result.current.character).toBeNull();
+    await act(async () => { await result.current.createCharacter(choices); });
+    expect(result.current.characters).toHaveLength(1);
+    act(() => result.current.selectCharacterAfterCreate(CHARACTER));
+    expect(result.current.character?.hp).toBe(20); unmount();
+  });
+  it('read-after-write failure retains original request for retry without speculative row', async () => {
+    sessionStorage.removeItem('selectedCharacterId'); mocks.rows = [[]];
+    mocks.rpc.mockResolvedValue({ data: { kind: 'applied', characterId: CHARACTER }, error: null });
+    mocks.readCreated.mockResolvedValueOnce({ data: null, error: new Error('read unavailable') });
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await act(async () => { await expect(result.current.createCharacter(choices)).rejects.toThrow('read unavailable'); });
+    expect(result.current.characters).toEqual([]);
+    await act(async () => { await result.current.createCharacter(choices); });
+    expect(mocks.rpc.mock.calls[1]).toEqual(mocks.rpc.mock.calls[0]); unmount();
+  });
+  it('rejects delegated inputs and does not resurrect a newer observed tombstone', async () => {
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await expect(result.current.createCharacter({ ...choices, targetAccount: 'other' })).rejects.toThrow('signed-in account');
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    act(() => mocks.change?.({ eventType: 'UPDATE', new: { ...base(5), lifecycle_version: 1, deleted_at: '2026-10-09' } }));
+    mocks.rpc.mockResolvedValue({ data: { kind: 'applied', characterId: CHARACTER }, error: null });
+    await act(async () => { await expect(result.current.createCharacter(choices)).rejects.toThrow('no longer available'); });
+    expect(result.current.characters).toEqual([]); unmount();
+  });
 });
 
 describe('P2-C lifecycle cutover client', () => {

@@ -17,7 +17,8 @@ interface Props {
   onCancel: () => void;
 }
 
-export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, onSave, onCancel }: Props) {
+export default function AdminCharacterSheet({ c, isEditing: requestedEditing, charEdits, setCharEdits, onEdit, onSave, onCancel }: Props) {
+  const isEditing = requestedEditing && !c.deleted_at;
   const inventory = c.inventory || [];
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
@@ -96,7 +97,7 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
               </Button>
             </>
           ) : (
-            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={onEdit}>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={onEdit} disabled={!!c.deleted_at}>
               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
             </Button>
           )}

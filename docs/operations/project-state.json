@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T18:11:37.086Z",
-  "based_on_source_sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+  "updated_at": "2026-10-09T19:09:55.875Z",
+  "based_on_source_sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -340,6 +340,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0010_progression_001g_c2_p2_b_inactive_integration.sql",
       "evidence": "Mik P2-C reports 0007–0010 installed and C2 inactive; P2-B cutover not installed. Recording timestamp only, installation time not supplied. Generated source b9d82b8f is a normal descendant and Git SQL blob matches reviewed b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. No independent hosted verification or Codex installation. Attempt1 failure/rollback evidence preserved."
+    },
+    {
+      "identity": "0011_progression_001g_c2_p2_c_inactive_lifecycle — installed (operator-reported)",
+      "status": "installed",
+      "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
+      "timestamp": "2026-10-09T19:09:55.875Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik installed baseline; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0011_progression_001g_c2_p2_c_inactive_lifecycle.sql",
+      "evidence": "Mik confirms 0007–0011 installed/private/inactive, cutover packages uninstalled. Recording time only; hosted installation time not supplied. Platform descendant4526c11e contains0011 SQL/journal/snapshot/generated types; Git SQL blob matches reviewed80e1259050b4f1ddb6309a236a910c96a9a3d3102e0b1e6f3a7d7565c0329b93. Source verified, no Codex hosted verification or installation."
     }
   ],
   "generated_supabase_types": {
@@ -1344,6 +1355,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
       "evidence": "New owner decisions resolve prior purge permission/minimum-proof blocker. Same private lifecycle command now supports Overlord-only reasoned purge after30days, serialized UUID-bound replay and atomic37-table cleanup, bounded nested cascade drift checks, origin removal and creation-log purged transition. No progression/history archive; existing unexpired creation/lifecycle receipts finish12months, expired purge reason clears and minimal purge replay lasts until controlled actor deletion. 36 SQL tests pass with real canonical progression and nested FK fixtures; hook/type/state validation recorded in handoff. Prior soft-delete/restore work retained. A private-only; B separate coordinated cutover. No hosted access/install, existing data/history edits, deployment/activation/publication/commit/push. Recovery stash and four F limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2 integrated cutover locally prepared",
+      "status": "authored",
+      "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
+      "timestamp": "2026-10-09T19:09:55.875Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
+      "evidence": "Choice-only C2 bridge frontend with persistent replay, authoritative row read and retained capacity; Overlord delegation/restore/purge controls; two owner-membership assertion fixes; dormant capacity/receipt/Auth-deletion support and single transaction cutover composition. Approved L10 founding/L1 joining shared-function guard. Existing P2-C cutover/runtime bytes unchanged. 80 SQL tests and29 frontend/tracking tests pass. No hosted operations, migration-history edits, deployment, activation, publication, commit or push. Four F limitations unchanged."
     }
   ],
   "known_blockers": [
@@ -1528,18 +1550,29 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
       "evidence": "Superseded policy blocker: owner now approves explicit Overlord purge after30days with reason and minimum necessary replay/integrity retention. Local lifecycle implementation complete,36 SQL tests pass. Remaining activation gates: corrected separately authorized P2-B legacy creation containment; installed direct/nested FK/trigger/ACL and exact runtime body verification; creation/lifecycle receipt expiry maintenance; distinct controlled account deletion integration; coordinated frontend cutover. No hosted activation or ordinary early purge."
+    },
+    {
+      "identity": "C2 integrated activation requires narrow hosted prerequisites and separate authorization",
+      "status": "blocked",
+      "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
+      "timestamp": "2026-10-09T19:09:55.875Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
+      "evidence": "Local integration/maintenance/account cleanup preparation supersedes missing-source gates. Before coordinated activation verify zero materials orphans (positive count needs explicit owner disposition), exact runtime/family source bodies/dependency map, Auth trigger install privilege and existing pg_cron API/job boundary. Private support and composed cutover not installed; no frontend publication. Hosted empty-equipment/unarmed/Realtime and multi-session behavior unproven. Four accepted F limitations preserved."
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — P2-C lifecycle locally complete; publication/installation/activation separately authorized",
+    "identity": "STOP — integrated C2 preparation complete; review and separately authorize source/installation/cutover",
     "status": "authored",
-    "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
-    "timestamp": "2026-10-09T18:11:37.086Z",
+    "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
+    "timestamp": "2026-10-09T19:09:55.875Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
-    "evidence": "Local purge, restore, soft delete, retention reconciliation and focused validation complete under newly approved decisions. Review uncommitted package; no automatic source publication, hosted installation, deployment, frontend activation/publication or next phase. Fresh installed dependency/privilege checks and separate creation/account/retention cutover gates remain."
+    "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
+    "evidence": "Review local changes first. A private support may be proposed conditionally after source publication and narrow preflight; B must be one coordinated standard-tool transaction, then verified before Mik manually publishes frontend. No automatic next phase, commit/push or hosted action. See integrated handoff for stop conditions."
   },
   "volatile_runtime_observations": [
     {

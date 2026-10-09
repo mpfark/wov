@@ -2,6 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useState, ReactNode 
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter, Character } from '@/features/character';
 import type { CharacterResourceDeliveryState } from '@/features/character/hooks/useCharacter';
+import type { CreationChoices } from '@/features/character/creation-client';
 import { useRole } from '@/hooks/useRole';
 import { useNodes, GameNode, Region } from '@/features/world';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
@@ -21,7 +22,7 @@ interface GameContextValue {
   selectCharacter: (id: string) => void;
   clearSelectedCharacter: () => void;
   deleteCharacter: (id: string) => Promise<void>;
-  createCharacter: (data: any) => Promise<any>;
+  createCharacter: (data: CreationChoices) => Promise<Character>;
   updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
   updateCharacterLocal: (updates: Partial<Character>, hold?: boolean) => void;
   clearCharacterFields: (updates: Partial<Character>) => void;

@@ -162,9 +162,131 @@ async function installRuntimeFixture(){
   await db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql'));
   assert.deepEqual(await q("SELECT proname,proowner,proacl::text FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname",[runtimeSources.map(s=>s[0])]),acl);
 }
+const familySource=()=>read('supabase/migrations/20260610100423_3b7b3bc3-161e-4cb6-a48b-1150b5cd57f3.sql')
+  .match(/CREATE OR REPLACE FUNCTION public\.apply_family_to_character\([\s\S]*?\$\$;/)[0];
+async function familyFixture(){
+  await db.exec(`CREATE TABLE families(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),key text UNIQUE,display_name text,founder_user_id uuid);
+    CREATE TABLE family_members(family_id uuid,user_id uuid);
+    CREATE FUNCTION _family_name_is_reserved(text) RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;`);
+  await db.exec(familySource());
+}
 const lifecycle=async({id=legacy,request=uid(next++),version=0,operation='soft_delete',reason=null}={})=>
   (await q('SELECT character_lifecycle_command($1,$2,$3,$4,$5) r',[id,request,version,operation,reason]))[0].r;
 const cutover=()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-lifecycle-cutover.sql'));
+const support=()=>db.exec(read('docs/operations/progression-001G-C2-integrated-private-support.sql'));
+test('integrated support is dormant, private and reports retained quota without changing characters',async()=>tx(async()=>{
+  const before=await counts();await support();assert.deepEqual(await counts(),before);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','character_creation_capacity(uuid)','EXECUTE') allowed"))[0].allowed,false);
+  assert.deepEqual((await q('SELECT character_creation_capacity(NULL) r'))[0].r,{retained:0,limit:5});
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  assert.deepEqual((await q('SELECT character_creation_capacity(NULL) r'))[0].r,{retained:1,limit:5});
+  await refused(()=>q('SELECT character_creation_capacity($1)',[target]),/not_authorized/);
+  await overlord();assert.deepEqual((await q('SELECT character_creation_capacity($1) r',[target]))[0].r,{retained:1,limit:5});
+}));
+test('creation detail expiry preserves live-account replay and immutable origin',async()=>tx(async()=>{
+  await support();const c=await call();const origin=await q('SELECT * FROM character_creation_origin');
+  // Local age fixture only: production maintenance cannot rewrite the clocks.
+  await db.exec('ALTER TABLE character_creation_log DISABLE TRIGGER character_creation_log_lifecycle');
+  await q("UPDATE character_creation_log SET created_at=timestamptz '2020-01-01',details_expires_at=timestamptz '2021-01-01' WHERE result_character_id=$1",[c.characterId]);
+  await db.exec('ALTER TABLE character_creation_log ENABLE TRIGGER character_creation_log_lifecycle');
+  await q('SELECT character_receipt_maintenance_internal()');
+  const log=(await q('SELECT * FROM character_creation_log'))[0];
+  assert.equal(log.detailed_receipt,null);assert.equal(log.replay_status,'applied');assert.equal(log.actor_id,actor);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin'),origin);
+  assert.equal((await q("SELECT has_function_privilege('service_role','character_receipt_maintenance_internal()','EXECUTE') allowed"))[0].allowed,false);
+}));
+test('expired purge details keep replay until controlled actor deletion, without automatic character purge',async()=>tx(async()=>{
+  await support();await overlord();const c=await call();await cutover();
+  await lifecycle({id:c.characterId});await age(c.characterId,721);
+  await lifecycle({id:c.characterId,version:1,operation:'purge',reason:'Expired and approved'});
+  await db.exec('ALTER TABLE character_creation_log DISABLE TRIGGER character_creation_log_lifecycle');
+  await q("UPDATE character_creation_log SET created_at=timestamptz '2020-01-01',details_expires_at=timestamptz '2021-01-01' WHERE result_character_id=$1",[c.characterId]);
+  await db.exec('ALTER TABLE character_creation_log ENABLE TRIGGER character_creation_log_lifecycle');
+  await db.exec('ALTER TABLE character_lifecycle_receipt DISABLE TRIGGER character_lifecycle_receipt_immutable');
+  await q("UPDATE character_lifecycle_receipt SET occurred_at=timestamptz '2020-01-01',details_expires_at=timestamptz '2021-01-01' WHERE character_id=$1",[c.characterId]);
+  await db.exec('ALTER TABLE character_lifecycle_receipt ENABLE TRIGGER character_lifecycle_receipt_immutable');
+  await q('SELECT character_receipt_maintenance_internal()');
+  assert.equal((await q('SELECT reason FROM character_lifecycle_receipt WHERE operation=\'purge\''))[0].reason,null);
+  assert.equal((await q('SELECT replay_status FROM character_creation_log'))[0].replay_status,'purged');
+  assert.equal((await q('SELECT count(*)::int n FROM characters WHERE id=$1',[legacy]))[0].n,1);
+  await db.exec('CREATE TRIGGER fixture_account_cleanup AFTER DELETE ON auth.users FOR EACH ROW EXECUTE FUNCTION character_account_deleted_internal()');
+  await q('DELETE FROM auth.users WHERE id=$1',[actor]);
+  assert.equal((await q('SELECT count(*)::int n FROM character_creation_log'))[0].n,0);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+}));
+test('controlled actor deletion retires only its replay and preserves delegated recipient provenance',async()=>tx(async()=>{
+  await support();await overlord();const c=await call({owner:target,reason:'delegated'});
+  await cutover();
+  await db.exec('CREATE TRIGGER fixture_account_cleanup AFTER DELETE ON auth.users FOR EACH ROW EXECUTE FUNCTION character_account_deleted_internal()');
+  await refused(()=>q('DELETE FROM auth.users WHERE id=$1',[target]),/lifecycle|creation origin|foreign key/i);
+  const origin=await q('SELECT * FROM character_creation_origin WHERE character_id=$1',[c.characterId]);
+  await q('DELETE FROM auth.users WHERE id=$1',[actor]);
+  const log=(await q('SELECT * FROM character_creation_log'))[0];
+  assert.equal(log.replay_status,'retired');assert.equal(log.actor_id,null);assert.equal(log.request_id,null);
+  assert.notEqual(log.detailed_receipt,null);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin WHERE character_id=$1',[c.characterId]),origin);
+}));
+test('coordinated containment refuses orphan data atomically and excludes owner membership',async()=>tx(async()=>{
+  await support();
+  await refused(()=>db.exec(read('docs/operations/progression-001G-C2-P2-B-cutover-containment.sql')),/foreign key|not present/i);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','delete_character_cascade(uuid)','EXECUTE') allowed"))[0].allowed,true);
+  // Remove only the deliberately-created orphan inside the disposable rollback fixture.
+  await q('DELETE FROM character_materials WHERE character_id=$1',[uid(999)]);
+  await db.exec(read('docs/operations/progression-001G-C2-P2-B-cutover-containment.sql'));
+  assert.equal((await q("SELECT has_function_privilege('authenticated','delete_character_cascade(uuid)','EXECUTE') allowed"))[0].allowed,false);
+  assert.equal((await q("SELECT has_function_privilege('postgres','delete_character_cascade(uuid)','EXECUTE') allowed"))[0].allowed,true);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','character_create_c2(uuid,text,text,text,uuid,text,text)','EXECUTE') allowed"))[0].allowed,false);
+}));
+test('complete composed cutover is atomic, grants only bridges and schedules receipt cleanup only',async()=>tx(async()=>{
+  await support();
+  await familyFixture();
+  for(const source of runtimeSources) await db.exec(originalRuntime(source).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION'));
+  await q('DELETE FROM character_materials WHERE character_id=$1',[uid(999)]);
+  await db.exec(`CREATE FUNCTION character_create(text) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ SELECT $$;
+    GRANT EXECUTE ON FUNCTION character_create(text) TO authenticated;
+    GRANT INSERT ON characters TO authenticated,service_role;`);
+  // PGlite cannot load pg_cron: this is an explicit catalog/API fixture solely to
+  // compile the scheduling branch. It does NOT test a real scheduler or job execution.
+  await db.exec(`INSERT INTO pg_catalog.pg_extension(oid,extname,extowner,extnamespace,extrelocatable,extversion)
+    VALUES(900001,'pg_cron','postgres'::regrole,'cron'::regnamespace,false,'fixture');
+    CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE plpgsql AS $$
+    BEGIN INSERT INTO cron.job VALUES($1,$2,$3);RETURN 1;END $$;`);
+  const composed=read('docs/operations/progression-001G-C2-integrated-cutover.sql');
+  // Fail at the last component and prove all earlier writer revocations roll back.
+  await db.exec("INSERT INTO cron.job VALUES('character-c2-receipt-expiry','fixture','fixture')");
+  await refused(()=>db.exec(composed),/job already exists/);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','character_create(text)','EXECUTE') allowed"))[0].allowed,true);
+  assert.equal((await q("SELECT count(*)::int n FROM pg_trigger WHERE tgname='character_c2_account_deleted'"))[0].n,0);
+  await db.exec("DELETE FROM cron.job WHERE jobname='character-c2-receipt-expiry'");
+  await db.exec(composed);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','character_create(text)','EXECUTE') allowed"))[0].allowed,false);
+  for(const role of ['anon','service_role']) {
+    assert.equal((await q("SELECT has_function_privilege($1,'character_create_c2(uuid,text,text,text,uuid,text,text)','EXECUTE') allowed",[role]))[0].allowed,false);
+  }
+  assert.equal((await q("SELECT has_table_privilege('service_role','characters','INSERT') allowed"))[0].allowed,false);
+  assert.equal((await q("SELECT has_function_privilege('authenticated','character_create_c2_internal(uuid,text,text,text,uuid,text,text)','EXECUTE') allowed"))[0].allowed,false);
+  const request=uid(next++);
+  await db.exec('SET LOCAL ROLE authenticated');
+  const created=(await q("SELECT character_create_c2($1,'BridgeOnly','human','male',NULL,NULL,'creation-c2-v1') r",[request]))[0].r;
+  const replay=(await q("SELECT character_create_c2($1,'BridgeOnly','human','male',NULL,NULL,'creation-c2-v1') r",[request]))[0].r;
+  assert.deepEqual(replay,created);
+  await db.exec('RESET ROLE');
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials WHERE character_id=$1',[created.characterId]))[0].n,7);
+  assert.equal((await q("SELECT count(*)::int n FROM cron.job WHERE jobname='character-c2-receipt-expiry' AND command='SELECT public.character_receipt_maintenance_internal();'"))[0].n,1);
+}));
+test('family guard enforces L10 founding but preserves L1 joining and existing ACLs',async()=>tx(async()=>{
+  await familyFixture();const c=await call();
+  const before=(await q("SELECT proacl::text acl FROM pg_proc WHERE oid='apply_family_to_character(uuid,text)'::regprocedure"))[0];
+  await db.exec(read('docs/operations/progression-001G-C2-integrated-family-guard.sql'));
+  assert.deepEqual((await q("SELECT proacl::text acl FROM pg_proc WHERE oid='apply_family_to_character(uuid,text)'::regprocedure"))[0],before);
+  await refused(()=>q("SELECT apply_family_to_character($1,'Newfamily')",[c.characterId]),/level 10/);
+  await q("INSERT INTO families(key,display_name,founder_user_id) VALUES('existing','Existing',$1)",[actor]);
+  assert.equal((await q("SELECT apply_family_to_character($1,'Existing') r",[c.characterId]))[0].r.ok,true);
+  // The fixture legacy character already exceeds L10; no raw progression rewrite.
+  await identity(target);assert.equal((await q("SELECT apply_family_to_character($1,'Founded') r",[legacy]))[0].r.ok,true);
+  await identity(actor);await cutover();await lifecycle({id:c.characterId});
+  await refused(()=>q("SELECT apply_family_to_character($1,'Existing')",[c.characterId]),/Character not found/);
+}));
 test('runtime exclusions change only the three active-character predicates, preserving function ACLs',async()=>tx(async()=>{
   for(const source of runtimeSources){
     const expected=originalRuntime(source).replace(source[2],source[3]).match(/AS \$\$([\s\S]*?)\$\$;/i)[1].replace(/\r\n/g,'\n');

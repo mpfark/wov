@@ -8,6 +8,7 @@ import UserListColumn from './UserListColumn';
 import CharacterListColumn from './CharacterListColumn';
 import CharacterActionsColumn from './CharacterActionsColumn';
 import CharacterSheetColumn from './CharacterSheetColumn';
+import CharacterLifecycleControls from './CharacterLifecycleControls';
 import type { AdminUser, AdminNode, CharacterEdits } from './constants';
 
 interface Props {
@@ -58,7 +59,7 @@ export default function UserManager({ isValar }: Props) {
     return data;
   }, []);
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (propagateError = false) => {
     setLoading(true);
     try {
       const data = await callAdmin(`list&page=${page}`, 'GET');
@@ -66,12 +67,13 @@ export default function UserManager({ isValar }: Props) {
       setTotal(data.total);
     } catch (err: any) {
       toast.error(err.message);
+      if (propagateError) throw err;
     } finally {
       setLoading(false);
     }
   }, [page, callAdmin]);
 
-  useEffect(() => { loadUsers(); }, [loadUsers]);
+  useEffect(() => { void loadUsers().catch(() => {}); }, [loadUsers]);
 
   useEffect(() => {
     (async () => {
@@ -264,6 +266,8 @@ export default function UserManager({ isValar }: Props) {
 
   return (
     <TooltipProvider delayDuration={200}>
+      {isValar && selectedUser && <CharacterLifecycleControls key={`${selectedUser.id}:${selectedChar?.id ?? ''}`}
+        target={selectedUser} character={selectedChar} refresh={() => loadUsers(true)} />}
       <div className="flex h-full">
         <UserListColumn
           users={users}
@@ -286,7 +290,7 @@ export default function UserManager({ isValar }: Props) {
           onSetRole={handleSetRole}
         />
 
-        <CharacterActionsColumn
+        {!selectedChar?.deleted_at && <CharacterActionsColumn
           selectedUser={selectedUser}
           selectedChar={selectedChar}
           allItems={allItems}
@@ -323,7 +327,7 @@ export default function UserManager({ isValar }: Props) {
           onRevive={handleRevive}
           onResetStats={handleResetStats}
           onRemoveItem={handleRemoveItem}
-        />
+        />}
 
         <CharacterSheetColumn
           selectedUser={selectedUser}
@@ -333,7 +337,7 @@ export default function UserManager({ isValar }: Props) {
           setCharEdits={setCharEdits}
           onEdit={(charId) => {
             const c = selectedUser?.characters.find(ch => ch.id === charId);
-            if (c) {
+            if (c && !c.deleted_at) {
               setEditingChar(charId);
               setCharEdits({ name: c.name, gold: c.gold, level: c.level });
             }

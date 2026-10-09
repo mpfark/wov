@@ -130,6 +130,7 @@ export default function CharacterListColumn({
                     <div>
                       <h3 className={`font-display text-sm ${isActive ? 'text-primary text-glow' : 'text-foreground'}`}>
                         {char.name}
+                        {char.deleted_at && <Badge variant="outline" className="ml-1">Deleted</Badge>}
                       </h3>
                       <p className="text-[10px] text-muted-foreground">
                         {char.gender === 'male' ? '♂' : '♀'} {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}

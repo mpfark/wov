@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { clampResourceUpdates } from '../utils/clampResources';
+import { requestCreation, acknowledgeCreation, type CreationChoices } from '../creation-client';
 
 export interface Character {
   id: string;
@@ -397,34 +398,20 @@ export function useCharacter(user: User | null) {
     void fetchCharactersRef.current();
   }, [user, characters]);
 
-  const createCharacter = async (charData: {
-    name: string; race: string; class: string; gender?: string;
-    str: number; dex: number; con: number; int: number; wis: number; cha: number;
-    hp: number; max_hp: number; ac: number; current_node_id: string;
-    is_classless?: boolean;
-  }) => {
-    if (!user) return null;
-    const { data, error } = await supabase.rpc('character_create' as never, {
-      _name: charData.name,
-      _race: charData.race,
-      _class: charData.class,
-      _gender: charData.gender ?? 'male',
-      _str: charData.str,
-      _dex: charData.dex,
-      _con: charData.con,
-      _int: charData.int,
-      _wis: charData.wis,
-      _cha: charData.cha,
-      _hp: charData.hp,
-      _max_hp: charData.max_hp,
-      _ac: charData.ac,
-      _is_classless: charData.is_classless ?? false,
-    } as never);
+  const createCharacter = async (choices: CreationChoices) => {
+    if (!user || choices.targetAccount) throw new Error('Create only for your signed-in account here.');
+    const actor = user.id;
+    const id = await requestCreation(actor, choices);
+    const { data, error } = await supabase.from('characters').select('*')
+      .eq('id', id).eq('user_id', actor).single();
     if (error) throw error;
-    const char = data as Character;
-    setCharacters(prev => [...prev, char]);
-    // Don't select yet — let the caller finish setup (e.g. granting gear) first
-    return data;
+    const char = latestLifecycleRow(data as Character);
+    if (activeUserIdRef.current !== actor || char.deleted_at) {
+      throw new Error('Created character is no longer available in this session.');
+    }
+    acknowledgeCreation(actor);
+    setCharacters(prev => [...prev.filter(c => c.id !== id), char]);
+    return char;
   };
 
   const selectCharacterAfterCreate = useCallback((id: string) => {

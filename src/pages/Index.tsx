@@ -81,13 +81,13 @@ const Index = () => {
     }
     return (
       <CharacterCreation
+        actorId={user.id}
         onCreateCharacter={async (data) => {
           const result = await createCharacter(data);
           setShowCreateNew(false);
           return result;
         }}
         onCharacterReady={(id: string) => selectCharacterAfterCreate(id)}
-        startingNodeId={startingNode.id}
         onBack={characters.length > 0 ? () => setShowCreateNew(false) : undefined}
       />
     );

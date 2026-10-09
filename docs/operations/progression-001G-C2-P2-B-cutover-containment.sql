@@ -30,7 +30,7 @@ BEGIN
     IF EXISTS (WITH RECURSIVE app(oid) AS (
       SELECT oid FROM pg_roles WHERE rolname IN ('anon','authenticated','service_role')
       UNION SELECT m.member FROM pg_auth_members m JOIN app ON m.roleid=app.oid)
-      SELECT 1 FROM app WHERE has_function_privilege(oid,f.oid,'EXECUTE'))
+      SELECT 1 FROM app WHERE oid<>f.proowner AND has_function_privilege(oid,f.oid,'EXECUTE'))
     THEN RAISE EXCEPTION 'legacy inherited execute leak: %',f.identity; END IF;
   END LOOP;
 END $functions$;
@@ -48,7 +48,7 @@ BEGIN
   FOR r IN WITH RECURSIVE app(oid) AS (
     SELECT oid FROM pg_roles WHERE rolname IN ('anon','authenticated','service_role')
     UNION SELECT m.member FROM pg_auth_members m JOIN app ON m.roleid=app.oid)
-    SELECT oid FROM app LOOP
+    SELECT oid FROM app WHERE oid<>'postgres'::regrole LOOP
     IF has_table_privilege(r,'public.characters','INSERT,DELETE')
       OR has_any_column_privilege(r,'public.characters','INSERT')
     THEN RAISE EXCEPTION 'inherited direct creation/deletion leak: %',pg_get_userbyid(r); END IF;

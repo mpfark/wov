@@ -20,6 +20,9 @@ export interface AdminInventoryItem {
 }
 
 export interface AdminCharacter {
+  deleted_at?: string | null;
+  restore_until?: string | null;
+  lifecycle_version?: number;
   id: string;
   name: string;
   gender: 'male' | 'female';
