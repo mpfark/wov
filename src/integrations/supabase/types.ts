@@ -893,6 +893,89 @@ export type Database = {
           },
         ]
       }
+      character_creation_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detailed_receipt: Json | null
+          details_expires_at: string
+          log_id: string
+          payload_digest: string | null
+          payload_version: number | null
+          replay_status: string
+          request_id: string | null
+          result_character_id: string | null
+          target_account_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at: string
+          detailed_receipt?: Json | null
+          details_expires_at: string
+          log_id: string
+          payload_digest?: string | null
+          payload_version?: number | null
+          replay_status: string
+          request_id?: string | null
+          result_character_id?: string | null
+          target_account_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detailed_receipt?: Json | null
+          details_expires_at?: string
+          log_id?: string
+          payload_digest?: string | null
+          payload_version?: number | null
+          replay_status?: string
+          request_id?: string | null
+          result_character_id?: string | null
+          target_account_id?: string | null
+        }
+        Relationships: []
+      }
+      character_creation_origin: {
+        Row: {
+          applied_snapshot: Json
+          character_id: string
+          class_version: string
+          created_at: string
+          creation_version: string
+          formula_version: string
+          race_version: string
+          snapshot_schema_version: number
+        }
+        Insert: {
+          applied_snapshot: Json
+          character_id: string
+          class_version: string
+          created_at: string
+          creation_version: string
+          formula_version: string
+          race_version: string
+          snapshot_schema_version: number
+        }
+        Update: {
+          applied_snapshot?: Json
+          character_id?: string
+          class_version?: string
+          created_at?: string
+          creation_version?: string
+          formula_version?: string
+          race_version?: string
+          snapshot_schema_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_creation_origin_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_guide_reads: {
         Row: {
           character_id: string
