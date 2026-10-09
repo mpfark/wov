@@ -6659,6 +6659,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      character_create_c2_internal: {
+        Args: {
+          _expected_revision: string
+          _gender: string
+          _name: string
+          _race: string
+          _reason: string
+          _request: string
+          _target: string
+        }
+        Returns: Json
+      }
       character_inventory_action: {
         Args: {
           _action: string
