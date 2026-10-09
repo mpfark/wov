@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "versions": {
+    "creation": "creation-c2-v1",
+    "race": "race-c2-v1",
+    "class": "class-c2-v1",
+    "formula": "formula-c2-v1"
+  },
+  "creation": {
+    "baseAttributes": {
+      "str": 8,
+      "dex": 8,
+      "con": 8,
+      "int": 8,
+      "wis": 8,
+      "cha": 8
+    },
+    "level": 1,
+    "xp": 0,
+    "gold": 200,
+    "quota": 5,
+    "nameMaxLength": 40,
+    "classKey": "classless",
+    "family": null,
+    "inventory": [],
+    "equipment": [],
+    "materials": {
+      "salvage": 40,
+      "garnet": 1,
+      "topaz": 1,
+      "emerald": 1,
+      "sapphire": 1,
+      "pearl": 1,
+      "amethyst": 1
+    },
+    "unspentStatPoints": 0,
+    "respecPoints": 0,
+    "renownBalance": 0,
+    "renownTotal": 0,
+    "trainedRanks": {}
+  },
+  "races": {
+    "human": {
+      "str": 1,
+      "dex": 1,
+      "con": 1,
+      "int": 1,
+      "wis": 1,
+      "cha": 1
+    },
+    "elf": {
+      "str": -1,
+      "dex": 2,
+      "con": -1,
+      "int": 2,
+      "wis": 3,
+      "cha": 0
+    },
+    "dwarf": {
+      "str": 2,
+      "dex": -1,
+      "con": 4,
+      "int": 0,
+      "wis": 1,
+      "cha": -2
+    },
+    "halfling": {
+      "str": -2,
+      "dex": 3,
+      "con": 1,
+      "int": 0,
+      "wis": 1,
+      "cha": 2
+    },
+    "edain": {
+      "str": 1,
+      "dex": 0,
+      "con": 3,
+      "int": 1,
+      "wis": 1,
+      "cha": 1
+    },
+    "half_elf": {
+      "str": 0,
+      "dex": 1,
+      "con": 0,
+      "int": 1,
+      "wis": 2,
+      "cha": 3
+    }
+  },
+  "class": {
+    "key": "classless",
+    "baseHp": 18,
+    "baseAc": 10,
+    "levelBonuses": {},
+    "isPreClass": true,
+    "status": "active",
+    "isSelectable": false
+  },
+  "formula": {
+    "modifierOffset": 10,
+    "modifierDivisor": 2,
+    "hpConMultiplier": 2,
+    "hpMin": 1,
+    "hpCap": 10000,
+    "cpBase": 30,
+    "cpMentalMultiplier": 3,
+    "cpMin": 0,
+    "cpCap": 5000,
+    "mpBase": 100,
+    "mpDexMultiplier": 10,
+    "mpMin": 0,
+    "mpCap": 5000
+  }
+}

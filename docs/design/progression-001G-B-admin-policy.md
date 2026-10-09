@@ -38,7 +38,7 @@ RP EARNING AUTHORITY GAP
 | O10 permissions | Fixed roles/permissions, audit and extra sensitive confirmation. **Only Overlord may reward own characters**, with audit flag. Steward cannot self-reward. **Repeated awards to the same character require separate approval.** | Approval authority, expiry, repeat scope, thresholds/windows and anti-splitting policy remain undecided. Proposed race-safe machinery is not owner-approved policy. |
 | O11 audit/privacy | Detailed history **12 months**, then controlled deletion/anonymization. Minimum progression proof has separately justified lawful retention. Player sees own relevant adjustments; Steward relevant support records; Overlord full authorized history. Notify affected player; hide security/internal and other-user data. | Legal basis, jurisdiction, minimal evidence fields, retention clocks, anonymization/linkage and deletion procedure require decisions. Twelve months is not indefinite retention. |
 | O12 resources | Corrections are **clamp-only**: preserve current HP/CP/MP up to new maxima, no healing or revival. Only Overlord approves separate documented resource compensation. No combat/movement/stance bypass. | A compensation amount/scope needs case approval; revive is O9. Canonical XP level-up resource behavior remains the existing fixed rule. |
-| O13 catalogs | Historic applied race bonuses/growth remain. Catalog edits are prospective; derived state uses current formulas. Record/version applied race/class catalogs. No guessed refunds or retroactive growth. Validated catalog publication authority. | Who may validate/publish catalogs and exact version/publication mechanics need approval; ordinary historical catalog RLS is not this new permission. |
+| O13 catalogs | Historic applied race bonuses/growth remain. Catalog edits are prospective; derived state uses current formulas. Record/version applied race/class catalogs. No guessed refunds or retroactive growth. Validated catalog publication authority. | P2-A owner continuation approves Overlord-only approval of future catalog revisions and initial canonical C2 values. C2 uses a pinned versioned source manifest and reviewed prospective SQL replacement; ordinary historical catalog RLS is not a new publication permission. No generic publication API is authorized. |
 | O14 phases | Owner review and separate authorization: B policy, C creation, D admin authority/UI containment, E detection/bounded repair, F verification. RP earning and equipment repair stay separate. | No install, deployment, activation, frontend publication or gameplay writes authorized by B or a phase plan. |
 
 ## Exact role matrix
@@ -64,7 +64,7 @@ product role. Roles and target ownership are always derived on the server.
 | Permanent purge | No new permission | No new permission | Controlled procedure/authorization still undecided |
 | Controlled revive | Normal own respawn remains its existing contract | Yes under O9 | Yes under O9 |
 | Resource compensation | No | No | Separate documented approval only |
-| Catalog validation/publication | No new permission | Undecided | Undecided; no inferred blanket grant |
+| Catalog revision approval | No | No | Overlord-only approval; reviewed prospective publication, no new direct write grant |
 | Relevant audit read | Own redacted adjustments | Relevant support scope | Full authorized history; security/privacy restrictions still apply |
 
 Caps are per action, never permission to split one reward across fresh UUIDs.
@@ -89,8 +89,9 @@ owned by the same actor does not remove that flag.
    restore evidence/collisions and deletion-window clock/boundary semantics.
 7. Confirm O9's complete normal respawn behavior for admin revive, and approve
    any deviation as a separate policy change. CP/MP fill is not approved.
-8. Define validated catalog publication role, immutable version semantics and
-   treatment of unsafe/current derived inputs without retroactive permanent edits.
+8. Preserve approved Overlord-only catalog revision approval. C2 initial immutable
+   version semantics are pinned in the P2-A manifest; other catalog scopes/mechanics
+   require their own review without retroactive permanent edits.
 9. Separately authorize each local phase and any subsequent Lovable inspection,
    installation/deployment or gameplay execution. Installed SECURITY DEFINER
    ownership/ACL/dependency evidence is an **evidence gap**, not a policy vote.
