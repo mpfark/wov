@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-08T15:13:17Z",
-  "based_on_source_sha": "2245354612807b18d58d8f502fc2cbde3fea4b62",
+  "updated_at": "2026-10-09T06:05:48Z",
+  "based_on_source_sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -285,6 +285,17 @@
       "directly_verified": false,
       "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification.",
       "artifact": "drizzle/migrations/0006_progression_001f_r1_restore_unprotected_service_updates.sql"
+    },
+    {
+      "identity": "0007_progression_001g_c2_private_creation_storage.sql — local preparation, not installed",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T23:19:49Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local implementation",
+      "directly_verified": true,
+      "artifact": "drizzle/migrations/0007_progression_001g_c2_private_creation_storage.sql",
+      "evidence": "S1 exact SQL locally implemented and executed on disposable PGlite 0.3.14/PostgreSQL17.5 only. Two empty private origin/log tables, ordinary constraints/indexes, one invoker UPDATE guard/two triggers, explicit new-object ACL/RLS closure and effective application privilege assertions. No creation RPC, initializer, gameplay data/backfill, name index, materials trigger/FK repair or activation. Existing executed migrations/journal/snapshots unchanged; no local registration fabricated, standard Lovable registration only upon separately authorized installation. 22 storage tests pass; installed identities/role graph/transaction/input gates remain. No hosted access/Lovable request, commit/push/deployment/publication."
     }
   ],
   "generated_supabase_types": {
@@ -1131,6 +1142,66 @@
       "reporting_actor": "Mik revised owner policy; Codex local design",
       "directly_verified": true,
       "evidence": "docs/design/progression-001G-C2-creation-blueprint.md reviewed, documentation only; owner authorized documentation commit/push on 2026-10-08 after validation. Revised C2-03 no equipment/inventory; C2-12/C2-13 staff/socket work deferred to ENG-ITEMS-001. Economy200gold/40salvage/six gems, full server-derived resources, no creationfamily, L1join/L10found, five retained characters/case-insensitive names/Overlorddelegation/origin receipt captured. Source empty-equipment basic attack uses unarmed d3; runtime entry remains unproven. Narrow creation calculation must preserve private Auth-context guard/clamp-only progression semantics. Targeted metadata/deletion containment/normalization-retention decisions and separately authorized packages remain gates. No runtime/SQL/test/config/history change, hosted access/gameplay writes/migration/deploy/activation/publication. F closure and four limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P0 targeted local evidence intake",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T15:23:02Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local source inspection; Mik supplied prior hosted summary",
+      "directly_verified": true,
+      "evidence": "Local read-only P0 intake documented in docs/operations/progression-001G-C2-P0-evidence.md; minimum Lovable request prepared/not sent/not executed. Committed C2 blueprint remains authority. Source entry/empty equipment snapshot/unarmed d3 supported; installed/deployed integration remains unproven. Source owner/Steward/Overlord hard-delete RPC and Auth-account/progression-proof cascades require installed metadata and activation containment. P1 gate OPEN: exact identity/index/FK/trigger/ACL/conflict metadata and name/version/privacy-replay contracts outstanding. P2/P3 metadata separated; no repeated baseline/catalog/economy survey. No runtime/SQL/test/config change, database access/write, migration, gameplay, deployment, activation, publication, commit/push or P1 implementation. Existing state and F closure/four accepted limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P1-A storage and identity contract",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T15:58:18Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local design; Mik supplied H2 summary",
+      "directly_verified": true,
+      "evidence": "Documentation-only proposed contract docs/design/progression-001G-C2-P1-A-storage-contract.md. Four empty private tables, collated NFC ICU case-insensitive identity proposal, account serialization, immutable origin/version identifiers, 12-calendar-month detailed receipts and minimum private replay ledger specified. Character-lifetime origin and receipt duration required by owner task; Unicode/length/corpus/publication/minimal replay-privacy account purge details remain approval gates. H2 materials FK omission is unverified, not proof of removal; one narrow catalog SELECT prepared/not executed, no corrective migration. Existing P0 documentation preserved. No runtime/migration execution/hosted access/gameplay/deployed privilege/frontend change/commit/push/item/socket/crafting work. P1-B local proposal recommended only after remaining metadata/contracts; no implementation authorized. F closure/four limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P1-A focused simplification review",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T22:09:06Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local design review",
+      "directly_verified": true,
+      "evidence": "docs/design/progression-001G-C2-P1-A-simplification-review.md recommends two private tables (immutable origin plus detailed receipt/minimal replay log), transaction advisory locks, ordinary lower/trim unique index subject to explicit Unicode semantics acceptance, four readable revision identities and one payload digest. This is an alternative proposal, not adopted policy or a P1-A rewrite. Original P1-A and P0 files preserved. No approved starting/retention/quota/provenance/security behavior removed. Architecture acceptance/name equivalence/privacy contract and exact storage metadata remain relevant gates. No implementation, SQL migration, hosted access/additional Lovable request, database writes, deployment/publication or commit/push. F closure/four retained limitations unchanged."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P1-B simplified storage proposal",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T22:56:37Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local proposal; Mik approved P1-B name and replay/privacy decisions",
+      "directly_verified": true,
+      "evidence": "docs/design/progression-001G-C2-P1-B-storage-proposal.md specifies two private tables, ordinary constraints, one guard/two triggers, ordered transaction advisory request/account locks, explicit ACL/RLS, separate version identities and applied origin. Independent log UUID plus constrained nullable replay group permits account-deletion replay retirement while detailed history completes twelve months; delegated recipient origin unaffected. Original P1-A/P0 documents preserved. Preferred two-table proposal supersedes original four-table planning only; no installation authorization. Exact storage metadata/privilege/namespace gates and actual name comparison/collision installation gates remain. Materials FK unresolved, no automatic repair. Deletion/raw writer/expiry/version0/manifest/integration containment remains before activation. No SQL migration file, runtime implementation, hosted access/Lovable request/gameplay write, commit/push, deployment or publication. F closure and four limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P1-B S1 local storage implementation",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T23:19:49Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Local handoff docs/operations/progression-001G-C2-P1-B-local-storage-handoff.md. 22/22 exact migration SQL tests pass; project-state Vitest3/3 passes. Existing F-R1 suite13 pass/1 archival history/type comparison failure already recorded in001G-A; historical F-R2 checker refuses any untracked Drizzle file including authorized new0007 (scope mismatch, historical artifacts preserved). Legacy fixture data/material trigger/service protected15 denied/unprotected38 allowed/no table UPDATE/browser6 unchanged. P0/P1-A and proposal unchanged; recovery stash/history preserved. Name/authority/version0/deletion/retention maintenance and hosted metadata remain later gates; storage does not activate creation. No hosted operations, Lovable request, production/gameplay writes, frontend changes, commit/push or publication. Four F limitations unchanged."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P1-B scoped source checkpoint preparation",
+      "status": "authored",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-09T06:05:48Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; Mik authorized source commit/push only",
+      "directly_verified": true,
+      "evidence": "Source checkpoint includes exact reviewed0007 SQL, isolated tests/local handoff, linked P0/P1-A/simplification/P1-B documents and project-state/roadmap tracking. SQL SHA2566eb30eedfab8544b1d80745c4b4a844323c9ec538c0441e23f578863d90b76cb/11371bytes verified. Source synchronized onmain; final commit/push identity reported in task return, not inferred as hosted installation. Existing journal/snapshot0000-0006 verified and unchanged; no supported local registration-only procedure, standard Lovable tool owns later registration/atomic execution. Prior22 storage tests and3 state tests passed; F-R1 archival baseline and F-R2 frozen checker scope mismatch retained. No SQL/runtime changes, Supabase history repair, hosted access/Lovable request, migration installation, activation, deployment or frontend publication. Recovery stash/four F limits preserved."
     }
   ],
   "known_blockers": [
@@ -1297,13 +1368,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "2245354612807b18d58d8f502fc2cbde3fea4b62",
-    "timestamp": "2026-10-08T15:13:17Z",
+    "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+    "timestamp": "2026-10-09T06:05:48Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — revised C2 blueprint reviewed; P0 and implementation packages require separate authorization",
-    "evidence": "Documentation only; owner approved no-equipment baseline. Recommended first separately authorized package P0 targeted evidence/contract intake, excluding item/socket work. Documentation-only review/corrections/commit/push authorized by owner on 2026-10-08, subject to validation and Git synchronization; no P0 authorization. C2 runtime/migration/install/deploy/activation/publication remains unauthorized; deletion/restore/purge separate dependency and hard-delete bypass containment required before safe activation. Preserve F closure/pausedcommands/frontendnotpublished and four accepted limitations."
+    "artifact": "STOP — P1-B source checkpoint prepared for authorized commit/push; registration and installation not authorized",
+    "evidence": "Owner authorized scoped source publication only. Final committed/pushed SHA must be taken from Git publication report. Later Lovable preparation requires separate authorization, matching pushed SQL identity, current installed prefix/role/dependency/transaction checks and standard-tool registration. No local journal/snapshot editing or alternate runner; no automatic hosted work, creation authority implementation, activation or frontend publication. F closure/four limits unchanged."
   },
   "volatile_runtime_observations": [
     {
@@ -1615,6 +1686,16 @@
       "reporting_actor": "Mik supplied summary of Lovable inspection",
       "directly_verified": false,
       "evidence": "Supplied observation window approximately2026-10-08 09:19-09:21UTC, not exact start time. Full original report unavailable/not independently retrieved. Reported one postgres SECURITY DEFINER creation overload/auth+service EXECUTE/Auth owner/startconfig/clientstatsHPAC; absentcharacter_class with retainedcast/textFK; defaults200gold/L1XP0/stats10/HP20CP100MP100AC10; no quota/case-sensitive name unique/service character+inventoryINSERT/browser6; enabled materialtrigger40salvage/sixgems; six active/selectable races/classless18HP10AC; no auto gear/creation sidecars/immutablecatalogversion established; familyfounding lacksL10; version0/opaque baseline/separatecreationreceipt. Metadata only, no creation invocation/runtime success. Deletion graph/namecollisions/overquota counts/externalwriters unproven. Original staff/socket evidence missing but now deferred outsideC2. No Codex hosted inspection. Supersedes earlier conclusion that no hosted inspection had occurred, not prior timestamped C1 source-only scope."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P0 latest metadata inspection summary supplied for P1-A",
+      "status": "unknown",
+      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+      "timestamp": "2026-10-08T15:41:37Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied summary of Lovable read-only inspection",
+      "directly_verified": false,
+      "evidence": "Supplied window 2026-10-08 15:41:37–15:42:25 UTC, metadata only/no writes/deployments. Full report unavailable in task evidence. Reported AFTER INSERT materials trigger 40salvage/six gems/conflict handling; no automatic progression sidecar or creation request/origin/receipt storage; characters.user_id account FK ON DELETE CASCADE. Materials character FK absent from returned result, NOT confirmed absent from database; own constraints require narrow follow-up. Reported anonymous/authenticated full direct material grants with owner/Steward read policies and service policy, preexisting privilege defect; exact effective exposure/runtime not independently verified. Original safe H2 output needed for remaining index/collation/ACL/provider/namespace facts. No Codex hosted access."
     }
   ],
   "product_backlog": [
