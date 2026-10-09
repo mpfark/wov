@@ -1132,6 +1132,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "character_materials_character_id_c2_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "character_materials_material_key_fkey"
             columns: ["material_key"]
             isOneToOne: false
@@ -6658,6 +6665,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      character_create_c2: {
+        Args: {
+          _expected_revision: string
+          _gender: string
+          _name: string
+          _race: string
+          _reason: string
+          _request: string
+          _target: string
+        }
+        Returns: Json
       }
       character_create_c2_internal: {
         Args: {

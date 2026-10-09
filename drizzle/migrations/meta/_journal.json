@@ -71,6 +71,13 @@
       "when": 1791546831234,
       "tag": "0009_progression_001g_c2_p2_a_creation_authority",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791557561683,
+      "tag": "0010_progression_001g_c2_p2_b_inactive_integration",
+      "breakpoints": true
     }
   ]
 }
