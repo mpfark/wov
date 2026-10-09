@@ -1111,6 +1111,51 @@ export type Database = {
           },
         ]
       }
+      character_lifecycle_receipt: {
+        Row: {
+          actor_id: string
+          character_id: string
+          details_expires_at: string
+          expected_version: number
+          occurred_at: string
+          operation: string
+          owner_account_id: string
+          purge_transaction: unknown
+          reason: string | null
+          reason_digest: string
+          request_id: string
+          result: Json
+        }
+        Insert: {
+          actor_id: string
+          character_id: string
+          details_expires_at: string
+          expected_version: number
+          occurred_at: string
+          operation: string
+          owner_account_id: string
+          purge_transaction?: unknown
+          reason?: string | null
+          reason_digest: string
+          request_id: string
+          result: Json
+        }
+        Update: {
+          actor_id?: string
+          character_id?: string
+          details_expires_at?: string
+          expected_version?: number
+          occurred_at?: string
+          operation?: string
+          owner_account_id?: string
+          purge_transaction?: unknown
+          reason?: string | null
+          reason_digest?: string
+          request_id?: string
+          result?: Json
+        }
+        Relationships: []
+      }
       character_materials: {
         Row: {
           character_id: string
@@ -1443,6 +1488,7 @@ export type Database = {
           created_at: string
           crown_item_created: boolean
           current_node_id: string | null
+          deleted_at: string | null
           dex: number
           family_changed_after_creation: boolean
           family_id: string | null
@@ -1458,6 +1504,7 @@ export type Database = {
           last_death_log: Json | null
           last_online: string
           level: number
+          lifecycle_version: number
           max_cp: number
           max_hp: number
           max_mp: number
@@ -1470,6 +1517,7 @@ export type Database = {
           race: string
           reserved_buffs: Json
           respec_points: number
+          restore_until: string | null
           rp_total_earned: number
           soulforged_item_created: boolean
           soulring_inventory_id: string | null
@@ -1498,6 +1546,7 @@ export type Database = {
           created_at?: string
           crown_item_created?: boolean
           current_node_id?: string | null
+          deleted_at?: string | null
           dex?: number
           family_changed_after_creation?: boolean
           family_id?: string | null
@@ -1513,6 +1562,7 @@ export type Database = {
           last_death_log?: Json | null
           last_online?: string
           level?: number
+          lifecycle_version?: number
           max_cp?: number
           max_hp?: number
           max_mp?: number
@@ -1525,6 +1575,7 @@ export type Database = {
           race: string
           reserved_buffs?: Json
           respec_points?: number
+          restore_until?: string | null
           rp_total_earned?: number
           soulforged_item_created?: boolean
           soulring_inventory_id?: string | null
@@ -1553,6 +1604,7 @@ export type Database = {
           created_at?: string
           crown_item_created?: boolean
           current_node_id?: string | null
+          deleted_at?: string | null
           dex?: number
           family_changed_after_creation?: boolean
           family_id?: string | null
@@ -1568,6 +1620,7 @@ export type Database = {
           last_death_log?: Json | null
           last_online?: string
           level?: number
+          lifecycle_version?: number
           max_cp?: number
           max_hp?: number
           max_mp?: number
@@ -1580,6 +1633,7 @@ export type Database = {
           race?: string
           reserved_buffs?: Json
           respec_points?: number
+          restore_until?: string | null
           rp_total_earned?: number
           soulforged_item_created?: boolean
           soulring_inventory_id?: string | null
@@ -6618,6 +6672,7 @@ export type Database = {
           created_at: string
           crown_item_created: boolean
           current_node_id: string | null
+          deleted_at: string | null
           dex: number
           family_changed_after_creation: boolean
           family_id: string | null
@@ -6633,6 +6688,7 @@ export type Database = {
           last_death_log: Json | null
           last_online: string
           level: number
+          lifecycle_version: number
           max_cp: number
           max_hp: number
           max_mp: number
@@ -6645,6 +6701,7 @@ export type Database = {
           race: string
           reserved_buffs: Json
           respec_points: number
+          restore_until: string | null
           rp_total_earned: number
           soulforged_item_created: boolean
           soulring_inventory_id: string | null
@@ -6698,6 +6755,32 @@ export type Database = {
           _request_id: string
           _slot: string
         }
+        Returns: Json
+      }
+      character_lifecycle_command: {
+        Args: {
+          _character: string
+          _expected_version: number
+          _operation: string
+          _reason: string
+          _request: string
+        }
+        Returns: Json
+      }
+      character_lifecycle_expire_receipts_internal: {
+        Args: never
+        Returns: number
+      }
+      character_lifecycle_purge_internal: {
+        Args: { _character: string }
+        Returns: undefined
+      }
+      character_lifecycle_quiescent_internal: {
+        Args: { _character: string }
+        Returns: undefined
+      }
+      character_purge_preflight_internal: {
+        Args: { _character: string }
         Returns: Json
       }
       character_repair: {
