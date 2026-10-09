@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T11:26:40Z",
-  "based_on_source_sha": "34ad8fe9d897d7691760798ff36f2e8bf97c8b29",
+  "updated_at": "2026-10-09T12:36:59Z",
+  "based_on_source_sha": "f3c357a24de85e254e41893242a90996bcf43987",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -307,17 +307,28 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0008_progression_001g_c2_s2_name_identity.sql",
       "evidence": "P2-A user identifies0007/0008 as installed. Clean fast-forward source34ad8fe9 adds generated0008/journalidx8/snapshot only; committed SQL matches reviewed SHA256d6c53867de0c1a0503ce8fc41f75acc73370908d1a66df9d8dc4ca36c5fbc510. Recording timestamp only; actual installation time/current ledger/index/ACL/collision preflight report not supplied, no independent hosted inspection. Existing S2 local regression tests10/10 pass. No Codex installation or gameplay writes."
+    },
+    {
+      "identity": "0009_progression_001g_c2_p2_a_creation_authority — installed (operator-reported)",
+      "status": "installed",
+      "sha": "f3c357a24de85e254e41893242a90996bcf43987",
+      "timestamp": "2026-10-09T12:36:59Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied installation facts; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0009_progression_001g_c2_p2_a_creation_authority.sql",
+      "evidence": "Mik P2-B reports installation, postgres owner, fixed path and owner-only EXECUTE. Recording timestamp only, actual execution time not supplied. Fetched generated source f3c357a2; Git blob matches reviewed SHA256785ef260b90e5255ed37055aea29414a7b352c6bbced52f52cb53a12be071174/15344UTF8-LF bytes. No independent hosted inspection/runtime proof or Codex installation; creation not activated."
     }
   ],
   "generated_supabase_types": {
-    "status": "installed",
+    "status": "committed",
+    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
+    "timestamp": "2026-10-09T12:36:59Z",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "011a026db7ae17deeeaa8a3601b7f7517f422efb",
-    "timestamp": "2026-10-09T08:19:30Z",
-    "evidence_type": "operator_reported",
-    "evidence": "Generated source011a026d adds origin/log declarations after operator-reported0007 installation. Local source diff verified; types confer no permissions and do not independently prove current hosted schema/ACLs. Recording timestamp only; no local regeneration or deployment.",
-    "reporting_actor": "Mik installation report; Codex source reconciliation",
-    "directly_verified": false
+    "evidence_type": "repository",
+    "reporting_actor": "Codex",
+    "directly_verified": true,
+    "evidence": "Fetched platform-generated0009 checkpoint adds private creation function declaration. Source only; types confer no permissions and do not prove current hosted access. No local regeneration/deployment."
   },
   "edge_function_deployments": [
     {
@@ -1267,6 +1278,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-P2-A-local-creation-handoff.md",
       "evidence": "Approved canonical initial manifest JSON/SQL literal: creation-c2-v1/race-c2-v1/class-c2-v1/formula-c2-v1; selected catalog drift refuses. Reviewed SQL outside migration discovery creates one postgres-only seven-argument definer function with fixed search_path/default+effective EXECUTE closure. Request/account advisory lock ordering, existing actor/target and Overlord reason, payload-v1 SHA256 replay, all-retained quota5, canonical full pools/L1XP0gold200/classless/no items, existing sole material trigger, version0/immutable origin/separate twelve-month detail+minimal replay log are atomic. 21 exact-SQL local tests pass including first C XP/F validator continuity, queued replay/lock lifetime, five failure boundaries/default+inherited ACLs; real two-session contention unproven. Existing P1-B22/S2 ten regressions pass. Historical prerequisite report retained/superseded. No existing production character or executed migration/history changes, hosted access/install, frontend activation/publication, commit/push or deployment. Recovery stash/four F limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P2-B local inactive bridge and cutover preparation",
+      "status": "authored",
+      "sha": "f3c357a24de85e254e41893242a90996bcf43987",
+      "timestamp": "2026-10-09T12:36:59Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
+      "evidence": "One owner-only postgres RPC bridge to exact installed0009; choice-only inputs and ID/kind response. Future-write materials FK NOT VALID preserves orphans; browser direct material writes narrowed with reads/RLS/service writers preserved. Separate cutover-only SQL validates FK, denies legacy creation/harness/direct INSERT and hard delete; bridge remains paused. 10 local exact integration tests +21 P2-A pass; queued single backend is not multi-session proof. Full soft-delete/Overlord restore/permanent purge/account replay lifecycle and orphan disposition block activation. No frontend changes, historical migration edits, hosted operations, installation, activation, deployment, publication, commit or push. Four F limitations unchanged."
     }
   ],
   "known_blockers": [
@@ -1429,17 +1451,29 @@
       "reporting_actor": "Mik supplied Lovable evidence; Codex reconciliation",
       "directly_verified": false,
       "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification."
+    },
+    {
+      "identity": "C2 P2-B activation — deletion lifecycle and orphan validation",
+      "status": "blocked",
+      "sha": "f3c357a24de85e254e41893242a90996bcf43987",
+      "timestamp": "2026-10-09T12:36:59Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
+      "evidence": "A additive inactive installation can be separately authorized. B shutdown intentionally disables existing create/delete UI and grants no new public EXECUTE. Full approved soft-delete/30-day Overlord restore/controlled purge-account replay lifecycle absent; current hard delete and owner/steward deletion cannot substitute. Existing orphan counts unknown; cutover validation refuses any orphan, owner-approved disposition required only if present. Frontend choices/stable UUID/familyless result integration remains separate. No new creation-policy contradiction."
     }
   ],
   "next_approved_task": {
+    "identity": "STOP — P2-B local preparation complete; publication/inactive installation separately authorized",
     "status": "authored",
-    "sha": "34ad8fe9d897d7691760798ff36f2e8bf97c8b29",
-    "timestamp": "2026-10-09T11:26:40Z",
+    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
+    "timestamp": "2026-10-09T12:36:59Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — P2-A local implementation complete; source publication/installation/integration separately authorized",
-    "evidence": "One private atomic operation and pinned initial manifest/test/handoff prepared locally only. Separate source publication is required before minimal standard Lovable installation from reviewed SQL outside migrations; no numbered SQL/journal/snapshot hand-editing. Actual installation needs scoped authorization, matching prefix/hash/dependencies/namespace and owner-only function verification, no gameplay invocation. Activation requires containment of known materials grants/missing FK cleanup, legacy RPC/service INSERT/hard-delete and retention/lifecycle/public-entry integration. O13 initial/revision approval resolved; no new gameplay/deletion policy inferred. Four F limits preserved."
+    "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
+    "evidence": "Review local A package, then separately authorize source checkpoint and minimum standard Lovable inactive installation. SQL outside migrations; no tool execution here. B/full activation remains gated by deletion lifecycle, orphan resolution, frontend cutover and scoped installed ACL proof. No automatic follow-on task."
   },
   "volatile_runtime_observations": [
     {
