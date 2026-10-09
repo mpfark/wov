@@ -50,6 +50,13 @@
       "when": 1791404929982,
       "tag": "0006_progression_001f_r1_restore_unprotected_service_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791533074337,
+      "tag": "0007_progression_001g_c2_private_creation_storage",
+      "breakpoints": true
     }
   ]
 }
