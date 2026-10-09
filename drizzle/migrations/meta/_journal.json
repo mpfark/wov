@@ -64,6 +64,13 @@
       "when": 1791537721654,
       "tag": "0008_progression_001g_c2_s2_name_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791546831234,
+      "tag": "0009_progression_001g_c2_p2_a_creation_authority",
+      "breakpoints": true
     }
   ]
 }
