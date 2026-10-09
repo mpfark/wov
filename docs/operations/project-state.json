@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T12:51:15Z",
-  "based_on_source_sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
+  "updated_at": "2026-10-09T18:11:37.086Z",
+  "based_on_source_sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -329,6 +329,17 @@
       "identity": "P2-B inactive integration attempt1 — assertion failure/full rollback",
       "status": "blocked",
       "evidence": "Original reviewed900cb8dba532a6d779073425dd0abd0f0b9f008e1abf0cde0c3dbb3d0fe9ce11 failed: materials inherited browser write privilege: postgres. Owner is a member of authenticated and anon. Clean full rollback, no migration installed. Recording timestamp only; actual execution time not supplied. Fetched source still95d8b235, no new platform commit observed. No Codex hosted operation."
+    },
+    {
+      "identity": "0010_progression_001g_c2_p2_b_inactive_integration — installed (operator-reported)",
+      "status": "installed",
+      "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+      "timestamp": "2026-10-09T15:45:51.407Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied installed baseline; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0010_progression_001g_c2_p2_b_inactive_integration.sql",
+      "evidence": "Mik P2-C reports 0007–0010 installed and C2 inactive; P2-B cutover not installed. Recording timestamp only, installation time not supplied. Generated source b9d82b8f is a normal descendant and Git SQL blob matches reviewed b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. No independent hosted verification or Codex installation. Attempt1 failure/rollback evidence preserved."
     }
   ],
   "generated_supabase_types": {
@@ -1311,6 +1322,28 @@
       "identity": "P2-B inactive owner-membership assertion correction",
       "status": "authored",
       "evidence": "Only materials effective-browser assertion excludes verified table owner; all browser roots/other members retain effective inherited/PUBLIC table/column checks. Corrected SQL SHA256b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. Focused P2-B16/16 passes with exact hosted membership regression and genuine inherited leaks. Cutover/preflight unchanged; analogous cutover assertion remains a later activation-only concern. Local correction/handoff only, no hosted operations, migration/history edits, frontend changes, activation, commit or push. Recovery stash/four F limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P2-C local deletion/restoration preparation; physical purge blocked",
+      "status": "authored",
+      "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+      "timestamp": "2026-10-09T15:45:51.407Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
+      "evidence": "Owner-only soft deletion and reasoned Overlord restore prepared with 30 elapsed days, private 12-month lifecycle receipt and version-fenced replay. Separate inactive SQL and activation-only fences/UI plus three exact-source runtime exclusions; 25 isolated SQL and 11 hook tests pass; app TypeScript passes. Physical purge only blocked eligibility preflight pending O8/O11 authorization and proof retention. 0010 source reconciled; no existing data/history/migration edits, hosted operations, activation, deployment, publication, commit or push. Four accepted F limitations and recovery stash retained."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-P2-C local permanent purge and lifecycle package complete",
+      "status": "authored",
+      "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+      "timestamp": "2026-10-09T18:11:37.086Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
+      "evidence": "New owner decisions resolve prior purge permission/minimum-proof blocker. Same private lifecycle command now supports Overlord-only reasoned purge after30days, serialized UUID-bound replay and atomic37-table cleanup, bounded nested cascade drift checks, origin removal and creation-log purged transition. No progression/history archive; existing unexpired creation/lifecycle receipts finish12months, expired purge reason clears and minimal purge replay lasts until controlled actor deletion. 36 SQL tests pass with real canonical progression and nested FK fixtures; hook/type/state validation recorded in handoff. Prior soft-delete/restore work retained. A private-only; B separate coordinated cutover. No hosted access/install, existing data/history edits, deployment/activation/publication/commit/push. Recovery stash and four F limitations preserved."
     }
   ],
   "known_blockers": [
@@ -1484,18 +1517,29 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
       "evidence": "A additive inactive installation can be separately authorized. B shutdown intentionally disables existing create/delete UI and grants no new public EXECUTE. Full approved soft-delete/30-day Overlord restore/controlled purge-account replay lifecycle absent; current hard delete and owner/steward deletion cannot substitute. Existing orphan counts unknown; cutover validation refuses any orphan, owner-approved disposition required only if present. Frontend choices/stable UUID/familyless result integration remains separate. No new creation-policy contradiction."
+    },
+    {
+      "identity": "C2 P2-C hosted lifecycle activation gates — purge policy resolved",
+      "status": "blocked",
+      "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+      "timestamp": "2026-10-09T18:11:37.086Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
+      "evidence": "Superseded policy blocker: owner now approves explicit Overlord purge after30days with reason and minimum necessary replay/integrity retention. Local lifecycle implementation complete,36 SQL tests pass. Remaining activation gates: corrected separately authorized P2-B legacy creation containment; installed direct/nested FK/trigger/ACL and exact runtime body verification; creation/lifecycle receipt expiry maintenance; distinct controlled account deletion integration; coordinated frontend cutover. No hosted activation or ordinary early purge."
     }
   ],
   "next_approved_task": {
-    "sha": "95d8b23517e84226f607b8587bdded7a3107dfa0",
-    "timestamp": "2026-10-09T12:51:15Z",
+    "identity": "STOP — P2-C lifecycle locally complete; publication/installation/activation separately authorized",
+    "status": "authored",
+    "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
+    "timestamp": "2026-10-09T18:11:37.086Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
-    "status": "authored",
-    "identity": "STOP — corrected P2-B inactive attempt preparation; publication/install separately authorized",
-    "evidence": "Local GO for second inactive-only attempt preparation after separately authorized corrected source publication, exact new SQL hash and unchanged scoped pre/post-install checks. No installation authorization or cutover readiness implied. Stop after correction."
+    "artifact": "docs/operations/progression-001G-C2-P2-C-lifecycle-handoff.md",
+    "evidence": "Local purge, restore, soft delete, retention reconciliation and focused validation complete under newly approved decisions. Review uncommitted package; no automatic source publication, hosted installation, deployment, frontend activation/publication or next phase. Fresh installed dependency/privilege checks and separate creation/account/retention cutover gates remain."
   },
   "volatile_runtime_observations": [
     {

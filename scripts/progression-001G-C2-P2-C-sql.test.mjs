@@ -1,0 +1,513 @@
+/** Exact local SQL on disposable PGlite only. No hosted connection or gameplay fixture.
+ * node scripts/progression-001G-C2-P2-C-sql.test.mjs <local-pglite-index.js>
+ * Queued calls share one backend; they do not prove two-session lock contention. */
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+if(!process.argv[2]) throw Error('Supply a local PGlite module path');
+const {PGlite}=await import(pathToFileURL(resolve(process.argv[2])).href);
+const read=p=>readFileSync(p,'utf8');
+const sql=read('drizzle/migrations/0009_progression_001g_c2_p2_a_creation_authority.sql');
+const manifest=JSON.parse(read('docs/design/progression-001G-C2-P2-A-creation-manifest.json'));
+const uid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const actor=uid(1),target=uid(2),node=uid(3),legacy=uid(4);let db,next=100;
+const q=async(sql,params=[])=>(await db.query(sql,params)).rows;
+const call=async({request=uid(next++),name='Eldrin',race='human',gender='male',owner=null,reason=null,revision='creation-c2-v1'}={})=>
+  (await q('SELECT public.character_create_c2_internal($1,$2,$3,$4,$5,$6,$7) AS r',[request,name,race,gender,owner,reason,revision]))[0].r;
+const identity=async a=>q("SELECT set_config('app.test_uid',$1,true)",[a??'']);
+async function tx(fn){await db.exec('BEGIN');try{await identity(actor);await fn();}finally{await db.exec('ROLLBACK');}}
+async function refused(fn,pattern){await db.exec('SAVEPOINT refusal');try{await assert.rejects(fn,pattern);}finally{await db.exec('ROLLBACK TO SAVEPOINT refusal; RELEASE SAVEPOINT refusal');}}
+const counts=async()=> (await q(`SELECT (SELECT count(*) FROM characters)::int characters,
+  (SELECT count(*) FROM character_materials)::int materials,(SELECT count(*) FROM character_inventory)::int inventory,
+  (SELECT count(*) FROM progression_character_state)::int state,(SELECT count(*) FROM character_creation_origin)::int origin,
+  (SELECT count(*) FROM character_creation_log)::int log`))[0];
+before(async()=>{
+  db=new PGlite();
+  // Reuse the existing C fixture and exact C authority; extend only isolated dependency tables.
+  await db.exec(read('scripts/progression-001C-sql.test.mjs').match(/const fixture=`([\s\S]*?)`;/)[1]);
+  await db.exec(`CREATE TABLE auth.users(id uuid PRIMARY KEY); INSERT INTO auth.users VALUES('${actor}'),('${target}');
+    CREATE TYPE public.character_gender AS ENUM('male','female'); CREATE TYPE public.app_role AS ENUM('player','steward','overlord');
+    CREATE ROLE custom_child; GRANT custom_default TO custom_child;
+    CREATE TABLE public.user_roles(user_id uuid,role public.app_role);
+    CREATE FUNCTION public.has_role(uuid,public.app_role) RETURNS boolean LANGUAGE sql STABLE
+      AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id=$1 AND role=$2) $$;
+    ALTER TABLE classes ADD base_ac integer NOT NULL DEFAULT 10,ADD is_pre_class boolean NOT NULL DEFAULT true,
+      ADD is_selectable boolean NOT NULL DEFAULT false,ADD status text NOT NULL DEFAULT 'active';
+    INSERT INTO classes(class_key,base_hp,level_bonuses) VALUES('classless',18,'{}');
+    CREATE TABLE public.races(race_key text PRIMARY KEY,str integer,dex integer,con integer,int integer,wis integer,cha integer,
+      status text NOT NULL DEFAULT 'active',is_selectable boolean NOT NULL DEFAULT true);
+    ALTER TABLE characters ADD name text NOT NULL DEFAULT 'Legacy',ADD race text NOT NULL DEFAULT 'human',
+      ADD gender public.character_gender NOT NULL DEFAULT 'male',ADD gold integer NOT NULL DEFAULT 200,
+      ADD current_node_id uuid,ADD family_id uuid,ADD family_name text,ADD family_changed_after_creation boolean NOT NULL DEFAULT false,
+      ADD rp_total_earned integer NOT NULL DEFAULT 0,ADD created_at timestamptz NOT NULL DEFAULT now();
+    CREATE TABLE public.nodes(id uuid PRIMARY KEY); INSERT INTO nodes VALUES('${node}');
+    CREATE TABLE public.combat2_respawn_config(singleton boolean PRIMARY KEY,default_node_id uuid);
+    INSERT INTO combat2_respawn_config VALUES(true,'${node}');
+    CREATE TABLE public.combat2_test_arena_node(node_id uuid);
+    CREATE TABLE public.character_materials(character_id uuid,material_key text,count integer,PRIMARY KEY(character_id,material_key));
+    CREATE TABLE public.character_class_bonds(character_id uuid);
+    ALTER TABLE characters ADD movement_locked_until timestamptz;
+    ALTER TABLE nodes ADD is_trainer boolean DEFAULT true;
+    CREATE TABLE node_encounter(id uuid,node_id uuid,status text,claim_token uuid,claim_expires_at timestamptz);
+    CREATE TABLE node_fighter(character_id uuid,encounter_id uuid,present boolean);
+    CREATE TABLE node_creature(encounter_id uuid,is_alive boolean,hp integer,engaged boolean);
+    CREATE TABLE character_stance(character_id uuid);
+    CREATE TABLE character_stance_request(character_id uuid,intent_id uuid,committed_at timestamptz);
+    CREATE TABLE node_intent(character_id uuid,status text);
+    CREATE TABLE combat2_departure_request(character_id uuid,status text);
+    CREATE TABLE combat2_party_departure_request(request_id uuid,status text);
+    CREATE TABLE combat2_party_departure_member(character_id uuid,request_id uuid,status text);
+    CREATE TABLE combat_sessions(character_id uuid,party_id uuid);
+    CREATE TABLE party_members(character_id uuid,party_id uuid,status text);
+    ALTER TABLE characters ENABLE ROW LEVEL SECURITY;
+    INSERT INTO characters(id,user_id,name,class,level,xp,str) VALUES('${legacy}','${target}','Unchanged Legacy','classless',37,123,42);`);
+  for(const [race,delta] of Object.entries(manifest.races)) await q('INSERT INTO races(race_key,str,dex,con,int,wis,cha) VALUES($1,$2,$3,$4,$5,$6,$7)',[race,...['str','dex','con','int','wis','cha'].map(k=>delta[k])]);
+  await db.exec(read('docs/operations/progression-001C-authority.sql'));
+  await db.exec('CREATE TABLE public.progression_class_growth_milestone(character_id uuid,destination_level integer)');
+  const f=read('drizzle/migrations/0005_progression_001f_canonical_renown_respec_authority.sql');
+  await db.exec(f.match(/CREATE FUNCTION public\.progression_validate_fresh_internal\([\s\S]*?END \$\$;/)[0]);
+  await db.exec(read('supabase/migrations/20260803232302_acc7c4e5-4148-48c0-8f35-8c2299e23944.sql'));
+  // Exact installed storage/name dependencies, atomically, on this empty local DB.
+  for(const p of ['drizzle/migrations/0007_progression_001g_c2_private_creation_storage.sql','drizzle/migrations/0008_progression_001g_c2_s2_name_identity.sql']){
+    await db.exec('BEGIN');try{await db.exec(read(p));await db.exec('COMMIT');}catch(e){await db.exec('ROLLBACK');throw e;}
+  }
+  const old=await q('SELECT to_jsonb(c) r FROM characters c WHERE id=$1',[legacy]);
+  await db.exec('BEGIN');try{await db.exec(sql);await db.exec('COMMIT');}catch(e){await db.exec('ROLLBACK');throw e;}
+  assert.deepEqual(await q('SELECT to_jsonb(c) r FROM characters c WHERE id=$1',[legacy]),old);
+  await db.exec('GRANT ALL ON character_materials TO anon,authenticated,service_role; GRANT UPDATE(count) ON character_materials TO anon,authenticated');
+  await q("INSERT INTO character_materials VALUES($1,'salvage',40)",[uid(999)]); // Old orphan predates installed NOT VALID FK.
+  await db.exec(read('drizzle/migrations/0010_progression_001g_c2_p2_b_inactive_integration.sql'));
+  await installLifecycleFixture();
+});
+after(async()=>await db?.close());
+async function installLifecycleFixture(){
+  for(const table of ['combat_audit_log','combat_soak_access','combat2_respawn_request','combat2_diagnostic_session',
+    'combat2_test_arena_access','combat2_test_arena_stance_snapshot_header','encounter_access_grants',
+    'encounter_engagements','encounter_participants','node_participation']) await db.exec(`CREATE TABLE ${table}(character_id uuid)`);
+  await db.exec(`ALTER TABLE node_intent ADD target_character_id uuid;
+    ALTER TABLE node_fighter ADD id uuid UNIQUE DEFAULT gen_random_uuid();
+    ALTER TABLE combat2_party_departure_member ADD fighter_id uuid REFERENCES node_fighter(id);
+    ALTER TABLE combat2_diagnostic_session ADD id uuid UNIQUE DEFAULT gen_random_uuid();
+    CREATE TABLE combat2_diagnostic_server_event(session_id uuid REFERENCES combat2_diagnostic_session(id) ON DELETE CASCADE);
+    ALTER TABLE combat2_test_arena_stance_snapshot_header ADD arena_id uuid,ADD PRIMARY KEY(arena_id,character_id);
+    CREATE TABLE combat2_test_arena_stance_snapshot(arena_id uuid,character_id uuid,
+      FOREIGN KEY(arena_id,character_id) REFERENCES combat2_test_arena_stance_snapshot_header(arena_id,character_id) ON DELETE CASCADE);
+    ALTER TABLE combat2_party_departure_request ADD leader_character_id uuid;
+    CREATE TABLE parties(leader_id uuid,tank_id uuid);
+    CREATE TABLE summon_requests(summoner_id uuid,target_id uuid,status text);
+    CREATE TABLE combat_actions(character_id uuid,target_character_id uuid,status text);
+    CREATE TABLE node_pending_event(actor_character_id uuid,target_character_id uuid,consumed_at timestamptz);
+    CREATE TABLE node_ground_loot(dropped_by uuid);
+    CREATE TABLE issue_reports(character_id uuid,character_name text,user_id uuid);`);
+  for(const table of ['character_ability_loadout','character_inventory_action_request','character_special_travel_request','character_waymark','character_npc_gifts','character_guide_reads','hidden_path_search_request']) await db.exec(`CREATE TABLE ${table}(character_id uuid)`);
+  await db.exec(`CREATE TABLE node_effect(source_character_id uuid,target_character_id uuid);
+    CREATE TABLE combat2_player_presence(character_id uuid PRIMARY KEY,user_id uuid,seen_at timestamptz);
+    CREATE TABLE combat2_test_presence(arena_id uuid,character_id uuid,user_id uuid,seen_at timestamptz,PRIMARY KEY(arena_id,character_id));`);
+  await db.exec(`CREATE TABLE marketplace_listings(seller_character_id uuid,buyer_character_id uuid);
+    ALTER TABLE characters ADD CONSTRAINT fixture_account_fk FOREIGN KEY(user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    CREATE TABLE active_effects(target_id uuid,source_id uuid);
+    CREATE TABLE character_visited_nodes(character_id uuid);
+    CREATE TABLE node_reward_claim(character_id uuid);
+    REVOKE ALL ON characters FROM PUBLIC,anon,authenticated,service_role,custom_default;
+    GRANT SELECT ON characters TO authenticated,service_role;
+    GRANT UPDATE(gold) ON characters TO service_role;
+    ALTER ROLE service_role BYPASSRLS;
+    CREATE POLICY fixture_owner_read ON characters FOR SELECT TO authenticated USING(user_id=auth.uid());
+    CREATE FUNCTION public.delete_character_cascade(uuid) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER AS $$
+    BEGIN DELETE FROM character_inventory WHERE character_id=$1;DELETE FROM character_materials WHERE character_id=$1;
+      DELETE FROM characters WHERE id=$1;RETURN $1;END $$;
+    GRANT EXECUTE ON FUNCTION delete_character_cascade(uuid) TO authenticated,service_role;
+    GRANT DELETE,TRUNCATE ON characters TO service_role;
+    GRANT authenticated,anon TO postgres;`);
+  const beforeRows=await q('SELECT to_jsonb(c) r FROM characters c');
+  await db.exec('BEGIN');try{await db.exec(read('docs/operations/progression-001G-C2-P2-C-inactive-lifecycle.sql'));await db.exec('COMMIT');}
+  catch(e){await db.exec('ROLLBACK');throw e;}
+  assert.deepEqual((await q("SELECT to_jsonb(c)-ARRAY['deleted_at','restore_until','lifecycle_version'] r FROM characters c")),beforeRows);
+  await installRuntimeFixture();
+}
+const runtimeSources=[
+  ['combat2_presence_heartbeat','supabase/migrations/20260913100000_combat2_production_cutover.sql','c.user_id=caller)','c.user_id=caller AND c.deleted_at IS NULL)'],
+  ['combat2_session_access','supabase/migrations/20260913100000_combat2_production_cutover.sql','c.current_node_id=_node_id)','c.current_node_id=_node_id AND c.deleted_at IS NULL)'],
+  ['settle_out_of_combat_resources','supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql','FROM public.characters ORDER BY id FOR UPDATE','FROM public.characters WHERE deleted_at IS NULL ORDER BY id FOR UPDATE']
+];
+const originalRuntime=([name,path])=>read(path).match(new RegExp('CREATE(?: OR REPLACE)? FUNCTION public\\.'+name+'\\([\\s\\S]*?\\$\\$;','i'))[0];
+async function installRuntimeFixture(){
+  await db.exec(`ALTER TABLE nodes ADD is_inn boolean DEFAULT false;
+    ALTER TABLE node_fighter ADD left_at timestamptz;
+    ALTER TABLE combat2_departure_request ADD resolved_at timestamptz;
+    ALTER TABLE combat2_party_departure_member ADD resolved_at timestamptz;
+    ALTER TABLE combat2_test_arena_node ADD arena_id uuid,ADD active boolean;
+    CREATE TABLE combat2_test_arena(id uuid,active boolean);
+    ALTER TABLE combat2_respawn_request ADD created_at timestamptz;
+    CREATE TABLE character_resource_settlement_state(singleton boolean PRIMARY KEY,settled_bucket timestamptz,updated_at timestamptz);
+    INSERT INTO character_resource_settlement_state VALUES(true,date_bin(interval '4 seconds',clock_timestamp(),timestamptz 'epoch')-interval '4 seconds',clock_timestamp());
+    CREATE SCHEMA cron;CREATE TABLE cron.job(jobname text,schedule text,command text);
+    INSERT INTO cron.job VALUES('combat2-dispatch-once','2 seconds','SELECT public.combat2_dispatch_scheduler_fire();');
+    CREATE FUNCTION world_state_is_awake() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+    CREATE FUNCTION combat_mode_is_open() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+    CREATE FUNCTION combat2_test_arena_access_allowed(uuid,uuid,uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;
+    CREATE TABLE combat_config(key text PRIMARY KEY,value text);INSERT INTO combat_config VALUES('combat_mode','maintenance');
+    CREATE TABLE fixture_wake(count integer);INSERT INTO fixture_wake VALUES(0);
+    CREATE FUNCTION wake_world() RETURNS void LANGUAGE sql AS $$ UPDATE fixture_wake SET count=count+1 $$;
+    CREATE FUNCTION shutdown_world() RETURNS void LANGUAGE sql AS $$ SELECT $$;
+    CREATE FUNCTION combat2_dispatch_scheduler_enable() RETURNS jsonb LANGUAGE sql AS $$ SELECT '{"ok":true}'::jsonb $$;
+    CREATE FUNCTION combat2_dispatch_scheduler_disable() RETURNS void LANGUAGE sql AS $$ SELECT $$;`);
+  for(const source of runtimeSources) await db.exec(originalRuntime(source));
+  await db.exec(`REVOKE ALL ON FUNCTION combat2_presence_heartbeat(uuid),combat2_session_access(uuid,uuid),settle_out_of_combat_resources(timestamptz) FROM PUBLIC,anon,authenticated,service_role,custom_default;
+    GRANT EXECUTE ON FUNCTION combat2_presence_heartbeat(uuid),combat2_session_access(uuid,uuid) TO authenticated,service_role;
+    GRANT EXECUTE ON FUNCTION settle_out_of_combat_resources(timestamptz) TO service_role;`);
+  const acl=await q("SELECT proname,proowner,proacl::text FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname",[runtimeSources.map(s=>s[0])]);
+  await db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql'));
+  assert.deepEqual(await q("SELECT proname,proowner,proacl::text FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname",[runtimeSources.map(s=>s[0])]),acl);
+}
+const lifecycle=async({id=legacy,request=uid(next++),version=0,operation='soft_delete',reason=null}={})=>
+  (await q('SELECT character_lifecycle_command($1,$2,$3,$4,$5) r',[id,request,version,operation,reason]))[0].r;
+const cutover=()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-lifecycle-cutover.sql'));
+test('runtime exclusions change only the three active-character predicates, preserving function ACLs',async()=>tx(async()=>{
+  for(const source of runtimeSources){
+    const expected=originalRuntime(source).replace(source[2],source[3]).match(/AS \$\$([\s\S]*?)\$\$;/i)[1].replace(/\r\n/g,'\n');
+    assert.equal((await q('SELECT replace(prosrc,E\'\\r\\n\',E\'\\n\') body FROM pg_proc WHERE proname=$1',[source[0]]))[0].body,expected);
+  }
+  assert.equal((await q("SELECT has_function_privilege('authenticated','settle_out_of_combat_resources(timestamptz)','EXECUTE') allowed"))[0].allowed,false);
+  assert.equal((await q("SELECT has_function_privilege('service_role','settle_out_of_combat_resources(timestamptz)','EXECUTE') allowed"))[0].allowed,true);
+}));
+test('runtime replacement refuses installed body drift; activation refuses missing exclusions',async()=>tx(async()=>{
+  for(const source of runtimeSources) await db.exec(originalRuntime(source).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION'));
+  await refused(()=>cutover(),/runtime exclusions must precede/);
+  await db.exec(originalRuntime(runtimeSources[0]).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION').replace('END $$;',()=> 'END -- drift\n$$;'));
+  await refused(()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql')),/runtime source drift/);
+}));
+test('deleted session and heartbeat entry refuse before world wake or presence creation',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  for(const statement of ['SELECT combat2_presence_heartbeat($1) r','SELECT combat2_session_access($1,$2) r']){
+    const result=(await q(statement,statement.includes('$2')?[c.characterId,node]:[c.characterId]))[0].r;
+    assert.equal(result.kind,'not_authorized');assert.equal(result.ok,false);
+  }
+  assert.equal((await q('SELECT count FROM fixture_wake'))[0].count,0);
+  assert.equal((await q('SELECT count(*)::int n FROM combat2_player_presence'))[0].n,0);
+}));
+test('existing ordinary or Arena presence refuses deletion without removing shared-session state',async()=>tx(async()=>{
+  const c=await call();await cutover();
+  for(const statement of ['INSERT INTO combat2_player_presence VALUES($1,$2,clock_timestamp())',
+    'INSERT INTO combat2_test_presence VALUES($1,$1,$2,clock_timestamp())']){
+    await db.exec('SAVEPOINT presence');await q(statement,[c.characterId,actor]);
+    await refused(()=>lifecycle({id:c.characterId}),/not_quiescent/);
+    assert.equal((await row(c.characterId)).deleted_at,null);
+    await db.exec('ROLLBACK TO SAVEPOINT presence; RELEASE SAVEPOINT presence');
+  }
+}));
+test('actual shared resource settlement skips tombstones while active character still regenerates',async()=>tx(async()=>{
+  const c=await call(),active=await call({name:'Active'});await cutover();await lifecycle({id:c.characterId});
+  await q('UPDATE characters SET hp=1,cp=1,mp=1 WHERE id=$1',[active.characterId]);
+  const preserved=await state(c.characterId);
+  await db.exec("UPDATE character_resource_settlement_state SET settled_bucket=date_bin(interval '4 seconds',clock_timestamp(),timestamptz 'epoch')-interval '4 seconds'");
+  const result=(await q('SELECT settle_out_of_combat_resources(clock_timestamp()) r'))[0].r;
+  assert.equal(result.ok,true);assert.equal(result.kind,'settled');assert.equal(result.settled_count,1);
+  assert.deepEqual(await state(c.characterId),preserved);
+  const after=await row(active.characterId);assert.ok(after.hp>1&&after.cp>1&&after.mp>1);
+}));
+const overlord=()=>q("INSERT INTO user_roles VALUES($1,'overlord')",[actor]);
+const row=async id=>(await q('SELECT * FROM characters WHERE id=$1',[id]))[0];
+const state=async id=>(await q('SELECT to_jsonb(c) r FROM characters c WHERE id=$1',[id]))[0]?.r;
+// Clock-fixture changes are owner-only and rolled back. Production API takes no clock input.
+const age=async(id,hours)=>{
+  await db.exec('ALTER TABLE characters DISABLE TRIGGER USER');
+  await q("WITH clock AS (SELECT clock_timestamp() t) UPDATE characters SET deleted_at=clock.t-($2::text||' hours')::interval,restore_until=clock.t-($2::text||' hours')::interval+interval '720 hours' FROM clock WHERE id=$1",[id,hours]);
+  await db.exec('ALTER TABLE characters ENABLE TRIGGER USER');
+};
+test('inactive schema/private roles installed; existing values and legacy deletion privileges preserved',async()=>{
+  assert.equal((await row(legacy)).lifecycle_version,0);assert.equal((await row(legacy)).deleted_at,null);
+  for(const role of ['anon','authenticated','service_role','custom_default','custom_child']){
+    assert.equal((await q("SELECT has_function_privilege($1,'character_lifecycle_command(uuid,uuid,bigint,text,text)','EXECUTE') ok",[role]))[0].ok,false);
+    assert.equal((await q("SELECT has_table_privilege($1,'character_lifecycle_receipt','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') ok",[role]))[0].ok,false);
+  }
+  assert.equal((await q("SELECT has_function_privilege('authenticated','delete_character_cascade(uuid)','EXECUTE') ok"))[0].ok,true);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+});
+test('own deletion only; stale/missing identities, Steward and Overlord cannot delete another owner',async()=>tx(async()=>{
+  await refused(()=>lifecycle(),/not_authorized/);await identity(null);await refused(()=>lifecycle(),/not_authorized/);
+  await identity(uid(999));await refused(()=>lifecycle(),/not_authorized/);await identity(actor);
+  await q("INSERT INTO user_roles VALUES($1,'steward')",[actor]);await refused(()=>lifecycle(),/not_authorized/);
+  await overlord();await refused(()=>lifecycle(),/not_authorized/);assert.equal((await row(legacy)).deleted_at,null);
+}));
+test('owner soft-delete preserves complete data, fixed deadline, repeated requests and binding',async()=>tx(async()=>{
+  const c=await call(),before=await state(c.characterId),request=uid(next++);await cutover();
+  const r=await lifecycle({id:c.characterId,request});assert.equal(r.kind,'soft_deleted');assert.equal(r.version,1);
+  assert.equal(new Date(r.restoreUntil)-new Date(r.deletedAt),720*3600000);
+  assert.deepEqual(await lifecycle({id:c.characterId,request}),r);
+  const repeated=await lifecycle({id:c.characterId});assert.equal(repeated.kind,'unchanged');assert.equal(repeated.restoreUntil,r.restoreUntil);
+  const after=await state(c.characterId);for(const key of Object.keys(before).filter(k=>!['deleted_at','restore_until','lifecycle_version'].includes(k)))assert.deepEqual(after[key],before[key]);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,1);
+  await refused(()=>lifecycle({id:c.characterId,request,reason:'Different'}),/request_conflict/);
+}));
+test('five retained rows still include tombstone; name remains reserved; creation stays private',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  for(let i=0;i<4;i++)await call({name:'Quota '+i});await refused(()=>call({name:'Sixth'}),/quota/);
+  assert.equal((await q('SELECT count(*)::int n FROM characters WHERE user_id=$1',[actor]))[0].n,5);
+  await refused(()=>q('INSERT INTO characters(id,user_id,name) VALUES($1,$2,$3)',[uid(next++),target,'ELDRIN']),/duplicate key/);
+  await db.exec('SET LOCAL ROLE authenticated');await refused(()=>call(),/permission denied/);
+}));
+test('cutover selection RLS and guarded gameplay deny tombstone writes, transfers and active presence',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  await db.exec('SET LOCAL ROLE authenticated');assert.equal((await q('SELECT count(*)::int n FROM characters WHERE id=$1',[c.characterId]))[0].n,0);
+  await db.exec('RESET ROLE');
+  await refused(()=>q('UPDATE characters SET gold=201 WHERE id=$1',[c.characterId]),/soft_deleted/);
+  await refused(()=>q('INSERT INTO character_inventory(character_id) VALUES($1)',[c.characterId]),/soft_deleted/);
+  await refused(()=>q("UPDATE character_materials SET count=41 WHERE character_id=$1",[c.characterId]),/soft_deleted/);
+  await refused(()=>q("INSERT INTO node_intent(character_id,status) VALUES($1,'pending')",[c.characterId]),/soft_deleted/);
+  await refused(()=>q('INSERT INTO node_fighter(character_id,present) VALUES($1,true)',[c.characterId]),/soft_deleted/);
+  await refused(()=>q('UPDATE progression_character_state SET version=version+1 WHERE character_id=$1',[c.characterId]),/soft_deleted/);
+  await refused(()=>q('UPDATE character_materials SET character_id=$1 WHERE character_id=$2',[legacy,c.characterId]),/soft_deleted/);
+}));
+test('restore requires Overlord and reason; retains identity, gear, materials, original resources and provenance',async()=>tx(async()=>{
+  const c=await call();await q('INSERT INTO items VALUES($1,\'{}\')',[uid(700)]);
+  await q('INSERT INTO character_inventory(character_id,item_id,equipped_slot) VALUES($1,$2,\'main_hand\')',[c.characterId,uid(700)]);
+  await q('UPDATE characters SET hp=0 WHERE id=$1',[c.characterId]); // Does not revive a dead record.
+  const before=await state(c.characterId),origin=await q('SELECT * FROM character_creation_origin'),materials=await q('SELECT * FROM character_materials');
+  await cutover();await lifecycle({id:c.characterId});
+  await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'}),/not_authorized/);
+  await q("INSERT INTO user_roles VALUES($1,'steward')",[actor]);await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'}),/not_authorized/);
+  await overlord();await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore'}),/not_authorized/);
+  const request=uid(next++),args={id:c.characterId,version:1,operation:'restore',reason:'Owner requested recovery',request};
+  const r=await lifecycle(args);assert.equal(r.kind,'restored');assert.equal(r.version,2);assert.deepEqual(await lifecycle(args),r);
+  assert.equal((await lifecycle({...args,request:uid(next++)})).kind,'unchanged');
+  const after=await state(c.characterId);for(const key of Object.keys(before).filter(k=>!['deleted_at','restore_until','lifecycle_version'].includes(k)))assert.deepEqual(after[key],before[key]);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin'),origin);assert.deepEqual(await q('SELECT * FROM character_materials'),materials);
+  assert.equal((await q('SELECT count(*)::int n FROM character_inventory'))[0].n,1);
+  assert.equal((await q('SELECT count(*)::int n FROM character_creation_log'))[0].n,1);
+  const receipt=(await q("SELECT * FROM character_lifecycle_receipt WHERE operation='restore'"))[0];
+  assert.equal(receipt.actor_id,actor);assert.equal(receipt.owner_account_id,actor);assert.equal(receipt.reason,args.reason);
+}));
+test('Overlord restores another account; cannot reset or regrant baseline',async()=>tx(async()=>{
+  await identity(target);await lifecycle();await identity(actor);await overlord();const before=await state(legacy);
+  await lifecycle({version:1,operation:'restore',reason:'Verified recovery'});const after=await state(legacy);
+  assert.equal(after.id,before.id);assert.equal(after.user_id,target);assert.equal(after.level,37);assert.equal(after.str,42);
+  assert.equal((await q("SELECT owner_account_id FROM character_lifecycle_receipt WHERE operation='restore'"))[0].owner_account_id,target);
+}));
+test('restoration before 30 days succeeds, at/after expiry refuses and expiry never purges',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await age(c.characterId,719);
+  await overlord();await lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Within window'});
+  await lifecycle({id:c.characterId,version:2});await age(c.characterId,720);
+  await refused(()=>lifecycle({id:c.characterId,version:3,operation:'restore',reason:'Too late'}),/window_expired/);
+  assert.ok(await row(c.characterId));assert.equal((await row(c.characterId)).lifecycle_version,3);
+}));
+test('expired receipt pruning cannot make a prior delete apply again after restore',async()=>tx(async()=>{
+  const c=await call(),request=uid(next++);await cutover();await lifecycle({id:c.characterId,request});await overlord();
+  await lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Verified recovery'});
+  await db.exec('ALTER TABLE character_lifecycle_receipt DISABLE TRIGGER USER');
+  await q("UPDATE character_lifecycle_receipt SET occurred_at='2020-01-01',details_expires_at='2021-01-01' WHERE request_id=$1",[request]);
+  await db.exec('ALTER TABLE character_lifecycle_receipt ENABLE TRIGGER USER');
+  assert.equal((await q('SELECT character_lifecycle_expire_receipts_internal() n'))[0].n,1);
+  await refused(()=>lifecycle({id:c.characterId,request}),/stale_version/);assert.equal((await row(c.characterId)).deleted_at,null);
+}));
+test('unsafe lifecycle refuses instead of deleting dependent state',async()=>tx(async()=>{
+  const c=await call();await q("INSERT INTO node_intent VALUES($1,'pending')",[c.characterId]);await cutover();
+  await refused(()=>lifecycle({id:c.characterId}),/not_quiescent/);assert.equal((await row(c.characterId)).deleted_at,null);
+  assert.equal((await q('SELECT count(*)::int n FROM node_intent'))[0].n,1);
+}));
+for(const table of ['character_lifecycle_receipt','characters'])test('late '+table+' failure rolls back tombstone and audit',async()=>tx(async()=>{
+  const c=await call();await cutover();await db.exec(`CREATE FUNCTION fixture_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'late_failure'; END $$;
+    CREATE TRIGGER zz_fixture_fail BEFORE ${table==='characters'?'UPDATE':'INSERT'} ON ${table} FOR EACH ROW EXECUTE FUNCTION fixture_fail()`);
+  await refused(()=>lifecycle({id:c.characterId}),/late_failure/);assert.equal((await row(c.characterId)).deleted_at,null);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+}));
+test('purge preflight reports eligibility/dependencies only; no orphan/account record cleanup',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  const pre=async()=> (await q('SELECT character_purge_preflight_internal($1) r',[c.characterId]))[0].r;
+  assert.equal((await pre()).eligibleByTime,false);await age(c.characterId,721);
+  const r=await pre();assert.equal(r.eligibleByTime,true);assert.equal(r.kind,'eligible');assert.equal(r.materials,7);assert.equal(r.origin,1);assert.equal(r.creationReceipts,1);assert.equal(r.progressionState,1);
+  await refused(()=>q('DELETE FROM characters WHERE id=$1',[c.characterId]),/purge_not_authorized/);
+  assert.equal((await q('SELECT count(*)::int n FROM auth.users'))[0].n,2);
+  assert.equal((await q('SELECT replay_status FROM character_creation_log'))[0].replay_status,'applied');
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials WHERE character_id=$1',[uid(999)]))[0].n,1);
+}));
+test('missing C2 origin is a damaged-character case, not ordinary restore',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();
+  await q('DELETE FROM character_creation_origin WHERE character_id=$1',[c.characterId]);
+  await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'}),/missing_provenance/);
+  assert.equal((await row(c.characterId)).lifecycle_version,1);
+}));
+test('late restore failure leaves original tombstone/audit and all seven material rows',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();
+  await db.exec(`CREATE FUNCTION fixture_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'late_restore_failure'; END $$;
+    CREATE TRIGGER zz_fixture_fail BEFORE UPDATE ON characters FOR EACH ROW EXECUTE FUNCTION fixture_fail()`);
+  await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'}),/late_restore_failure/);
+  assert.equal((await row(c.characterId)).lifecycle_version,1);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,1);
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials WHERE character_id=$1',[c.characterId]))[0].n,7);
+}));
+test('legacy hard delete and direct DELETE/TRUNCATE contained; raw lifecycle edit denied; creation stays paused',async()=>tx(async()=>{
+  await cutover();await db.exec('SET LOCAL ROLE authenticated');
+  await refused(()=>q('SELECT delete_character_cascade($1)',[legacy]),/permission denied/);
+  await db.exec('RESET ROLE');await db.exec('SET LOCAL ROLE service_role');await refused(()=>q('DELETE FROM characters WHERE id=$1',[legacy]),/permission denied/);
+  await refused(()=>db.exec('TRUNCATE characters CASCADE'),/permission denied/);
+  await refused(()=>q('UPDATE characters SET lifecycle_version=1 WHERE id=$1',[legacy]),/permission denied/);
+  await refused(()=>lifecycle(),/permission denied/);await refused(()=>call(),/permission denied/);
+}));
+test('queued repeated lifecycle requests have one audit and fixed tombstone; account locks held',async()=>tx(async()=>{
+  const c=await call(),request=uid(next++);await cutover();const a=await Promise.all([lifecycle({id:c.characterId,request}),lifecycle({id:c.characterId,request})]);
+  assert.deepEqual(a[0],a[1]);assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,1);
+  assert.ok((await q("SELECT classid::bigint n FROM pg_locks WHERE locktype='advisory' AND granted")).some(x=>Number(x.n)===173202));
+}));
+test('lifecycle activation refuses exposed legacy creation or raw INSERT instead of bypassing quota',async()=>tx(async()=>{
+  await db.exec('GRANT INSERT ON characters TO service_role');
+  await refused(()=>cutover(),/prior legacy creation containment/);
+  await db.exec('REVOKE INSERT ON characters FROM service_role');
+  await db.exec('CREATE FUNCTION character_create() RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ SELECT $$; GRANT EXECUTE ON FUNCTION character_create() TO authenticated');
+  await refused(()=>cutover(),/prior legacy creation containment/);
+  assert.equal((await q("SELECT count(*)::int n FROM pg_trigger WHERE tgname='character_lifecycle_character_fence'"))[0].n,0);
+}));
+test('actual canonical XP authority is fenced while deleted and works after restore without changing origin',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await identity(null);
+  const event=uid(next++);
+  const xp=()=>q("SELECT progression_apply_xp_internal($1,$2,'combat2_reward',50::numeric,$3::jsonb) r",[c.characterId,event,{rewardClaimId:event}]);
+  await refused(()=>xp(),/soft_deleted/);assert.equal((await q('SELECT count(*)::int n FROM progression_receipt'))[0].n,0);
+  await identity(actor);await lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Verified recovery'});
+  const origin=await q('SELECT * FROM character_creation_origin');await identity(null);await xp();
+  assert.equal((await row(c.characterId)).level,2);assert.equal((await row(c.characterId)).lifecycle_version,2);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin'),origin);
+}));
+test('account cascade cannot physically delete a retained character or its receipts before approved purge',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});
+  await refused(()=>q('DELETE FROM auth.users WHERE id=$1',[actor]),/purge_not_authorized/);
+  assert.equal((await q('SELECT count(*)::int n FROM auth.users'))[0].n,2);assert.ok(await row(c.characterId));
+  assert.equal((await q('SELECT count(*)::int n FROM character_creation_log'))[0].n,1);
+}));
+
+test('purge requires a live Overlord, reason, tombstone, matching version and elapsed 30 days',async()=>tx(async()=>{
+  const c=await call();await cutover();
+  const purge=options=>lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge',...options});
+  await refused(()=>purge(),/not_authorized/);await overlord();
+  await refused(()=>purge({reason:'  '}),/not_authorized/);
+  await refused(()=>purge({version:0}),/purge_window_not_elapsed/);
+  await lifecycle({id:c.characterId});await age(c.characterId,719);
+  await refused(()=>purge(),/purge_window_not_elapsed/);await age(c.characterId,721);
+  await refused(()=>purge({version:0}),/stale_version/);
+  await identity(null);await refused(()=>purge(),/not_authorized/);await identity(target);
+  await refused(()=>purge(),/not_authorized/);assert.ok(await row(c.characterId));
+}));
+test('eligible purge removes gameplay/origin/progression, preserves other characters and minimal replay, and safely repeats',async()=>tx(async()=>{
+  const creationRequest=uid(next++),c=await call({request:creationRequest}),other=await call({name:'Other'});
+  await q('INSERT INTO character_inventory(character_id) VALUES($1),($2)',[c.characterId,other.characterId]);
+  await q('INSERT INTO combat_audit_log VALUES($1),($2)',[c.characterId,other.characterId]);
+  await q('INSERT INTO character_guide_reads VALUES($1),($2)',[c.characterId,other.characterId]);
+  await q('INSERT INTO combat_actions VALUES($1,$2,\'consumed\'),($2,$1,\'consumed\')',[c.characterId,other.characterId]);
+  await q('INSERT INTO node_ground_loot VALUES($1)',[c.characterId]);
+  await q('INSERT INTO issue_reports VALUES($1,\'Eldrin\',$2)',[c.characterId,actor]);
+  await q('INSERT INTO node_pending_event VALUES($1,$2,clock_timestamp())',[c.characterId,other.characterId]);
+  await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  const preserved=await state(other.characterId),details=(await q('SELECT detailed_receipt FROM character_creation_log WHERE result_character_id=$1',[c.characterId]))[0].detailed_receipt;
+  const request=uid(next++),purge=()=>lifecycle({id:c.characterId,request,operation:'purge',version:1,reason:'Approved expired-character purge'});
+  await db.exec('SAVEPOINT caller');const result=await purge();await db.exec('RELEASE SAVEPOINT caller');
+  assert.equal(result.kind,'purged');assert.deepEqual(await purge(),result);assert.equal(await row(c.characterId),undefined);
+  assert.deepEqual(await state(other.characterId),preserved);
+  for(const table of ['character_materials','character_inventory','character_guide_reads','combat_audit_log','character_creation_origin','progression_character_state','progression_receipt']) assert.equal((await q(`SELECT count(*)::int n FROM ${table} WHERE character_id=$1`,[c.characterId]))[0].n,0);
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials WHERE character_id=$1',[uid(999)]))[0].n,1);
+  assert.equal((await q('SELECT count(*)::int n FROM auth.users'))[0].n,2);
+  const log=(await q('SELECT * FROM character_creation_log WHERE result_character_id=$1',[c.characterId]))[0];assert.equal(log.replay_status,'purged');assert.deepEqual(log.detailed_receipt,details);
+  assert.equal((await call({request:creationRequest})).kind,'purged');
+  const audit=(await q("SELECT * FROM character_lifecycle_receipt WHERE operation='purge'"))[0];assert.equal(audit.actor_id,actor);assert.equal(audit.reason,'Approved expired-character purge');
+  assert.deepEqual(Object.keys(audit.result).sort(),['characterId','kind','version']);
+  assert.equal((await q('SELECT dropped_by FROM node_ground_loot'))[0].dropped_by,null);
+  assert.equal((await q('SELECT character_name FROM issue_reports'))[0].character_name,'');
+  assert.equal((await q('SELECT target_character_id FROM combat_actions WHERE character_id=$1',[other.characterId]))[0].target_character_id,null);
+  assert.equal((await q('SELECT target_character_id FROM node_pending_event'))[0].target_character_id,other.characterId);
+  await refused(()=>lifecycle({id:c.characterId,request,operation:'purge',version:1,reason:'Changed binding'}),/request_conflict/);
+}));
+test('purge of canonically progressed character removes complete proof instead of archiving attributes',async()=>tx(async()=>{
+  const c=await call(),event=uid(next++);await identity(null);await q("SELECT progression_apply_xp_internal($1,$2,'combat2_reward',50::numeric,$3::jsonb)",[c.characterId,event,{rewardClaimId:event}]);
+  assert.equal((await q('SELECT count(*)::int n FROM progression_receipt WHERE character_id=$1',[c.characterId]))[0].n,1);
+  await identity(actor);await cutover();await lifecycle({id:c.characterId});await age(c.characterId,721);await overlord();
+  await lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'});
+  for(const table of ['progression_character_state','progression_receipt','progression_respec_milestone','progression_class_growth_milestone']) assert.equal((await q(`SELECT count(*)::int n FROM ${table} WHERE character_id=$1`,[c.characterId]))[0].n,0);
+  await identity(null);const rejected=(await q("SELECT progression_apply_xp_internal($1,$2,'combat2_reward',50::numeric,$3::jsonb) r",[c.characterId,event,{rewardClaimId:event}]))[0].r;
+  assert.equal(rejected.kind,'refused');assert.equal(rejected.reason,'character_missing');
+}));
+test('purge reason expires at 12 months while digest replay remains payload-bound',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  const request=uid(next++),purge=reason=>lifecycle({id:c.characterId,request,operation:'purge',version:1,reason});
+  const result=await purge('Retention test');
+  // Disposable time fixture; production expiry takes no caller clock.
+  await db.exec('ALTER TABLE character_lifecycle_receipt DISABLE TRIGGER USER');
+  await db.exec("UPDATE character_lifecycle_receipt SET occurred_at=now()-interval '13 months',details_expires_at=((now()-interval '13 months') AT TIME ZONE 'UTC'+interval '12 months') AT TIME ZONE 'UTC'");
+  await db.exec('ALTER TABLE character_lifecycle_receipt ENABLE TRIGGER USER');
+  await q('SELECT character_lifecycle_expire_receipts_internal()');
+  const audit=(await q('SELECT * FROM character_lifecycle_receipt'))[0];assert.equal(audit.operation,'purge');assert.equal(audit.reason,null);assert.equal(audit.reason_digest.length,32);
+  assert.deepEqual(await purge('Retention test'),result);await refused(()=>purge('Changed text'),/request_conflict/);
+  await refused(()=>q("UPDATE character_lifecycle_receipt SET reason='Recovered text'"),/immutable/);
+}));
+test('late purge failure atomically restores character, children, origin, log and audit',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  const before=await counts();await db.exec(`CREATE FUNCTION fixture_purge_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'late_purge'; END $$;
+    CREATE TRIGGER zz_purge_failure BEFORE UPDATE ON character_creation_log FOR EACH ROW EXECUTE FUNCTION fixture_purge_failure()`);
+  await refused(()=>lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'}),/late_purge/);
+  assert.deepEqual(await counts(),before);assert.ok(await row(c.characterId));assert.equal((await q("SELECT count(*)::int n FROM character_lifecycle_receipt WHERE operation='purge'"))[0].n,0);
+  assert.equal((await q('SELECT replay_status FROM character_creation_log'))[0].replay_status,'applied');
+}));
+test('unknown character FK and shared departure refuse purge rather than deleting unrelated data',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  const purge=()=>lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'});
+  await db.exec('SAVEPOINT unknown');await db.exec('CREATE TABLE unexpected_child(character_id uuid REFERENCES characters(id) ON DELETE CASCADE)');
+  await refused(purge,/dependency_drift/);await db.exec('ROLLBACK TO SAVEPOINT unknown; RELEASE SAVEPOINT unknown');
+  await q('INSERT INTO combat2_party_departure_request VALUES($1,\'done\',$2)',[uid(next++),c.characterId]);
+  const request=(await q('SELECT request_id FROM combat2_party_departure_request'))[0].request_id;
+  await q('INSERT INTO combat2_party_departure_member(character_id,request_id,status) VALUES($1,$2,\'done\')',[legacy,request]);
+  await refused(purge,/shared_departure/);assert.ok(await row(c.characterId));
+}));
+test('purge deletes historical departure before referenced fighter and only its nested diagnostic/Arena rows',async()=>tx(async()=>{
+  const c=await call(),other=await call({name:'Kept'}),fighter=uid(next++),request=uid(next++),arena=uid(next++);
+  await q('INSERT INTO node_fighter(character_id,present,id) VALUES($1,false,$2)',[c.characterId,fighter]);
+  await q('INSERT INTO combat2_party_departure_request VALUES($1,\'done\',$2)',[request,c.characterId]);
+  await q('INSERT INTO combat2_party_departure_member(character_id,request_id,status,fighter_id) VALUES($1,$2,\'done\',$3)',[c.characterId,request,fighter]);
+  for(const id of [c.characterId,other.characterId]){
+    await q('INSERT INTO combat2_diagnostic_session(character_id,id) VALUES($1,$1)',[id]);
+    await q('INSERT INTO combat2_diagnostic_server_event VALUES($1)',[id]);
+    await q('INSERT INTO combat2_test_arena_stance_snapshot_header(character_id,arena_id) VALUES($1,$2)',[id,arena]);
+    await q('INSERT INTO combat2_test_arena_stance_snapshot VALUES($1,$2)',[arena,id]);
+  }
+  await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  await lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'});
+  assert.equal((await q('SELECT count(*)::int n FROM node_fighter'))[0].n,0);
+  assert.deepEqual(await q('SELECT session_id FROM combat2_diagnostic_server_event'),[{session_id:other.characterId}]);
+  assert.deepEqual(await q('SELECT character_id FROM combat2_test_arena_stance_snapshot'),[{character_id:other.characterId}]);
+}));
+test('unknown nested cascade blocks purge before erasing unrelated records',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  await db.exec('CREATE TABLE unexpected_nested(session_id uuid REFERENCES combat2_diagnostic_session(id) ON DELETE CASCADE)');
+  await refused(()=>lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'}),/nested_dependency_drift/);
+  assert.ok(await row(c.characterId));
+}));
+test('delegated purge preserves recipient account/other origin; actor retirement is a separate controlled account operation',async()=>tx(async()=>{
+  await overlord();const c=await call({owner:target,reason:'Approved delegation'}),kept=await call({owner:target,reason:'Approved delegation',name:'Kept'});
+  const preserved=await q('SELECT * FROM character_creation_origin WHERE character_id=$1',[kept.characterId]);
+  await cutover();await identity(target);await lifecycle({id:c.characterId});await age(c.characterId,721);await identity(actor);
+  await lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'});
+  let log=(await q('SELECT * FROM character_creation_log WHERE result_character_id=$1',[c.characterId]))[0];
+  assert.equal(log.actor_id,actor);assert.equal(log.target_account_id,target);assert.equal(log.replay_status,'purged');
+  assert.equal((await q('SELECT count(*)::int n FROM auth.users WHERE id=$1',[target]))[0].n,1);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin WHERE character_id=$1',[kept.characterId]),preserved);
+  // Simulate only the already-approved 0007 account retirement contract, not a new account API.
+  await q('DELETE FROM auth.users WHERE id=$1',[actor]);
+  await q("UPDATE character_creation_log SET replay_status='retired',actor_id=NULL,request_id=NULL,target_account_id=NULL,result_character_id=NULL,payload_version=NULL,payload_digest=NULL WHERE actor_id=$1",[actor]);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin WHERE character_id=$1',[kept.characterId]),preserved);
+  assert.equal((await q('SELECT count(*)::int n FROM character_creation_log WHERE detailed_receipt IS NOT NULL'))[0].n,2);
+  await refused(()=>lifecycle({id:kept.characterId,operation:'purge',version:1,reason:'Stale actor'}),/not_authorized/);
+}));
+test('private purge helper and old hard-delete remain unavailable as bypasses',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
+  await refused(()=>q('SELECT character_lifecycle_purge_internal($1)',[c.characterId]),/purge_not_authorized/);
+  await q("SELECT set_config('app.trusted_rpc','true',true)");
+  await refused(()=>q('SELECT delete_character_cascade($1)',[c.characterId]),/soft_deleted|purge_not_authorized/);
+  await db.exec('SET LOCAL ROLE authenticated');
+  await refused(()=>q('SELECT character_lifecycle_purge_internal($1)',[c.characterId]),/permission denied/);
+  await db.exec('RESET ROLE');assert.ok(await row(c.characterId));
+}));
+test('purge releases quota/name but never reuses a purged character UUID',async()=>tx(async()=>{
+  const c=await call();await cutover();await lifecycle({id:c.characterId});for(let i=0;i<4;i++)await call({name:'Other '+i});
+  await overlord();await age(c.characterId,721);await lifecycle({id:c.characterId,operation:'purge',version:1,reason:'Explicit purge'});
+  const replacement=await call();assert.notEqual(replacement.characterId,c.characterId);
+  await refused(()=>q('INSERT INTO characters(id,user_id,name) VALUES($1,$2,$3)',[c.characterId,actor,'Reused UUID']),/purged_identity_reserved/);
+  assert.equal((await q('SELECT count(*)::int n FROM characters WHERE user_id=$1',[actor]))[0].n,5);
+}));

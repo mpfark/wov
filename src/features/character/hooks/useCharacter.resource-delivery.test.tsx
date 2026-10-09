@@ -8,11 +8,13 @@ const base = (hp: number, userId = 'user-a', nodeId = 'node'): Character => ({
   level: 1, xp: 0, hp, max_hp: 20, gold: 0, str: 10, dex: 10, con: 10, int: 10, wis: 10,
   cha: 10, ac: 10, current_node_id: nodeId, unspent_stat_points: 0, cp: hp, max_cp: 20,
   mp: hp, max_mp: 20, respec_points: 0, bhp: 0, bhp_trained: {}, rp_total_earned: 0,
+  lifecycle_version: 0, deleted_at: null, restore_until: null,
 });
 
 const mocks = vi.hoisted(() => ({
   rows: [] as Character[][],
   query: vi.fn(),
+  rpc: vi.fn(),
   change: null as null | ((payload: any) => void),
   status: null as null | ((status: string) => void),
   remove: vi.fn(),
@@ -28,7 +30,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {
     return channel;
   },
   removeChannel: mocks.remove,
-  rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  rpc: mocks.rpc,
 } }));
 
 beforeEach(() => {
@@ -40,6 +42,54 @@ beforeEach(() => {
   mocks.change = null;
   mocks.status = null;
   mocks.remove.mockReset();
+  mocks.rpc.mockReset().mockResolvedValue({ data: null, error: null });
+});
+
+describe('P2-C lifecycle cutover client', () => {
+  const deletion = { kind: 'soft_deleted', characterId: CHARACTER, version: 1,
+    deletedAt: '2026-10-09T12:00:00Z', restoreUntil: '2026-11-08T12:00:00Z' };
+  it('keeps the same request/version across lost-response retry without optimistic deletion', async () => {
+    mocks.rows = [[base(5)], [base(5)], []];
+    mocks.rpc.mockRejectedValueOnce(new Error('Network interrupted')).mockResolvedValueOnce({ data: deletion, error: null });
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await act(async () => { await expect(result.current.deleteCharacter(CHARACTER)).rejects.toThrow('Network interrupted'); });
+    expect(result.current.characters).toHaveLength(1);
+    await act(async () => { await result.current.deleteCharacter(CHARACTER); });
+    expect(mocks.rpc.mock.calls[0]).toEqual(mocks.rpc.mock.calls[1]);
+    expect(mocks.rpc.mock.calls[0][0]).toBe('character_lifecycle_command');
+    expect(mocks.rpc.mock.calls[0][1]).toMatchObject({ _expected_version: 0, _operation: 'soft_delete', _reason: null });
+    expect(result.current.character).toBeNull();
+    unmount();
+  });
+  it('does not call legacy hard deletion when lifecycle metadata or execution is unavailable', async () => {
+    mocks.rows = [[{ ...base(5), lifecycle_version: undefined }]];
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await act(async () => { await expect(result.current.deleteCharacter(CHARACTER)).rejects.toThrow('unavailable'); });
+    expect(mocks.rpc).not.toHaveBeenCalled();expect(result.current.characters).toHaveLength(1);
+    unmount();
+  });
+  it('drops a realtime tombstone and rejects an older in-flight selection read', async () => {
+    let release!: (value: unknown) => void;
+    mocks.query.mockReset().mockResolvedValueOnce({ data: [base(5)], error: null })
+      .mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});act(() => result.current.refetchCharacters());
+    await act(async () => { mocks.change?.({ eventType: 'UPDATE', new: { ...base(5), lifecycle_version: 1, deleted_at: deletion.deletedAt } }); });
+    await act(async () => { release({ data: [base(5)], error: null }); });
+    expect(result.current.characters).toEqual([]);expect(result.current.character).toBeNull();
+    act(() => result.current.selectCharacter(CHARACTER));expect(result.current.character).toBeNull();
+    unmount();
+  });
+  it('accepts a later restoration delivery without selecting or refilling the character', async () => {
+    const { result, unmount } = renderHook(() => useCharacter({ id: 'user-a' } as any));
+    await act(async () => {});
+    await act(async () => { mocks.change?.({ eventType: 'UPDATE', new: { ...base(5), lifecycle_version: 1, deleted_at: deletion.deletedAt } }); });
+    await act(async () => { mocks.change?.({ eventType: 'UPDATE', new: { ...base(5), lifecycle_version: 2 } }); });
+    expect(result.current.characters).toHaveLength(1);expect(result.current.characters[0].hp).toBe(5);
+    expect(result.current.character).toBeNull();unmount();
+  });
 });
 afterEach(() => vi.useRealTimers());
 

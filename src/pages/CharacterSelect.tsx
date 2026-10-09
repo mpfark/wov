@@ -31,9 +31,9 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
     setDeleting(true);
     try {
       await onDelete(deleteTarget.id);
-      toast.success(`${deleteTarget.name} has been deleted.`);
-    } catch {
-      toast.error('Failed to delete character.');
+      toast.success(`${deleteTarget.name}'s deletion request was recorded.`);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete character.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -149,13 +149,13 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display">Delete {deleteTarget?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this character, their inventory, and party memberships. This cannot be undone.
+              This removes the character from play while preserving their data. An Overlord can restore them within 30 days. They still count toward your five-character limit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? 'Deleting...' : 'Delete Forever'}
+              {deleting ? 'Requesting...' : 'Request Deletion'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

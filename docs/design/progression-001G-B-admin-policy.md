@@ -33,7 +33,7 @@ RP EARNING AUTHORITY GAP
 | O5 tokens | Compensation/reward grants: Steward **1 token/action**, Overlord **5 tokens/action**. Durable reason, audit, UUID; preserve earned milestone uniqueness. | Consumed grants cannot be naively reversed. Repeated awards O10 and case-specific compensation. |
 | O6 Renown | RP rewards/compensation: Steward **25 RP/action**, Overlord **100 RP/action**. Only Overlord approves documented rank, lifetime or Renown-related attribute corrections. Distinguish balance, lifetime, ranks and stat provenance. Never reroll historical HMAC outcomes. | Whether each reward/compensation increases lifetime RP needs an explicit model. Gameplay earning remains deferred. |
 | O7 creation | One **server-authoritative atomic** creation covers character, initial resources and starting materials. **Revised C2 owner decision supersedes starter gear: no equipment or inventory items.** Admin creation uses the same baseline. Browser submits choices, never authoritative computed values. | Current revised [C2 blueprint](progression-001G-C2-creation-blueprint.md) fixes gold200/salvage40/six gems, full resources and no family at creation; staff/socket work deferred. Remaining dependency evidence and manifest versions require review. |
-| O8 deletion/restoration | **Soft delete; 30-day restoration window; only Overlord restores.** Controlled permanent deletion after the window is subject to privacy/retention. Deleted characters are excluded from gameplay; unsafe lifecycle refuses. | Evidence retained only where justified; purge authorization/process, lawful retention and restore conflicts need scoped decisions. |
+| O8 deletion/restoration | **Soft delete; 30-day restoration window; only Overlord restores.** Controlled permanent deletion after the window is subject to privacy/retention. Deleted characters are excluded from gameplay; unsafe lifecycle refuses. | C2-P2-C now approves explicit Overlord-only purge after the window, with reason, minimal integrity/replay evidence and previously approved retention only; no complete progression/attribute archive. Restore conflicts and other domains retain their scoped gates. |
 | O9 revive | Steward/Overlord controlled revive with **normal respawn semantics** for HP/CP/MP; verify source amounts. No inconsistent bare HP set; no active combat/pending-state bypass. | Source preserves CP/MP, rather than filling them. Confirm complete respawn consequences, including delay, gold loss, destination and cleanup, for the admin adapter before implementation. |
 | O10 permissions | Fixed roles/permissions, audit and extra sensitive confirmation. **Only Overlord may reward own characters**, with audit flag. Steward cannot self-reward. **Repeated awards to the same character require separate approval.** | Approval authority, expiry, repeat scope, thresholds/windows and anti-splitting policy remain undecided. Proposed race-safe machinery is not owner-approved policy. |
 | O11 audit/privacy | Detailed history **12 months**, then controlled deletion/anonymization. Minimum progression proof has separately justified lawful retention. Player sees own relevant adjustments; Steward relevant support records; Overlord full authorized history. Notify affected player; hide security/internal and other-user data. | Legal basis, jurisdiction, minimal evidence fields, retention clocks, anonymization/linkage and deletion procedure require decisions. Twelve months is not indefinite retention. |
@@ -59,9 +59,9 @@ product role. Roles and target ownership are always derived on the server.
 | RP award | No | 1..25/action, no self-reward | 1..100/action; own target flagged |
 | Rank/lifetime/Renown-attribute correction | No | No | Approval only, documented coherent case |
 | Creation | Own normal baseline | No creation for another account | Create for another account with reason/audit, same baseline/quota, under revised C2 |
-| Soft deletion | Current own-delete permission requires reconciliation | No new admin-delete permission decided | No new admin-delete permission decided |
+| Soft deletion | Own character only, approved in C2-P2-C | No new admin-delete permission decided | No new admin-delete permission decided |
 | Restore within 30 days | No | No | Yes, safe verified restore only |
-| Permanent purge | No new permission | No new permission | Controlled procedure/authorization still undecided |
+| Permanent purge | Forbidden | Forbidden | Explicit expired-tombstone purge with reason; C2-P2-C owner approval |
 | Controlled revive | Normal own respawn remains its existing contract | Yes under O9 | Yes under O9 |
 | Resource compensation | No | No | Separate documented approval only |
 | Catalog revision approval | No | No | Overlord-only approval; reviewed prospective publication, no new direct write grant |
@@ -84,9 +84,10 @@ owned by the same actor does not remove that flag.
 5. Approve each opaque/irreversible technical repair's evidence, exact scope,
    safe compensation, and who executes after Overlord approval. There is no
    general permission to repair arbitrary level/XP or damaged snapshots.
-6. Define lawful minimum progression evidence retention separately from the
-   12-month detailed audit; define purge permissions, privacy erasure conflicts,
-   restore evidence/collisions and deletion-window clock/boundary semantics.
+6. C2-P2-C resolves character purge authority (Overlord only), minimum retained
+   replay/integrity evidence and the720-hour restoration boundary. Separate
+   account deletion integration and other domains' privacy/retention conflicts
+   remain scoped work; this does not authorize retaining complete character history.
 7. Confirm O9's complete normal respawn behavior for admin revive, and approve
    any deviation as a separate policy change. CP/MP fill is not approved.
 8. Preserve approved Overlord-only catalog revision approval. C2 initial immutable

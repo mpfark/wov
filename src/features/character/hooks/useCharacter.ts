@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { clampResourceUpdates } from '../utils/clampResources';
-import { clearCharacter } from '@/features/combat/events/log-archive';
 
 export interface Character {
   id: string;
   user_id: string;
+  deleted_at?: string | null;
+  restore_until?: string | null;
+  lifecycle_version?: number;
   name: string;
   gender: 'male' | 'female';
   race: string;
@@ -91,6 +93,14 @@ const RESOURCE_REFRESH_MS = 4000;
 
 export function useCharacter(user: User | null) {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const deletionRequestsRef = useRef(new Map<string, { request: string; version: number }>());
+  const lifecycleRowsRef = useRef(new Map<string, Character>());
+  const latestLifecycleRow = (incoming: Character) => {
+    const previous = lifecycleRowsRef.current.get(incoming.id);
+    if (previous && (previous.lifecycle_version ?? 0) > (incoming.lifecycle_version ?? 0)) return previous;
+    lifecycleRowsRef.current.set(incoming.id, incoming);
+    return incoming;
+  };
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
     () => sessionStorage.getItem('selectedCharacterId')
   );
@@ -157,8 +167,9 @@ export function useCharacter(user: User | null) {
       // for the rows we just received so the next realtime echo is honored.
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
       // write could hide the post-login authoritative HP/CP/MP for several seconds.)
-      const rows = data as Character[];
+      const rows = (data as Character[]).map(latestLifecycleRow).filter(c => !c.deleted_at);
       const fetchedIds = new Set(rows.map(c => c.id));
+      setSelectedCharacterId(previous => previous && !fetchedIds.has(previous) ? null : previous);
       for (const id of fetchedIds) {
         const locationChangedAfterFetchStarted = (locationRevisionRef.current.get(id) ?? 0) > fetchStartedAtLocationRevision;
         if (locationChangedAfterFetchStarted) {
@@ -230,6 +241,8 @@ export function useCharacter(user: User | null) {
       prevUserIdRef.current = null;
       setCharacters([]);
       setSelectedCharacterId(null);
+      deletionRequestsRef.current.clear();
+      lifecycleRowsRef.current.clear();
       // Drop all pending masks on sign-out so a future login starts clean.
       // Reassign instead of .clear() to be robust against HMR-preserved refs
       // that may have been initialized as a non-Map in a prior code version.
@@ -248,6 +261,8 @@ export function useCharacter(user: User | null) {
     const isNewUser = prevUserIdRef.current !== user.id;
     prevUserIdRef.current = user.id;
     if (isNewUser) {
+      deletionRequestsRef.current.clear();
+      lifecycleRowsRef.current.clear();
       setLoading(true);
       fetchSourceRef.current = 'initial';
       void fetchCharactersRef.current();
@@ -264,6 +279,15 @@ export function useCharacter(user: User | null) {
         filter: `user_id=eq.${user.id}`,
       }, (payload) => {
         if (activeUserIdRef.current !== user.id) return;
+        if (payload.eventType !== 'DELETE') {
+          const incoming = latestLifecycleRow(payload.new as Character);
+          if (incoming.deleted_at) {
+            setCharacters(previous => previous.filter(c => c.id !== incoming.id));
+            setSelectedCharacterId(previous => previous === incoming.id ? null : previous);
+            return;
+          }
+          payload = { ...payload, new: incoming };
+        }
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as any).id;
           setCharacters(prev => prev.filter(c => c.id !== deletedId));
@@ -275,7 +299,7 @@ export function useCharacter(user: User | null) {
           resourceRevisionRef.current.set(incoming.id, ++resourceRevisionCounterRef.current);
           const pendingFields = pendingWritesRef.current.get(incoming.id);
           const heldFields = heldFieldsRef.current.get(incoming.id);
-          setCharacters(prev => prev.map(c => {
+          setCharacters(prev => !prev.some(c => c.id === incoming.id) ? [...prev, incoming] : prev.map(c => {
             if (c.id !== incoming.id) return c;
             const keep = new Set<string>([
               ...(pendingFields ? Array.from(pendingFields) : []),
@@ -330,28 +354,48 @@ export function useCharacter(user: User | null) {
   }, [user]);
 
   const selectCharacter = useCallback((id: string) => {
-    setSelectedCharacterId(id);
-  }, []);
+    if (characters.some(c => c.id === id && !c.deleted_at)) setSelectedCharacterId(id);
+  }, [characters]);
 
   const clearSelectedCharacter = useCallback(() => {
     setSelectedCharacterId(null);
   }, []);
 
   const deleteCharacter = useCallback(async (id: string) => {
-    // Optimistically remove from UI immediately
-    setCharacters(prev => prev.filter(c => c.id !== id));
-    setSelectedCharacterId(prev => prev === id ? null : prev);
-    // Fully purge the character and all related rows in a single transaction
-    const { error } = await supabase.rpc('delete_character_cascade', { _character_id: id });
+    if (!user) throw new Error('Sign in before requesting deletion.');
+    const key = `${user.id}:${id}`;
+    let pending = deletionRequestsRef.current.get(key);
+    if (!pending) {
+      const character = characters.find(c => c.id === id && c.user_id === user.id);
+      if (!character || !Number.isSafeInteger(character.lifecycle_version)) {
+        throw new Error('Character deletion is unavailable until lifecycle metadata is installed.');
+      }
+      pending = { request: crypto.randomUUID(), version: character.lifecycle_version! };
+      deletionRequestsRef.current.set(key, pending);
+    }
+    // UUID/version are retained on transport failure. No fallback to physical deletion.
+    const { data: outcome, error } = await supabase.rpc('character_lifecycle_command' as never, {
+      _character: id, _request: pending.request, _expected_version: pending.version,
+      _operation: 'soft_delete', _reason: null,
+    } as never);
     if (error) {
-      // Revert on failure — refetch
-      const { data } = await supabase.from('characters').select('*').eq('user_id', user!.id).order('created_at', { ascending: true });
-      if (data) setCharacters(data as Character[]);
+      if (error.message.includes('lifecycle_stale_version')) deletionRequestsRef.current.delete(key);
+      if (activeUserIdRef.current === user.id) void fetchCharactersRef.current();
       throw error;
     }
-    // Purge the player's on-device log archive for this character too.
-    void clearCharacter(id);
-  }, [user]);
+    const result = outcome as unknown as { kind?: string; characterId?: string; version?: number; deletedAt?: string; restoreUntil?: string };
+    if (!result || !['soft_deleted', 'unchanged'].includes(result.kind ?? '') || result.characterId !== id
+      || !result.deletedAt || !Number.isSafeInteger(result.version)) throw new Error('Unexpected character deletion response.');
+    deletionRequestsRef.current.delete(key);
+    if (activeUserIdRef.current !== user.id) return;
+    const current = lifecycleRowsRef.current.get(id) ?? characters.find(c => c.id === id);
+    if (current) latestLifecycleRow({ ...current, lifecycle_version: result.version,
+      deleted_at: result.deletedAt, restore_until: result.restoreUntil });
+    setCharacters(previous => previous.filter(c => c.id !== id));
+    setSelectedCharacterId(previous => previous === id ? null : previous);
+    // Preserve the on-device archive too. Restore does not need to reconstruct it.
+    void fetchCharactersRef.current();
+  }, [user, characters]);
 
   const createCharacter = async (charData: {
     name: string; race: string; class: string; gender?: string;
