@@ -10,6 +10,13 @@ Hosted Lovable must verify actual effective privileges for PUBLIC, anon, authent
 
 Hosted schema changes use only Lovable's standard Drizzle migration tool, with explicit scoped authorization. Edge deployment and authorized hosted data mutation also belong to Lovable. Codex prepares and validates local source; Git push does not install or deploy anything. Frontend publication remains Mik's manual action.
 
+0007 follow-up: Mik reports that the standard tool creates its own SQL file,
+journal entry and snapshot; a pre-existing intended filename caused a collision.
+Prepare reviewed SQL outside the migration directory, preserve its SHA-256, and let
+the standard tool register it. Inspect automatic commits after both successful and
+failed operations; verify generated SQL, installed history, journal/snapshot and
+derived types separately. See the [B2 preparation procedure](migration-baseline-strategy.md#sql-preparation-and-tool-owned-registration-0007-evidence).
+
 ## Role containment
 
 Require private objects to retain the reviewed owner, ACLs, RLS and policy contract. Direct nonowner/PUBLIC table or column grants are leaks even when the grantee is an administrator. Independently reject effective access for gameplay/application roles and their members; those principals never receive an administrative exemption.

@@ -2,6 +2,11 @@
 
 **S1 LOCAL IMPLEMENTATION COMPLETE / NOT INSTALLED / CREATION NOT ACTIVATED.**
 
+Historical local-preparation status above. On 2026-10-09 Mik subsequently reports
+0007 installed at generated commit `011a026d`, merged into `5ecc36c7`. The
+[next implementation preparation](../design/progression-001G-C2-next-implementation-preparation.md)
+records source reconciliation and remaining evidence; this handoff is retained.
+
 Primary specification: [P1-B proposal](../design/progression-001G-C2-P1-B-storage-proposal.md).
 Owner authorized local storage implementation only. Affected specification boundaries:
 Progression/provenance and Transactional authority; roadmap ENG-PROGRESSION-001G.

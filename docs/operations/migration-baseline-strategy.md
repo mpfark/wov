@@ -44,13 +44,32 @@ Classifications distinguish acceptance of documented platform behavior from dire
 
 ## Safety without native preview and minimal containment
 
+### SQL preparation and tool-owned registration (0007 evidence)
+
+Mik reports successful 0007 installation and a filename-collision failure in the
+preceding attempt. Source history through `5ecc36c7` corroborates preservation of
+reviewed SQL outside the migration directory, removal of the colliding input and
+Lovable-generated SQL/journal/snapshot/types at `011a026d`. This is operator-reported
+tool/installation evidence, not fresh Codex hosted verification.
+
+Codex must prepare reviewed SQL under `docs/operations/`, **outside**
+`drizzle/migrations/`, and record its SHA-256 before source handoff. A pre-existing
+file at the intended generated path collides with the standard tool. Lovable creates
+the numbered migration, journal entry and snapshot; no local hand-registration or
+direct CLI lifecycle management. Before authorized invocation verify the path is
+available and the reviewed input matches its hash; never remove executed migrations.
+After **successful or failed** operations fetch and inspect automatic source commits:
+verify generated SQL bytes, journal/snapshot prefix and chain, generated types, and
+actual installed history separately. A source commit does not prove database success
+or rollback. Stop on mismatches/unexpected generated work; preserve failure evidence.
+
 Before any mutating task: clean synchronized source checkpoint; standard Lovable Drizzle route declared; reviewed exact custom SQL/change set and protected-data outcome; current journal/ledger prefix comparison by reads; no unexplained pending Drizzle SQL; focused catalog/privilege/dependency inspection; explicit Mik authorization. Review tool-created migration/journal mapping and preserve exact artifact/evidence hashes. `drizzle-kit check` is a platform step, not a native database execution dry-run or proof of data safety. Do not require a nonexistent preview endpoint.
 
 Use deterministic local SQL/containment tests where meaningful. Additive preflight must be satisfied as the platform defines it; clarify exact limitations before approving risky/nonadditive tasks. Same-migration explicit PUBLIC/anon/authenticated/service_role/internal caller, owner, definer/invoker and search_path policy remains mandatory. Static review cannot prove effective inherited rights or dynamic SQL behavior. Risky/destructive work requires available disposable rehearsal and recovery evidence; if unavailable, block that task rather than block every safe additive task permanently. Fail loudly and preserve persistent data; no compatibility/dual-write shortcut.
 
 Post-apply: record actual new SQL/journal/history identity/hash, verify intended catalog changes/effective ACLs and persistent-data invariants, and inspect automatically regenerated Supabase type diff as an expected platform side effect. Generated types are derived evidence, not schema authority. Type regeneration does not deploy Edge or publish frontend. Verify failure/transaction/recovery semantics per task rather than assume rollback. On unexpected extra migrations, replay, data/security delta or failure, STOP; no fallback runner or historical repair.
 
-Recommended subsequent small containment task, **not implemented here**: freeze Supabase migration and pending paths by reviewed baseline blob manifest (reject additions/edits/deletions except explicit archival exception); prohibit new executable legacy-route scripts/instructions without treating historical quoted evidence as a runnable instruction; protect Drizzle executed SQL and journal tuples while permitting legitimate append-only standard-tool entries; reject new migration SQL in other directories; flag routing/config/placeholder changes; require explicit privilege intent/reviewer verification. Repository checks cannot revoke platform capabilities, so operator/task policy must forbid all legacy routes. Preserve existing history/journals rather than reset them.
+Recommended subsequent small containment task, **not implemented here**: freeze Supabase migration and pending paths by reviewed baseline blob manifest (reject additions/edits/deletions except explicit archival exception); prohibit new executable legacy-route scripts/instructions without treating historical quoted evidence as a runnable instruction; protect Drizzle executed SQL and journal tuples while permitting legitimate append-only standard-tool entries; reject executable migration discovery in other directories (reviewed, non-discovered SQL preparation under docs/operations is permitted); flag routing/config/placeholder changes; require explicit privilege intent/reviewer verification. Repository checks cannot revoke platform capabilities, so operator/task policy must forbid all legacy routes. Preserve existing history/journals rather than reset them.
 
 ## Verdict B: exact final read-only questions
 

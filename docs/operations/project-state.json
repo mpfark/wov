@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T06:05:48Z",
-  "based_on_source_sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
+  "updated_at": "2026-10-09T09:07:26Z",
+  "based_on_source_sha": "5ecc36c7107fe34b15262a30d9e52386fbe0294f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -287,25 +287,25 @@
       "artifact": "drizzle/migrations/0006_progression_001f_r1_restore_unprotected_service_updates.sql"
     },
     {
-      "identity": "0007_progression_001g_c2_private_creation_storage.sql — local preparation, not installed",
-      "status": "authored",
-      "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
-      "timestamp": "2026-10-08T23:19:49Z",
-      "evidence_type": "repository",
-      "reporting_actor": "Codex local implementation",
-      "directly_verified": true,
+      "identity": "0007_progression_001g_c2_private_creation_storage — installed (operator-reported)",
+      "status": "installed",
+      "sha": "011a026db7ae17deeeaa8a3601b7f7517f422efb",
+      "timestamp": "2026-10-09T08:19:30Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik reported successful Lovable installation; Codex source reconciliation",
+      "directly_verified": false,
       "artifact": "drizzle/migrations/0007_progression_001g_c2_private_creation_storage.sql",
-      "evidence": "S1 exact SQL locally implemented and executed on disposable PGlite 0.3.14/PostgreSQL17.5 only. Two empty private origin/log tables, ordinary constraints/indexes, one invoker UPDATE guard/two triggers, explicit new-object ACL/RLS closure and effective application privilege assertions. No creation RPC, initializer, gameplay data/backfill, name index, materials trigger/FK repair or activation. Existing executed migrations/journal/snapshots unchanged; no local registration fabricated, standard Lovable registration only upon separately authorized installation. 22 storage tests pass; installed identities/role graph/transaction/input gates remain. No hosted access/Lovable request, commit/push/deployment/publication."
+      "evidence": "Mik reports successful standard-tool installation from generated source011a026d, merged5ecc36c7. Recording timestamp only; execution timestamp and fresh installed ledger/ACL/runtime inspection not supplied. Generated SQL and preserved docs/operations reviewed input have identical committed bytes SHA2566eb30eedfab8544b1d80745c4b4a844323c9ec538c0441e23f578863d90b76cb/11371bytes. Journal idx7 and snapshot0007 chain verified locally; prior0–6 preserved. Two private empty storage tables/guards/ACLs only; no creation RPC, name/quota enforcement, initializer or activation. No Codex hosted access. Historical local22-test evidence remains in operational work."
     }
   ],
   "generated_supabase_types": {
     "status": "installed",
     "artifact": "src/integrations/supabase/types.ts",
-    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
-    "timestamp": "2026-10-07T18:34:56.637Z",
+    "sha": "011a026db7ae17deeeaa8a3601b7f7517f422efb",
+    "timestamp": "2026-10-09T08:19:30Z",
     "evidence_type": "operator_reported",
-    "evidence": "Platform819fd123 preserves automatic Cloud-derived type declarations after0005; adds F private function/single8-argument command surface. Source diff verified locally; generated declarations confer no EXECUTE privileges. No local regeneration or deployment.",
-    "reporting_actor": "Mik supplied hosted evidence; Codex recording",
+    "evidence": "Generated source011a026d adds origin/log declarations after operator-reported0007 installation. Local source diff verified; types confer no permissions and do not independently prove current hosted schema/ACLs. Recording timestamp only; no local regeneration or deployment.",
+    "reporting_actor": "Mik installation report; Codex source reconciliation",
     "directly_verified": false
   },
   "edge_function_deployments": [
@@ -1202,6 +1202,38 @@
       "reporting_actor": "Codex; Mik authorized source commit/push only",
       "directly_verified": true,
       "evidence": "Source checkpoint includes exact reviewed0007 SQL, isolated tests/local handoff, linked P0/P1-A/simplification/P1-B documents and project-state/roadmap tracking. SQL SHA2566eb30eedfab8544b1d80745c4b4a844323c9ec538c0441e23f578863d90b76cb/11371bytes verified. Source synchronized onmain; final commit/push identity reported in task return, not inferred as hosted installation. Existing journal/snapshot0000-0006 verified and unchanged; no supported local registration-only procedure, standard Lovable tool owns later registration/atomic execution. Prior22 storage tests and3 state tests passed; F-R1 archival baseline and F-R2 frozen checker scope mismatch retained. No SQL/runtime changes, Supabase history repair, hosted access/Lovable request, migration installation, activation, deployment or frontend publication. Recovery stash/four F limits preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2 next implementation preparation",
+      "status": "authored",
+      "sha": "5ecc36c7107fe34b15262a30d9e52386fbe0294f",
+      "timestamp": "2026-10-09T08:19:30Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local documentation/planning",
+      "directly_verified": true,
+      "artifact": "docs/design/progression-001G-C2-next-implementation-preparation.md",
+      "evidence": "Source synchronized5ecc36c7; operator-reported0007 installation distinguished from locally verified SQL hash/journal/snapshot/types. Short B2/operating-contract follow-up records tool-owned registration, outside-migrations SQL preparation, filename collisions and automatic commits after successful/failed operations. Recommend gated S2 name index then dormant owner-only P2-A transaction; no new storage architecture or approved policy changes. Catalog publication O13 remains owner decision; installed dependency/name/materialFK and writer/deletion containment gates remain. Documentation only; no SQL/RPC implementation, hosted operations, deployment, publication, commit or push. Four accepted F limitations preserved."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-S2 local character name uniqueness",
+      "status": "authored",
+      "sha": "5ecc36c7107fe34b15262a30d9e52386fbe0294f",
+      "timestamp": "2026-10-09T08:46:51Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex local SQL preparation and disposable tests",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-S2-name-handoff.md",
+      "evidence": "Reviewed SQL outside migration discovery docs/operations/progression-001G-C2-S2-name-identity.sql SHA256d6c53867de0c1a0503ce8fc41f75acc73370908d1a66df9d8dc4ca36c5fbc510/2213bytes. One ordinary unique expression index for lower(btrim(name)) COLLATE C on all retained rows, atomic SHARE-lock preflight, UTF8/actual deterministic column locale checks and fail-closed collision/null/blank checks. No existing names renamed/rewritten; ACL/RLS/migrations/history unchanged. Read-only hosted checks prepared only, no hosted findings claimed. 10 isolated PGlite tests pass; actual hosted comparison/collisions/version/index-name/current prefix remain installation gates. Existing next-preparation documentation preserved. No creation RPC, hosted SQL/install, deployment/publication/commit/push; four accepted F limitations unchanged."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2-S2 consolidated source checkpoint preparation",
+      "status": "authored",
+      "sha": "5ecc36c7107fe34b15262a30d9e52386fbe0294f",
+      "timestamp": "2026-10-09T09:07:26Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; Mik authorized consolidated commit/push",
+      "directly_verified": true,
+      "evidence": "Checkpoint includes completed next-implementation plan, B2 workflow/operating-contract follow-up, historical P1-B handoff reconciliation, S2 reviewed SQL/read-only preflight/handoff/isolated tests and project-state/roadmap tracking. Eleven related files only; no application code or migration-directory/history changes. Both S2 SQL artifacts preserved exactly: index SHA256d6c53867de0c1a0503ce8fc41f75acc73370908d1a66df9d8dc4ca36c5fbc510, preflight SHA25639db32f1e3cc05d980b85b767ad62446cffa4fdb5efa8490621c029cb7c56707. Source publication authorized only; actual final commit/push identity comes from Git return, not hosted installation evidence. No hosted preflight/install, creation RPC, gameplay writes, deployment or frontend publication. Recovery stash/four accepted F limitations preserved."
     }
   ],
   "known_blockers": [
@@ -1368,13 +1400,13 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "9489b991b3e4c4be5c443d2fa246d0382ca62c7e",
-    "timestamp": "2026-10-09T06:05:48Z",
+    "sha": "5ecc36c7107fe34b15262a30d9e52386fbe0294f",
+    "timestamp": "2026-10-09T09:07:26Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "STOP — P1-B source checkpoint prepared for authorized commit/push; registration and installation not authorized",
-    "evidence": "Owner authorized scoped source publication only. Final committed/pushed SHA must be taken from Git publication report. Later Lovable preparation requires separate authorization, matching pushed SQL identity, current installed prefix/role/dependency/transaction checks and standard-tool registration. No local journal/snapshot editing or alternate runner; no automatic hosted work, creation authority implementation, activation or frontend publication. F closure/four limits unchanged."
+    "artifact": "STOP — consolidated S2 source checkpoint; Lovable read-only preflight remains separate",
+    "evidence": "Mik authorizes consolidated source commit/push of next-planning/B2 documentation dependencies and S2 preparation only. Final source checkpoint must be verified in Git publication report. Lovable may perform the separately approved read-only preflight from published source; Codex does not execute hosted queries here. Index installation remains separately authorized after actual hosted comparison/collision/current-prefix evidence. No automatic name repair, creation authority implementation, activation, deployment or frontend publication. F closure/four limits preserved."
   },
   "volatile_runtime_observations": [
     {
