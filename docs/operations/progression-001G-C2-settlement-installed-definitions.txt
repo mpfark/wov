@@ -1,0 +1,217 @@
+=== defs
+BEGIN
+identity|owner|prosecdef|provolatile|proconfig|acl|body_sha256|definition
+combat2_regenerate_force_shields(timestamp with time zone,integer)|postgres|t|v|{"search_path=public, pg_temp"}|{postgres=X/postgres,service_role=X/postgres,sandbox_exec_gpclaklkaolyzfnooajt=X/postgres}|bb2b219f099d6f78809ff1172f219518e5d20f3894dab8a06adddcf8ce1764d8|CREATE OR REPLACE FUNCTION public.combat2_regenerate_force_shields(_now timestamp with time zone, _settlement_steps integer)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE row record; bonus_int integer; bonus_wis integer; int_mod integer; wis_mod integer;
+ cap integer; per_tick integer; changed integer:=0;
+BEGIN
+ IF _settlement_steps<=0 THEN RETURN 0; END IF;
+ FOR row IN SELECT c.*,s.state,s.version FROM public.characters c JOIN public.character_stance s ON s.character_id=c.id
+  WHERE s.ability_key='force_shield' ORDER BY c.id FOR UPDATE OF c,s LOOP
+   IF row.hp<=0 OR row.current_node_id IS NULL
+      OR EXISTS(SELECT 1 FROM public.combat2_test_arena_node t WHERE t.node_id=row.current_node_id)
+      OR EXISTS(SELECT 1 FROM public.combat2_departure_request d WHERE d.character_id=row.id
+        AND (d.status='queued' OR d.resolved_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch')))
+      OR EXISTS(SELECT 1 FROM public.combat2_party_departure_member m JOIN public.combat2_party_departure_request r ON r.request_id=m.request_id
+        WHERE m.character_id=row.id AND ((r.status='queued' AND m.status IN('waiting','queued'))
+          OR m.resolved_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch')))
+      OR EXISTS(SELECT 1 FROM public.combat2_respawn_request rr WHERE rr.character_id=row.id
+        AND rr.created_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch'))
+      OR EXISTS(SELECT 1 FROM public.node_fighter released WHERE released.character_id=row.id
+        AND released.left_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch'))
+      OR EXISTS(SELECT 1 FROM public.node_fighter f JOIN public.node_encounter e ON e.id=f.encounter_id
+        WHERE f.character_id=row.id AND e.status='active' AND ((f.present AND EXISTS(
+          SELECT 1 FROM public.node_creature nc WHERE nc.encounter_id=e.id AND nc.is_alive AND nc.hp>0 AND nc.engaged))
+          OR (e.claim_token IS NOT NULL AND e.claim_expires_at>_now))) THEN CONTINUE; END IF;
+   SELECT coalesce(sum(coalesce((coalesce(nullif(ci.stat_override,'{}'::jsonb),i.stats,'{}'::jsonb)->>'int')::integer,0)
+       +coalesce((coalesce(ci.applied_gems,'{}'::jsonb)->>'sapphire')::integer,0)),0)::integer,
+     coalesce(sum(coalesce((coalesce(nullif(ci.stat_override,'{}'::jsonb),i.stats,'{}'::jsonb)->>'wis')::integer,0)
+       +coalesce((coalesce(ci.applied_gems,'{}'::jsonb)->>'pearl')::integer,0)),0)::integer
+     INTO bonus_int,bonus_wis FROM public.character_inventory ci JOIN public.items i ON i.id=ci.item_id
+     WHERE ci.character_id=row.id AND ci.equipped_slot IS NOT NULL AND ci.current_durability>0;
+   int_mod:=greatest(0,floor(((row.int+bonus_int)-10)/2.0)::integer);
+   wis_mod:=greatest(0,floor(((row.wis+bonus_wis)-10)/2.0)::integer);
+   cap:=greatest(1,wis_mod+floor(row.level/2.0)::integer); per_tick:=1+floor(int_mod/2.0)::integer;
+   UPDATE public.character_stance SET state=jsonb_set(state,'{ward_remaining}',to_jsonb(least(cap,
+       greatest(0,coalesce((state->>'ward_remaining')::integer,cap))+(_settlement_steps*2*per_tick))),true),
+     version=version+1,updated_at=clock_timestamp()
+    WHERE character_id=row.id AND ability_key='force_shield' AND version=row.version
+      AND greatest(0,coalesce((state->>'ward_remaining')::integer,cap))<cap;
+   IF FOUND THEN changed:=changed+1; END IF;
+ END LOOP;
+ RETURN changed;
+END $function$
+
+settle_out_of_combat_resources(timestamp with time zone)|postgres|t|v|{"search_path=public, cron, pg_temp"}|{postgres=X/postgres,service_role=X/postgres,sandbox_exec_gpclaklkaolyzfnooajt=X/postgres}|17185b0df23c90e8707a739249c7940324dd387d49f6ec300a7be1d58d99c183|CREATE OR REPLACE FUNCTION public.settle_out_of_combat_resources(_now timestamp with time zone DEFAULT clock_timestamp())
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'cron', 'pg_temp'
+AS $function$
+DECLARE out jsonb; regenerated integer:=0;
+BEGIN
+ out:=public.settle_out_of_combat_resources_without_character_stances(_now);
+ IF out->>'ok'='true' AND out->>'kind'='settled' THEN
+   regenerated:=public.combat2_regenerate_force_shields(_now,coalesce((out->>'steps')::integer,0));
+ END IF;
+ RETURN out||jsonb_build_object('force_shields_regenerated',regenerated);
+END $function$
+
+settle_out_of_combat_resources_without_character_stances(timestamp with time zone)|postgres|t|v|{"search_path=public, cron, pg_temp"}|{postgres=X/postgres,service_role=X/postgres,sandbox_exec_gpclaklkaolyzfnooajt=X/postgres}|69e507eb64d25d0559cfd4a37cfc4e3016b2201f221692a3326bb9c219d46e90|CREATE OR REPLACE FUNCTION public.settle_out_of_combat_resources_without_character_stances(_now timestamp with time zone DEFAULT clock_timestamp())
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'cron', 'pg_temp'
+AS $function$
+DECLARE
+  state public.character_resource_settlement_state%ROWTYPE;
+  bucket timestamptz := date_bin(interval '4 seconds', _now, timestamptz 'epoch');
+  elapsed integer;
+  steps integer;
+  c public.characters%ROWTYPE;
+  bonus_hp integer;
+  bonus_con integer;
+  bonus_int integer;
+  bonus_wis integer;
+  bonus_dex integer;
+  bonus_hp_regen integer;
+  effective_con integer;
+  effective_wis integer;
+  effective_dex integer;
+  con_mod integer;
+  int_mod integer;
+  wis_mod integer;
+  dex_mod integer;
+  base_hp integer;
+  hp_cap integer;
+  cp_cap integer;
+  mp_cap integer;
+  hp_per_tick integer;
+  cp_per_tick integer;
+  mp_per_tick integer;
+  inn_bonus integer;
+  eligible_count integer := 0;
+  settled_count integer := 0;
+BEGIN
+  IF _now > clock_timestamp() + interval '5 seconds' THEN
+    RETURN jsonb_build_object('ok', false, 'kind', 'invalid_time');
+  END IF;
+
+  SELECT * INTO state FROM public.character_resource_settlement_state
+  WHERE singleton FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'resource settlement state missing'; END IF;
+
+  -- Advancing the cursor while ineligible prevents sleep or maintenance time
+  -- from becoming banked regeneration when the world next wakes.
+  IF NOT public.world_state_is_awake()
+     OR NOT public.combat_mode_is_open()
+     OR NOT EXISTS (
+       SELECT 1 FROM cron.job
+       WHERE jobname = 'combat2-dispatch-once'
+         AND schedule = '2 seconds'
+         AND command = 'SELECT public.combat2_dispatch_scheduler_fire();'
+     ) THEN
+    UPDATE public.character_resource_settlement_state
+      SET settled_bucket = GREATEST(settled_bucket, bucket), updated_at = clock_timestamp()
+      WHERE singleton;
+    RETURN jsonb_build_object('ok', false, 'kind', 'ineligible', 'steps', 0);
+  END IF;
+
+  elapsed := floor(extract(epoch FROM (bucket - state.settled_bucket)) / 4.0)::integer;
+  IF elapsed <= 0 THEN
+    RETURN jsonb_build_object('ok', true, 'kind', 'already_settled', 'steps', 0);
+  END IF;
+  -- Ordinary scheduler jitter catches up at most three four-second intervals.
+  -- A longer gap represents downtime: award one current interval, never the gap.
+  steps := CASE WHEN elapsed <= 3 THEN elapsed ELSE 1 END;
+  UPDATE public.character_resource_settlement_state
+    SET settled_bucket = bucket, updated_at = clock_timestamp() WHERE singleton;
+
+  -- Lock order is character UUID only. No encounter row is locked here. Combat
+  -- entry/commit/movement may lock encounter then character, so this cannot add
+  -- a reversed encounter/character lock pair; after the character lock, all
+  -- ownership and transition predicates are re-read before mutation.
+  FOR c IN SELECT * FROM public.characters ORDER BY id FOR UPDATE LOOP
+    IF c.hp <= 0 OR c.current_node_id IS NULL THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.combat2_test_arena_node t WHERE t.node_id = c.current_node_id) THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.combat2_departure_request d
+      WHERE d.character_id = c.id AND (d.status = 'queued' OR d.resolved_at >= bucket)) THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.combat2_party_departure_member m
+      JOIN public.combat2_party_departure_request r ON r.request_id = m.request_id
+      WHERE m.character_id = c.id AND ((r.status = 'queued' AND m.status IN ('waiting','queued'))
+        OR m.resolved_at >= bucket)) THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.combat2_respawn_request rr
+      WHERE rr.character_id = c.id AND rr.created_at >= bucket) THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.node_fighter released
+      WHERE released.character_id = c.id AND released.left_at >= bucket) THEN CONTINUE; END IF;
+    IF EXISTS (SELECT 1 FROM public.node_fighter f
+      JOIN public.node_encounter e ON e.id = f.encounter_id
+      WHERE f.character_id = c.id AND e.status = 'active' AND (
+        (f.present AND EXISTS (SELECT 1 FROM public.node_creature nc
+          WHERE nc.encounter_id = e.id AND nc.is_alive AND nc.hp > 0 AND nc.engaged))
+        OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)
+      )) THEN CONTINUE; END IF;
+
+    eligible_count := eligible_count + 1;
+    SELECT
+      COALESCE(sum(COALESCE((base->>'hp')::integer, 0)), 0)::integer,
+      COALESCE(sum(COALESCE((base->>'con')::integer, 0) + COALESCE((gems->>'emerald')::integer, 0)), 0)::integer,
+      COALESCE(sum(COALESCE((base->>'int')::integer, 0) + COALESCE((gems->>'sapphire')::integer, 0)), 0)::integer,
+      COALESCE(sum(COALESCE((base->>'wis')::integer, 0) + COALESCE((gems->>'pearl')::integer, 0)), 0)::integer,
+      COALESCE(sum(COALESCE((base->>'dex')::integer, 0) + COALESCE((gems->>'topaz')::integer, 0)), 0)::integer,
+      COALESCE(sum(COALESCE((base->>'hp_regen')::integer, 0)), 0)::integer
+    INTO bonus_hp, bonus_con, bonus_int, bonus_wis, bonus_dex, bonus_hp_regen
+    FROM (
+      SELECT COALESCE(NULLIF(ci.stat_override, '{}'::jsonb), i.stats, '{}'::jsonb) base,
+             COALESCE(ci.applied_gems, '{}'::jsonb) gems
+      FROM public.character_inventory ci JOIN public.items i ON i.id = ci.item_id
+      WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL AND ci.current_durability > 0
+    ) equipped;
+
+    effective_con := c.con + bonus_con;
+    effective_wis := c.wis + bonus_wis;
+    effective_dex := c.dex + bonus_dex;
+    con_mod := floor((effective_con - 10) / 2.0)::integer;
+    int_mod := greatest(floor(((c.int + bonus_int) - 10) / 2.0)::integer, 0);
+    wis_mod := greatest(floor((effective_wis - 10) / 2.0)::integer, 0);
+    dex_mod := greatest(floor((effective_dex - 10) / 2.0)::integer, 0);
+    base_hp := CASE c.class::text WHEN 'warrior' THEN 24 WHEN 'wizard' THEN 16
+      WHEN 'ranger' THEN 20 WHEN 'rogue' THEN 16 WHEN 'assassin' THEN 16
+      WHEN 'healer' THEN 18 WHEN 'bard' THEN 16 WHEN 'templar' THEN 22 ELSE 18 END;
+    hp_cap := least(greatest(base_hp + con_mod * 2 + (c.level - 1) * 5 + bonus_hp, 1), 10000);
+    cp_cap := least(greatest(30 + (c.level - 1) * 3 + (int_mod + wis_mod) * 3, 0), 5000);
+    mp_cap := least(greatest(100 + dex_mod * 10 + floor((c.level - 1) * 2)::integer, 0), 5000);
+    SELECT CASE WHEN n.is_inn THEN 10 ELSE 0 END INTO inn_bonus
+      FROM public.nodes n WHERE n.id = c.current_node_id;
+    inn_bonus := COALESCE(inn_bonus, 0);
+
+    hp_per_tick := 2 + floor(sqrt(greatest(effective_con - 10, 0)))::integer
+      + bonus_hp_regen + CASE WHEN c.level >= 40 THEN 10 WHEN c.level >= 35 THEN 8
+        WHEN c.level >= 30 THEN 6 WHEN c.level >= 25 THEN 4 WHEN c.level >= 20 THEN 2 ELSE 0 END
+      + inn_bonus;
+    cp_per_tick := 2 + floor(sqrt(greatest(effective_wis - 10, 0)))::integer
+      + CASE WHEN c.level >= 40 THEN 5 WHEN c.level >= 35 THEN 4 WHEN c.level >= 30 THEN 3
+        WHEN c.level >= 25 THEN 2 WHEN c.level >= 20 THEN 1 ELSE 0 END + inn_bonus;
+    mp_per_tick := round((5 + dex_mod) * 0.67)::integer * 2 + inn_bonus;
+
+    PERFORM set_config('app.trusted_rpc', 'true', true);
+    UPDATE public.characters SET
+      hp = CASE WHEN hp < hp_cap THEN least(hp_cap, hp + hp_per_tick * steps) ELSE hp END,
+      cp = CASE WHEN cp < cp_cap THEN least(cp_cap, cp + cp_per_tick * steps) ELSE cp END,
+      mp = CASE WHEN mp < mp_cap THEN least(mp_cap, mp + mp_per_tick * steps) ELSE mp END
+    WHERE id = c.id AND hp > 0;
+    IF FOUND THEN settled_count := settled_count + 1; END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object('ok', true, 'kind', 'settled', 'steps', steps,
+    'eligible_count', eligible_count, 'settled_count', settled_count, 'bucket', bucket);
+END;
+$function$
+
+(3 rows)
+ROLLBACK

@@ -82,6 +82,135 @@ before(async()=>{
   await installLifecycleFixture();
 });
 after(async()=>await db?.close());
+// One-time reset uses the same real creation/storage/lifecycle dependencies as cutover.
+const resetSql=()=>read('docs/operations/progression-001G-C2-character-reset.sql');
+const resetNames=()=>Array.from(resetSql().split('UPDATE c2_reset_allowlist')[0].matchAll(/\('([^']+)','all'\)/g),m=>m[1]);
+async function resetFixture(){
+  for(const name of resetNames()) if(!(await q('SELECT to_regclass($1) r',['public.'+name]))[0].r){
+    await db.exec(`CREATE TABLE public.${name}(id uuid PRIMARY KEY DEFAULT gen_random_uuid());INSERT INTO public.${name} DEFAULT VALUES`);
+  }
+  // Replace only the minimal registry made above, with the actual runtime location contract.
+  await db.exec(`DROP TABLE unique_item_instance;
+    CREATE TABLE unique_item_instance(id uuid PRIMARY KEY,item_id uuid UNIQUE REFERENCES items(id) ON DELETE RESTRICT,
+      location_kind text NOT NULL CHECK(location_kind IN ('inventory','ground','marketplace','transit')),
+      location_id uuid NOT NULL UNIQUE,updated_at timestamptz DEFAULT now());
+    ALTER TABLE items ADD weapon_tag text;
+    ALTER TABLE character_inventory ADD id uuid UNIQUE DEFAULT gen_random_uuid(), ADD unique_instance_id uuid
+      REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
+    ALTER TABLE node_ground_loot ADD id uuid UNIQUE DEFAULT gen_random_uuid(),ADD item_id uuid REFERENCES items(id),
+      ADD unique_instance_id uuid REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
+    ALTER TABLE marketplace_listings ADD id uuid UNIQUE DEFAULT gen_random_uuid(),ADD item_id uuid REFERENCES items(id),
+      ADD unique_instance_id uuid REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
+    CREATE TABLE combat2_test_run(id uuid PRIMARY KEY,status text,final_summary jsonb);
+    CREATE TABLE combat2_test_run_batch(run_id uuid REFERENCES combat2_test_run(id) ON DELETE CASCADE,
+      batch_id uuid,encounter_id uuid,seq integer,PRIMARY KEY(run_id,batch_id));
+    CREATE TABLE combat2_test_run_event(run_id uuid,batch_id uuid,event_seq integer,event jsonb,
+      FOREIGN KEY(run_id,batch_id) REFERENCES combat2_test_run_batch(run_id,batch_id) ON DELETE CASCADE);
+    CREATE TABLE profiles(id uuid PRIMARY KEY);INSERT INTO profiles SELECT id FROM auth.users;
+    INSERT INTO user_roles VALUES('${actor}','overlord');
+    CREATE TABLE configured_world_placement(id uuid PRIMARY KEY,item_id uuid REFERENCES items(id),node_id uuid REFERENCES nodes(id));`);
+  for(const [name,path] of [['unique_holder_before_delete','supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql'],
+    ['unique_holder_finalize_delete','supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql'],
+    ['combat2_refuse_invalid_stance_equipment_change','supabase/migrations/20261001130000_combat2_character_persistent_stances.sql']]){
+    await db.exec(read(path).match(new RegExp('CREATE(?: OR REPLACE)? FUNCTION public\\.'+name+'\\([\\s\\S]*?\\$\\$;'))[0]);
+  }
+  for(const name of ['character_inventory','node_ground_loot','marketplace_listings'])await db.exec(`
+    CREATE TRIGGER ${name}_reset_delete BEFORE DELETE ON ${name} FOR EACH ROW EXECUTE FUNCTION unique_holder_before_delete();
+    CREATE CONSTRAINT TRIGGER ${name}_reset_finalize AFTER DELETE ON ${name}
+      DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION unique_holder_finalize_delete();`);
+  await db.exec(`CREATE TRIGGER fixture_stance_inventory BEFORE DELETE ON character_inventory
+    FOR EACH ROW EXECUTE FUNCTION combat2_refuse_invalid_stance_equipment_change()`);
+  const c=await call({name:'ResetReusable'}),dead=await call({name:'DeletedReusable'});
+  const event=uid(next++);await identity(null);
+  await q("SELECT progression_apply_xp_internal($1,$2,'combat2_reward',50::numeric,$3::jsonb)",[c.characterId,event,{rewardClaimId:event}]);
+  await identity(actor);
+  await q("UPDATE characters SET deleted_at=now(),restore_until=now()+interval '720 hours',lifecycle_version=1 WHERE id=$1",[dead.characterId]);
+  for(const [kind,table] of [['inventory','character_inventory'],['ground','node_ground_loot'],['marketplace','marketplace_listings'],['transit',null]]){
+    const item=uid(next++),instance=uid(next++),holder=uid(next++);
+    await q("INSERT INTO items VALUES($1,'{}','shield')",[item]);
+    await q('INSERT INTO unique_item_instance VALUES($1,$2,$3,$4,now())',[instance,item,kind,holder]);
+    if(table==='character_inventory')await q("INSERT INTO character_inventory(character_id,item_id,equipped_slot,current_durability,id,unique_instance_id) VALUES($1,$2,'off_hand',1,$3,$4)",[c.characterId,item,holder,instance]);
+    if(table==='node_ground_loot')await q('INSERT INTO node_ground_loot(dropped_by,item_id,id,unique_instance_id) VALUES(NULL,$1,$2,$3)',[item,holder,instance]);
+    if(table==='marketplace_listings')await q('INSERT INTO marketplace_listings(seller_character_id,item_id,id,unique_instance_id) VALUES($1,$2,$3,$4)',[dead.characterId,item,holder,instance]);
+    await q('INSERT INTO configured_world_placement VALUES($1,$2,$3)',[uid(next++),item,node]);
+  }
+  await q("INSERT INTO character_stance(character_id,ability_key) VALUES($1,'shield_wall')",[c.characterId]);
+  await q("INSERT INTO issue_reports VALUES($1,'ResetReusable',$2)",[c.characterId,actor]);
+  // Exactly the historical orphan CSV plus the pre-existing local orphan; reset accepts all obsolete material state.
+  const csv=read('docs/operations/progression-001G-C2-orphan-materials-snapshot.csv').trim().split(/\r?\n/);
+  const headers=csv.shift().split(',');
+  // Model rows predating 0010: load obsolete rows before installing its NOT VALID FK.
+  // This fixture-only reconstruction never disables a trigger/constraint in reset SQL.
+  await db.exec('ALTER TABLE character_materials DROP CONSTRAINT character_materials_character_id_c2_fkey');
+  for(const line of csv){const v=line.split(',').map(x=>x.replace(/^"|"$/g,''));await q('INSERT INTO character_materials VALUES($1,$2,$3)',[v[headers.indexOf('character_id')],v[headers.indexOf('material_key')],Number(v[headers.indexOf('count')])]);}
+  await db.exec('ALTER TABLE character_materials ADD CONSTRAINT character_materials_character_id_c2_fkey FOREIGN KEY(character_id) REFERENCES characters(id) ON UPDATE RESTRICT ON DELETE CASCADE NOT VALID');
+  for(const status of ['recording','completed']){
+    const run=uid(next++),batch=uid(next++);
+    await q('INSERT INTO combat2_test_run VALUES($1,$2,$3)',[run,status,{historical_character_id:c.characterId}]);
+    await q('INSERT INTO combat2_test_run_batch VALUES($1,$2,$3,1)',[run,batch,uid(next++)]);
+    await q('INSERT INTO combat2_test_run_event VALUES($1,$2,1,$3)',[run,batch,{actor_id:dead.characterId,actor_name:'Historical'}]);
+  }
+  return c;
+}
+test('full reset empties all 72 targets, tombstones, all ground loot, transit and 203 CSV orphans; preserves reports/accounts/world',async()=>tx(async()=>{
+  await resetFixture();
+  const definitions=await q('SELECT to_jsonb(x) r FROM configured_world_placement x');
+  const reports=await q("SELECT to_jsonb(x) r FROM combat2_test_run x WHERE status='completed'");
+  await db.exec(resetSql());
+  for(const table of resetNames())assert.equal((await q(`SELECT count(*)::int n FROM ${table}`))[0].n,0,table);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM configured_world_placement x'),definitions);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM combat2_test_run x'),reports);
+  assert.equal((await q('SELECT count(*)::int n FROM combat2_test_run_event'))[0].n,1);
+  assert.equal((await q('SELECT count(*)::int n FROM auth.users'))[0].n,2);
+  assert.equal((await q("SELECT count(*)::int n FROM user_roles WHERE role='overlord'"))[0].n,1);
+  assert.deepEqual(await q('SELECT * FROM issue_reports'),[{character_id:null,character_name:null,user_id:actor}]);
+  const fresh=await call({name:'ResetReusable'});assert.ok(fresh.characterId);
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials'))[0].n,7);
+  assert.equal((await q('SELECT count(*)::int n FROM characters'))[0].n,1);
+}));
+test('reset rejects unknown persistent FK or unlisted sidecar before losing any rows',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  await db.exec('SAVEPOINT unknown_reset');
+  await db.exec('CREATE TABLE persistent_world_dependency(character_id uuid REFERENCES characters(id) ON DELETE CASCADE)');
+  await refused(()=>db.exec(resetSql()),/preserved incoming FK/);assert.deepEqual(await counts(),before);
+  await db.exec('ROLLBACK TO SAVEPOINT unknown_reset;RELEASE SAVEPOINT unknown_reset');
+  await db.exec('CREATE TABLE unlisted_quest_state(character_id uuid)');
+  await refused(()=>db.exec(resetSql()),/unlisted character dependency/);assert.deepEqual(await counts(),before);
+}));
+test('reset refuses unreviewed DELETE triggers and already-active lifecycle fences rather than bypassing them',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  await db.exec(`CREATE FUNCTION unexpected_reset_trigger() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD;END $$;
+    CREATE TRIGGER unexpected_reset_trigger BEFORE DELETE ON characters FOR EACH ROW EXECUTE FUNCTION unexpected_reset_trigger()`);
+  await refused(()=>db.exec(resetSql()),/unreviewed DELETE/);assert.deepEqual(await counts(),before);
+  await db.exec('DROP TRIGGER unexpected_reset_trigger ON characters');await cutover();
+  await refused(()=>db.exec(resetSql()),/unreviewed DELETE/);assert.deepEqual(await counts(),before);
+}));
+test('reset late assertion failure rolls back all deleted character/runtime/material/report data',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  // Inject failure after deletion, deferred trigger completion and preservation comparison.
+  const failing=resetSql().replace('END $reset$;',"RAISE EXCEPTION 'late_reset_assertion'; END $reset$;");
+  await refused(()=>db.exec(failing),/late_reset_assertion/);assert.deepEqual(await counts(),before);
+  assert.equal((await q('SELECT count(*)::int n FROM combat2_test_run'))[0].n,2);
+  assert.equal((await q('SELECT count(*)::int n FROM unique_item_instance'))[0].n,4);
+}));
+test('same-transaction reset plus unchanged corrected B rolls back reset on cutover failure and then creates only through C2',async()=>tx(async()=>{
+  await resetFixture();await support();await familyFixture();
+  for(const source of runtimeSources)await db.exec(originalRuntime(source).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION'));
+  await db.exec(`INSERT INTO pg_catalog.pg_extension(oid,extname,extowner,extnamespace,extrelocatable,extversion)
+    VALUES(900001,'pg_cron','postgres'::regrole,'cron'::regnamespace,false,'fixture');
+    CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE plpgsql AS $$ BEGIN INSERT INTO cron.job VALUES($1,$2,$3);RETURN 1;END $$;
+    INSERT INTO cron.job VALUES('character-c2-receipt-expiry','fixture','fixture')`);
+  const combined=read('docs/operations/progression-001G-C2-reset-and-cutover.sql'),before=await counts();
+  assert.ok(combined.indexOf(resetSql())<combined.indexOf(read('docs/operations/progression-001G-C2-integrated-cutover.sql')));
+  await refused(()=>db.exec(combined),/job already exists/);assert.deepEqual(await counts(),before);
+  await db.exec("DELETE FROM cron.job WHERE jobname='character-c2-receipt-expiry'");await db.exec(combined);
+  assert.equal((await q('SELECT count(*)::int n FROM characters'))[0].n,0);
+  await db.exec('SET LOCAL ROLE authenticated');
+  const created=(await q("SELECT character_create_c2($1,'ResetReusable','human','male',NULL,NULL,'creation-c2-v1') r",[uid(next++)]))[0].r;
+  await db.exec('RESET ROLE');assert.ok(created.characterId);
+  assert.equal((await q('SELECT count(*)::int n FROM character_materials'))[0].n,7);
+  assert.equal((await q("SELECT has_table_privilege('service_role','characters','INSERT') allowed"))[0].allowed,false);
+}));
 async function installLifecycleFixture(){
   for(const table of ['combat_audit_log','combat_soak_access','combat2_respawn_request','combat2_diagnostic_session',
     'combat2_test_arena_access','combat2_test_arena_stance_snapshot_header','encounter_access_grants',
@@ -132,7 +261,8 @@ const runtimeSources=[
   ['combat2_session_access','supabase/migrations/20260913100000_combat2_production_cutover.sql','c.current_node_id=_node_id)','c.current_node_id=_node_id AND c.deleted_at IS NULL)'],
   ['settle_out_of_combat_resources','supabase/migrations/20260923100000_authoritative_ooc_resource_settlement.sql','FROM public.characters ORDER BY id FOR UPDATE','FROM public.characters WHERE deleted_at IS NULL ORDER BY id FOR UPDATE']
 ];
-const originalRuntime=([name,path])=>read(path).match(new RegExp('CREATE(?: OR REPLACE)? FUNCTION public\\.'+name+'\\([\\s\\S]*?\\$\\$;','i'))[0];
+const installedSettlement=()=>Array.from(read('docs/operations/progression-001G-C2-settlement-installed-definitions.txt').matchAll(/\|(CREATE OR REPLACE FUNCTION [\s\S]*?AS \$function\$[\s\S]*?\$function\$)/g),m=>m[1]+';').join('\n');
+const originalRuntime=([name,path])=>name==='settle_out_of_combat_resources'?installedSettlement():read(path).match(new RegExp('CREATE(?: OR REPLACE)? FUNCTION public\\.'+name+'\\([\\s\\S]*?\\$\\$;','i'))[0];
 async function installRuntimeFixture(){
   await db.exec(`ALTER TABLE nodes ADD is_inn boolean DEFAULT false;
     ALTER TABLE node_fighter ADD left_at timestamptz;
@@ -141,6 +271,8 @@ async function installRuntimeFixture(){
     ALTER TABLE combat2_test_arena_node ADD arena_id uuid,ADD active boolean;
     CREATE TABLE combat2_test_arena(id uuid,active boolean);
     ALTER TABLE combat2_respawn_request ADD created_at timestamptz;
+    CREATE ROLE sandbox_exec_gpclaklkaolyzfnooajt;
+    ALTER TABLE character_stance ADD ability_key text,ADD state jsonb DEFAULT '{}',ADD version bigint DEFAULT 0,ADD updated_at timestamptz;
     CREATE TABLE character_resource_settlement_state(singleton boolean PRIMARY KEY,settled_bucket timestamptz,updated_at timestamptz);
     INSERT INTO character_resource_settlement_state VALUES(true,date_bin(interval '4 seconds',clock_timestamp(),timestamptz 'epoch')-interval '4 seconds',clock_timestamp());
     CREATE SCHEMA cron;CREATE TABLE cron.job(jobname text,schedule text,command text);
@@ -158,6 +290,8 @@ async function installRuntimeFixture(){
   await db.exec(`REVOKE ALL ON FUNCTION combat2_presence_heartbeat(uuid),combat2_session_access(uuid,uuid),settle_out_of_combat_resources(timestamptz) FROM PUBLIC,anon,authenticated,service_role,custom_default;
     GRANT EXECUTE ON FUNCTION combat2_presence_heartbeat(uuid),combat2_session_access(uuid,uuid) TO authenticated,service_role;
     GRANT EXECUTE ON FUNCTION settle_out_of_combat_resources(timestamptz) TO service_role;`);
+  await db.exec(`REVOKE ALL ON FUNCTION settle_out_of_combat_resources(timestamptz),settle_out_of_combat_resources_without_character_stances(timestamptz),combat2_regenerate_force_shields(timestamptz,integer) FROM PUBLIC,anon,authenticated,custom_default;
+    GRANT EXECUTE ON FUNCTION settle_out_of_combat_resources(timestamptz),settle_out_of_combat_resources_without_character_stances(timestamptz),combat2_regenerate_force_shields(timestamptz,integer) TO service_role,sandbox_exec_gpclaklkaolyzfnooajt;`);
   const acl=await q("SELECT proname,proowner,proacl::text FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname",[runtimeSources.map(s=>s[0])]);
   await db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql'));
   assert.deepEqual(await q("SELECT proname,proowner,proacl::text FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname",[runtimeSources.map(s=>s[0])]),acl);
@@ -192,27 +326,14 @@ test('hosted blocker preflight evaluates postgres instead of restricted inspecto
   const orphans=rows.find(r=>'count_reliable' in r);assert.equal(orphans.count_reliable,false);assert.equal(orphans.orphan_material_rows,null);
   await db.exec('RESET ROLE');
 }));
-test('hosted blocker old settlement replacement refuses later present-fighter/Force Shield chain before changing it',async()=>tx(async()=>{
+test('settlement exact helper guard refuses drift and leaves wrapper unchanged',async()=>tx(async()=>{
   for(const source of runtimeSources) await db.exec(originalRuntime(source).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION'));
-  const correction=read('supabase/migrations/20260924100000_combat2_post_completion_settlement_ownership.sql')
-    .match(/DO \$migration\$[\s\S]*?\$migration\$;/)[0];
-  await db.exec(correction);
-  await db.exec(`ALTER FUNCTION settle_out_of_combat_resources(timestamptz) RENAME TO settle_out_of_combat_resources_without_character_stances;
-    CREATE FUNCTION combat2_regenerate_force_shields(timestamptz,integer) RETURNS integer LANGUAGE sql AS $$ SELECT 21 $$;`);
-  const wrapper=read('supabase/migrations/20261001130000_combat2_character_persistent_stances.sql')
-    .match(/CREATE FUNCTION public\.settle_out_of_combat_resources\([\s\S]*?\$\$;/)[0];
-  await db.exec(wrapper);
-  await db.exec('ALTER TABLE character_materials ADD updated_at timestamptz NOT NULL DEFAULT now()');
-  const inspection=await db.exec(read('docs/operations/progression-001G-C2-blocker-evidence.sql'));
-  const inspected=inspection.flatMap(r=>r.rows??[]).filter(r=>'definition' in r && 'body_sha256' in r);
-  assert.equal(inspected.length,3);assert.ok(inspected.every(r=>r.definition.startsWith('CREATE OR REPLACE FUNCTION')));
-  const before=await q("SELECT proname,prosrc,proacl::text FROM pg_proc WHERE proname LIKE 'settle_out_of_combat_resources%' ORDER BY proname");
-  assert.match(before.find(r=>r.proname.endsWith('without_character_stances')).prosrc,/OR \(f.present AND e.claim_token/);
-  await refused(()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql')),/runtime source drift: settle/);
-  assert.deepEqual(await q("SELECT proname,prosrc,proacl::text FROM pg_proc WHERE proname LIKE 'settle_out_of_combat_resources%' ORDER BY proname"),before);
-  const result=(await q('SELECT settle_out_of_combat_resources(clock_timestamp()) r'))[0].r;
-  assert.equal(result.force_shields_regenerated,21);
+  const wrapper=(await q("SELECT prosrc FROM pg_proc WHERE oid='settle_out_of_combat_resources(timestamptz)'::regprocedure"))[0];
+  await db.exec("CREATE OR REPLACE FUNCTION combat2_regenerate_force_shields(_now timestamptz,_settlement_steps integer) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$ BEGIN RETURN 21; END $$;");
+  await refused(()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql')),/runtime source drift: combat2_regenerate_force_shields/);
+  assert.deepEqual((await q("SELECT prosrc FROM pg_proc WHERE oid='settle_out_of_combat_resources(timestamptz)'::regprocedure"))[0],wrapper);
 }));
+
 test('integrated support is dormant, private and reports retained quota without changing characters',async()=>tx(async()=>{
   const before=await counts();await support();assert.deepEqual(await counts(),before);
   assert.equal((await q("SELECT has_function_privilege('authenticated','character_creation_capacity(uuid)','EXECUTE') allowed"))[0].allowed,false);
@@ -326,10 +447,14 @@ test('family guard enforces L10 founding but preserves L1 joining and existing A
   await identity(actor);await cutover();await lifecycle({id:c.characterId});
   await refused(()=>q("SELECT apply_family_to_character($1,'Existing')",[c.characterId]),/Character not found/);
 }));
-test('runtime exclusions change only the three active-character predicates, preserving function ACLs',async()=>tx(async()=>{
-  for(const source of runtimeSources){
+test('runtime exclusions change only four active-character predicates, preserving wrapper and ACLs',async()=>tx(async()=>{
+  for(const source of runtimeSources.slice(0,2)){
     const expected=originalRuntime(source).replace(source[2],source[3]).match(/AS \$\$([\s\S]*?)\$\$;/i)[1].replace(/\r\n/g,'\n');
     assert.equal((await q('SELECT replace(prosrc,E\'\\r\\n\',E\'\\n\') body FROM pg_proc WHERE proname=$1',[source[0]]))[0].body,expected);
+  }
+  for(const m of installedSettlement().matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\([\s\S]*?AS \$function\$([\s\S]*?)\$function\$/g)){
+    const expected=m[2].replace('FROM public.characters ORDER BY id FOR UPDATE','FROM public.characters WHERE deleted_at IS NULL ORDER BY id FOR UPDATE').replace("WHERE s.ability_key='force_shield' ORDER BY c.id FOR UPDATE OF c,s LOOP","WHERE s.ability_key='force_shield' AND c.deleted_at IS NULL ORDER BY c.id FOR UPDATE OF c,s LOOP");
+    assert.equal((await q('SELECT prosrc FROM pg_proc WHERE proname=$1',[m[1]]))[0].prosrc,expected);
   }
   assert.equal((await q("SELECT has_function_privilege('authenticated','settle_out_of_combat_resources(timestamptz)','EXECUTE') allowed"))[0].allowed,false);
   assert.equal((await q("SELECT has_function_privilege('service_role','settle_out_of_combat_resources(timestamptz)','EXECUTE') allowed"))[0].allowed,true);
@@ -672,3 +797,58 @@ test('purge releases quota/name but never reuses a purged character UUID',async(
   await refused(()=>q('INSERT INTO characters(id,user_id,name) VALUES($1,$2,$3)',[c.characterId,actor,'Reused UUID']),/purged_identity_reserved/);
   assert.equal((await q('SELECT count(*)::int n FROM characters WHERE user_id=$1',[actor]))[0].n,5);
 }));
+
+test('settlement preserves wrapper, stale non-present claim correction and actual Force Shield regeneration; tombstones excluded',()=>tx(async()=>{
+  const active=await call({name:'Active Shield'}),deleted=await call({name:'Deleted Shield'}),stale=await call({name:'Stale Fighter'}),blocked=await call({name:'Present Claim'});
+  await db.exec('ALTER TABLE characters DISABLE TRIGGER USER');
+  await q('UPDATE characters SET hp=1,cp=1,mp=1,int=14,wis=14 WHERE id=ANY($1::uuid[])',[[active.characterId,deleted.characterId,stale.characterId,blocked.characterId]]);
+  await q("UPDATE characters SET deleted_at=clock_timestamp(),restore_until=clock_timestamp()+interval '720 hours',lifecycle_version=1 WHERE id=$1",[deleted.characterId]);
+  await db.exec('ALTER TABLE characters ENABLE TRIGGER USER');
+  for(const c of [active,deleted])await q("INSERT INTO character_stance(character_id,ability_key,state,version) VALUES($1,'force_shield','{\"ward_remaining\":0}',0)",[c.characterId]);
+  const encounter=uid(next++);await q("INSERT INTO node_encounter(id,node_id,status,claim_token,claim_expires_at) VALUES($1,$2,'active',$1,clock_timestamp()+interval '1 hour')",[encounter,node]);
+  await q('INSERT INTO node_fighter(character_id,encounter_id,present) VALUES($1,$2,false)',[stale.characterId,encounter]);
+  await q('INSERT INTO node_fighter(character_id,encounter_id,present) VALUES($1,$2,true)',[blocked.characterId,encounter]);
+  await db.exec("UPDATE character_resource_settlement_state SET settled_bucket=date_bin(interval '4 seconds',clock_timestamp(),timestamptz 'epoch')-interval '4 seconds'");
+  const result=(await q('SELECT settle_out_of_combat_resources(clock_timestamp()) r'))[0].r;assert.equal(result.kind,'settled');assert.equal(result.force_shields_regenerated,1);
+  assert.ok((await row(active.characterId)).hp>1);assert.ok((await row(stale.characterId)).hp>1);assert.equal((await row(deleted.characterId)).hp,1);assert.equal((await row(blocked.characterId)).hp,1);
+  assert.deepEqual(await q('SELECT character_id,(state->>\'ward_remaining\')::int ward,version::int FROM character_stance ORDER BY character_id'),[{character_id:active.characterId,ward:2,version:1},{character_id:deleted.characterId,ward:0,version:0}].sort((a,b)=>a.character_id.localeCompare(b.character_id)));
+}));
+
+test('reset preserves a configured placement pointing at registry by refusing the unexpected incoming FK',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  await db.exec('CREATE TABLE persistent_unique_placement(instance_id uuid REFERENCES unique_item_instance(id) ON DELETE CASCADE)');
+  await refused(()=>db.exec(resetSql()),/preserved incoming FK/);assert.deepEqual(await counts(),before);
+}));
+test('reset refuses a new persistent registry location rather than interpreting it as disposable runtime',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  await db.exec("ALTER TABLE unique_item_instance DROP CONSTRAINT unique_item_instance_location_kind_check;UPDATE unique_item_instance SET location_kind='configured_world'");
+  await refused(()=>db.exec(resetSql()),/unknown persistent unique location/);assert.deepEqual(await counts(),before);
+}));
+test('reset guards registry UPDATE triggers invoked by ordinary holder deletion',async()=>tx(async()=>{
+  await resetFixture();const before=await counts();
+  await db.exec(`CREATE FUNCTION unexpected_registry_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
+    CREATE TRIGGER unexpected_registry_update BEFORE UPDATE ON unique_item_instance FOR EACH ROW EXECUTE FUNCTION unexpected_registry_update()`);
+  await refused(()=>db.exec(resetSql()),/unreviewed DELETE\/update trigger/);assert.deepEqual(await counts(),before);
+}));
+
+test('synthetic one-time physical checkpoint restores complete affected fixture in an isolated PGlite instance',async()=>{
+  // Final test: commit disposable fixture only, then export its existing data directory.
+  // No production backup, Auth credentials, external connection or persistent backup service.
+  await db.exec('BEGIN');try{await identity(actor);await resetFixture();await db.exec('COMMIT');}catch(e){await db.exec('ROLLBACK');throw e;}
+  const names=[...resetNames(),'combat2_test_run','combat2_test_run_batch','combat2_test_run_event','issue_reports',
+    'configured_world_placement','items','nodes','profiles','user_roles'];
+  const capture=async connection=>{const result={};for(const name of names)result[name]=(await connection.query(`SELECT to_jsonb(x) r FROM ${name} x ORDER BY to_jsonb(x)::text`)).rows;
+    result.auth_ids=(await connection.query('SELECT id FROM auth.users ORDER BY id')).rows;return result;};
+  const before=await capture(db),checkpoint=await db.dumpDataDir();let rehearsal,restored;
+  try{
+    rehearsal=new PGlite({loadDataDir:checkpoint});
+    assert.deepEqual(await capture(rehearsal),before);
+    await rehearsal.exec('BEGIN');await rehearsal.exec(resetSql());await rehearsal.exec('COMMIT');
+    assert.equal((await rehearsal.query('SELECT count(*)::int n FROM characters')).rows[0].n,0);
+    assert.equal((await rehearsal.query('SELECT count(*)::int n FROM combat2_test_run_event')).rows[0].n,1);
+    await rehearsal.close();rehearsal=null;
+    restored=new PGlite({loadDataDir:checkpoint});assert.deepEqual(await capture(restored),before);
+    await restored.exec('BEGIN;SET CONSTRAINTS ALL IMMEDIATE;ROLLBACK');
+  }finally{await rehearsal?.close();await restored?.close();}
+  // This proves recovery of synthetic data only, not provider/Supabase restore capability.
+});

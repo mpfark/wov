@@ -1,11 +1,13 @@
 -- LOCAL ACTIVATION-ONLY preparation; standard tool, one transaction.
--- Exact three source bodies with one added predicate each; no formula/scheduler refactor.
+-- Exact hosted settlement chain: preserve outer wrapper; exclude tombstones in inner/helper loops.
 -- CREATE OR REPLACE preserves existing function owners/ACLs. No new EXECUTE grants.
 DO $source_guard$
 BEGIN
   IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.combat2_presence_heartbeat(uuid)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND proconfig @> ARRAY['search_path=public, auth, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='9e94b365242c34c90a76b85175d6b5f15be39e2df58f7826579194d137dda6e1') THEN RAISE EXCEPTION 'lifecycle runtime source drift: combat2_presence_heartbeat'; END IF;
   IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.combat2_session_access(uuid,uuid)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND proconfig @> ARRAY['search_path=public, auth, cron, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='dffc702006532a07e660a96394bb0245be5aa0ea963a50bfdf5fb709f2c65851') THEN RAISE EXCEPTION 'lifecycle runtime source drift: combat2_session_access'; END IF;
-  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources(timestamptz)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND proconfig @> ARRAY['search_path=public, cron, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='6f3adbcae008361bbec089f55a42f1eb1f348fb3ee519c2da67a2df0948d9135') THEN RAISE EXCEPTION 'lifecycle runtime source drift: settle_out_of_combat_resources'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.combat2_regenerate_force_shields(timestamptz,integer)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND provolatile='v' AND proconfig=ARRAY['search_path=public, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='bb2b219f099d6f78809ff1172f219518e5d20f3894dab8a06adddcf8ce1764d8' AND cardinality(proacl)=3 AND proacl @> ARRAY['postgres=X/postgres','service_role=X/postgres','sandbox_exec_gpclaklkaolyzfnooajt=X/postgres']::aclitem[]) THEN RAISE EXCEPTION 'lifecycle runtime source drift: combat2_regenerate_force_shields'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources(timestamptz)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND provolatile='v' AND proconfig=ARRAY['search_path=public, cron, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='17185b0df23c90e8707a739249c7940324dd387d49f6ec300a7be1d58d99c183' AND cardinality(proacl)=3 AND proacl @> ARRAY['postgres=X/postgres','service_role=X/postgres','sandbox_exec_gpclaklkaolyzfnooajt=X/postgres']::aclitem[]) THEN RAISE EXCEPTION 'lifecycle runtime source drift: settle_out_of_combat_resources'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources_without_character_stances(timestamptz)'::regprocedure AND proowner='postgres'::regrole AND prosecdef AND provolatile='v' AND proconfig=ARRAY['search_path=public, cron, pg_temp'] AND encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='69e507eb64d25d0559cfd4a37cfc4e3016b2201f221692a3326bb9c219d46e90' AND cardinality(proacl)=3 AND proacl @> ARRAY['postgres=X/postgres','service_role=X/postgres','sandbox_exec_gpclaklkaolyzfnooajt=X/postgres']::aclitem[]) THEN RAISE EXCEPTION 'lifecycle runtime source drift: settle_out_of_combat_resources_without_character_stances'; END IF;
 END $source_guard$;
 
 CREATE OR REPLACE FUNCTION public.combat2_presence_heartbeat(_character_id uuid)
@@ -51,13 +53,13 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN RETURN jsonb_build_object('ok',false,'kind','access_check_failed');
 END $$;
 
-CREATE OR REPLACE FUNCTION public.settle_out_of_combat_resources(_now timestamptz DEFAULT clock_timestamp())
-RETURNS jsonb
-LANGUAGE plpgsql
-VOLATILE
-SECURITY DEFINER
-SET search_path = public, cron, pg_temp
-AS $$
+-- Outer wrapper is intentionally NOT replaced. Existing owners/ACLs remain unchanged.
+CREATE OR REPLACE FUNCTION public.settle_out_of_combat_resources_without_character_stances(_now timestamp with time zone DEFAULT clock_timestamp())
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'cron', 'pg_temp'
+AS $function$
 DECLARE
   state public.character_resource_settlement_state%ROWTYPE;
   bucket timestamptz := date_bin(interval '4 seconds', _now, timestamptz 'epoch');
@@ -144,7 +146,7 @@ BEGIN
       WHERE f.character_id = c.id AND e.status = 'active' AND (
         (f.present AND EXISTS (SELECT 1 FROM public.node_creature nc
           WHERE nc.encounter_id = e.id AND nc.is_alive AND nc.hp > 0 AND nc.engaged))
-        OR (e.claim_token IS NOT NULL AND e.claim_expires_at > _now)
+        OR (f.present AND e.claim_token IS NOT NULL AND e.claim_expires_at > _now)
       )) THEN CONTINUE; END IF;
 
     eligible_count := eligible_count + 1;
@@ -201,5 +203,50 @@ BEGIN
   RETURN jsonb_build_object('ok', true, 'kind', 'settled', 'steps', steps,
     'eligible_count', eligible_count, 'settled_count', settled_count, 'bucket', bucket);
 END;
-$$;
+$function$;
 
+CREATE OR REPLACE FUNCTION public.combat2_regenerate_force_shields(_now timestamp with time zone, _settlement_steps integer)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE row record; bonus_int integer; bonus_wis integer; int_mod integer; wis_mod integer;
+ cap integer; per_tick integer; changed integer:=0;
+BEGIN
+ IF _settlement_steps<=0 THEN RETURN 0; END IF;
+ FOR row IN SELECT c.*,s.state,s.version FROM public.characters c JOIN public.character_stance s ON s.character_id=c.id
+  WHERE s.ability_key='force_shield' AND c.deleted_at IS NULL ORDER BY c.id FOR UPDATE OF c,s LOOP
+   IF row.hp<=0 OR row.current_node_id IS NULL
+      OR EXISTS(SELECT 1 FROM public.combat2_test_arena_node t WHERE t.node_id=row.current_node_id)
+      OR EXISTS(SELECT 1 FROM public.combat2_departure_request d WHERE d.character_id=row.id
+        AND (d.status='queued' OR d.resolved_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch')))
+      OR EXISTS(SELECT 1 FROM public.combat2_party_departure_member m JOIN public.combat2_party_departure_request r ON r.request_id=m.request_id
+        WHERE m.character_id=row.id AND ((r.status='queued' AND m.status IN('waiting','queued'))
+          OR m.resolved_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch')))
+      OR EXISTS(SELECT 1 FROM public.combat2_respawn_request rr WHERE rr.character_id=row.id
+        AND rr.created_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch'))
+      OR EXISTS(SELECT 1 FROM public.node_fighter released WHERE released.character_id=row.id
+        AND released.left_at>=date_bin(interval '4 seconds',_now,timestamptz 'epoch'))
+      OR EXISTS(SELECT 1 FROM public.node_fighter f JOIN public.node_encounter e ON e.id=f.encounter_id
+        WHERE f.character_id=row.id AND e.status='active' AND ((f.present AND EXISTS(
+          SELECT 1 FROM public.node_creature nc WHERE nc.encounter_id=e.id AND nc.is_alive AND nc.hp>0 AND nc.engaged))
+          OR (e.claim_token IS NOT NULL AND e.claim_expires_at>_now))) THEN CONTINUE; END IF;
+   SELECT coalesce(sum(coalesce((coalesce(nullif(ci.stat_override,'{}'::jsonb),i.stats,'{}'::jsonb)->>'int')::integer,0)
+       +coalesce((coalesce(ci.applied_gems,'{}'::jsonb)->>'sapphire')::integer,0)),0)::integer,
+     coalesce(sum(coalesce((coalesce(nullif(ci.stat_override,'{}'::jsonb),i.stats,'{}'::jsonb)->>'wis')::integer,0)
+       +coalesce((coalesce(ci.applied_gems,'{}'::jsonb)->>'pearl')::integer,0)),0)::integer
+     INTO bonus_int,bonus_wis FROM public.character_inventory ci JOIN public.items i ON i.id=ci.item_id
+     WHERE ci.character_id=row.id AND ci.equipped_slot IS NOT NULL AND ci.current_durability>0;
+   int_mod:=greatest(0,floor(((row.int+bonus_int)-10)/2.0)::integer);
+   wis_mod:=greatest(0,floor(((row.wis+bonus_wis)-10)/2.0)::integer);
+   cap:=greatest(1,wis_mod+floor(row.level/2.0)::integer); per_tick:=1+floor(int_mod/2.0)::integer;
+   UPDATE public.character_stance SET state=jsonb_set(state,'{ward_remaining}',to_jsonb(least(cap,
+       greatest(0,coalesce((state->>'ward_remaining')::integer,cap))+(_settlement_steps*2*per_tick))),true),
+     version=version+1,updated_at=clock_timestamp()
+    WHERE character_id=row.id AND ability_key='force_shield' AND version=row.version
+      AND greatest(0,coalesce((state->>'ward_remaining')::integer,cap))<cap;
+   IF FOUND THEN changed:=changed+1; END IF;
+ END LOOP;
+ RETURN changed;
+END $function$;

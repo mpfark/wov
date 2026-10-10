@@ -1,5 +1,8 @@
 # C2 hosted preflight — bounded blocker resolution
 
+**Historical blocker record:** [final cutover handoff](progression-001G-C2-final-cutover-handoff.md) now records supplied exact CSV/settlement definitions, conditional owner approval, deterministic replacement comparison and corrected local packages. Old fingerprint is historical only; no hosted action occurred. The incomplete-template/unknown-evidence notes and old SQL identities below describe the ee64bb3a checkpoint, not current readiness.
+
+
 Source baseline/current HEAD `e712a3f65ff3fbd67bb00712a0fef4aeb13f6369`, synchronized with origin/main. Findings below are supplied Lovable observations via Mik on2026-10-10; inspection time/raw definitions/203-row snapshot were not supplied. No Codex hosted access. This report supersedes the integrated handoff's installation readiness where noted; approved C2 policies/architecture and all four F limitations are unchanged.
 
 ## Materials: structural cause proven;203-row disposition unproven

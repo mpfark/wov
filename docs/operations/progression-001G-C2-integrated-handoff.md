@@ -1,5 +1,8 @@
 # C2 integrated cutover — local preparation
 
+**Current local preparation:** [full reset handoff](progression-001G-C2-character-reset-preparation.md) supersedes the historical standalone orphan-cleanup/install sequence below. Prepare one coordinated reset + unchanged corrected B transaction, with private A separate. ALL ground loot/obsolete runtime is owner-approved disposable data; completed reports/accounts/world/configuration survive. A practical private recovery checkpoint and fresh installed metadata remain execution gates; no hosted action is authorized.
+
+
 ## Current blocker status —2026-10-10
 
 This preparation was published at `e712a3f65ff3fbd67bb00712a0fef4aeb13f6369`; the source/worktree narrative below records the earlier preparation. Supplied hosted preflight reports203 apparent orphan materials, settlement body drift, an inspector-role Auth check and unverified pg_cron permissions. [Bounded blocker resolution](progression-001G-C2-blocker-resolution.md) is the current installation gate: revised preflight targets postgres and validates count visibility; exact orphan disposition and the three installed settlement-chain definitions are still needed. A is unchanged/separate. **Do not install B at its existing hash or replace its expected hash:** later source adds present-fighter ownership and a Force Shield wrapper that the old replacement would lose. No runtime patch or cleanup authorization is inferred. New cleanup SQL is an empty, fail-closed review template outside A/B.
@@ -33,8 +36,8 @@ Run the existing P2-C preflight plus narrow `integrated-preflight.sql`; no broad
 In a coordinated maintenance window install **the single generated `integrated-cutover.sql` in ONE transaction**:
 
 1. Validate materials FK; close legacy creation/harness/hard-delete EXECUTE and direct character INSERT/DELETE, preserving unrelated UPDATE columns.
-2. Apply the unchanged three runtime exclusions and the narrow family guard.
-3. Apply unchanged P2-C character/child fences, restrictive active-character selection and lifecycle command authorization.
+2. Apply the corrected runtime exclusions preserving the installed settlement chain and the narrow family guard.
+3. Apply P2-C character/child fences with the corrected settlement-chain prerequisite, restrictive active-character selection and lifecycle command authorization.
 4. Attach the controlled Auth-deletion hook; schedule one private daily receipt cleanup; grant authenticated EXECUTE on creation bridge/capacity. Anon/service/internal execution stays denied; private storage stays inaccessible.
 5. Commit only if every assertion succeeds. There is no externally visible transaction interval with both old and new creation authorities. **Do not install component files separately.** `prepare-c2-integrated-cutover.mjs --check` verifies exact composition.
 6. Verify resulting objects/ACLs and generated tool artifacts/automatic commits after success **or failure**. No new Edge code/deployment is required: existing admin-users performs service-authorized tombstone reads; verify its installed list behavior. Frontend source and database cutover are separate: old frontend may fail closed during the maintenance window. After verification, **Mik manually publishes** the reviewed frontend; no automatic publication.
@@ -60,13 +63,13 @@ Affected specification: canonical progression/creation, resources/attributes, au
 | File under docs/operations | SHA-256 |
 |---|---|
 | progression-001G-C2-integrated-private-support.sql (A) | 5aa1c167bd59c239e94bdfd9e7a929f5ed060deda9ad3f754a68b83b8e01938c |
-| progression-001G-C2-integrated-cutover.sql (B) | 2977ee653b31c8ecca9ff2881e5764bc97251f1212d0b0457c8f5bbee5ea6024 |
+| progression-001G-C2-integrated-cutover.sql (B) | 7df1c1cd143433878019628d40d2bff6695df317e43cdb25105c1db31edf4fae |
 | progression-001G-C2-integrated-enable.sql (component only) | ebacf7073010fc86d0a978684c982ff1280210e64881f4501fd03a4c2e5590d5 |
 | progression-001G-C2-integrated-family-guard.sql (component only) | 71920f43e0f4023ddc2777b8a60a2e57083ee64e6cc726f79f20217200f3c7c4 |
 | progression-001G-C2-integrated-preflight.sql (revised read-only; prior117dfa0a retained in e712a3f6) | 609fbb06b10e14174f3d58a2f721478bf3b8acf41a54ed18b803e53c864257be |
 | progression-001G-C2-P2-B-cutover-containment.sql (corrected component) | 925f8b62c7bf6b2a4980a150749df3e62f756c2be541e6c33e7411ce30c2c520 |
-| progression-001G-C2-P2-C-lifecycle-cutover.sql (unchanged) | 222e52df6a656ce7c015829037255f38391ee0112ae5d574121710e7670483f7 |
-| progression-001G-C2-P2-C-runtime-exclusions.sql (unchanged) | ba2df76c3c65f4310d0f609d69605d7e1c6db788efc0419cc23c387ebe420f22 |
+| progression-001G-C2-P2-C-lifecycle-cutover.sql (corrected prerequisite) | 2ef9cfe0c3cd913ca78200e18815e0a1e48320d6dcb7112c1e78438204726b52 |
+| progression-001G-C2-P2-C-runtime-exclusions.sql (verified chain correction) | 15530c2f1d07934ce2987ed9c8a5a35bff46231376c07fecb79fdc93b2c0a12c |
 
 ## File inventory
 

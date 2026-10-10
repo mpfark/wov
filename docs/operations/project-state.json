@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T23:30:00.060Z",
-  "based_on_source_sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
+  "updated_at": "2026-10-10T10:35:13.227Z",
+  "based_on_source_sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1377,6 +1377,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
       "evidence": "Inspector-vs-installer preflight corrected to explicit postgres capabilities; orphan count reliability checks RLS. Source proves original materials character FK absent, unvalidated0010 preserves legacy rows, later present-fighter settlement correction and Force Shield wrapper omitted from old C2 runtime package. Three-function read-only inspection and exact203-row fail-closed cleanup template prepared, no snapshot filled. 45 existing/extended C2 SQL tests and5 cleanup tests pass. No runtime body/hash whitelist changed; A/B remain separate and unchanged. No hosted access, data/privilege/history changes, deployment, activation, publication, commit or push."
+    },
+    {
+      "identity": "C2 final cutover — exact CSV cleanup and verified settlement chain prepared",
+      "status": "authored",
+      "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
+      "timestamp": "2026-10-10T07:04:29.528Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; supplied Lovable inspection and owner-approved exact snapshot",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-final-cutover-handoff.md",
+      "evidence": "203 CSV rows/29 UUIDs/1341 units verified; owner approved preparation including seven deviations. Historical MD5 unrecoverable/not executable. Bidirectional typed UTC-microsecond snapshot equality, locks, zero-orphan postcondition and FK readiness; no cleanup execution. Exact supplied three settlement body hashes reproduced; wrapper unchanged, corrected inner/helper tombstone predicates only; guards and composed cutover updated; A unchanged. 91 focused local SQL tests pass. No hosted concurrency/scheduler proof, installed migrations/history changes, commit, push, deployment or activation. Four F limitations unchanged."
     }
   ],
   "known_blockers": [
@@ -1575,26 +1586,48 @@
     },
     {
       "identity": "C2 actual orphan disposition and settlement-chain evidence still required",
-      "status": "blocked",
+      "status": "authored",
       "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
       "timestamp": "2026-10-09T23:30:00.060Z",
       "evidence_type": "operator_reported",
       "reporting_actor": "Mik relaying Lovable read-only preflight; Codex bounded source reconciliation",
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
-      "evidence": "Supplied observations:203 orphan-material rows, outer settlement body hash mismatch, Auth trigger capability checked against supabase_read_only_user rather than installer, pg_cron1.6.4 installed with scheduling permissions unknown. Inspection time/full row snapshot/definitions not provided. Physical orphan classification requires complete administrative visibility plus narrow row/dependency evidence and owner disposition. Preserve later present-fighter/Force Shield composition; installed three-body definitions/metadata needed before new C2 runtime patch and B guard. Existing B2977ee65 blocked, not authorized; A5aa1c167 independent/unchanged. No grants or scheduling probes. Four accepted F limitations remain."
+      "evidence": "Historical ee64bb3a blocker, superseded by progression-001G-C2-final-cutover-handoff.md: exact CSV and three definitions supplied/reconciled, owner approved exact-snapshot cleanup preparation, original MD5 irrecoverable and replaced by approved deterministic typed comparison. No hosted action performed. Original supplied observations retained in the historical blocker-resolution report. Hosted execution/runtime gates remain separately blocked."
+    },
+    {
+      "identity": "C2 hosted installation and runtime verification remain unperformed",
+      "status": "blocked",
+      "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
+      "timestamp": "2026-10-10T07:04:29.528Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Codex; supplied Lovable inspection and owner-approved exact snapshot",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-C2-final-cutover-handoff.md",
+      "evidence": "Earlier missing snapshot and settlement-definition evidence supplied and locally reconciled; exact MD5 unrecoverable, owner approved deterministic CSV comparison. Inspector reports postgres Auth/cron privileges and pg_cron1.6.4/no job collision. No hosted support/cleanup/cutover executed or independent concurrency, Auth lifecycle, scheduler, unarmed/Realtime canary verified. Require separately authorized sequence and stop on live evidence drift."
+    },
+    {
+      "identity": "C2 one-time full character reset — explicit local reset/cutover preparation",
+      "status": "authored",
+      "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
+      "timestamp": "2026-10-10T10:35:13.227Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner full-reset preparation instruction",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
+      "evidence": "Latest owner makes all player data, ALL node ground loot and obsolete transit registry disposable; provenance gate superseded without another audit. Existing91 inventory:72 full reset targets+4 selective,15 preserved. Exact reviewed reset composed before unchanged corrected B in ONE proposed transaction; inactive A separate. 55 local SQL tests pass, including9 reset/recovery scenarios, deferred holder/stance triggers, archive/account/world preservation, late reset/cutover rollback and isolated synthetic physical checkpoint restore. Actual provider checkpoint/restore, fresh installed graph/trigger evidence and execution approval remain gates; no hosted action, commit/push/history change. Four F limitations retained. Reset SHA-256 5b4db8a0031f33b0c53f00972cf27c9463cd2904e48f188fcf6a7f62d6321e11; combined d5870370bbc46daa45141f23b7877b4edd949349bc6b71a2ca4867e8d341d2e3. Targeted metadata4 and project-state3 also pass; total62 focused tests, composition and whitespace valid."
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — await narrow read-only Lovable evidence and exact orphan-disposition decision",
-    "status": "authored",
-    "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
-    "timestamp": "2026-10-09T23:30:00.060Z",
+    "identity": "STOP — review full reset/cutover preparation; publication and hosted execution need separate authorization",
+    "status": "blocked",
+    "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
+    "timestamp": "2026-10-10T10:32:38.430Z",
     "evidence_type": "repository",
-    "reporting_actor": "Codex",
+    "reporting_actor": "Codex; owner full-reset preparation instruction",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
-    "evidence": "Return corrected postgres capability metadata; complete-visibility material snapshot/links/FK/trigger metadata; only three settlement-chain definitions/security/ACLs. No installation or writes in evidence pass. Owner then decides exact residue disposal versus recovery, before any filled cleanup procedure. Locally reconcile actual chain before revising B; no simple hash replacement, old-body restoration or automatic next phase/source publication."
+    "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
+    "evidence": "Local requested preparation complete. No further ground-loot provenance request. Before execution: separately authorized source checkpoint, fresh existing integrated/reset metadata checks, practical private recovery checkpoint and actual restore availability, standard runner ONE-transaction guarantee, explicit full-reset AND C2 activation approval. Local synthetic restoration does not establish provider restoration or hosted lock/scheduler behavior. No next action executed."
   },
   "volatile_runtime_observations": [
     {

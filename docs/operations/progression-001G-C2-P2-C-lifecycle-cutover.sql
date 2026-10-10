@@ -17,8 +17,13 @@ BEGIN
       CROSS JOIN pg_roles r WHERE n.nspname='public' AND p.proname='character_create'
         AND r.rolname IN ('anon','authenticated','service_role') AND has_function_privilege(r.oid,p.oid,'EXECUTE'))
   THEN RAISE EXCEPTION 'lifecycle cutover requires prior legacy creation containment'; END IF;
-  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources(timestamptz)'::regprocedure
+  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources_without_character_stances(timestamptz)'::regprocedure
     AND prosrc LIKE '%FROM public.characters WHERE deleted_at IS NULL ORDER BY id FOR UPDATE%')
+    OR NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.settle_out_of_combat_resources(timestamptz)'::regprocedure
+      AND prosrc LIKE '%public.settle_out_of_combat_resources_without_character_stances(_now)%'
+      AND prosrc LIKE '%public.combat2_regenerate_force_shields(_now,%')
+    OR NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid='public.combat2_regenerate_force_shields(timestamptz,integer)'::regprocedure
+      AND prosrc LIKE '%c.deleted_at IS NULL%')
     OR EXISTS(SELECT 1 FROM pg_proc WHERE oid IN ('public.combat2_session_access(uuid,uuid)'::regprocedure,
       'public.combat2_presence_heartbeat(uuid)'::regprocedure) AND prosrc NOT LIKE '%c.deleted_at IS NULL%')
   THEN RAISE EXCEPTION 'lifecycle runtime exclusions must precede cutover'; END IF;
