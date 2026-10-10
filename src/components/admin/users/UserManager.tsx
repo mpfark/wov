@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function UserManager({ isValar }: Props) {
-  const { refetchCharacters } = useGameContext();
+  useGameContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -305,7 +305,7 @@ export default function UserManager({ isValar }: Props) {
             const c = selectedUser?.characters.find(ch => ch.id === charId);
             if (c && !c.deleted_at) {
               setEditingChar(charId);
-              setCharEdits({ name: c.name, gold: c.gold, level: c.level });
+              setCharEdits({ name: c.name, gender: c.gender });
             }
           }}
           onSave={handleSaveCharacter}

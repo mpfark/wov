@@ -106,6 +106,13 @@
       "when": 1791659456904,
       "tag": "0014_progression_001g_c2_lifecycle_timestamp_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791670109798,
+      "tag": "0015_progression_001g_d3_direct_teleport_containment",
+      "breakpoints": true
     }
   ]
 }
