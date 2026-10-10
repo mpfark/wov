@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AdminCharacterSheet from './AdminCharacterSheet';
@@ -35,3 +35,65 @@ it('disables raw respec/reset and paused XP and all D2 convenience actions', () 
   const gold = screen.getByRole('button', { name: 'Grant Gold' }); expect(gold).toBeDisabled(); fireEvent.click(gold);
   for (const callback of Object.values(callbacks)) expect(callback).not.toHaveBeenCalled();
 });
+
+vi.mock('@/contexts/GameContext', () => ({ useGameContext: () => ({}) }));
+vi.mock('@/lib/supabase-paginate', () => ({ fetchAllRows: async () => [] }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: {
+  auth: { getSession: async () => ({ data: { session: { access_token: 'test' } } }) },
+  from: () => ({ select: () => ({ data: [], order: async () => ({ data: [] }) }) }),
+} }));
+vi.mock('./UserListColumn', () => ({ default: ({ users, onSelectUser }: any) => <button onClick={() => onSelectUser(users[0].id)} disabled={!users.length}>Select account</button> }));
+vi.mock('./CharacterListColumn', () => ({ default: () => null }));
+vi.mock('./CharacterSheetColumn', () => ({ default: () => null }));
+vi.mock('./CharacterLifecycleControls', () => ({ default: () => null }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+import UserManager from './UserManager';
+import { toast } from 'sonner';
+afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
+for (const [overlord, cap] of [[false, 1], [true, 5]] as const) {
+  it(`renders reason entry, enforces cap ${cap}, retries UUID and resets new intent`, async () => {
+    const awards: any[] = []; let lists = 0; let finish: ((value: any) => void) | undefined;
+    let outcome = 'committed';
+    const request = vi.fn(async (url: string, options: any) => {
+      if (url.includes('action=list')) { lists++; return { ok: true, json: async () => ({ users: [{ id: 'account', characters: [character] }], total: 1 }) }; }
+      awards.push(JSON.parse(options.body));
+      if (awards.length === 1) await new Promise(resolve => { finish = resolve; });
+      return { ok: outcome !== 'refused', json: async () => outcome === 'refused' ? { kind: 'refused', reason: 'invalid_target' } : { kind: outcome } };
+    });
+    vi.stubGlobal('fetch', request);
+    render(<UserManager isValar={overlord} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Select account' })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Select account' }));
+    const reason = await screen.findByRole('textbox', { name: 'Token award reason' });
+    const amount = screen.getByRole('spinbutton', { name: 'Token amount' });
+    const award = screen.getByRole('button', { name: 'Grant Respec' });
+    expect(award).toBeDisabled();
+    fireEvent.change(reason, { target: { value: '   ' } }); expect(award).toBeDisabled();
+    fireEvent.change(reason, { target: { value: 'x'.repeat(1001) } }); expect(award).toBeDisabled();
+    fireEvent.change(reason, { target: { value: 'Support correction' } }); expect(award).not.toBeDisabled();
+    for (const invalid of [0, cap + 1, 1.5]) { fireEvent.change(amount, { target: { value: invalid } }); expect(award).toBeDisabled(); }
+    fireEvent.change(amount, { target: { value: cap } }); expect(award).not.toBeDisabled();
+    fireEvent.click(award); fireEvent.click(award);
+    await waitFor(() => expect(awards).toHaveLength(1)); expect(award).toBeDisabled();
+    finish!({});
+    await waitFor(() => expect(award).not.toBeDisabled()); expect(lists).toBe(2);
+    expect(toast.success).toHaveBeenCalledWith('Respec tokens awarded');
+    outcome = 'replayed'; fireEvent.click(award);
+    await waitFor(() => expect(lists).toBe(3));
+    expect(awards[1].request_id).toBe(awards[0].request_id);
+    expect(toast.success).toHaveBeenCalledWith('Original token award confirmed');
+    fireEvent.click(screen.getByRole('button', { name: 'New token award' }));
+    expect(reason).toHaveValue(''); expect(amount).toHaveValue(1); expect(award).toBeDisabled();
+    fireEvent.change(reason, { target: { value: 'Support correction' } });
+    fireEvent.change(amount, { target: { value: cap } });
+    outcome = 'refused'; fireEvent.click(award);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('invalid_target'));
+    expect(awards[2].request_id).not.toBe(awards[0].request_id); expect(lists).toBe(3);
+    outcome = 'committed'; fireEvent.click(award);
+    await waitFor(() => expect(lists).toBe(4));
+    expect(awards[3].request_id).toBe(awards[2].request_id);
+    for (const label of ['Grant XP', 'Grant Gold', 'Grant Salvage', 'Grant Gem', 'Give', 'Tp']) expect(screen.getByRole('button', { name: label })).toBeDisabled();
+    request.mockRejectedValueOnce(new Error('Network unavailable')); fireEvent.click(award);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Network unavailable'));
+  });
+}

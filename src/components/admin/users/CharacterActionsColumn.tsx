@@ -29,6 +29,11 @@ interface Props {
   setTeleportNodeId: (id: string) => void;
   grantXpAmount: number;
   setGrantXpAmount: (n: number) => void;
+  onNewRespecIntent: () => void;
+  grantRespecReason: string;
+  setGrantRespecReason: (reason: string) => void;
+  respecCap: number;
+  respecPending?: boolean;
   grantRespecAmount: number;
   setGrantRespecAmount: (n: number) => void;
   grantSalvageAmount: number;
@@ -59,7 +64,7 @@ export default function CharacterActionsColumn({
   giveItemId, setGiveItemId, givingItem: _givingItem,
   teleportNodeId, setTeleportNodeId,
   grantXpAmount, setGrantXpAmount,
-  grantRespecAmount, setGrantRespecAmount,
+  grantRespecAmount, setGrantRespecAmount, grantRespecReason, setGrantRespecReason, respecCap, onNewRespecIntent, respecPending,
   grantSalvageAmount, setGrantSalvageAmount,
   grantGoldAmount, setGrantGoldAmount,
   grantGemKey, setGrantGemKey, grantGemAmount, setGrantGemAmount,
@@ -141,7 +146,7 @@ export default function CharacterActionsColumn({
 
           {/* Progression */}
           <AdminFormSection title="Progression">
-            <p className="text-xs text-muted-foreground">XP awards remain paused; raw respec grants are unavailable.</p>
+            <p className="text-xs text-muted-foreground">XP awards remain paused. Token awards require a reason; raw respec grants remain unavailable.</p>
             <div className="space-y-2">
               <div className="flex gap-1">
                 <Input disabled type="number" min={1} value={grantXpAmount}
@@ -154,14 +159,18 @@ export default function CharacterActionsColumn({
               </div>
 
               <div className="flex gap-1">
-                <Input disabled type="number" min={1} value={grantRespecAmount}
-                  onChange={e => setGrantRespecAmount(parseInt(e.target.value) || 0)}
+                <Input aria-label="Token amount" disabled={respecPending} type="number" min={1} max={respecCap} value={grantRespecAmount}
+                  onChange={e => setGrantRespecAmount(Number(e.target.value))}
                   className="h-7 text-[10px] w-20" placeholder="Pts" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled title="Raw respec grants are unavailable" onClick={() => onGrantRespec(selectedChar.id)}>
+                  disabled={respecPending || !!selectedChar.deleted_at || !grantRespecReason?.trim() || grantRespecReason.trim().length > 1000 || !Number.isInteger(grantRespecAmount) || grantRespecAmount < 1 || grantRespecAmount > respecCap} onClick={() => onGrantRespec(selectedChar.id)}>
                   <RotateCcw className="w-3 h-3" /> Grant Respec
                 </Button>
               </div>
+              <Input aria-label="Token award reason" placeholder="Reason for token award" maxLength={1000}
+                value={grantRespecReason ?? ''} disabled={respecPending}
+                onChange={e => setGrantRespecReason(e.target.value)} />
+              <Button size="sm" variant="ghost" disabled={respecPending} onClick={onNewRespecIntent}>New token award</Button>
 
               <div className="flex gap-1">
                 <Input disabled type="number" min={1} value={grantSalvageAmount}

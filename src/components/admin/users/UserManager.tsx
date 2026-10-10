@@ -33,6 +33,10 @@ export default function UserManager({ isValar }: Props) {
   const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
   const [teleportNodeId, setTeleportNodeId] = useState<string>('');
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
+  const respecRequest = useRef<{ key: string; id: string } | null>(null);
+  const respecBusy = useRef(false);
+  const [respecPending, setRespecPending] = useState(false);
+  const [grantRespecReason, setGrantRespecReason] = useState('');
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
   const [grantSalvageAmount, setGrantSalvageAmount] = useState<number>(100);
   const [grantGoldAmount, setGrantGoldAmount] = useState<number>(100);
@@ -55,7 +59,7 @@ export default function UserManager({ isValar }: Props) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) throw new Error(data.error || data.reason || 'Request failed');
     return data;
   }, []);
 
@@ -195,7 +199,24 @@ export default function UserManager({ isValar }: Props) {
 
   const handleResetStats = async (_characterId: string) => { toast.error('Stat reconstruction is unavailable.'); };
 
-  const handleGrantRespec = async (_characterId: string) => { toast.error('Raw respec grants are unavailable.'); };
+  const handleGrantRespec = async (characterId: string) => {
+    if (respecBusy.current || !grantRespecReason.trim() || grantRespecReason.trim().length > 1000
+      || !Number.isInteger(grantRespecAmount) || grantRespecAmount < 1 || grantRespecAmount > (isValar ? 5 : 1)) return;
+    const key = JSON.stringify([characterId, grantRespecAmount, grantRespecReason.trim()]);
+    if (respecRequest.current?.key !== key) respecRequest.current = { key, id: crypto.randomUUID() };
+    respecBusy.current = true;
+    setRespecPending(true);
+    try {
+      const result = await callAdmin('award-respec-token', 'POST', {
+        character_id: characterId, request_id: respecRequest.current.id, amount: grantRespecAmount, reason: grantRespecReason.trim(),
+      });
+      if (!['committed','replayed'].includes(result.kind)) throw new Error('Token award was not confirmed');
+      toast.success(result.kind === 'replayed' ? 'Original token award confirmed' : 'Respec tokens awarded');
+      // Retain UUID until the operator starts a different intent; double clicks/retries replay.
+      await loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+    finally { respecBusy.current = false; setRespecPending(false); }
+  };
 
   const handleGrantSalvage = async (characterId: string) => {
     if (!grantSalvageAmount || grantSalvageAmount <= 0) return;
@@ -270,6 +291,11 @@ export default function UserManager({ isValar }: Props) {
           setTeleportNodeId={setTeleportNodeId}
           grantXpAmount={grantXpAmount}
           setGrantXpAmount={setGrantXpAmount}
+          onNewRespecIntent={() => { if (!respecBusy.current) { respecRequest.current = null; setGrantRespecReason(''); setGrantRespecAmount(1); } }}
+          respecPending={respecPending}
+          grantRespecReason={grantRespecReason}
+          setGrantRespecReason={setGrantRespecReason}
+          respecCap={isValar ? 5 : 1}
           grantRespecAmount={grantRespecAmount}
           setGrantRespecAmount={setGrantRespecAmount}
           grantSalvageAmount={grantSalvageAmount}

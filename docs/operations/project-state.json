@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T23:09:29.771Z",
+  "updated_at": "2026-10-10T23:19:46.140Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1708,15 +1708,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — simplified D policy documented; narrow respec-token implementation recommended, not started",
+    "identity": "STOP — D4 token award locally implemented/tested; separate source publication and rollout authorization",
     "status": "blocked",
     "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
-    "timestamp": "2026-10-10T23:06:29.748Z",
+    "timestamp": "2026-10-10T23:19:46.140Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/design/progression-001G-D-simplified-admin-policy.md",
-    "evidence": "Owner removes second-person approval/queues and mandatory generalized frameworks. Mandatory remaining D: canonical role-capped token grant with small private logging/retry protection, then proportionate known-gap/acceptance review. Disabled conveniences deferred; owner explicitly defers class-access/attribute/resource corrections, not cancelled; XP paused, C2 complete, E/F and four F limits open. No implementation or rollout authorization implied."
+    "artifact": "docs/operations/progression-001G-D4-respec-token-handoff.md",
+    "evidence": "Local token-only SQL/Edge/UI prepared; role caps/self restriction, reason, atomic request replay/progression receipt,12-month private log and existing cron expiry job. NOT INSTALLED/DEPLOYED/PUBLISHED. C2/XP pause and four F limits preserved; installation requires canonical dependency/ACL/cron verification. Validation:9 SQL and59 focused tests, typecheck/build/state/migration consistency pass. D4 UI review blocker corrected locally: rendered reason/new-award controls, role-cap validation, pending guard, UUID replay/reset and authoritative refresh covered by actual UserManager interaction tests. No publication or rollout."
   },
   "volatile_runtime_observations": [
     {

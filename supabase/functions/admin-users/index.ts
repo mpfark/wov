@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adminClient, callerRole } = await verifyAdmin(req);
+    const { adminClient, callerRole, userId } = await verifyAdmin(req);
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
@@ -60,6 +60,22 @@ Deno.serve(async (req) => {
 
     if (action && ['revive','teleport','give-item','remove-item','grant-gold','grant-salvage','grant-gem'].includes(action)) {
       return jsonResponse({ code: 'legacy_character_operation_retired', error: 'This legacy character administration operation is unavailable pending replacement authority.' }, 410);
+    }
+
+    if (action === 'award-respec-token' && req.method === 'POST') {
+      const body = await req.json();
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!body || Object.keys(body).some(k => !['character_id','request_id','amount','reason'].includes(k))
+        || !uuid.test(body.character_id) || !uuid.test(body.request_id) || !Number.isInteger(body.amount)
+        || body.amount < 1 || body.amount > (callerRole === 'steward' ? 1 : 5)
+        || typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 1000) {
+        return jsonResponse({ error: 'Valid target, request UUID, capped integer amount and reason required' }, 400);
+      }
+      const { data, error } = await adminClient.rpc('admin_respec_award', {
+        _actor: userId, _character: body.character_id, _request: body.request_id, _amount: body.amount, _reason: body.reason.trim(),
+      });
+      if (error) throw error;
+      return jsonResponse(data, data?.kind === 'refused' ? 409 : 200);
     }
 
     // LIST USERS

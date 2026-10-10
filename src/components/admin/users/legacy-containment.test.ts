@@ -6,7 +6,7 @@ const source = readFileSync('supabase/functions/admin-users/index.ts', 'utf8');
 function fixture(role = 'steward', authenticated = true, target: any = { id: 'char', deleted_at: null }) {
   const writes: unknown[] = [], tables: string[] = [];
   let handler: (request: Request) => Promise<Response>;
-  const admin = { from(table: string) {
+  const admin = { rpc: async (name: string, args: unknown) => { writes.push({ rpc: name, args }); return { data: { kind: 'committed' }, error: null }; }, from(table: string) {
     tables.push(table);
     const chain = {
       select: () => chain, eq: () => chain, is: () => chain,
@@ -88,4 +88,18 @@ describe('actual admin-users D1 boundary', () => {
     expect(await f.request('grant-xp', {})).toMatchObject({ status: 503, body: { code: 'progression_awards_paused' } });
     expect(f.writes).toEqual([]);
   });
+});
+
+it('new token entry validates amount/reason and derives actor; old raw route stays410', async () => {
+  const character_id = '00000000-0000-4000-8000-000000000001', request_id = '00000000-0000-4000-8000-000000000002';
+  for (const body of [{ character_id, request_id, amount: 2, reason: 'Support' },{ character_id, request_id, amount: 1, reason: '' },{ character_id, request_id, amount: 1, reason: 'Support', actor: 'spoofed' }]) {
+    const f=fixture(); expect((await f.request('award-respec-token',body)).status).toBe(400);expect(f.writes).toEqual([]);
+  }
+  const f=fixture();expect((await f.request('award-respec-token',{ character_id, request_id, amount: 1, reason: 'Support' })).status).toBe(200);
+  expect(f.writes).toEqual([{ rpc: 'admin_respec_award', args: { _actor:'actor',_character:character_id,_request:request_id,_amount:1,_reason:'Support' } }]);
+});
+
+it('new token entry retains auth refusals',async()=>{
+  const body={character_id:'00000000-0000-4000-8000-000000000001',request_id:'00000000-0000-4000-8000-000000000002',amount:1,reason:'Support'};
+  for(const f of [fixture('player'),fixture('steward',false)]){expect([401,403]).toContain((await f.request('award-respec-token',body)).status);expect(f.writes).toEqual([]);}
 });
