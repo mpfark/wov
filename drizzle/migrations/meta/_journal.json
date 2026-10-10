@@ -85,6 +85,13 @@
       "when": 1791571329761,
       "tag": "0011_progression_001g_c2_p2_c_inactive_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791636162901,
+      "tag": "0012_progression_001g_c2_integrated_private_support",
+      "breakpoints": true
     }
   ]
 }

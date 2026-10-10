@@ -6747,6 +6747,11 @@ export type Database = {
         }
         Returns: Json
       }
+      character_creation_capacity: { Args: { _target?: string }; Returns: Json }
+      character_creation_expire_receipts_internal: {
+        Args: never
+        Returns: number
+      }
       character_inventory_action: {
         Args: {
           _action: string
@@ -6783,6 +6788,7 @@ export type Database = {
         Args: { _character: string }
         Returns: Json
       }
+      character_receipt_maintenance_internal: { Args: never; Returns: number }
       character_repair: {
         Args: {
           _character_id: string
