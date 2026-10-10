@@ -174,6 +174,45 @@ const lifecycle=async({id=legacy,request=uid(next++),version=0,operation='soft_d
   (await q('SELECT character_lifecycle_command($1,$2,$3,$4,$5) r',[id,request,version,operation,reason]))[0].r;
 const cutover=()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-lifecycle-cutover.sql'));
 const support=()=>db.exec(read('docs/operations/progression-001G-C2-integrated-private-support.sql'));
+test('hosted blocker preflight evaluates postgres instead of restricted inspector and distrusts RLS orphan counts',async()=>tx(async()=>{
+  await familyFixture();
+  await db.exec(`CREATE ROLE supabase_read_only_user;
+    GRANT USAGE ON SCHEMA auth,cron TO supabase_read_only_user;
+    GRANT SELECT ON characters,character_materials,cron.job TO supabase_read_only_user;
+    CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE sql AS $$ SELECT 1::bigint $$;
+    REVOKE ALL ON FUNCTION cron.schedule(text,text,text) FROM PUBLIC;`);
+  await db.exec('SET LOCAL ROLE supabase_read_only_user');
+  const results=await db.exec(read('docs/operations/progression-001G-C2-integrated-preflight.sql'));
+  const rows=results.flatMap(r=>r.rows??[]);
+  const installer=rows.find(r=>r.inspector_role);
+  assert.equal(installer.inspector_role,'supabase_read_only_user');assert.equal(installer.installer_auth_trigger,true);
+  assert.equal((await q("SELECT has_table_privilege(current_user,'auth.users','TRIGGER') allowed"))[0].allowed,false);
+  assert.equal(rows.find(r=>'installer_schedule_execute' in r).installer_schedule_execute,true);
+  assert.equal((await q("SELECT has_function_privilege(current_user,'cron.schedule(text,text,text)','EXECUTE') allowed"))[0].allowed,false);
+  const orphans=rows.find(r=>'count_reliable' in r);assert.equal(orphans.count_reliable,false);assert.equal(orphans.orphan_material_rows,null);
+  await db.exec('RESET ROLE');
+}));
+test('hosted blocker old settlement replacement refuses later present-fighter/Force Shield chain before changing it',async()=>tx(async()=>{
+  for(const source of runtimeSources) await db.exec(originalRuntime(source).replace(/CREATE(?: OR REPLACE)? FUNCTION/i,'CREATE OR REPLACE FUNCTION'));
+  const correction=read('supabase/migrations/20260924100000_combat2_post_completion_settlement_ownership.sql')
+    .match(/DO \$migration\$[\s\S]*?\$migration\$;/)[0];
+  await db.exec(correction);
+  await db.exec(`ALTER FUNCTION settle_out_of_combat_resources(timestamptz) RENAME TO settle_out_of_combat_resources_without_character_stances;
+    CREATE FUNCTION combat2_regenerate_force_shields(timestamptz,integer) RETURNS integer LANGUAGE sql AS $$ SELECT 21 $$;`);
+  const wrapper=read('supabase/migrations/20261001130000_combat2_character_persistent_stances.sql')
+    .match(/CREATE FUNCTION public\.settle_out_of_combat_resources\([\s\S]*?\$\$;/)[0];
+  await db.exec(wrapper);
+  await db.exec('ALTER TABLE character_materials ADD updated_at timestamptz NOT NULL DEFAULT now()');
+  const inspection=await db.exec(read('docs/operations/progression-001G-C2-blocker-evidence.sql'));
+  const inspected=inspection.flatMap(r=>r.rows??[]).filter(r=>'definition' in r && 'body_sha256' in r);
+  assert.equal(inspected.length,3);assert.ok(inspected.every(r=>r.definition.startsWith('CREATE OR REPLACE FUNCTION')));
+  const before=await q("SELECT proname,prosrc,proacl::text FROM pg_proc WHERE proname LIKE 'settle_out_of_combat_resources%' ORDER BY proname");
+  assert.match(before.find(r=>r.proname.endsWith('without_character_stances')).prosrc,/OR \(f.present AND e.claim_token/);
+  await refused(()=>db.exec(read('docs/operations/progression-001G-C2-P2-C-runtime-exclusions.sql')),/runtime source drift: settle/);
+  assert.deepEqual(await q("SELECT proname,prosrc,proacl::text FROM pg_proc WHERE proname LIKE 'settle_out_of_combat_resources%' ORDER BY proname"),before);
+  const result=(await q('SELECT settle_out_of_combat_resources(clock_timestamp()) r'))[0].r;
+  assert.equal(result.force_shields_regenerated,21);
+}));
 test('integrated support is dormant, private and reports retained quota without changing characters',async()=>tx(async()=>{
   const before=await counts();await support();assert.deepEqual(await counts(),before);
   assert.equal((await q("SELECT has_function_privilege('authenticated','character_creation_capacity(uuid)','EXECUTE') allowed"))[0].allowed,false);

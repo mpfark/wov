@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-09T19:09:55.875Z",
-  "based_on_source_sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
+  "updated_at": "2026-10-09T23:30:00.060Z",
+  "based_on_source_sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1366,6 +1366,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
       "evidence": "Choice-only C2 bridge frontend with persistent replay, authoritative row read and retained capacity; Overlord delegation/restore/purge controls; two owner-membership assertion fixes; dormant capacity/receipt/Auth-deletion support and single transaction cutover composition. Approved L10 founding/L1 joining shared-function guard. Existing P2-C cutover/runtime bytes unchanged. 80 SQL tests and29 frontend/tracking tests pass. No hosted operations, migration-history edits, deployment, activation, publication, commit or push. Four F limitations unchanged."
+    },
+    {
+      "identity": "C2 hosted preflight blocker resolution — local evidence preparation",
+      "status": "authored",
+      "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
+      "timestamp": "2026-10-09T23:30:00.060Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
+      "evidence": "Inspector-vs-installer preflight corrected to explicit postgres capabilities; orphan count reliability checks RLS. Source proves original materials character FK absent, unvalidated0010 preserves legacy rows, later present-fighter settlement correction and Force Shield wrapper omitted from old C2 runtime package. Three-function read-only inspection and exact203-row fail-closed cleanup template prepared, no snapshot filled. 45 existing/extended C2 SQL tests and5 cleanup tests pass. No runtime body/hash whitelist changed; A/B remain separate and unchanged. No hosted access, data/privilege/history changes, deployment, activation, publication, commit or push."
     }
   ],
   "known_blockers": [
@@ -1561,18 +1572,29 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
       "evidence": "Local integration/maintenance/account cleanup preparation supersedes missing-source gates. Before coordinated activation verify zero materials orphans (positive count needs explicit owner disposition), exact runtime/family source bodies/dependency map, Auth trigger install privilege and existing pg_cron API/job boundary. Private support and composed cutover not installed; no frontend publication. Hosted empty-equipment/unarmed/Realtime and multi-session behavior unproven. Four accepted F limitations preserved."
+    },
+    {
+      "identity": "C2 actual orphan disposition and settlement-chain evidence still required",
+      "status": "blocked",
+      "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
+      "timestamp": "2026-10-09T23:30:00.060Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik relaying Lovable read-only preflight; Codex bounded source reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
+      "evidence": "Supplied observations:203 orphan-material rows, outer settlement body hash mismatch, Auth trigger capability checked against supabase_read_only_user rather than installer, pg_cron1.6.4 installed with scheduling permissions unknown. Inspection time/full row snapshot/definitions not provided. Physical orphan classification requires complete administrative visibility plus narrow row/dependency evidence and owner disposition. Preserve later present-fighter/Force Shield composition; installed three-body definitions/metadata needed before new C2 runtime patch and B guard. Existing B2977ee65 blocked, not authorized; A5aa1c167 independent/unchanged. No grants or scheduling probes. Four accepted F limitations remain."
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — integrated C2 preparation complete; review and separately authorize source/installation/cutover",
+    "identity": "STOP — await narrow read-only Lovable evidence and exact orphan-disposition decision",
     "status": "authored",
-    "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
-    "timestamp": "2026-10-09T19:09:55.875Z",
+    "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
+    "timestamp": "2026-10-09T23:30:00.060Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-integrated-handoff.md",
-    "evidence": "Review local changes first. A private support may be proposed conditionally after source publication and narrow preflight; B must be one coordinated standard-tool transaction, then verified before Mik manually publishes frontend. No automatic next phase, commit/push or hosted action. See integrated handoff for stop conditions."
+    "artifact": "docs/operations/progression-001G-C2-blocker-resolution.md",
+    "evidence": "Return corrected postgres capability metadata; complete-visibility material snapshot/links/FK/trigger metadata; only three settlement-chain definitions/security/ACLs. No installation or writes in evidence pass. Owner then decides exact residue disposal versus recovery, before any filled cleanup procedure. Locally reconcile actual chain before revising B; no simple hash replacement, old-body restoration or automatic next phase/source publication."
   },
   "volatile_runtime_observations": [
     {

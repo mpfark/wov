@@ -1,5 +1,9 @@
 # C2 integrated cutover — local preparation
 
+## Current blocker status —2026-10-10
+
+This preparation was published at `e712a3f65ff3fbd67bb00712a0fef4aeb13f6369`; the source/worktree narrative below records the earlier preparation. Supplied hosted preflight reports203 apparent orphan materials, settlement body drift, an inspector-role Auth check and unverified pg_cron permissions. [Bounded blocker resolution](progression-001G-C2-blocker-resolution.md) is the current installation gate: revised preflight targets postgres and validates count visibility; exact orphan disposition and the three installed settlement-chain definitions are still needed. A is unchanged/separate. **Do not install B at its existing hash or replace its expected hash:** later source adds present-fighter ownership and a Force Shield wrapper that the old replacement would lose. No runtime patch or cleanup authorization is inferred. New cleanup SQL is an empty, fail-closed review template outside A/B.
+
 Starting source `662a0c44dfb30623f41b776e3b36111cbd334f5f`; synchronized/final local and remote HEAD `4526c11e2ee6e6c0a79b5b8f7232bb86c391c220`. Recorded baseline `b9d82b8f` is an ancestor. Work remains uncommitted; no push. Recovery stash remains `0a5529d5227675319b166881b10f1c91edd7486b`.
 
 Mik confirms **0007–0011 installed, private, inactive**. This is supplied evidence, not Codex hosted verification. The generated0011 Git SQL blob exactly matches reviewed `80e1259050b4f1ddb6309a236a910c96a9a3d3102e0b1e6f3a7d7565c0329b93`; journal ends at idx11; snapshot/types arrived in platform commit4526c11e. No migration, journal, snapshot, generated types or Supabase history was edited here.
@@ -59,7 +63,7 @@ Affected specification: canonical progression/creation, resources/attributes, au
 | progression-001G-C2-integrated-cutover.sql (B) | 2977ee653b31c8ecca9ff2881e5764bc97251f1212d0b0457c8f5bbee5ea6024 |
 | progression-001G-C2-integrated-enable.sql (component only) | ebacf7073010fc86d0a978684c982ff1280210e64881f4501fd03a4c2e5590d5 |
 | progression-001G-C2-integrated-family-guard.sql (component only) | 71920f43e0f4023ddc2777b8a60a2e57083ee64e6cc726f79f20217200f3c7c4 |
-| progression-001G-C2-integrated-preflight.sql (read-only) | 117dfa0ae3c180eed64ebbbb9d7a3cb169ab1bc5044da1df53cf0931a523417d |
+| progression-001G-C2-integrated-preflight.sql (revised read-only; prior117dfa0a retained in e712a3f6) | 609fbb06b10e14174f3d58a2f721478bf3b8acf41a54ed18b803e53c864257be |
 | progression-001G-C2-P2-B-cutover-containment.sql (corrected component) | 925f8b62c7bf6b2a4980a150749df3e62f756c2be541e6c33e7411ce30c2c520 |
 | progression-001G-C2-P2-C-lifecycle-cutover.sql (unchanged) | 222e52df6a656ce7c015829037255f38391ee0112ae5d574121710e7670483f7 |
 | progression-001G-C2-P2-C-runtime-exclusions.sql (unchanged) | ba2df76c3c65f4310d0f609d69605d7e1c6db788efc0419cc23c387ebe420f22 |
