@@ -99,6 +99,13 @@
       "when": 1791641318730,
       "tag": "0013_progression_001g_c2_reset_and_cutover",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791659456904,
+      "tag": "0014_progression_001g_c2_lifecycle_timestamp_fix",
+      "breakpoints": true
     }
   ]
 }
