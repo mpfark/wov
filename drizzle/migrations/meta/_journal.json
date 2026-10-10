@@ -92,6 +92,13 @@
       "when": 1791636162901,
       "tag": "0012_progression_001g_c2_integrated_private_support",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791641318730,
+      "tag": "0013_progression_001g_c2_reset_and_cutover",
+      "breakpoints": true
     }
   ]
 }
