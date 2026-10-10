@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001G-B — Phased plan, evidence and traceability
 
+Current D policy precedence (2026-10-11): [simplified owner decision](../design/progression-001G-D-simplified-admin-policy.md) supersedes mandatory second-person/repeated-award approval and generalized audit/replay/notification framework requirements, and records owner-approved deferral (not cancellation) of disabled conveniences and class-access/attribute/resource correction tools. Earlier tables are historical where conflicting. Canonical authority, caps, self-reward restrictions,12-month detailed retention and existing protections remain; see the explicit mandatory/deferred D boundary.
+
+
 **001G-B POLICY/CONTRACT PACKAGE COMPLETE. Documentation only. STOP before C.**
 
 Starting source `e69047e47f9d4ec9c2d60bf4fc3cb56927d68bc1`; fetched origin/main

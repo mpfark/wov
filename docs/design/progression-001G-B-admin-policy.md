@@ -1,5 +1,8 @@
 # ENG-PROGRESSION-001G-B — Owner-approved admin policy
 
+Current D policy precedence (2026-10-11): [simplified owner decision](progression-001G-D-simplified-admin-policy.md) supersedes mandatory second-person/repeated-award approval and generalized audit/replay/notification framework requirements, and records owner-approved deferral (not cancellation) of disabled conveniences and class-access/attribute/resource correction tools. Earlier tables are historical where conflicting. Canonical authority, caps, self-reward restrictions,12-month detailed retention and existing protections remain; see the explicit mandatory/deferred D boundary.
+
+
 **POLICY AND CONTRACTS DOCUMENTED / DOCS ONLY. No 001G implementation or closure.**
 
 Owner authority: Mik's supplied 001G-B request approves O1–O14 below. This document

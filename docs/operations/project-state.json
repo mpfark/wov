@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T21:21:59.967Z",
+  "updated_at": "2026-10-10T23:09:29.771Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -395,6 +395,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-C2-P5-owner-acceptance.md",
       "evidence": "Owner explicitly accepts C2 closure with known verification gaps; exhaustive lifecycle testing not required. Reported hosted core canonical creation/resources/exact replay/no duplicates/own deletion/retained quota/player restore denial/reasoned Overlord restore/identity-resource preservation PASS; Calikon unaffected, Canaryone active version2. Owner identifies earlier authoritative Lovable Calikon origin/receipt/privilege/starting-resource reads; raw transcript and exact matrices not available locally, no invented details.0013/0014 source identities reconciled; frontend publication reported. C2 COMPLETE with accepted limitations, not exhaustive live proof. Remaining delegation/unarmed/concurrency/lifecycle edges/scheduler-retention/family-XP coverage deferred nonblocking. All four F limitations remain open. Earlier conditional entries are historical and superseded by this acceptance. Overall001G open; next001G-D planned only. No hosted activity, migrations, runtime edits, commit/push or deployment."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-D3 direct teleport browser ACL containment",
+      "status": "installed",
+      "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
+      "timestamp": "2026-10-10T22:56:35.880Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik rollout report; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
+      "evidence": "Mik reports D3 installed. Source0015/journal/snapshot present at1b7e2ddf; exact reviewed SQL preserved. No fresh hosted ACL/history inspection. Browser containment only; service authority retained. Earlier NOT INSTALLED preparation records superseded."
     }
   ],
   "generated_supabase_types": {
@@ -520,17 +531,29 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-D2-admin-character-containment.md",
       "evidence": "D2 local containment: seven routes410 after auth, name/gender only on active target. NOT DEPLOYED/PUBLISHED. Direct admin_teleport remains separate gap. D1/C2/XP pause and four F limitations preserved."
+    },
+    {
+      "identity": "admin-users ENG-PROGRESSION-001G-D1/D2 containment rollout",
+      "status": "deployed",
+      "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
+      "timestamp": "2026-10-10T22:56:35.880Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik rollout report; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
+      "evidence": "Mik reports D1/D2 Edge deployed. Source/tests verified; no live bundle/readback or comprehensive per-route runtime campaign. Earlier local-only records superseded for rollout status."
     }
   ],
   "frontend_publication": {
+    "identity": "ENG-PROGRESSION-001G-D1/D2 manual frontend publication",
     "status": "manually_published",
-    "artifact": "Current frontend including the ENG-HB-001-compatible diagnostic source and previously published ENG-COMBAT-002/ENG-MOVE-001 work",
     "sha": null,
-    "timestamp": "2026-09-30T07:29:40Z",
+    "timestamp": "2026-10-10T22:56:35.880Z",
     "evidence_type": "operator_reported",
-    "evidence": "Mik previously reports frontend publication after ENG-HB-001; its exact revision is unknown. Preserve later bounded heartbeat/cadence evidence and Mik's reported stuck-creature recovery plus successful fight/leave/return movement. These do not verify other nodes or multiplayer/concurrency branches. The new character-persistent stance frontend remains unpublished and live-unverified.",
-    "reporting_actor": "Mik",
-    "directly_verified": false
+    "reporting_actor": "Mik rollout report; Codex local source reconciliation",
+    "directly_verified": false,
+    "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
+    "evidence": "Mik reports manual publication and normal Admin access/workflows appear available. Report date2026-10-11; exact published revision/time not independently known.1b7e2ddf is reviewed source checkpoint, not a verified deployed bundle identity. Earlier frontend evidence remains in historical records; unrelated feature publication not inferred."
   },
   "combat2_operational_work": [
     {
@@ -1685,15 +1708,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D3 browser teleport ACL prepared/tested; separate publication and installation authorization",
+    "identity": "STOP — simplified D policy documented; narrow respec-token implementation recommended, not started",
     "status": "blocked",
-    "sha": "6628e8a2e1c2cf8550b054007611bb8c9a23a02f",
-    "timestamp": "2026-10-10T21:21:59.967Z",
+    "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
+    "timestamp": "2026-10-10T23:06:29.748Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-D3-direct-teleport-handoff.md",
-    "evidence": "D3 local reviewed SQL outside migrations: browser-only exact RPC EXECUTE revoke; service authority retained; 5 isolated SQL tests pass. NOT INSTALLED. Hosted effective ACL/dependency check required before installation. D1/D2 NOT DEPLOYED; C2 and four F limits unchanged."
+    "artifact": "docs/design/progression-001G-D-simplified-admin-policy.md",
+    "evidence": "Owner removes second-person approval/queues and mandatory generalized frameworks. Mandatory remaining D: canonical role-capped token grant with small private logging/retry protection, then proportionate known-gap/acceptance review. Disabled conveniences deferred; owner explicitly defers class-access/attribute/resource corrections, not cancelled; XP paused, C2 complete, E/F and four F limits open. No implementation or rollout authorization implied."
   },
   "volatile_runtime_observations": [
     {
@@ -2025,6 +2048,17 @@
       "reporting_actor": "Mik supplied P2-A continuation facts",
       "directly_verified": false,
       "evidence": "Owner confirms postgres-owned private origin/log and atomic definer writes to creation/progression tables; existing material trigger transactional. Confirms character_materials has no character FK, broad direct grants restricted by RLS; legacy character_create callable, service_role direct INSERT, active hard-delete. These are explicit containment/deletion gates; no silent correction. Full inspection timestamp/report not supplied; recording time only. Previously missing FK metadata is now resolved by supplied absence finding, not corrective migration. Initial canonical values and future Overlord-only revision approval supplied. No repeat hosted audit or independent Codex verification."
+    },
+    {
+      "identity": "D1–D3 owner Admin availability smoke observation",
+      "status": "manually_published",
+      "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
+      "timestamp": "2026-10-10T22:56:35.880Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik rollout report; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
+      "evidence": "Owner reports Admin access/workflows appear available after manual publication. No comprehensive hosted campaign. Refusal/edit/ACL branches remain UNVERIFIED, not failed."
     }
   ],
   "product_backlog": [
