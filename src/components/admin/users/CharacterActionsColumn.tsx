@@ -56,7 +56,7 @@ interface Props {
 
 export default function CharacterActionsColumn({
   selectedUser, selectedChar, allItems, allNodes, allRegions, allAreas,
-  giveItemId, setGiveItemId, givingItem,
+  giveItemId, setGiveItemId, givingItem: _givingItem,
   teleportNodeId, setTeleportNodeId,
   grantXpAmount, setGrantXpAmount,
   grantRespecAmount, setGrantRespecAmount,
