@@ -33,7 +33,7 @@ export default function AdminCharacterSheet({ c, isEditing: requestedEditing, ch
   }, {} as Record<string, number>);
 
   const gold = isEditing ? (charEdits.gold ?? c.gold) : c.gold;
-  const level = isEditing ? (charEdits.level ?? c.level) : c.level;
+  const level = c.level;
   const name = isEditing ? (charEdits.name ?? c.name) : c.name;
 
   const hpPercent = Math.round((c.hp / c.max_hp) * 100);
@@ -80,10 +80,8 @@ export default function AdminCharacterSheet({ c, isEditing: requestedEditing, ch
             ) : (
               <span className="mr-1">{c.gender === 'male' ? '♂' : '♀'}</span>
             )}
-            {RACE_LABELS[c.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} — Lvl {isEditing ? (
-              <input type="number" className="w-10 bg-background border border-border rounded px-1 text-xs text-foreground inline"
-                value={level} onChange={e => setCharEdits(p => ({ ...p, level: parseInt(e.target.value) || 1 }))} />
-            ) : level}
+            {RACE_LABELS[c.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} — Lvl {level}
+            {isEditing && <span className="block text-muted-foreground">Progression fields are read-only.</span>}
           </p>
         </div>
         <div className="flex gap-1">

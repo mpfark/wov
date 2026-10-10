@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+
+const source = readFileSync('supabase/functions/admin-users/index.ts', 'utf8');
+function fixture(role = 'steward', authenticated = true) {
+  const writes: unknown[] = [], tables: string[] = [];
+  let handler: (request: Request) => Promise<Response>;
+  const admin = { from(table: string) {
+    tables.push(table);
+    const chain = {
+      select: () => chain, eq: () => chain,
+      maybeSingle: async () => ({ data: { role }, error: null }),
+      update: (value: unknown) => { writes.push({ table, value }); return chain; },
+      then: (resolve: (value: unknown) => unknown) => resolve({ error: null }),
+    }; return chain;
+  } };
+  const user = { auth: { getClaims: async () => ({ data: authenticated ? { claims: { sub: 'actor' } } : null, error: null }) } };
+  let client = 0;
+  const code = ts.transpileModule(source.replace(/^import .*;\r?\n/gm, ''),
+    { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+  new Function('Deno', 'createClient', code)({
+    env: { get: () => 'local-test-only' }, serve: (value: typeof handler) => { handler = value; },
+  }, () => client++ % 2 === 0 ? admin : user);
+  return { writes, tables, async request(action: string, body: unknown, method = 'POST') {
+    const response = await handler!(new Request(`https://local.invalid/?action=${action}`, {
+      method, headers: { Authorization: 'Bearer local-test' },
+      ...(method === 'GET' ? {} : { body: JSON.stringify(body) }),
+    }));
+    return { status: response.status, body: await response.json() };
+  } };
+}
+describe('actual admin-users D1 boundary', () => {
+  for (const role of ['steward', 'overlord']) {
+    for (const action of ['set-level', 'reset-stats', 'grant-respec']) {
+      it(`${role}: ${action} refuses before gameplay table access`, async () => {
+        const f = fixture(role);
+        expect(await f.request(action, { character_id: 'char', new_level: 42, amount: 5 }))
+          .toMatchObject({ status: 410, body: { code: 'legacy_progression_operation_retired' } });
+        expect(f.tables).toEqual(['user_roles']); expect(f.writes).toEqual([]);
+      });
+    }
+  }
+  for (const field of ['str','dex','con','int','wis','cha','level','xp','class','is_classless',
+    'unspent_stat_points','respec_points','bhp','bhp_trained','rp_total_earned']) {
+    it(`mixed ${field} payload is refused atomically`, async () => {
+      const f = fixture();
+      expect(await f.request('update-character', { character_id: 'char', updates: { name: 'Allowed', [field]: 1 } }))
+        .toMatchObject({ status: 403, body: { code: 'protected_progression_edit_denied' } });
+      expect(f.tables).toEqual(['user_roles']); expect(f.writes).toEqual([]);
+    });
+  }
+  it('preserves permitted generic edits and rejects unknown fields without writes', async () => {
+    const f = fixture(), updates = { name: 'Allowed', gender: 'female', gold: 200, hp: 10, max_hp: 16, ac: 9, current_node_id: null };
+    expect((await f.request('update-character', { character_id: 'char', updates })).status).toBe(200);
+    expect(f.writes).toEqual([{ table: 'characters', value: updates }]);
+    const invalid = fixture();
+    expect((await invalid.request('update-character', { character_id: 'char', updates: { unknown: 1 } })).status).toBe(500);
+    expect(invalid.writes).toEqual([]);
+  });
+  it('retains auth/role denial and XP pause', async () => {
+    for (const f of [fixture('player'), fixture('steward', false)]) {
+      expect([401, 403]).toContain((await f.request('reset-stats', {})).status);
+      expect(f.writes).toEqual([]);
+    }
+    const f = fixture();
+    expect(await f.request('grant-xp', {})).toMatchObject({ status: 503, body: { code: 'progression_awards_paused' } });
+    expect(f.writes).toEqual([]);
+  });
+});

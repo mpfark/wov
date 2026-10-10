@@ -140,23 +140,24 @@ export default function CharacterActionsColumn({
 
           {/* Progression */}
           <AdminFormSection title="Progression">
+            <p className="text-xs text-muted-foreground">XP awards remain paused; raw respec grants are unavailable.</p>
             <div className="space-y-2">
               <div className="flex gap-1">
-                <Input type="number" min={1} value={grantXpAmount}
+                <Input disabled type="number" min={1} value={grantXpAmount}
                   onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="XP" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled={grantXpAmount <= 0} onClick={() => onGrantXp(selectedChar.id)}>
+                  disabled title="XP awards remain paused" onClick={() => onGrantXp(selectedChar.id)}>
                   <Sparkles className="w-3 h-3" /> Grant XP
                 </Button>
               </div>
 
               <div className="flex gap-1">
-                <Input type="number" min={1} value={grantRespecAmount}
+                <Input disabled type="number" min={1} value={grantRespecAmount}
                   onChange={e => setGrantRespecAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="Pts" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled={grantRespecAmount <= 0} onClick={() => onGrantRespec(selectedChar.id)}>
+                  disabled title="Raw respec grants are unavailable" onClick={() => onGrantRespec(selectedChar.id)}>
                   <RotateCcw className="w-3 h-3" /> Grant Respec
                 </Button>
               </div>
@@ -231,6 +232,7 @@ Grant Salvage
 
           {/* Character Management */}
           <AdminFormSection title="Character Management">
+            <p className="text-xs text-muted-foreground">Legacy stat reconstruction is unavailable.</p>
             <div className="flex flex-wrap gap-1">
               <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
                 disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => onRevive(selectedChar.id)}>
@@ -240,7 +242,7 @@ Grant Salvage
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1">
+                  <Button disabled title="Stat reconstruction is unavailable" size="sm" variant="outline" className="h-7 text-[10px] gap-1">
                     <RotateCcw className="w-3 h-3" /> Reset Stats
                   </Button>
                 </AlertDialogTrigger>
@@ -248,12 +250,12 @@ Grant Salvage
                   <AlertDialogHeader>
                     <AlertDialogTitle>Reset Stats?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will reset all stat allocations for <span className="font-display text-primary">{selectedChar.name}</span> and refund the points. This action cannot be undone.
+                      Legacy stat reconstruction is unavailable.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onResetStats(selectedChar.id)}>
+                    <AlertDialogAction disabled onClick={() => onResetStats(selectedChar.id)}>
                       Reset Stats
                     </AlertDialogAction>
                   </AlertDialogFooter>

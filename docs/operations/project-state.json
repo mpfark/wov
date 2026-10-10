@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T19:34:06.320Z",
-  "based_on_source_sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
+  "updated_at": "2026-10-10T19:42:24.482Z",
+  "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -498,6 +498,17 @@
       "directly_verified": false,
       "evidence": "Operator-supplied deployment 2026-10-07T21:06:27Z, progression-command: Successfully deployed edge functions: progression-command. Working-tree SHA-256 index.ts 88819cab31e7a2f9695a6f8cc391fe310dd632b55caf825bf6f68b89c3e978d7; shared progression-command.ts 845401a78e02da379345e808e5aced143a9802f4f3bcefa9eba5d95013c6e178; config.toml a470ef6c53518ff4159bac8a0d47d43bb28beb09f59b11aa5f49e7bb59e624a9. Operator-observed OPTIONS200 empty/expected CORS, unauthenticated POST401 {\"kind\":\"refused\",\"reason\":\"unauthorized\"}, GET405 {\"kind\":\"refused\",\"reason\":\"method_not_allowed\"}; verify_jwt=false effective through handler-owned refusal. Authenticated probes intentionally skipped. Seven Drizzle entries unchanged,0005/0006 identities verified; controlfalse; service table UPDATEfalse/protected15false/unprotected38true; authenticated six preference columns only; commandservice-only/projectionauthenticated-only/private Renown+XPowner-only; six progression tablesowner-only/RLS/no policies; function identities unchanged,no key material exposed. Characters fingerprint f672ddcb4c0e4d88f21f7bc585159646/count21 before/after; sidecars0/0/0/0,keyrows1,Drizzlerows7 unchanged; no gameplay mutation,receipt,backfill,keyrotation. Supplied hosted evidence,not independent Codex verification or authenticated gameplay proof. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP.",
       "artifact": "supabase/functions/progression-command/index.ts"
+    },
+    {
+      "identity": "admin-users D1 legacy progression containment — local only",
+      "status": "authored",
+      "sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
+      "timestamp": "2026-10-10T19:42:24.482Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-D1-legacy-admin-containment.md",
+      "evidence": "Explicit post-auth HTTP410 retired set-level/reset-stats/grant-respec before gameplay access; HTTP403 mixed protected15 generic edits atomically refused. Legacy mutation branches removed; permitted generic/resource/economy/admin paths unchanged, XP503 pause and C2 lifecycle preserved. Level editor removed, reset/respec disabled, XP UI accurately paused.34 focused handler/UI/C2 preservation tests pass; app typecheck/build and project-state checks pass. Local only, NOT DEPLOYED/PUBLISHED; no migration, hosted operation, commit/push or character changes. Four F/C2 accepted limitations retained."
     }
   ],
   "frontend_publication": {
@@ -1663,15 +1674,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "NEXT PLANNED — ENG-PROGRESSION-001G-D admin authority/UI containment; awaiting separate authorization",
+    "identity": "STOP — D1 locally implemented/tested; review and separately authorize publication/deployment",
     "status": "blocked",
-    "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
-    "timestamp": "2026-10-10T19:34:06.320Z",
+    "sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
+    "timestamp": "2026-10-10T19:42:24.482Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-P5-owner-acceptance.md",
-    "evidence": "C2 COMPLETE with explicitly accepted limitations; no further C2 closure task. Existing001G-D admin authority/UI containment is next; preserve O8 lifecycle already completed under C2. D implementation has not started and requires separately scoped instruction; E/F remain later. Accepted unperformed tests are follow-ups, not C2 blockers. Four F limitations remain open."
+    "artifact": "docs/operations/progression-001G-D1-legacy-admin-containment.md",
+    "evidence": "No owner policy decision blocks D1 containment publication; separate commit/push/deploy and Mik frontend publication needed. No replacement awards or wider D scope implemented. D remains open; C2 COMPLETE with accepted limitations. Do not restore legacy writer grants."
   },
   "volatile_runtime_observations": [
     {

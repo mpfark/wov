@@ -62,7 +62,6 @@ export interface AdminUser {
 export interface CharacterEdits {
   name?: string;
   gold?: number;
-  level?: number;
   gender?: 'male' | 'female';
 }
 

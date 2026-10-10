@@ -1,19 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getMaxHp, getMaxCp, getMaxMp } from "../_shared/formulas/resources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-// Class-based stat bonuses awarded every 3 levels
-const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
-  warrior: { str: 1, dex: 1 },
-  wizard:  { int: 1, wis: 1 },
-  ranger:  { dex: 1, wis: 1 },
-  assassin:   { dex: 1, cha: 1 },
-  healer:  { wis: 1, con: 1 },
-  bard:    { cha: 1, int: 1 },
 };
 
 async function verifyAdmin(req: Request) {
@@ -61,6 +50,13 @@ Deno.serve(async (req) => {
     const { adminClient, callerRole } = await verifyAdmin(req);
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+
+    // Retired reconstruction/raw grant routes fail after admin authentication,
+    // before parsing their payload or accessing gameplay tables.
+    if (action && ['set-level', 'reset-stats', 'grant-respec'].includes(action)) {
+      return jsonResponse({ code: 'legacy_progression_operation_retired',
+        error: 'This legacy progression operation is unavailable.' }, 410);
+    }
 
     // LIST USERS
     if (action === "list" && req.method === "GET") {
@@ -153,111 +149,19 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true });
     }
 
-    // UPDATE CHARACTER (admin edit)
-    // SET LEVEL (with proper stat/HP recalculation)
-    if (action === "set-level" && req.method === "POST") {
-      const { character_id, new_level } = await req.json();
-      if (!character_id || !new_level || typeof new_level !== "number" || new_level < 1 || new_level > 100) {
-        throw new Error("character_id and valid new_level (1-100) required");
-      }
-
-      const { data: char, error: charErr } = await adminClient.from("characters").select("*").eq("id", character_id).single();
-      if (charErr || !char) throw new Error("Character not found");
-
-      const oldLevel = char.level;
-      if (new_level === oldLevel) return jsonResponse({ success: true, message: "No change" });
-
-      // Recalculate stats from scratch: base(8) + race + class + level-up bonuses
-      const RACE_STATS: Record<string, Record<string, number>> = {
-        human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-        elf:      { str: -1, dex: 2, con: -1, int: 2, wis: 3, cha: 0 },
-        dwarf:    { str: 2, dex: -1, con: 4, int: 0, wis: 1, cha: -2 },
-        halfling: { str: -2, dex: 3, con: 1, int: 0, wis: 1, cha: 2 },
-        edain:    { str: 1, dex: 0, con: 3, int: 1, wis: 1, cha: 1 },
-        half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 2, cha: 3 },
-      };
-      const CLASS_STATS: Record<string, Record<string, number>> = {
-        warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
-        wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
-        ranger:  { str: 1, dex: 3, con: 1, int: 0, wis: 2, cha: 0 },
-        assassin:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
-        healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
-        bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
-      };
-      const CLASS_BASE_HP: Record<string, number> = {
-        warrior: 24, wizard: 16, ranger: 20, assassin: 16, healer: 18, bard: 16,
-      };
-
-      const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      const raceBonus = RACE_STATS[char.race] || {};
-      const classBonus = CLASS_STATS[char.class] || {};
-      const levelBonuses = CLASS_LEVEL_BONUSES[char.class] || {};
-
-      // Calculate what stats SHOULD be at old level (base + automatic gains)
-      // Then figure out how many manual stat points were spent
-      const calcStatsAtLevel = (level: number) => {
-        const stats: Record<string, number> = {};
-        for (const s of statKeys) {
-          let val = 8 + (raceBonus[s] || 0) + (classBonus[s] || 0);
-          // Class bonus every 3 levels
-          if (levelBonuses[s]) {
-            let bonusCount = 0;
-            for (let l = 1; l <= level; l++) {
-              if (l % 3 === 0) bonusCount++;
-            }
-            val += levelBonuses[s] * bonusCount;
-          }
-          stats[s] = val;
-        }
-        return stats;
-      };
-
-      const oldBaseStats = calcStatsAtLevel(oldLevel);
-      const newBaseStats = calcStatsAtLevel(new_level);
-
-      // Preserve manually spent stat points
-      const updates: Record<string, any> = { level: new_level };
-      for (const s of statKeys) {
-        const manualPoints = Math.max(0, (char as any)[s] - oldBaseStats[s]);
-        updates[s] = newBaseStats[s] + manualPoints;
-      }
-      // Adjust unspent stat points for new level (1 per level, minus what was already allocated)
-      const totalPointsAtNewLevel = Math.max(new_level - 1, 0);
-      const totalPointsAtOldLevel = Math.max(oldLevel - 1, 0);
-      const pointsDiff = totalPointsAtNewLevel - totalPointsAtOldLevel;
-      updates.unspent_stat_points = Math.max(0, (char.unspent_stat_points || 0) + pointsDiff);
-
-      // Calculate respec points: 1 per milestone (10, 20, 30, 40)
-      const countMilestones = (level: number) => [10, 20, 30, 40].filter(m => level >= m).length;
-      const newMilestones = countMilestones(new_level);
-      const oldMilestones = countMilestones(oldLevel);
-      const respecDiff = newMilestones - oldMilestones;
-      if (respecDiff !== 0) {
-        updates.respec_points = Math.max(0, (char.respec_points || 0) + respecDiff);
-      }
-
-      // HP/CP/MP caps via canonical shared helpers (mirror SQL sync_character_resources).
-      updates.max_hp = getMaxHp(char.class, updates.con, new_level);
-      updates.hp = updates.max_hp;
-      updates.max_cp = getMaxCp(new_level, updates.wis);
-      updates.cp = updates.max_cp;
-      updates.max_mp = getMaxMp(new_level, updates.dex);
-      updates.mp = updates.max_mp;
-
-      // Reset XP when setting level directly
-      updates.xp = 0;
-
-      const { error } = await adminClient.from("characters").update(updates).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true, old_level: oldLevel, new_level });
-    }
-
     if (action === "update-character" && req.method === "POST") {
       const { character_id, updates } = await req.json();
       if (!character_id || !updates || typeof updates !== "object") throw new Error("character_id and updates required");
 
-      const allowedFields = ["name", "hp", "max_hp", "gold", "xp",
-        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points", "gender", "respec_points"];
+      const protectedFields = ['str','dex','con','int','wis','cha','level','xp','class','is_classless',
+        'unspent_stat_points','respec_points','bhp','bhp_trained','rp_total_earned'];
+      // Refuse the whole mixed payload before any update, never partially apply it.
+      if (Object.keys(updates).some(field => protectedFields.includes(field))) {
+        return jsonResponse({ code: 'protected_progression_edit_denied',
+          error: 'Protected progression fields cannot be edited here.' }, 403);
+      }
+
+      const allowedFields = ["name", "hp", "max_hp", "gold", "ac", "current_node_id", "gender"];
 
       const filteredUpdates: Record<string, any> = {};
       for (const [key, value] of Object.entries(updates)) {
@@ -353,71 +257,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true });
     }
 
-    // RESET STATS
-    if (action === "reset-stats" && req.method === "POST") {
-      const { character_id } = await req.json();
-      if (!character_id) throw new Error("character_id required");
-      
-      const { data: char } = await adminClient.from("characters").select("*").eq("id", character_id).single();
-      if (!char) throw new Error("Character not found");
-
-      // Calculate base stats: 8 base + race + class bonuses
-      const RACE_STATS: Record<string, Record<string, number>> = {
-        human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-        elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
-        dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
-      halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
-      edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
-        half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
-      };
-      const CLASS_STATS: Record<string, Record<string, number>> = {
-        warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
-        wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
-        ranger:  { str: 1, dex: 3, con: 1, int: 0, wis: 2, cha: 0 },
-        assassin:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
-        healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
-        bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
-      };
-
-      const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      const raceBonus = RACE_STATS[char.race] || {};
-      const classBonus = CLASS_STATS[char.class] || {};
-      const levelBonuses = CLASS_LEVEL_BONUSES[char.class] || {};
-
-      const baseStats: Record<string, number> = {};
-      let totalSpentPoints = 0;
-
-      for (const stat of statKeys) {
-        let base = 8 + (raceBonus[stat] || 0) + (classBonus[stat] || 0);
-        // No more auto +1 all stats every 5 levels — removed
-        // Add class level bonuses (every 3 levels)
-        // Add class level bonuses (every 3 levels)
-        if (levelBonuses[stat]) {
-          let bonusCount = 0;
-          for (let l = 1; l <= char.level; l++) {
-            if (l % 3 === 0) bonusCount++;
-          }
-          base += levelBonuses[stat] * bonusCount;
-        }
-        totalSpentPoints += (char as any)[stat] - base;
-        baseStats[stat] = base;
-      }
-
-      // Total unspent = current unspent + spent points (refunded)
-      const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
-
-      // CP cap via canonical shared helper.
-      const newMaxCp = getMaxCp(char.level, baseStats.wis ?? 10);
-      const { error } = await adminClient.from("characters").update({
-        ...baseStats,
-        unspent_stat_points: newUnspent,
-        max_cp: newMaxCp,
-        cp: newMaxCp,
-      }).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true, refunded_points: Math.max(totalSpentPoints, 0) });
-    }
-
     // GRANT SALVAGE
     if (action === "grant-salvage" && req.method === "POST") {
       const { character_id, amount } = await req.json();
@@ -456,17 +295,6 @@ Deno.serve(async (req) => {
       const { error } = await adminClient.from("characters").update({ gold: newTotal }).eq("id", character_id);
       if (error) throw error;
       return jsonResponse({ success: true, new_total: newTotal });
-    }
-
-    if (action === "grant-respec") {
-      const body = await req.json();
-      const { character_id, amount } = body;
-      if (!character_id || !amount || amount < 1) throw { message: "character_id and amount (>=1) required", status: 400 };
-      const { data: char, error: fetchErr } = await adminClient.from("characters").select("respec_points").eq("id", character_id).single();
-      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
-      const { error } = await adminClient.from("characters").update({ respec_points: (char.respec_points || 0) + amount }).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true, new_total: (char.respec_points || 0) + amount });
     }
 
     // 'set-password' action removed: admins can only trigger password reset emails

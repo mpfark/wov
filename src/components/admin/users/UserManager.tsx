@@ -144,15 +144,7 @@ export default function UserManager({ isValar }: Props) {
 
   const handleSaveCharacter = async (charId: string) => {
     try {
-      if (charEdits.level !== undefined) {
-        await callAdmin('set-level', 'POST', { character_id: charId, new_level: charEdits.level });
-        const { level, ...remainingEdits } = charEdits;
-        if (Object.keys(remainingEdits).length > 0) {
-          await callAdmin('update-character', 'POST', { character_id: charId, updates: remainingEdits });
-        }
-      } else {
-        await callAdmin('update-character', 'POST', { character_id: charId, updates: charEdits });
-      }
+      await callAdmin('update-character', 'POST', { character_id: charId, updates: charEdits });
       toast.success('Character updated');
       setEditingChar(null);
       setCharEdits({});
@@ -214,22 +206,9 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleResetStats = async (characterId: string) => {
-    try {
-      const data = await callAdmin('reset-stats', 'POST', { character_id: characterId });
-      toast.success(`Stats reset — ${data.refunded_points} points refunded`);
-      loadUsers();
-    } catch (err: any) { toast.error(err.message); }
-  };
+  const handleResetStats = async (_characterId: string) => { toast.error('Stat reconstruction is unavailable.'); };
 
-  const handleGrantRespec = async (characterId: string) => {
-    if (!grantRespecAmount || grantRespecAmount <= 0) return;
-    try {
-      const data = await callAdmin('grant-respec', 'POST', { character_id: characterId, amount: grantRespecAmount });
-      toast.success(`Granted ${grantRespecAmount} respec point${grantRespecAmount > 1 ? 's' : ''} (total: ${data.new_total})`);
-      loadUsers();
-    } catch (err: any) { toast.error(err.message); }
-  };
+  const handleGrantRespec = async (_characterId: string) => { toast.error('Raw respec grants are unavailable.'); };
 
   const handleGrantSalvage = async (characterId: string) => {
     if (!grantSalvageAmount || grantSalvageAmount <= 0) return;
