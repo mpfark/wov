@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T20:40:58.239Z",
+  "updated_at": "2026-10-10T21:21:59.967Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1685,15 +1685,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D2 locally implemented/tested; separately authorize publication/deployment",
+    "identity": "STOP — D3 browser teleport ACL prepared/tested; separate publication and installation authorization",
     "status": "blocked",
-    "sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
-    "timestamp": "2026-10-10T19:42:24.482Z",
+    "sha": "6628e8a2e1c2cf8550b054007611bb8c9a23a02f",
+    "timestamp": "2026-10-10T21:21:59.967Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-D2-admin-character-containment.md",
-    "evidence": "55 focused tests/typecheck/build/state checks pass. No replacement authority or migration. Direct admin_teleport remains separately scoped; C2 COMPLETE with accepted limits, 001G-D open."
+    "artifact": "docs/operations/progression-001G-D3-direct-teleport-handoff.md",
+    "evidence": "D3 local reviewed SQL outside migrations: browser-only exact RPC EXECUTE revoke; service authority retained; 5 isolated SQL tests pass. NOT INSTALLED. Hosted effective ACL/dependency check required before installation. D1/D2 NOT DEPLOYED; C2 and four F limits unchanged."
   },
   "volatile_runtime_observations": [
     {
