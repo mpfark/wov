@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T13:30:26.884Z",
-  "based_on_source_sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
+  "updated_at": "2026-10-10T18:43:37.119Z",
+  "based_on_source_sha": "01c65fda645c2b6b1c098e8f9e9cd25c40049fe4",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -351,6 +351,28 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0011_progression_001g_c2_p2_c_inactive_lifecycle.sql",
       "evidence": "Mik confirms 0007–0011 installed/private/inactive, cutover packages uninstalled. Recording time only; hosted installation time not supplied. Platform descendant4526c11e contains0011 SQL/journal/snapshot/generated types; Git SQL blob matches reviewed80e1259050b4f1ddb6309a236a910c96a9a3d3102e0b1e6f3a7d7565c0329b93. Source verified, no Codex hosted verification or installation."
+    },
+    {
+      "identity": "0013_progression_001g_c2_reset_and_cutover",
+      "status": "installed",
+      "sha": "01c65fda645c2b6b1c098e8f9e9cd25c40049fe4",
+      "timestamp": "2026-10-10T14:16:49.595Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0013_progression_001g_c2_reset_and_cutover.sql",
+      "evidence": "Mik reports C2 activation succeeded, hosted Drizzle history row14 and installed SQL SHA-256 c93fd93efb75dd9e2ab8478b8672678b2ecd40be846c46da62d19318cbc48b40; automatic commit9148e366 merged at01c65fda. Local LF-normalized0013 equals reviewed combined SQL exactly; journal idx13 and snapshot chain verified. Required generated RPC/lifecycle types already present; activation checkpoint contains no type regeneration. No independent hosted inspection. Targeted frontend readiness:26 creation/form/hook/Overlord UI tests pass, typecheck and production build pass. No live legacy creation/deletion calls; canonical RPCs, retained quota, authoritative read/selection and tombstone fencing present. GO for Mik manual frontend publication with bounded Auth/create/replay/resource/lifecycle smoke required before live-verification claim. Build-generated unrelated MCP Edge side effect restored. No hosted mutation, deployment/publication, commit/push by Codex. All four accepted F limitations retained."
+    },
+    {
+      "identity": "C2 lifecycle timestamp drift correction — prepared only",
+      "status": "authored",
+      "sha": "b8f3dfae58ad2b39f8c724cccce9ae04cabc2879",
+      "timestamp": "2026-10-10T18:43:37.119Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; hosted canary result reported by owner",
+      "directly_verified": true,
+      "artifact": "docs/operations/progression-001G-C2-lifecycle-timestamp-fix.md",
+      "evidence": "Owner reports creation/exact replay/duplicate prevention PASS; owner soft-delete P0001 lifecycle_character_drift, Canaryone version0/no receipt; remaining lifecycle checks not run. Source-defined updated_at trigger reproduces failure locally; patch excludes timestamp from JSON equality but separately requires transaction timestamp.64 isolated SQL tests pass including7 regressions, strict other-field mutation rejection and deferred rollback. Reviewed SQL8d329d18d1a1004551331104d49d89857b4d2906c896dcfe150c04e03b9a6608 outside migrations; function metadata/ACLs unchanged. No hosted inspection/mutation, installation, commit/push or deployment. Calikon and Canaryone untouched; four F limitations retained; C2 NOT COMPLETE."
     }
   ],
   "generated_supabase_types": {
@@ -1619,15 +1641,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — corrected issue-report reset prepared; source publication and any hosted retry need authorization",
+    "identity": "STOP — lifecycle timestamp fix needs publication/installation authorization; lifecycle runtime incomplete",
     "status": "blocked",
-    "sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
-    "timestamp": "2026-10-10T13:30:26.884Z",
+    "sha": "01c65fda645c2b6b1c098e8f9e9cd25c40049fe4",
+    "timestamp": "2026-10-10T18:43:37.119Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; owner full-reset preparation instruction",
     "directly_verified": true,
     "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
-    "evidence": "Local NOT NULL correction complete. No further loot investigation or general audit. Before retry: separately authorized corrected source checkpoint and exact hashes, confirm source/installed support0012 (do not replay), original installed-graph/recovery/transaction gates and explicit retry approval. Owner-reported failed attempt rolled back; do not infer live activation or scheduler/hosted restoration proof. No hosted action or publication in this correction task."
+    "evidence": "Local correction prepared. Separate approval required for source publication, guarded standard Drizzle installation and canary lifecycle retry. Do not rerun reset/cutover or touch Calikon. Owner-reported canary creation/replay pass; hosted lifecycle remains unverified."
   },
   "volatile_runtime_observations": [
     {

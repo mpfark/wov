@@ -531,6 +531,52 @@ test('actual shared resource settlement skips tombstones while active character 
 const overlord=()=>q("INSERT INTO user_roles VALUES($1,'overlord')",[actor]);
 const row=async id=>(await q('SELECT * FROM characters WHERE id=$1',[id]))[0];
 const state=async id=>(await q('SELECT to_jsonb(c) r FROM characters c WHERE id=$1',[id]))[0]?.r;
+async function timestampFixture(){
+  await db.exec("ALTER TABLE characters ADD updated_at timestamptz NOT NULL DEFAULT '2026-01-01'");
+  await db.exec(read('supabase/migrations/20260329162528_51bddc3f-74f8-43ba-ab35-e353c458988c.sql')
+    .match(/CREATE OR REPLACE FUNCTION public\.update_updated_at\(\)[\s\S]*?\$function\$;/)[0]);
+  await db.exec('CREATE TRIGGER update_characters_updated_at BEFORE UPDATE ON characters FOR EACH ROW EXECUTE FUNCTION update_updated_at()');
+}
+const timestampFix=()=>db.exec(read('docs/operations/progression-001G-C2-lifecycle-timestamp-fix.sql'));
+test('original timestamp trigger reproduces lifecycle drift and rolls back character and receipt',async()=>tx(async()=>{
+  await timestampFixture();const c=await call();
+  // Force an earlier timestamp without modifying the trigger or runtime authority.
+  await db.exec('ALTER TABLE characters DISABLE TRIGGER update_characters_updated_at');
+  await q("UPDATE characters SET updated_at='2026-01-01' WHERE id=$1",[c.characterId]);
+  await db.exec('ALTER TABLE characters ENABLE TRIGGER update_characters_updated_at');
+  await cutover();const before=await state(c.characterId);
+  await refused(()=>lifecycle({id:c.characterId}),/lifecycle_character_drift/);
+  assert.deepEqual(await state(c.characterId),before);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+}));
+test('timestamp fix accepts managed timestamp and preserves resources, origin, replay, quota and authority',async()=>tx(async()=>{
+  await timestampFixture();const request=uid(next++),c=await call({request});await support();await cutover();await timestampFix();
+  const before=await state(c.characterId),origin=await q('SELECT * FROM character_creation_origin'),materials=await q('SELECT * FROM character_materials');
+  const deleted=await lifecycle({id:c.characterId});assert.equal(deleted.kind,'soft_deleted');
+  assert.equal((await q('SELECT updated_at=transaction_timestamp() ok FROM characters WHERE id=$1',[c.characterId]))[0].ok,true);
+  assert.deepEqual(await call({request}),c);
+  assert.equal((await q('SELECT character_creation_capacity(NULL) r'))[0].r.retained,1); // own tombstone still counts; legacy belongs to another account
+  await refused(()=>lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'}),/not_authorized/);
+  await overlord();assert.equal((await lifecycle({id:c.characterId,version:1,operation:'restore',reason:'Recovery'})).kind,'restored');
+  const after=await state(c.characterId);
+  for(const key of Object.keys(before).filter(k=>!['deleted_at','restore_until','lifecycle_version','updated_at'].includes(k)))assert.deepEqual(after[key],before[key],key);
+  assert.deepEqual(await q('SELECT * FROM character_creation_origin'),origin);assert.deepEqual(await q('SELECT * FROM character_materials'),materials);
+}));
+test('timestamp fix late receipt failure restores timestamp, lifecycle and all resources',async()=>tx(async()=>{
+  await timestampFixture();const c=await call();await cutover();await timestampFix();const before=await state(c.characterId),beforeCounts=await counts();
+  await db.exec("CREATE FUNCTION fixture_timestamp_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'timestamp_late_failure';END $$;CREATE CONSTRAINT TRIGGER timestamp_late_failure AFTER INSERT ON character_lifecycle_receipt DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fixture_timestamp_failure()");
+  await refused(async()=>{await lifecycle({id:c.characterId});await db.exec('SET CONSTRAINTS ALL IMMEDIATE');},/timestamp_late_failure/);
+  assert.deepEqual(await state(c.characterId),before);assert.deepEqual(await counts(),beforeCounts);
+  assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+}));
+for(const field of ['gold','hp','name','updated_at'])test('timestamp fix rejects unexpected '+field+' trigger mutation and rolls back',async()=>tx(async()=>{
+  await timestampFixture();const c=await call();await cutover();await timestampFix();const before=await state(c.characterId);
+  const assignment={gold:'NEW.gold:=NEW.gold+1',hp:'NEW.hp:=NEW.hp-1',name:"NEW.name:='Unexpected'",updated_at:"NEW.updated_at:='2026-01-01'::timestamptz"}[field];
+  await db.exec(`CREATE FUNCTION fixture_timestamp_drift() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN ${assignment};RETURN NEW;END $$;
+    CREATE TRIGGER zz_timestamp_drift BEFORE UPDATE ON characters FOR EACH ROW EXECUTE FUNCTION fixture_timestamp_drift()`);
+  await refused(()=>lifecycle({id:c.characterId}),/lifecycle_character_drift/);
+  assert.deepEqual(await state(c.characterId),before);assert.equal((await q('SELECT count(*)::int n FROM character_lifecycle_receipt'))[0].n,0);
+}));
 // Clock-fixture changes are owner-only and rolled back. Production API takes no clock input.
 const age=async(id,hours)=>{
   await db.exec('ALTER TABLE characters DISABLE TRIGGER USER');
