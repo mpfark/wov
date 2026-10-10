@@ -164,20 +164,7 @@ export default function UserManager({ isValar }: Props) {
     finally { setGivingItem(false); }
   };
 
-  const handleTeleport = async (characterId: string) => {
-    if (!teleportNodeId) return;
-    try {
-      const { error } = await supabase.rpc('admin_teleport', {
-        _character_id: characterId,
-        _node_id: teleportNodeId,
-      });
-      if (error) throw error;
-      const nodeName = allNodes.find(n => n.id === teleportNodeId)?.name || 'node';
-      toast.success(`Teleported to ${nodeName}`);
-      refetchCharacters();
-      loadUsers();
-    } catch (err: any) { toast.error(err.message); }
-  };
+  const handleTeleport = async (_characterId: string) => { toast.error('Admin teleport is unavailable pending replacement authority.'); };
 
   const handleGrantXp = async (characterId: string) => {
     if (!grantXpAmount || grantXpAmount <= 0) return;

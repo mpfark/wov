@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
 const source = readFileSync('supabase/functions/admin-users/index.ts', 'utf8');
-function fixture(role = 'steward', authenticated = true) {
+function fixture(role = 'steward', authenticated = true, target: any = { id: 'char', deleted_at: null }) {
   const writes: unknown[] = [], tables: string[] = [];
   let handler: (request: Request) => Promise<Response>;
   const admin = { from(table: string) {
     tables.push(table);
     const chain = {
-      select: () => chain, eq: () => chain,
-      maybeSingle: async () => ({ data: { role }, error: null }),
+      select: () => chain, eq: () => chain, is: () => chain,
+      maybeSingle: async () => ({ data: table === 'user_roles' ? { role } : target, error: null }),
       update: (value: unknown) => { writes.push({ table, value }); return chain; },
       then: (resolve: (value: unknown) => unknown) => resolve({ error: null }),
     }; return chain;
@@ -50,12 +50,33 @@ describe('actual admin-users D1 boundary', () => {
       expect(f.tables).toEqual(['user_roles']); expect(f.writes).toEqual([]);
     });
   }
-  it('preserves permitted generic edits and rejects unknown fields without writes', async () => {
-    const f = fixture(), updates = { name: 'Allowed', gender: 'female', gold: 200, hp: 10, max_hp: 16, ac: 9, current_node_id: null };
+  for (const action of ['revive','teleport','give-item','remove-item','grant-gold','grant-salvage','grant-gem']) {
+    for (const role of ['steward','overlord']) it(role + ': ' + action + ' retired before gameplay access', async () => {
+      const f = fixture(role);
+      expect(await f.request(action, {})).toMatchObject({ status: 410, body: { code: 'legacy_character_operation_retired' } });
+      expect(f.tables).toEqual(['user_roles']); expect(f.writes).toEqual([]);
+    });
+    it(action + ' retains authentication and role denial', async () => {
+      expect((await fixture('player').request(action, {})).status).toBe(403);
+      expect((await fixture('steward', false).request(action, {})).status).toBe(401);
+    });
+  }
+  for (const field of ['hp','max_hp','ac','gold','current_node_id','unknown']) it('denies mixed ' + field, async () => {
+    const f = fixture();
+    expect((await f.request('update-character', { character_id: 'char', updates: { name: 'Allowed', [field]: 1 } })).status).toBe(403);
+    expect(f.tables).toEqual(['user_roles']); expect(f.writes).toEqual([]);
+  });
+  it('permits name and gender only for an existing active target', async () => {
+    const f = fixture(), updates = { name: 'Allowed', gender: 'female' };
     expect((await f.request('update-character', { character_id: 'char', updates })).status).toBe(200);
     expect(f.writes).toEqual([{ table: 'characters', value: updates }]);
+    for (const [target, status] of [[null,404], [{ id: 'char', deleted_at: '2026-10-10' },409]] as const) {
+      const invalid = fixture('steward', true, target);
+      expect((await invalid.request('update-character', { character_id: 'char', updates })).status).toBe(status);
+      expect(invalid.writes).toEqual([]);
+    }
     const invalid = fixture();
-    expect((await invalid.request('update-character', { character_id: 'char', updates: { unknown: 1 } })).status).toBe(500);
+    expect((await invalid.request('update-character', { character_id: 'char', updates: { gender: 'invalid' } })).status).toBe(400);
     expect(invalid.writes).toEqual([]);
   });
   it('retains auth/role denial and XP pause', async () => {

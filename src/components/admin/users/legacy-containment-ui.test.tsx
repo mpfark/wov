@@ -11,7 +11,7 @@ const character = { id: 'char', name: 'Test', gender: 'male', level: 1, class: '
   hp: 10, max_hp: 16, cp: 30, max_cp: 30, gold: 200, xp: 0, ac: 9,
   str: 9, dex: 9, con: 9, int: 9, wis: 9, cha: 9, unspent_stat_points: 0, inventory: [], current_node_id: null } as any;
 afterEach(cleanup);
-it('keeps name/gold editing but removes the level editor', () => {
+it('keeps name editing but removes the level editor', () => {
   const edit = vi.fn();
   render(<TooltipProvider><AdminCharacterSheet c={character} isEditing charEdits={{}} setCharEdits={edit}
     onEdit={vi.fn()} onSave={vi.fn()} onCancel={vi.fn()} /></TooltipProvider>);
@@ -19,19 +19,19 @@ it('keeps name/gold editing but removes the level editor', () => {
   const name = screen.getByDisplayValue('Test'); fireEvent.change(name, { target: { value: 'Changed' } });
   expect(edit).toHaveBeenCalled();
   expect(screen.queryByDisplayValue('1')).toBeNull();
-  expect(screen.getByDisplayValue('200')).toBeInTheDocument();
+  expect(screen.queryByDisplayValue('200')).toBeNull();
 });
-it('disables raw respec/reset and paused XP while leaving unrelated actions available', () => {
-  const callbacks = { onGrantXp: vi.fn(), onGrantRespec: vi.fn(), onResetStats: vi.fn(), onGrantGold: vi.fn() };
-  const props: any = { selectedChar: character, selectedUser: null, allItems: [], allNodes: [], allRegions: [], allAreas: [],
+it('disables raw respec/reset and paused XP and all D2 convenience actions', () => {
+  const callbacks = { onGrantXp: vi.fn(), onGrantRespec: vi.fn(), onResetStats: vi.fn(), onGrantGold: vi.fn(), onGiveItem: vi.fn(), onRemoveItem: vi.fn(), onTeleport: vi.fn(), onRevive: vi.fn(), onGrantSalvage: vi.fn(), onGrantGem: vi.fn() };
+  const props: any = { selectedChar: { ...character, inventory: [{ id: 'inv', item: { name: 'Test item', rarity: 'common' } }] }, selectedUser: null, allItems: [], allNodes: [], allRegions: [], allAreas: [],
     giveItemId: '', teleportNodeId: '', grantXpAmount: 1, grantRespecAmount: 1, grantSalvageAmount: 1,
     grantGoldAmount: 1, grantGemKey: 'garnet', grantGemAmount: 1, removeItemId: '', ...callbacks };
   render(<CharacterActionsColumn {...props} />);
-  for (const label of ['Grant XP', 'Grant Respec', 'Reset Stats']) {
+  for (const label of ['Grant XP', 'Grant Respec', 'Reset Stats', 'Grant Gold', 'Grant Salvage', 'Grant Gem', 'Give', 'Tp', 'Rm', 'Revive (10/16)']) {
     const button = screen.getByRole('button', { name: label }); expect(button).toBeDisabled(); fireEvent.click(button);
   }
   expect(callbacks.onGrantXp).not.toHaveBeenCalled(); expect(callbacks.onGrantRespec).not.toHaveBeenCalled();
   expect(callbacks.onResetStats).not.toHaveBeenCalled();
-  const gold = screen.getByRole('button', { name: 'Grant Gold' }); expect(gold).not.toBeDisabled(); fireEvent.click(gold);
-  expect(callbacks.onGrantGold).toHaveBeenCalledWith('char');
+  const gold = screen.getByRole('button', { name: 'Grant Gold' }); expect(gold).toBeDisabled(); fireEvent.click(gold);
+  for (const callback of Object.values(callbacks)) expect(callback).not.toHaveBeenCalled();
 });

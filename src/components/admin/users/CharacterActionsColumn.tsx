@@ -93,6 +93,7 @@ export default function CharacterActionsColumn({
           {/* Character summary at top */}
           <CharacterSummaryCard character={selectedChar} nodeName={nodeName} />
 
+          <p className="text-xs text-muted-foreground">Character item grants/removal, economy grants, teleport and revive are unavailable pending replacement authorities.</p>
           {/* Items & Inventory */}
           <AdminFormSection title="Items & Inventory">
             <div className="space-y-2">
@@ -108,7 +109,7 @@ export default function CharacterActionsColumn({
                   />
                 </div>
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                  disabled={!giveItemId || givingItem} onClick={() => onGiveItem(selectedChar.id)}>
+                  disabled title="Unavailable pending replacement authority" onClick={() => onGiveItem(selectedChar.id)}>
                   <Gift className="w-3 h-3" /> Give
                 </Button>
               </div>
@@ -116,7 +117,7 @@ export default function CharacterActionsColumn({
               {/* Remove Item */}
               {selectedChar.inventory.length > 0 && (
                 <div className="flex gap-1">
-                  <Select value={removeItemId} onValueChange={setRemoveItemId}>
+                  <Select disabled value={removeItemId} onValueChange={setRemoveItemId}>
                     <SelectTrigger className="h-7 flex-1 text-[10px]">
                       <SelectValue placeholder="Remove item..." />
                     </SelectTrigger>
@@ -130,7 +131,7 @@ export default function CharacterActionsColumn({
                     </SelectContent>
                   </Select>
                   <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 shrink-0"
-                    disabled={!removeItemId} onClick={onRemoveItem}>
+                    disabled title="Unavailable pending replacement authority" onClick={onRemoveItem}>
                     <Trash2 className="w-3 h-3" /> Rm
                   </Button>
                 </div>
@@ -163,30 +164,30 @@ export default function CharacterActionsColumn({
               </div>
 
               <div className="flex gap-1">
-                <Input type="number" min={1} value={grantSalvageAmount}
+                <Input disabled type="number" min={1} value={grantSalvageAmount}
                   onChange={e => setGrantSalvageAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled={grantSalvageAmount <= 0} onClick={() => onGrantSalvage(selectedChar.id)}>
+                  disabled title="Unavailable pending replacement authority" onClick={() => onGrantSalvage(selectedChar.id)}>
 Grant Salvage
                 </Button>
               </div>
 
               <div className="flex gap-1">
-                <Input type="number" min={1} value={grantGoldAmount}
+                <Input disabled type="number" min={1} value={grantGoldAmount}
                   onChange={e => setGrantGoldAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="Gold" />
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled={grantGoldAmount <= 0} onClick={() => onGrantGold(selectedChar.id)}>
+                  disabled title="Unavailable pending replacement authority" onClick={() => onGrantGold(selectedChar.id)}>
                   <Coins className="w-3 h-3" /> Grant Gold
                 </Button>
               </div>
 
               <div className="flex gap-1">
-                <Input type="number" min={1} max={1000} value={grantGemAmount}
+                <Input disabled type="number" min={1} max={1000} value={grantGemAmount}
                   onChange={e => setGrantGemAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="Qty" />
-                <Select value={grantGemKey} onValueChange={setGrantGemKey}>
+                <Select disabled value={grantGemKey} onValueChange={setGrantGemKey}>
                   <SelectTrigger className="h-7 flex-1 text-[10px]">
                     <SelectValue placeholder="Gem..." />
                   </SelectTrigger>
@@ -202,7 +203,7 @@ Grant Salvage
                   </SelectContent>
                 </Select>
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                  disabled={grantGemAmount <= 0 || !grantGemKey} onClick={() => onGrantGem(selectedChar.id)}>
+                  disabled title="Unavailable pending replacement authority" onClick={() => onGrantGem(selectedChar.id)}>
                   Grant Gem
                 </Button>
               </div>
@@ -224,7 +225,7 @@ Grant Salvage
                 />
               </div>
               <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                disabled={!teleportNodeId} onClick={() => onTeleport(selectedChar.id)}>
+                disabled title="Unavailable pending replacement authority" onClick={() => onTeleport(selectedChar.id)}>
                 <MapPin className="w-3 h-3" /> Tp
               </Button>
             </div>
@@ -235,7 +236,7 @@ Grant Salvage
             <p className="text-xs text-muted-foreground">Legacy stat reconstruction is unavailable.</p>
             <div className="flex flex-wrap gap-1">
               <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
-                disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => onRevive(selectedChar.id)}>
+                disabled title="Unavailable pending replacement authority" onClick={() => onRevive(selectedChar.id)}>
                 <Heart className="w-3 h-3" /> Revive
                 {selectedChar.hp < selectedChar.max_hp && <span className="text-blood">({selectedChar.hp}/{selectedChar.max_hp})</span>}
               </Button>

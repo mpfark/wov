@@ -32,7 +32,7 @@ export default function AdminCharacterSheet({ c, isEditing: requestedEditing, ch
     return acc;
   }, {} as Record<string, number>);
 
-  const gold = isEditing ? (charEdits.gold ?? c.gold) : c.gold;
+  const gold = c.gold;
   const level = c.level;
   const name = isEditing ? (charEdits.name ?? c.name) : c.name;
 
@@ -232,12 +232,7 @@ export default function AdminCharacterSheet({ c, isEditing: requestedEditing, ch
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Gold</span>
-                {isEditing ? (
-                  <input type="number" className="w-14 bg-background border border-border rounded px-1 text-[10px] text-primary text-right"
-                    value={gold} onChange={e => setCharEdits(p => ({ ...p, gold: parseInt(e.target.value) || 0 }))} />
-                ) : (
-                  <span className="text-primary font-display">{gold}</span>
-                )}
+                <span className="text-primary font-display">{gold}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Items</span>

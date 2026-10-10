@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
         error: 'This legacy progression operation is unavailable.' }, 410);
     }
 
+    if (action && ['revive','teleport','give-item','remove-item','grant-gold','grant-salvage','grant-gem'].includes(action)) {
+      return jsonResponse({ code: 'legacy_character_operation_retired', error: 'This legacy character administration operation is unavailable pending replacement authority.' }, 410);
+    }
+
     // LIST USERS
     if (action === "list" && req.method === "GET") {
       const page = parseInt(url.searchParams.get("page") || "1");
@@ -161,16 +165,10 @@ Deno.serve(async (req) => {
           error: 'Protected progression fields cannot be edited here.' }, 403);
       }
 
-      const allowedFields = ["name", "hp", "max_hp", "gold", "ac", "current_node_id", "gender"];
-
-      const filteredUpdates: Record<string, any> = {};
-      for (const [key, value] of Object.entries(updates)) {
-        if (!allowedFields.includes(key)) {
-          throw new Error(`Field '${key}' cannot be updated via this endpoint`);
-        }
-        filteredUpdates[key] = value;
+      if (Object.keys(updates).some(field => !['name','gender'].includes(field))) {
+        return jsonResponse({ code: 'character_edit_field_denied', error: 'Only name and gender can be edited here.' }, 403);
       }
-
+      const filteredUpdates = { ...updates };
       // Validate string fields
       if (filteredUpdates.name !== undefined) {
         if (typeof filteredUpdates.name !== "string" || filteredUpdates.name.trim().length === 0 || filteredUpdates.name.length > 50) {
@@ -178,123 +176,26 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Validate numeric ranges
-      const numericRanges: Record<string, [number, number]> = {
-        hp: [0, 10000], max_hp: [1, 10000], gold: [0, 1000000], xp: [0, 1000000],
-        str: [1, 999], dex: [1, 999], con: [1, 999],
-        int: [1, 999], wis: [1, 999], cha: [1, 999], ac: [0, 100],
-        unspent_stat_points: [0, 200],
-      };
-      for (const [field, [min, max]] of Object.entries(numericRanges)) {
-        if (filteredUpdates[field] !== undefined) {
-          const val = filteredUpdates[field];
-          if (typeof val !== "number" || !Number.isInteger(val) || val < min || val > max) {
-            throw new Error(`${field} must be an integer between ${min} and ${max}`);
-          }
-        }
+      if (filteredUpdates.gender !== undefined && !['male','female'].includes(filteredUpdates.gender)) {
+        return jsonResponse({ error: 'Gender must be male or female' }, 400);
       }
-
-      // Validate current_node_id is a valid UUID if provided
-      if (filteredUpdates.current_node_id !== undefined && filteredUpdates.current_node_id !== null) {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (typeof filteredUpdates.current_node_id !== "string" || !uuidRegex.test(filteredUpdates.current_node_id)) {
-          throw new Error("current_node_id must be a valid UUID");
-        }
-      }
-
       if (Object.keys(filteredUpdates).length === 0) throw new Error("No valid fields to update");
 
-      const { error } = await adminClient.from("characters").update(filteredUpdates).eq("id", character_id);
+      const { data: target, error: targetError } = await adminClient.from('characters')
+        .select('id, deleted_at').eq('id', character_id).maybeSingle();
+      if (targetError) throw targetError;
+      if (!target) return jsonResponse({ error: 'Character not found' }, 404);
+      if (target.deleted_at) return jsonResponse({ error: 'Deleted characters cannot be edited' }, 409);
+      const { data: changed, error } = await adminClient.from('characters').update(filteredUpdates)
+        .eq('id', character_id).is('deleted_at', null).select('id').maybeSingle();
       if (error) throw error;
-      return jsonResponse({ success: true });
-    }
-
-    // GIVE ITEM TO CHARACTER
-    if (action === "give-item" && req.method === "POST") {
-      const { character_id, item_id } = await req.json();
-      if (!character_id || !item_id) throw new Error("character_id and item_id required");
-      const { error } = await adminClient.from("character_inventory").insert({
-        character_id, item_id, current_durability: 100,
-      });
-      if (error) throw error;
-      return jsonResponse({ success: true });
-    }
-
-    // TELEPORT CHARACTER
-    if (action === "teleport" && req.method === "POST") {
-      const { character_id, node_id } = await req.json();
-      if (!character_id || !node_id) throw new Error("character_id and node_id required");
-      // Validate node exists
-      const { data: node, error: nodeErr } = await adminClient.from("nodes").select("id").eq("id", node_id).maybeSingle();
-      if (nodeErr || !node) throw new Error("Node not found");
-      const { error } = await adminClient.from("characters").update({ current_node_id: node_id }).eq("id", character_id);
-      if (error) throw error;
+      if (!changed) return jsonResponse({ error: 'Character no longer available for editing' }, 409);
       return jsonResponse({ success: true });
     }
 
     // GRANT XP — paused pending canonical validated admin award integration.
     if (action === "grant-xp") {
       return jsonResponse({ code: "progression_awards_paused", error: "XP awards are temporarily unavailable." }, 503);
-    }
-
-    // REVIVE CHARACTER
-    if (action === "revive" && req.method === "POST") {
-      const { character_id } = await req.json();
-      if (!character_id) throw new Error("character_id required");
-      const { data: char } = await adminClient.from("characters").select("max_hp").eq("id", character_id).single();
-      if (!char) throw new Error("Character not found");
-      const { error } = await adminClient.from("characters").update({ hp: char.max_hp }).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true });
-    }
-
-    // REMOVE ITEM
-    if (action === "remove-item" && req.method === "POST") {
-      const { inventory_id } = await req.json();
-      if (!inventory_id) throw new Error("inventory_id required");
-      const { error } = await adminClient.from("character_inventory").delete().eq("id", inventory_id);
-      if (error) throw error;
-      return jsonResponse({ success: true });
-    }
-
-    // GRANT SALVAGE
-    if (action === "grant-salvage" && req.method === "POST") {
-      const { character_id, amount } = await req.json();
-      if (!character_id || !amount || amount < 1) throw { message: "character_id and positive amount required", status: 400 };
-      const { data: newTotal, error } = await adminClient.rpc('add_material', {
-        _character_id: character_id, _key: 'salvage', _delta: amount,
-      });
-      if (error) throw error;
-      return jsonResponse({ success: true, new_total: newTotal });
-    }
-
-    // GRANT GEM
-    if (action === "grant-gem" && req.method === "POST") {
-      const { character_id, gem_key, amount } = await req.json();
-      const GEMS = ['garnet', 'topaz', 'emerald', 'sapphire', 'pearl', 'amethyst'];
-      if (!character_id || !GEMS.includes(gem_key) || !amount || amount < 1 || amount > 1000) {
-        throw { message: "character_id, valid gem_key and amount (1..1000) required", status: 400 };
-      }
-      const { data: newTotal, error } = await adminClient.rpc('add_material', {
-        _character_id: character_id, _key: gem_key, _delta: amount,
-      });
-      if (error) throw error;
-      return jsonResponse({ success: true, new_total: newTotal });
-    }
-
-
-    // GRANT GOLD
-    if (action === "grant-gold" && req.method === "POST") {
-      const { character_id, amount } = await req.json();
-      if (!character_id || !amount || amount < 1 || amount > 1000000) {
-        throw { message: "character_id and amount (1..1000000) required", status: 400 };
-      }
-      const { data: char, error: fetchErr } = await adminClient.from("characters").select("gold").eq("id", character_id).single();
-      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
-      const newTotal = (char.gold || 0) + amount;
-      const { error } = await adminClient.from("characters").update({ gold: newTotal }).eq("id", character_id);
-      if (error) throw error;
-      return jsonResponse({ success: true, new_total: newTotal });
     }
 
     // 'set-password' action removed: admins can only trigger password reset emails
