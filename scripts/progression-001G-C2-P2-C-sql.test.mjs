@@ -90,10 +90,10 @@ async function resetFixture(){
     await db.exec(`CREATE TABLE public.${name}(id uuid PRIMARY KEY DEFAULT gen_random_uuid());INSERT INTO public.${name} DEFAULT VALUES`);
   }
   // Replace only the minimal registry made above, with the actual runtime location contract.
-  await db.exec(`DROP TABLE unique_item_instance;
-    CREATE TABLE unique_item_instance(id uuid PRIMARY KEY,item_id uuid UNIQUE REFERENCES items(id) ON DELETE RESTRICT,
-      location_kind text NOT NULL CHECK(location_kind IN ('inventory','ground','marketplace','transit')),
-      location_id uuid NOT NULL UNIQUE,updated_at timestamptz DEFAULT now());
+  await db.exec('DROP TABLE unique_item_instance');
+  await db.exec(read('supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql')
+    .match(/CREATE TABLE public\.unique_item_instance\s*\([\s\S]*?\);/)[0]);
+  await db.exec(`
     ALTER TABLE items ADD weapon_tag text;
     ALTER TABLE character_inventory ADD id uuid UNIQUE DEFAULT gen_random_uuid(), ADD unique_instance_id uuid
       REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
@@ -101,14 +101,14 @@ async function resetFixture(){
       ADD unique_instance_id uuid REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
     ALTER TABLE marketplace_listings ADD id uuid UNIQUE DEFAULT gen_random_uuid(),ADD item_id uuid REFERENCES items(id),
       ADD unique_instance_id uuid REFERENCES unique_item_instance(id) DEFERRABLE INITIALLY DEFERRED;
-    CREATE TABLE combat2_test_run(id uuid PRIMARY KEY,status text,final_summary jsonb);
-    CREATE TABLE combat2_test_run_batch(run_id uuid REFERENCES combat2_test_run(id) ON DELETE CASCADE,
-      batch_id uuid,encounter_id uuid,seq integer,PRIMARY KEY(run_id,batch_id));
-    CREATE TABLE combat2_test_run_event(run_id uuid,batch_id uuid,event_seq integer,event jsonb,
-      FOREIGN KEY(run_id,batch_id) REFERENCES combat2_test_run_batch(run_id,batch_id) ON DELETE CASCADE);
+    ALTER TABLE combat2_test_arena ADD PRIMARY KEY(id);
     CREATE TABLE profiles(id uuid PRIMARY KEY);INSERT INTO profiles SELECT id FROM auth.users;
     INSERT INTO user_roles VALUES('${actor}','overlord');
     CREATE TABLE configured_world_placement(id uuid PRIMARY KEY,item_id uuid REFERENCES items(id),node_id uuid REFERENCES nodes(id));`);
+  const reportSource=read('supabase/migrations/20260907110000_combat2_test_runs.sql');
+  for(const name of ['combat2_test_run','combat2_test_run_batch','combat2_test_run_event'])await db.exec(
+    reportSource.match(new RegExp('CREATE TABLE public\\.'+name+'\\s*\\([\\s\\S]*?\\);'))[0]);
+  await db.exec(reportSource.match(/CREATE UNIQUE INDEX combat2_test_run_one_recording_per_arena[^;]*;/)[0]);
   for(const [name,path] of [['unique_holder_before_delete','supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql'],
     ['unique_holder_finalize_delete','supabase/migrations/20260915190000_combat2_authoritative_reward_model.sql'],
     ['combat2_refuse_invalid_stance_equipment_change','supabase/migrations/20261001130000_combat2_character_persistent_stances.sql']]){
@@ -128,14 +128,14 @@ async function resetFixture(){
   for(const [kind,table] of [['inventory','character_inventory'],['ground','node_ground_loot'],['marketplace','marketplace_listings'],['transit',null]]){
     const item=uid(next++),instance=uid(next++),holder=uid(next++);
     await q("INSERT INTO items VALUES($1,'{}','shield')",[item]);
-    await q('INSERT INTO unique_item_instance VALUES($1,$2,$3,$4,now())',[instance,item,kind,holder]);
+    await q('INSERT INTO unique_item_instance(id,item_id,location_kind,location_id) VALUES($1,$2,$3,$4)',[instance,item,kind,holder]);
     if(table==='character_inventory')await q("INSERT INTO character_inventory(character_id,item_id,equipped_slot,current_durability,id,unique_instance_id) VALUES($1,$2,'off_hand',1,$3,$4)",[c.characterId,item,holder,instance]);
     if(table==='node_ground_loot')await q('INSERT INTO node_ground_loot(dropped_by,item_id,id,unique_instance_id) VALUES(NULL,$1,$2,$3)',[item,holder,instance]);
     if(table==='marketplace_listings')await q('INSERT INTO marketplace_listings(seller_character_id,item_id,id,unique_instance_id) VALUES($1,$2,$3,$4)',[dead.characterId,item,holder,instance]);
     await q('INSERT INTO configured_world_placement VALUES($1,$2,$3)',[uid(next++),item,node]);
   }
   await q("INSERT INTO character_stance(character_id,ability_key) VALUES($1,'shield_wall')",[c.characterId]);
-  await q("INSERT INTO issue_reports VALUES($1,'ResetReusable',$2)",[c.characterId,actor]);
+  await q("INSERT INTO issue_reports(character_id,character_name,user_id,message,status) VALUES($1,'ResetReusable',$2,'Historical linked report','open'),(NULL,'Previously removed',$2,'Historical detached report','resolved')",[c.characterId,actor]);
   // Exactly the historical orphan CSV plus the pre-existing local orphan; reset accepts all obsolete material state.
   const csv=read('docs/operations/progression-001G-C2-orphan-materials-snapshot.csv').trim().split(/\r?\n/);
   const headers=csv.shift().split(',');
@@ -145,9 +145,11 @@ async function resetFixture(){
   for(const line of csv){const v=line.split(',').map(x=>x.replace(/^"|"$/g,''));await q('INSERT INTO character_materials VALUES($1,$2,$3)',[v[headers.indexOf('character_id')],v[headers.indexOf('material_key')],Number(v[headers.indexOf('count')])]);}
   await db.exec('ALTER TABLE character_materials ADD CONSTRAINT character_materials_character_id_c2_fkey FOREIGN KEY(character_id) REFERENCES characters(id) ON UPDATE RESTRICT ON DELETE CASCADE NOT VALID');
   for(const status of ['recording','completed']){
-    const run=uid(next++),batch=uid(next++);
-    await q('INSERT INTO combat2_test_run VALUES($1,$2,$3)',[run,status,{historical_character_id:c.characterId}]);
-    await q('INSERT INTO combat2_test_run_batch VALUES($1,$2,$3,1)',[run,batch,uid(next++)]);
+    const run=uid(next++),batch=uid(next++),arena=uid(next++);
+    await q('INSERT INTO combat2_test_arena VALUES($1,false)',[arena]);
+    await q('INSERT INTO combat2_test_run(id,arena_id,status,initiated_by,start_request_id,completed_at,stop_request_id,final_seq,final_summary) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+      [run,arena,status,actor,uid(next++),status==='completed'?'2026-10-09T12:00:00Z':null,status==='completed'?uid(next++):null,status==='completed'?1:null,{historical_character_id:c.characterId}]);
+    await q("INSERT INTO combat2_test_run_batch VALUES($1,$2,$3,1,1,'2026-10-09T11:00:00Z')",[run,batch,uid(next++)]);
     await q('INSERT INTO combat2_test_run_event VALUES($1,$2,1,$3)',[run,batch,{actor_id:dead.characterId,actor_name:'Historical'}]);
   }
   return c;
@@ -156,6 +158,7 @@ test('full reset empties all 72 targets, tombstones, all ground loot, transit an
   await resetFixture();
   const definitions=await q('SELECT to_jsonb(x) r FROM configured_world_placement x');
   const reports=await q("SELECT to_jsonb(x) r FROM combat2_test_run x WHERE status='completed'");
+  const issues=await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id');
   await db.exec(resetSql());
   for(const table of resetNames())assert.equal((await q(`SELECT count(*)::int n FROM ${table}`))[0].n,0,table);
   assert.deepEqual(await q('SELECT to_jsonb(x) r FROM configured_world_placement x'),definitions);
@@ -163,10 +166,33 @@ test('full reset empties all 72 targets, tombstones, all ground loot, transit an
   assert.equal((await q('SELECT count(*)::int n FROM combat2_test_run_event'))[0].n,1);
   assert.equal((await q('SELECT count(*)::int n FROM auth.users'))[0].n,2);
   assert.equal((await q("SELECT count(*)::int n FROM user_roles WHERE role='overlord'"))[0].n,1);
-  assert.deepEqual(await q('SELECT * FROM issue_reports'),[{character_id:null,character_name:null,user_id:actor}]);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues.map(({r})=>({r:{...r,character_id:null}})));
   const fresh=await call({name:'ResetReusable'});assert.ok(fresh.characterId);
   assert.equal((await q('SELECT count(*)::int n FROM character_materials'))[0].n,7);
   assert.equal((await q('SELECT count(*)::int n FROM characters'))[0].n,1);
+}));
+test('original combined issue unlink reproduces hosted23502 and rolls back earlier Arena deletes; corrected schema stays NOT NULL',async()=>tx(async()=>{
+  await resetFixture();await support();await familyFixture();
+  const before=await counts(),issues=await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id');
+  const schema=await q("SELECT attname,attnotnull FROM pg_attribute WHERE attrelid='issue_reports'::regclass AND attnum>0 ORDER BY attname");
+  assert.equal(schema.find(x=>x.attname==='character_id').attnotnull,false);
+  for(const column of ['id','user_id','character_name','message','status','created_at'])assert.equal(schema.find(x=>x.attname===column).attnotnull,true,column);
+  const combined=read('docs/operations/progression-001G-C2-reset-and-cutover.sql');
+  const old=combined.replace('UPDATE public.issue_reports SET character_id=NULL WHERE character_id IS NOT NULL;',
+    'UPDATE public.issue_reports SET character_id=NULL,character_name=NULL WHERE character_id IS NOT NULL OR character_name IS NOT NULL;');
+  assert.notEqual(old,combined);
+  await refused(()=>db.exec(old),error=>{assert.equal(error.code,'23502');assert.equal(error.table,'issue_reports');assert.equal(error.column,'character_name');return true;});
+  assert.deepEqual(await counts(),before);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues);
+  assert.equal((await q('SELECT count(*)::int n FROM combat2_test_run'))[0].n,2);
+  assert.deepEqual(await q("SELECT attname,attnotnull FROM pg_attribute WHERE attrelid='issue_reports'::regclass AND attnum>0 ORDER BY attname"),schema);
+}));
+test('reset preservation assertion detects a historical-name change even when NOT NULL remains satisfied',async()=>tx(async()=>{
+  await resetFixture();const before=await counts(),issues=await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id');
+  const corrupted=resetSql().replace('UPDATE public.issue_reports SET character_id=NULL WHERE character_id IS NOT NULL;',
+    "UPDATE public.issue_reports SET character_id=NULL,character_name='unexpected replacement' WHERE character_id IS NOT NULL;");
+  await refused(()=>db.exec(corrupted),/preserved data changed/);assert.deepEqual(await counts(),before);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues);
 }));
 test('reset rejects unknown persistent FK or unlisted sidecar before losing any rows',async()=>tx(async()=>{
   await resetFixture();const before=await counts();
@@ -187,9 +213,11 @@ test('reset refuses unreviewed DELETE triggers and already-active lifecycle fenc
 }));
 test('reset late assertion failure rolls back all deleted character/runtime/material/report data',async()=>tx(async()=>{
   await resetFixture();const before=await counts();
+  const issues=await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id');
   // Inject failure after deletion, deferred trigger completion and preservation comparison.
   const failing=resetSql().replace('END $reset$;',"RAISE EXCEPTION 'late_reset_assertion'; END $reset$;");
   await refused(()=>db.exec(failing),/late_reset_assertion/);assert.deepEqual(await counts(),before);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues);
   assert.equal((await q('SELECT count(*)::int n FROM combat2_test_run'))[0].n,2);
   assert.equal((await q('SELECT count(*)::int n FROM unique_item_instance'))[0].n,4);
 }));
@@ -201,10 +229,13 @@ test('same-transaction reset plus unchanged corrected B rolls back reset on cuto
     CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE plpgsql AS $$ BEGIN INSERT INTO cron.job VALUES($1,$2,$3);RETURN 1;END $$;
     INSERT INTO cron.job VALUES('character-c2-receipt-expiry','fixture','fixture')`);
   const combined=read('docs/operations/progression-001G-C2-reset-and-cutover.sql'),before=await counts();
+  const issues=await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id');
   assert.ok(combined.indexOf(resetSql())<combined.indexOf(read('docs/operations/progression-001G-C2-integrated-cutover.sql')));
   await refused(()=>db.exec(combined),/job already exists/);assert.deepEqual(await counts(),before);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues);
   await db.exec("DELETE FROM cron.job WHERE jobname='character-c2-receipt-expiry'");await db.exec(combined);
   assert.equal((await q('SELECT count(*)::int n FROM characters'))[0].n,0);
+  assert.deepEqual(await q('SELECT to_jsonb(x) r FROM issue_reports x ORDER BY id'),issues.map(({r})=>({r:{...r,character_id:null}})));
   await db.exec('SET LOCAL ROLE authenticated');
   const created=(await q("SELECT character_create_c2($1,'ResetReusable','human','male',NULL,NULL,'creation-c2-v1') r",[uid(next++)]))[0].r;
   await db.exec('RESET ROLE');assert.ok(created.characterId);
@@ -229,7 +260,10 @@ async function installLifecycleFixture(){
     CREATE TABLE combat_actions(character_id uuid,target_character_id uuid,status text);
     CREATE TABLE node_pending_event(actor_character_id uuid,target_character_id uuid,consumed_at timestamptz);
     CREATE TABLE node_ground_loot(dropped_by uuid);
-    CREATE TABLE issue_reports(character_id uuid,character_name text,user_id uuid);`);
+    `);
+  // Exact source DDL: NOT NULL names/content/status/account plus nullable SET NULL character FK.
+  await db.exec(read('supabase/migrations/20260303171955_64df7909-005f-4cd8-aa02-a30487f6e719.sql')
+    .match(/CREATE TABLE public\.issue_reports\s*\([\s\S]*?\);/)[0]);
   for(const table of ['character_ability_loadout','character_inventory_action_request','character_special_travel_request','character_waymark','character_npc_gifts','character_guide_reads','hidden_path_search_request']) await db.exec(`CREATE TABLE ${table}(character_id uuid)`);
   await db.exec(`CREATE TABLE node_effect(source_character_id uuid,target_character_id uuid);
     CREATE TABLE combat2_player_presence(character_id uuid PRIMARY KEY,user_id uuid,seen_at timestamptz);
@@ -681,7 +715,7 @@ test('eligible purge removes gameplay/origin/progression, preserves other charac
   await q('INSERT INTO character_guide_reads VALUES($1),($2)',[c.characterId,other.characterId]);
   await q('INSERT INTO combat_actions VALUES($1,$2,\'consumed\'),($2,$1,\'consumed\')',[c.characterId,other.characterId]);
   await q('INSERT INTO node_ground_loot VALUES($1)',[c.characterId]);
-  await q('INSERT INTO issue_reports VALUES($1,\'Eldrin\',$2)',[c.characterId,actor]);
+  await q('INSERT INTO issue_reports(character_id,character_name,user_id,message) VALUES($1,\'Eldrin\',$2,\'Historical purge report\')',[c.characterId,actor]);
   await q('INSERT INTO node_pending_event VALUES($1,$2,clock_timestamp())',[c.characterId,other.characterId]);
   await cutover();await lifecycle({id:c.characterId});await overlord();await age(c.characterId,721);
   const preserved=await state(other.characterId),details=(await q('SELECT detailed_receipt FROM character_creation_log WHERE result_character_id=$1',[c.characterId]))[0].detailed_receipt;

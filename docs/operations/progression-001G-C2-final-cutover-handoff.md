@@ -5,6 +5,8 @@
 
 Baseline: ee64bb3ac16742702ea3a0bcd9a82017d436cdb5. No hosted access or execution. This handoff supersedes the earlier blocker report and integrated handoff wherever readiness, runtime composition or orphan disposition differs. ENG-PROGRESSION-001G/C2 gameplay rules remain unchanged.
 
+**Issue-report correction:** first combined attempt reportedly failed23502 and rolled back. The corrected reset clears only issue_reports.character_id and preserves historical character_name plus all report/account/content/status fields. See the current reset handoff for new SQL hashes and source-defined regression fixtures. Corrected B remains byte-identical; inactive support0012 is now registered in fetched source—verify existing installation rather than replay it. No hosted retry/publication is authorized here.
+
 ## Evidence and owner decision
 
 Supplied hosted definitions are retained in [settlement evidence](progression-001G-C2-settlement-installed-definitions.txt). All three LF-normalized body SHA-256 hashes reproduce exactly: wrapper 17185b0df23c90e8707a739249c7940324dd387d49f6ec300a7be1d58d99c183; corrected inner 69e507eb64d25d0559cfd4a37cfc4e3016b2201f221692a3326bb9c219d46e90; Force Shield helper bb2b219f099d6f78809ff1172f219518e5d20f3894dab8a06adddcf8ce1764d8. Supplied postgres ownership, SECURITY DEFINER, volatility, search paths and ACLs are checked in the revised source guards. These are supplied inspection observations, not a Codex hosted verification.

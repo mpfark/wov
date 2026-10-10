@@ -182,8 +182,8 @@ BEGIN
   DELETE FROM public.combat2_test_run WHERE status='recording';
  END IF;
  IF to_regclass('public.issue_reports') IS NOT NULL THEN
-  INSERT INTO c2_reset_preserved SELECT 'issue_reports',to_jsonb(x)-ARRAY['character_id','character_name'] FROM public.issue_reports x;
-  UPDATE public.issue_reports SET character_id=NULL,character_name=NULL WHERE character_id IS NOT NULL OR character_name IS NOT NULL;
+  INSERT INTO c2_reset_preserved SELECT 'issue_reports',to_jsonb(x)-'character_id' FROM public.issue_reports x;
+  UPDATE public.issue_reports SET character_id=NULL WHERE character_id IS NOT NULL;
  END IF;
  -- Leaves before parents according to actual FKs, but only allowlisted tables.
  -- Clear stances before shield inventory; registry after ordinary holder deletion.
@@ -220,7 +220,7 @@ BEGIN
   INSERT INTO c2_reset_after SELECT 'combat2_test_run_event',to_jsonb(x) FROM public.combat2_test_run_event x;
  END IF;
  IF to_regclass('public.issue_reports') IS NOT NULL THEN
-  INSERT INTO c2_reset_after SELECT 'issue_reports',to_jsonb(x)-ARRAY['character_id','character_name'] FROM public.issue_reports x;
+  INSERT INTO c2_reset_after SELECT 'issue_reports',to_jsonb(x)-'character_id' FROM public.issue_reports x;
  END IF;
  IF EXISTS((SELECT * FROM c2_reset_preserved EXCEPT ALL SELECT * FROM c2_reset_after)
   UNION ALL (SELECT * FROM c2_reset_after EXCEPT ALL SELECT * FROM c2_reset_preserved)) THEN

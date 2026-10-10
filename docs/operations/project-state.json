@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T10:35:13.227Z",
-  "based_on_source_sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
+  "updated_at": "2026-10-10T13:30:26.884Z",
+  "based_on_source_sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1609,25 +1609,25 @@
     {
       "identity": "C2 one-time full character reset — explicit local reset/cutover preparation",
       "status": "authored",
-      "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
-      "timestamp": "2026-10-10T10:35:13.227Z",
+      "sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
+      "timestamp": "2026-10-10T13:30:26.884Z",
       "evidence_type": "repository",
       "reporting_actor": "Codex; owner full-reset preparation instruction",
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
-      "evidence": "Latest owner makes all player data, ALL node ground loot and obsolete transit registry disposable; provenance gate superseded without another audit. Existing91 inventory:72 full reset targets+4 selective,15 preserved. Exact reviewed reset composed before unchanged corrected B in ONE proposed transaction; inactive A separate. 55 local SQL tests pass, including9 reset/recovery scenarios, deferred holder/stance triggers, archive/account/world preservation, late reset/cutover rollback and isolated synthetic physical checkpoint restore. Actual provider checkpoint/restore, fresh installed graph/trigger evidence and execution approval remain gates; no hosted action, commit/push/history change. Four F limitations retained. Reset SHA-256 5b4db8a0031f33b0c53f00972cf27c9463cd2904e48f188fcf6a7f62d6321e11; combined d5870370bbc46daa45141f23b7877b4edd949349bc6b71a2ca4867e8d341d2e3. Targeted metadata4 and project-state3 also pass; total62 focused tests, composition and whitespace valid."
+      "evidence": "Owner-reported combined attempt failed23502/issue_reports.character_name NOT NULL and rolled back completely; no independent hosted inspection. Local three-line correction clears only character_id and compares every other report field including historical name. Exact source issue/Arena/registry DDL strengthens fixture.57 SQL tests pass including11 reset/recovery scenarios, original23502 reproduction, unchanged report/account/content/status, successful combined cutover and late-failure rollback; metadata4/project-state3 total64. B unchanged7df1c1cd143433878019628d40d2bff6695df317e43cdb25105c1db31edf4fae. Reset 02da4e8aa9d884cf665456a3c32477b44a57e56705686f50c7b97151fd5f7122; combined c93fd93efb75dd9e2ab8478b8672678b2ecd40be846c46da62d19318cbc48b40. Fetched support0012 source registered at5ee683b4 is retained, not independently hosted-verified or replayed. No new hosted access/retry, installation, commit/push, deployment or history edits. All four F limitations preserved."
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — review full reset/cutover preparation; publication and hosted execution need separate authorization",
+    "identity": "STOP — corrected issue-report reset prepared; source publication and any hosted retry need authorization",
     "status": "blocked",
-    "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
-    "timestamp": "2026-10-10T10:32:38.430Z",
+    "sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
+    "timestamp": "2026-10-10T13:30:26.884Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; owner full-reset preparation instruction",
     "directly_verified": true,
     "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
-    "evidence": "Local requested preparation complete. No further ground-loot provenance request. Before execution: separately authorized source checkpoint, fresh existing integrated/reset metadata checks, practical private recovery checkpoint and actual restore availability, standard runner ONE-transaction guarantee, explicit full-reset AND C2 activation approval. Local synthetic restoration does not establish provider restoration or hosted lock/scheduler behavior. No next action executed."
+    "evidence": "Local NOT NULL correction complete. No further loot investigation or general audit. Before retry: separately authorized corrected source checkpoint and exact hashes, confirm source/installed support0012 (do not replay), original installed-graph/recovery/transaction gates and explicit retry approval. Owner-reported failed attempt rolled back; do not infer live activation or scheduler/hosted restoration proof. No hosted action or publication in this correction task."
   },
   "volatile_runtime_observations": [
     {
