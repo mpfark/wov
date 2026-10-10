@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T18:43:37.119Z",
-  "based_on_source_sha": "01c65fda645c2b6b1c098e8f9e9cd25c40049fe4",
+  "updated_at": "2026-10-10T19:34:06.320Z",
+  "based_on_source_sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -373,6 +373,28 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-lifecycle-timestamp-fix.md",
       "evidence": "Owner reports creation/exact replay/duplicate prevention PASS; owner soft-delete P0001 lifecycle_character_drift, Canaryone version0/no receipt; remaining lifecycle checks not run. Source-defined updated_at trigger reproduces failure locally; patch excludes timestamp from JSON equality but separately requires transaction timestamp.64 isolated SQL tests pass including7 regressions, strict other-field mutation rejection and deferred rollback. Reviewed SQL8d329d18d1a1004551331104d49d89857b4d2906c896dcfe150c04e03b9a6608 outside migrations; function metadata/ACLs unchanged. No hosted inspection/mutation, installation, commit/push or deployment. Calikon and Canaryone untouched; four F limitations retained; C2 NOT COMPLETE."
+    },
+    {
+      "identity": "C2 hosted canary closeout — bounded operator results",
+      "status": "blocked",
+      "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
+      "timestamp": "2026-10-10T19:25:24.563Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik; Codex local acceptance mapping",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-C2-closeout-review.md",
+      "evidence": "Owner reports canonical creation/resources, exact UUID replay/no duplicates, own soft-delete, retained quota/resources, unauthorized player restore refusal, reasoned Overlord restoration and original identity/resources preserved; Calikon unaffected. Canaryone active lifecycle_version2. Fetched0014 source matches reviewed timestamp correction8d329d18d1a1004551331104d49d89857b4d2906c896dcfe150c04e03b9a6608 after LF normalization; no independent hosted ledger/ACL inspection. Earlier frontend publication/login/selection/movement reported. Core bounded canary PASS; C2 NOT COMPLETE pending explicit P5 owner acceptance/addendum for remaining private-provenance/metadata/delegation/unarmed/name-quota concurrency/maintenance coverage. No new defect or hosted campaign indicated. Four F limitations unchanged; no hosted operations, commit/push or character edits."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-C2 COMPLETE — P5 owner acceptance with retained limits",
+      "status": "authored",
+      "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
+      "timestamp": "2026-10-10T19:34:06.320Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit P5 acceptance; Codex documentation reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-C2-P5-owner-acceptance.md",
+      "evidence": "Owner explicitly accepts C2 closure with known verification gaps; exhaustive lifecycle testing not required. Reported hosted core canonical creation/resources/exact replay/no duplicates/own deletion/retained quota/player restore denial/reasoned Overlord restore/identity-resource preservation PASS; Calikon unaffected, Canaryone active version2. Owner identifies earlier authoritative Lovable Calikon origin/receipt/privilege/starting-resource reads; raw transcript and exact matrices not available locally, no invented details.0013/0014 source identities reconciled; frontend publication reported. C2 COMPLETE with accepted limitations, not exhaustive live proof. Remaining delegation/unarmed/concurrency/lifecycle edges/scheduler-retention/family-XP coverage deferred nonblocking. All four F limitations remain open. Earlier conditional entries are historical and superseded by this acceptance. Overall001G open; next001G-D planned only. No hosted activity, migrations, runtime edits, commit/push or deployment."
     }
   ],
   "generated_supabase_types": {
@@ -1641,15 +1663,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — lifecycle timestamp fix needs publication/installation authorization; lifecycle runtime incomplete",
+    "identity": "NEXT PLANNED — ENG-PROGRESSION-001G-D admin authority/UI containment; awaiting separate authorization",
     "status": "blocked",
-    "sha": "01c65fda645c2b6b1c098e8f9e9cd25c40049fe4",
-    "timestamp": "2026-10-10T18:43:37.119Z",
+    "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
+    "timestamp": "2026-10-10T19:34:06.320Z",
     "evidence_type": "repository",
-    "reporting_actor": "Codex; owner full-reset preparation instruction",
+    "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
-    "evidence": "Local correction prepared. Separate approval required for source publication, guarded standard Drizzle installation and canary lifecycle retry. Do not rerun reset/cutover or touch Calikon. Owner-reported canary creation/replay pass; hosted lifecycle remains unverified."
+    "artifact": "docs/operations/progression-001G-C2-P5-owner-acceptance.md",
+    "evidence": "C2 COMPLETE with explicitly accepted limitations; no further C2 closure task. Existing001G-D admin authority/UI containment is next; preserve O8 lifecycle already completed under C2. D implementation has not started and requires separately scoped instruction; E/F remain later. Accepted unperformed tests are follow-ups, not C2 blockers. Four F limitations remain open."
   },
   "volatile_runtime_observations": [
     {
