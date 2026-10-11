@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-11T08:03:44.083Z",
+  "updated_at": "2026-10-11T08:28:55.921Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -553,18 +553,29 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
       "evidence": "Mik reports D1/D2 Edge deployed. Source/tests verified; no live bundle/readback or comprehensive per-route runtime campaign. Earlier local-only records superseded for rollout status."
+    },
+    {
+      "identity": "admin-users ENG-PROGRESSION-001G-D4 canonical token award",
+      "status": "deployed",
+      "sha": null,
+      "timestamp": "2026-10-11T08:21:58.713Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik D final review context",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-D-closeout-review.md",
+      "evidence": "Owner reports D4 Edge deployed following0016 installation. Exact deployment timestamp/revision/live bundle unknown. UI controls visible per owner; authenticated awards remain untested. D1/D2 containment preserved in source; no hosted operation performed by Codex."
     }
   ],
   "frontend_publication": {
-    "identity": "ENG-PROGRESSION-001G-D1/D2 manual frontend publication",
+    "identity": "ENG-PROGRESSION-001G-D1–D4 manual frontend publication",
     "status": "manually_published",
     "sha": null,
-    "timestamp": "2026-10-10T22:56:35.880Z",
+    "timestamp": "2026-10-11T08:21:58.713Z",
     "evidence_type": "operator_reported",
-    "reporting_actor": "Mik rollout report; Codex local source reconciliation",
+    "reporting_actor": "Mik D final review context",
     "directly_verified": false,
-    "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
-    "evidence": "Mik reports manual publication and normal Admin access/workflows appear available. Report date2026-10-11; exact published revision/time not independently known.1b7e2ddf is reviewed source checkpoint, not a verified deployed bundle identity. Earlier frontend evidence remains in historical records; unrelated feature publication not inferred."
+    "artifact": "docs/operations/progression-001G-D-closeout-review.md",
+    "evidence": "Owner reports D4 frontend manually published and token controls visible in Admin → Users. UI smoke only, not proof of authenticated token award/refusal/replay. Published bundle/revision/time not supplied; earlier D1/D2 rollout preserved in historical records."
   },
   "combat2_operational_work": [
     {
@@ -1488,6 +1499,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/progression-001G-C2-final-cutover-handoff.md",
       "evidence": "203 CSV rows/29 UUIDs/1341 units verified; owner approved preparation including seven deviations. Historical MD5 unrecoverable/not executable. Bidirectional typed UTC-microsecond snapshot equality, locks, zero-orphan postcondition and FK readiness; no cleanup execution. Exact supplied three settlement body hashes reproduced; wrapper unchanged, corrected inner/helper tombstone predicates only; guards and composed cutover updated; A unchanged. 91 focused local SQL tests pass. No hosted concurrency/scheduler proof, installed migrations/history changes, commit, push, deployment or activation. Four F limitations unchanged."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-D COMPLETE — explicit owner acceptance with retained limitations",
+      "status": "authored",
+      "sha": "f6833b87fc4bd9c99eafa78c27d25a513768a9af",
+      "timestamp": "2026-10-11T08:28:55.921Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit D acceptance; Codex documentation reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-D-closeout-review.md",
+      "evidence": "Owner accepts D1–D4 delivered/rolled-out scope and nonblocking unverified authenticated token awards/refusals/UUID replay, hosted ACL readback, actual cron expiry and privileged v3→v2 uncertainty (neither contained nor exploitable proven). D COMPLETE with accepted limitations; approved tools/corrections deferred, C2 COMPLETE, four F limitations OPEN, overall001G OPEN. Broader review not prerequisite for E. No hosted actions or repair authorization."
     }
   ],
   "known_blockers": [
@@ -1719,15 +1741,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D4 database installed per owner report; ready for separately authorized Edge deployment",
+    "identity": "STOP — D COMPLETE with accepted limitations; E bounded read-only classification plan prepared",
     "status": "blocked",
     "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
-    "timestamp": "2026-10-11T08:03:44.083Z",
+    "timestamp": "2026-10-11T08:28:55.921Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-D4-respec-token-handoff.md",
-    "evidence": "D4 source published f7590e41; installed0016 reported by Mik, generated SQL/journal/snapshot/types reconciled at1f2118e5. Edge/UI source unchanged and locally validated. No Edge deployment or D4 frontend publication/runtime test performed here; separate authorization required. D acceptance open; C2/XP pause/four F limitations unchanged."
+    "artifact": "docs/operations/progression-001G-D-closeout-review.md",
+    "evidence": "Explicit D acceptance recorded. Next E first step: define narrow current-character/origin/progression evidence inventory and classify No issue/Accepted historical state/Requires evidence/Individually approved repair candidate. Current population and repair need unknown; no automatic normalization, hosted read or repair executed. Overall001G/E/F remain open; C2 complete and four F limitations unchanged."
   },
   "volatile_runtime_observations": [
     {
