@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-10T23:19:46.140Z",
+  "updated_at": "2026-10-11T08:03:44.083Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -406,17 +406,28 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
       "evidence": "Mik reports D3 installed. Source0015/journal/snapshot present at1b7e2ddf; exact reviewed SQL preserved. No fresh hosted ACL/history inspection. Browser containment only; service authority retained. Earlier NOT INSTALLED preparation records superseded."
+    },
+    {
+      "identity": "0016_progression_001g_d4_respec_token_award",
+      "status": "installed",
+      "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
+      "timestamp": "2026-10-11T08:03:44.083Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik installation report; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0016_progression_001g_d4_respec_token_award.sql",
+      "evidence": "Mik reports successful hosted D4 installation and 17 history rows. Lovable source commit d696e9cb502133d3e5ac8ba12ec6c0aa0b569017 merged at1f2118e5. Committed SQL is byte-identical to approved8531-byte SHA256 6fffef744a6213d27cd93f0c7b60e9c7580b64d035ca414d6f029a8e184acdaf; Windows working copy CRLF differs only by line endings. Journal index16 and17 snapshot links verified locally; generated types add only D4 log/three functions. No direct hosted history, effective ACL or scheduler inspection by Codex. D4 Edge NOT DEPLOYED; frontend NOT PUBLISHED for D4; runtime unverified. C2/XP pause and all four accepted F limitations preserved."
     }
   ],
   "generated_supabase_types": {
     "status": "committed",
-    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
-    "timestamp": "2026-10-09T12:36:59Z",
+    "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
+    "timestamp": "2026-10-11T08:03:44.083Z",
     "artifact": "src/integrations/supabase/types.ts",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Fetched platform-generated0009 checkpoint adds private creation function declaration. Source only; types confer no permissions and do not prove current hosted access. No local regeneration/deployment."
+    "evidence": "Lovable D4 regeneration adds only admin_respec_award_log and admin_respec_award/admin_respec_award_internal/admin_respec_award_log_expire_internal signatures. Source comparison verified; generated declarations do not grant access or establish current hosted ACLs."
   },
   "edge_function_deployments": [
     {
@@ -1708,15 +1719,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D4 token award locally implemented/tested; separate source publication and rollout authorization",
+    "identity": "STOP — D4 database installed per owner report; ready for separately authorized Edge deployment",
     "status": "blocked",
-    "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
-    "timestamp": "2026-10-10T23:19:46.140Z",
+    "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
+    "timestamp": "2026-10-11T08:03:44.083Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
     "artifact": "docs/operations/progression-001G-D4-respec-token-handoff.md",
-    "evidence": "Local token-only SQL/Edge/UI prepared; role caps/self restriction, reason, atomic request replay/progression receipt,12-month private log and existing cron expiry job. NOT INSTALLED/DEPLOYED/PUBLISHED. C2/XP pause and four F limits preserved; installation requires canonical dependency/ACL/cron verification. Validation:9 SQL and59 focused tests, typecheck/build/state/migration consistency pass. D4 UI review blocker corrected locally: rendered reason/new-award controls, role-cap validation, pending guard, UUID replay/reset and authoritative refresh covered by actual UserManager interaction tests. No publication or rollout."
+    "evidence": "D4 source published f7590e41; installed0016 reported by Mik, generated SQL/journal/snapshot/types reconciled at1f2118e5. Edge/UI source unchanged and locally validated. No Edge deployment or D4 frontend publication/runtime test performed here; separate authorization required. D acceptance open; C2/XP pause/four F limitations unchanged."
   },
   "volatile_runtime_observations": [
     {
