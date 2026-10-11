@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-11T10:20:33.145Z",
+  "updated_at": "2026-10-11T10:35:26.251Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1532,6 +1532,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-F-closure-checklist.md",
       "evidence": "Owner accepts001G including F COMPLETE with C2/D/E staged scope and E no-repair conclusion. Retain unverified behavior, privileged v3→v2 uncertainty, deferred tools and all four OPEN F limitations; no universal runtime/ACL proof. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout. No gameplay code change, normal XP investigation, hosted action or repair."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001H COMPLETE — owner acceptance of retained restricted legacy paths",
+      "status": "authored",
+      "sha": "16fbb59b1cad342c716e96db6f78e18c8afa5595",
+      "timestamp": "2026-10-11T10:35:26.251Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit H acceptance; Codex documentation reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001H1-legacy-dependency-inventory.md",
+      "evidence": "H1 bounded dependency inventory accepted. Owner retains410/503 refusals/disabled controls, legacy combat modules/test dependencies, restricted XP/Order/bond/Renown functions, legacy creation/deletion RPCs/service teleport and uncertain privileged v3→v2 delegation. No secure/unrestricted/fully verified claim; physical removal deferred. Roadmap allows uncertain restricted wrappers; accepted D–G prerequisites met.001H and agreed progression delivery sequence complete at staged evidence levels;001G/F/C2/D/E closure unchanged, four F limitations OPEN, deferred features remain deferred. Administrative XP grants paused only; normal gameplay XP not intentionally disabled or runtime-established. No code, SQL, hosted action or privilege change."
     }
   ],
   "known_blockers": [
@@ -1763,15 +1774,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — 001G/F COMPLETE with accepted limitations; bounded H1 dependency inventory proposed only",
+    "identity": "STOP — 001H COMPLETE with accepted retention; future writer-map scope task proposed only",
     "status": "blocked",
     "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
-    "timestamp": "2026-10-11T10:20:33.145Z",
+    "timestamp": "2026-10-11T10:35:26.251Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-F-closure-checklist.md",
-    "evidence": "Final owner acceptance recorded. Proposed next H1: existing legacy candidate/caller/authority dependency inventory before any removal, retain uncertain restricted wrappers. No H implementation or broad Authority/Writer Map audit begun. Separate H1 authorization required. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout."
+    "artifact": "docs/operations/progression-001H1-legacy-dependency-inventory.md",
+    "evidence": "Owner H acceptance recorded; no further progression retirement implementation mandatory for accepted closure. Future entry ENG-LEGACY-001/bounded runtime retirement audit; separately authorize map scope/evidence-format preparation reusing existing records. No broad audit begun, no deletion/hosted probe/privilege change. Preserve four F limitations and accepted uncertainties/deferrals. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout."
   },
   "volatile_runtime_observations": [
     {
