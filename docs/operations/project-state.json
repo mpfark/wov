@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-11T08:28:55.921Z",
+  "updated_at": "2026-10-11T08:44:55.033Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1741,15 +1741,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D COMPLETE with accepted limitations; E bounded read-only classification plan prepared",
+    "identity": "STOP — E1 bounded read-only inventory prepared; hosted read requires separate authorization",
     "status": "blocked",
     "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
-    "timestamp": "2026-10-11T08:28:55.921Z",
+    "timestamp": "2026-10-11T08:44:55.033Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-D-closeout-review.md",
-    "evidence": "Explicit D acceptance recorded. Next E first step: define narrow current-character/origin/progression evidence inventory and classify No issue/Accepted historical state/Requires evidence/Individually approved repair candidate. Current population and repair need unknown; no automatic normalization, hosted read or repair executed. Overall001G/E/F remain open; C2 complete and four F limitations unchanged."
+    "artifact": "docs/operations/progression-001G-E1-inventory.md",
+    "evidence": "Prepared minimal current-character/origin/sidecar/receipt/milestone/lifecycle SELECT-only transaction, no RPC/SQL execution. Actual remaining legacy cases and repair need unknown; missing proof is not corruption. Next separately authorized hosted projection, anomaly-driven follow-up only. E may close without repairs if evidence supports dispositions or owner accepts explicit remaining limits. D/C2 COMPLETE with accepted limitations; overall001G and four F limitations OPEN. No repair candidate demonstrated."
   },
   "volatile_runtime_observations": [
     {
