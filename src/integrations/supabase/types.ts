@@ -409,6 +409,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_respec_award_log: {
+        Row: {
+          actor_id: string
+          amount: number
+          character_id: string
+          created_at: string
+          expires_at: string
+          reason: string
+          request_id: string
+        }
+        Insert: {
+          actor_id: string
+          amount: number
+          character_id: string
+          created_at?: string
+          expires_at?: string
+          reason: string
+          request_id: string
+        }
+        Update: {
+          actor_id?: string
+          amount?: number
+          character_id?: string
+          created_at?: string
+          expires_at?: string
+          reason?: string
+          request_id?: string
+        }
+        Relationships: []
+      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -6538,6 +6568,30 @@ export type Database = {
           _target_node_id: string
         }
         Returns: Json
+      }
+      admin_respec_award: {
+        Args: {
+          _actor: string
+          _amount: number
+          _character: string
+          _reason: string
+          _request: string
+        }
+        Returns: Json
+      }
+      admin_respec_award_internal: {
+        Args: {
+          _actor: string
+          _amount: number
+          _character: string
+          _reason: string
+          _request: string
+        }
+        Returns: Json
+      }
+      admin_respec_award_log_expire_internal: {
+        Args: never
+        Returns: undefined
       }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
