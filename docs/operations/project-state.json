@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-11T08:44:55.033Z",
+  "updated_at": "2026-10-11T09:19:47.573Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1510,6 +1510,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-D-closeout-review.md",
       "evidence": "Owner accepts D1–D4 delivered/rolled-out scope and nonblocking unverified authenticated token awards/refusals/UUID replay, hosted ACL readback, actual cron expiry and privileged v3→v2 uncertainty (neither contained nor exploitable proven). D COMPLETE with accepted limitations; approved tools/corrections deferred, C2 COMPLETE, four F limitations OPEN, overall001G OPEN. Broader review not prerequisite for E. No hosted actions or repair authorization."
+    },
+    {
+      "identity": "ENG-PROGRESSION-001G-E COMPLETE — E2 inventory / owner acceptance; no repairs",
+      "status": "authored",
+      "sha": "371b33437d374b21f324b0a944ff386c9c4dc1f5",
+      "timestamp": "2026-10-11T09:13:09.185Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied E2 evidence and explicit E acceptance",
+      "directly_verified": false,
+      "artifact": "docs/operations/progression-001G-E1-inventory.md",
+      "evidence": "Hosted read-only inventory role supabase_read_only_user;2 current characters both NO ISSUE for selected subset. No missing origins/progression sidecars, basic-state/version flags, repair candidates or unresolved anomalies. No mutations/repairs; E required no repairs. Owner accepts selected-invariant coverage, separate statement snapshots for metadata/inventory and excluded purged history. Not direct Codex hosted verification or exhaustive state proof. E COMPLETE with accepted limitations; C2/D complete, overall001G OPEN, four F limitations OPEN."
     }
   ],
   "known_blockers": [
@@ -1741,15 +1752,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — E1 bounded read-only inventory prepared; hosted read requires separate authorization",
+    "identity": "STOP — E COMPLETE without repairs; bounded F final closure checklist prepared",
     "status": "blocked",
     "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
-    "timestamp": "2026-10-11T08:44:55.033Z",
+    "timestamp": "2026-10-11T09:19:47.573Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex; Mik P5 owner acceptance",
     "directly_verified": true,
-    "artifact": "docs/operations/progression-001G-E1-inventory.md",
-    "evidence": "Prepared minimal current-character/origin/sidecar/receipt/milestone/lifecycle SELECT-only transaction, no RPC/SQL execution. Actual remaining legacy cases and repair need unknown; missing proof is not corruption. Next separately authorized hosted projection, anomaly-driven follow-up only. E may close without repairs if evidence supports dispositions or owner accepts explicit remaining limits. D/C2 COMPLETE with accepted limitations; overall001G and four F limitations OPEN. No repair candidate demonstrated."
+    "artifact": "docs/operations/progression-001G-F-closure-checklist.md",
+    "evidence": "E2 supplied read-only evidence and explicit owner acceptance recorded. No repair necessary. C2/D/E COMPLETE with accepted limitations; overall001G/F OPEN. Minimum next task documentation-only consolidated F review/explicit owner acceptance; no comprehensive audit or runtime campaign prerequisite. Retain all four F limitations, D token/ACL/cron/delegation uncertainty, C2 accepted coverage and E selected-invariant/separate-snapshot/purged-history limits. No hosted operations or repairs by Codex."
   },
   "volatile_runtime_observations": [
     {

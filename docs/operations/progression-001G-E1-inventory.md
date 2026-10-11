@@ -1,6 +1,6 @@
 # ENG-PROGRESSION-001G-E1 — bounded legacy-state inventory
 
-Prepared2026-10-11; not executed. D and C2 COMPLETE with accepted limitations; overall001G OPEN. No repair case demonstrated. [Prepared query](progression-001G-E1-inventory.sql) is an evidence intake, not a validator or repair command.
+E1 preparation2026-10-11; E2 hosted execution now owner-reported below. E COMPLETE with explicitly accepted limitations; no repairs required. D and C2 COMPLETE with accepted limitations; overall001G OPEN. No repair case demonstrated. [Prepared query](progression-001G-E1-inventory.sql) is an evidence intake, not a validator or repair command.
 
 ## Existing evidence and local conclusions
 
@@ -28,3 +28,9 @@ E closure requires a bounded current inventory, disposition of any returned anom
 First step: separately authorized execution of the single prepared hosted projection; only anomaly-driven follow-up. No policy blocker to that read. Actual population and correction necessity remain REQUIRES EVIDENCE until then. No new demonstrated problem, migration or repair proposal.
 
 OPEN unchanged: HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP.
+
+## E2 execution and explicit owner acceptance — 2026-10-11
+
+Owner supplies successful hosted read-only inventory: observation2026-10-11T09:13:09.185Z, role supabase_read_only_user;2 current characters, both NO ISSUE for the checked subset. No missing creation origins/progression sidecars, no basic-state/version flags, no repair candidates or unresolved inventory anomalies. No hosted mutation or repair. This is supplied operator evidence, not a Codex hosted inspection; no raw per-character rows or additional invariants invented.
+
+Owner explicitly accepts E closure without repairs. E COMPLETE WITH ACCEPTED LIMITATIONS: selected invariants only; observation metadata and inventory used separate statement snapshots (do not claim the prepared repeatable-read transaction was the actual executed mechanism); purged-character historical records outside scope. No detailed-resource/growth/history or exhaustive correctness claim. Earlier prepared/not-dispatched request text is historical and superseded for E2 execution status. No anomaly-driven second read necessary on the supplied result. C2/D COMPLETE, overall001G OPEN, four F limitations OPEN. Next: [bounded F checklist](progression-001G-F-closure-checklist.md), not repair implementation.
