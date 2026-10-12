@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T07:56:33.956Z",
+  "updated_at": "2026-10-12T08:41:24.753Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1598,6 +1598,28 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001C3-resource-sync-preflight.md",
       "evidence": "One SELECT envelope for exact sync/derived/action/repair/restrict functions, direct/effective EXECUTE, all noninternal characters/inventory triggers including constraint triggers and full bound definitions, relevant columns/defaults/constraints and filtered isolation metadata. Five normalized source fingerprints computed; no installed parity assumed. PASS/FAIL/REQUIRES EVIDENCE and same-statement versus separate observations defined. No gameplay rows/calls, SQL execution, hosted operation, correction or publication. Prior C1/C2 work, closures and accepted limitations preserved. Validation:18 applicable tests PASS, one unchanged bash-dependent check FAILS with ENOENT; single-statement scope/privacy and five source hashes/links/whitespace pass. SQL not executed or compiled."
+    },
+    {
+      "identity": "ENG-LEGACY-001C3 hosted sync metadata received — owner report",
+      "status": "authored",
+      "sha": "4ee7994cbe1e19ea836b634e7dec28d386088844",
+      "timestamp": "2026-10-12T08:41:24.753Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik C4 supplied preflight summary",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
+      "evidence": "Four PASS/zero FAIL/three REQUIRES EVIDENCE; installed sync normalized fingerprint f5fb2896e66dec364d86403494c485b0e9ef967e7fe1bb99a1fae7bf8a30e096 matches unlocked source. Full per-check result/observation time/role not supplied; recording timestamp only. No hosted mutation or concurrency test; remaining checks not invented as resolved."
+    },
+    {
+      "identity": "ENG-LEGACY-001C4 minimal sync locking correction locally prepared",
+      "status": "authored",
+      "sha": "4ee7994cbe1e19ea836b634e7dec28d386088844",
+      "timestamp": "2026-10-12T08:41:24.753Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
+      "evidence": "Guarded patch adds only FOR UPDATE to initial character read; captured values protected through calculation/UPDATE. Same formulas/caps/clamps/auth/AC/overrides/equipment semantics and grants; no new tables/triggers/other-function changes. Nine isolated exact-SQL tests pass including lock-mode/body proof and serialized prior updates; no independent-session lock-wait proof. Lock-order assessment uses existing character ownership, adds no node/encounter/inventory locks. Installation gated on source/security/ACL/trigger/runner prerequisites and separate authorization. No hosted operations, deployment, commit or push. Validation:18 existing source/state/mirror equality tests PASS; unchanged bash-dependent import check FAILS ENOENT. Nine new SQL tests PASS; 18-entry migration chain, state/link/hash/whitespace checks PASS. No hosted multi-session claim."
     }
   ],
   "known_blockers": [
@@ -1829,15 +1851,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — ENG-LEGACY-001C3 source preflight prepared; hosted read-only authorization pending",
+    "identity": "STOP — C4 reviewed source correction; installation authorization and prerequisites pending",
     "status": "blocked",
     "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
-    "timestamp": "2026-10-12T07:56:33.956Z",
+    "timestamp": "2026-10-12T08:41:24.753Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001C3-resource-sync-preflight.md",
-    "evidence": "Lovable prompt and SELECT-only SQL prepared locally; source publication authorized by C3A; hosted read-only execution remains separately gated. Source parity does not prove concurrency correctness, RPC isolation or item override intent. No correction authorized; preserve B/progression closure, four F limitations, v3 uncertainty and admin-only XP policy."
+    "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
+    "evidence": "Minimal reviewed SQL and tests complete locally. Source/security/authority drift guards preserve existing metadata. Remaining C3 gaps and hosted concurrency not declared resolved; no AC/override/callback/helper changes. Preserve all prior closures/four F limitations, v3 uncertainty and admin-only XP policy. Source publication authorized by C4A; installation remains separately gated."
   },
   "volatile_runtime_observations": [
     {
