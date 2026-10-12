@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T09:27:40.809Z",
+  "updated_at": "2026-10-12T10:24:34.124Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1642,6 +1642,28 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
       "evidence": "Clean fast-forward, expected three automatic migration metadata files only; committed0018 SQL exact approved bytes;19-entry journal/snapshot prefix preserves original18. Installed status/security/fingerprint is owner-supplied, not direct Codex hosted/runtime verification. One-line read lock correction installed; C remains open with C3 gaps and AC/override/callback/helper findings requiring disposition. Prior closures and four F limitations unchanged; no local gameplay/sourceSQL/grant/history changes."
+    },
+    {
+      "identity": "ENG-LEGACY-001C5 remaining resource-authority disposition prepared",
+      "status": "authored",
+      "sha": "08f815764df39f0718d24422e121012c98ae249b",
+      "timestamp": "2026-10-12T09:39:59.858Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C5-resource-authority-disposition.md",
+      "evidence": "Bounded three-helper source/caller/ACL-history review reuses C1-C4. L1 deliberately retained heal both overloads and damage; historical2026-10-02 metadata effective authenticated/service access, current hosted ACL unverified. July bodies validate ownership/party but caller-authored amounts/cap, no gameplay event proof. Current GamePage fences heal and routes departure before damage fallback; no supported authenticated dependency demonstrated, external/dynamic/server usage uncertain. Recommend exact browser EXECUTE containment with bodies/server rights retained after owner approval and narrow metadata. C closure NO-GO pending helper disposition; remaining verification limits and inventory-domain deferrals proposed, not silently owner-accepted. No implementation, SQL/hosted probe, commit/push; previous closures/F limitations preserved. Validation:14 tests PASS, one unchanged baseline legacy ACL test fails on absent old migration-history blocked entry at line135; known_blockers identical to HEAD. No tests/status rewritten. State/link/whitespace preservation pass."
+    },
+    {
+      "identity": "ENG-LEGACY-001C5A exact legacy HP helper ACL containment prepared",
+      "status": "authored",
+      "sha": "08f815764df39f0718d24422e121012c98ae249b",
+      "timestamp": "2026-10-12T10:24:34.124Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C5A-hp-helper-containment.md",
+      "evidence": "Exact source/historical signatures: heal(uuid,uuid,integer), heal(uuid,uuid,integer,integer) fourth integer defaultNULL, damage(uuid,integer). SELECT-only exact metadata preflight and transactional ACL-only correction outside migrations prepared; revoke only PUBLIC/anon/authenticated, retain bodies/owner/service and other actual server ACL entries. Fingerprint/security/server prerequisite guards and effective browser/retained rights postconditions. Eight static regression checks pass; no SQL execution per restriction, no PostgreSQL rollback/inheritance/concurrency proof. Current hosted ACL/default/server-consumer evidence and separate publication/installation authorization pending. C open; existing closures/F/v3/XP policy preserved."
     }
   ],
   "known_blockers": [
@@ -1873,15 +1895,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — C4 installed/reconciled; remaining C-domain findings await targeted disposition",
+    "identity": "STOP — C5A ACL-only preparation complete; exact hosted metadata and installation authorization pending",
     "status": "blocked",
-    "sha": "0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2",
-    "timestamp": "2026-10-12T09:27:40.809Z",
+    "sha": "08f815764df39f0718d24422e121012c98ae249b",
+    "timestamp": "2026-10-12T10:24:34.124Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
-    "evidence": "No additional implementation authorized. Retain C3 missing metadata breakdown and unverified multi-session behavior. Prioritize disposition of AC freshness/empty override semantics/equipment callback boundary and retained helper authority from C1/C2, reusing evidence without broad audit. C not marked COMPLETE. Progression/B closures, four F limitations, v3 uncertainty and administrative XP grant pause preserved."
+    "artifact": "docs/operations/legacy-001C5A-hp-helper-containment.md",
+    "evidence": "Source publication owner-authorized; then obtain separately authorized three-signature current metadata and identified server consumer checks. Source/historical signature resolved, current hosted authority unverified. Stop on drift/inherited residual or server reliance on removed rights, no broad grants/revokes. No SQL executed, body change or C closure; preserve recovery stash and accepted limitations."
   },
   "volatile_runtime_observations": [
     {
