@@ -134,6 +134,13 @@
       "when": 1791796628642,
       "tag": "0018_legacy_001c4_resource_sync_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791804870482,
+      "tag": "0019_legacy_001c5a_hp_helper_containment",
+      "breakpoints": true
     }
   ]
 }
