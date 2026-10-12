@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T12:02:17.676Z",
-  "based_on_source_sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
+  "updated_at": "2026-10-12T13:02:46.032Z",
+  "based_on_source_sha": "44779594c71ee042193457f193d031fd738ae9fe",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1686,6 +1686,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
       "evidence": "C4/C5C installation metadata owner-reported; local ancestry, exact SQL and20-entry chain verified. No newly demonstrated material authority blocker. Proposed accepted limitations and inventory-domain deferrals require separate owner acceptance. Actual C remains OPEN, overall LEGACY001 OPEN; previous closures, F limitations and administrative-only XP pause unchanged."
+    },
+    {
+      "identity": "ENG-LEGACY-001C COMPLETE WITH ACCEPTED LIMITATIONS — C7 owner acceptance",
+      "status": "authored",
+      "sha": "44779594c71ee042193457f193d031fd738ae9fe",
+      "timestamp": "2026-10-12T13:02:46.032Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit C7 owner acceptance; Codex documentation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
+      "evidence": "Owner accepts C6 closure: visibility/isolation gaps, unverified multi-session concurrency, AC inconsistencies and privileged/server/external caller uncertainty retained. Equipment synchronization/missing paths, callback transactionality and empty-object overrides deferred to Inventory/Items/Crafting. C4/C5 installed corrections intact; no runtime proof inferred. Prior progression/B closures, four OPEN F limitations and administrative-only XP pause preserved. Overall LEGACY001 OPEN."
     }
   ],
   "known_blockers": [
@@ -1917,15 +1928,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — ENG-LEGACY-001C owner acceptance of C6 disposition pending",
+    "identity": "STOP — next Inventory / Items / Crafting domain investigation awaits authorization",
     "status": "blocked",
-    "sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
-    "timestamp": "2026-10-12T12:02:17.676Z",
+    "sha": "44779594c71ee042193457f193d031fd738ae9fe",
+    "timestamp": "2026-10-12T13:02:46.032Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
-    "evidence": "Reconciliation/documentation publication authorized. C COMPLETE WITH ACCEPTED LIMITATIONS is proposed only; explicit owner acceptance required before final closure. No new correction, hosted work or next-domain audit authorized."
+    "artifact": "docs/operations/legacy-001A-authority-writer-map-scope.md",
+    "evidence": "C7 closes resource domain with explicit owner acceptance. Next proposed bounded inventory/items/crafting writer/dependency map reuses C equipment findings. No implementation, hosted work or next-domain investigation authorized by closeout."
   },
   "volatile_runtime_observations": [
     {

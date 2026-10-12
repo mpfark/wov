@@ -94,7 +94,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 
 ### ENG-LEGACY-001 — Remaining gameplay-writer audit
 
-Bounded batch update (2026-10-12): [001B COMPLETE WITH ACCEPTED LIMITATIONS](../operations/legacy-001B6-combat2-closeout.md), claim/commit/OOC source map plus 0017 stance membership correction installed/metadata verified per owner. Runtime/concurrency, privileged delegation and remaining domains stay unverified/open. Proposed next 001C: local character resource/stat/equipment ownership slice reusing B; not started or implementation-authorized. Overall task status below is unchanged.
+Bounded batch update (2026-10-12): [001B COMPLETE WITH ACCEPTED LIMITATIONS](../operations/legacy-001B6-combat2-closeout.md); [001C COMPLETE WITH ACCEPTED LIMITATIONS by C7 owner acceptance](../operations/legacy-001C6-resource-domain-acceptance-proposal.md). C4/0018 resource lock and C5C/0019 HP-helper ACL containment installed/metadata verified per owner; reconciliation preserved. Visibility/isolation, multi-session concurrency, AC and privileged/external-caller uncertainties remain accepted limitations, not fixes or runtime verification. Equipment synchronization, callback transactionality and empty-object override semantics are deferred to the next Inventory / Items / Crafting domain. Next bounded investigation requires separate authorization; overall ENG-LEGACY-001 remains OPEN. Previous closures, four OPEN F limitations and administrative-only XP-grant pause unchanged.
 
 - **Engine area / status / priority:** authority boundaries; `implemented_source`; 6.
 - **Problem or decision:** legacy hooks and temporary rollout surfaces may still contain dormant mutation paths.

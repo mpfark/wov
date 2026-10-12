@@ -1,6 +1,6 @@
 # ENG-LEGACY-001C6 — reconciliation and resource-domain acceptance proposal
 
-**Actual C status: OPEN / READY FOR OWNER REVIEW.** Proposed closure: **COMPLETE WITH ACCEPTED LIMITATIONS**, contingent on separate explicit owner acceptance. No acceptance is inferred from installation authorization or this reconciliation task. Overall ENG-LEGACY-001 is not complete.
+**Current C status: COMPLETE WITH ACCEPTED LIMITATIONS**, by explicit C7 owner acceptance on 2026-10-12. Overall ENG-LEGACY-001 remains OPEN. The C6 proposal below is retained as historical evidence; its pending-acceptance statements describe the pre-C7 state.
 
 ## Reconciled installation evidence
 
@@ -47,3 +47,13 @@ Administrative XP grants remain paused. Normal gameplay XP earning, including cr
 Eight C5A static checks, nine isolated C4 SQL tests, project-state tests, typecheck, source hash/prefix checks, documentation links and whitespace are applicable local checks. The preparation-era C5A test asserting no installed C5A entry was reconciled to allow only exact reviewed0019 at index19 with identical normalized SQL and intact chain; ACL/body/security regression assertions unchanged. No SQL correction/history edited, and no C5A PostgreSQL execution/runtime proof introduced.
 
 Known unrelated baseline bash ENOENT and stale historical-status tests remain documented, not newly resolved; they are not silently counted as runtime authority verification. No production build/deployment or additional Lovable work. Source publication covers this reconciliation and proposal only.
+
+## C7 — explicit owner acceptance and closeout (2026-10-12)
+
+The owner explicitly accepts this published C6 disposition and closes ENG-LEGACY-001C COMPLETE WITH ACCEPTED LIMITATIONS. Accepted limitations: metadata visibility/isolation evidence gaps; unverified multi-session runtime concurrency; AC freshness/calculation inconsistencies; remaining privileged/server helper authority and unidentified external/dynamic callers. None is fixed or runtime-verified by this closeout.
+
+Equipment resource synchronization and missing synchronization paths, callback transactionality, and empty-object equipment stat-override semantics are deferred to the Inventory / Items / Crafting domain. The other retained C6 findings and scoped browser HP-helper refusal remain explicit; no physical helper retirement or new authority assurance is inferred.
+
+C4/0018 and C5C/0019 installed corrections and C6 reconciliation remain intact. Local migration chain and unchanged SQL checks verify source preservation; hosted installation and ACL outcomes remain owner-supplied metadata evidence. Earlier progression/B closures, accepted risks and all four OPEN F limitations are preserved. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout.
+
+Next planned domain: Inventory / Items / Crafting under the approved [001A scope](legacy-001A-authority-writer-map-scope.md), beginning with a bounded dependency/writer inventory that reuses C equipment findings. This closeout does not authorize beginning that investigation. No SQL, gameplay, hosted, deployment or privilege changes.
