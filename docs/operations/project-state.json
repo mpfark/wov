@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T06:12:09.957Z",
+  "updated_at": "2026-10-12T07:56:33.956Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -1565,6 +1565,39 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001B6-combat2-closeout.md",
       "evidence": "B1 source map/overlap and B2 trust boundary complete; B3A guard locally tested, B4 metadata PASS/B5 installed per owner. Bounded trace/classification/static guard criteria met; no comprehensive Combat2 or overall ENG-LEGACY-001 completion. Metadata versus runtime/concurrency separated; direct privileged OOC helper, wider scheduler/deployed/external writer gaps retained. v3-to-v2 uncertainty neither contained nor exploitable proven. Progression closures and four F limitations OPEN preserved. Administrative XP grants remain paused; normal gameplay XP not intentionally disabled, runtime not established. Next proposed C resource/stat/equipment domain, not begun."
+    },
+    {
+      "identity": "ENG-LEGACY-001C1 resource/stat/equipment source inventory prepared",
+      "status": "authored",
+      "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
+      "timestamp": "2026-10-12T06:50:35.217Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C1-resource-equipment-writer-map.md",
+      "evidence": "Approved local resource-domain inspection reuses completed B chain. Thirteen path groups and ownership overlap matrix distinguish base attributes, equipment contributions, maxima and current-resource writes. No confirmed authority conflict/live exploit; potential stale captured resource writes by sync RPC and caller-authored legacy heal/damage, plus cap/AC freshness and empty-override semantics gaps. Current hosted function/ACL/trigger/deployment parity unverified beyond reused owner evidence. No SQL execution, hosted operation, implementation, repair or publication. Progression closures, four F limitations, delegated authority uncertainty and admin-only XP pause preserved. Validation:77 focused tests passed; one pre-existing shell-dependent mirror import check failed with bash ENOENT, not a demonstrated source mismatch. State synchronization, report links and whitespace pass."
+    },
+    {
+      "identity": "ENG-LEGACY-001C2 resource synchronization and AC ownership investigation prepared",
+      "status": "authored",
+      "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
+      "timestamp": "2026-10-12T07:32:27.517Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C2-resource-sync-ac-ownership.md",
+      "evidence": "Exact unlocked sync read/calculate/write and separate gear callbacks traced. Proposed early character-row lock before captured resources; no node/encounter locks after it, no universal inventory serialization claim. Stored maxima used by SQL/respawn/naked combat; sync and canonical derived helper do not write AC despite resolver comment, equipped consumers derive dynamically. GamePage gates equip/unequip via legacy execution fence; entry sync remains independent. Repair panels ignore supplied character refresh; wear/strip lack explicit sync. SQL empty-as-absent versus TS nullish override semantics differ. Current installed sync/trigger/ACL parity and item empty-override intent require evidence; no correction, SQL execution, hosted operation or publication. Validation:77 tests PASS; existing bash-dependent import check FAILS with ENOENT, no test modification/bypass. Source guard and mirror equality checks pass; state/links/whitespace valid."
+    },
+    {
+      "identity": "ENG-LEGACY-001C3 metadata-only resource sync/AC preflight prepared",
+      "status": "authored",
+      "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
+      "timestamp": "2026-10-12T07:56:33.956Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C3-resource-sync-preflight.md",
+      "evidence": "One SELECT envelope for exact sync/derived/action/repair/restrict functions, direct/effective EXECUTE, all noninternal characters/inventory triggers including constraint triggers and full bound definitions, relevant columns/defaults/constraints and filtered isolation metadata. Five normalized source fingerprints computed; no installed parity assumed. PASS/FAIL/REQUIRES EVIDENCE and same-statement versus separate observations defined. No gameplay rows/calls, SQL execution, hosted operation, correction or publication. Prior C1/C2 work, closures and accepted limitations preserved. Validation:18 applicable tests PASS, one unchanged bash-dependent check FAILS with ENOENT; single-statement scope/privacy and five source hashes/links/whitespace pass. SQL not executed or compiled."
     }
   ],
   "known_blockers": [
@@ -1796,15 +1829,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — bounded 001B closed; ENG-LEGACY-001C resource/stat/equipment scope proposed pending authorization",
+    "identity": "STOP — ENG-LEGACY-001C3 source preflight prepared; hosted read-only authorization pending",
     "status": "blocked",
-    "sha": "8e9b506148ca0b0f8e0236842bb2251cee163237",
-    "timestamp": "2026-10-12T06:12:09.957Z",
+    "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
+    "timestamp": "2026-10-12T07:56:33.956Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001B6-combat2-closeout.md",
-    "evidence": "Proposed smallest C slice: local HP/CP/MP/Force Shield ownership and relevant maxima/AC/equipment synchronization, reusing B commit/OOC evidence. Map only direct resource/reset delegates where relevant; no broad audit, hosted query, mechanics change or implementation. Owner scope authorization required before starting. Overall writer audit remains open; progression closures/deferrals/four F limitations unchanged."
+    "artifact": "docs/operations/legacy-001C3-resource-sync-preflight.md",
+    "evidence": "Lovable prompt and SELECT-only SQL prepared locally; source publication authorized by C3A; hosted read-only execution remains separately gated. Source parity does not prove concurrency correctness, RPC isolation or item override intent. No correction authorized; preserve B/progression closure, four F limitations, v3 uncertainty and admin-only XP policy."
   },
   "volatile_runtime_observations": [
     {
