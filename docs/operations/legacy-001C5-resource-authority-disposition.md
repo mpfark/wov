@@ -1,5 +1,7 @@
 # ENG-LEGACY-001C5 — remaining resource-authority disposition
 
+Current C6 disposition: [0019 installed containment and acceptance proposal](legacy-001C6-resource-domain-acceptance-proposal.md) address the helper ACL blocker at owner-reported metadata level. Historical NO-GO below is superseded by CONDITIONAL GO for owner-approved bounded closure; current C remains OPEN pending that acceptance. Remaining limits/deferrals are proposed, not silently accepted.
+
 C5A follow-up: owner authorized [exact three-signature containment preparation](legacy-001C5A-hp-helper-containment.md). Source four-argument identity is resolved as `(uuid,uuid,integer,integer)`; hosted current ACL readback and installation remain pending. The recommendation below is historical decision preparation, not an installed privilege change or C closure.
 
 Local decision preparation, 2026-10-12, source `08f815764df39f0718d24422e121012c98ae249b`. Reuses [C1](legacy-001C1-resource-equipment-writer-map.md), [C2](legacy-001C2-resource-sync-ac-ownership.md), [C3](legacy-001C3-resource-sync-preflight.md) and [installed C4 reconciliation](legacy-001C4-resource-sync-lock.md). No SQL/code/ACL change, hosted inspection or runtime probe. The dispositions below are recommendations; newly proposed limitations/deferrals require owner acceptance, not a claim that all C findings are already accepted.

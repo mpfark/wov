@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T10:24:34.124Z",
-  "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
+  "updated_at": "2026-10-12T12:02:17.676Z",
+  "based_on_source_sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -439,17 +439,28 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0018_legacy_001c4_resource_sync_lock.sql",
       "evidence": "Hosted history19 rows/latest0018 and preserved original owner/security/EXECUTE per owner. Approved/committed SQL byte SHA256 719809335e6a3ae7d5b560322d5a2332fc2a59ce68b7ec0960c6dd2e32b7c3c6; installed normalized body65fef58ca1438e8f276b2f6eeef48272aa93174e9b95043d500a64f197377638 reported. Automatic92ce58e2 merged0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2; local blob/hash, appended journal/snapshot and original18 entries verified. No types/Edge/frontend changes. Lovable2.7credits owner-reported. Timestamp recording only; no direct hosted read by Codex, no runtime/multi-session proof; C3 evidence gaps retained."
+    },
+    {
+      "identity": "0019_legacy_001c5a_hp_helper_containment",
+      "status": "installed",
+      "sha": "f7cd32719b1d2c8157baa266ad2dc67183353f20",
+      "timestamp": "2026-10-12T12:02:17.676Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik C6 supplied C5C installation evidence; Codex local reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0019_legacy_001c5a_hp_helper_containment.sql",
+      "evidence": "Owner reports history20/latest0019, effective browser EXECUTE denied for exact three HP helpers, postgres/service rights preserved; Lovable3credits. Local committed SQL byte SHA256 f7881885b89e4ae9bf48a589b15422e73d9ffc1c07c01dd7c5839cd84eb06fb2 equals reviewed artifact; original19 journal entries and earlier migration bytes preserved. Timestamp is recording time, not hosted execution observation. No runtime or multi-session proof."
     }
   ],
   "generated_supabase_types": {
     "status": "committed",
-    "sha": "1f2118e54cbdca38c2d69c9f9aa33024937a95ed",
-    "timestamp": "2026-10-11T08:03:44.083Z",
+    "sha": "87800451fcc5b466a9166f50e1253f2be85e20bb",
+    "timestamp": "2026-10-12T12:02:17.676Z",
     "artifact": "src/integrations/supabase/types.ts",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Lovable D4 regeneration adds only admin_respec_award_log and admin_respec_award/admin_respec_award_internal/admin_respec_award_log_expire_internal signatures. Source comparison verified; generated declarations do not grant access or establish current hosted ACLs."
+    "evidence": "Intervening generated-types-only commit changes PostgrestVersion14.5 to14.1; no table/RPC shape changes. Direct source comparison verified, no hosted runtime downgrade or ACL inference. Earlier D4 declarations retained."
   },
   "edge_function_deployments": [
     {
@@ -1664,6 +1675,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001C5A-hp-helper-containment.md",
       "evidence": "Exact source/historical signatures: heal(uuid,uuid,integer), heal(uuid,uuid,integer,integer) fourth integer defaultNULL, damage(uuid,integer). SELECT-only exact metadata preflight and transactional ACL-only correction outside migrations prepared; revoke only PUBLIC/anon/authenticated, retain bodies/owner/service and other actual server ACL entries. Fingerprint/security/server prerequisite guards and effective browser/retained rights postconditions. Eight static regression checks pass; no SQL execution per restriction, no PostgreSQL rollback/inheritance/concurrency proof. Current hosted ACL/default/server-consumer evidence and separate publication/installation authorization pending. C open; existing closures/F/v3/XP policy preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001C6 — reconciliation complete; C closure proposal awaiting owner acceptance",
+      "status": "authored",
+      "sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
+      "timestamp": "2026-10-12T12:02:17.676Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
+      "evidence": "C4/C5C installation metadata owner-reported; local ancestry, exact SQL and20-entry chain verified. No newly demonstrated material authority blocker. Proposed accepted limitations and inventory-domain deferrals require separate owner acceptance. Actual C remains OPEN, overall LEGACY001 OPEN; previous closures, F limitations and administrative-only XP pause unchanged."
     }
   ],
   "known_blockers": [
@@ -1895,15 +1917,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — C5A ACL-only preparation complete; exact hosted metadata and installation authorization pending",
+    "identity": "STOP — ENG-LEGACY-001C owner acceptance of C6 disposition pending",
     "status": "blocked",
-    "sha": "08f815764df39f0718d24422e121012c98ae249b",
-    "timestamp": "2026-10-12T10:24:34.124Z",
+    "sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
+    "timestamp": "2026-10-12T12:02:17.676Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001C5A-hp-helper-containment.md",
-    "evidence": "Source publication owner-authorized; then obtain separately authorized three-signature current metadata and identified server consumer checks. Source/historical signature resolved, current hosted authority unverified. Stop on drift/inherited residual or server reliance on removed rights, no broad grants/revokes. No SQL executed, body change or C closure; preserve recovery stash and accepted limitations."
+    "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
+    "evidence": "Reconciliation/documentation publication authorized. C COMPLETE WITH ACCEPTED LIMITATIONS is proposed only; explicit owner acceptance required before final closure. No new correction, hosted work or next-domain audit authorized."
   },
   "volatile_runtime_observations": [
     {

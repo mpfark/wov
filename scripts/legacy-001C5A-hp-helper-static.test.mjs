@@ -42,8 +42,11 @@ test('retained direct ACL entries/grant options, server access, owner and full d
  for(const marker of ['a.grantor','a.is_grantable','IS DISTINCT FROM retained_acl','IS DISTINCT FROM before_def','IS DISTINCT FROM before_owner'])assert(correction.includes(marker));
  assert.equal((correction.match(/has_function_privilege\('service_role'/g)||[]).length,2);assert.equal((correction.match(/has_function_privilege\('postgres'/g)||[]).length,2);
 });
-test('standard migration chain is retained; reviewed correction outside automatic history',()=>{
+test('standard migration chain retained; any installed C5A entry is exact reviewed 0019',()=>{
  const j=JSON.parse(readFileSync('drizzle/migrations/meta/_journal.json'));let prior;
- for(const [i,e] of j.entries.entries()){assert.equal(e.idx,i);assert(existsSync('drizzle/migrations/'+e.tag+'.sql'));const snap=JSON.parse(readFileSync('drizzle/migrations/meta/'+String(i).padStart(4,'0')+'_snapshot.json'));if(prior)assert.equal(snap.prevId,prior.id);prior=snap;assert(!e.tag.includes('001c5a'));}
+  const installed=j.entries.filter(e=>e.tag.includes('001c5a'));assert(installed.length<=1);
+  if(installed.length){assert.equal(installed[0].idx,19);assert.equal(installed[0].tag,'0019_legacy_001c5a_hp_helper_containment');
+    assert.equal(readFileSync('drizzle/migrations/'+installed[0].tag+'.sql','utf8').replace(/\r\n/g,'\n'),correction.replace(/\r\n/g,'\n'));}
+  for(const [i,e] of j.entries.entries()){assert.equal(e.idx,i);assert(existsSync('drizzle/migrations/'+e.tag+'.sql'));const snap=JSON.parse(readFileSync('drizzle/migrations/meta/'+String(i).padStart(4,'0')+'_snapshot.json'));if(prior)assert.equal(snap.prevId,prior.id);prior=snap;}
  assert(!existsSync('drizzle/migrations/legacy-001C5A-hp-helper-containment.sql'));
 });

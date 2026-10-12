@@ -1,5 +1,7 @@
 # ENG-LEGACY-001C5A — exact legacy HP helper containment preparation
 
+Current status (C6, 2026-10-12): **0019 INSTALLED / METADATA VERIFIED per owner report**; [reconciliation and proposed C acceptance](legacy-001C6-resource-domain-acceptance-proposal.md) supersede preparation-only status below. Reported browser EXECUTE denied on all three signatures, postgres/service rights retained; no runtime refusal/concurrency proof. Preflight/install instructions below are historical, not authority to replay0019. C remains OPEN pending explicit owner acceptance.
+
 Local preparation at `08f815764df39f0718d24422e121012c98ae249b`, 2026-10-12. Owner C5A authorizes preparation of browser ACL containment; no installation or SQL execution. Source publication is now owner-authorized. Reuses [C5 disposition](legacy-001C5-resource-authority-disposition.md), [L1](../design/legacy-cleanup-l1-checkpoint.md) and [historical installed inventory](../design/combat2-legacy-sql-dependency-audit.md). Prior closures, all four open F limitations, v3→v2 uncertainty and recovery stash preserved.
 
 ## Exact identities / prerequisite fingerprints
