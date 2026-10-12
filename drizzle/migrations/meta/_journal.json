@@ -120,6 +120,13 @@
       "when": 1791705354663,
       "tag": "0016_progression_001g_d4_respec_token_award",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791784894488,
+      "tag": "0017_legacy_001b3_stance_encounter_guard",
+      "breakpoints": true
     }
   ]
 }
