@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T08:41:24.753Z",
+  "updated_at": "2026-10-12T09:27:40.809Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -428,6 +428,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0017_legacy_001b3_stance_encounter_guard.sql",
       "evidence": "INSTALLED / METADATA VERIFIED per owner: approved SQL cd170a15d6d69415cd0787de5050b1d3f79723bb5e7f70ff6296792ca0ef5f06; installed outer normalized fingerprint fb533882bc10a723135460dbd0416b1a136b7d57e5afaf803183c963e5408bdb. Hosted Drizzle18 rows/original17 unchanged; owner/definer/search_path/EXECUTE and direct predecessor fingerprint/all29 relevant triggers unchanged. B4 preflight PASS. Source commit e996b0f8 merged at8e9b506148ca0b0f8e0236842bb2251cee163237; exact Git blob/hash and append-only journal/snapshot reconciled locally. Windows working copy CRLF only. Timestamp is recording time, not supplied hosted execution time; no direct Codex hosted inspection. Runtime commits/concurrency/scheduler unverified. No B6 SQL execution or deployment."
+    },
+    {
+      "identity": "0018_legacy_001c4_resource_sync_lock",
+      "status": "installed",
+      "sha": "92ce58e2a1583fed23e6fd7698abee19c86091e1",
+      "timestamp": "2026-10-12T09:27:40.809Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik C4C supplied C4B installation report; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0018_legacy_001c4_resource_sync_lock.sql",
+      "evidence": "Hosted history19 rows/latest0018 and preserved original owner/security/EXECUTE per owner. Approved/committed SQL byte SHA256 719809335e6a3ae7d5b560322d5a2332fc2a59ce68b7ec0960c6dd2e32b7c3c6; installed normalized body65fef58ca1438e8f276b2f6eeef48272aa93174e9b95043d500a64f197377638 reported. Automatic92ce58e2 merged0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2; local blob/hash, appended journal/snapshot and original18 entries verified. No types/Edge/frontend changes. Lovable2.7credits owner-reported. Timestamp recording only; no direct hosted read by Codex, no runtime/multi-session proof; C3 evidence gaps retained."
     }
   ],
   "generated_supabase_types": {
@@ -1620,6 +1631,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
       "evidence": "Guarded patch adds only FOR UPDATE to initial character read; captured values protected through calculation/UPDATE. Same formulas/caps/clamps/auth/AC/overrides/equipment semantics and grants; no new tables/triggers/other-function changes. Nine isolated exact-SQL tests pass including lock-mode/body proof and serialized prior updates; no independent-session lock-wait proof. Lock-order assessment uses existing character ownership, adds no node/encounter/inventory locks. Installation gated on source/security/ACL/trigger/runner prerequisites and separate authorization. No hosted operations, deployment, commit or push. Validation:18 existing source/state/mirror equality tests PASS; unchanged bash-dependent import check FAILS ENOENT. Nine new SQL tests PASS; 18-entry migration chain, state/link/hash/whitespace checks PASS. No hosted multi-session claim."
+    },
+    {
+      "identity": "ENG-LEGACY-001C4C hosted sync lock installation reconciled",
+      "status": "authored",
+      "sha": "0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2",
+      "timestamp": "2026-10-12T09:27:40.809Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
+      "evidence": "Clean fast-forward, expected three automatic migration metadata files only; committed0018 SQL exact approved bytes;19-entry journal/snapshot prefix preserves original18. Installed status/security/fingerprint is owner-supplied, not direct Codex hosted/runtime verification. One-line read lock correction installed; C remains open with C3 gaps and AC/override/callback/helper findings requiring disposition. Prior closures and four F limitations unchanged; no local gameplay/sourceSQL/grant/history changes."
     }
   ],
   "known_blockers": [
@@ -1851,15 +1873,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — C4 reviewed source correction; installation authorization and prerequisites pending",
+    "identity": "STOP — C4 installed/reconciled; remaining C-domain findings await targeted disposition",
     "status": "blocked",
-    "sha": "2ba016cc9a05df8d9b2980d106150789c6ee357d",
-    "timestamp": "2026-10-12T08:41:24.753Z",
+    "sha": "0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2",
+    "timestamp": "2026-10-12T09:27:40.809Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
     "artifact": "docs/operations/legacy-001C4-resource-sync-lock.md",
-    "evidence": "Minimal reviewed SQL and tests complete locally. Source/security/authority drift guards preserve existing metadata. Remaining C3 gaps and hosted concurrency not declared resolved; no AC/override/callback/helper changes. Preserve all prior closures/four F limitations, v3 uncertainty and admin-only XP policy. Source publication authorized by C4A; installation remains separately gated."
+    "evidence": "No additional implementation authorized. Retain C3 missing metadata breakdown and unverified multi-session behavior. Prioritize disposition of AC freshness/empty override semantics/equipment callback boundary and retained helper authority from C1/C2, reusing evidence without broad audit. C not marked COMPLETE. Progression/B closures, four F limitations, v3 uncertainty and administrative XP grant pause preserved."
   },
   "volatile_runtime_observations": [
     {

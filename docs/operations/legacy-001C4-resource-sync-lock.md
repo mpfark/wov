@@ -1,6 +1,16 @@
 # ENG-LEGACY-001C4 — minimal resource sync lock handoff
 
-**LOCAL PREPARATION — NOT INSTALLED.** C4A authorizes source publication only. Starting source `4ee7994cbe1e19ea836b634e7dec28d386088844`. Reuses [C2 boundary/lock analysis](legacy-001C2-resource-sync-ac-ownership.md) and [C3 preflight](legacy-001C3-resource-sync-preflight.md). No engine formula, AC, item override policy, callbacks or legacy helper changes.
+**INSTALLED / METADATA VERIFIED per owner-supplied C4B evidence**, reconciled by C4C on 2026-10-12. Local preparation/installation instructions below are historical and are not authorization to replay 0018. Starting source `4ee7994cbe1e19ea836b634e7dec28d386088844`. Reuses [C2 boundary/lock analysis](legacy-001C2-resource-sync-ac-ownership.md) and [C3 preflight](legacy-001C3-resource-sync-preflight.md). No engine formula, AC, item override policy, callbacks or legacy helper changes.
+
+## C4B installation / C4C source reconciliation
+
+- Installed migration: `0018_legacy_001c4_resource_sync_lock`, owner-reported hosted Drizzle history 19 rows/latest0018.
+- Automatic commit `92ce58e2a1583fed23e6fd7698abee19c86091e1`, merged at `0ef1a1a3827d692e6a0f1b0836c45854dc7e45d2`; clean local checkout fast-forwarded from a21bbd0e with ancestry verified, no history rewrite.
+- Committed migration SQL is byte-identical to the approved `719809335e6a3ae7d5b560322d5a2332fc2a59ce68b7ec0960c6dd2e32b7c3c6` artifact. Source journal index18/tag0018 and snapshot chain through 19 entries verified; original18 source entries unchanged. Windows working-copy line endings do not replace the committed-byte comparison.
+- Installed normalized prosrc `65fef58ca1438e8f276b2f6eeef48272aa93174e9b95043d500a64f197377638`; original owner/security settings/EXECUTE preserved, per supplied hosted evidence. No direct hosted inspection by Codex. Full observation timestamp/role/catalog output not supplied; the date here is recording date, not an invented installation time.
+- Lovable cost 2.7 credits, owner-reported. No additional Lovable work requested. Automatic changes limited to migration SQL/journal/snapshot; no generated types, Edge or frontend source change in these commits.
+
+C3's three REQUIRES EVIDENCE remain unresolved at their supplied evidence level: no full per-check breakdown was supplied, so do not invent their identities or mark all trigger/isolation metadata PASS. Independent-session blocking/runtime remains unverified. C1/C2's AC freshness, SQL/TS empty override semantics, equipment callbacks/separate transactions, retained heal/damage helper authority and privileged equipment/ward writers still require targeted disposition. The exact unlocked-read defect is corrected in installed source; this is not overall C closure or proof every resource interleaving is safe.
 
 ## Exact correction / evidence
 
