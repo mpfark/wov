@@ -1,5 +1,7 @@
 # ENG-LEGACY-001B — Combat2 claim/commit and OOC writer map
 
+Current status: **bounded 001B COMPLETE WITH ACCEPTED LIMITATIONS**; [B6 closeout](legacy-001B6-combat2-closeout.md) records B3A installed/metadata verified per owner. The following map is the historical pre-correction source inspection; its stance-scope finding is addressed by 0017, while runtime/concurrency and unrelated gaps remain unverified. Overall ENG-LEGACY-001 is not complete.
+
 Local source inspection2026-10-11, baseline6d108344d5988bbaef0a7e45fd0ffa2f47ab9172. [Approved format/scope](legacy-001A-authority-writer-map-scope.md) applied only to first domain. No code changes, SQL execution, hosted calls or gameplay probes. Prior [runtime audit](../design/combat2-legacy-runtime-retirement-audit.md), [SQL dependency audit](../design/combat2-legacy-sql-dependency-audit.md) and [H1](progression-001H1-legacy-dependency-inventory.md) reused; old metadata remains historical, not refreshed hosted authority. Exact identities below are inspected source; dynamic migration composition does not prove today's installed body.
 
 ## Writer chains / evidence rows

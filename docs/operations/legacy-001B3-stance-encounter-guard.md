@@ -1,6 +1,6 @@
 # ENG-LEGACY-001B3 — local stance encounter guard handoff
 
-Status: locally implemented and tested; owner-authorized source publication checkpoint. **Not installed or deployed.** Source checkpoint `6d108344d5988bbaef0a7e45fd0ffa2f47ab9172`. Follows [B2](legacy-001B2-stance-target-scope.md); preserves engine stance mechanics, progression closure and all four open F limitations.
+Current status (B6, 2026-10-12): **INSTALLED / METADATA VERIFIED**, owner-supplied B5 evidence; [closeout](legacy-001B6-combat2-closeout.md) records 0017, exact hashes and retained runtime/concurrency gaps. No Edge deployment required or claimed for this SQL correction. The local preparation and installation gates below are historical, superseded by the supplied B4 PASS/B5 installation result. Source checkpoint `6d108344d5988bbaef0a7e45fd0ffa2f47ab9172`. Follows [B2](legacy-001B2-stance-target-scope.md); preserves engine stance mechanics, progression closure and all four open F limitations.
 
 Reviewed forward SQL: [legacy-001B3-stance-encounter-guard.sql](legacy-001B3-stance-encounter-guard.sql).
 

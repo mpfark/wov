@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-11T12:25:31.305Z",
+  "updated_at": "2026-10-12T06:12:09.957Z",
   "based_on_source_sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
   "status_vocabulary": [
     "authored",
@@ -417,6 +417,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0016_progression_001g_d4_respec_token_award.sql",
       "evidence": "Mik reports successful hosted D4 installation and 17 history rows. Lovable source commit d696e9cb502133d3e5ac8ba12ec6c0aa0b569017 merged at1f2118e5. Committed SQL is byte-identical to approved8531-byte SHA256 6fffef744a6213d27cd93f0c7b60e9c7580b64d035ca414d6f029a8e184acdaf; Windows working copy CRLF differs only by line endings. Journal index16 and17 snapshot links verified locally; generated types add only D4 log/three functions. No direct hosted history, effective ACL or scheduler inspection by Codex. D4 Edge NOT DEPLOYED; frontend NOT PUBLISHED for D4; runtime unverified. C2/administrative XP grant pause and all four accepted F limitations preserved."
+    },
+    {
+      "identity": "0017_legacy_001b3_stance_encounter_guard",
+      "status": "installed",
+      "sha": "e996b0f828011a4514a15e603a214b81df95db65",
+      "timestamp": "2026-10-12T06:12:09.957Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik B6 supplied B4/B5 hosted evidence; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0017_legacy_001b3_stance_encounter_guard.sql",
+      "evidence": "INSTALLED / METADATA VERIFIED per owner: approved SQL cd170a15d6d69415cd0787de5050b1d3f79723bb5e7f70ff6296792ca0ef5f06; installed outer normalized fingerprint fb533882bc10a723135460dbd0416b1a136b7d57e5afaf803183c963e5408bdb. Hosted Drizzle18 rows/original17 unchanged; owner/definer/search_path/EXECUTE and direct predecessor fingerprint/all29 relevant triggers unchanged. B4 preflight PASS. Source commit e996b0f8 merged at8e9b506148ca0b0f8e0236842bb2251cee163237; exact Git blob/hash and append-only journal/snapshot reconciled locally. Windows working copy CRLF only. Timestamp is recording time, not supplied hosted execution time; no direct Codex hosted inspection. Runtime commits/concurrency/scheduler unverified. No B6 SQL execution or deployment."
     }
   ],
   "generated_supabase_types": {
@@ -1543,6 +1554,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001H1-legacy-dependency-inventory.md",
       "evidence": "H1 bounded dependency inventory accepted. Owner retains410/503 refusals/disabled controls, legacy combat modules/test dependencies, restricted XP/Order/bond/Renown functions, legacy creation/deletion RPCs/service teleport and uncertain privileged v3→v2 delegation. No secure/unrestricted/fully verified claim; physical removal deferred. Roadmap allows uncertain restricted wrappers; accepted D–G prerequisites met.001H and agreed progression delivery sequence complete at staged evidence levels;001G/F/C2/D/E closure unchanged, four F limitations OPEN, deferred features remain deferred. Administrative XP grants paused only; normal gameplay XP not intentionally disabled or runtime-established. No code, SQL, hosted action or privilege change."
+    },
+    {
+      "identity": "ENG-LEGACY-001B COMPLETE WITH ACCEPTED LIMITATIONS — bounded Combat2 writer-chain audit",
+      "status": "authored",
+      "sha": "8e9b506148ca0b0f8e0236842bb2251cee163237",
+      "timestamp": "2026-10-12T06:12:09.957Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik B6 accepted-limitation closure instruction; Codex local criteria reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001B6-combat2-closeout.md",
+      "evidence": "B1 source map/overlap and B2 trust boundary complete; B3A guard locally tested, B4 metadata PASS/B5 installed per owner. Bounded trace/classification/static guard criteria met; no comprehensive Combat2 or overall ENG-LEGACY-001 completion. Metadata versus runtime/concurrency separated; direct privileged OOC helper, wider scheduler/deployed/external writer gaps retained. v3-to-v2 uncertainty neither contained nor exploitable proven. Progression closures and four F limitations OPEN preserved. Administrative XP grants remain paused; normal gameplay XP not intentionally disabled, runtime not established. Next proposed C resource/stat/equipment domain, not begun."
     }
   ],
   "known_blockers": [
@@ -1774,15 +1796,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — ENG-LEGACY-001B3A lock order corrected locally; hosted metadata and installation authorization pending",
-    "status": "authored",
-    "sha": "6d108344d5988bbaef0a7e45fd0ffa2f47ab9172",
-    "timestamp": "2026-10-11T12:25:31.305Z",
+    "identity": "STOP — bounded 001B closed; ENG-LEGACY-001C resource/stat/equipment scope proposed pending authorization",
+    "status": "blocked",
+    "sha": "8e9b506148ca0b0f8e0236842bb2251cee163237",
+    "timestamp": "2026-10-12T06:12:09.957Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001B3-stance-encounter-guard.md",
-    "evidence": "B3A acquires identical UUID-ordered origin/moved-destination node advisory locks before encounter/fighter/stance locks; captures and rechecks encounter node and guards exact direct predecessor body/security. Thirteen isolated SQL tests pass using actual outer and direct predecessor; deeper commit modeled. Foreign stance targets rejected atomically, death/departure and retries preserved. B4 SQL unchanged; criteria/input hash updated. No hosted execution, history changes or deployment. Owner-authorized source checkpoint publication; installation remains separately gated. Progression closures, four F limitations, authority uncertainty and admin-only XP policy preserved."
+    "artifact": "docs/operations/legacy-001B6-combat2-closeout.md",
+    "evidence": "Proposed smallest C slice: local HP/CP/MP/Force Shield ownership and relevant maxima/AC/equipment synchronization, reusing B commit/OOC evidence. Map only direct resource/reset delegates where relevant; no broad audit, hosted query, mechanics change or implementation. Owner scope authorization required before starting. Overall writer audit remains open; progression closures/deferrals/four F limitations unchanged."
   },
   "volatile_runtime_observations": [
     {
