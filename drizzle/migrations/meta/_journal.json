@@ -127,6 +127,13 @@
       "when": 1791784894488,
       "tag": "0017_legacy_001b3_stance_encounter_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791796628642,
+      "tag": "0018_legacy_001c4_resource_sync_lock",
+      "breakpoints": true
     }
   ]
 }
