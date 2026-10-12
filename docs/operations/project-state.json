@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T13:02:46.032Z",
-  "based_on_source_sha": "44779594c71ee042193457f193d031fd738ae9fe",
+  "updated_at": "2026-10-12T22:20:12.374Z",
+  "based_on_source_sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1697,6 +1697,61 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001C6-resource-domain-acceptance-proposal.md",
       "evidence": "Owner accepts C6 closure: visibility/isolation gaps, unverified multi-session concurrency, AC inconsistencies and privileged/server/external caller uncertainty retained. Equipment synchronization/missing paths, callback transactionality and empty-object overrides deferred to Inventory/Items/Crafting. C4/C5 installed corrections intact; no runtime proof inferred. Prior progression/B closures, four OPEN F limitations and administrative-only XP pause preserved. Overall LEGACY001 OPEN."
+    },
+    {
+      "identity": "ENG-LEGACY-001D1 — Inventory/Items/Crafting writer inventory prepared; D OPEN",
+      "status": "authored",
+      "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+      "timestamp": "2026-10-12T14:46:58.564Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D1-inventory-items-crafting-writer-map.md",
+      "evidence": "Twelve bounded writer families reuse C deferrals and H/B evidence. Source sale handler ignores consume false; strip multi-request writes unchecked; deployed parity/ACL/runtime unknown. Equipment sync/callback transactionality/empty overrides retained. No SQL/code/hosted action; C and earlier closures/F limitations preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001D2 — material-sale atomicity proposal prepared; D OPEN",
+      "status": "authored",
+      "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+      "timestamp": "2026-10-12T15:22:29.705Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D2-material-sale-atomicity.md",
+      "evidence": "False consume result discarded before separate stale gold UPDATE; non-atomic refund/retry paths traced. Proposed service-only actor-bound sale transaction reuses material helper and existing inventory request ledger; character-first locks, additive gold, UUID replay. No code/SQL/hosted action or live exploit assertion. Installed dependency/ACL/type gates retained."
+    },
+    {
+      "identity": "ENG-LEGACY-001D3 — atomic material sale prepared locally; D OPEN",
+      "status": "authored",
+      "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+      "timestamp": "2026-10-12T15:52:09.375Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
+      "evidence": "New service-only SD sale uses existing ledger/helper, character-first lock, exact consumption/additive bounded gold and UUID replay. Edge and two callers prepared; isolated tests not hosted/concurrency proof. No installation/deployment or commit authorized. Prior closures/limitations preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001D3A — material-sale caller retry/refusal correction prepared",
+      "status": "authored",
+      "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+      "timestamp": "2026-10-12T17:30:18.581Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
+      "evidence": "Production shared hook replays immutable pending payload despite low stock; only explicit matching post-replay SQL refusal clears state. Timeout/HTTP-only errors retain UUID. Both panels expose retry and block new submission. Approved SQL unchanged; D OPEN, no hosted/commit/push."
+    },
+    {
+      "identity": "ENG-LEGACY-001D4 — material-sale source publication reviewed; no activation",
+      "status": "authored",
+      "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+      "timestamp": "2026-10-12T22:20:12.374Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
+      "evidence": "Final D1–D3A source review GO, SQL hash unchanged. Shared caller/Edge refusal/retry and SQL rollback tests pass; remount/reload UUID persistence not guaranteed. No hosted/Edge/frontend activation; D OPEN and prior closures/F limitations preserved."
     }
   ],
   "known_blockers": [
@@ -1928,15 +1983,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — next Inventory / Items / Crafting domain investigation awaits authorization",
+    "identity": "STOP — D3 local preparation ready; publication/hosted prerequisites require authorization",
     "status": "blocked",
-    "sha": "44779594c71ee042193457f193d031fd738ae9fe",
-    "timestamp": "2026-10-12T13:02:46.032Z",
+    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+    "timestamp": "2026-10-12T15:52:09.375Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001A-authority-writer-map-scope.md",
-    "evidence": "C7 closes resource domain with explicit owner acceptance. Next proposed bounded inventory/items/crafting writer/dependency map reuses C equipment findings. No implementation, hosted work or next-domain investigation authorized by closeout."
+    "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
+    "evidence": "D4 source publication owner-authorized only. Next read-only hosted metadata preflight requires separate authorization; reconcile helper/ledger/schema/trigger/ACL prerequisites. Database then verified Edge then manual frontend rollout; remount recovery limitation must be acknowledged before activation. D OPEN."
   },
   "volatile_runtime_observations": [
     {

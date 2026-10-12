@@ -13,6 +13,7 @@ import { GemPouch } from './GemPouch';
 import { buildErrorEvent, buildRewardEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
+import { useMaterialSaleRequest } from '../hooks/useMaterialSaleRequest';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
 type BlacksmithTab = 'repair' | 'forge' | 'enhance' | 'soulforge';
@@ -63,7 +64,7 @@ export default function BlacksmithPanel({
   const [tab, setTab] = useState<BlacksmithTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
-  const [selling, setSelling] = useState(false);
+  const { pending: pendingSale, selling, submit: submitSale } = useMaterialSaleRequest();
   const { counts } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
 
@@ -106,14 +107,9 @@ export default function BlacksmithPanel({
   };
 
   const handleSellSalvage = async () => {
-    if (sellAmount < 1 || sellAmount > salvage || selling) return;
-    setSelling(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sell-material', {
-        body: { character_id: characterId, material_key: 'salvage', amount: sellAmount },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await submitSale(characterId, sellAmount, salvage, body => supabase.functions.invoke('sell-material', { body }));
+      if (!data) return;
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       addEvent(buildRewardEvent(`Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`, { amount: data.gold_gained, amountKind: 'gold', effectType: 'salvage_sale' }));
@@ -121,7 +117,7 @@ export default function BlacksmithPanel({
     } catch (e: any) {
       addEvent(buildErrorEvent(`Sale failed: ${e.message || 'Unknown error'}`));
     }
-    setSelling(false);
+
   };
 
   const totalRepairCost = damagedItems
@@ -204,6 +200,7 @@ export default function BlacksmithPanel({
       {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]"> Sell Salvage</h3>
+        {pendingSale && <Button disabled={selling || pendingSale.character_id !== characterId} onClick={handleSellSalvage}>Retry pending sale ({pendingSale.amount} salvage)</Button>}
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
@@ -213,7 +210,7 @@ export default function BlacksmithPanel({
               <span className="font-display text-dwarvish"> {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
-            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || sellAmount < 1}
+            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || !!pendingSale || sellAmount < 1}
               className="w-full font-display text-xs h-7">
               {selling ? <span className="animate-pulse">Selling…</span> : <><Coins className="w-3 h-3 mr-1" /> Sell Salvage</>}
             </Button>

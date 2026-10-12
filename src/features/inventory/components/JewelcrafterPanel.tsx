@@ -12,6 +12,7 @@ import { GemPouch } from './GemPouch';
 import { useMaterials, notifyMaterialsChanged } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 import { GemIcon } from '@/components/icons/GemIcon';
+import { useMaterialSaleRequest } from '../hooks/useMaterialSaleRequest';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 import { buildErrorEvent, buildSystemEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
@@ -60,7 +61,7 @@ export default function JewelcrafterPanel({
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
-  const [selling, setSelling] = useState(false);
+  const { pending: pendingSale, selling, submit: submitSale } = useMaterialSaleRequest();
   const [cutting, setCutting] = useState<string | null>(null);
   const { counts } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
@@ -107,14 +108,9 @@ export default function JewelcrafterPanel({
   };
 
   const handleSellSalvage = async () => {
-    if (sellAmount < 1 || sellAmount > salvage || selling) return;
-    setSelling(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sell-material', {
-        body: { character_id: characterId, material_key: 'salvage', amount: sellAmount },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await submitSale(characterId, sellAmount, salvage, body => supabase.functions.invoke('sell-material', { body }));
+      if (!data) return;
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       addEvent(buildSystemEvent(`Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`));
@@ -122,7 +118,7 @@ export default function JewelcrafterPanel({
     } catch (e: any) {
       addEvent(buildErrorEvent(`Sale failed: ${e.message || 'Unknown error'}`));
     }
-    setSelling(false);
+
   };
 
   const handleTradeGem = async (gemKey: GemKey) => {
@@ -219,6 +215,7 @@ export default function JewelcrafterPanel({
       {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]"> Sell Salvage</h3>
+        {pendingSale && <Button disabled={selling || pendingSale.character_id !== characterId} onClick={handleSellSalvage}>Retry pending sale ({pendingSale.amount} salvage)</Button>}
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
@@ -228,7 +225,7 @@ export default function JewelcrafterPanel({
               <span className="font-display text-dwarvish"> {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
-            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || sellAmount < 1}
+            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || !!pendingSale || sellAmount < 1}
               className="w-full font-display text-xs h-7">
               {selling ? <span className="animate-pulse">Selling…</span> : <><Coins className="w-3 h-3 mr-1" /> Sell Salvage</>}
             </Button>
