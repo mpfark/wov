@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T06:07:17.458Z",
-  "based_on_source_sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
+  "updated_at": "2026-10-13T07:47:25.204Z",
+  "based_on_source_sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -608,18 +608,29 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-D-closeout-review.md",
       "evidence": "Owner reports D4 Edge deployed following0016 installation. Exact deployment timestamp/revision/live bundle unknown. UI controls visible per owner; authenticated awards remain untested. D1/D2 containment preserved in source; no hosted operation performed by Codex."
+    },
+    {
+      "identity": "sell-material ENG-LEGACY-001D9 atomic sale rollout",
+      "status": "deployed",
+      "sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
+      "timestamp": "2026-10-13T07:47:25.204Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik D10 supplied deployment evidence",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001D10-closeout.md",
+      "evidence": "Owner reports Edge deployed from5d9b7941. Live artifact identity not independently retrieved; no material-sale live transaction/replay/concurrency test. Recording time not exact deployment time.0020 installed/history21/service-only RPC per owner; no Codex hosted action."
     }
   ],
   "frontend_publication": {
-    "identity": "ENG-PROGRESSION-001G-D1–D4 manual frontend publication",
+    "identity": "ENG-LEGACY-001D9 owner manual frontend publication",
     "status": "manually_published",
     "sha": null,
-    "timestamp": "2026-10-11T08:21:58.713Z",
+    "timestamp": "2026-10-13T07:47:25.204Z",
     "evidence_type": "operator_reported",
-    "reporting_actor": "Mik D final review context",
+    "reporting_actor": "Mik D10 owner report",
     "directly_verified": false,
-    "artifact": "docs/operations/progression-001G-D-closeout-review.md",
-    "evidence": "Owner reports D4 frontend manually published and token controls visible in Admin → Users. UI smoke only, not proof of authenticated token award/refusal/replay. Published bundle/revision/time not supplied; earlier D1/D2 rollout preserved in historical records."
+    "artifact": "docs/operations/legacy-001D10-closeout.md",
+    "evidence": "Owner manually published2026-10-13; exact bundle/time unknown. Traveler Bread buy7gold/sell3gold observed, ordinary vendor smoke only, not atomic material sale. Crafting and level1 creature-kill problems unresolved, root causes unknown. Earlier manual publication evidence retained in history."
   },
   "combat2_operational_work": [
     {
@@ -1796,6 +1807,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001D7-installation-retry-recovery.md",
       "evidence": "Session storage scoped authenticated account/character, exact immutable pending payload, explicit retry, matching UUID outcomes; same-tab guard, no auto dispatch. Storage clearing/tab isolation limits remain. SQL unchanged; D OPEN, no commit/deploy/hosted action. Prior closures/F limitations/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001D COMPLETE WITH ACCEPTED LIMITATIONS — D10 bounded writer audit",
+      "status": "authored",
+      "sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
+      "timestamp": "2026-10-13T07:47:25.204Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik D10 conditional closeout authorization; Codex bounded reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001D10-closeout.md",
+      "evidence": "Bounded map/trace/static guard and installed/deployed sale evidence meet staged audit closure, no new critical authority blocker demonstrated. Live material sale/concurrency/bundle identity unverified; session scope/count CHECK/search path/trigger/C3/equipment/override/transactionality/privileged findings accepted unresolved. Owner vendor smoke distinct; crafting/level1 combat problems follow-up candidates, no root cause. Prior closures/four OPEN F limits/admin-only XP pause preserved. Overall LEGACY001 OPEN."
     }
   ],
   "known_blockers": [
@@ -2027,15 +2049,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D7 retry-recovery bundle awaits publication and separate deployment authorization",
+    "identity": "STOP — next listed Economy/Rewards domain; earlier Progression-domain disposition requires explicit kickoff reconciliation",
     "status": "blocked",
-    "sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
-    "timestamp": "2026-10-13T06:07:17.458Z",
+    "sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
+    "timestamp": "2026-10-13T07:47:25.204Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001D7-installation-retry-recovery.md",
-    "evidence": "0020 must not be replayed. Publish reviewed recovery bundle only after authorization; matching Edge deployment then manual frontend publication separately. Preserve full-helper/failed-aggregate evidence limits and no runtime proof. D OPEN."
+    "artifact": "docs/operations/legacy-001D10-closeout.md",
+    "evidence": "001A order preserved. Economy/Rewards follows Inventory in approved list; earlier Progression/XP/RP/class/bonds not silently marked complete by reuse of progression closure. Next bounded kickoff separately authorized, no broad scan/functional fix/runtime probe begun."
   },
   "volatile_runtime_observations": [
     {
@@ -2410,6 +2432,11 @@
       "evidence": "Product request recorded, not designed or implemented. After a character has been logged out/inactive for a configured period, reset its authoritative position to the default city/start location. The period should preferably reference the same configured duration already used for unique-item inactivity/loss rather than duplicating a hard-coded number. The initial destination is the current default city/start node, described by the operator as position 0,0; before implementation it must be verified whether 0,0 is an authoritative coordinate, a map-presentation concept or shorthand for a specific node id. Future extension: let a character choose an authoritative personal home/bind/start location. The reset must never occur while the character holds a live combat claim, participates in an active encounter, has a queued movement or departure, an active marketplace or other protected transaction, or any other incompatible lifecycle state. 'Logged out/inactive' must be defined from authoritative session/activity evidence, not browser presence. Idempotency and safe interaction with parties and followers must be resolved before implementation. No schema, RPC, timer or cleanup job was added.",
       "reporting_actor": "Lovable",
       "directly_verified": true
+    },
+    {
+      "identity": "Owner-reported crafting failure and level1 creature-kill problem — unresolved follow-up candidates",
+      "evidence": "D10 owner report; no root causes established; prevents material acquisition/live sale test. No repair authorized.",
+      "artifact": "docs/operations/legacy-001D10-closeout.md"
     }
   ]
 }

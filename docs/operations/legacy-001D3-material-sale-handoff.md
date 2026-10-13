@@ -1,5 +1,7 @@
 # ENG-LEGACY-001D3 — atomic material sale preparation
 
+Current status: **D COMPLETE WITH ACCEPTED LIMITATIONS** under [D10 owner-authorized closeout](legacy-001D10-closeout.md). Earlier preparation/OPEN/deployment statements are historical; unresolved findings remain explicit.
+
 Local preparation only, D OPEN. Reuses [D1 inventory](legacy-001D1-inventory-items-crafting-writer-map.md) and [D2 proposal](legacy-001D2-material-sale-atomicity.md); no repeat broad audit. SQL: [legacy-001D3-atomic-material-sale.sql](legacy-001D3-atomic-material-sale.sql), SHA-256 c4620461e47da357bf44ace6c09192a864a6ecfa4975145f7e22818bfd987966 (reviewed LF bytes; verify exact artifact before installation).
 
 ## Implemented boundary

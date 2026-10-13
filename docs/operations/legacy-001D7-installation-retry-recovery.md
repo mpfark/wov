@@ -1,5 +1,7 @@
 # ENG-LEGACY-001D7 — D6 reconciliation and sale retry recovery
 
+Current status: **D COMPLETE WITH ACCEPTED LIMITATIONS** under [D10 owner-authorized closeout](legacy-001D10-closeout.md). Earlier preparation/OPEN/deployment statements are historical; unresolved findings remain explicit.
+
 2026-10-13 local preparation. D OPEN; no local commit/push, hosted action or activation.
 
 ## Reconciled source and supplied hosted observations

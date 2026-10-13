@@ -1,5 +1,7 @@
 # ENG-LEGACY-001D1 — Inventory / Items / Crafting writer inventory
 
+Current status: **D COMPLETE WITH ACCEPTED LIMITATIONS** under [D10 owner-authorized closeout](legacy-001D10-closeout.md). Earlier preparation/OPEN/deployment statements are historical; unresolved findings remain explicit.
+
 Local source checkpoint: cd85386ba78ce57d227c97d0bb403f26a09bad6f, 2026-10-12. **D OPEN; preparation only.** No installed-parity, effective hosted ACL or gameplay/concurrency verification is inferred. Reuse [C1](legacy-001C1-resource-equipment-writer-map.md), [C2](legacy-001C2-resource-sync-ac-ownership.md), [C7 closeout](legacy-001C6-resource-domain-acceptance-proposal.md), [H1 retained dependencies](progression-001H1-legacy-dependency-inventory.md) and [001A scope](legacy-001A-authority-writer-map-scope.md). These are writer families, not an exhaustive catalogue of external callers.
 
 ## Writer / dependency map
