@@ -1,0 +1,33 @@
+# ENG-LEGACY-001D5B — hosted preflight reconciliation
+
+2026-10-13 local documentation; D OPEN. **GO for separately authorized installation of unchanged D3 SQL**, on the reported preflight scope; no runtime activation authorization. Reviewed SHA-256 c4620461e47da357bf44ace6c09192a864a6ecfa4975145f7e22818bfd987966. [D3 handoff](legacy-001D3-material-sale-handoff.md), [D2 source contract](legacy-001D2-material-sale-atomicity.md).
+
+## Supplied observations — distinct snapshots
+
+D5 owner-supplied metadata: character_materials.count has no nonnegative CHECK; consume_material(uuid,text,integer) installed search_path=public, expected observed behavior and service-only EXECUTE; ledger, relevant triggers and migration history passed.
+
+D5A separately observed owner-supplied metadata: materials catalog writes restricted by RLS to steward/overlord accounts. This is not the same snapshot as D5, nor a demonstration of catalog immutability or schema CREATE privileges. Exact execution timestamps, querying roles, per-object output/full normalized helper definition and fingerprints were not supplied in this task and have no new local report. Do not fabricate those values or merge the results into one atomic observation. Evidence recorded here is operator-reported, not a Codex hosted read. Earlier C3/F limits retained.
+
+## Count constraint difference
+
+The D3 transaction explicitly locks the owned balance row and rejects missing/null/before_count < positive amount. Any existing negative count therefore refuses before consumption or gold credit and remains unchanged; it is not normalized. For allowed balance b>=a>0, exact after_count=b-a is asserted after helper returns true. This prevents this sale operation producing a negative count despite absence of a table CHECK; it does not impose that invariant on other writers or establish no negative live balances exist. No row inspection/repair required merely to install this narrow authority.
+
+An isolated PGlite probe with source helper and approved SQL confirmed count=-4 refuses with gold/balance/ledger unchanged; balance5/amount5 succeeds at zero. Tests are local single-backend, not independent-session or production proof. Remove the handoff's implied requirement that the schema already enforce nonnegativity; preserve the operation's actual guards.
+
+## Helper search path and body reconciliation
+
+[May source](../../supabase/migrations/20260511110342_53371110-9a2c-481e-aa15-011d2237f4a2.sql)30–57 declares SECURITY DEFINER SET search_path=public, exactly the reported installed setting. It is not a mismatch with that source; the new sale function separately declares public,pg_temp. The helper reads/updates **public.character_materials** explicitly, uses built-in integer/boolean operations, now(), and no dynamic SQL or unqualified application-table references. D3 calls **public.consume_material** explicitly and checks true plus exact decrement under a held row lock.
+
+With this source body, implicit pg_catalog lookup precedes public for built-ins; temp schema can otherwise precede public for unqualified relations/types, but cannot redirect the qualified material relation. Temp functions/operators are not searched as application functions. Local probe created a pg_temp.character_materials decoy: helper changed only public balance, decoy stayed999. This is a narrow resolution probe, not comprehensive SECURITY DEFINER hardening proof. Public-schema DDL privileges and arbitrary external service SQL sessions are not established by materials RLS. Browser denial/service-only EXECUTE reduces the exposed entry boundary; it does not make every definer body safe by definition.
+
+Reported locked read/boolean refusal/decrement behavior is consistent with D2 source. No full hosted definition bytes were provided, so exact source/body fingerprint equality is **not independently established**. GO applies to the supplied expected-behavior/body assumptions: if installation-time reconciliation reveals dynamic SQL, unqualified application objects, changed helper resolution/security/owner or unexpected trigger writes, STOP rather than infer safety from this search-path string. No helper replacement/search-path change proposed. Existing material helpers remain shared primitives, not competing sale writers.
+
+## Prerequisites versus reconciled differences
+
+Accepted technical compatibility differences for this narrow installation: absent nonnegative CHECK (guard enforced by sale), helper search_path=public (source-aligned qualified body). These are not owner acceptance of unrelated authority issues or global invariant claims. D5 ledger/triggers/history and D5A restricted catalog writes are recorded passed only at supplied scope. Catalog remains editable by authorized admins; D3 FOR SHARE pins the selected pricing row through its transaction and conflicts with row UPDATE/DELETE. No immutable catalog requirement added.
+
+Installation still requires exact reviewed artifact/checkpoint, new signature absence, current dependency identity/types/bounds/privacy and no intervening metadata drift. Confirm helper body/resolution assumptions above from existing D5 output at authorized installation handoff; do not assume full definition equality solely from behavior. Standard Lovable/Drizzle only, SQL outside migrations until tool installation; one transactional execution including ACL postconditions. Stop if numeric types/checks differ from int4 model, ledger rejects action or triggers alter intended results/locks, effective browser EXECUTE remains, service/postgres capabilities differ, name collision or journal prefix drift. No broad grant, negative-count cleanup or CHECK migration.
+
+Post-install: generated SQL bytes/hash, journal/snapshot append and prior prefix preservation, owner/SECURITY DEFINER/search_path/service-only EXECUTE, helper and pre-existing trigger preservation. Then separately authorized Edge deployment followed by owner manual compatible frontend publication. Existing old Edge stays unchanged/unsafe until deployed replacement; missing-UUID old callers refuse under new handler. Remount/reload UUID recovery limitation requires acknowledgment before activation; multi-session runtime remains unverified. No runtime canary authorized by this GO.
+
+Validation: approved SQL hash, existing8 SQL/static tests, local negative/zero/temp-shadow probes, project-state consistency/tests, documentation links and whitespace. No SQL/code change, hosted query, migration, privilege change, deployment, commit or push. Earlier closures and four OPEN F limitations preserved. Administrative XP grants remain paused; normal gameplay XP not intentionally disabled or runtime-established by this review. Recovery stash unchanged.

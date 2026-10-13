@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T22:20:12.374Z",
-  "based_on_source_sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
+  "updated_at": "2026-10-12T22:47:59.955Z",
+  "based_on_source_sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1752,6 +1752,28 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
       "evidence": "Final D1–D3A source review GO, SQL hash unchanged. Shared caller/Edge refusal/retry and SQL rollback tests pass; remount/reload UUID persistence not guaranteed. No hosted/Edge/frontend activation; D OPEN and prior closures/F limitations preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001D5/D5A — separately observed metadata preflights owner-reported",
+      "status": "authored",
+      "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
+      "timestamp": "2026-10-12T22:47:59.955Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied D5/D5A summaries",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001D5B-preflight-reconciliation.md",
+      "evidence": "D5 no count CHECK; consume public search_path/expected behavior/service-only EXECUTE, ledger/triggers/history passed. D5A separately catalog writes RLS limited steward/overlord. Exact observation times/roles/full-body fingerprints unavailable; recording time only, distinct snapshots not merged. No runtime proof."
+    },
+    {
+      "identity": "ENG-LEGACY-001D5B — unchanged SQL installation compatibility GO; D OPEN",
+      "status": "authored",
+      "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
+      "timestamp": "2026-10-12T22:47:59.955Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D5B-preflight-reconciliation.md",
+      "evidence": "Sale rejects existing negative balance, exact decrement prevents new negative count; local source public-qualified helper resolution and temp decoy probe support reported compatibility. No SQL change; installation depends on expected body/identity and no metadata drift. Full hosted definition parity not independently established. No hosted/install/deploy/commit authorization."
     }
   ],
   "known_blockers": [
@@ -1983,15 +2005,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D3 local preparation ready; publication/hosted prerequisites require authorization",
+    "identity": "STOP — D5B unchanged sale SQL requires separate installation authorization",
     "status": "blocked",
-    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
-    "timestamp": "2026-10-12T15:52:09.375Z",
+    "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
+    "timestamp": "2026-10-12T22:47:59.955Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
-    "evidence": "D4 source publication owner-authorized only. Next read-only hosted metadata preflight requires separate authorization; reconcile helper/ledger/schema/trigger/ACL prerequisites. Database then verified Edge then manual frontend rollout; remount recovery limitation must be acknowledged before activation. D OPEN."
+    "artifact": "docs/operations/legacy-001D5B-preflight-reconciliation.md",
+    "evidence": "GO at reported preflight scope; confirm exact artifact/dependencies and no drift including helper body resolution before standard transactional install, postverify metadata. Edge/frontend/runtime remain separate. D OPEN; earlier closures/F limitations/admin-only XP pause preserved."
   },
   "volatile_runtime_observations": [
     {
