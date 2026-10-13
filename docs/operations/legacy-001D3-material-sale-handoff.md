@@ -47,3 +47,7 @@ Validation:8 isolated SQL/static tests,6 shared production-hook/actual mocked Ed
 ## D5B installation decision
 
 [Owner-supplied D5/D5A reconciliation](legacy-001D5B-preflight-reconciliation.md): GO for separately authorized unchanged SQL installation under documented dependency/drift gates. Missing count CHECK is compatible with the sale guard; installed helper public search path matches the qualified-table May source, not the new function setting. Distinct observation snapshots, no supplied full-body fingerprint or fresh Codex read. No broad security acceptance or runtime verification inferred.
+
+## D7 recovery and installed-source reconciliation
+
+[0020 installation reconciliation and session recovery](legacy-001D7-installation-retry-recovery.md) supersedes component-lifetime-only pending recovery for the prepared caller bundle: account/character-scoped session storage survives ordinary same-tab reload/remount. Cleared storage, tab closure and independent tabs remain limitations. Edge success now echoes request UUID; SQL artifact unchanged. Installed migration must not be replayed. Failed aggregate trigger fingerprint query is not a metadata PASS. No new rollout activated.

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     if (!data || data.error || !Number.isInteger(data.gold_remaining)) throw new Error("Sale refused");
-    return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ...data, request_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(
       JSON.stringify({ error: (e as Error).message || "Unknown error" }),

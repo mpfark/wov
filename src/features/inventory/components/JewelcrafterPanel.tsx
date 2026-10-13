@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -61,7 +62,8 @@ export default function JewelcrafterPanel({
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [sellAmount, setSellAmount] = useState(1);
-  const { pending: pendingSale, selling, submit: submitSale } = useMaterialSaleRequest();
+  const { user: saleUser } = useAuth();
+  const { pending: pendingSale, selling, recoveryError, submit: submitSale } = useMaterialSaleRequest(saleUser?.id ?? null, characterId);
   const [cutting, setCutting] = useState<string | null>(null);
   const { counts } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
@@ -215,6 +217,7 @@ export default function JewelcrafterPanel({
       {craftBlock}
       <div className="gap-group border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]"> Sell Salvage</h3>
+        {recoveryError && <p role="alert">{recoveryError}</p>}
         {pendingSale && <Button disabled={selling || pendingSale.character_id !== characterId} onClick={handleSellSalvage}>Retry pending sale ({pendingSale.amount} salvage)</Button>}
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
@@ -225,7 +228,7 @@ export default function JewelcrafterPanel({
               <span className="font-display text-dwarvish"> {sellAmount} → {sellAmount}g</span>
             </div>
             <Slider min={1} max={salvage} step={1} value={[sellAmount]} onValueChange={([v]) => setSellAmount(v)} className="w-full" />
-            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={selling || !!pendingSale || sellAmount < 1}
+            <Button size="sm" variant="outline" onClick={handleSellSalvage} disabled={!saleUser || !!recoveryError || selling || !!pendingSale || sellAmount < 1}
               className="w-full font-display text-xs h-7">
               {selling ? <span className="animate-pulse">Selling…</span> : <><Coins className="w-3 h-3 mr-1" /> Sell Salvage</>}
             </Button>

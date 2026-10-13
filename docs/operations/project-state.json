@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-12T22:47:59.955Z",
-  "based_on_source_sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
+  "updated_at": "2026-10-13T06:07:17.458Z",
+  "based_on_source_sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -450,17 +450,28 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0019_legacy_001c5a_hp_helper_containment.sql",
       "evidence": "Owner reports history20/latest0019, effective browser EXECUTE denied for exact three HP helpers, postgres/service rights preserved; Lovable3credits. Local committed SQL byte SHA256 f7881885b89e4ae9bf48a589b15422e73d9ffc1c07c01dd7c5839cd84eb06fb2 equals reviewed artifact; original19 journal entries and earlier migration bytes preserved. Timestamp is recording time, not hosted execution observation. No runtime or multi-session proof."
+    },
+    {
+      "identity": "0020_legacy_001d3_atomic_material_sale",
+      "status": "installed",
+      "sha": "0e21419036f3652aae2a04beb558a8964b927f0d",
+      "timestamp": "2026-10-13T06:07:17.458Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik supplied D6 installation; Codex local source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0020_legacy_001d3_atomic_material_sale.sql",
+      "evidence": "Owner successful D6/history21/function material_sale_internal. Local exact approved SHA256 c4620461e47da357bf44ace6c09192a864a6ecfa4975145f7e22818bfd987966,21-chain/original20 preserved. Separate D5/D5A/D6 observations; times/roles/full catalog not supplied. Failed aggregate trigger fingerprint query not verified parity. Timestamp recording only; no runtime/concurrency proof or Edge/frontend activation."
     }
   ],
   "generated_supabase_types": {
     "status": "committed",
-    "sha": "87800451fcc5b466a9166f50e1253f2be85e20bb",
-    "timestamp": "2026-10-12T12:02:17.676Z",
+    "sha": "0e21419036f3652aae2a04beb558a8964b927f0d",
+    "timestamp": "2026-10-13T06:07:17.458Z",
     "artifact": "src/integrations/supabase/types.ts",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Intervening generated-types-only commit changes PostgrestVersion14.5 to14.1; no table/RPC shape changes. Direct source comparison verified, no hosted runtime downgrade or ACL inference. Earlier D4 declarations retained."
+    "evidence": "D6 automatic regeneration adds only material_sale_internal five-argument signature/JSON result. Source delta directly verified; no privilege/runtime inference."
   },
   "edge_function_deployments": [
     {
@@ -1774,6 +1785,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001D5B-preflight-reconciliation.md",
       "evidence": "Sale rejects existing negative balance, exact decrement prevents new negative count; local source public-qualified helper resolution and temp decoy probe support reported compatibility. No SQL change; installation depends on expected body/identity and no metadata drift. Full hosted definition parity not independently established. No hosted/install/deploy/commit authorization."
+    },
+    {
+      "identity": "ENG-LEGACY-001D7 — D6 reconciled; scoped session retry recovery prepared",
+      "status": "authored",
+      "sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
+      "timestamp": "2026-10-13T06:07:17.458Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001D7-installation-retry-recovery.md",
+      "evidence": "Session storage scoped authenticated account/character, exact immutable pending payload, explicit retry, matching UUID outcomes; same-tab guard, no auto dispatch. Storage clearing/tab isolation limits remain. SQL unchanged; D OPEN, no commit/deploy/hosted action. Prior closures/F limitations/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2005,15 +2027,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — D5B unchanged sale SQL requires separate installation authorization",
+    "identity": "STOP — D7 retry-recovery bundle awaits publication and separate deployment authorization",
     "status": "blocked",
-    "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
-    "timestamp": "2026-10-12T22:47:59.955Z",
+    "sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
+    "timestamp": "2026-10-13T06:07:17.458Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001D5B-preflight-reconciliation.md",
-    "evidence": "GO at reported preflight scope; confirm exact artifact/dependencies and no drift including helper body resolution before standard transactional install, postverify metadata. Edge/frontend/runtime remain separate. D OPEN; earlier closures/F limitations/admin-only XP pause preserved."
+    "artifact": "docs/operations/legacy-001D7-installation-retry-recovery.md",
+    "evidence": "0020 must not be replayed. Publish reviewed recovery bundle only after authorization; matching Edge deployment then manual frontend publication separately. Preserve full-helper/failed-aggregate evidence limits and no runtime proof. D OPEN."
   },
   "volatile_runtime_observations": [
     {
