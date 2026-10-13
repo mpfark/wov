@@ -68,8 +68,22 @@ These are planned concurrency tests, not runtime or installed behavior evidence.
 
 [SELECT-only parity SQL](legacy-001F3-party-parity.sql) and [Lovable handoff](legacy-001F3-party-parity-handoff.md) provide one statement snapshot, exact definitions, fingerprints, direct/effective ACLs, bound trigger bodies and relevant constraints/indexes/RLS. No gameplay data or function invocation. No fresh migration history request: installed B/C2 evidence is reused and correction would follow the existing reviewed-SQL-outside-migrations Lovable workflow after separate authorization. Never replay historical Supabase files or register an alternate runner.
 
-Ready for **hosted metadata parity**, not correction implementation or installation yet. No new owner gameplay policy needed; authority/trigger drift could require a bounded decision. F1 retry issue independent. All prior closures and four OPEN progression limitations retained. Administrative XP grants remain paused; normal gameplay XP earning is not intentionally disabled by this policy and is not established here. Recovery stash preserved.
+Initial F3 status was ready for hosted metadata parity. F5/F5A have now been supplied and reconciled in F5B: **GO for separately authorized local correction implementation**, not installation or runtime sign-off. No new owner gameplay policy needed; authority/trigger drift could require a bounded decision. F1 retry issue independent. All prior closures and four OPEN progression limitations retained. Administrative XP grants remain paused; normal gameplay XP earning is not intentionally disabled by this policy and is not established here. Recovery stash preserved.
 
 ## Local validation result
 
 13 existing tests passed (party API7, party UI contract3, project-state3). Project-state JSON/Markdown synchronized;21 F3 documentation links valid; static checks confirm one metadata SELECT, no mutation statements or public gameplay-row reads; whitespace checks passed. SQL was not executed. No implementation/concurrency test result inferred from these checks.
+
+## F5B clarification — membership is not movement
+
+Protected party_mutate operations change party/member/request metadata, not characters.current_node_id. Row locking is not a character UPDATE. They therefore do not directly invoke the characters AFTER UPDATE OF current_node_id movement triggers, including characters_end_participation_on_node_change and Combat2 authoritative arrival. Coordinated/solo movement remains a separate caller path that does change location and may invoke them. This narrows correction scope; it does not prove all indirect trigger dependencies absent.
+
+Historical [participation cleanup source](../../supabase/migrations/20260827094512_37a985a4-cb14-4ce8-9a04-43f75cd26184.sql):1–100 defines encounter_end_participation(uuid,uuid), legacy encounter advisory locking, arm_effects_catchup_for_node calls, and the node-change trigger's exception swallowing. The historical source is distinguished from the now-supplied owner-reported F5A evidence. See [F5B reconciliation](legacy-001F5B-party-correction-readiness.md). Existing Combat1 lock-order hazard is temporarily owner-accepted for this narrow correction readiness decision, per the subsequent owner instruction. It remains unresolved; no unrestricted legacy safety or runtime proof is claimed. F5A observations use separate statement snapshots and abbreviated nested fingerprints.
+
+## F6 local implementation status
+
+[F6 candidate/tests/handoff](legacy-001F6-party-lock-handoff.md) implement the existing design only in party_mutate. All pending invitees are included in discovery; protected operations retain original body and existing failure response kind.14 executed PGlite SQL tests passed. At the initial checkpoint six independent-session scenarios were skipped; the subsequent native follow-up below supersedes this and passes those six local scenarios. No hosted concurrency proof. Metadata preflight preparation can proceed after review; installation remains separately gated by preflight and owner authorization. No migration/authority/tank/Combat1 changes installed.
+
+## Native verification follow-up — 2026-10-14
+
+F6 subsequently executed all six independent-session regression scenarios successfully on isolated PostgreSQL18.6 after a Windows process-startup harness fix. The earlier skipped-test limitation is superseded for these six scenarios; no hosted verification inferred. SQL unchanged, other accepted risks retained. See F6 handoff.

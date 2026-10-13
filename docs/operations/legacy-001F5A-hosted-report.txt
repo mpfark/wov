@@ -1,0 +1,52 @@
+ENG-LEGACY-001F5A result: the missing movement trigger dependency doesn't block F3. The F3 party change doesn't move characters, so it never fires this trigger. One older locking hazard does exist, from legacy Combat1 functions that can still be run. It is not part of the party design, but you need to accept it or contain it separately.
+
+How it ran
+- Source: the local copy and origin/main are both at `e29785bd`.
+- Role and time: catalog-only SELECTs as `sandbox_exec`, from 2026-10-13 21:01:46.85 to 21:02:32.75 UTC. They ran as separate statements, so this is not one snapshot. `transaction_read_only` was off, but only reads were run.
+- Visibility: nothing was inaccessible or truncated. The one truncated output was a local design-file search, not database metadata.
+- Fingerprints use the F3 method (whitespace-collapsed `pg_get_functiondef`).
+
+Installed definitions
+
+| Function | Overloads | Owner / security | search_path | Fingerprint |
+|---|---|---|---|---|
+| `encounter_end_participation(uuid,uuid)` | 1 | postgres, DEFINER | public | `e1c855de…2533` |
+| `characters_end_participation_on_node_change()` | — | postgres, DEFINER | public | `cbc04da6…23de` |
+| `trg_character_encounter_lifecycle()` | — | postgres, DEFINER | public | `5a1ae8ae…5e03` |
+| `sync_stance_effects()` | — | postgres, INVOKER | public | `9e230c7b…88e2` |
+| `encounter_lock_key(uuid)` | — | IMMUTABLE | — | `20e7669f…b75a` |
+| `arm_effects_catchup_for_node(uuid)` | — | DEFINER | public, cron | `099c96e1…173af` |
+
+Triggers on `characters`
+- `trg_characters_node_change_participation`: runs AFTER UPDATE OF `current_node_id`, only when the old node is set and differs from the new one. It calls `encounter_end_participation(OLD.id, OLD.current_node_id)`. Any error is swallowed, so movement never fails because of it.
+- `trg_characters_encounter_lifecycle`: runs AFTER UPDATE OF `current_node_id` or `hp`. On a node change it runs `DELETE encounter_participants WHERE character_id=NEW.id`, across every encounter and without an advisory lock. Triggers fire in name order, so this runs first.
+- `trg_characters_sync_stance_effects`: fires only when `reserved_buffs` changes, which a node change doesn't do. It deletes stance rows in `active_effects` and adds no lock-order dependency. Out of scope from here on.
+
+What `encounter_end_participation` does
+1. Reads the newest legacy `public.encounters` row for the node being left, without a row lock. This is the old Combat1 table, not Combat2 `node_encounter`.
+2. Takes `pg_advisory_xact_lock(encounter_lock_key(enc))`, a key built from the encounter's UUID. This is a different lock family from Combat2's `combat_enter_node:<uuid>` node locks.
+3. Deletes from `encounter_engagements` and `encounter_participants`, and cancels pending `combat_actions`.
+4. Calls `arm_effects_catchup_for_node`, which may call `cron.schedule` if the catch-up job is missing. Errors are swallowed.
+5. The child fence on these tables takes `FOR KEY SHARE` on the character's row. That doesn't conflict with the movement update's own row lock, so it adds no new character lock.
+
+It takes no Combat2 encounter, fighter, node or party-lifecycle lock.
+
+Lock order compared
+- Combat2 solo and party departure: sorted `combat_enter_node` locks, then encounter and character rows, then characters in UUID order in the finalizer, then this trigger's legacy lock on the origin node. Only a mover leaving that same node takes that node's legacy lock, and every such Combat2 mover already holds that node's lock. So Combat2 departures can't form a cycle with each other.
+- F3 proposed party change: only changes membership, never `current_node_id`. It never fires this trigger and never takes the legacy lock. No new cycle.
+- Arrival: runs with the node locks already held. Same result.
+
+Remaining hazard (existed before F3, not introduced by it)
+These functions take the same legacy lock first and then touch characters or participant rows. Movement takes them in the opposite order:
+- Service-role only: `encounter_apply_character_damage/heal/resource`, `encounter_boss_resolve_cast` (update characters) and `commit_encounter_tick_v2` (also updates characters, but the service role has no EXECUTE on it).
+- Executable by anon and authenticated: `encounter_intake`, `claim_encounter_tick` and `encounter_reconcile`. They write participant tables while holding the lock.
+
+A possible deadlock: movement deletes a participant row, then waits for the legacy lock. Meanwhile `encounter_intake` or `claim_encounter_tick` holds that lock and needs the same participant row. If the database picks the movement trigger to cancel, the error is swallowed and the cleanup is lost. If it picks the other side, that call fails. Whether these legacy paths still have live callers or legacy encounter rows can't be shown without reading gameplay rows. Node changes that skip Combat2 node locks (special travel, summon, teleport, respawn, lifecycle) were also not inspected here.
+
+Reclassified F5 criteria
+- Movement: PASS. The party and solo Combat2 lock order holds. The trigger adds one legacy lock after the character rows, but the origin node's lock already covers it. The F3 change adds no cycle.
+- Triggers: REQUIRES EVIDENCE. The body is now fully accounted for and no extra Combat2 lock is involved. Still open is the possible deadlock with the browser-executable `encounter_intake`, `claim_encounter_tick` and `encounter_reconcile` and the service-role legacy functions. It needs either containment (removing the anon and authenticated EXECUTE as legacy cleanup) or your acceptance as a limitation.
+
+Effect on F3 readiness: this dependency no longer blocks the F3 party-lock correction. The F3 design only needs a note that it doesn't touch this trigger. The other F5 items (FAIL and REQUIRES EVIDENCE) stay open.
+
+Nothing was changed, called, granted, migrated, deployed or published. No gameplay rows were read, and no repository files were modified. ENG-LEGACY-001F stays in progress.

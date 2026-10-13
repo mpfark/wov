@@ -33,3 +33,10 @@ docs/operations/progression-001F-R1-service-update-repair.sql text eol=lf
 docs/operations/progression-001F-R1-manifest.json text eol=lf
 scripts/prepare-progression-001F-R1.mjs text eol=lf
 scripts/progression-001F-R1-sql.test.mjs text eol=lf
+
+# Exact Parties audit evidence and reviewed SQL bytes.
+docs/operations/legacy-001F5-party-parity-envelope.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/operations/legacy-001F5A-hosted-report.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/operations/legacy-001F6A-native-test-results.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/operations/legacy-001F6-party-combat-serialization.sql text eol=lf
+docs/operations/legacy-001F7-party-preflight.sql text eol=lf

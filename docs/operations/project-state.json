@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T20:10:32.807Z",
-  "based_on_source_sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
+  "updated_at": "2026-10-13T22:52:08.356Z",
+  "based_on_source_sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2005,6 +2005,39 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001F3-party-lock-design.md",
       "evidence": "Metadata-only single-SELECT parity/handoff prepared; no hosted result. Design: unlocked affected member/node/encounter discovery, sorted nodes before lifecycle, sorted encounters before UUID characters/member writes, abort on coverage drift; preserves replay, tank selection and movement. Two-session tests planned, not performed. F1 retry issue separate; Parties IN PROGRESS/parent OPEN, previous closures/four progression limitations/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F5B Parties IN PROGRESS — supplied F5/F5A reconciled; GO local correction",
+      "status": "authored",
+      "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
+      "timestamp": "2026-10-13T21:36:31.402Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F5B-party-correction-readiness.md",
+      "evidence": "Owner-supplied F5 raw JSON and F5A text archived byte-identically, separate observations. Membership changes no current_node_id and do not fire movement cleanup. F5A reports no new Combat2 lock dependency; retained Combat1 deadlock hazard temporarily owner-accepted, unresolved. Broad DML grants remain a criterion FAIL distinct from RLS default-denial; caller isolation/raw authority/runtime concurrency unverified. GO narrowly scoped local F3 implementation after separate authorization and isolated two-session tests; no installation/runtime sign-off. Prior closures/four OPEN progression limitations/admin-only XP pause retained."
+    },
+    {
+      "identity": "ENG-LEGACY-001F6 Parties IN PROGRESS — local SQL and native two-session tests PASS",
+      "status": "authored",
+      "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
+      "timestamp": "2026-10-13T22:37:51.614Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F6-party-lock-handoff.md",
+      "evidence": "F6/F6A current result: only party_mutate reviewed SQL outside migrations;14 PGlite SQL tests and6 executed independent-session native tests PASS on PostgreSQL18.6; initial skips superseded. Windows harness spawn/ignored stdio fix only; SQL39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d unchanged. No hosted/runtime proof; restricted caller/raw authority and accepted Combat1 hazard retained. Prior closures/four progression limitations/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F7 Parties IN PROGRESS — verified candidate and scoped metadata preflight publication",
+      "status": "authored",
+      "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
+      "timestamp": "2026-10-13T22:52:08.356Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F7-party-preflight-handoff.md",
+      "evidence": "F5/F5A original evidence and F5B/F6/F6A reconciled. Candidate unchanged;14 SQL/6 native/4 preflight tests PASS. Prepared two SELECTs: scoped dependency/trigger/ACL/column metadata with F5 hash reuse; separate22-entry Drizzle source-prefix read. No hosted execution, install/deploy/Publish. GO separate metadata preflight after source publication, not installation/closure. Parties IN PROGRESS/parent OPEN; all accepted limits/stash preserved."
     }
   ],
   "known_blockers": [
@@ -2236,15 +2269,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — F3 parity request ready for review/publication; hosted execution and correction need authorization",
+    "identity": "STOP — F7 publication authorized; hosted metadata preflight needs separate owner execution",
     "status": "blocked",
-    "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
-    "timestamp": "2026-10-13T20:10:32.807Z",
+    "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
+    "timestamp": "2026-10-13T22:52:08.356Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001F3-party-lock-design.md",
-    "evidence": "Metadata-only single-SELECT parity/handoff prepared; no hosted result. Design: unlocked affected member/node/encounter discovery, sorted nodes before lifecycle, sorted encounters before UUID characters/member writes, abort on coverage drift; preserves replay, tank selection and movement. Two-session tests planned, not performed. F1 retry issue separate; Parties IN PROGRESS/parent OPEN, previous closures/four progression limitations/admin-only XP pause preserved."
+    "artifact": "docs/operations/legacy-001F7-party-preflight-handoff.md",
+    "evidence": "F5/F5A original evidence and F5B/F6/F6A reconciled. Candidate unchanged;14 SQL/6 native/4 preflight tests PASS. Prepared two SELECTs: scoped dependency/trigger/ACL/column metadata with F5 hash reuse; separate22-entry Drizzle source-prefix read. No hosted execution, install/deploy/Publish. GO separate metadata preflight after source publication, not installation/closure. Parties IN PROGRESS/parent OPEN; all accepted limits/stash preserved."
   },
   "volatile_runtime_observations": [
     {

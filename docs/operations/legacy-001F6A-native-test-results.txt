@@ -1,0 +1,15 @@
+Isolated native PostgreSQL cluster: C:\Users\mik\AppData\Local\Temp\wov-f6-postgres-tsdp3m
+✔ two sessions reproduce old accept guard versus real F5 entry race (509.3463ms)
+✔ corrected mutation-first blocks real entry until membership commits (437.4273ms)
+✔ real entry-first causes corrected acceptance refusal (334.5012ms)
+✔ claim row/lease first forces wait then refusal for absent historical fighter (471.4739ms)
+✔ mutation-held encounter makes claim locking primitive SKIP LOCKED (390.6705ms)
+✔ pending membership added while awaiting lifecycle refuses coverage without late locks/write (351.2052ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2680.1403
