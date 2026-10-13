@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T11:48:41.633Z",
-  "based_on_source_sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+  "updated_at": "2026-10-13T12:25:42.372Z",
+  "based_on_source_sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -461,6 +461,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0020_legacy_001d3_atomic_material_sale.sql",
       "evidence": "Owner successful D6/history21/function material_sale_internal. Local exact approved SHA256 c4620461e47da357bf44ace6c09192a864a6ecfa4975145f7e22818bfd987966,21-chain/original20 preserved. Separate D5/D5A/D6 observations; times/roles/full catalog not supplied. Failed aggregate trigger fingerprint query not verified parity. Timestamp recording only; no runtime/concurrency proof or Edge/frontend activation."
+    },
+    {
+      "identity": "0021_legacy_001e6_npc_gift_correction",
+      "status": "installed",
+      "sha": "aa36cca388049487063ad90fa9ea9c17dcb30402",
+      "timestamp": "2026-10-13T12:25:42.372Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik E12 supplied E11 installation evidence; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0021_legacy_001e6_npc_gift_correction.sql",
+      "evidence": "Owner reports SUCCESS/history22/original21 unchanged and before/after trigger fingerprintc504637d2f979b38294ce5b860051925. Local candidate byte hashc9265d6845fd6fe325116a7062f34d1601be3e1d4e1a765c1c34ef61d99da65e and extracted bodyad8cec2a48a0a7f706d8410762afbc10e9b401f6bdef344466defd77bb293430 match supplied results. Chain/prefix/types unchanged verified. Timestamp recording, not exact hosted observation; no live gift/concurrency proof."
     }
   ],
   "generated_supabase_types": {
@@ -1939,6 +1950,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001E9-npc-gift-installation-preflight.md",
       "evidence": "E8 SQL unchanged hashc9265d…; full E5 absent locally so handoff explicitly reuses Lovable original report before minimal missing exact metadata. Unknown external NULL-auth/server compatibility requires owner acceptance or concrete caller resolution, not automatic safety. No preflight/install/deploy dispatched. E IN PROGRESS and previous closures/F limits/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001E12 — NPC installed reconciliation; Economy closure OWNER DECISION REQUIRED",
+      "status": "authored",
+      "sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
+      "timestamp": "2026-10-13T12:25:42.372Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner explicitly accepted three NPC verification limitations",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E12-installation-disposition.md",
+      "evidence": "NPC correction resolved at source/owner installation metadata level. Unknown external callers, independent-session concurrency and uninspected duplicate/conflicting gift config owner-accepted. Vendor transaction risks, salvage source mismatch and contract/quest coverage not silently accepted; explicit owner follow-up/deferral decision needed. E IN PROGRESS, overall OPEN; prior closures/four F limits/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2170,15 +2192,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — E9 source package ready; minimal hosted evidence/owner gates require separate authorization",
+    "identity": "STOP — owner disposition of remaining Economy E1 risks required before E closure",
     "status": "blocked",
-    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
-    "timestamp": "2026-10-13T11:48:41.633Z",
+    "sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
+    "timestamp": "2026-10-13T12:25:42.372Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001E9-npc-gift-installation-preflight.md",
-    "evidence": "Publish source owner-authorized only; reuse full E5, reconcile exact installed guard/ACL/trigger/server dependencies, explicit external/runtime limitation acceptance before separate installation. No hosted read/install or broad scan automatically authorized."
+    "artifact": "docs/operations/legacy-001E12-installation-disposition.md",
+    "evidence": "Decide explicit acceptance/deferment or narrow investigation of vendor read/delete/credit risks, salvage reward composition mismatch and contract/quest completion coverage. NPC three limits already accepted, no repeated broad audit. No new repair/probe or E closure authorized."
   },
   "volatile_runtime_observations": [
     {

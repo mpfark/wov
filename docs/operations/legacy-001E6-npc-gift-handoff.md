@@ -38,3 +38,7 @@ Prior closures, four OPEN F limitations, privileged v3→v2 uncertainty, accepte
 E7 original NULL guard bypass corrected by IS DISTINCT FROM true on the complete existing predicate; FALSE and NULL reject without weakening any fingerprint/default/security check. Character acquisition uses FOR NO KEY UPDATE, preserving same-character serialization and character-first order while allowing parent-cascade lifecycle FOR KEY SHARE. Original artifact26c75bfd… is historical; exact inverse-diff test reproduces its complete hash. No other SQL, ACL or gameplay semantics changed.
 
 12 focused isolated tests now include original defect reproduction/rejection, FALSE-setting drift, retained character lock/order, all E6 behavior, E7 ACL scenarios and final-assert installation rollback. Lock-mode compatibility/static cascade chain is not independent-session deadlock/concurrency proof. Revised SQL remains one atomic DO operation. READY FOR HOSTED PREFLIGHT using existing E5 full output first; exact source/ACL/trigger/server-caller gates remain, not installation authorization.
+
+## E11/E12 installed-source reconciliation
+
+[0021 installation and Economy disposition](legacy-001E12-installation-disposition.md): owner reports successful installation,22-entry history and unchanged trigger fingerprint; local exact SQL/body/type/journal reconciliation verified. This supersedes pending-installation wording for NPC correction only. Three NPC limitations explicitly accepted; other E1 risks need separate owner decision, E remains IN PROGRESS. Do not reinstall artifact.
