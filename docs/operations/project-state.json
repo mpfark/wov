@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T07:47:25.204Z",
-  "based_on_source_sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
+  "updated_at": "2026-10-13T08:16:23.498Z",
+  "based_on_source_sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1818,6 +1818,28 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001D10-closeout.md",
       "evidence": "Bounded map/trace/static guard and installed/deployed sale evidence meet staged audit closure, no new critical authority blocker demonstrated. Live material sale/concurrency/bundle identity unverified; session scope/count CHECK/search path/trigger/C3/equipment/override/transactionality/privileged findings accepted unresolved. Owner vendor smoke distinct; crafting/level1 combat problems follow-up candidates, no root cause. Prior closures/four OPEN F limits/admin-only XP pause preserved. Overall LEGACY001 OPEN."
+    },
+    {
+      "identity": "ENG-LEGACY-001 Progression-domain disposition — existing-work coverage recommended, not auto-closed",
+      "status": "authored",
+      "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
+      "timestamp": "2026-10-13T08:10:21.484Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
+      "evidence": "001A domain3 requirements mapped to completed progression A–H inventories/cutovers/accepted closures. Recommend covered by existing work with accepted limitations; no new mandatory uncovered writer identified, no duplicate full audit. Four F limits OPEN, RP earning/v3→v2/bond/delegate/runtime gaps preserved. Formal reuse disposition needs owner acceptance; prior B/C/D/progression closures untouched."
+    },
+    {
+      "identity": "ENG-LEGACY-001 Progression domain COVERED BY EXISTING WORK WITH ACCEPTED LIMITATIONS — owner acceptance",
+      "status": "authored",
+      "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
+      "timestamp": "2026-10-13T08:16:23.498Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit Progression reuse acceptance; Codex documentation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
+      "evidence": "Owner accepts completed A–H evidence reuse, not full gameplay/security verification. Four F limits OPEN; RP earning, v3→v2, external bond/helper, historical ACL and untested runtime/replay/cron preserved. Earlier closures unchanged, overall LEGACY001 OPEN. Administrative XP grants paused only; gameplay XP not intentionally disabled. Economy/Rewards next, no investigation begun."
     }
   ],
   "known_blockers": [
@@ -2049,15 +2071,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — next listed Economy/Rewards domain; earlier Progression-domain disposition requires explicit kickoff reconciliation",
+    "identity": "STOP — Economy / Rewards next bounded domain, awaiting scoped kickoff authorization",
     "status": "blocked",
-    "sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
-    "timestamp": "2026-10-13T07:47:25.204Z",
+    "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
+    "timestamp": "2026-10-13T08:16:23.498Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001D10-closeout.md",
-    "evidence": "001A order preserved. Economy/Rewards follows Inventory in approved list; earlier Progression/XP/RP/class/bonds not silently marked complete by reuse of progression closure. Next bounded kickoff separately authorized, no broad scan/functional fix/runtime probe begun."
+    "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
+    "evidence": "Progression-domain reuse explicitly accepted; domain-order reconciliation complete. Economy/Rewards ready for next scoped request using prior inventories and retained RP/delegate gaps. No implementation, broad audit or hosted probes authorized by documentation publication."
   },
   "volatile_runtime_observations": [
     {
