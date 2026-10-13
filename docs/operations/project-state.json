@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T12:46:32.602Z",
-  "based_on_source_sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
+  "updated_at": "2026-10-13T20:10:32.807Z",
+  "based_on_source_sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1972,6 +1972,39 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
       "evidence": "Vendor double-credit/stale/partial transaction risk and salvage source mismatch owner-accepted unresolved; separate deferred candidates. Contract/quest authority transferred unresolved to World/Creatures/Quests with receiving plan references. NPC0021 installed/reconciled; three unknown-caller/concurrency/config limits retained, no gameplay PASS. Other E1–E12 findings retain original dispositions. Parent LEGACY001 OPEN; Parties next active planned domain, no audit begun. Previous closures/four OPEN F limits/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F Parties IN PROGRESS — F1 source writer/authority map prepared",
+      "status": "authored",
+      "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
+      "timestamp": "2026-10-13T19:12:29.196Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F1-parties-writer-map.md",
+      "evidence": "11 bounded lifecycle/movement/entry/resource/reward/legacy families reuse prior audits. Canonical party_mutate global/request receipts, follow patch and immediate departure ordering mapped; leader transfer absent, tank metadata distinct. Guard/entry race and raw-service bypass capability unverified; malformed-client-response UUID clearing source weakness. No host/gameplay/code change; prior closures/four F limits/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F2 Parties IN PROGRESS — CONCRETE SOURCE GAP in accept versus entry",
+      "status": "authored",
+      "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
+      "timestamp": "2026-10-13T19:46:01.281Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F2-party-combat-serialization.md",
+      "evidence": "Source schedule: accept guard passes, another accepted member enters without lifecycle lock, accept completes during active combat. Coordinated departure shares lifecycle lock; FK/child locks do not close accept window. No hosted race/exploit claim. Next bounded metadata parity and node-first correction design require authorization; F1 malformed-response UUID candidate remains separate. Prior closures, four OPEN progression limits and admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F3 Parties IN PROGRESS — parity preflight and node-first lock design prepared",
+      "status": "authored",
+      "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
+      "timestamp": "2026-10-13T20:10:32.807Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F3-party-lock-design.md",
+      "evidence": "Metadata-only single-SELECT parity/handoff prepared; no hosted result. Design: unlocked affected member/node/encounter discovery, sorted nodes before lifecycle, sorted encounters before UUID characters/member writes, abort on coverage drift; preserves replay, tank selection and movement. Two-session tests planned, not performed. F1 retry issue separate; Parties IN PROGRESS/parent OPEN, previous closures/four progression limitations/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2203,15 +2236,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — Parties/cooperative state next active planned audit domain; scoped kickoff pending",
+    "identity": "STOP — F3 parity request ready for review/publication; hosted execution and correction need authorization",
     "status": "blocked",
-    "sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
-    "timestamp": "2026-10-13T12:46:32.602Z",
+    "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
+    "timestamp": "2026-10-13T20:10:32.807Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
-    "evidence": "E13 closes bounded Economy audit with explicit limits. Parent OPEN, Parties order6 next then World/Creatures/Quests order7 with unresolved contract/quest transfer. No new audit/fix/runtime or hosted operation authorized by closure publication."
+    "artifact": "docs/operations/legacy-001F3-party-lock-design.md",
+    "evidence": "Metadata-only single-SELECT parity/handoff prepared; no hosted result. Design: unlocked affected member/node/encounter discovery, sorted nodes before lifecycle, sorted encounters before UUID characters/member writes, abort on coverage drift; preserves replay, tank selection and movement. Two-session tests planned, not performed. F1 retry issue separate; Parties IN PROGRESS/parent OPEN, previous closures/four progression limitations/admin-only XP pause preserved."
   },
   "volatile_runtime_observations": [
     {
