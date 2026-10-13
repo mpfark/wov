@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T08:16:23.498Z",
-  "based_on_source_sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
+  "updated_at": "2026-10-13T10:19:53.892Z",
+  "based_on_source_sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1840,6 +1840,50 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
       "evidence": "Owner accepts completed A–H evidence reuse, not full gameplay/security verification. Four F limits OPEN; RP earning, v3→v2, external bond/helper, historical ACL and untested runtime/replay/cron preserved. Earlier closures unchanged, overall LEGACY001 OPEN. Administrative XP grants paused only; gameplay XP not intentionally disabled. Economy/Rewards next, no investigation begun."
+    },
+    {
+      "identity": "ENG-LEGACY-001E IN PROGRESS — E1 Economy/Rewards source inventory prepared",
+      "status": "authored",
+      "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+      "timestamp": "2026-10-13T09:35:43.977Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E1-economy-rewards-writer-map.md",
+      "evidence": "13 bounded writer families reuse B/C/D/progression maps. NPC gift configured-event/once inputs not validated, vendor read/delete-credit races, resolver salvage vs0002 composition gap identified at source, not hosted exploits/runtime defects proven. Recommend narrow NPC gift E2; other priority findings retained. E/overall OPEN; previous closures/four F limits/v3 uncertainty/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001E2 — NPC gift authority source investigation prepared; E IN PROGRESS",
+      "status": "authored",
+      "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+      "timestamp": "2026-10-13T09:49:52.256Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E2-npc-gift-authority.md",
+      "evidence": "Admin JSON topics configure item/once; RPC ignores config, caller false/NULL skips once guard, NULL auth predicate fails open in source, no node lookup/character lock. FKs enforce identity, lifecycle/unique triggers may constrain mutation; current effective ACL/body not proven. Recommend same-RPC authoritative config validation and serialization, no correction yet; preserve E1 and previous closures/limits."
+    },
+    {
+      "identity": "ENG-LEGACY-001E3 — SELECT-only NPC gift metadata preflight prepared; E IN PROGRESS",
+      "status": "authored",
+      "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+      "timestamp": "2026-10-13T10:12:53.065Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E3-npc-gift-preflight.md",
+      "evidence": "Exact signature/source hash, six bounded table catalogs/bound triggers, effective ACL/RLS and separate runner history snapshots; no gameplay row reads/invocations. Proposed same-NPC/item equivalent topics collapse and conflicting flags refuse, pending owner approval. No correction/execution/push; prior E1/E2 and closures/F limits retained."
+    },
+    {
+      "identity": "ENG-LEGACY-001E4 — prepared E1–E3 source publication and gift-pair policy approved",
+      "status": "authored",
+      "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+      "timestamp": "2026-10-13T10:19:53.892Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik explicit E4 authorization; Codex local preparation review",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001E3-npc-gift-preflight.md",
+      "evidence": "Owner approves NPC/item pairs, equivalent duplicate collapse, conflicting once flags refusal and legitimate repeatable gifts. Source-only publication authorized. Metadata preflight SQL unchanged/SELECT-only, no gameplay rows/functions. No correction/hosted execution authorized; earlier closures/four F limits/admin-only XP pause and v3 uncertainty preserved. E IN PROGRESS, overall OPEN."
     }
   ],
   "known_blockers": [
@@ -2071,15 +2115,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — Economy / Rewards next bounded domain, awaiting scoped kickoff authorization",
+    "identity": "STOP — published E3 metadata preflight awaits separate hosted execution authorization",
     "status": "blocked",
-    "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
-    "timestamp": "2026-10-13T08:16:23.498Z",
+    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+    "timestamp": "2026-10-13T10:19:53.892Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
-    "evidence": "Progression-domain reuse explicitly accepted; domain-order reconciliation complete. Economy/Rewards ready for next scoped request using prior inventories and retained RP/delegate gaps. No implementation, broad audit or hosted probes authorized by documentation publication."
+    "artifact": "docs/operations/legacy-001E3-npc-gift-preflight.md",
+    "evidence": "E4 approves configuration rule and source publication only. Next exact-signature metadata preflight separate authorization; no SQL correction/hosted calls, NPC config row reads or gameplay probes permitted by publication. E IN PROGRESS."
   },
   "volatile_runtime_observations": [
     {

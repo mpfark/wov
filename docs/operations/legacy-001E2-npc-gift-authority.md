@@ -1,0 +1,61 @@
+# ENG-LEGACY-001E2 — NPC gift authority investigation
+
+Source baseline d03b4bb26b0e46f4961df880ca49da82370a14fe;2026-10-13. E IN PROGRESS, overall OPEN. Reuses uncommitted [E1 map](legacy-001E1-economy-rewards-writer-map.md) E8 and [G exact writer/ACL inventory](progression-001G-A-writer-inventory.md). No SQL/code/grant changes, hosted access or mutation probe.
+
+## Configured gift and request chain
+
+[GamePage](../../src/pages/GamePage.tsx)380,2015 selects current-node NPCs via [useNPCs](../../src/features/creatures/hooks/useNPCs.ts)22–28 and mounts [NPCDialogPanel](../../src/features/creatures/components/NPCDialogPanel.tsx). Panel49–63 selects topic kind give_item, params.item_id, params.once_per_character ?? true, then calls **public.grant_npc_gift(uuid,uuid,uuid,boolean)** with character,NPC,item and coerced once boolean. Result ok dispatches inventory:changed; already_gifted/not_owner/error are UI feedback. UI node filtering/topic selection/busy flag is not server authorization.
+
+Configuration is **public.npcs.dialogue_topics JSONB**, an array of author topics. [NPCManager](../../src/components/admin/NPCManager.tsx)523–546 item picker/checkbox persists params.item_id and boolean once_per_character; [dialogue-topics.ts](../../src/features/creatures/utils/dialogue-topics.ts)15–27,193–199,240–247 defines give_item/default display and weak structural parser. requires/follow_up are expressly reserved, not enforced gameplay conditions. Existing source NPC write policies steward/overlord in [February policy](../../supabase/migrations/20260215091228_fce1ea0c-a649-4361-959e-c677e1011267.sql)83–84; current grants/effective RLS unverified. Do not borrow D5A materials RLS proof for NPC configuration.
+
+## Exact SQL checks and omissions
+
+Single retained source definition: [June migration](../../supabase/migrations/20260630170429_0143b593-54cd-470a-b2e5-a4b26dc7599f.sql)9–85. SECURITY DEFINER, search_path=public; actual current owner not independently established by CREATE source. Qualified public.characters/inventory/gift tables prevent temp table shadow in those reads/writes; gen_random_uuid default and auth.uid do not establish safe business authority. No blanket safe/unsafe verdict based solely on search_path.
+
+| Requirement | Source behavior / consequence |
+|---|---|
+| Character ownership | auth.uid→owner; IF owner IS NULL OR owner<>user returns not_owner. Nonnull wrong owner rejected, but user NULL with nonnull owner yields SQL NULL condition; IF does not reject. **Confirmed fail-open source predicate**, not demonstrated anonymous access. |
+| NPC/item identity/existence | No explicit NPC/item lookup. Ledger NOT NULL FKs to npcs/items/characters enforce existence on insert; invalid identity failure rolls the whole RPC back, including prior inventory insert. Existence is not configured gift authorization or co-location. |
+| Configured item | No dialogue_topics read. Caller chooses any FK-valid item, subject to inventory/unique/lifecycle constraints. **Confirmed source configured-event validation omission.** |
+| Once-only | Caller true performs EXISTS check; false or NULL skips it. Unique ledger conflict DO NOTHING occurs after inventory insertion. Caller can bypass configured true; no trust boundary binds flag to NPC config. |
+| Interaction/location | No node comparison, NPC interaction eligibility or character movement check in body. UI filters node only. Source does not define future requires conditions as current policy. |
+| Deleted character | No explicit deleted_at check. Installed-source0013 child fences cover inventory and gift ledger; absent active-state SQL check is delegated to triggers rather than proof of a bypass. Must verify actual binding/enabled state. |
+
+Historical explicit authenticated EXECUTE grant at85; no revoke of PUBLIC/anon/service in that file. New-function PostgreSQL default PUBLIC EXECUTE may remain unless default ACL or later containment changes it. No later exact grant_npc_gift replacement/revoke found in targeted source identity search; current effective ACL/membership/default grants unverified. **Do not claim anonymous execution or arbitrary live minting proved.** SECURITY DEFINER owner bypass/RLS effect depends on installed metadata; read-only browser inventory ACL alone does not fence a callable owner-definer writer.
+
+## Ledger/replay and item lifecycle
+
+character_npc_gifts PK UUID, unique(character_id,npc_id,item_id), granted_at, FK cascades; authenticated owner SELECT policy, service full grant in June source. Function checks ledger only for caller true, then checks whether item already in inventory; absent item inserts durability100, then inserts ledger ON CONFLICT DO NOTHING. All within one DB call/transaction; exception aborts both writes.
+
+Sequential true + existing ledger refuses even if gift item consumed/sold/dropped. false/NULL + existing ledger can regrant after item removal; not inherently wrong for a **configured** repeatable gift, but current body accepts caller override. Already-held item creates ledger despite no new item; that existing behavior must be consciously preserved or changed, not silently described as receipt of a new grant. NPC/item deletion cascades may reset old ledger coverage; no permanent replay survival guarantee.
+
+No request UUID, character lock or atomic ledger-first insert-result gate. Two calls can observe neither ledger nor inventory, insert two ordinary copies, then one ledger conflict is ignored; ledger uniqueness alone does not make the item grant exactly once. **Source race candidate**, not independent-session/live reproduction. Inventory existence is not a unique(character,item) constraint for ordinary stack/copy items. Same-character lock plus decisive ledger guard can preserve sequential/retry behavior without a new replay framework.
+
+## Trigger dependencies (reuse D/C)
+
+- [0013 lifecycle child fence](../../drizzle/migrations/0013_progression_001g_c2_reset_and_cutover.sql)736–783 reads referenced character deleted_at FOR KEY SHARE and refuses soft-deleted writes; mandatory inventory, optional-if-present gift ledger bindings. Do not infer missing character invalidity from that shared fence alone; FKs/domain checks matter.
+- [June inventory column guard](../../supabase/migrations/20260622114830_ca3040c6-6882-487d-897e-866f1650b060.sql)3–30 guards UPDATE item/character identity; does not by itself authorize a gift INSERT.
+- [September unique registry/holder triggers](../../supabase/migrations/20260917133413_fc7e672e-18b4-4103-9e8a-40f493fa167f.sql)97–198 and [identity correction](../../supabase/migrations/20260923084603_63ed1235-60fa-4f63-a4a6-f37673d50ae8.sql) compose BEFORE holder write, deferred identity/FK/finalize guards. Unique-item rejection/registry delegation can constrain item kinds, not ordinary configured-gift authority. NPC gift passes no unique_instance_id; do not invent a new unique mint policy.
+- Source no explicit resource sync required for unequipped ordinary gift insertion; map consumption and item holder/deletion behavior reused, not modified. No equip/AC/crafting redesign.
+
+## Minimal options and recommendation
+
+| Option | Benefit / cost / decision |
+|---|---|
+| Strengthen existing same-signature SQL | **Recommended smallest preserving correction.** Existing browser RPC remains authenticated-only; explicit NULL-safe owner/active target, locked character, authoritative NPC/config lookup and co-location, server-derived once behavior, serialized ledger/item insertion. Retain response fields/no new table/Edge service. Compare existing item argument to configured gift; fourth flag remains compatibility input but cannot weaken server config. Revoke PUBLIC/anon explicitly and verify effective grants; existing server callers must be identified before deciding service grant changes. |
+| Revoke browser and add trusted server caller | Adds Edge/caller/deployment and actor-binding boundary; does not solve configured-item/once validation unless that authority implements it. Unnecessary for this small database-local decision absent a concrete dependency. Emergency revoke can be separately scoped, but not assume generic service access is safer. |
+| Temporarily disable gifting | Narrow explicit refusal/revoke can contain unresolved authority quickly but breaks legitimate gifts. Use only if installed dependencies/config ambiguity prevent safe bounded validation; not the preferred default. No change executed. |
+
+Proposed transaction: authenticate nonnull user → character FOR UPDATE/owner/active/location → NPC configuration row FOR SHARE → validate unambiguous give_item binding and item existence → character-scoped ledger/inventory checks and mutation. No node/encounter locks introduced. Match D/C character-first ordering; inspect unique-holder advisory/row-lock composition before installation. Reserve/enforce once ledger in same transaction before grant with conflict outcome decisive (not ignore after grant). For server-configured repeatable gifts retain existing already-held-item behavior and serialized grant-after-removal. No UUID table needed for current once/repeat semantics; do not promise a repeatable grant is globally once-only after item consumption/removal.
+
+Compatibility gates before authoring: same NPC may have multiple topics for same item; conflicting once flags are ambiguous without topic identifier in RPC. Do not silently choose OR/AND. Default missing once to true as existing UI; require actual boolean config and valid item UUID. Reject malformed/ambiguous configuration until owner resolves authoring inconsistency, or separately approve adding topic identity only if actually needed. Nested follow_up/requires are not current supported eligibility; no new gating engine. Confirm whether immediate co-location should also require no movement/dead interaction; UI node selection supports co-location, but additional life/movement rules require established contract or explicit owner choice, not invention. Preserve existing already-inventory ledger semantics and any configured repeatable gift intentionally; do not simply force every gift once-only.
+
+## Evidence gates and next bounded step
+
+**Next E3 recommended:** metadata-only preflight preparation (no hosted execution) for the exact signature, followed by separately authorized existing-function correction once identity/config compatibility is established. Before installation need: full installed definition/signature including boolean default, owner/SECURITY DEFINER/search_path/proacl/direct+effective PUBLIC/anon/auth/service EXECUTE; character/gift/inventory/NPC/item relevant types/defaults/FKs/unique constraints/RLS policies/grants; all noninternal inventory/gift lifecycle and unique-holder trigger identities/enabled states/bound definitions; NPC config write authority. No database-wide scan, secrets or player rows. One narrow non-player configured-gift ambiguity summary may be needed if schema metadata cannot establish whether same-item flags conflict; no such query authored/executed here.
+
+Source proves omitted business checks and NULL predicate; current installed body/visibility/grants and trigger composition remain decisive evidence gaps. No material live exploit or repair asserted. Existing source-compatible ownership/config correction is feasible in principle; exact malformed/duplicate config and external server dependencies are stop gates, not reasons for a broad NPC/quest redesign.
+
+## Validation and preserved scope
+
+Focused existing inventory/unique-identity static tests and state tests support reused dependency conventions; not runtime NPC-gift tests or installed ACL verification. Targeted source assertions confirm configured params/caller signature and absent dialogue lookup/NULL guard. Documentation links/state synchronization/whitespace and prior-record preservation checked. E1 pending work preserved; E IN PROGRESS and overall OPEN. Four progression F limitations OPEN, privileged v3→v2 uncertainty, earlier closures and admin-only XP pause unchanged. Normal gameplay XP not intentionally disabled or runtime-established by this task. No vendor/salvage changes, SQL/grant/gameplay mutation, hosted query, commit/push or deployment. Recovery stash unchanged.
