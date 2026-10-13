@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T10:19:53.892Z",
-  "based_on_source_sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
+  "updated_at": "2026-10-13T11:48:41.633Z",
+  "based_on_source_sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1884,6 +1884,61 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001E3-npc-gift-preflight.md",
       "evidence": "Owner approves NPC/item pairs, equivalent duplicate collapse, conflicting once flags refusal and legitimate repeatable gifts. Source-only publication authorized. Metadata preflight SQL unchanged/SELECT-only, no gameplay rows/functions. No correction/hosted execution authorized; earlier closures/four F limits/admin-only XP pause and v3 uncertainty preserved. E IN PROGRESS, overall OPEN."
+    },
+    {
+      "identity": "ENG-LEGACY-001E5 — NPC gift metadata PASS/access finding owner-reported",
+      "status": "authored",
+      "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+      "timestamp": "2026-10-13T11:02:44.020Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik E6 baseline summary",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001E6-npc-gift-handoff.md",
+      "evidence": "E5 PASS with documented access finding supplied; exact observation times/role/ACL details/full hashes not available locally. Do not infer exact anonymous access or current body equality; recording time only. No Codex hosted read."
+    },
+    {
+      "identity": "ENG-LEGACY-001E6 — guarded same-signature NPC gift correction prepared locally",
+      "status": "authored",
+      "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+      "timestamp": "2026-10-13T11:02:44.020Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E6-npc-gift-handoff.md",
+      "evidence": "Approved configured pair/duplicate/conflict/repeatable rule, owner/active/node checks, character-first serialized ledger/item mutation; PUBLIC/anon revoke and preserved existing server capability in proposed SQL.8 isolated tests not independent-session/runtime proof. Exact E5 hash/ACL/external caller/trigger reconciliation installation gate. No install/deploy/commit, E IN PROGRESS; previous closures/four F limits/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001E7 — targeted NPC gift SQL review LOCAL CORRECTION REQUIRED",
+      "status": "authored",
+      "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+      "timestamp": "2026-10-13T11:16:39.296Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E7-npc-gift-review.md",
+      "evidence": "E6 bytes unchanged. NULL proconfig bypasses IF NOT source guard confirmed in isolated probe; credible source NPC/item cascade→lifecycle KEY SHARE vs gift FOR UPDATE inversion. Propose NULL-safe predicate and FOR NO KEY UPDATE, no SQL edits authorized. Repeatable/config semantics match approved pair rule; tested ACL variants pass. E IN PROGRESS, exact E5/server/installed trigger metadata still needed."
+    },
+    {
+      "identity": "ENG-LEGACY-001E8 — targeted NPC gift guard/lock corrected; READY FOR HOSTED PREFLIGHT",
+      "status": "authored",
+      "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+      "timestamp": "2026-10-13T11:40:08.828Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E6-npc-gift-handoff.md",
+      "evidence": "Only NULL-safe complete-source predicate and FOR NO KEY UPDATE changed in SQL; exact reverse restores E6 hash. Focused isolated tests include defect reproduction/rejection, source lock compatibility, ACL variants and atomic install rollback. No hosted/concurrent-session proof. E IN PROGRESS; E5 actual body/ACL/triggers/server dependencies remain; no installation/publication authorization."
+    },
+    {
+      "identity": "ENG-LEGACY-001E9 — corrected NPC gift artifact source publication and targeted preflight handoff prepared",
+      "status": "authored",
+      "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+      "timestamp": "2026-10-13T11:48:41.633Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001E9-npc-gift-installation-preflight.md",
+      "evidence": "E8 SQL unchanged hashc9265d…; full E5 absent locally so handoff explicitly reuses Lovable original report before minimal missing exact metadata. Unknown external NULL-auth/server compatibility requires owner acceptance or concrete caller resolution, not automatic safety. No preflight/install/deploy dispatched. E IN PROGRESS and previous closures/F limits/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2115,15 +2170,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — published E3 metadata preflight awaits separate hosted execution authorization",
+    "identity": "STOP — E9 source package ready; minimal hosted evidence/owner gates require separate authorization",
     "status": "blocked",
-    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
-    "timestamp": "2026-10-13T10:19:53.892Z",
+    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
+    "timestamp": "2026-10-13T11:48:41.633Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001E3-npc-gift-preflight.md",
-    "evidence": "E4 approves configuration rule and source publication only. Next exact-signature metadata preflight separate authorization; no SQL correction/hosted calls, NPC config row reads or gameplay probes permitted by publication. E IN PROGRESS."
+    "artifact": "docs/operations/legacy-001E9-npc-gift-installation-preflight.md",
+    "evidence": "Publish source owner-authorized only; reuse full E5, reconcile exact installed guard/ACL/trigger/server dependencies, explicit external/runtime limitation acceptance before separate installation. No hosted read/install or broad scan automatically authorized."
   },
   "volatile_runtime_observations": [
     {
