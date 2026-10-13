@@ -148,6 +148,13 @@
       "when": 1791866245714,
       "tag": "0020_legacy_001d3_atomic_material_sale",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791893663148,
+      "tag": "0021_legacy_001e6_npc_gift_correction",
+      "breakpoints": true
     }
   ]
 }
