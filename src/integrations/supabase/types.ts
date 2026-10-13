@@ -7838,6 +7838,16 @@ export type Database = {
         }
         Returns: Json
       }
+      material_sale_internal: {
+        Args: {
+          _actor: string
+          _amount: number
+          _character_id: string
+          _key: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       move_follower: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined

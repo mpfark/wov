@@ -141,6 +141,13 @@
       "when": 1791804870482,
       "tag": "0019_legacy_001c5a_hp_helper_containment",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791866245714,
+      "tag": "0020_legacy_001d3_atomic_material_sale",
+      "breakpoints": true
     }
   ]
 }
