@@ -1,5 +1,7 @@
 # ENG-LEGACY-001E12 — NPC gift installation reconciliation and Economy disposition
 
+Current E status: **COMPLETE WITH ACCEPTED LIMITATIONS** under [E13 explicit owner acceptance](legacy-001E13-economy-rewards-closeout.md). The pending-decision classifications below are historical and superseded only by E13 named dispositions; source findings/evidence limits remain.
+
 2026-10-13. **OWNER DECISION REQUIRED; E remains IN PROGRESS.** Overall ENG-LEGACY-001 OPEN. No automatic E closure. [E1 findings](legacy-001E1-economy-rewards-writer-map.md), [E6/E8 handoff](legacy-001E6-npc-gift-handoff.md), [E7 review](legacy-001E7-npc-gift-review.md), [E9 evidence gates](legacy-001E9-npc-gift-installation-preflight.md) reused; no expanded audit or new repair.
 
 ## Reconciliation

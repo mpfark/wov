@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-13T12:25:42.372Z",
-  "based_on_source_sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
+  "updated_at": "2026-10-13T12:46:32.602Z",
+  "based_on_source_sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -1961,6 +1961,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001E12-installation-disposition.md",
       "evidence": "NPC correction resolved at source/owner installation metadata level. Unknown external callers, independent-session concurrency and uninspected duplicate/conflicting gift config owner-accepted. Vendor transaction risks, salvage source mismatch and contract/quest coverage not silently accepted; explicit owner follow-up/deferral decision needed. E IN PROGRESS, overall OPEN; prior closures/four F limits/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001E COMPLETE WITH ACCEPTED LIMITATIONS — E13 explicit owner closure",
+      "status": "authored",
+      "sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
+      "timestamp": "2026-10-13T12:46:32.602Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik E13 explicit closure/disposition acceptance; Codex documentation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
+      "evidence": "Vendor double-credit/stale/partial transaction risk and salvage source mismatch owner-accepted unresolved; separate deferred candidates. Contract/quest authority transferred unresolved to World/Creatures/Quests with receiving plan references. NPC0021 installed/reconciled; three unknown-caller/concurrency/config limits retained, no gameplay PASS. Other E1–E12 findings retain original dispositions. Parent LEGACY001 OPEN; Parties next active planned domain, no audit begun. Previous closures/four OPEN F limits/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2192,15 +2203,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — owner disposition of remaining Economy E1 risks required before E closure",
+    "identity": "STOP — Parties/cooperative state next active planned audit domain; scoped kickoff pending",
     "status": "blocked",
-    "sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
-    "timestamp": "2026-10-13T12:25:42.372Z",
+    "sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
+    "timestamp": "2026-10-13T12:46:32.602Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001E12-installation-disposition.md",
-    "evidence": "Decide explicit acceptance/deferment or narrow investigation of vendor read/delete/credit risks, salvage reward composition mismatch and contract/quest completion coverage. NPC three limits already accepted, no repeated broad audit. No new repair/probe or E closure authorized."
+    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
+    "evidence": "E13 closes bounded Economy audit with explicit limits. Parent OPEN, Parties order6 next then World/Creatures/Quests order7 with unresolved contract/quest transfer. No new audit/fix/runtime or hosted operation authorized by closure publication."
   },
   "volatile_runtime_observations": [
     {
@@ -2580,6 +2591,21 @@
       "identity": "Owner-reported crafting failure and level1 creature-kill problem — unresolved follow-up candidates",
       "evidence": "D10 owner report; no root causes established; prevents material acquisition/live sale test. No repair authorized.",
       "artifact": "docs/operations/legacy-001D10-closeout.md"
+    },
+    {
+      "identity": "Deferred vendor transaction correction candidate — E13 accepted limitation",
+      "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
+      "evidence": "Potential double-credit/stale writes/partial failure not fixed or proven exploitable; separately authorized narrow correction only."
+    },
+    {
+      "identity": "Deferred salvage/reward source composition investigation — E13 accepted limitation",
+      "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
+      "evidence": "Installed runtime inconclusive; no inferred cause or repair. Address only on specifically authorized salvage/reward task."
+    },
+    {
+      "identity": "Transferred contract/quest authority/reward-path findings — receiving World/Creatures/Quests",
+      "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
+      "evidence": "Unresolved event/completion/replay/privileged-helper coverage from E1/E12, transferred by owner E13; receiving001A order7 must reference. Not resolved or auto-accepted."
     }
   ]
 }
