@@ -32,7 +32,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Do not reimplement delivered source. Reconcile only remaining prerequisites/verification: install `20261001100000_combat2_present_equipment_fencing.sql`, regenerate official types only if the installed tool reports a type-surface change, deploy every proven Edge consumer of the regenerated resolver mirror, then perform bounded live recovery checks.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:15](game-engine-roadmap.md) line15.
 - **Implementation/runtime boundary:** Source implementation only in 001A; remaining gates below unresolved at that source snapshot. Check authoritative dated state before release; no hosted proof added.
-- **Dependencies / overlaps:** install `20261001100000_combat2_present_equipment_fencing.sql`, regenerate official types only if the installed tool reports a type-surface change, deploy every proven Edge consumer of the regenerated resolver mirror, then perform bounded live recovery checks. 
+- **Dependencies / overlaps:** install `20261001100000_combat2_present_equipment_fencing.sql`, regenerate official types only if the installed tool reports a type-surface change, deploy every proven Edge consumer of the regenerated resolver mirror, then perform bounded live recovery checks.
 - **001A mapping / current tracking:** ENG-COMBAT-003 → ENG-COMBAT-003; Roadmap; state evidence varies.
 
 #### ENG-COMBAT-001 — Targeting and combat-initiation audit (remaining gates only)
@@ -41,7 +41,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Do not reimplement delivered source. Reconcile only remaining prerequisites/verification: bounded diagnostics and preserved live evidence.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:35](game-engine-roadmap.md) line35.
 - **Implementation/runtime boundary:** Source implementation only in 001A; remaining gates below unresolved at that source snapshot. Check authoritative dated state before release; no hosted proof added.
-- **Dependencies / overlaps:** bounded diagnostics and preserved live evidence. 
+- **Dependencies / overlaps:** bounded diagnostics and preserved live evidence.
 - **001A mapping / current tracking:** ENG-COMBAT-001 → ENG-COMBAT-001; Roadmap; state evidence varies.
 
 #### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
@@ -50,7 +50,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** solo and coordinated movement invoke one idempotent authoritative entry check in follower-first/leader-last order; reconnect attaches without duplication; one generic server-authored hostile-action boundary atomically enters and queues a validated hostile ability or Basic Attack; tank fallback becomes newest valid entry globally.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:45](game-engine-roadmap.md) line45.
 - **Implementation/runtime boundary:** Source/dated rollout evidence exists; live_verification_pending is not comprehensive runtime PASS.
-- **Dependencies / overlaps:** bounded live arrival, hostile-initiation and multiplayer tank-order verification; preserve `ENG-MOVE-001` serialization. 
+- **Dependencies / overlaps:** bounded live arrival, hostile-initiation and multiplayer tank-order verification; preserve `ENG-MOVE-001` serialization.
 - **001A mapping / current tracking:** ENG-COMBAT-002 → ENG-COMBAT-002; Roadmap; state evidence varies.
 
 #### ENG-STANCE-001 — Character-scoped stance authority (remaining gates only)
@@ -59,7 +59,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Do not reimplement delivered source. Reconcile only remaining prerequisites/verification: migration installation, official type regeneration, affected Edge deployment, Mik's manual publication and bounded live verification.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:123](game-engine-roadmap.md) line123.
 - **Implementation/runtime boundary:** Source implementation only in 001A; remaining gates below unresolved at that source snapshot. Check authoritative dated state before release; no hosted proof added.
-- **Dependencies / overlaps:** migration installation, official type regeneration, affected Edge deployment, Mik's manual publication and bounded live verification. 
+- **Dependencies / overlaps:** migration installation, official type regeneration, affected Edge deployment, Mik's manual publication and bounded live verification.
 - **001A mapping / current tracking:** ENG-STANCE-001 → ENG-STANCE-001; Roadmap; state evidence varies.
 
 #### ENG-STANCE-002 — Appropriate stance activation outside combat (remaining gates only)
@@ -68,7 +68,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Do not reimplement delivered source. Reconcile only remaining prerequisites/verification: ENG-STANCE-001 and its approved lifecycle decisions; ability matrix in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:134](game-engine-roadmap.md) line134.
 - **Implementation/runtime boundary:** Source implementation only in 001A; remaining gates below unresolved at that source snapshot. Check authoritative dated state before release; no hosted proof added.
-- **Dependencies / overlaps:** ENG-STANCE-001 and its approved lifecycle decisions; ability matrix in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md). 
+- **Dependencies / overlaps:** ENG-STANCE-001 and its approved lifecycle decisions; ability matrix in [combat2-ability-availability-and-persistent-stances.md](../design/combat2-ability-availability-and-persistent-stances.md).
 - **001A mapping / current tracking:** ENG-STANCE-002 → ENG-STANCE-002; Roadmap; state evidence varies.
 
 #### ENG-BALANCE-001 — Broader ability and balance audit
@@ -77,7 +77,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** evidence-based review without mixing engine repairs and tuning.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:261](game-engine-roadmap.md) line261.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** stabilized heartbeat/targeting/rewards. 
+- **Dependencies / overlaps:** stabilized heartbeat/targeting/rewards.
 - **001A mapping / current tracking:** ENG-BALANCE-001 → ENG-BALANCE-001; Roadmap; state evidence varies.
 
 #### WOV-IDEA-003 — Telegraphed shared boss abilities
@@ -86,7 +86,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Shared visible casts and leave-node avoidance; older approved-in-principle v3 proposal paused.
 - **Approval evidence:** Older approved-in-principle proposal, paused; current contract needs reconciliation. Source: [phase-1-telegraphed-boss-abilities.md:3](../design/phase-1-telegraphed-boss-abilities.md) line3.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Architecture reconciliation; summon/interrupt/hazard contracts. 
+- **Dependencies / overlaps:** Architecture reconciliation; summon/interrupt/hazard contracts.
 - **001A mapping / current tracking:** INV-A03 → WOV-IDEA-003; Design; overlaps Combat2/ADM-024, current completion unclear.
 
 #### WOV-IDEA-005 — Non-stance ability decisions
@@ -95,7 +95,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Resolve ability availability outside the delivered stance slice.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [combat2-ability-availability-and-persistent-stances.md:98](../design/combat2-ability-availability-and-persistent-stances.md) line98.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Ability matrix and per-ability decisions. 
+- **Dependencies / overlaps:** Ability matrix and per-ability decisions.
 - **001A mapping / current tracking:** INV-A05 → WOV-IDEA-005; Design sub-batch; overlaps ability/balance roadmap.
 
 #### WOV-IDEA-006 — Awake empty-encounter lifecycle
@@ -104,7 +104,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Determine completion after participants leave; sleep shutdown success does not establish awake completion.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Existing active-effect/pending-action evidence; separate authorization. 
+- **Dependencies / overlaps:** Existing active-effect/pending-action evidence; separate authorization.
 - **001A mapping / current tracking:** INV-A06 → WOV-IDEA-006; F11/state and roadmap narrative, no dedicated stable ID.
 
 #### WOV-IDEA-007 — Shared-world persistent creature HP
@@ -113,7 +113,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Agreed future direction; not implemented by Party closeout.
 - **Approval evidence:** Direction agreed: F11 owner-supplied direction, retained by F12; no implementation approval. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
-- **Dependencies / overlaps:** Creature lifecycle and encounter boundaries. 
+- **Dependencies / overlaps:** Creature lifecycle and encounter boundaries.
 - **001A mapping / current tracking:** INV-A07 → WOV-IDEA-007; F11/state/roadmap narrative; no dedicated ID.
 
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
@@ -122,7 +122,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Combat-related DoTs suppress ordinary HP regeneration; balance damage and regen together.
 - **Approval evidence:** Direction agreed: F11 owner-supplied direction, retained by F12; no implementation approval. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
-- **Dependencies / overlaps:** WOV-IDEA-007; explicit future design/implementation scope. 
+- **Dependencies / overlaps:** WOV-IDEA-007; explicit future design/implementation scope.
 - **001A mapping / current tracking:** INV-A08 → WOV-IDEA-008; F11/state/roadmap narrative; not implemented.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
@@ -131,7 +131,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Future completion boundary waits for active combat effects and pending actions.
 - **Approval evidence:** Direction agreed: F11 owner-supplied direction, retained by F12; no implementation approval. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
-- **Dependencies / overlaps:** WOV-IDEA-006; active-effect/action authority. 
+- **Dependencies / overlaps:** WOV-IDEA-006; active-effect/action authority.
 - **001A mapping / current tracking:** INV-A09 → WOV-IDEA-009; F11/state/roadmap narrative; not implemented.
 
 #### WOV-IDEA-016 — Level1 creature-kill difficulty/failure
@@ -140,7 +140,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Owner cannot successfully kill creatures; no evidence selects balance versus functional cause.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:23](../operations/legacy-001D10-closeout.md) line23.
 - **Implementation/runtime boundary:** Owner-reported functional problem; cause unestablished, no repair or reproduction performed.
-- **Dependencies / overlaps:** Minimal separately authorized reproduction. 
+- **Dependencies / overlaps:** Minimal separately authorized reproduction.
 - **001A mapping / current tracking:** INV-A16 → WOV-IDEA-016; State product_backlog; not proven by later party refusal smoke.
 
 #### WOV-IDEA-030 — Rend initial weapon-hit balance formula
@@ -149,7 +149,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Deferred weapon-hit balance formula; keep separate from delivered semantic/publication changes.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [game-engine-roadmap.md:12](game-engine-roadmap.md) line12.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-ABILITY-001 and separate balance decision. 
+- **Dependencies / overlaps:** ENG-ABILITY-001 and separate balance decision.
 - **001A mapping / current tracking:** INV-A30 → WOV-IDEA-030; Roadmap remaining gates; overlaps ENG-BALANCE-001, no distinct ID.
 
 ### Parties and movement
@@ -160,7 +160,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** one synchronous authoritative transition serialized with encounter processing: departure-first excludes the fighter from the next tick; tick-first commits then a surviving fighter departs; MP, relocation and non-damage cleanup occur exactly once.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:25](game-engine-roadmap.md) line25.
 - **Implementation/runtime boundary:** Source/dated rollout evidence exists; live_verification_pending is not comprehensive runtime PASS.
-- **Dependencies / overlaps:** bounded solo/party race and live verification. 
+- **Dependencies / overlaps:** bounded solo/party race and live verification.
 - **001A mapping / current tracking:** ENG-MOVE-001 → ENG-MOVE-001; Roadmap; state evidence varies.
 
 #### ENG-PARTY-001 — Coordinated party movement release verification
@@ -169,7 +169,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** prove per-member outcomes, lifecycle release and reconnect without changing semantics.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:196](game-engine-roadmap.md) line196.
 - **Implementation/runtime boundary:** Source/dated rollout evidence exists; live_verification_pending is not comprehensive runtime PASS.
-- **Dependencies / overlaps:** safe bounded party scenario. 
+- **Dependencies / overlaps:** safe bounded party scenario.
 - **001A mapping / current tracking:** ENG-PARTY-001 → ENG-PARTY-001; Roadmap; state evidence varies.
 
 #### ENG-LIFECYCLE-001 — Inactive-character return-home
@@ -178,7 +178,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** idempotent authoritative transition after the same configured inactivity duration used by unique-item policy, with future bind-point extension.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:223](game-engine-roadmap.md) line223.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** authoritative activity evidence; verified destination; party/transaction rules. 
+- **Dependencies / overlaps:** authoritative activity evidence; verified destination; party/transaction rules.
 - **001A mapping / current tracking:** ENG-LIFECYCLE-001 → ENG-LIFECYCLE-001; Roadmap; state evidence varies.
 
 #### WOV-IDEA-001 — Single active gameplay character
@@ -187,7 +187,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Server-enforced single ordinary active character; other tabs may be read-only.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [single-active-gameplay-character.md:1](../design/single-active-gameplay-character.md) line1.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Authoritative activity/lease boundary; privileged exceptions. 
+- **Dependencies / overlaps:** Authoritative activity/lease boundary; privileged exceptions.
 - **001A mapping / current tracking:** INV-A01 → WOV-IDEA-001; Design only; state/roadmap dedicated ID absent.
 
 #### ENG-LEGACY-001F-R3-RETRY — Party malformed-response UUID retention
@@ -196,7 +196,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Keep original request identity on uncertain malformed response; owner accepts OPEN deferred correction, not fixed.
 - **Approval evidence:** F12 explicitly accepts deferral; OPEN, NOT FIXED; no implementation authorization. Source: [legacy-001F11-evidence-and-closure-assessment.md:69](../operations/legacy-001F11-evidence-and-closure-assessment.md) line69.
 - **Implementation/runtime boundary:** NOT FIXED. F10 exact replay/refusal PASS is sequential hosted evidence, not malformed-response recovery or hosted concurrency proof.
-- **Dependencies / overlaps:** Narrow caller-state regression/correction authorization. 
+- **Dependencies / overlaps:** Narrow caller-state regression/correction authorization.
 - **001A mapping / current tracking:** ENG-LEGACY-001F-R3-RETRY → ENG-LEGACY-001F-R3-RETRY; State product_backlog; roadmap F12 reference.
 
 ### World timing, delivery and verification
@@ -207,7 +207,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** a durable monotonic scheduler-invocation identity carried as correlation metadata to settlement, selected nodes, claims, commits and bounded diagnostics without changing local encounter tick semantics or delaying immediate transactions.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:55](game-engine-roadmap.md) line55.
 - **Implementation/runtime boundary:** Source/dated rollout evidence exists; live_verification_pending is not comprehensive runtime PASS.
-- **Dependencies / overlaps:** bounded observation of the remaining ineligible, retry, failure and catch-up branches; no further source implementation dependency. 
+- **Dependencies / overlaps:** bounded observation of the remaining ineligible, retry, failure and catch-up branches; no further source implementation dependency.
 - **001A mapping / current tracking:** ENG-HB-001 → ENG-HB-001; Roadmap; state evidence varies.
 
 #### ENG-HB-003 — Two-second encounter schedule phase correction
@@ -216,7 +216,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** preserve one encounter tick per eligible two-second heartbeat by advancing from the previous authoritative server deadline, while skipping obsolete opportunities after delays and never replaying combat debt.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:65](game-engine-roadmap.md) line65.
 - **Implementation/runtime boundary:** Source/dated rollout evidence exists; live_verification_pending is not comprehensive runtime PASS.
-- **Dependencies / overlaps:** bounded live verification; no gameplay decision or further source dependency remains. 
+- **Dependencies / overlaps:** bounded live verification; no gameplay decision or further source dependency remains.
 - **001A mapping / current tracking:** ENG-HB-003 → ENG-HB-003; Roadmap; state evidence varies.
 
 #### ENG-DIAG-001 — Limited latency and jitter measurement
@@ -225,7 +225,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** bounded, sanitized measurements with no gameplay mutation beyond a controlled run.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:75](game-engine-roadmap.md) line75.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** existing bounded diagnostics. 
+- **Dependencies / overlaps:** existing bounded diagnostics.
 - **001A mapping / current tracking:** ENG-DIAG-001 → ENG-DIAG-001; Roadmap; state evidence varies.
 
 #### ENG-DIAG-002 — Distinguish world heartbeat and encounter tick
@@ -234,7 +234,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** diagnostics and admin presentation label both concepts unambiguously.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:85](game-engine-roadmap.md) line85.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-HB-001. 
+- **Dependencies / overlaps:** ENG-HB-001.
 - **001A mapping / current tracking:** ENG-DIAG-002 → ENG-DIAG-002; Roadmap; state evidence varies.
 
 #### ENG-VERIFY-001 — Complete installed-schema execution coverage
@@ -243,7 +243,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** reproducible executable-schema and bounded installed verification for critical chains.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:111](game-engine-roadmap.md) line111.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** safe non-production fixture policy. 
+- **Dependencies / overlaps:** safe non-production fixture policy.
 - **001A mapping / current tracking:** ENG-VERIFY-001 → ENG-VERIFY-001; Roadmap; state evidence varies.
 
 #### ENG-HB-002 — Heartbeat performance and scaling
@@ -252,7 +252,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** measured bounded due-work scaling while retaining one authority.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:234](game-engine-roadmap.md) line234.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-HB-001 and production metrics. 
+- **Dependencies / overlaps:** ENG-HB-001 and production metrics.
 - **001A mapping / current tracking:** ENG-HB-002 → ENG-HB-002; Roadmap; state evidence varies.
 
 #### ENG-DELIVERY-001 — Reduce fallback polling
@@ -261,7 +261,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** reduce it only after reliability evidence.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:243](game-engine-roadmap.md) line243.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** measured Realtime recovery and gap visibility. 
+- **Dependencies / overlaps:** measured Realtime recovery and gap visibility.
 - **001A mapping / current tracking:** ENG-DELIVERY-001 → ENG-DELIVERY-001; Roadmap; state evidence varies.
 
 #### WOV-IDEA-010 — Sleep-consistent creature OOC regeneration
@@ -270,7 +270,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Keep ordinary regeneration logically consistent across world sleep; no catch-up algorithm selected.
 - **Approval evidence:** Direction agreed: F11 owner-supplied direction, retained by F12; no implementation approval. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
-- **Dependencies / overlaps:** Single heartbeat; WOV-IDEA-007/08; joint DoT/regen balance review. 
+- **Dependencies / overlaps:** Single heartbeat; WOV-IDEA-007/08; joint DoT/regen balance review.
 - **001A mapping / current tracking:** INV-A10 → WOV-IDEA-010; F11/state/roadmap narrative; no dedicated ID.
 
 ### Authority and legacy governance
@@ -281,7 +281,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** inventory of every HP/CP/MP/position/effect/reward writer, with active paths fenced to authoritative contracts.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:95](game-engine-roadmap.md) line95.
 - **Implementation/runtime boundary:** Parent OPEN; B–F accepted closed. Those audit closures do not certify all gameplay or authorize World audit.
-- **Dependencies / overlaps:** none. 
+- **Dependencies / overlaps:** none.
 - **001A mapping / current tracking:** ENG-LEGACY-001 → ENG-LEGACY-001; Parent OPEN in current state; B–F closed with accepted limitations; World domain not started.
 
 #### ENG-UX-001 — Combat feedback refinement
@@ -290,7 +290,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** concise state and timing feedback grounded in projections.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:252](game-engine-roadmap.md) line252.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-COMBAT-001, ENG-DIAG-002. 
+- **Dependencies / overlaps:** ENG-COMBAT-001, ENG-DIAG-002.
 - **001A mapping / current tracking:** ENG-UX-001 → ENG-UX-001; Roadmap; state evidence varies.
 
 #### ENG-LEGACY-002 — Remove obsolete legacy runtime surfaces (remaining gates only)
@@ -299,7 +299,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Do not reimplement delivered source. Reconcile only remaining prerequisites/verification: ENG-LEGACY-001, separate implementation authorization, and installed/live dependency proof for SQL or endpoint retirement.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:288](game-engine-roadmap.md) line288.
 - **Implementation/runtime boundary:** Source implementation only in 001A; remaining gates below unresolved at that source snapshot. Check authoritative dated state before release; no hosted proof added.
-- **Dependencies / overlaps:** ENG-LEGACY-001, separate implementation authorization, and installed/live dependency proof for SQL or endpoint retirement. 
+- **Dependencies / overlaps:** ENG-LEGACY-001, separate implementation authorization, and installed/live dependency proof for SQL or endpoint retirement.
 - **001A mapping / current tracking:** ENG-LEGACY-002 → ENG-LEGACY-002; Roadmap; state evidence varies.
 
 #### WOV-IDEA-026 — Privileged v3 to v2 delegation/external helper authority
@@ -308,7 +308,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Accepted uncertainty neither proven contained nor exploitable; retained restricted legacy paths.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [progression-001G-F-closure-checklist.md:56](../operations/progression-001G-F-closure-checklist.md) line56.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Scoped dependency/installed authority evidence; ENG-LEGACY-001. 
+- **Dependencies / overlaps:** Scoped dependency/installed authority evidence; ENG-LEGACY-001.
 - **001A mapping / current tracking:** INV-A26 → WOV-IDEA-026; Closure/state/legacy inventories; not a new full audit approval.
 
 #### WOV-IDEA-027 — Legacy Combat1 lock-order hazard
@@ -317,7 +317,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Owner accepts unresolved lock-order risk; not repaired by Party serialization correction.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001F11-evidence-and-closure-assessment.md:25](../operations/legacy-001F11-evidence-and-closure-assessment.md) line25.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Separate narrowly authorized legacy correction. 
+- **Dependencies / overlaps:** Separate narrowly authorized legacy correction.
 - **001A mapping / current tracking:** INV-A27 → WOV-IDEA-027; Party state/roadmap narrative.
 
 ### Progression and character lifecycle
@@ -328,7 +328,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** characters at the configured maximum level receive no additional persisted XP, and presentation accurately reflects the authoritative result.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:178](game-engine-roadmap.md) line178.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** separately authorized read-only evidence distinguishing emitted log data from the persisted character row; no reward change is part of the stance design. 
+- **Dependencies / overlaps:** separately authorized read-only evidence distinguishing emitted log data from the persisted character row; no reward change is part of the stance design.
 - **001A mapping / current tracking:** ENG-XP-001 → ENG-XP-001; Roadmap; state evidence varies.
 
 #### WOV-IDEA-002 — Personal home / bind destination
@@ -337,7 +337,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Future personal destination extends default inactive return-home.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [project-state.json:2735](../operations/project-state.json) line2735.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-LIFECYCLE-001; destination/activity decisions. 
+- **Dependencies / overlaps:** ENG-LIFECYCLE-001; destination/activity decisions.
 - **001A mapping / current tracking:** INV-A02 → WOV-IDEA-002; State product_backlog; part of ENG-LIFECYCLE-001, no separate ID.
 
 #### WOV-IDEA-022 — Administrative XP grants
@@ -346,7 +346,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Remain paused; decide authority/caps before any reactivation; normal gameplay XP not intentionally paused.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [progression-001G-D-simplified-admin-policy.md:25](../design/progression-001G-D-simplified-admin-policy.md) line25.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Future policy and canonical authority. 
+- **Dependencies / overlaps:** Future policy and canonical authority.
 - **001A mapping / current tracking:** INV-A22 → WOV-IDEA-022; Progression closure/state/roadmap; no activation authorization.
 
 #### WOV-IDEA-023 — Administrative RP awards/Renown corrections
@@ -355,7 +355,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Deferred lifetime-reward semantics and coherent corrections; RP earning authority gap remains OPEN.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [progression-001G-D-simplified-admin-policy.md:25](../design/progression-001G-D-simplified-admin-policy.md) line25.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Separate reward/earning policy. 
+- **Dependencies / overlaps:** Separate reward/earning policy.
 - **001A mapping / current tracking:** INV-A23 → WOV-IDEA-023; Progression closure/state; overlaps open F limitation.
 
 ### Inventory, economy and rewards
@@ -366,7 +366,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** durable server-owned food effect consumed consistently by both owners.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:187](game-engine-roadmap.md) line187.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** effect ownership schema. 
+- **Dependencies / overlaps:** effect ownership schema.
 - **001A mapping / current tracking:** ENG-FOOD-001 → ENG-FOOD-001; Roadmap; state evidence varies.
 
 #### ENG-REWARD-001 — Complete ADM-025B reward channels
@@ -393,7 +393,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Owner reports crafting does not work; affected operation/root cause unestablished.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:23](../operations/legacy-001D10-closeout.md) line23.
 - **Implementation/runtime boundary:** Owner-reported functional problem; cause unestablished, no repair or reproduction performed.
-- **Dependencies / overlaps:** Bounded UI/request/refusal evidence. 
+- **Dependencies / overlaps:** Bounded UI/request/refusal evidence.
 - **001A mapping / current tracking:** INV-A15 → WOV-IDEA-015; State product_backlog; no dedicated engine ID.
 
 #### WOV-IDEA-017 — Vendor transaction atomicity
@@ -402,7 +402,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Accepted potential double credit, stale gold overwrite and partial failure; not proven exploited.
 - **Approval evidence:** E13 accepts retained risk/deferral, not correction approval. Source: [legacy-001E13-economy-rewards-closeout.md:15](../operations/legacy-001E13-economy-rewards-closeout.md) line15.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Existing writer map; targeted transaction contract. 
+- **Dependencies / overlaps:** Existing writer map; targeted transaction contract.
 - **001A mapping / current tracking:** INV-A17 → WOV-IDEA-017; State product_backlog; E closure accepted risk.
 
 #### WOV-IDEA-018 — Combat2 salvage-channel composition
@@ -411,7 +411,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Source implementations differ; installed runtime behavior inconclusive.
 - **Approval evidence:** E13 accepts retained risk/deferral, not correction approval. Source: [legacy-001E13-economy-rewards-closeout.md:16](../operations/legacy-001E13-economy-rewards-closeout.md) line16.
 - **Implementation/runtime boundary:** Installed salvage behavior inconclusive; source is not runtime proof.
-- **Dependencies / overlaps:** Specific installed/reward evidence. 
+- **Dependencies / overlaps:** Specific installed/reward evidence.
 - **001A mapping / current tracking:** INV-A18 → WOV-IDEA-018; State product_backlog; overlaps ENG-REWARD-001.
 
 #### WOV-IDEA-020 — Forge-strip and gem-trade partial mutation
@@ -420,7 +420,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Unchecked multi-request strip/gem trading and partial failures remain unresolved writer-map findings.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:13](../operations/legacy-001D10-closeout.md) line13.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** D1 writer map and exact transaction evidence. 
+- **Dependencies / overlaps:** D1 writer map and exact transaction evidence.
 - **001A mapping / current tracking:** INV-A20 → WOV-IDEA-020; D closeout/state evidence, no standalone roadmap ID.
 
 #### WOV-IDEA-021 — Unique transfer/market dependencies and soulring authority
@@ -429,7 +429,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Retained lock/identity and catalog/privileged helper uncertainties; not universally fenced.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:13](../operations/legacy-001D10-closeout.md) line13.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ADM-025A and D1 dependencies. 
+- **Dependencies / overlaps:** ADM-025A and D1 dependencies.
 - **001A mapping / current tracking:** INV-A21 → WOV-IDEA-021; D accepted findings; overlaps rewards/admin work.
 
 #### WOV-IDEA-028 — Lesser-unique reward fallback
@@ -438,7 +438,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Deferred optional product extension; not part of delivered exclusive-item contract.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [admin-maintenance-backlog.md:28](../admin-maintenance-backlog.md) line28.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** ENG-REWARD-002 authoring decision. 
+- **Dependencies / overlaps:** ENG-REWARD-002 authoring decision.
 - **001A mapping / current tracking:** INV-A28 → WOV-IDEA-028; Admin backlog only at this granularity.
 
 #### WOV-IDEA-029 — Marketplace expiry return-to-seller
@@ -447,7 +447,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Possible deferred product extension, not approved implementation.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [admin-maintenance-backlog.md:28](../admin-maintenance-backlog.md) line28.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Marketplace identity/escrow and explicit product decision. 
+- **Dependencies / overlaps:** Marketplace identity/escrow and explicit product decision.
 - **001A mapping / current tracking:** INV-A29 → WOV-IDEA-029; Admin backlog mention; no dedicated state/roadmap item.
 
 ### Admin and documentation
@@ -458,7 +458,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** read-only build/import presentation keyed by stable ENG IDs while preserving product/content items.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:270](game-engine-roadmap.md) line270.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** source/Cloud schema and publication design. 
+- **Dependencies / overlaps:** source/Cloud schema and publication design.
 - **001A mapping / current tracking:** ENG-ADMIN-001 → ENG-ADMIN-001; Roadmap; state evidence varies.
 
 #### ENG-MANUAL-001 — Admin Game Manual integration
@@ -467,7 +467,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** present selected repository-backed specification sections with revision/date; keep authoring guidance distinct.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:279](game-engine-roadmap.md) line279.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** safe build-time content pipeline and admin access review. 
+- **Dependencies / overlaps:** safe build-time content pipeline and admin access review.
 - **001A mapping / current tracking:** ENG-MANUAL-001 → ENG-MANUAL-001; Roadmap; state evidence varies.
 
 #### ENG-ADMIN-002 — Single-creature reset and despawn controls
@@ -476,7 +476,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** separately named reset and despawn operations with server-derived admin authorization, transactional claim/state-version fencing, explicit creature effect/target/engagement handling, and durable audit evidence. Reset restores an approved lifecycle state; despawn removes the active instance under a separately specified contract. Neither grants kill credit, XP, loot or death effects.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:297](game-engine-roadmap.md) line297.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** read-only investigation of supported source/installed states; product decision defining reset versus despawn and allowed encounter conditions; concurrency design preserving unrelated creatures, characters, participation and reward history. 
+- **Dependencies / overlaps:** read-only investigation of supported source/installed states; product decision defining reset versus despawn and allowed encounter conditions; concurrency design preserving unrelated creatures, characters, participation and reward history.
 - **001A mapping / current tracking:** ENG-ADMIN-002 → ENG-ADMIN-002; Roadmap; state evidence varies.
 
 ### Admin and authoring
@@ -487,7 +487,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Ordering and category/entry deletion consistency need focused review.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:21](../admin-maintenance-backlog.md) line21.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Define deletion/reorder semantics. 
+- **Dependencies / overlaps:** Define deletion/reorder semantics.
 - **001A mapping / current tracking:** ADM-016 → ADM-016; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-020 — Node Editor
@@ -496,7 +496,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Loads complete item, creature and NPC catalogues for local pickers and repeatedly reloads them.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:23](../admin-maintenance-backlog.md) line23.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Add scoped/paginated search without weakening selection. 
+- **Dependencies / overlaps:** Add scoped/paginated search without weakening selection.
 - **001A mapping / current tracking:** ADM-020 → ADM-020; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-021 — Items
@@ -505,7 +505,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Ownership of `tier`, `weapon_die`, `world_drop` and `drop_weight` is unclear between authoring and generated runtime records.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:24](../admin-maintenance-backlog.md) line24.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Product/data-owner decision required. 
+- **Dependencies / overlaps:** Product/data-owner decision required.
 - **001A mapping / current tracking:** ADM-021 → ADM-021; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-022 — Statuses
@@ -514,7 +514,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Buff/debuff terminology does not map cleanly to every active reusable status classification.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:25](../admin-maintenance-backlog.md) line25.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Agree player/admin taxonomy first. 
+- **Dependencies / overlaps:** Agree player/admin taxonomy first.
 - **001A mapping / current tracking:** ADM-022 → ADM-022; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-023 — Abilities
@@ -523,7 +523,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Legacy ability aliases remain active compatibility inputs and cannot safely be removed from editors/runtime independently.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:26](../admin-maintenance-backlog.md) line26.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Retirement plan and data inventory required. 
+- **Dependencies / overlaps:** Retirement plan and data inventory required.
 - **001A mapping / current tracking:** ADM-023 → ADM-023; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-024 — Combat2 summons
@@ -532,7 +532,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Authoritative summon editing semantics and ownership are not yet defined.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:27](../admin-maintenance-backlog.md) line27.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Combat2 contract decision required. 
+- **Dependencies / overlaps:** Combat2 contract decision required.
 - **001A mapping / current tracking:** ADM-024 → ADM-024; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### ADM-030 — All admin pages
@@ -541,7 +541,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Full responsive layout, action hierarchy, density and accessibility review remains outstanding.
 - **Approval evidence:** Existing admin queue entry; blocked/open is not approval to implement. Source: [admin-maintenance-backlog.md:30](../admin-maintenance-backlog.md) line30.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Complete technical correctness batches first. 
+- **Dependencies / overlaps:** Complete technical correctness batches first.
 - **001A mapping / current tracking:** ADM-030 → ADM-030; Admin backlog authoritative; not individually keyed in engine roadmap; ADM-025 overlaps ENG-REWARD.
 
 #### WOV-IDEA-024 — Admin class-access/attribute/resource corrections
@@ -570,7 +570,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Accepted unresolved persisted/dynamic AC freshness and calculation inconsistencies.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001C6-resource-domain-acceptance-proposal.md:3](../operations/legacy-001C6-resource-domain-acceptance-proposal.md) line3.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Consumer/formula authority evidence before correction. 
+- **Dependencies / overlaps:** Consumer/formula authority evidence before correction.
 - **001A mapping / current tracking:** INV-A11 → WOV-IDEA-011; C closure/state; no dedicated correction roadmap ID.
 
 #### WOV-IDEA-012 — Missing equipment resource synchronization
@@ -579,7 +579,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Equip/wear/repair/strip paths may not refresh resource maxima consistently.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:13](../operations/legacy-001D10-closeout.md) line13.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** C/D writer maps; resource authority. 
+- **Dependencies / overlaps:** C/D writer maps; resource authority.
 - **001A mapping / current tracking:** INV-A12 → WOV-IDEA-012; C/D/state closure; not fixed by material sale.
 
 #### WOV-IDEA-013 — Equipment callback transactionality
@@ -588,7 +588,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Review equip/unequip callbacks across separate transactions and freshness.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:13](../operations/legacy-001D10-closeout.md) line13.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** WOV-IDEA-012; inventory action boundary. 
+- **Dependencies / overlaps:** WOV-IDEA-012; inventory action boundary.
 - **001A mapping / current tracking:** INV-A13 → WOV-IDEA-013; C to D transfer retained in state/evidence.
 
 #### WOV-IDEA-014 — Empty-object item override semantics
@@ -597,7 +597,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** SQL/TS {} fallback discrepancy retained; intended policy not silently selected.
 - **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:13](../operations/legacy-001D10-closeout.md) line13.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Item contract/consumer evidence. 
+- **Dependencies / overlaps:** Item contract/consumer evidence.
 - **001A mapping / current tracking:** INV-A14 → WOV-IDEA-014; C/D reports/state narrative; no dedicated ID.
 
 ### World, creatures and quests
@@ -608,7 +608,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Unresolved completion/event/replay and privileged reward-helper coverage transferred from E.
 - **Approval evidence:** E13 transfers unresolved coverage; not resolved or repair-approved. Source: [legacy-001E13-economy-rewards-closeout.md:17](../operations/legacy-001E13-economy-rewards-closeout.md) line17.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** Planned World domain; no repairs authorized. 
+- **Dependencies / overlaps:** Planned World domain; no repairs authorized.
 - **001A mapping / current tracking:** INV-A19 → WOV-IDEA-019; State product_backlog and roadmap receiving domain.
 
 #### ENG-LEGACY-001G1 — World domain scope/evidence preparation
@@ -617,7 +617,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Intent:** Next proposed bounded preparation; reuse inventories and transferred quest findings, not started.
 - **Approval evidence:** Proposed next preparation only; F12 does not start audit. Source: [legacy-001F11-evidence-and-closure-assessment.md:75](../operations/legacy-001F11-evidence-and-closure-assessment.md) line75.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** F12 closure and explicit next-task authorization. 
+- **Dependencies / overlaps:** F12 closure and explicit next-task authorization.
 - **001A mapping / current tracking:** ENG-LEGACY-001G1 → ENG-LEGACY-001G1; State next_approved_task and engine roadmap.
 
 ## Completed references and retained limitations
