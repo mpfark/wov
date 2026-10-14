@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14T10:11:55.717Z",
-  "based_on_source_sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
+  "updated_at": "2026-10-14T18:40:16.500Z",
+  "based_on_source_sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2071,6 +2071,39 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001F9A-installation-reconciliation.md",
       "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding. Prior closures/four OPEN progression limitations/admin-only XP pause/Combat1/privileged/F1 retry uncertainty retained; no Parties closure or gameplay/hosted operation."
+    },
+    {
+      "identity": "ENG-LEGACY-001F10 Parties IN PROGRESS — bounded runtime smoke plan authored, NOT EXECUTED",
+      "status": "authored",
+      "sha": "46cbfb4a16fd91c55a5b563917bc83c34ed37d6c",
+      "timestamp": "2026-10-14T10:49:08.058Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F10-runtime-smoke-plan.md",
+      "evidence": "Plan only:3 explicitly owner-designated disposable actors across2 authenticated owner sessions; exact UUID acceptance/replay and six combat_active refusals, approved evidence/cleanup/stop conditions. Actual IDs, safe combat/exit fixture, exact-UUID caller and hosted write/read authorization still missing. Calikon/Canaryone/non-test data excluded; sequential smoke not hosted concurrency. F1 retry issue separate; prior closures/risks/four progression limits/admin-only XP pause preserved. F9A published46cbfb4a; F10 plan/state local only, no hosted/test execution or automatic closure."
+    },
+    {
+      "identity": "ENG-LEGACY-001F10A Parties IN PROGRESS — source fixture/caller readiness authored, NOT EXECUTED",
+      "status": "authored",
+      "sha": "46cbfb4a16fd91c55a5b563917bc83c34ed37d6c",
+      "timestamp": "2026-10-14T11:11:47.341Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F10A-fixture-readiness.md",
+      "evidence": "Local source establishes supported own-account C2 creation within retained quota and ordinary authenticated six-argument party RPC caller via existing Vite application, with immutable request replay. No actual fixture UUIDs selected, caller executed or hosted safety verified. Owner-nominated dedicated test identities/node/creature/exit and separately authorized bounded reads required first; setup/combat/party/cleanup writes require later explicit approval. No code changes or hosted operations. Parties IN PROGRESS, parent OPEN; prior limitations and protected-character exclusions preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F11 Parties IN PROGRESS — CONDITIONAL GO closure proposal; hosted sequential smoke reported PASS",
+      "status": "authored",
+      "sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
+      "timestamp": "2026-10-14T18:40:16.500Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex reconciliation of owner-supplied F10E/F10F/F10H results",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
+      "evidence": "Documentation assessment only: owner reports ordinary authenticated create/invite/accept, exact six-argument replay without duplicate membership and six combat_active refusals PASS; ordinary respawn/cancel/disband cleanup, no remaining test-party memberships/invitations. Hosted sequential smoke is not native independent-session or hosted concurrency proof. F10H asleep/maintenance/jobs removed at2026-10-14 16:00UTC; empty stored active encounter receives no ticks, awake lifecycle unresolved. F1 retry-UUID weakness remains unresolved; explicit closure acceptance/disposition required. Parties IN PROGRESS, parent OPEN. Separate future persistent creature HP/DoT/regen/sleep/completion direction NOT IMPLEMENTED. All prior risks/four progression limitations/admin-only XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -2302,15 +2335,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — F9A reconciliation ready for review; bounded runtime smoke/F1 disposition separately authorized",
+    "identity": "STOP — Party F closure owner acceptance/disposition required; no automatic World audit",
     "status": "blocked",
-    "sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
-    "timestamp": "2026-10-14T10:11:55.717Z",
-    "evidence_type": "operator_reported",
-    "reporting_actor": "Owner F9/F9A installation summary; Codex source reconciliation",
-    "directly_verified": false,
-    "artifact": "docs/operations/legacy-001F9A-installation-reconciliation.md",
-    "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding. Prior closures/four OPEN progression limitations/admin-only XP pause/Combat1/privileged/F1 retry uncertainty retained; no Parties closure or gameplay/hosted operation."
+    "sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
+    "timestamp": "2026-10-14T18:40:16.500Z",
+    "evidence_type": "repository",
+    "reporting_actor": "Codex reconciliation of owner-supplied F10E/F10F/F10H results",
+    "directly_verified": true,
+    "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
+    "evidence": "Documentation assessment only: owner reports ordinary authenticated create/invite/accept, exact six-argument replay without duplicate membership and six combat_active refusals PASS; ordinary respawn/cancel/disband cleanup, no remaining test-party memberships/invitations. Hosted sequential smoke is not native independent-session or hosted concurrency proof. F10H asleep/maintenance/jobs removed at2026-10-14 16:00UTC; empty stored active encounter receives no ticks, awake lifecycle unresolved. F1 retry-UUID weakness remains unresolved; explicit closure acceptance/disposition required. Parties IN PROGRESS, parent OPEN. Separate future persistent creature HP/DoT/regen/sleep/completion direction NOT IMPLEMENTED. All prior risks/four progression limitations/admin-only XP pause preserved."
   },
   "volatile_runtime_observations": [
     {
@@ -2653,6 +2686,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/progression-001G-D1-D3-rollout-and-remaining-scope.md",
       "evidence": "Owner reports Admin access/workflows appear available after manual publication. No comprehensive hosted campaign. Refusal/edit/ACL branches remain UNVERIFIED, not failed."
+    },
+    {
+      "identity": "F10E/F10F reported sequential party smoke/cleanup and F10H idle shutdown",
+      "status": "unknown",
+      "sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
+      "timestamp": "2026-10-14T16:00:00Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner F11 supplied hosted evidence summary",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
+      "evidence": "F10H observation time only: world asleep, Combat2 maintenance, dispatcher/idle jobs removed; empty stored active encounter not ticking and did not block shutdown. F10E authenticated party create/invite/accept, exact replay/no duplicate and six combat_active refusals reported PASS; F10F ordinary respawn/cancel/disband, no test memberships/invitations. E/F exact times/raw request IDs/transcripts not provided; separate phases not one snapshot. Not independently inspected by Codex or a current safe-window assertion. Awake empty-encounter lifecycle remains unresolved."
     }
   ],
   "product_backlog": [
