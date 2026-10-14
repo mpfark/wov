@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14T18:40:16.500Z",
-  "based_on_source_sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
+  "updated_at": "2026-10-14T19:07:36.386Z",
+  "based_on_source_sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2104,6 +2104,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
       "evidence": "Documentation assessment only: owner reports ordinary authenticated create/invite/accept, exact six-argument replay without duplicate membership and six combat_active refusals PASS; ordinary respawn/cancel/disband cleanup, no remaining test-party memberships/invitations. Hosted sequential smoke is not native independent-session or hosted concurrency proof. F10H asleep/maintenance/jobs removed at2026-10-14 16:00UTC; empty stored active encounter receives no ticks, awake lifecycle unresolved. F1 retry-UUID weakness remains unresolved; explicit closure acceptance/disposition required. Parties IN PROGRESS, parent OPEN. Separate future persistent creature HP/DoT/regen/sleep/completion direction NOT IMPLEMENTED. All prior risks/four progression limitations/admin-only XP pause preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F12 Parties COMPLETE WITH ACCEPTED LIMITATIONS — explicit owner acceptance",
+      "status": "authored",
+      "sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
+      "timestamp": "2026-10-14T19:07:36.386Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner F12 closure decision; Codex documentation reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
+      "evidence": "Owner explicitly accepts bounded F1–F11 closure. F1/F-R3 malformed-response/retry-UUID weakness remains OPEN deferred correction ENG-LEGACY-001F-R3-RETRY, NOT FIXED. Privileged/legacy callers, Combat1 risk, masked ACLs, unproven hosted concurrency and broader multiplayer coverage accepted/retained; exact replay/six refusals only reported sequential scope. Awake empty-encounter lifecycle and future HP/DoT/regen direction separate, NOT IMPLEMENTED. Parent LEGACY001 OPEN; prior closures/four OPEN progression limitations/admin-only XP pause preserved. Next proposed World/Creatures/Quests scope preparation, not begun."
     }
   ],
   "known_blockers": [
@@ -2335,15 +2346,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — Party F closure owner acceptance/disposition required; no automatic World audit",
-    "status": "blocked",
-    "sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
-    "timestamp": "2026-10-14T18:40:16.500Z",
+    "identity": "PROPOSED — ENG-LEGACY-001G1 World / Creatures / Quests scope/evidence reuse preparation; not started",
+    "status": "authored",
+    "sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
+    "timestamp": "2026-10-14T19:07:36.386Z",
     "evidence_type": "repository",
-    "reporting_actor": "Codex reconciliation of owner-supplied F10E/F10F/F10H results",
+    "reporting_actor": "Codex",
     "directly_verified": true,
     "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
-    "evidence": "Documentation assessment only: owner reports ordinary authenticated create/invite/accept, exact six-argument replay without duplicate membership and six combat_active refusals PASS; ordinary respawn/cancel/disband cleanup, no remaining test-party memberships/invitations. Hosted sequential smoke is not native independent-session or hosted concurrency proof. F10H asleep/maintenance/jobs removed at2026-10-14 16:00UTC; empty stored active encounter receives no ticks, awake lifecycle unresolved. F1 retry-UUID weakness remains unresolved; explicit closure acceptance/disposition required. Parties IN PROGRESS, parent OPEN. Separate future persistent creature HP/DoT/regen/sleep/completion direction NOT IMPLEMENTED. All prior risks/four progression limitations/admin-only XP pause preserved."
+    "evidence": "Party F COMPLETE WITH ACCEPTED LIMITATIONS by F12 owner decision. Next existing order7 preparation: reuse inventories and separate persistent definitions/spawns/runtime writers, carry E13 unresolved contract/quest reward authority and separate Combat2 lifecycle/design follow-ups. No audit/implementation/hosted action begun; await task authorization. Parent OPEN; OPEN F1 deferred correction tracked in product_backlog."
   },
   "volatile_runtime_observations": [
     {
@@ -2749,6 +2760,11 @@
       "identity": "Transferred contract/quest authority/reward-path findings — receiving World/Creatures/Quests",
       "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
       "evidence": "Unresolved event/completion/replay/privileged-helper coverage from E1/E12, transferred by owner E13; receiving001A order7 must reference. Not resolved or auto-accepted."
+    },
+    {
+      "identity": "ENG-LEGACY-001F-R3-RETRY — OPEN deferred malformed-response/retry-UUID correction",
+      "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
+      "evidence": "Original F1 risk register F-R3 at docs/operations/legacy-001F1-parties-writer-map.md: malformed response may clear a committed operation UUID; subsequent click can mint a new UUID. Actor/remount recovery also not durable. Owner F12 accepts deferral, not a fix or runtime proof. Separate future caller-state regression/correction authorization required."
     }
   ]
 }

@@ -1,5 +1,7 @@
 # ENG-LEGACY-001F11 — Party evidence and closure assessment
 
+**Current status, F12 owner acceptance: ENG-LEGACY-001F COMPLETE WITH ACCEPTED LIMITATIONS.** The F12 decision below supersedes the historical conditional recommendation and pending-acceptance wording in this F11 assessment. Parent ENG-LEGACY-001 remains OPEN.
+
 2026-10-14. Starting local46cbfb4a16fd91c55a5b563917bc83c34ed37d6c; synchronized to origin/main before this documentation change. Scope: ENG-LEGACY-001F, engine authority/character ownership and movement/Combat2 sections. No engine rule or application behavior changed. Parent ENG-LEGACY-001 OPEN.
 
 ## Evidence provenance and acceptance mapping
@@ -57,3 +59,19 @@ Administrative XP grants remain paused. Normal gameplay XP earning, including cr
 Documentation only. No hosted calls, SQL/application/migration/history changes, deployment, frontend publication, fixes or runtime probes. Earlier local F10/F10A preparation is included as documentation dependency, with historical NOT EXECUTED wording scoped to those preparation tasks. Next safe action: explicit owner closure decision, then separately authorized World-domain preparation; no automatic investigation.
 
 Local validation:3 project-state tests PASS; JSON/Markdown synchronized;75 documentation links valid across changed reports/state/roadmap; git diff whitespace check PASS.23-entry Drizzle journal remains unchanged; no SQL/migration modifications. No gameplay tests or native concurrency rerun needed for documentation changes. Recovery stash unchanged. Synchronization fast-forwarded unrelated upstream email commits to54bb1a51795845d951a9bd6ca1fe5bbdf9366456; these are not authored or included in the six-file F11 documentation commit.
+
+## F12 — Explicit owner acceptance and closure
+
+On2026-10-14 the owner explicitly approves **COMPLETE WITH ACCEPTED LIMITATIONS**, based on bounded F1–F11 evidence. The owner accepts/defer-tracks the unresolved F1 malformed-response/retry-UUID weakness, privileged/legacy caller uncertainty, existing Combat1 lock-order risk, masked explicit ACL evidence, unproven hosted independent-session concurrency and incomplete broader multiplayer runtime coverage. These are retained limitations, not fixes or verification results. Hosted exact six-argument replay and six combat_active refusals remain valid only at their documented sequential scope. Local native concurrency remains separate evidence.
+
+Awake empty-encounter lifecycle and the future shared creature HP/DoT/regeneration/completion direction remain separate unresolved, NOT IMPLEMENTED Combat2 follow-ups. All prior accepted limitations, progression closures, four OPEN progression limitations, administrative-only XP-grant pause and parent OPEN status are unchanged. Closure authorizes no implementation or hosted action.
+
+## OPEN deferred correction — F1 malformed-response/retry UUID
+
+Tracking identity: **ENG-LEGACY-001F-R3-RETRY — OPEN / DEFERRED, NOT FIXED**. Original evidence: [F1 risk register F-R3](legacy-001F1-parties-writer-map.md), party-api malformed result lacks uncertain=true and the coordinator removes its UUID when !uncertain. A server-committed operation followed by malformed response can therefore lose its retry identity; remount/actor changes also do not provide durable request recovery. Successful exact manual replay does not resolve this client behavior; no live duplicate exploit is claimed.
+
+F12 explicitly accepts deferral for bounded Party audit closure. This remains visibly listed in project-state product_backlog. Future separately authorized work should preserve the same UUID/immutable payload on uncertain outcomes and exercise actual caller state transitions, without broad party redesign. No correction, runtime validation or new retention policy is performed here.
+
+## Next bounded preparation — World / Creatures / Quests
+
+Proposed next task: **ENG-LEGACY-001G1 — World / Creatures / Quests scope and evidence reuse preparation**, following001A order7 (distinct from completed ENG-PROGRESSION-001G). Reuse existing inventories, identify persistent definitions/spawn configuration versus runtime writers, and explicitly carry E13's unresolved contract/quest completion/reward authority coverage and the separate encounter-lifecycle/design follow-ups. Establish a small source inventory/evidence plan before any investigation, implementation or hosted request. This task is identified only; not started or automatically authorized by F12 closure.
