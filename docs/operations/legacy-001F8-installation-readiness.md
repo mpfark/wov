@@ -67,3 +67,7 @@ All earlier closures, four OPEN progression limitations, accepted authority unce
 ## F8A owner acceptance and publication
 
 The owner explicitly approved hosted installation of the unchanged F6 candidate and accepted the retained limitations documented above. This supersedes the initial pending-approval wording for this specific installation, not the REQUIRES EVIDENCE classification of masked raw ACLs or unverified runtime/callers. Privileged caller uncertainty, unresolved Combat1 deadlock risk, F1 retry-UUID issue and all progression limitations remain. F8A authorizes Codex only to publish these six documentation/evidence changes; no hosted operation is performed. Parties IN PROGRESS; parent OPEN.
+
+## F9A installed reconciliation
+
+Owner reports successful0022 installation/all metadata checks PASS and target normalized fingerprint4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Locally verified generated Git blob differs from approved39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d only by omitted terminal LF; generated/ledger source-derived full hashbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d. Owner accepts this specific byte-identity exception. Migration/journal/snapshot remain unchanged. See [F9A reconciliation](legacy-001F9A-installation-reconciliation.md); installed metadata evidence does not establish hosted runtime or resolve masked ACL/caller/Combat1/F1 limitations.

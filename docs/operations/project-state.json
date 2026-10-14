@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14T09:57:01.465Z",
-  "based_on_source_sha": "1a7ec70ecc51265795ef25d309956c537cc06644",
+  "updated_at": "2026-10-14T10:11:55.717Z",
+  "based_on_source_sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -472,6 +472,17 @@
       "directly_verified": false,
       "artifact": "drizzle/migrations/0021_legacy_001e6_npc_gift_correction.sql",
       "evidence": "Owner reports SUCCESS/history22/original21 unchanged and before/after trigger fingerprintc504637d2f979b38294ce5b860051925. Local candidate byte hashc9265d6845fd6fe325116a7062f34d1601be3e1d4e1a765c1c34ef61d99da65e and extracted bodyad8cec2a48a0a7f706d8410762afbc10e9b401f6bdef344466defd77bb293430 match supplied results. Chain/prefix/types unchanged verified. Timestamp recording, not exact hosted observation; no live gift/concurrency proof."
+    },
+    {
+      "identity": "0022_legacy_001f6_party_combat_serialization",
+      "status": "installed",
+      "sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
+      "timestamp": "2026-10-14T10:11:55.717Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner F9/F9A installation summary; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "drizzle/migrations/0022_legacy_001f6_party_combat_serialization.sql",
+      "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding."
     }
   ],
   "generated_supabase_types": {
@@ -2049,6 +2060,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001F8-installation-readiness.md",
       "evidence": "Original statement1/2 text archived byte-identically. Owner reports initial sandbox_exec failure then unchanged success as supabase_read_only_user; separate04:48:02.680118Z catalog/04:49:22.045943Z ledger observations.48 function hashes/settings/owners,41 columns and25 trigger definitions/bindings match F5;22 ledger hashes match source.13 masked raw ACL records remain REQUIRES EVIDENCE; effective target rights observed and candidate atomically asserts actual ACL preservation. GO specific installation proposal with explicit limited-readback/privileged risk acknowledgment and separate authorization, not installed/runtime verified. Candidate39f559... unchanged; old risks/four progression limitations/admin-only XP pause retained. F8A owner explicitly approves unchanged hosted installation with retained limits; Codex task only publishes six documentation/evidence files, no installed status claimed. Masked ACLs still REQUIRES EVIDENCE; F1 retry/privileged/Combat1/progression limitations preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001F9A Parties IN PROGRESS — installed/metadata-verified with accepted terminal-LF exception",
+      "status": "authored",
+      "sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
+      "timestamp": "2026-10-14T10:11:55.717Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner F9/F9A installation summary; Codex source reconciliation",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001F9A-installation-reconciliation.md",
+      "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding. Prior closures/four OPEN progression limitations/admin-only XP pause/Combat1/privileged/F1 retry uncertainty retained; no Parties closure or gameplay/hosted operation."
     }
   ],
   "known_blockers": [
@@ -2280,15 +2302,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "STOP — F8A documentation publication only; owner-approved installation remains unexecuted",
+    "identity": "STOP — F9A reconciliation ready for review; bounded runtime smoke/F1 disposition separately authorized",
     "status": "blocked",
-    "sha": "1a7ec70ecc51265795ef25d309956c537cc06644",
-    "timestamp": "2026-10-14T07:36:22.598Z",
+    "sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
+    "timestamp": "2026-10-14T10:11:55.717Z",
     "evidence_type": "operator_reported",
-    "reporting_actor": "Owner-supplied Lovable reports; Codex local reconciliation",
+    "reporting_actor": "Owner F9/F9A installation summary; Codex source reconciliation",
     "directly_verified": false,
-    "artifact": "docs/operations/legacy-001F8-installation-readiness.md",
-    "evidence": "Original statement1/2 text archived byte-identically. Owner reports initial sandbox_exec failure then unchanged success as supabase_read_only_user; separate04:48:02.680118Z catalog/04:49:22.045943Z ledger observations.48 function hashes/settings/owners,41 columns and25 trigger definitions/bindings match F5;22 ledger hashes match source.13 masked raw ACL records remain REQUIRES EVIDENCE; effective target rights observed and candidate atomically asserts actual ACL preservation. GO specific installation proposal with explicit limited-readback/privileged risk acknowledgment and separate authorization, not installed/runtime verified. Candidate39f559... unchanged; old risks/four progression limitations/admin-only XP pause retained. F8A owner explicitly approves unchanged hosted installation with retained limits; Codex task only publishes six documentation/evidence files, no installed status claimed. Masked ACLs still REQUIRES EVIDENCE; F1 retry/privileged/Combat1/progression limitations preserved."
+    "artifact": "docs/operations/legacy-001F9A-installation-reconciliation.md",
+    "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding. Prior closures/four OPEN progression limitations/admin-only XP pause/Combat1/privileged/F1 retry uncertainty retained; no Parties closure or gameplay/hosted operation."
   },
   "volatile_runtime_observations": [
     {
