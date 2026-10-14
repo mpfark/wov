@@ -15,7 +15,7 @@ const corsHeaders = {
 }
 
 // Configuration
-const SITE_NAME = "WoVarneth"
+const SITE_NAME = "Wayfarers of Varneth"
 const SENDER_DOMAIN = "notify.wayfarersofvarneth.dk"
 const ROOT_DOMAIN = "wayfarersofvarneth.dk"
 const FROM_DOMAIN = "wayfarersofvarneth.dk"
