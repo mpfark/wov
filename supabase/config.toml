@@ -31,6 +31,4 @@ project_id = "gpclaklkaolyzfnooajt"
 
   [functions.ai-suggest-character-name]
     verify_jwt = false
-  [functions.process-email-queue]
-    verify_jwt = true
 
