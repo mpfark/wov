@@ -155,6 +155,13 @@
       "when": 1791893663148,
       "tag": "0021_legacy_001e6_npc_gift_correction",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791972149269,
+      "tag": "0022_legacy_001f6_party_combat_serialization",
+      "breakpoints": true
     }
   ]
 }
