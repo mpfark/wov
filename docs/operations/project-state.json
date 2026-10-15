@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T21:15:59.459Z",
-  "based_on_source_sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
+  "updated_at": "2026-10-15T21:34:56.549Z",
+  "based_on_source_sha": "d73948ed14de8ebe18c1f0e6cbf8093d0a1db09e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2170,6 +2170,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001G4A-regeneration-hp-ownership.md",
       "evidence": "Reuses G3/G4: regen/wake heal write only authored HP using Combat1 guards; claim consumes runtime HP, seed retains same-generation rows even after encounter end, and helpers do not fence claimed versions. Source-implied lost healing/divergence, not a hosted reproduction. Active-only predicate or creatures-row lock alone insufficient. Options: owner-approved temporary containment of two healing writers with respawn retained, or coherent maintenance requiring explicit eligibility/lock/version design; none selected or implemented.93 existing source/pure tests passed; no PostgreSQL helper/concurrency execution, SQL candidate, migration, hosted access or G3D reopening. G3 accepted deferral, G2/E13 and all prior risks/statuses preserved; G/parent OPEN."
+    },
+    {
+      "identity": "ENG-LEGACY-001G4A2 — coherent creature HP/OOC design assessment prepared; recommendation NOT APPROVED",
+      "status": "authored",
+      "sha": "d73948ed14de8ebe18c1f0e6cbf8093d0a1db09e",
+      "timestamp": "2026-10-15T21:34:56.549Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001G4A2-coherent-creature-hp-design.md",
+      "evidence": "Compares authored durable HP with synchronized projections, runtime authority with handback, and a minimal transitional existing-table protocol. Recommends transition toward creatures.hp durable authority while preserving current claim shape under coherent writes/claim fencing. Proposes minimal durable accounting and bounded elapsed OOC settlement without continuous sleep ticks; no schema or balance approved. Owner decisions on blockers, timing/rate/rounding, sleep and cursor/cutover remain pending. No implementation, SQL, database test, hosted operation or idea-status change. G4-R1/E13/G/parent OPEN; G3 accepted deferral/G3D BLOCKED and all prior dispositions preserved."
     }
   ],
   "known_blockers": [
@@ -2401,15 +2412,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "PROPOSED — G4-R1 owner authority-boundary decision and narrowly authorized compatibility/test preparation",
+    "identity": "PROPOSED — G4A2 owner contract decisions and separately authorized local design/test preparation",
     "status": "authored",
-    "sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
-    "timestamp": "2026-10-15T21:15:59.459Z",
+    "sha": "d73948ed14de8ebe18c1f0e6cbf8093d0a1db09e",
+    "timestamp": "2026-10-15T21:34:56.549Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001G4A-regeneration-hp-ownership.md",
-    "evidence": "Owner review required before choosing temporary containment of legacy regen/wake healing (retain respawn) versus coherent current-generation OOC maintenance design. No gameplay policy, correction, SQL artifact or local PostgreSQL access authorized by the proposal. Use bounded G4A compatibility/concurrency plan only after separate authorization. G4B Admin overlap and G4C helper authority gaps stay pending; G3D remains BLOCKED, G3 correction deferred, E13/G/parent OPEN."
+    "artifact": "docs/operations/legacy-001G4A2-coherent-creature-hp-design.md",
+    "evidence": "Owner review needed for recommended transitional durable-HP/projection authority, exact OOC blockers, regeneration timing/rate/quantization, sleep policy and minimal accounting initialization. Then separately authorize compatibility/state-machine proof before a candidate; no PostgreSQL access, schema change or runtime implementation assumed. WOV-IDEA-007/008/010 remain future design, not implemented; G3D not reopened, G4-R1/E13/G/parent OPEN."
   },
   "volatile_runtime_observations": [
     {
