@@ -66,7 +66,7 @@ These questions are **REQUIRES EVIDENCE**, not newly demonstrated hosted exploit
 |---|---|
 | G2–G2D | [Bounded investigation COMPLETE WITH EXPLICIT LIMITATIONS](legacy-001G2D-contract-completion-delegate-trace.md#g3-owner-disposition--2026-10-15); E13 contract/quest transfer remains OPEN, no deployed contract functionality asserted. |
 | G3–G3E | [INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS](legacy-001G3E-owner-disposition-g4-handoff.md). Owner accepts deferring the source-proven idle/activation race and local correction installation. G3B candidate/tests are local only; G3D hosted verification remains BLOCKED and NOT EXECUTED. Not a production fix. |
-| G4 | Next bounded investigation: creature authority/lifecycle, using existing C1–C3 families and B/E evidence. Not started by G3E; no creature behavior or implementation change authorized. |
+| G4 | [Bounded creature authority/lifecycle source review recorded](legacy-001G4-creature-authority-lifecycle.md),2026-10-15. Findings OPEN; no implementation/hosted proof/domain closure. Proposed next G4A examines legacy regen/wake-heal versus Combat2 HP projection ownership, requiring separate authorization. Historical G3E handoff did not start the audit. |
 | G5 / G6 | Existing later node/path and remaining quest/consolidated-disposition scope retained below; not started or closed. Overall G and ENG-LEGACY-001 OPEN. |
 
 The original proposed scope table below remains the historical boundary, not a claim G2/G3 are still awaiting initial investigation. Prior B–F/progression closures and accepted/deferred findings retain their original dispositions.

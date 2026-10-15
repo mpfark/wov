@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T20:10:31.067Z",
-  "based_on_source_sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
+  "updated_at": "2026-10-15T20:56:18.820Z",
+  "based_on_source_sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2148,6 +2148,17 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
       "evidence": "Owner explicitly accepts deferring G3B production installation and the known source-proven READ COMMITTED idle-shutdown/session-activation race while continuing the audit. Candidate ec2ddfc2458c28d8ecb291c8f405f5091a8364708fd7c6097716ba51c97f233c unchanged;11 native PostgreSQL18.6 tests passed locally with dependency doubles, not hosted proof. Correction NOT INSTALLED; hosted runtime/concurrency verification absent. G3D remains BLOCKED/NOT EXECUTED: permitted read-only route and actual PostgREST/pg_cron isolation unresolved; fresh installed parity/ACL/caller uncertainty retained. Closure is of investigation, not a production fix. G4 creature authority/lifecycle next, not started. E13/G/parent OPEN; prior closures/risks, four OPEN progression limitations, OPEN F1 retry correction and admin-only XP pause unchanged."
+    },
+    {
+      "identity": "ENG-LEGACY-001G4 — bounded creature authority/lifecycle source review recorded; findings OPEN",
+      "status": "authored",
+      "sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
+      "timestamp": "2026-10-15T20:56:18.820Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
+      "evidence": "Local source maps authored creatures UUID/generation and encounter node_creature projection; claim/commit mirrors HP/death and uses spawn-fenced rewards. Legacy regen/wake healing guard old combat tables and change only authored HP; direct Admin saves also write full generated HP. Source-confirmed ownership overlap, not proved hosted execution/exploit. Current maintenance ACL/jobs, runtime synchronization/concurrency and external callers unresolved.99 focused source/pure tests passed, no SQL/hosted/gameplay execution. Findings not automatically accepted or fixed; G4A proposed, not begun. G/parent and E13 OPEN; prior B-F/progression/G2/G3 dispositions, four OPEN progression limitations, F1 retry deferral and admin-only XP pause unchanged."
     }
   ],
   "known_blockers": [
@@ -2379,15 +2390,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "NEXT — ENG-LEGACY-001G4 creature authority/lifecycle bounded investigation; not started",
+    "identity": "PROPOSED — ENG-LEGACY-001G4A creature maintenance/Combat2 HP ownership investigation; awaits authorization",
     "status": "authored",
-    "sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
-    "timestamp": "2026-10-15T20:10:31.067Z",
+    "sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
+    "timestamp": "2026-10-15T20:56:18.820Z",
     "evidence_type": "repository",
-    "reporting_actor": "Codex; owner G3E handoff instruction",
+    "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
-    "evidence": "Next existing G1 batch: source-based creature authored configuration/node associations versus spawn/respawn/death/effects/encounter ownership, reusing B/E evidence. Handoff only; no G4 investigation, implementation, behavior change or hosted work begun. G3 investigation accepted complete with limitations; race correction remains OPEN deferred and G3D BLOCKED. E13/G/ENG-LEGACY-001 OPEN, previous closures and all accepted/deferred findings preserved."
+    "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
+    "evidence": "Narrow next source/evidence gate for regen_creature_hp and heal_creatures_on_wake versus node_creature claim/commit projection, reusing G3 scheduling and B evidence. No correction, metadata execution or creature mechanic redesign authorized. G4 findings OPEN; G3 installation remains deferred/G3D BLOCKED; E13/G/parent OPEN. G4B admin active-encounter boundary and G4C exact helper authority preparation are separately proposed, not started."
   },
   "volatile_runtime_observations": [
     {
@@ -2803,6 +2814,11 @@
       "identity": "OPEN DEFERRED — G3 idle-shutdown/session-activation serialization correction; owner-accepted race risk",
       "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
       "evidence": "Source-proven READ COMMITTED race; G3B candidate prepared/local independent-session regression passed, NOT INSTALLED or hosted-runtime-verified. G3E owner accepts deferral/continued risk, not resolution. G3D evidence gate remains BLOCKED for unestablished permitted read-only route and actual RPC/cron isolation; installed parity and retained caller/dependency limits remain. Resume only with separate scoped authorization and unchanged installation prerequisites."
+    },
+    {
+      "identity": "OPEN G4 creature authority findings — maintenance/Combat2 HP projection, Admin overlap and helper authority evidence",
+      "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
+      "evidence": "G4-R1 source legacy regen/wake-heal versus runtime HP mismatch; R2 Admin generic save/node/delete overlap; R3 effective maintenance EXECUTE evidence gap; R4 concurrency/projection risks and R5 installed/external-caller gaps. Not automatically owner-accepted, hosted-confirmed or fixed. Separate bounded follow-up authorization required; no creature behavior change."
     }
   ]
 }
