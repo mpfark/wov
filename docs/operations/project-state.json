@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T22:33:57.086Z",
-  "based_on_source_sha": "3f1a8186f073393651510d9a73de1ec6de4a2fb1",
+  "updated_at": "2026-10-15T23:06:57.341Z",
+  "based_on_source_sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2236,6 +2236,28 @@
       "artifact": "docs/operations/legacy-001G4A5-creature-hp-transition-integration.md",
       "identity": "ENG-LEGACY-001G4A5 — creature HP transition hooks and synchronization design prepared",
       "evidence": "Bounded source integration map: shared entry/hostile intent/stance, pre-claim, successful-new-commit, immediate departure/arrival, seed/ended reactivation, respawn and guarded Admin edit boundaries. Proposes one private node/generation accounting authority, early sorted node/encounter coverage, live-claim deferral/stale fencing, exact cutoff and atomic refusal/replay handling. Generic fullHP saves/direct reassignment and legacy full healing must be adapted before activation. Recommends preserving earned fractions, no-refill/clamp maxHP, bounded exact decimal/microsecond storage and initially deferred quiet-ended reassignment; all new policy choices pending owner decision. No production, proof-code, SQL, schema, migration, hosted operation or native concurrency test. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED and all previous closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
+      "timestamp": "2026-10-15T23:06:57.341Z",
+      "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
+      "identity": "ENG-LEGACY-001G4A6 — owner-approved two-decimal rate/combat reset/maxHP/reassignment contract",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik",
+      "directly_verified": false,
+      "evidence": "Owner approves at most two decimal percentage places over0–100%; renewed combat keeps whole HP but discards fractional credit; wounded maxHP edits preserve missing HP subject to explicit living-boundary validation; safely ended reassignment allowed without effects/actions/outstanding claims. Prior durable authority/default5/60second delay/sleep/no historical credit/ordinary respawn/active edit refusal preserved. Floor1 explicitly evaluation-only pending confirmation. Local-only SQL/accounting candidate and independent-session tests authorized; no production or hosted changes."
+    },
+    {
+      "status": "authored",
+      "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
+      "timestamp": "2026-10-15T23:06:57.341Z",
+      "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
+      "identity": "ENG-LEGACY-001G4A6 — isolated SQL authority candidate locally exercised, production integration UNIMPLEMENTED",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Own g4a6 namespace under guarded disposable local databases only. Candidate SHA256 c2dd470dc8776724d82035487f1f6089f8bbfbfe687690791dcd86f073126d9b.26 PostgreSQL18.6 Windows READ COMMITTED tests PASS including4 independently connected transaction races with pg_blocking_pids/advisory-lock evidence;34 unchanged G4A4 baseline tests PASS. Exact rate/remainder/microsecond accounting, combat reset, guards, projection/version/generation/rollback and reduced entry/claim/commit/respawn/reassignment exercised. Reduced tables and integration doubles omit actual Auth/party/trigger/reward/scheduler/installed composition; not canonical/hosted concurrency proof. Floor1 opt-in test branch pending owner choice; rate-edit credit preservation remains proposed. No production/Edge/UI/migration or hosted changes. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2468,14 +2490,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "3f1a8186f073393651510d9a73de1ec6de4a2fb1",
-    "timestamp": "2026-10-15T22:33:57.086Z",
+    "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
+    "timestamp": "2026-10-15T23:06:57.341Z",
+    "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
+    "identity": "PROPOSED — confirm floor/rate-credit policy then local source-adapter integration candidate",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001G4A5-creature-hp-transition-integration.md",
-    "identity": "PROPOSED — G4A5 policy decisions then separately authorized coherent local synchronization candidate",
-    "evidence": "Confirm fractional interruption/rate-change behavior, wounded maxHP edit policy, exact decimal/time storage bounds and retained-ended projection reassignment disposition; approved5%/0–100%/zero/no historical initialization rules not reopened. Separately authorize guarded source-specific transition/accounting candidate plus independent-session tests, including early claim/entry, commit/departure/arrival, seed, respawn and Admin callers; no installation or hosted route presumed. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
+    "evidence": "Owner decision needed only for nonpositive living max-edit boundary and rate-edit fractional-credit behavior; approved rate precision, combat discard, missingHP preservation and quiescent reassignment are not reopened. Separately authorize exact source-bound adapters and native proofs for retained entry/intent/stance/claim/commit/arrival/party/lifecycle/respawn/Admin/Arena integration and transfer history. Fixture SQL is nondeployable; no installation or hosted route assumed. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
   },
   "volatile_runtime_observations": [
     {

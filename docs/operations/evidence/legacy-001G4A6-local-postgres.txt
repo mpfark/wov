@@ -1,0 +1,39 @@
+LOCAL POSTGRES: PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit; cluster C:\Users\mik\AppData\Local\Temp\wov-g4a6-5C7pcS
+✔ candidate refuses non-fixture database; creates no public function (477.4406ms)
+✔ default/custom/zero/100 rates and invalid precision/range (357.2142ms)
+✔ 60 second delay, persisted fraction and exact microsecond replay (424.4718ms)
+✔ partition invariance for custom rate and repeated short settlements (751.5166ms)
+✔ renewed combat retains whole HP, discards fraction, resets uninterrupted delay (356.503ms)
+✔ DoT and pending cast block empty/ended encounters until resolved under lock (461.182ms)
+✔ eligible sleep counts elapsed time; initialization never pays historical wounds (342.1238ms)
+✔ whole HP caps at max and does not bank excess (363.1858ms)
+✔ active rate edit refuses; inactive rate edit preserves fraction as proposed policy (369.3396ms)
+✔ max edits preserve missing HP both directions; floor defaults refused and opt-in evaluated (321.1499ms)
+✔ quiet-ended reassignment preserves generation/identity and synchronization (365.8309ms)
+✔ ended reassignment refuses effects, pending casts, intents and outstanding expired claim (321.9058ms)
+✔ live lease defers maintenance, expired claim cannot overwrite newer HP (322.3555ms)
+✔ NULL claim/commit metadata and nonfinite cutoffs refuse without writes (325.8466ms)
+✔ same-generation ended seed/reactivation retains authoritative wounds (520.859ms)
+✔ new projection seeds existing wounds; seed refuses unexplained divergence (450.3646ms)
+✔ version fence alone rejects old proposal despite matching token and live lease (476.4297ms)
+✔ successful damage/death commit and exact commit replay (527.1895ms)
+✔ ordinary respawn remains separate at rate0; old generation cannot mutate new life (589.8928ms)
+✔ rollback/failure restores HP, credit, cursor and encounter version; mismatch not repaired (603.9434ms)
+✔ hostile entry plus pending-intent admission blocks, and failed admission rolls back entry (607.3508ms)
+✔ private fixture functions have no browser EXECUTE; explicitly READ COMMITTED (598.2975ms)
+OBSERVED NODE LOCK 28144 -> 21864
+✔ INDEPENDENT SESSIONS: regeneration-first blocks entry, which sees earned HP (794.3154ms)
+OBSERVED NODE LOCK 3296 -> 33192
+✔ INDEPENDENT SESSIONS: entry-first blocks regeneration and preserves combat HP (693.7679ms)
+OBSERVED NODE LOCK 28592 -> 34116
+✔ INDEPENDENT SESSIONS: combat commit-first blocks regeneration; no stale restore (799.9121ms)
+OBSERVED NODE LOCK 39524 -> 38952
+✔ INDEPENDENT SESSIONS: regeneration-first fences expired worker commit (694.261ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15062.1937
