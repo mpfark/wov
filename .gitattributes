@@ -44,3 +44,6 @@ docs/operations/legacy-001F7-party-preflight.sql text eol=lf
 # Original hosted F7 result bytes.
 docs/operations/legacy-001F7-statement1-catalog.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/operations/legacy-001F7-statement2-ledger.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+
+# Exact original conditional G2B metadata evidence; never executable migration inputs.
+docs/operations/legacy-001G2B-evidence/* -text
