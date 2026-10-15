@@ -2,6 +2,12 @@
 
 This is the canonical description of intended game-engine behaviour. Code and installed Cloud state may temporarily lag behind it. [Project state](../operations/project-state.md) records operational evidence; the [engine roadmap](../roadmap/game-engine-roadmap.md) records unfinished work. Contradictions must be reported, not silently resolved. A task that changes an engine rule must update this specification in the same commit. Speculative ideas must never be labelled implemented.
 
+## Approved future creature HP contract — not implemented
+
+The owner-approved [G4A3 contract](../operations/legacy-001G4A3-creature-hp-contract-readiness.md) establishes durable shared-world `creatures.hp`, synchronized Combat2 projections and stale-claim fencing. Living damage persists across players/encounters. Ordinary creature regeneration requires relevant combat effects and pending actions to resolve, followed by 60 seconds of uninterrupted OOC eligibility. Eligible elapsed world-sleep time can be settled later without continuous simulation; existing wounds receive no retroactive initialization credit. Dead creatures retain ordinary respawn, not regeneration. Active Combat2 attachment blocks or defers reassignment.
+
+Regeneration must be configurable/inspectable per creature in Admin. 5% maximum HP/minute is a provisional default only, not finalized universal balance. Representation, bounds, initialization rates, exact blockers, fractional accounting and edit policies remain proposed in G4A3. This is approved target behavior, not installed mechanics. The bounded creature elapsed-accounting exception does not authorize replaying combat/rewards, player sleep regeneration, a second heartbeat or unbounded simulation. Existing independent legacy healing remains an OPEN ownership finding pending separate implementation authority.
+
 ## Information layers
 
 | Layer | Authority | Must not become |

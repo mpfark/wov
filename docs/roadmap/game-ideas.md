@@ -116,6 +116,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Dependencies / overlaps:** Creature lifecycle and encounter boundaries.
 - **001A mapping / current tracking:** INV-A07 → WOV-IDEA-007; F11/state/roadmap narrative; no dedicated ID.
 
+- **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
+
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
 
 - **Status / kind:** DESIGN AGREED; Design decision. Authoritative source disposition: 001A classification DESIGN AGREED; see linked original report for exact decision.
@@ -124,6 +126,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
 - **Dependencies / overlaps:** WOV-IDEA-007; explicit future design/implementation scope.
 - **001A mapping / current tracking:** INV-A08 → WOV-IDEA-008; F11/state/roadmap narrative; not implemented.
+
+- **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
 
@@ -267,11 +271,13 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 #### WOV-IDEA-010 — Sleep-consistent creature OOC regeneration
 
 - **Status / kind:** DESIGN AGREED; Design decision. Authoritative source disposition: 001A classification DESIGN AGREED; see linked original report for exact decision.
-- **Intent:** Keep ordinary regeneration logically consistent across world sleep; no catch-up algorithm selected.
+- **Intent:** Keep ordinary regeneration logically consistent across world sleep; eligible elapsed sleep accounting approved in G4A3; exact accounting implementation remains proposed.
 - **Approval evidence:** Direction agreed: F11 owner-supplied direction, retained by F12; no implementation approval. Source: [legacy-001F11-evidence-and-closure-assessment.md:41](../operations/legacy-001F11-evidence-and-closure-assessment.md) line41.
 - **Implementation/runtime boundary:** NOT IMPLEMENTED by F11/F12; no runtime result or balance algorithm asserted.
 - **Dependencies / overlaps:** Single heartbeat; WOV-IDEA-007/08; joint DoT/regen balance review.
 - **001A mapping / current tracking:** INV-A10 → WOV-IDEA-010; F11/state/roadmap narrative; no dedicated ID.
+
+- **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
 
 ### Authority and legacy governance
 
