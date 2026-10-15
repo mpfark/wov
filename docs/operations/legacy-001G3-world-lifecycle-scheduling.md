@@ -2,6 +2,8 @@
 
 Local source/document review, 2026-10-15; source baseline `6292734adccc619a00943b6a047a277ace5db186`. No hosted access, SQL execution, gameplay probe or implementation change. ENG-LEGACY-001 and its G domain remain OPEN.
 
+**Current G3E owner disposition (2026-10-15): G3 INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS.** The owner accepts deferring G3B production installation and its source-proven READ COMMITTED idle/activation race risk while the audit continues. The correction passed local independent-session tests but remains uninstalled and hosted-runtime-unverified. G3D verification remains BLOCKED: no permitted read-only execution route or actual RPC/pg_cron isolation contract was established. See [G3E acceptance, retained limitations and G4 handoff](legacy-001G3E-owner-disposition-g4-handoff.md). This supersedes pending follow-up recommendations below, not their evidence or the OPEN G/E13 status.
+
 ## Scope and evidence boundary
 
 Reuse [G1 W1/W2](legacy-001G1-world-creatures-quests-preparation.md), [bounded B writer map](legacy-001B-combat2-writer-chain.md), [heartbeat identity](../design/world-heartbeat-identity.md), [legacy SQL dependencies](../design/combat2-legacy-sql-dependency-audit.md) and [Party F11 evidence](legacy-001F11-evidence-and-closure-assessment.md). G2 owner acceptance is recorded in the [G2D addendum](legacy-001G2D-contract-completion-delegate-trace.md#g3-owner-disposition--2026-10-15); E13 remains unresolved.

@@ -60,6 +60,17 @@ These questions are **REQUIRES EVIDENCE**, not newly demonstrated hosted exploit
 
 ## Proposed independently reviewable G2+ batches
 
+### Current bounded audit index — G3E owner disposition, 2026-10-15
+
+| Batch | Current disposition / next boundary |
+|---|---|
+| G2–G2D | [Bounded investigation COMPLETE WITH EXPLICIT LIMITATIONS](legacy-001G2D-contract-completion-delegate-trace.md#g3-owner-disposition--2026-10-15); E13 contract/quest transfer remains OPEN, no deployed contract functionality asserted. |
+| G3–G3E | [INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS](legacy-001G3E-owner-disposition-g4-handoff.md). Owner accepts deferring the source-proven idle/activation race and local correction installation. G3B candidate/tests are local only; G3D hosted verification remains BLOCKED and NOT EXECUTED. Not a production fix. |
+| G4 | Next bounded investigation: creature authority/lifecycle, using existing C1–C3 families and B/E evidence. Not started by G3E; no creature behavior or implementation change authorized. |
+| G5 / G6 | Existing later node/path and remaining quest/consolidated-disposition scope retained below; not started or closed. Overall G and ENG-LEGACY-001 OPEN. |
+
+The original proposed scope table below remains the historical boundary, not a claim G2/G3 are still awaiting initial investigation. Prior B–F/progression closures and accepted/deferred findings retain their original dispositions.
+
 | Proposed batch | Precise boundary / output | Explicit stop boundary |
 |---|---|---|
 | **G2 recommended: existing assassin-contract completion chain** | Local source trace only of NPC take/abandon, exact take/abandon/complete signatures, actual completion callers and any named reward/progression delegates, relevant lifecycle triggers/grant history. Reuse E1. Produce a compact state/authority/transaction/replay map and identify the minimum installed metadata needed. | No new schema/correction/preflight execution, contract redesign, generic quest expansion, reward/balance change or broad privilege scan. If caller is external/unknown, record gap rather than invent it. Do not start automatically. |

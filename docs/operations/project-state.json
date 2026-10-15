@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T10:59:38.542Z",
-  "based_on_source_sha": "6292734adccc619a00943b6a047a277ace5db186",
+  "updated_at": "2026-10-15T20:10:31.067Z",
+  "based_on_source_sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2137,6 +2137,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001G3-world-lifecycle-scheduling.md",
       "evidence": "Local source distinguishes canonical session activation/presence, idle shutdown, heartbeat scheduler and retained activity/watchdog paths. Empty active encounter alone does not block idle shutdown or imply a defect. F10 observations are owner-reported historical evidence, not current metadata/concurrency proof. Identified source idle-decision/activation interleaving candidate; not hosted-confirmed, fixed or silently accepted. Legacy rearming, in-flight shutdown, ACL/deployed parity gaps retained. Documentation only; no SQL, hosted action or gameplay change. Administrative XP grants remain paused; ordinary gameplay XP is not intentionally disabled or runtime-established here."
+    },
+    {
+      "identity": "ENG-LEGACY-001G3 — INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS; G3E owner disposition",
+      "status": "authored",
+      "sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
+      "timestamp": "2026-10-15T20:10:31.067Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner ENG-LEGACY-001G3E instruction",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
+      "evidence": "Owner explicitly accepts deferring G3B production installation and the known source-proven READ COMMITTED idle-shutdown/session-activation race while continuing the audit. Candidate ec2ddfc2458c28d8ecb291c8f405f5091a8364708fd7c6097716ba51c97f233c unchanged;11 native PostgreSQL18.6 tests passed locally with dependency doubles, not hosted proof. Correction NOT INSTALLED; hosted runtime/concurrency verification absent. G3D remains BLOCKED/NOT EXECUTED: permitted read-only route and actual PostgREST/pg_cron isolation unresolved; fresh installed parity/ACL/caller uncertainty retained. Closure is of investigation, not a production fix. G4 creature authority/lifecycle next, not started. E13/G/parent OPEN; prior closures/risks, four OPEN progression limitations, OPEN F1 retry correction and admin-only XP pause unchanged."
     }
   ],
   "known_blockers": [
@@ -2368,15 +2379,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "PROPOSED — ENG-LEGACY-001G3A idle/activation serialization evidence gate; awaits owner review",
+    "identity": "NEXT — ENG-LEGACY-001G4 creature authority/lifecycle bounded investigation; not started",
     "status": "authored",
-    "sha": "6292734adccc619a00943b6a047a277ace5db186",
-    "timestamp": "2026-10-15T10:59:38.542Z",
+    "sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
+    "timestamp": "2026-10-15T20:10:31.067Z",
     "evidence_type": "repository",
-    "reporting_actor": "Codex",
+    "reporting_actor": "Codex; owner G3E handoff instruction",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001G3-world-lifecycle-scheduling.md",
-    "evidence": "Narrow proposed follow-up for idle_shutdown_check versus combat2_session_access and directly necessary lifecycle/scheduler dependencies. Reuse archives first; no hosted query, implementation or G4 authorized by this proposal. Overall G/ENG-LEGACY-001 remain OPEN; E13 unresolved, G2 bounded investigation accepted complete. Existing source/installed/deployed/runtime distinctions and all accepted limitations preserved."
+    "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
+    "evidence": "Next existing G1 batch: source-based creature authored configuration/node associations versus spawn/respawn/death/effects/encounter ownership, reusing B/E evidence. Handoff only; no G4 investigation, implementation, behavior change or hosted work begun. G3 investigation accepted complete with limitations; race correction remains OPEN deferred and G3D BLOCKED. E13/G/ENG-LEGACY-001 OPEN, previous closures and all accepted/deferred findings preserved."
   },
   "volatile_runtime_observations": [
     {
@@ -2787,6 +2798,11 @@
       "identity": "ENG-LEGACY-001F-R3-RETRY — OPEN deferred malformed-response/retry-UUID correction",
       "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
       "evidence": "Original F1 risk register F-R3 at docs/operations/legacy-001F1-parties-writer-map.md: malformed response may clear a committed operation UUID; subsequent click can mint a new UUID. Actor/remount recovery also not durable. Owner F12 accepts deferral, not a fix or runtime proof. Separate future caller-state regression/correction authorization required."
+    },
+    {
+      "identity": "OPEN DEFERRED — G3 idle-shutdown/session-activation serialization correction; owner-accepted race risk",
+      "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
+      "evidence": "Source-proven READ COMMITTED race; G3B candidate prepared/local independent-session regression passed, NOT INSTALLED or hosted-runtime-verified. G3E owner accepts deferral/continued risk, not resolution. G3D evidence gate remains BLOCKED for unestablished permitted read-only route and actual RPC/cron isolation; installed parity and retained caller/dependency limits remain. Resume only with separate scoped authorization and unchanged installation prerequisites."
     }
   ]
 }
