@@ -13,7 +13,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 ## Open records
 
-65 records, including 6 existing-ID release/evidence records. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
+67 records:65 foundation records plus two owner-reviewed G2D ideas added after001A, including 6 existing-ID release/evidence records. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
 
 ### Combat, abilities and creature runtime
 
@@ -602,6 +602,25 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 ### World, creatures and quests
 
+#### WOV-IDEA-031 — Regional Bounty Boards & Shared Contract Framework
+
+- **Status / kind:** IDEA; future gameplay feature and unresolved design questions. No implementation priority assigned.
+- **Intent:** Town bounty boards offer contracts to any class, supporting meaningful local adventures rather than repetitive kill counts. Design preference: avoid “Kill5 Wolves.” Examples: a particular dangerous creature near a settlement, investigating traveler attacks, tracking a rare/named target, or a bounty tied to an NPC/location/local event. Examples are not approved mechanics or content.
+- **Approval evidence:** Owner G2D request supplied2026-10-15 approves recording this IDEA only; [request summary/provenance](../operations/legacy-001G2D-contract-completion-delegate-trace.md#b--owner-provided-future-idea-separately-recorded). Do not promote to DESIGN AGREED.
+- **Implementation/runtime boundary:** Not implemented or runtime-verified. Existing Assassin contracts remain unchanged; possible class-specific specialization is not an approved redesign/removal.
+- **Open decisions:** Individual/archetype/event targets; continuity across respawn/replacement; qualified multiplayer participation; possible gold/XP/Renown/other rewards; regional availability/expiration; Assassin specialization versus public bounties. No reward channel/amount or data model selected.
+- **Dependencies / overlaps:** [WOV-IDEA-032](#wov-idea-032--creature-display-name-and-technical-identity-generalization), [WOV-IDEA-019](#wov-idea-019--contractquest-authority-and-reward-coverage), [G2 findings](../operations/legacy-001G2-assassin-contract-authority.md) and [G2D trace](../operations/legacy-001G2D-contract-completion-delegate-trace.md). Future quest targeting must not treat display names as unique identifiers. No creature_type_id or any other schema field is approved.
+- **001A mapping / review:** New after001A; not a replacement or closure of existing quest findings. Registration owner-reviewed as IDEA; design/implementation approval pending.
+
+#### WOV-IDEA-032 — Creature display-name and technical-identity generalization
+
+- **Status / kind:** IDEA; future creature identity design question, not a selected schema.
+- **Intent:** Common creatures may share display names while retaining unique technical IDs. Names must not become quest/contract identity keys. Archetype, region/area, specific instance, unique rare/boss or event are potential target concepts; representation and respawn/replacement semantics remain undecided.
+- **Approval evidence:** Already mentioned among [G1 future exclusions](../operations/legacy-001G1-world-creatures-quests-preparation.md#ownership-boundaries-and-exclusions); owner G2D authorizes recording its relationship to the bounty idea. No standalone register ID existed before G2D; this keys the proposal without inventing historical implementation or DESIGN AGREED status.
+- **Implementation/runtime boundary:** No schema field, name change, template/instance redesign, migration or quest conversion implemented/approved. Existing Assassin creature UUID matching does not establish the future generalization.
+- **Dependencies / overlaps:** [WOV-IDEA-031](#wov-idea-031--regional-bounty-boards--shared-contract-framework), existing creature authoring/encounter identity evidence and later owner design review. WOV-IDEA-007 persistent creature HP is distinct, not an alias. No NodeView miniature feature or content added.
+- **001A mapping / review:** New keyed record after001A for an unkeyed existing proposal; [G2D provenance](../operations/legacy-001G2D-contract-completion-delegate-trace.md#b--owner-provided-future-idea-separately-recorded). Registration authorized; design/implementation approval pending.
+
 #### WOV-IDEA-019 — Contract/quest authority and reward coverage
 
 - **Status / kind:** NEEDS AUDIT; Technical correction / evidence work. Authoritative source disposition: 001A classification NEEDS AUDIT; see linked original report for exact decision.
@@ -662,6 +681,8 @@ Administrative XP grants remain paused. Normal gameplay XP earning, including cr
 ## Alias and overlap reconciliation / complete001A mapping
 
 Every one of 001A's88 rows is accounted for: 65 open records + 17 references +4 limitation rows +2 aliases/umbrella rows =88. Every active record carries its original ID alias; every completed ID is listed above. The two non-record mappings are:
+
+That mapping describes the001B foundation only. WOV-IDEA-031/032 were added from later owner-reviewed G2D input and are not retroactively inserted into001A's88-row inventory.
 
 - INV-A04 → ENG-ABILITY-001: older calculation-rework checkpoints are source/evidence context, not a second feature; remaining non-stance decisions stay WOV-IDEA-005.
 - ADM-015 → historical admin umbrella; remaining owner-deferred scope WOV-IDEA-024 and WOV-IDEA-025. Admin queue still owns ADM-015; its status is not edited.
