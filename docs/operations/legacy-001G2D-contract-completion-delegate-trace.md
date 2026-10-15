@@ -76,3 +76,11 @@ Only this report and relevant register entries/count/cross-reference notes chang
 Validate exact archive/source hashes/bodies, references, function-versus-table dependencies, register IDs/anchors, project-state synchronization/tests and whitespace. No hosted calls, SQL execution, gameplay, migrations/grants, world wake, deployment or frontend publication. Recovery stash preserved. Publish only these two files; await owner review.
 
 Executed validation:117 repository links and7 anchors valid across the report/register;67 unique register records, including new031/032; exact archived2269/1007-byte hashes, wrapper source-body equality and hash domains verified;3 project-state tests PASS; JSON/Markdown synchronized unchanged; whitespace passed. Source checks only, no SQL/runtime execution. Only the two authorized documentation files differ; recovery stash unchanged.
+
+## G3 owner disposition — 2026-10-15
+
+The owner's G3 instruction explicitly accepts **the bounded G2–G2D investigation as COMPLETE WITH EXPLICIT LIMITATIONS**. This acceptance supersedes the earlier pending-disposition recommendation, not its evidence. It does not establish that Assassin contracts work in deployed gameplay.
+
+**E13's transferred contract/quest authority and reward-path finding remains OPEN and unresolved.** Preserve the missing located canonical completion producer, non-atomic re-roll, trusted completion helper without independent event/target/provenance validation, unverified deployed/runtime completion and rewards, unknown external callers and fresh installed parity. G2B's supplied October15 metadata remains conditionally accepted observational evidence from forbidden sandbox_exec with transaction_read_only=off: procedurally noncompliant, not retrospective authorization or permission to repeat it.
+
+Overall G and ENG-LEGACY-001 remain OPEN. Prior B–F closures, OPEN ENG-LEGACY-001F-R3-RETRY, all four OPEN progression F limitations, privileged delegation uncertainty and deferred functionality remain unchanged. Administrative XP grants remain paused; normal gameplay XP earning is not intentionally disabled or runtime-verified by this disposition. Continue only the separately authorized [G3 lifecycle investigation](legacy-001G3-world-lifecycle-scheduling.md).

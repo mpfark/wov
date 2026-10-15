@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-14T19:07:36.386Z",
-  "based_on_source_sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
+  "updated_at": "2026-10-15T10:59:38.542Z",
+  "based_on_source_sha": "6292734adccc619a00943b6a047a277ace5db186",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2115,6 +2115,28 @@
       "directly_verified": false,
       "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
       "evidence": "Owner explicitly accepts bounded F1–F11 closure. F1/F-R3 malformed-response/retry-UUID weakness remains OPEN deferred correction ENG-LEGACY-001F-R3-RETRY, NOT FIXED. Privileged/legacy callers, Combat1 risk, masked ACLs, unproven hosted concurrency and broader multiplayer coverage accepted/retained; exact replay/six refusals only reported sequential scope. Awake empty-encounter lifecycle and future HP/DoT/regen direction separate, NOT IMPLEMENTED. Parent LEGACY001 OPEN; prior closures/four OPEN progression limitations/admin-only XP pause preserved. Next proposed World/Creatures/Quests scope preparation, not begun."
+    },
+    {
+      "identity": "ENG-LEGACY-001G2 through G2D — COMPLETE WITH EXPLICIT LIMITATIONS; owner disposition",
+      "status": "authored",
+      "sha": "6292734adccc619a00943b6a047a277ace5db186",
+      "timestamp": "2026-10-15T10:59:38.542Z",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Owner ENG-LEGACY-001G3 instruction",
+      "directly_verified": false,
+      "artifact": "docs/operations/legacy-001G2D-contract-completion-delegate-trace.md",
+      "evidence": "Owner accepts the bounded investigation only, not deployed Assassin functionality. E13 transferred contract/quest authority and reward finding remains OPEN: no canonical producer located, non-atomic re-roll, unbound completion helper, unverified deployed/runtime completion and rewards, fresh parity/unknown callers. G2B sandbox_exec/read_only off deviation remains conditionally accepted observational evidence, procedurally noncompliant. Overall G/ENG-LEGACY-001 OPEN; all earlier closures, four OPEN progression F limitations, privileged delegation and OPEN deferred F1 retry correction preserved."
+    },
+    {
+      "identity": "ENG-LEGACY-001G3 — bounded world lifecycle/scheduling source review",
+      "status": "authored",
+      "sha": "6292734adccc619a00943b6a047a277ace5db186",
+      "timestamp": "2026-10-15T10:59:38.542Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001G3-world-lifecycle-scheduling.md",
+      "evidence": "Local source distinguishes canonical session activation/presence, idle shutdown, heartbeat scheduler and retained activity/watchdog paths. Empty active encounter alone does not block idle shutdown or imply a defect. F10 observations are owner-reported historical evidence, not current metadata/concurrency proof. Identified source idle-decision/activation interleaving candidate; not hosted-confirmed, fixed or silently accepted. Legacy rearming, in-flight shutdown, ACL/deployed parity gaps retained. Documentation only; no SQL, hosted action or gameplay change. Administrative XP grants remain paused; ordinary gameplay XP is not intentionally disabled or runtime-established here."
     }
   ],
   "known_blockers": [
@@ -2346,15 +2368,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "PROPOSED — ENG-LEGACY-001G1 World / Creatures / Quests scope/evidence reuse preparation; not started",
+    "identity": "PROPOSED — ENG-LEGACY-001G3A idle/activation serialization evidence gate; awaits owner review",
     "status": "authored",
-    "sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
-    "timestamp": "2026-10-14T19:07:36.386Z",
+    "sha": "6292734adccc619a00943b6a047a277ace5db186",
+    "timestamp": "2026-10-15T10:59:38.542Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
-    "evidence": "Party F COMPLETE WITH ACCEPTED LIMITATIONS by F12 owner decision. Next existing order7 preparation: reuse inventories and separate persistent definitions/spawns/runtime writers, carry E13 unresolved contract/quest reward authority and separate Combat2 lifecycle/design follow-ups. No audit/implementation/hosted action begun; await task authorization. Parent OPEN; OPEN F1 deferred correction tracked in product_backlog."
+    "artifact": "docs/operations/legacy-001G3-world-lifecycle-scheduling.md",
+    "evidence": "Narrow proposed follow-up for idle_shutdown_check versus combat2_session_access and directly necessary lifecycle/scheduler dependencies. Reuse archives first; no hosted query, implementation or G4 authorized by this proposal. Overall G/ENG-LEGACY-001 remain OPEN; E13 unresolved, G2 bounded investigation accepted complete. Existing source/installed/deployed/runtime distinctions and all accepted limitations preserved."
   },
   "volatile_runtime_observations": [
     {
