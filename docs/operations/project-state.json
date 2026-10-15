@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T21:34:56.549Z",
-  "based_on_source_sha": "d73948ed14de8ebe18c1f0e6cbf8093d0a1db09e",
+  "updated_at": "2026-10-15T22:21:34.457Z",
+  "based_on_source_sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2203,6 +2203,28 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Current creature generator uses STR/DEX and level/rarity HP, no established creature CON/WIS regen. Player HP settlement uses effective CON, equipment hp_regen, milestones and inn bonus in gated four-second buckets; no formula changed. Recommends per-creature percentage/minute field plus explicit eligibility/cursor/fractional accounting and HP/min preview; generic CreatureManager save currently refills HP and must not be reused for rate-only edits. Exact blockers, rate bounds/default initialization, fractional precision and parameter-edit policies remain proposed. No runtime/code/SQL/schema/hosted change. G4-R1/E13/G/parent OPEN; G3 correction deferred/G3D BLOCKED; all prior closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
+      "timestamp": "2026-10-15T22:21:34.457Z",
+      "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
+      "identity": "ENG-LEGACY-001G4A4 — owner-approved regeneration rate and fractional contract",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik",
+      "directly_verified": false,
+      "evidence": "Owner approves5% maxHP/minute default for new/existing creatures; decimal0–100% inclusive; zero disables ordinary regen only; no historical initial healing; persistent fractional HP across settlements; no rate edits during active Combat2 attachment. Prior G4A3 HP authority/60second delay/sleep/respawn/reassignment rules preserved. Design approval and local isolated proof authorization only, not production implementation/install."
+    },
+    {
+      "status": "authored",
+      "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
+      "timestamp": "2026-10-15T22:21:34.457Z",
+      "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
+      "identity": "ENG-LEGACY-001G4A4 — isolated exact-rational accounting and transition proof",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Isolated BigInt rational model/tests: decimal/default/zero/cap, fractional partition invariance and same-time replay,60second delay/reset, source-shaped DoT/aura/pending/empty/ended blockers, eligible/blocked sleep, initialization/respawn separation, inactive/active rate edits and modeled version/claim orderings. No real concurrency/SQL/lock/runtime proof. Complete transition instrumentation, exact persistence limits, interruption/edit fraction policy and maxHP decisions remain prerequisites. No production, UI, SQL candidate, migration or hosted operation. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2435,14 +2457,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "8571ba136a4e0d6acd9b71cb2b1f7405a67ddfc8",
-    "timestamp": "2026-10-15T21:52:28.225Z",
-    "artifact": "docs/operations/legacy-001G4A3-creature-hp-contract-readiness.md",
-    "identity": "PROPOSED — G4A3 configuration decisions, then separately authorized local transition-model proof",
+    "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
+    "timestamp": "2026-10-15T22:21:34.457Z",
+    "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
+    "identity": "PROPOSED — exact creature eligibility transition coverage and synchronized local candidate design",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Owner decision needed for percentage representation/precision/bounds/zero-disable, provisional default and existing-creature initialization rates, exact blocker/release handling, fractional accounting and maxHP/rate edit policies. Then separately authorize local accounting/transition tests and lock proof; no candidate, hosted access or implementation approved. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; previous dispositions retained."
+    "evidence": "Owner confirms only remaining fractional interruption/edit/maxHP policies and production decimal/time representation limits; approved default/range/zero/init decisions not reopened. Separately authorize exact blocker/hook coverage, seed/ended projection, claim/version/lock and config edit boundary design before one coherent local correction candidate. No implementation/install or hosted verification automatically authorized. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
   },
   "volatile_runtime_observations": [
     {

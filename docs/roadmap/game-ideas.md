@@ -118,6 +118,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 - **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
 
+- **G4A4 current approval / proof:** [Owner contract and isolated proof](../operations/legacy-001G4A4-creature-regen-accounting-proof.md) supersede G4A3 provisional rate/range/init questions: 5% default for new/existing creatures, configurable decimal 0–100%, zero disables ordinary regeneration only, no historical initialization healing, persistent fractional HP between settlements, active-attachment rate-edit refusal. Pure model only; exact production transition coverage, interruption/edit policy and persistence remain unimplemented/unverified. DESIGN AGREED remains unchanged.
+
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
 
 - **Status / kind:** DESIGN AGREED; Design decision. Authoritative source disposition: 001A classification DESIGN AGREED; see linked original report for exact decision.
@@ -128,6 +130,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **001A mapping / current tracking:** INV-A08 → WOV-IDEA-008; F11/state/roadmap narrative; not implemented.
 
 - **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
+
+- **G4A4 current approval / proof:** [Owner contract and isolated proof](../operations/legacy-001G4A4-creature-regen-accounting-proof.md) supersede G4A3 provisional rate/range/init questions: 5% default for new/existing creatures, configurable decimal 0–100%, zero disables ordinary regeneration only, no historical initialization healing, persistent fractional HP between settlements, active-attachment rate-edit refusal. Pure model only; exact production transition coverage, interruption/edit policy and persistence remain unimplemented/unverified. DESIGN AGREED remains unchanged.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
 
@@ -278,6 +282,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **001A mapping / current tracking:** INV-A10 → WOV-IDEA-010; F11/state/roadmap narrative; no dedicated ID.
 
 - **G4A3 owner direction / remaining design:** [Approved HP contract and configuration readiness](../operations/legacy-001G4A3-creature-hp-contract-readiness.md): durable creatures.hp and synchronized projections; relevant effects/actions block regeneration; 60 seconds continuous OOC delay; eligible sleep credit; no pre-initialization credit; dead ordinary respawn; active attachment prevents reassignment. Per-creature configuration required. 5% maxHP/minute provisional only; rate bounds/defaults, exact blockers, fractions and edit policies still need decisions. DESIGN AGREED, not IMPLEMENTED or runtime-verified; no implementation authorization.
+
+- **G4A4 current approval / proof:** [Owner contract and isolated proof](../operations/legacy-001G4A4-creature-regen-accounting-proof.md) supersede G4A3 provisional rate/range/init questions: 5% default for new/existing creatures, configurable decimal 0–100%, zero disables ordinary regeneration only, no historical initialization healing, persistent fractional HP between settlements, active-attachment rate-edit refusal. Pure model only; exact production transition coverage, interruption/edit policy and persistence remain unimplemented/unverified. DESIGN AGREED remains unchanged.
 
 ### Authority and legacy governance
 
