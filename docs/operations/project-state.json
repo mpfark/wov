@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T22:21:34.457Z",
-  "based_on_source_sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
+  "updated_at": "2026-10-15T22:33:57.086Z",
+  "based_on_source_sha": "3f1a8186f073393651510d9a73de1ec6de4a2fb1",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2225,6 +2225,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Isolated BigInt rational model/tests: decimal/default/zero/cap, fractional partition invariance and same-time replay,60second delay/reset, source-shaped DoT/aura/pending/empty/ended blockers, eligible/blocked sleep, initialization/respawn separation, inactive/active rate edits and modeled version/claim orderings. No real concurrency/SQL/lock/runtime proof. Complete transition instrumentation, exact persistence limits, interruption/edit fraction policy and maxHP decisions remain prerequisites. No production, UI, SQL candidate, migration or hosted operation. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "3f1a8186f073393651510d9a73de1ec6de4a2fb1",
+      "timestamp": "2026-10-15T22:33:57.086Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001G4A5-creature-hp-transition-integration.md",
+      "identity": "ENG-LEGACY-001G4A5 — creature HP transition hooks and synchronization design prepared",
+      "evidence": "Bounded source integration map: shared entry/hostile intent/stance, pre-claim, successful-new-commit, immediate departure/arrival, seed/ended reactivation, respawn and guarded Admin edit boundaries. Proposes one private node/generation accounting authority, early sorted node/encounter coverage, live-claim deferral/stale fencing, exact cutoff and atomic refusal/replay handling. Generic fullHP saves/direct reassignment and legacy full healing must be adapted before activation. Recommends preserving earned fractions, no-refill/clamp maxHP, bounded exact decimal/microsecond storage and initially deferred quiet-ended reassignment; all new policy choices pending owner decision. No production, proof-code, SQL, schema, migration, hosted operation or native concurrency test. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED and all previous closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2457,14 +2468,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
-    "timestamp": "2026-10-15T22:21:34.457Z",
-    "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
-    "identity": "PROPOSED — exact creature eligibility transition coverage and synchronized local candidate design",
+    "sha": "3f1a8186f073393651510d9a73de1ec6de4a2fb1",
+    "timestamp": "2026-10-15T22:33:57.086Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Owner confirms only remaining fractional interruption/edit/maxHP policies and production decimal/time representation limits; approved default/range/zero/init decisions not reopened. Separately authorize exact blocker/hook coverage, seed/ended projection, claim/version/lock and config edit boundary design before one coherent local correction candidate. No implementation/install or hosted verification automatically authorized. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
+    "artifact": "docs/operations/legacy-001G4A5-creature-hp-transition-integration.md",
+    "identity": "PROPOSED — G4A5 policy decisions then separately authorized coherent local synchronization candidate",
+    "evidence": "Confirm fractional interruption/rate-change behavior, wounded maxHP edit policy, exact decimal/time storage bounds and retained-ended projection reassignment disposition; approved5%/0–100%/zero/no historical initialization rules not reopened. Separately authorize guarded source-specific transition/accounting candidate plus independent-session tests, including early claim/entry, commit/departure/arrival, seed, respawn and Admin callers; no installation or hosted route presumed. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
   },
   "volatile_runtime_observations": [
     {
