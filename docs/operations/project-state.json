@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T20:56:18.820Z",
-  "based_on_source_sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
+  "updated_at": "2026-10-15T21:15:59.459Z",
+  "based_on_source_sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2159,6 +2159,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
       "evidence": "Local source maps authored creatures UUID/generation and encounter node_creature projection; claim/commit mirrors HP/death and uses spawn-fenced rewards. Legacy regen/wake healing guard old combat tables and change only authored HP; direct Admin saves also write full generated HP. Source-confirmed ownership overlap, not proved hosted execution/exploit. Current maintenance ACL/jobs, runtime synchronization/concurrency and external callers unresolved.99 focused source/pure tests passed, no SQL/hosted/gameplay execution. Findings not automatically accepted or fixed; G4A proposed, not begun. G/parent and E13 OPEN; prior B-F/progression/G2/G3 dispositions, four OPEN progression limitations, F1 retry deferral and admin-only XP pause unchanged."
+    },
+    {
+      "identity": "ENG-LEGACY-001G4A — focused regeneration/Combat2 HP ownership source review; R1 OPEN",
+      "status": "authored",
+      "sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
+      "timestamp": "2026-10-15T21:15:59.459Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/legacy-001G4A-regeneration-hp-ownership.md",
+      "evidence": "Reuses G3/G4: regen/wake heal write only authored HP using Combat1 guards; claim consumes runtime HP, seed retains same-generation rows even after encounter end, and helpers do not fence claimed versions. Source-implied lost healing/divergence, not a hosted reproduction. Active-only predicate or creatures-row lock alone insufficient. Options: owner-approved temporary containment of two healing writers with respawn retained, or coherent maintenance requiring explicit eligibility/lock/version design; none selected or implemented.93 existing source/pure tests passed; no PostgreSQL helper/concurrency execution, SQL candidate, migration, hosted access or G3D reopening. G3 accepted deferral, G2/E13 and all prior risks/statuses preserved; G/parent OPEN."
     }
   ],
   "known_blockers": [
@@ -2390,15 +2401,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "PROPOSED — ENG-LEGACY-001G4A creature maintenance/Combat2 HP ownership investigation; awaits authorization",
+    "identity": "PROPOSED — G4-R1 owner authority-boundary decision and narrowly authorized compatibility/test preparation",
     "status": "authored",
-    "sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
-    "timestamp": "2026-10-15T20:56:18.820Z",
+    "sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
+    "timestamp": "2026-10-15T21:15:59.459Z",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
-    "evidence": "Narrow next source/evidence gate for regen_creature_hp and heal_creatures_on_wake versus node_creature claim/commit projection, reusing G3 scheduling and B evidence. No correction, metadata execution or creature mechanic redesign authorized. G4 findings OPEN; G3 installation remains deferred/G3D BLOCKED; E13/G/parent OPEN. G4B admin active-encounter boundary and G4C exact helper authority preparation are separately proposed, not started."
+    "artifact": "docs/operations/legacy-001G4A-regeneration-hp-ownership.md",
+    "evidence": "Owner review required before choosing temporary containment of legacy regen/wake healing (retain respawn) versus coherent current-generation OOC maintenance design. No gameplay policy, correction, SQL artifact or local PostgreSQL access authorized by the proposal. Use bounded G4A compatibility/concurrency plan only after separate authorization. G4B Admin overlap and G4C helper authority gaps stay pending; G3D remains BLOCKED, G3 correction deferred, E13/G/parent OPEN."
   },
   "volatile_runtime_observations": [
     {
