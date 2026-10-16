@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T12:44:12.190Z",
-  "based_on_source_sha": "3e17bd6e1bc357a2eeff03f4bbe82a49b3a0509e",
+  "updated_at": "2026-10-16T15:06:58.940Z",
+  "based_on_source_sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2357,6 +2357,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "17 native PostgreSQL18.6 tests PASS including8 observed independent-session blocking cases. Actual worker/decoder/catalogue/resolver/full claim and commit execute complete canonical XP/receipt/derived resource/growth/respec delegates and directly required lifecycle/deferred triggers, replacing the progression spy only in a new disposable fixture. Generation death, authorized single-recipient reward, gold/loot replay, actual invalid-config refusal/atomic rollback, milestones, equipment read and lifecycle row conflicts covered. Reduced Auth/scope/tables, fixture lifecycle receipts, scheduler/Arena/unique pickup/full trigger/runtime/installed limits remain. No production/history/runtime/hosted changes. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; prior dispositions and administrative XP-grant pause preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
+      "timestamp": "2026-10-16T15:03:16.661Z",
+      "artifact": "docs/operations/legacy-001G4A15-creature-admin-configuration-integration.md",
+      "identity": "ENG-LEGACY-001G4A15 — local Creature Admin/configuration source integration demonstrated; production gates remain",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "25 native PostgreSQL18.6 tests PASS including8 observed independent-session cases. Complete CreatureManager save/delete/decoder and NodeEditor assignment handlers execute with actual pure generation/boss modules through private transport; complete role helpers, reward RPC/trigger and prior canonical progression chain loaded. Raw full-object save locally reproduces healing/projection divergence; private explicit metadata/config guards preserve wounds, old-rate eligibility, missing HP, claims/generation/retained references. Actual worker death/XP still executes. Existing two-request partial-save semantics retained. Reduced Auth/RLS/schema, metadata-only translation, conservative delete/unassignment/creation, external/installed/runtime limitations explicit. No production/UI/history/grant/hosted changes. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; all prior limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2589,14 +2600,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "3e17bd6e1bc357a2eeff03f4bbe82a49b3a0509e",
-    "timestamp": "2026-10-16T12:44:12.190Z",
-    "artifact": "docs/operations/legacy-001G4A14-canonical-reward-progression-integration.md",
-    "identity": "PROPOSED — bounded local full-source guarded creature Admin writer composition",
+    "sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
+    "timestamp": "2026-10-16T15:03:16.661Z",
+    "artifact": "docs/operations/legacy-001G4A15-creature-admin-configuration-integration.md",
+    "identity": "PROPOSED — bounded creature Admin input/authority contract for production authoring",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Separately authorize guarded creature save/rate/max-HP/node/delete source entry points and direct-trigger composition under existing early coverage, reusing G4A8 and canonical progression proof. No production authoring, installation or broad authority audit authorized. Retained private queued-party completion still requires owner disposition before a corresponding production repair. G4A11 and other production gates unchanged."
+    "evidence": "Separately authorize explicit metadata/config input and expected-state mapping for CreatureManager/NodeEditor/Populate, raw protected-write refusal design without late node locks, and owner disposition of retained deletion/unassignment. Reuse G4A15 source proof; no runtime/UI/SQL implementation, broader audit, reward redesign or hosted installation authorized. Existing G4A11 and other production gates unchanged."
   },
   "volatile_runtime_observations": [
     {
