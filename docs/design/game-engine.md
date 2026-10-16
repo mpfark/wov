@@ -19,6 +19,8 @@ Owner decision ENG-LEGACY-001G4A17 (2026-10-17) approves the following authoring
 
 Existing server-side Admin authorization requirements remain. Browser inputs must not directly set durable current HP, alive/dead/generation state, Combat2 projections/claims or regeneration accounting. Maximum HP and regeneration rate are explicit authorized configuration inputs applied through the common HP authority, not competing HP writers. The preceding creature HP, regeneration, respawn and synchronization rules remain unchanged. [Architecture contract](../architecture/creature-admin-authority.md) separates approved policy from candidate interfaces; [G4A17 readiness](../operations/legacy-001G4A17-admin-implementation-readiness.md) records source mapping and proposed implementation slices. Exact receipt retention/cleanup and the concrete SQL/storage design remain review gates, not approved policy or installed functionality.
 
+G4A18 proposes a [narrower authoring replay policy](../operations/legacy-001G4A18-simplified-admin-hp-proposal.md#replay-amendment--approval-required-before-conflicting-implementation) for convergent configuration and guarded creation/deletion, retaining reward replay. This amendment is **PENDING explicit owner approval**; the approved consequential replay rule above remains binding. The ownership and creature HP rules are unchanged.
+
 ## Information layers
 
 | Layer | Authority | Must not become |

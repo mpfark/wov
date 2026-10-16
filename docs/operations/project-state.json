@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T22:10:45.310Z",
-  "based_on_source_sha": "e0f7527463f3886a8c591b19d0520708fa142442",
+  "updated_at": "2026-10-16T22:21:22.280Z",
+  "based_on_source_sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2390,6 +2390,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Owner approves stale authored-field conflicts, retained-reference deletion refusal, limited quiet/unprojected/unreferenced NULL-node unassignment, separate metadata/config and reward transactions with partial-result reporting, durable consequential replay and metadata-only expected-field/already_matches without receipt or UUID conflict claims. Canonical spec and architecture now record approved policy, not installed behavior. Eight candidate RPC interfaces, exact source mapping, minimal shared authoring receipt recommendation, request/row lock order, creatures-only DML/known-helper containment plan and five dependent implementation slices documented; none executed. Exact receipt retention/cleanup pending. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 correction deferred; prior limitations/closures/admin XP pause unchanged. No runtime/SQL/grant/DB/hosted operations."
+    },
+    {
+      "status": "authored",
+      "sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
+      "timestamp": "2026-10-16T22:21:22.280Z",
+      "artifact": "docs/operations/legacy-001G4A18-simplified-admin-hp-proposal.md",
+      "identity": "ENG-LEGACY-001G4A18 — simplified Admin/HP proposal; replay amendment requires owner approval",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Replaces unstarted G4A17 metadata/containment proof. Existing source full-save HP overwrite and independent legacy healing revisited using prior proofs. One action-based Admin boundary and two implementation slices recommended; no new authoring receipt proposed only subject to explicit narrower replay-policy approval. Canonical consequential replay remains binding; HP/authorization/reference protections preserved. No runtime/SQL/DB operations. All prior OPEN/BLOCKED/deferred statuses and closures unchanged."
     }
   ],
   "known_blockers": [
@@ -2622,14 +2633,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "e0f7527463f3886a8c591b19d0520708fa142442",
-    "timestamp": "2026-10-16T22:10:45.310Z",
-    "artifact": "docs/operations/legacy-001G4A17-admin-implementation-readiness.md",
-    "identity": "PROPOSED — separately authorize G4A17 slice1 local metadata and raw-DML-containment proof",
+    "sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
+    "timestamp": "2026-10-16T22:21:22.280Z",
+    "artifact": "docs/operations/legacy-001G4A18-simplified-admin-hp-proposal.md",
+    "identity": "PROPOSED — owner replay amendment decision and separate slice1 local implementation authorization",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "A-D/replay policy approved; do not request it again. Next recommended task is isolated local metadata expected-field/already_matches authority and creature-only browser DML denial with positive owner/internal tests, using pinned source and explicit doubles. Separate implementation/testing authorization still required; no production RPC, UI, SQL, grant or hosted changes now. Exact new consequential-receipt retention/cleanup requires owner disposition before production activation, not reapproval of metadata policy."
+    "evidence": "Review G4A18 replay policy table, then authorize actual existing Admin source/SQL correction with reused focused tests, not another isolated proof framework. No implementation automatically authorized; hosted capability/parity/caller and release gates remain."
   },
   "volatile_runtime_observations": [
     {

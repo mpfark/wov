@@ -1,5 +1,7 @@
 # Creature HP/Admin integration readiness
 
+Current handoff: [G4A18 simplification](../operations/legacy-001G4A18-simplified-admin-hp-proposal.md) replaces the unstarted metadata-proof next task and recommends two implementation slices. The checklist below is G4A17 background; do not start its old five-slice sequence. Replay simplification requires owner approval; HP/authorization/reference protection remain required.
+
 **G4A17: A–D/replay policy approved; source implementation planned, implementation/installation still NO-GO in this task.** This ordered checklist supports ENG-LEGACY-001G4; it neither reprioritizes the engine roadmap nor starts another audit. Read the [Admin contract](creature-admin-authority.md) and [G4A15 source proof](../operations/legacy-001G4A15-creature-admin-configuration-integration.md).
 
 1. **Owner policy approved; remaining retention decision.** G4A17 approves A–D and durable consequential replay versus metadata-only field comparison/`already_matches` without a receipt. Do not request A–D approval again. Exact new receipt retention/cleanup and late-retry/identity handling remain pending. [Concrete candidate interfaces, receipt comparison and five implementation slices](../operations/legacy-001G4A17-admin-implementation-readiness.md) are plans, not created APIs/schema. No second-person approval or general replay framework.
