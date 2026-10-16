@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T09:56:56.070Z",
-  "based_on_source_sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
+  "updated_at": "2026-10-16T11:28:17.370Z",
+  "based_on_source_sha": "e87c93c2ee0a0d9d5db206fe126a1fff6e7d749b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2335,6 +2335,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Nine full pinned claim/commit bodies/compositions plus actual Edge worker/decoder/catalogue/resolver execute in disposable PostgreSQL18.6.29 native tests PASS including12 observed independent-session cases; generation/replay/rollback, DoT expiry, stance consumption, reward/ground-loot writes and party arrival covered. Scope/progression delegates and reduced schema explicit; canonical XP/milestone/private ledger not executed. Cross-node commit proposals explicitly refused before late node locks. No production/runtime/history/hosted changes. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; G4A11 parity gate not reopened; previous limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "e87c93c2ee0a0d9d5db206fe126a1fff6e7d749b",
+      "timestamp": "2026-10-16T11:28:17.370Z",
+      "artifact": "docs/operations/legacy-001G4A13-in-tick-departure-coverage.md",
+      "identity": "ENG-LEGACY-001G4A13 — local in-tick departure multi-node coverage demonstrated; production gates remain",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "25 native PostgreSQL18.6 tests PASS including11 observed independent-session cases. Unchanged full source claim/resolver/commit and real arrival compose under sorted node/lifecycle/encounter/discovered-dependent locks with coverage revalidation and rollback. Whole HP/fraction interruption, DoT/pending blockers, stale claims, replay, source respawn and off-node/mismatched projections tested. Retained private queued-party waiting/parent completion is unsupported by selected source after explicit old-trigger removal; public immediate completion tested separately, no replacement invented. Progression/scope/trigger/installed limits remain. No production/history/runtime/hosted changes. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; prior dispositions preserved."
     }
   ],
   "known_blockers": [
@@ -2567,14 +2578,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
-    "timestamp": "2026-10-16T09:56:56.070Z",
-    "artifact": "docs/operations/legacy-001G4A12-full-claim-commit-integration.md",
-    "identity": "PROPOSED — local multi-node in-tick departure commit early-coverage integration",
+    "sha": "e87c93c2ee0a0d9d5db206fe126a1fff6e7d749b",
+    "timestamp": "2026-10-16T11:28:17.370Z",
+    "artifact": "docs/operations/legacy-001G4A13-in-tick-departure-coverage.md",
+    "identity": "PROPOSED — bounded local canonical reward/progression delegate and direct-trigger composition",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Separately authorize sorted origin/destination/projection discovery, party lifecycle then encounter/dependent locks, revalidation and destination settlement/arrival around full source commit. No late node gates or production authoring; independent-session tests required. Canonical progression/trigger composition remains separate. G4A11 installed-parity gate stays BLOCKED; no hosted authorization."
+    "evidence": "Separately authorize one qualifying death transaction with canonical progression delegate/required trigger composition and rollback/replay/lock tests, reusing existing authority audits. No reward redesign or production authoring. Retained worker-owned queued-party support needs explicit disposition before any completion repair; no old trigger reinstatement authorized. G4A11 parity gate remains BLOCKED and other production gates unchanged."
   },
   "volatile_runtime_observations": [
     {
