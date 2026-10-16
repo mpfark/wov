@@ -1,0 +1,40 @@
+LOCAL PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit; cluster C:\Users\mik\AppData\Local\Temp\wov-g4a10-nUBmiU
+SOURCE MANIFEST [{"path":"supabase/migrations/20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql","function":"combat_enter","firstLine":3,"bodySha256":"9edae295a0435a8535db2c10e1db8d2afa319956b479552112f3b499aadf61ef"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat2_hostile_action","firstLine":423,"bodySha256":"8a9c4aa51f71973dbcb5427e81a740dd6c57d34986578ae1b47b6e294799b5a3"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat_intent","firstLine":399,"bodySha256":"b320e576928235fef3c301b0a3183214e47ab0d3cdccbb1a01299c80388a210e"},{"path":"supabase/migrations/20260902194101_e3b1caf6-58cf-4028-b292-49cc3c283914.sql","function":"combat2_seed_spawns","firstLine":3,"bodySha256":"ee481254948a2dafd44946cbb4bc90489bc4862badf8c21981dcd9518d403cbb"},{"path":"supabase/migrations/20260717123612_8f687cfb-1b50-4ad5-9ea0-d1f78b5122db.sql","function":"regen_creature_hp","firstLine":126,"bodySha256":"a433f2b827af2faa94ee78b5dbae4cc17398223023b9d2cf6f1b96951e5f5349"},{"path":"supabase/migrations/20260805185103_b8924e02-7328-4878-a630-d1d490bfa791.sql","function":"heal_creatures_on_wake","firstLine":1,"bodySha256":"0897894a80123df05fc1df6435c5f307f62b99a4261b66c450cc387347d43830"},{"path":"supabase/migrations/20260629060824_a75ddfbf-a2d4-4e53-b368-b3f47ef8ebbe.sql","function":"respawn_creatures","firstLine":52,"bodySha256":"35d9ae0643b2bb6cf751d4aebfb3280e86b42e560fc7f35989929856ce3e566d"},{"path":"supabase/migrations/20260813091924_37c97e14-37a5-4719-bfd8-eaa03442e179.sql","function":"bump_creature_spawn_seq","firstLine":9,"bodySha256":"8bb1a46ab5b4c5a916ecb41ae506f7b1a60d5ee993daa51d4f2130d1647e3682"},{"path":"supabase/migrations/20260829135558_f0037825-ccff-4b35-b0b2-aa6566be826c.sql","function":"node_tick_claim","firstLine":12,"bodySha256":"cf181d5c16331a0dcd18e7d030fc7ade808f342f37f9895936ad925b3b0ada57"},{"path":"drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql","function":"node_tick_commit_without_bounded_failure","firstLine":89,"bodySha256":"0b3d23a80090bb549cde77c7a9bb2e96e25c5d737024e7571dd141bac6b81061"}]
+ORIGINAL DIAGNOSTIC 42702 column reference "cost" is ambiguous
+✔ original explicit error: structured refusal/rollback; diagnostic reveals SQLSTATE42702 (587.5682ms)
+ORIGINAL use_column reported follower=8; actual follower MP cost=8
+✔ original explicit use_column: distinguish reported cost from MP spent (613.1233ms)
+ORIGINAL use_variable reported follower=5; actual follower MP cost=8
+✔ original explicit use_variable: distinguish reported cost from MP spent (473.4863ms)
+✔ corrected explicit error: compilation and per-member response/cost preserved (568.5371ms)
+✔ corrected explicit use_column: compilation and per-member response/cost preserved (530.8597ms)
+✔ corrected explicit use_variable: compilation and per-member response/cost preserved (590.8454ms)
+✔ original global error / function-level use_column (610.4968ms)
+✔ original global use_column / function-level error (469.0845ms)
+✔ original global use_column / function-level use_variable (467.0187ms)
+✔ candidate preserves function-level use_variable while result columns remain deterministic (510.2231ms)
+✔ inline compiler directive overrides global/function setting; candidate refuses changed source (460.7078ms)
+CACHE: previously compiled use_column survived SET error; replacement reproduced refusal
+✔ cached compilation is not established by a later session setting; replacement recompiles (497.9073ms)
+✔ single aggregate replacement preserves all pg_proc metadata and explicit fixture server ACL (619.6223ms)
+✔ source drift rejects atomically without changing function metadata/body or F6 (477.4548ms)
+✔ reapplying candidate refuses original-source mismatch without changing corrected body (728.8916ms)
+✔ solo movement unaffected before/after party-only correction (627.1712ms)
+✔ queued leader / waiting follower retains source request IDs, ordering, MP and finalization (641.5751ms)
+✔ corrected exact replay and UUID conflict retain authoritative response/refusal contracts (733.16ms)
+✔ insufficient MP matches original use_column and corrected error refusal/rollback (1229.3343ms)
+✔ complete successful JSON shape equals original use_column under corrected error (1512.2624ms)
+OBSERVED SOURCE-ADAPTER LOCK 38644 -> 19912
+✔ independent corrected movement versus regeneration preserves HP and explicit coverage retry (681.7051ms)
+OBSERVED SOURCE-ADAPTER LOCK 31496 -> 32640
+✔ independent unchanged F6 mutation serializes corrected movement/frozen mover selection (767.8689ms)
+OBSERVED SOURCE-ADAPTER LOCK 10964 -> 34648
+✔ independent corrected coordinated departure fences old Combat2 claim/commit (765.627ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17491.3751
