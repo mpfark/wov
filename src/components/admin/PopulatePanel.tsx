@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { CREATURE_ADMIN_ENABLED, CREATURE_ADMIN_GATE, mutateCreature, type CreatureCommand } from './creature-admin';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, Swords, X } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
-import { calculateHumanoidGold, generateCreatureStats } from '@/lib/game-data';
 
 interface GeneratedCreature {
   temp_id?: string;
@@ -51,6 +51,8 @@ interface PopulatePanelProps {
 }
 
 export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDataChanged }: PopulatePanelProps) {
+  const populationRef = useRef(new WeakMap<GeneratedCreature, { command: CreatureCommand; complete: boolean }>());
+  const applyingRef = useRef(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -102,48 +104,36 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
   };
 
   const applyAll = async () => {
-    if (!generated) return;
-    setApplying(true);
-
+    if (!CREATURE_ADMIN_ENABLED) return toast.error(CREATURE_ADMIN_GATE);
+    if (!generated || applyingRef.current) return;
+    applyingRef.current = true; setApplying(true);
+    let succeeded = 0, failed = 0;
     try {
       for (const creature of generated.creatures) {
-        const nodeId = creature.node_temp_id; // Already a real UUID
-        const isHumanoid = creature.is_humanoid || false;
-        const goldLoot = isHumanoid
-          ? [calculateHumanoidGold(creature.level, creature.rarity)]
-          : [];
-
-        // Recalculate stats from formulas to ensure correctness
-        const computed = generateCreatureStats(creature.level, creature.rarity);
-
-        await supabase.from('creatures').insert({
-          name: creature.name,
-          description: creature.description,
-          node_id: nodeId,
-          level: creature.level,
-          hp: computed.hp,
-          max_hp: computed.hp,
-          ac: computed.ac,
-          rarity: creature.rarity as any,
-          is_aggressive: creature.is_aggressive,
-          is_humanoid: isHumanoid,
-          respawn_seconds: creature.respawn_seconds || 300,
-          stats: computed.stats,
-          loot_table: goldLoot,
-          loot_table_id: null,
-          loot_mode: isHumanoid ? 'item_pool' : 'salvage_only',
-          drop_chance: creature.drop_chance || 0.3,
-        } as any);
+        let saved = populationRef.current.get(creature);
+        if (saved?.complete) { succeeded++; continue; }
+        // These old generated reward labels have no proven lossless mapping.
+        if (creature.is_humanoid || creature.loot_table?.length || creature.loot_table_id) {
+          failed++; toast.error(creature.name + ': legacy generated rewards require explicit review; not created.'); continue;
+        }
+        if (!saved) {
+          saved = { complete: false, command: { action: 'create', id: crypto.randomUUID(), expected: {}, patch: {
+            name: creature.name, description: creature.description, node_id: creature.node_temp_id,
+            level: creature.level, rarity: creature.rarity, is_aggressive: creature.is_aggressive,
+            is_humanoid: false, respawn_seconds: creature.respawn_seconds ?? 300, regen_percent_4s: '2',
+          } } };
+          populationRef.current.set(creature, saved);
+        }
+        try {
+          const result = await mutateCreature(saved.command);
+          if (!result.ok) { failed++; toast.error(creature.name + ': ' + result.kind + '; reconcile before retry.'); continue; }
+          saved.complete = true; succeeded++;
+        } catch (e) { failed++; toast.error(creature.name + ': ' + String(e)); }
       }
-      toast.success(`Populated ${generated.creatures.length} creatures across ${selectedNodeIds.size} nodes.`);
-      setGenerated(null);
-      setPrompt('');
+      toast.info(succeeded + ' created/already reconciled; ' + failed + ' failed or unresolved.');
+      // Keep proposals and immutable identities for explicit retry/reconciliation.
       onDataChanged?.();
-    } catch (e: any) {
-      toast.error('Apply failed: ' + (e.message || 'Unknown error'));
-    } finally {
-      setApplying(false);
-    }
+    } finally { applyingRef.current = false; setApplying(false); }
   };
 
   const rarityColor = (r: string) => {
@@ -268,7 +258,8 @@ Loot: {ltName} ({Math.round((cr.drop_chance || 0.3) * 100)}% drop)
 
             {/* Apply button */}
             <div className="pt-2 border-t border-border">
-              <Button onClick={applyAll} disabled={applying} className="w-full text-xs">
+              {!CREATURE_ADMIN_ENABLED && <p role="status">{CREATURE_ADMIN_GATE}</p>}
+              <Button onClick={applyAll} disabled={applying || !CREATURE_ADMIN_ENABLED} className="w-full text-xs">
                 {applying ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Check className="w-3 h-3 mr-1" />}
                 {applying ? 'Applying…' : `Apply ${generated.creatures.length} Creatures`}
               </Button>

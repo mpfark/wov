@@ -124,6 +124,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 - **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
+
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
 
 - **Status / kind:** DESIGN AGREED; Design decision. Authoritative source disposition: 001A classification DESIGN AGREED; see linked original report for exact decision.
@@ -140,6 +142,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **G4A6 current decision / local evidence:** [Owner decisions and isolated SQL candidate](../operations/legacy-001G4A6-local-creature-hp-candidate.md): up to two decimal percentage places; retain whole HP/discard fraction on renewed combat; wounded maxHP edits preserve missing HP with floor boundary pending; quiescent ended reassignment permitted. Native local26-test fixture passes, including4 independent-session cases; production integration remains unimplemented and hosted behavior unverified. Floor1 and rate-edit fractional policy not approved. DESIGN AGREED status retained.
 
 - **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
+
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
 
@@ -298,6 +302,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
 ### Authority and legacy governance
+
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
 
 #### ENG-LEGACY-001 — Remaining gameplay-writer audit
 

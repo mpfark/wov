@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { CREATURE_ADMIN_ENABLED, CREATURE_ADMIN_GATE, configuration, configurationChange, mutateCreature, type CreatureCommand } from './creature-admin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +28,7 @@ interface Creature {
   level: number;
   hp: number;
   max_hp: number;
+  regen_percent_4s?: number | string;
   ac: number;
   stats: Record<string, number>;
   is_aggressive: boolean;
@@ -101,6 +103,7 @@ interface BossCritFlavor {
 
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
+  regen_percent_4s: '2',
   level: 1, rarity: 'regular',
   is_aggressive: false, is_humanoid: false, respawn_seconds: 300,
   loot_table: [] as { item_id: string; chance: number }[],
@@ -127,6 +130,11 @@ const defaultForm = () => ({
 });
 
 export default function CreatureManager() {
+  const bossFormRef = useRef<ReturnType<typeof bossCastFormFromCreature> | null>(null);
+  const needsRefreshRef = useRef(false);
+  const baselineRef = useRef<Record<string, unknown>>({});
+  const pendingRef = useRef<CreatureCommand | null>(null);
+  const dispatchingRef = useRef(false);
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [nodes, setNodes] = useState<NodeOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -194,6 +202,8 @@ export default function CreatureManager() {
   };
 
   const openNew = () => {
+    if (pendingRef.current) return toast.error('Reconcile the unresolved creature request before starting another.');
+    needsRefreshRef.current = false; bossFormRef.current = null;
     setSelectedId(null);
     setIsNew(true);
     setNewCreatureId(crypto.randomUUID());
@@ -203,6 +213,10 @@ export default function CreatureManager() {
   };
 
   const openEdit = (c: Creature) => {
+    if (pendingRef.current) return toast.error('Reconcile or retry the unresolved creature request first.');
+    needsRefreshRef.current = false;
+    bossFormRef.current = bossCastFormFromCreature({ rarity: c.rarity, boss_cast: (c as any).boss_cast }, TICK_RATE_MS);
+    baselineRef.current = { ...configuration(c as unknown as Record<string, unknown>), max_hp: c.max_hp, node_id: c.node_id };
     setSelectedId(c.id);
     setIsNew(false);
     const rawLoot = Array.isArray(c.loot_table) ? c.loot_table : [];
@@ -212,8 +226,9 @@ export default function CreatureManager() {
     setRewardExpected(reward);
     setForm({
       name: c.name, description: c.description, node_id: c.node_id,
+      regen_percent_4s: String(c.regen_percent_4s ?? 2),
       level: c.level, rarity: c.rarity,
-      is_aggressive: c.is_aggressive, is_humanoid: c.is_humanoid ?? false,
+      is_aggressive: (c as any).base_aggressive ?? c.is_aggressive, is_humanoid: c.is_humanoid ?? false,
       respawn_seconds: c.respawn_seconds,
       loot_table: itemLoot,
       gold_min: reward.gold_min as number,
@@ -240,6 +255,7 @@ export default function CreatureManager() {
   };
 
   const closePanel = () => {
+    if (pendingRef.current) return toast.error('Outcome unresolved. Retry the unchanged request or reload and reconcile server state before another operation.');
     setSelectedId(null);
     setIsNew(false);
     setRewardExpected(null);
@@ -247,7 +263,11 @@ export default function CreatureManager() {
   };
 
   const handleSave = async () => {
-    if (loading) return;
+    if (!CREATURE_ADMIN_ENABLED) return toast.error(CREATURE_ADMIN_GATE);
+    if (loading || dispatchingRef.current) return;
+    if (needsRefreshRef.current) return toast.error('Reopen the editor to refresh authoritative configuration first.');
+    if (!/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,2})?$/.test(form.regen_percent_4s) || Number(form.regen_percent_4s) > 100) return toast.error('Regeneration requires 0–100%, at most two decimals.');
+    if (selectedId && form.node_id !== baselineRef.current.node_id) return toast.error('Use guarded node assignment separately.');
     if (!form.name.trim()) return toast.error('Name is required');
     if (form.gold_enabled && form.gold_max < form.gold_min) return toast.error('Gold maximum must be at least the minimum.');
     if (form.item_source === 'assigned_table' && !form.loot_table_id) return toast.error('Select a loot table.');
@@ -257,7 +277,6 @@ export default function CreatureManager() {
     if (form.item_source === 'unique_boss_drop' && ((form.unique_drop_chance ?? -1) < 0 || (form.unique_drop_chance ?? 2) > 1)) return toast.error('Unique drop chance must be between 0 and 1.');
     setLoading(true);
 
-    const generated = generateCreatureStats(form.level, form.rarity);
 
     // ── Boss cast: canonical write, preservation, validation ──────────────
     // One authoritative stored shape, one pure transform (`buildBossCastSave`).
@@ -287,12 +306,8 @@ export default function CreatureManager() {
       node_id: form.node_id || null,
       level: form.level,
       rarity: form.rarity as any,
-      hp: generated.hp,
-      max_hp: generated.hp,
-      ac: generated.ac,
-      stats: generated.stats,
+      regen_percent_4s: form.regen_percent_4s,
       is_aggressive: form.is_aggressive,
-      base_aggressive: form.is_aggressive,
       is_humanoid: form.is_humanoid,
       respawn_seconds: Math.max(0, form.respawn_seconds),
       boss_crit_flavors: form.boss_crit_flavors
@@ -308,19 +323,33 @@ export default function CreatureManager() {
 
     } as any;
 
-    let savedId = selectedId;
     if (selectedId) {
-      const { error } = await supabase.from('creatures').update(payload).eq('id', selectedId);
-      if (error) { toast.error(error.message); setLoading(false); return; }
-    } else {
-      const { data, error } = await supabase
-        .from('creatures')
-        .insert({ ...payload, id: creatureId })
-        .select()
-        .single();
-      if (error) { toast.error(error.message); setLoading(false); return; }
-      if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
+      if (bossFormRef.current && Object.entries(bossFormRef.current).every(([k, v]) => JSON.stringify((form as any)[k]) === JSON.stringify(v))) payload.boss_cast = baselineRef.current.boss_cast;
+      if (JSON.stringify(form.boss_crit_flavors) === JSON.stringify(baselineRef.current.boss_crit_flavors)) payload.boss_crit_flavors = baselineRef.current.boss_crit_flavors;
+      if (form.boss_death_cry === baselineRef.current.boss_death_cry) payload.boss_death_cry = baselineRef.current.boss_death_cry;
     }
+    let savedId = selectedId;
+    const change = configurationChange(baselineRef.current, payload);
+    const command: CreatureCommand = selectedId
+      ? { action: 'save', id: selectedId, ...change }
+      : { action: 'create', id: creatureId, expected: {}, patch: { ...payload, node_id: form.node_id || null } };
+    if (pendingRef.current && JSON.stringify(pendingRef.current) !== JSON.stringify(command)) {
+      toast.error('An earlier outcome is unresolved. Retry its unchanged fields first.'); setLoading(false); return;
+    }
+    pendingRef.current ??= structuredClone(command);
+    dispatchingRef.current = true;
+    try {
+      const result = await mutateCreature(pendingRef.current);
+      pendingRef.current = null;
+      if (!result.ok) { toast.error(result.kind + ': no configuration change accepted; refresh/review.'); setLoading(false); return; }
+      savedId = creatureId;
+      const { data: authoritative, error: refreshError } = await supabase.from('creatures').select('*').eq('id', creatureId).single();
+      if (refreshError || !authoritative) { needsRefreshRef.current = true; toast.error('Configuration committed; refresh failed. Reopen the editor before another operation.'); setLoading(false); return; }
+      baselineRef.current = { ...configuration(authoritative as unknown as Record<string, unknown>), max_hp: authoritative.max_hp, node_id: authoritative.node_id };
+      setSelectedId(savedId); setIsNew(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Outcome unknown; reconcile before another request.'); setLoading(false); return;
+    } finally { dispatchingRef.current = false; }
     if(savedId){
       const desired={gold_enabled:form.gold_enabled,gold_min:form.gold_min,gold_max:form.gold_max,gold_chance:form.gold_chance,salvage_enabled:form.salvage_enabled,item_source:form.item_source,loot_table_id:form.item_source==='assigned_table'?form.loot_table_id:null,drop_chance:form.item_source==='assigned_table'||form.item_source==='world_pool'?form.drop_chance:null,unique_item_id:form.item_source==='unique_boss_drop'?form.unique_item_id:null,unique_drop_chance:form.item_source==='unique_boss_drop'?form.unique_drop_chance:null};
       const expected=rewardExpected??{gold_enabled:false,gold_min:0,gold_max:0,gold_chance:0,salvage_enabled:false,item_source:'none',loot_table_id:null,drop_chance:null,unique_item_id:null,unique_drop_chance:null};
@@ -328,8 +357,8 @@ export default function CreatureManager() {
       if(rewardRequestRef.current?.key!==key)rewardRequestRef.current={key,id:crypto.randomUUID()};
       const {data,error}=await supabase.rpc('admin_set_creature_rewards' as any,{_creature_id:savedId,_expected:expected,_desired:desired,_request_id:rewardRequestRef.current.id});
       const result=decodeRewardMutationResult(data);
-      if(error||!result){toast.error(error?.message||'Malformed reward response');setLoading(false);return;}
-      if(!result.ok){if(result.kind==='stale')setRewardExpected(result.current);toast.error(result.kind);setLoading(false);return;}
+      if(error||!result){toast.error('Configuration saved; rewards unresolved: ' + (error?.message||'Malformed reward response'));setLoading(false);return;}
+      if(!result.ok){if(result.kind==='stale')setRewardExpected(result.current);toast.error('Configuration saved; reward update refused: ' + result.kind);setLoading(false);return;}
       rewardRequestRef.current=null;
       setRewardExpected(desired); toast.success(selectedId?'Creature updated':'Creature created');
     }
@@ -343,11 +372,19 @@ export default function CreatureManager() {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('creatures').delete().eq('id', id);
-    if (error) return toast.error(error.message);
-    toast.success('Creature deleted');
-    if (selectedId === id) closePanel();
-    loadData();
+    if (!CREATURE_ADMIN_ENABLED) return toast.error(CREATURE_ADMIN_GATE);
+    if (dispatchingRef.current || pendingRef.current) return toast.error('Reconcile the pending operation first.');
+    const row = creatures.find(c => c.id === id);
+    if (!row || !window.confirm('Delete this unreferenced creature? Retained history will refuse deletion.')) return;
+    dispatchingRef.current = true;
+    try {
+      const result = await mutateCreature({ action: 'delete', id, expected: { name: row.name, node_id: row.node_id }, patch: {} });
+      if (!result.ok) return toast.error(result.kind);
+      toast.success(result.kind === 'already_absent' ? 'Creature already absent' : 'Creature deleted');
+      if (selectedId === id) closePanel();
+      await loadData();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Deletion outcome unknown; refresh before retry.'); }
+    finally { dispatchingRef.current = false; }
   };
 
   const previewStats = generateCreatureStats(form.level, form.rarity);
@@ -641,7 +678,7 @@ export default function CreatureManager() {
               <AdminFormSection title="Stats" description={`Auto-generated for Lvl ${form.level} ${form.rarity}`}>
               <div className="p-2 bg-background/50 rounded border border-border">
                 <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
-                  <span>HP: <strong>{previewStats.hp}</strong></span>
+                  <span>Generated max HP preview: <strong>{previewStats.hp}</strong></span>
                   <span>AC: <strong>{previewStats.ac}</strong></span>
                   <span>STR: <strong>{previewStats.stats.str}</strong></span>
                   <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
@@ -935,7 +972,13 @@ export default function CreatureManager() {
                 {form.item_source==='unique_boss_drop'&&<><Select value={form.unique_item_id??''} onValueChange={v=>setForm(f=>({...f,unique_item_id:v}))}><SelectTrigger><SelectValue placeholder="Unique item"/></SelectTrigger><SelectContent>{uniqueItems.filter(i=>i.origin_id===selectedId||i.origin_id===newCreatureId).map(i=><SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select><Input type="number" min={0} max={1} step={0.05} value={form.unique_drop_chance??0} onChange={e=>setForm(f=>({...f,unique_drop_chance:+e.target.value}))}/><p className="text-[9px] text-muted-foreground">Only one copy may exist globally. It drops on the ground and may be stolen.</p></>}
               </AdminFormSection>
 
-              <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading} />
+              {!CREATURE_ADMIN_ENABLED && <p role="status" className="text-sm text-muted-foreground">{CREATURE_ADMIN_GATE}</p>}
+              <label className="block text-sm">Regeneration (% max HP per 4 seconds)
+                <Input type="text" inputMode="decimal" value={form.regen_percent_4s} disabled={!CREATURE_ADMIN_ENABLED}
+                  onChange={e => setForm(f => ({ ...f, regen_percent_4s: e.target.value }))} />
+                <span>Default 2%; 0–100%, up to two decimals. Preview: {((selectedId ? creatures.find(c => c.id === selectedId)?.max_hp ?? previewStats.hp : previewStats.hp) * Number(form.regen_percent_4s) / 100).toFixed(2)} HP per eligible interval.</span>
+              </label>
+              <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading || !CREATURE_ADMIN_ENABLED} />
             </div>
           </ScrollArea>
           </>

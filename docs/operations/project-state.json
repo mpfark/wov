@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T22:21:22.280Z",
-  "based_on_source_sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
+  "updated_at": "2026-10-16T22:55:47.622Z",
+  "based_on_source_sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2401,6 +2401,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Replaces unstarted G4A17 metadata/containment proof. Existing source full-save HP overwrite and independent legacy healing revisited using prior proofs. One action-based Admin boundary and two implementation slices recommended; no new authoring receipt proposed only subject to explicit narrower replay-policy approval. Canonical consequential replay remains binding; HP/authorization/reference protections preserved. No runtime/SQL/DB operations. All prior OPEN/BLOCKED/deferred statuses and closures unchanged."
+    },
+    {
+      "status": "authored",
+      "sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
+      "timestamp": "2026-10-16T22:55:47.622Z",
+      "artifact": "docs/operations/legacy-001G4A19-simplified-admin-implementation.md",
+      "identity": "ENG-LEGACY-001G4A19 — simplified Admin locally implemented; new4-second regeneration candidate, activation OFF",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Owner approves G4A18 replay amendment and replaces60s/5% per minute with2% maxHP per4eligible seconds, configurable0–100/two decimals. Canonical updated; historical reports preserved. Single action RPC/scoped DML containment and exact fractional4s accounting candidate; existing four Admin callers converted/gated with no raw HP/stat fallback. 37 PostgreSQL18.6 tests PASS (25 historical+12 new),10 observed session cases (8 historical+2 new),24 focused application/state tests; no hosted proof. Full transition/healer cutover, retained projected protected edits, rich boss validation and fresh installed/caller parity remain incomplete/fail closed. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 deferred; all prior closures/limitations/admin XP grant pause preserved. No installed migrations, live grants, Edge deployment or frontend publication."
     }
   ],
   "known_blockers": [
@@ -2633,14 +2644,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
-    "timestamp": "2026-10-16T22:21:22.280Z",
-    "artifact": "docs/operations/legacy-001G4A18-simplified-admin-hp-proposal.md",
-    "identity": "PROPOSED — owner replay amendment decision and separate slice1 local implementation authorization",
+    "sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
+    "timestamp": "2026-10-16T22:55:47.622Z",
+    "artifact": "docs/operations/legacy-001G4A19-simplified-admin-implementation.md",
+    "identity": "PROPOSED — finish existing HP transition/protected Admin compatibility, then separately authorized cutover",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Review G4A18 replay policy table, then authorize actual existing Admin source/SQL correction with reused focused tests, not another isolated proof framework. No implementation automatically authorized; hosted capability/parity/caller and release gates remain."
+    "evidence": "Reuse G4A7–15 composition and current candidate, no redesign. Integrate4-second helper at real transitions/settlement, legacy healer cutover, boss validator and safe projected operations or explicit disabled limitations. Keep frontend gate OFF. Fresh permitted installed parity/isolation/effective-authority and exact forward review required before separate database install/reconciliation; compatible frontend manual publication by Mik only. No automatic next implementation authorized."
   },
   "volatile_runtime_observations": [
     {

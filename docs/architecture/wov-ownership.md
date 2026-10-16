@@ -22,12 +22,13 @@ flowchart TB
   ITEMS["STATE: gold, receipts, inventory and ground loot"]:::state
   OOC["SOURCE: character OOC settlement"]:::source
   REGEN["APPROVED HP / LOCAL ONLY: common creature accounting"]:::future
-  LEGACY["LEGACY / OVERLAP: creature healing and raw Admin saves"]:::legacy
+  LEGACY["LEGACY / OVERLAP: creature healing and historical raw Admin saves"]:::legacy
   VIEW["STATE: delivery and presentation models"]:::state
 
   UI -->|commands| RPC
   ADMIN -->|existing reward RPC| RPC
-  ADMIN -->|current direct table saves| LEGACY
+  ADMIN -.->|historical raw saves; hosted parity unknown| LEGACY
+  ADMIN -.->|gated local config candidate| RPC
   RPC -->|entry and movement| MOVE
   RPC -->|validate and queue| INTENT
   INTENT -.->|snapshot read| CLAIM
@@ -80,3 +81,5 @@ The browser submits intent; neither a browser state update nor the pure resolver
 Administrative XP grants remain paused. Normal gameplay XP earning is not intentionally disabled by that policy; Combat2 gameplay XP is not declared hosted-runtime-verified. E13 quest/contract completion, privileged delegation/external callers, accepted Combat1 risk and deferred F1 retry weakness remain outside this diagram's certification scope.
 
 G4A17 owner approval now establishes scoped stale-field conflicts, retained-reference deletion refusal, limited safe NULL-node unassignment, separate save/reward transactions and durable consequential replay versus metadata-only comparison. These are [approved design rules](../design/game-engine.md#approved-creature-admin-contract--not-implemented), **not new source or installed paths**. Candidate RPC/containment work is [planned separately](../operations/legacy-001G4A17-admin-implementation-readiness.md); this source overview deliberately does not redraw future RPCs as current writers.
+
+G4A19 adds gated local Admin configuration callers/candidate, not an installed RPC or engine HP cutover. [Current handoff](../operations/legacy-001G4A19-simplified-admin-implementation.md) records approved4-second accounting and simplified replay. Legacy independent healing remains an OPEN competitor.

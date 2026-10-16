@@ -1,4 +1,4 @@
-import {test,after} from 'node:test';
+import {test,after,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn,execFile} from 'node:child_process';
 import {promisify} from 'node:util';
@@ -27,6 +27,7 @@ const ctl=args=>new Promise((res,rej)=>{const p=spawn(exe('pg_ctl'),args,{stdio:
 await ctl(['-D',join(root,'data'),'-l',join(root,'server.log'),'-o',`-h 127.0.0.1 -p ${port}`,'-w','start']);
 const admin=postgres({host:'127.0.0.1',port,username:'postgres',database:'postgres',max:1});
 after(async()=>{for(const c of clients)await c.end({timeout:1});await admin.end({timeout:1});await ctl(['-D',join(root,'data'),'-m','immediate','-w','stop']);console.log('STOPPED disposable cluster '+root);});
+afterEach(async()=>{for(const c of clients.splice(0))await c.end({timeout:1});});
 console.log('LOCAL '+(await admin`SELECT version() v`)[0].v+'; cluster '+root);
 const read=p=>readFile(new URL(p,import.meta.url),'utf8');
 const files=await Promise.all(['../g4a6/fixture.sql','../g4a6/candidate.sql','../g4a7/fixture.sql','../g4a7/adapters.sql','../g4a8/fixture.sql','../g4a8/adapters.sql','../g4a9/fixture.sql','../g4a9/adapters.sql','../g4a12/fixture.sql','../g4a12/adapters.sql','../g4a13/adapters.sql','../g4a13/fixture.sql','../g4a14/fixture.sql','./fixture.sql','./adapters.sql'].map(read));
@@ -108,3 +109,6 @@ test('deletion refuses legacy or queued references even without retained project
 test('actual worker death/reward/progression still executes after guarded Admin metadata',options,async()=>{const x=await setup();await damage(x,{amount:100});await edit(x.o,'metadata',{name:'named before death'});await x.o`UPDATE g4a6.node_encounter SET claim_token=NULL,claimed_tick=NULL,claim_expires_at=NULL`;const result=await processNodeTickOnce(node,{abilityRecords:inventory.abilities,statusRecords:inventory.statuses,transport:{claimNode:()=>claim(x.o),commitTick:a=>commit(x.o,{encounter_id:a._encounter_id,claim_token:a._claim_token,candidate_tick:a._candidate_tick,last_committed_tick:a._expected_last_tick,state_version:a._expected_state_version},a._proposed)}});assert.equal(result.kind,'committed',JSON.stringify(result));assert.equal((await row(x.o)).hp,0);assert.equal((await state(x.o)).projection_hp,0);assert.equal((await x.o`SELECT xp FROM g4a6.characters WHERE id=${actor}`)[0].xp,'10');assert.equal((await x.o`SELECT count(*)::int n FROM g4a6.progression_receipt`)[0].n,1);await edit(x.o,'metadata',{description:'dead remains dead'});assert.equal((await row(x.o)).is_alive,false);});
 after(()=>console.log('ALL EXECUTED ADMIN SOURCE IDENTITIES '+JSON.stringify([...new Map(adminManifest.map(m=>[m.path+' '+m.identity,m])).values()])));
 test('ended destination with its own effect, pending action or uncleared claim refuses transfer',options,async()=>{for(const blocker of ['effect','pending','claim']){const x=await setup();await quiet(x);await x.o`INSERT INTO g4a6.creatures(id,node_id,hp,max_hp,is_alive) VALUES(${request},${dest},40,100,true)`;await x.o`SELECT g4a6.settle(${request},g4a6.test_now())`;await x.o`SELECT g4a6.seed(${request})`;if(blocker==='effect')await x.o`INSERT INTO g4a6.node_effect(encounter_id,kind,target_creature_id) VALUES(${enc2},'dot',${request})`;if(blocker==='pending')await x.o`UPDATE g4a6.node_creature SET pending_action='{}' WHERE creature_id=${request}`;if(blocker==='claim')await x.o`UPDATE g4a6.node_encounter SET claim_token=gen_random_uuid(),claim_expires_at=${at(-1)} WHERE id=${enc2}`;await assert.rejects(edit(x.o,'node',dest),/destination not quiescent/);assert.equal((await row(x.o)).node_id,node);assert.equal((await x.o`SELECT encounter_id FROM g4a6.node_creature WHERE creature_id=${cid}`)[0].encounter_id,enc);}});
+
+// G4A19 reuses this exact disposable source composition, not a second harness.
+export { setup, auth, clock, quiet, state, row, race, damage, commit, claim, proposal, cid, node, dest, enc, enc2, actor, user, request, at };

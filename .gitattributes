@@ -47,3 +47,6 @@ docs/operations/legacy-001F7-statement2-ledger.txt -text whitespace=blank-at-eol
 
 # Exact original conditional G2B metadata evidence; never executable migration inputs.
 docs/operations/legacy-001G2B-evidence/* -text
+
+# G4A19 reviewed local candidate bytes; not installed.
+docs/operations/legacy-001G4A19-admin-candidate.sql text eol=lf

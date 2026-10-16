@@ -10,7 +10,7 @@ Authority remains with the [engine specification](../design/game-engine.md), [ro
 |---|---|
 | `SOURCE` / blue | Current repository path or writer. **Not** proof of fresh installed parity, exclusive authority or deployed execution. |
 | `STATE` / teal | Durable state or read projection. Storage itself is not an authorization boundary. |
-| `APPROVED HP / LOCAL ONLY` or `APPROVED DESIGN` / purple | Owner-approved HP/policy direction; selected HP behavior has local proof, while newly approved Admin policy has no new implementation. Production integration is absent. |
+| `APPROVED HP / LOCAL ONLY` or `APPROVED DESIGN` / purple | Owner-approved HP/policy direction; selected HP behavior has local proof, with gated local Admin/accounting candidate code. Production integration is absent. |
 | `PROPOSAL` / amber | Architecture/API recommendation, awaiting review and implementation authorization. |
 | `LEGACY / OVERLAP` / red | Retained or competing source writer; reachability may be restricted or unknown. Red does not mean demonstrated exploit. |
 | `DECISION` / gray diamond | Explicit unresolved owner decision. Recommendations are not approvals. |
@@ -26,6 +26,4 @@ Keep diagrams small, with stable node IDs and descriptive labels. Put exact sign
 
 The Mermaid fences are the diagram source; do not maintain separate hand-edited image copies. Use a Mermaid parser/renderer where available and check links/state on each edit. G4A16 had no installed Mermaid parser/CLI: structural checks and manual grammar review were performed, **not renderer validation**.
 
-Current design checkpoint: ENG-LEGACY-001G4A17, based on `e0f7527463f3886a8c591b19d0520708fa142442`. [Approved decisions and implementation-readiness handoff](../operations/legacy-001G4A17-admin-implementation-readiness.md). A–D/replay approval comes from the owner and canonical spec, not diagram color. No implementation/hosted authorization follows. [Original G4A16 handoff](../operations/legacy-001G4A16-admin-contract-architecture.md) remains historical preparation evidence.
-
-Current recommendation: [G4A18 simplification](../operations/legacy-001G4A18-simplified-admin-hp-proposal.md) preserves these ownership diagrams and proposes one Admin mutation boundary instead of eight interfaces, no new authoring receipt subject to explicit replay-policy amendment, and two implementation slices. G4A17 approved policy remains binding pending that amendment; no SOURCE or installed arrows change.
+Current checkpoint: [G4A19 implementation](../operations/legacy-001G4A19-simplified-admin-implementation.md), based on64f568ba9c7542d196f2543b18403bb79eecbb48. The owner approves G4A18 replay simplification and new2%-per4seconds regeneration. Local clients/candidate are gated and uninstalled; historical G4A16–18 evidence remains linked from the report. Two implementation slices replace the older five-slice recommendation.

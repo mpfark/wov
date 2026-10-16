@@ -1,3 +1,4 @@
+import { CREATURE_ADMIN_ENABLED, CREATURE_ADMIN_GATE, mutateCreature } from './creature-admin';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -735,9 +736,11 @@ export default function NodeEditorPanel({
 
   /* ── Assign existing creature to this node ── */
   const assignCreature = async () => {
+    if (!CREATURE_ADMIN_ENABLED) return toast.error(CREATURE_ADMIN_GATE);
     if (!activeNodeId || !assignCreatureId) return;
     setAssigning(true);
-    const { error } = await supabase.from('creatures').update({ node_id: activeNodeId }).eq('id', assignCreatureId);
+    const current = allCreatures.find(c => c.id === assignCreatureId);
+    const { error } = await mutateCreature({ action: 'move', id: assignCreatureId, expected: { node_id: current?.node_id ?? null }, patch: { node_id: activeNodeId } }).then(r => ({ error: r.ok ? null : { message: r.kind } }), e => ({ error: { message: String(e) } }));
     if (error) { toast.error(error.message); setAssigning(false); return; }
     const name = allCreatures.find(c => c.id === assignCreatureId)?.name || 'Creature';
     toast.success(`${name} assigned to node`);
@@ -751,7 +754,8 @@ export default function NodeEditorPanel({
 
   /* ── Unassign creature from node (set node_id = null) ── */
   const unassignCreature = async (id: string, name: string) => {
-    const { error } = await supabase.from('creatures').update({ node_id: null }).eq('id', id);
+    if (!CREATURE_ADMIN_ENABLED) return toast.error(CREATURE_ADMIN_GATE);
+    const { error } = await mutateCreature({ action: 'move', id, expected: { node_id: activeNodeId }, patch: { node_id: null } }).then(r => ({ error: r.ok ? null : { message: r.kind } }), e => ({ error: { message: String(e) } }));
     if (error) { toast.error(error.message); return; }
     toast.success(`${name} unassigned`);
     if (activeNodeId) loadCreatures(activeNodeId);

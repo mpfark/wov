@@ -65,29 +65,9 @@ export default function CreatureLootModesTab() {
     });
   };
 
-  const saveAll = async () => {
-    const entries = [...pendingChanges.entries()];
-    if (entries.length === 0) return toast.info('No changes');
-    let errors = 0;
-    for (const [id, mode] of entries) {
-      const { error } = await supabase.from('creatures').update({ loot_mode: mode } as any).eq('id', id);
-      if (error) errors++;
-    }
-    if (errors) toast.error(`${errors} creatures failed`);
-    else toast.success(`${entries.length} creatures updated`);
-    setPendingChanges(new Map());
-    loadData();
-  };
-
-  const bulkSetMode = async (mode: string) => {
-    const ids = filtered.map(c => c.id);
-    if (ids.length === 0) return;
-    const { error } = await supabase.from('creatures').update({ loot_mode: mode } as any).in('id', ids);
-    if (error) return toast.error(error.message);
-    toast.success(`${ids.length} creatures set to ${MODE_LABELS[mode]}`);
-    setPendingChanges(new Map());
-    loadData();
-  };
+  // Legacy labels are not proven equivalent to canonical reward configuration.
+  const saveAll = async () => { toast.error('Legacy loot-mode writes are disabled. Use explicit creature reward configuration.'); };
+  const bulkSetMode = async (_mode: string) => { toast.error('Legacy bulk loot mapping is unsupported; no changes made.'); };
 
   const modeCounts = useMemo(() => {
     const counts: Record<string, number> = { legacy_table: 0, item_pool: 0, salvage_only: 0 };
