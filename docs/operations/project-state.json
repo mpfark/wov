@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T08:54:01.752Z",
-  "based_on_source_sha": "68169465c89851017f6c1160fb2a426445ee5e22",
+  "updated_at": "2026-10-16T09:56:56.070Z",
+  "based_on_source_sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2324,6 +2324,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Three exact movement-function catalog targets and non-executable SELECT-only review artifact prepared. Historical F5/F9 not fresh installed parity. No database query executed; route BLOCKED pending named permitted enforced read-only execution approval. Original/already-corrected/divergent gates defined. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; previous dispositions preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
+      "timestamp": "2026-10-16T09:56:56.070Z",
+      "artifact": "docs/operations/legacy-001G4A12-full-claim-commit-integration.md",
+      "identity": "ENG-LEGACY-001G4A12 — full source claim/resolver/single-node commit locally exercised; production composition incomplete",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Nine full pinned claim/commit bodies/compositions plus actual Edge worker/decoder/catalogue/resolver execute in disposable PostgreSQL18.6.29 native tests PASS including12 observed independent-session cases; generation/replay/rollback, DoT expiry, stance consumption, reward/ground-loot writes and party arrival covered. Scope/progression delegates and reduced schema explicit; canonical XP/milestone/private ledger not executed. Cross-node commit proposals explicitly refused before late node locks. No production/runtime/history/hosted changes. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; G4A11 parity gate not reopened; previous limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2556,14 +2567,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "68169465c89851017f6c1160fb2a426445ee5e22",
-    "timestamp": "2026-10-16T08:54:01.752Z",
-    "artifact": "docs/operations/legacy-001G4A11-party-installed-parity-plan.md",
-    "identity": "PROPOSED — separately approve exact party movement metadata route and artifact",
+    "sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
+    "timestamp": "2026-10-16T09:56:56.070Z",
+    "artifact": "docs/operations/legacy-001G4A12-full-claim-commit-integration.md",
+    "identity": "PROPOSED — local multi-node in-tick departure commit early-coverage integration",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Owner must separately name and approve permitted transactionally enforced read-only route, identity, project and exact review-script hash. No sandbox execution or read-write workaround. No route established; no execution or installation authorized. Review returned parity before any separately authorized forward correction."
+    "evidence": "Separately authorize sorted origin/destination/projection discovery, party lifecycle then encounter/dependent locks, revalidation and destination settlement/arrival around full source commit. No late node gates or production authoring; independent-session tests required. Canonical progression/trigger composition remains separate. G4A11 installed-parity gate stays BLOCKED; no hosted authorization."
   },
   "volatile_runtime_observations": [
     {
