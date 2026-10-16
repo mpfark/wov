@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T06:27:14.829Z",
-  "based_on_source_sha": "ac207c016e814d62fe273fa67af3710862322b1b",
+  "updated_at": "2026-10-16T06:54:05.053Z",
+  "based_on_source_sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2280,6 +2280,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Ten hash-pinned source identities from nine unchanged files; full selected entry/hostile/intent-lock-wrapper/seed/regen/wake-heal/respawn/generation-trigger bodies rebound to fixture namespace/clock, partial claim snapshot and exact commit guard/HP/generation/effect-delete/consumption fragments.24 PostgreSQL18.6 READ COMMITTED native tests PASS including6 independently connected observed blocking cases; full party/movement/trigger/Auth/catalogue/reward/commit composition not executed. Source legacy healing conflict reproduced locally; early entry lease fencing corrected local loss-of-credit edge; owner floor/rate-reset wrappers tested.34 unchanged historical pure baseline tests PASS. No production/UI/Edge/SQL/migration/history or hosted changes. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED and prior closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
+      "timestamp": "2026-10-16T06:54:05.053Z",
+      "artifact": "docs/operations/legacy-001G4A8-arrival-departure-guarded-writers.md",
+      "identity": "ENG-LEGACY-001G4A8 — local arrival/departure/guarded-writer adapters exercised; production composition incomplete",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Six complete pinned selected arrival/immediate solo-party departure/legacy cleanup bodies in isolated namespace, reused G4A7 partial claim/commit and explicit doubles.21 native PostgreSQL18.6 READ COMMITTED tests PASS including8 independently connected lock-observed cases; old-rate settlement/fraction discard, floor1, raw protected-payload and retained-delete refusals, quiet-ended transfer tested. Production request creation/party lifecycle/full trigger/Auth/ACL/commit/schema and arbitrary early coverage remain unproven.34 unchanged accounting tests PASS. No production runtime/UI/Edge/SQL/history or hosted changes. G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2512,14 +2523,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
-    "timestamp": "2026-10-16T06:27:14.829Z",
-    "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
-    "identity": "PROPOSED — local arrival/departure/guarded-writer source composition before production authoring",
+    "sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
+    "timestamp": "2026-10-16T06:54:05.053Z",
+    "artifact": "docs/operations/legacy-001G4A8-arrival-departure-guarded-writers.md",
+    "identity": "PROPOSED — bounded local movement predecessor/party lifecycle/early coverage composition",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "No floor/rate policy decision remains pending. Separately authorize source-bound authoritative arrival, immediate solo/party departure/participation-ending and guarded Admin/raw-writer adapter tests, including multi-node/trigger lock coverage. Then one coherent private production-authoring cutover, not direct installation of fixture SQL. Claim/commit outer stack, real Auth/Arena/catalogue/reward/worker and installed parity remain evidence gates. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED; no hosted route or production activation assumed."
+    "evidence": "Separately authorize supported movement/request-creation and party lifecycle predecessor composition with frozen movers/off-node coverage and real character triggers, including missing encounters/multiple creatures. G4A8 selected finalizer/arrival/guard tests do not establish complete production integration. No direct fixture promotion or hosted installation; G4-R1/G4-R2/E13/G/parent OPEN, G3 deferred/G3D BLOCKED. Preserve all existing accepted limitations and administrative-only XP grant pause."
   },
   "volatile_runtime_observations": [
     {

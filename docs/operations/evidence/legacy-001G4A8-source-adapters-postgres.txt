@@ -1,0 +1,40 @@
+LOCAL PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit; cluster C:\Users\mik\AppData\Local\Temp\wov-g4a8-8B6l8P
+SOURCE MANIFEST [{"path":"supabase/migrations/20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql","function":"combat_enter","firstLine":3,"bodySha256":"9edae295a0435a8535db2c10e1db8d2afa319956b479552112f3b499aadf61ef"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat2_hostile_action","firstLine":423,"bodySha256":"8a9c4aa51f71973dbcb5427e81a740dd6c57d34986578ae1b47b6e294799b5a3"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat_intent","firstLine":399,"bodySha256":"b320e576928235fef3c301b0a3183214e47ab0d3cdccbb1a01299c80388a210e"},{"path":"supabase/migrations/20260902194101_e3b1caf6-58cf-4028-b292-49cc3c283914.sql","function":"combat2_seed_spawns","firstLine":3,"bodySha256":"ee481254948a2dafd44946cbb4bc90489bc4862badf8c21981dcd9518d403cbb"},{"path":"supabase/migrations/20260717123612_8f687cfb-1b50-4ad5-9ea0-d1f78b5122db.sql","function":"regen_creature_hp","firstLine":126,"bodySha256":"a433f2b827af2faa94ee78b5dbae4cc17398223023b9d2cf6f1b96951e5f5349"},{"path":"supabase/migrations/20260805185103_b8924e02-7328-4878-a630-d1d490bfa791.sql","function":"heal_creatures_on_wake","firstLine":1,"bodySha256":"0897894a80123df05fc1df6435c5f307f62b99a4261b66c450cc387347d43830"},{"path":"supabase/migrations/20260629060824_a75ddfbf-a2d4-4e53-b368-b3f47ef8ebbe.sql","function":"respawn_creatures","firstLine":52,"bodySha256":"35d9ae0643b2bb6cf751d4aebfb3280e86b42e560fc7f35989929856ce3e566d"},{"path":"supabase/migrations/20260813091924_37c97e14-37a5-4719-bfd8-eaa03442e179.sql","function":"bump_creature_spawn_seq","firstLine":9,"bodySha256":"8bb1a46ab5b4c5a916ecb41ae506f7b1a60d5ee993daa51d4f2130d1647e3682"},{"path":"supabase/migrations/20260829135558_f0037825-ccff-4b35-b0b2-aa6566be826c.sql","function":"node_tick_claim","firstLine":12,"bodySha256":"cf181d5c16331a0dcd18e7d030fc7ade808f342f37f9895936ad925b3b0ada57"},{"path":"drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql","function":"node_tick_commit_without_bounded_failure","firstLine":89,"bodySha256":"0b3d23a80090bb549cde77c7a9bb2e96e25c5d737024e7571dd141bac6b81061"}]
+MOVEMENT SOURCE MANIFEST [{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","name":"combat2_arrive_after_relocation","line":147,"bodySha256":"bc15da82a3a0db09dc8d1e3ebb0f19bffb64bab9742a7b76cd86e4c631021c28"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","name":"combat2_authoritative_arrival_trigger","line":278,"bodySha256":"25c617b9e0232307b711f3ed7dea3de877819490572ce6f4a66785d1358a7b82"},{"path":"supabase/migrations/20260929100000_combat2_immediate_authoritative_departure.sql","name":"combat2_finish_immediate_departure","line":210,"bodySha256":"22cb035d95b1b82c568b02bda0a74b59e21dca5bba62acda0d7ddb8a48cb4c5e"},{"path":"supabase/migrations/20260929100000_combat2_immediate_authoritative_departure.sql","name":"combat2_finish_immediate_party_departure","line":308,"bodySha256":"8d401d005bef43429849aee5ba35fabb37a93df517aebb07a735a8d020b3b277"},{"path":"supabase/migrations/20260827094512_37a985a4-cb14-4ce8-9a04-43f75cd26184.sql","name":"encounter_end_participation","line":1,"bodySha256":"7b0d233867ee303c1ea281c9c10333f95b4856ade1d2c061a37f8e2065d2023f"},{"path":"supabase/migrations/20260827094512_37a985a4-cb14-4ce8-9a04-43f75cd26184.sql","name":"characters_end_participation_on_node_change","line":76,"bodySha256":"a62244a280fc6256d20efab4939542823c36d4159f647ec669ce783f0535d299"}]
+✔ six complete pinned movement/cleanup bodies; no public functions installed (538.3824ms)
+✔ source solo departure consumes MP once, fences claim, preserves creature DoT and refuses regeneration (432.371ms)
+✔ departure without residual blockers starts eligibility; delay is not credited retroactively (392.6164ms)
+✔ complete party finalizer moves queued leader plus waiting follower; retry does not charge twice (396.0204ms)
+✔ source arrival trigger engages destination from durable HP; full arrival request replays (417.4579ms)
+✔ failed second party member rolls back first movement, MP, requests and regeneration transition (397.0695ms)
+✔ raw generic HP save and retained-projection deletion refuse atomically; safe name allowed (382.7872ms)
+✔ rate settles old whole credit, discards fraction, starts cursor; max preserves missing HP and living floor (518.0888ms)
+✔ active attachment refuses rate, max, reassignment including outstanding claim (396.3293ms)
+OBSERVED SOURCE-ADAPTER LOCK 38240 -> 32624
+✔ independent arrival versus regeneration: entry holds gate; settlement observes blocker (654.1001ms)
+OBSERVED SOURCE-ADAPTER LOCK 40836 -> 40672
+✔ independent source departure versus regeneration: retained DoT still blocks (551.0816ms)
+OBSERVED SOURCE-ADAPTER LOCK 39552 -> 19440
+✔ independent party-follow finalizer versus regeneration: serialized movement and quiet release (549.969ms)
+OBSERVED SOURCE-ADAPTER LOCK 38436 -> 37964
+✔ independent quiet-ended reassignment versus entry: old node has no creature after transfer (439.9287ms)
+OBSERVED SOURCE-ADAPTER LOCK 19620 -> 10688
+✔ independent source commit versus Admin edit: edit waits then refuses active attachment (482.2638ms)
+OBSERVED SOURCE-ADAPTER LOCK 25444 -> 29188
+✔ independent multi-node opposite coverage order uses sorted gates without late acquisition (504.626ms)
+OBSERVED SOURCE-ADAPTER LOCK 30636 -> 8524
+✔ independent active claim versus Admin rate: observed wait then refusal (675.7151ms)
+OBSERVED SOURCE-ADAPTER LOCK 37912 -> 9444
+✔ independent active claim versus Admin max: observed wait then refusal (565.306ms)
+✔ complete legacy cleanup and trigger remove only old-node participation; replay is empty (622.3799ms)
+✔ arrival adapter exact replay preserves accounting and encounter fences (518.4491ms)
+✔ cross-node retained projection refuses before any late node gate or character write (563.2639ms)
+✔ quiet rate change fences retained projection even with no whole HP applied (689.4614ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11686.7178
