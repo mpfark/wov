@@ -1,0 +1,40 @@
+LOCAL PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit; cluster C:\Users\mik\AppData\Local\Temp\wov-g4a7-KrcOkJ
+SOURCE MANIFEST [{"path":"supabase/migrations/20260902123413_f5e0f14f-b91d-451a-a267-fbe6fea9665c.sql","function":"combat_enter","firstLine":3,"bodySha256":"9edae295a0435a8535db2c10e1db8d2afa319956b479552112f3b499aadf61ef"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat2_hostile_action","firstLine":423,"bodySha256":"8a9c4aa51f71973dbcb5427e81a740dd6c57d34986578ae1b47b6e294799b5a3"},{"path":"supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql","function":"combat_intent","firstLine":399,"bodySha256":"b320e576928235fef3c301b0a3183214e47ab0d3cdccbb1a01299c80388a210e"},{"path":"supabase/migrations/20260902194101_e3b1caf6-58cf-4028-b292-49cc3c283914.sql","function":"combat2_seed_spawns","firstLine":3,"bodySha256":"ee481254948a2dafd44946cbb4bc90489bc4862badf8c21981dcd9518d403cbb"},{"path":"supabase/migrations/20260717123612_8f687cfb-1b50-4ad5-9ea0-d1f78b5122db.sql","function":"regen_creature_hp","firstLine":126,"bodySha256":"a433f2b827af2faa94ee78b5dbae4cc17398223023b9d2cf6f1b96951e5f5349"},{"path":"supabase/migrations/20260805185103_b8924e02-7328-4878-a630-d1d490bfa791.sql","function":"heal_creatures_on_wake","firstLine":1,"bodySha256":"0897894a80123df05fc1df6435c5f307f62b99a4261b66c450cc387347d43830"},{"path":"supabase/migrations/20260629060824_a75ddfbf-a2d4-4e53-b368-b3f47ef8ebbe.sql","function":"respawn_creatures","firstLine":52,"bodySha256":"35d9ae0643b2bb6cf751d4aebfb3280e86b42e560fc7f35989929856ce3e566d"},{"path":"supabase/migrations/20260813091924_37c97e14-37a5-4719-bfd8-eaa03442e179.sql","function":"bump_creature_spawn_seq","firstLine":9,"bodySha256":"8bb1a46ab5b4c5a916ecb41ae506f7b1a60d5ee993daa51d4f2130d1647e3682"},{"path":"supabase/migrations/20260829135558_f0037825-ccff-4b35-b0b2-aa6566be826c.sql","function":"node_tick_claim","firstLine":12,"bodySha256":"cf181d5c16331a0dcd18e7d030fc7ade808f342f37f9895936ad925b3b0ada57"},{"path":"drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql","function":"node_tick_commit_without_bounded_failure","firstLine":89,"bodySha256":"0b3d23a80090bb549cde77c7a9bb2e96e25c5d737024e7571dd141bac6b81061"}]
+✔ hash-pinned source extraction:10 identities, no public references or stored body copies (381.5498ms)
+✔ adapted FULL entry: wounded HP settled, initial spawn seeded and request replays without duplicate membership (482.6588ms)
+✔ adapted FULL hostile source + source intent lock wrapper, with explicitly doubled admission (377.0019ms)
+✔ actual hostile subtransaction rolls entry/accounting back on intent refusal; Auth is a labeled double (362.403ms)
+✔ adapted source seed baseline retains stale same-generation row; candidate refuses mismatch (472.0931ms)
+✔ retained ended projection reactivation preserves wounds and runtime identity (472.566ms)
+✔ full source entry exercises party arrival-group branch without claiming party_mutate integration (343.7357ms)
+✔ adapted claim pre-synchronizes HP; exact source guard/write fragments mirror damage and replay (390.0329ms)
+✔ new authoritative entry fences a quiet live lease before settlement, preserving earned whole HP (358.354ms)
+✔ exact source creature identity guard rejects foreign runtime reference atomically (362.4826ms)
+✔ source commit effects-delete/pending-action clear releases OOC only after all work resolves (487.2004ms)
+✔ approved rate edit settles old rate, discards fraction, starts fresh cursor; max edit floors living HP (863.0149ms)
+✔ source respawn due-time and real generation trigger: zero rate does not prevent ordinary respawn (382.4658ms)
+✔ source generation mirror predicate preserves new life; adapter rejects an old-generation new proposal (426.7467ms)
+✔ actual source re-entry after partial regeneration retains whole HP and discards fraction (573.2724ms)
+✔ actual source regen/wake bodies reproduce durable/projection conflict; proposed bridge does not full-heal (1640.3449ms)
+✔ elapsed sleeping eligibility and fractional replay; real world scheduler not executed (502.2814ms)
+✔ active edit/reassignment refused; quiescent ended transfer uses base local candidate, not source transfer (533.4259ms)
+OBSERVED SOURCE-ADAPTER LOCK 18428 -> 31740
+✔ INDEPENDENT: source entry waits for regeneration and receives coherent HP (793.0208ms)
+OBSERVED SOURCE-ADAPTER LOCK 38436 -> 25388
+✔ INDEPENDENT: regeneration waits for adapted full source entry, no combat healing (733.8554ms)
+OBSERVED SOURCE-ADAPTER LOCK 4708 -> 19440
+✔ INDEPENDENT: source commit HP fragment blocks regeneration, preserving damage (628.378ms)
+OBSERVED SOURCE-ADAPTER LOCK 17512 -> 39104
+✔ INDEPENDENT: pre-claim quiet source snapshot becomes stale after expired-claim regeneration (573.9861ms)
+OBSERVED SOURCE-ADAPTER LOCK 32016 -> 26276
+✔ INDEPENDENT: shared sorted-node/party-lifecycle/encounter primitive blocks source entry; full party/movement body NOT executed (561.9577ms)
+OBSERVED SOURCE-ADAPTER LOCK 1984 -> 21204
+✔ INDEPENDENT: source entry first blocks the same party/movement gate primitive (653.9644ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14962.0457

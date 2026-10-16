@@ -122,6 +122,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 - **G4A6 current decision / local evidence:** [Owner decisions and isolated SQL candidate](../operations/legacy-001G4A6-local-creature-hp-candidate.md): up to two decimal percentage places; retain whole HP/discard fraction on renewed combat; wounded maxHP edits preserve missing HP with floor boundary pending; quiescent ended reassignment permitted. Native local26-test fixture passes, including4 independent-session cases; production integration remains unimplemented and hosted behavior unverified. Floor1 and rate-edit fractional policy not approved. DESIGN AGREED status retained.
 
+- **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
+
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
 
 - **Status / kind:** DESIGN AGREED; Design decision. Authoritative source disposition: 001A classification DESIGN AGREED; see linked original report for exact decision.
@@ -136,6 +138,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **G4A4 current approval / proof:** [Owner contract and isolated proof](../operations/legacy-001G4A4-creature-regen-accounting-proof.md) supersede G4A3 provisional rate/range/init questions: 5% default for new/existing creatures, configurable decimal 0–100%, zero disables ordinary regeneration only, no historical initialization healing, persistent fractional HP between settlements, active-attachment rate-edit refusal. Pure model only; exact production transition coverage, interruption/edit policy and persistence remain unimplemented/unverified. DESIGN AGREED remains unchanged.
 
 - **G4A6 current decision / local evidence:** [Owner decisions and isolated SQL candidate](../operations/legacy-001G4A6-local-creature-hp-candidate.md): up to two decimal percentage places; retain whole HP/discard fraction on renewed combat; wounded maxHP edits preserve missing HP with floor boundary pending; quiescent ended reassignment permitted. Native local26-test fixture passes, including4 independent-session cases; production integration remains unimplemented and hosted behavior unverified. Floor1 and rate-edit fractional policy not approved. DESIGN AGREED status retained.
+
+- **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
 
@@ -290,6 +294,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **G4A4 current approval / proof:** [Owner contract and isolated proof](../operations/legacy-001G4A4-creature-regen-accounting-proof.md) supersede G4A3 provisional rate/range/init questions: 5% default for new/existing creatures, configurable decimal 0–100%, zero disables ordinary regeneration only, no historical initialization healing, persistent fractional HP between settlements, active-attachment rate-edit refusal. Pure model only; exact production transition coverage, interruption/edit policy and persistence remain unimplemented/unverified. DESIGN AGREED remains unchanged.
 
 - **G4A6 current decision / local evidence:** [Owner decisions and isolated SQL candidate](../operations/legacy-001G4A6-local-creature-hp-candidate.md): up to two decimal percentage places; retain whole HP/discard fraction on renewed combat; wounded maxHP edits preserve missing HP with floor boundary pending; quiescent ended reassignment permitted. Native local26-test fixture passes, including4 independent-session cases; production integration remains unimplemented and hosted behavior unverified. Floor1 and rate-edit fractional policy not approved. DESIGN AGREED status retained.
+
+- **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
 ### Authority and legacy governance
 

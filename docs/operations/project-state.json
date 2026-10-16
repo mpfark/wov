@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-15T23:06:57.341Z",
-  "based_on_source_sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
+  "updated_at": "2026-10-16T06:27:14.829Z",
+  "based_on_source_sha": "ac207c016e814d62fe273fa67af3710862322b1b",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2258,6 +2258,28 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Own g4a6 namespace under guarded disposable local databases only. Candidate SHA256 c2dd470dc8776724d82035487f1f6089f8bbfbfe687690791dcd86f073126d9b.26 PostgreSQL18.6 Windows READ COMMITTED tests PASS including4 independently connected transaction races with pg_blocking_pids/advisory-lock evidence;34 unchanged G4A4 baseline tests PASS. Exact rate/remainder/microsecond accounting, combat reset, guards, projection/version/generation/rollback and reduced entry/claim/commit/respawn/reassignment exercised. Reduced tables and integration doubles omit actual Auth/party/trigger/reward/scheduler/installed composition; not canonical/hosted concurrency proof. Floor1 opt-in test branch pending owner choice; rate-edit credit preservation remains proposed. No production/Edge/UI/migration or hosted changes. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
+      "timestamp": "2026-10-16T06:27:14.829Z",
+      "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
+      "identity": "ENG-LEGACY-001G4A7 — owner-approved living floor and rate-change accounting rules",
+      "evidence_type": "operator_reported",
+      "reporting_actor": "Mik",
+      "directly_verified": false,
+      "evidence": "Owner confirms living HP minimum1 when preserving missingHP during max reduction; no implicit death/loot/reward/respawn; dead ordinary semantics retained. Rate edits settle old eligible time/apply wholeHP, discard fractional credit, apply new rate and start fresh accounting at edit cutoff; active attachment refusal unchanged. All prior creature HP requirements preserved. Design/local source-adapter approval only; no production or hosted changes."
+    },
+    {
+      "status": "authored",
+      "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
+      "timestamp": "2026-10-16T06:27:14.829Z",
+      "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
+      "identity": "ENG-LEGACY-001G4A7 — bounded local source-adapter integration exercised, production parity UNVERIFIED",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Ten hash-pinned source identities from nine unchanged files; full selected entry/hostile/intent-lock-wrapper/seed/regen/wake-heal/respawn/generation-trigger bodies rebound to fixture namespace/clock, partial claim snapshot and exact commit guard/HP/generation/effect-delete/consumption fragments.24 PostgreSQL18.6 READ COMMITTED native tests PASS including6 independently connected observed blocking cases; full party/movement/trigger/Auth/catalogue/reward/commit composition not executed. Source legacy healing conflict reproduced locally; early entry lease fencing corrected local loss-of-credit edge; owner floor/rate-reset wrappers tested.34 unchanged historical pure baseline tests PASS. No production/UI/Edge/SQL/migration/history or hosted changes. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED and prior closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2490,14 +2512,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
-    "timestamp": "2026-10-15T23:06:57.341Z",
-    "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
-    "identity": "PROPOSED — confirm floor/rate-credit policy then local source-adapter integration candidate",
+    "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
+    "timestamp": "2026-10-16T06:27:14.829Z",
+    "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
+    "identity": "PROPOSED — local arrival/departure/guarded-writer source composition before production authoring",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Owner decision needed only for nonpositive living max-edit boundary and rate-edit fractional-credit behavior; approved rate precision, combat discard, missingHP preservation and quiescent reassignment are not reopened. Separately authorize exact source-bound adapters and native proofs for retained entry/intent/stance/claim/commit/arrival/party/lifecycle/respawn/Admin/Arena integration and transfer history. Fixture SQL is nondeployable; no installation or hosted route assumed. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED."
+    "evidence": "No floor/rate policy decision remains pending. Separately authorize source-bound authoritative arrival, immediate solo/party departure/participation-ending and guarded Admin/raw-writer adapter tests, including multi-node/trigger lock coverage. Then one coherent private production-authoring cutover, not direct installation of fixture SQL. Claim/commit outer stack, real Auth/Arena/catalogue/reward/worker and installed parity remain evidence gates. G4-R1/E13/G/parent OPEN, G3 deferred/G3D BLOCKED; no hosted route or production activation assumed."
   },
   "volatile_runtime_observations": [
     {
