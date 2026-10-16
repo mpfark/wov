@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T06:54:05.053Z",
-  "based_on_source_sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
+  "updated_at": "2026-10-16T07:59:55.628Z",
+  "based_on_source_sha": "de27e6b0132d5cebd61eeeb92e44a6773ef8b26d",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2291,6 +2291,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Six complete pinned selected arrival/immediate solo-party departure/legacy cleanup bodies in isolated namespace, reused G4A7 partial claim/commit and explicit doubles.21 native PostgreSQL18.6 READ COMMITTED tests PASS including8 independently connected lock-observed cases; old-rate settlement/fraction discard, floor1, raw protected-payload and retained-delete refusals, quiet-ended transfer tested. Production request creation/party lifecycle/full trigger/Auth/ACL/commit/schema and arbitrary early coverage remain unproven.34 unchanged accounting tests PASS. No production runtime/UI/Edge/SQL/history or hosted changes. G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "de27e6b0132d5cebd61eeeb92e44a6773ef8b26d",
+      "timestamp": "2026-10-16T07:59:55.628Z",
+      "artifact": "docs/operations/legacy-001G4A9-movement-party-coverage-integration.md",
+      "identity": "ENG-LEGACY-001G4A9 — source-bound movement requests/party lifecycle/early coverage exercised locally; production composition incomplete",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Twenty additional pinned identities from archived F5 and unchanged source; F6 reconstructed body matches historical F9 normalized fingerprint.25 PostgreSQL18.6 READ COMMITTED tests PASS including12 independent-session lock cases. Supported request creation, frozen same-node movers, off-node/pending coverage, selected lifecycle/arrival/tank triggers, missing encounters, retained projections, rollback and claim fencing exercised over reduced schemas/Auth/scope doubles and partial commit. OPEN G4A9-R1: unchanged party predecessor result cost ambiguity causes local default refusal/42702; successful party cases use explicitly qualified local-only result aggregate, not production parity. Fresh installed/compiler context unknown. No production source/SQL/migration/runtime or hosted changes. G4-R1/G4-R2/E13/G/parent OPEN, G3 deferred/G3D BLOCKED; accepted closures/limitations preserved."
     }
   ],
   "known_blockers": [
@@ -2523,14 +2534,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
-    "timestamp": "2026-10-16T06:54:05.053Z",
-    "artifact": "docs/operations/legacy-001G4A8-arrival-departure-guarded-writers.md",
-    "identity": "PROPOSED — bounded local movement predecessor/party lifecycle/early coverage composition",
+    "sha": "de27e6b0132d5cebd61eeeb92e44a6773ef8b26d",
+    "timestamp": "2026-10-16T07:59:55.628Z",
+    "artifact": "docs/operations/legacy-001G4A9-movement-party-coverage-integration.md",
+    "identity": "PROPOSED — narrow party-result compatibility disposition/candidate before remaining production HP composition",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Separately authorize supported movement/request-creation and party lifecycle predecessor composition with frozen movers/off-node coverage and real character triggers, including missing encounters/multiple creatures. G4A8 selected finalizer/arrival/guard tests do not establish complete production integration. No direct fixture promotion or hosted installation; G4-R1/G4-R2/E13/G/parent OPEN, G3 deferred/G3D BLOCKED. Preserve all existing accepted limitations and administrative-only XP grant pause."
+    "evidence": "Separately authorize review/preparation of terminal party-result column qualification with source drift guard and unchanged privileges/response/exception semantics; current installed compiler context unknown. G4A9 local qualification is not production authorization. Full claim/commit/stance/effect/Arena/trigger/raw Admin/bulk lifecycle composition and approved installed/isolation route remain activation gates. No hosted installation or new balance decision; preserve G4-R1/G4-R2/E13/G/parent OPEN and G3 deferred/G3D BLOCKED."
   },
   "volatile_runtime_observations": [
     {
