@@ -1,0 +1,55 @@
+-- REVIEW ARTIFACT ONLY. Not authorized for execution; not a migration.
+-- One catalog SELECT. Requires a separately approved, already enforced read-only route.
+WITH observation AS (
+ SELECT statement_timestamp() AS observed_at, current_database() AS database_name,
+ current_user AS execution_role, session_user AS session_role,
+ current_setting('server_version') AS server_version,
+ current_setting('transaction_read_only') AS transaction_read_only,
+ current_setting('transaction_isolation') AS transaction_isolation,
+ current_setting('plpgsql.variable_conflict',true) AS metadata_backend_variable_conflict
+), gate AS (
+ SELECT *, transaction_read_only='on'
+ AND execution_role !~ '^sandbox_exec($|_)'
+ AND session_role !~ '^sandbox_exec($|_)' AS route_checks_pass FROM observation
+), targets(identity,expected_definition_sha256,expected_body_sha256) AS (
+ VALUES
+ ('public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)',
+ '6a1fabd7dbdea1ad132e189d3eb48c0b7caa625b5b0fe81b18759c254f2aacf4',
+ '4b7f16cfd9da168704831ebf641740e9ce69cd206272a39244b076855adb1ea5'),
+ ('public.combat2_party_depart_without_immediate_transition(uuid,uuid,uuid)',
+ '741363f1b31e75af76a2f92968897caa1ee13876c33fdedf9632ffcdc10cde97',
+ '8f6b3ea859a2a9343f691439e52b0cf6c985a10fccb33eb62a5a7181ac5f2e7d'),
+ ('public.combat2_party_depart(uuid,uuid,uuid)',
+ 'a79b11c049ebbbd2e8c2843404aded448c92e1c7483e1ab56f7f90457ccd87e0',
+ 'd075ac4c7d454451b89142337c84e515b3d2a7369797baf391076a1d042a28ad')
+), metadata AS (
+ SELECT t.*,p.oid,pg_get_function_identity_arguments(p.oid) AS arguments,
+ pg_get_function_result(p.oid) AS result_type,pg_get_userbyid(p.proowner) AS owner,
+ l.lanname AS language,p.prosecdef AS security_definer,p.provolatile AS volatility,
+ p.proconfig AS function_settings,p.proacl::text AS raw_acl,
+ pg_get_functiondef(p.oid) AS definition,p.prosrc AS body,
+ encode(sha256(convert_to(regexp_replace(replace(pg_get_functiondef(p.oid),E'\r\n',E'\n'),'[[:space:]]+',' ','g'),'UTF8')),'hex') AS definition_sha256,
+ encode(sha256(convert_to(p.prosrc,'UTF8')),'hex') AS body_sha256,
+ (SELECT jsonb_agg(jsonb_build_object('grantee',CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+ 'grantor',pg_get_userbyid(a.grantor),'privilege',a.privilege_type,'grantable',a.is_grantable))
+ FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a) AS acl_entries,
+ p.proacl IS NULL AS acl_uses_default,
+ (SELECT jsonb_agg(jsonb_build_object('role',r.name,'role_exists',r.oid IS NOT NULL,
+ 'effective_execute',CASE WHEN r.oid IS NULL OR p.oid IS NULL THEN NULL ELSE has_function_privilege(r.oid,p.oid,'EXECUTE') END) ORDER BY r.name)
+ FROM (SELECT v.name,pr.oid FROM (VALUES ('anon'),('authenticated'),('service_role'),('postgres')) v(name)
+ LEFT JOIN pg_roles pr ON pr.rolname=v.name) r) AS effective_execute
+ FROM targets t LEFT JOIN pg_proc p ON p.oid=to_regprocedure(t.identity)
+ LEFT JOIN pg_language l ON l.oid=p.prolang
+ WHERE (SELECT route_checks_pass FROM gate)
+)
+SELECT jsonb_build_object('observation',to_jsonb(g),
+ 'route_approval','NOT_ESTABLISHED_BY_QUERY',
+ 'status',CASE WHEN g.route_checks_pass THEN 'METADATA_FOR_REVIEW_ONLY' ELSE 'BLOCKED' END,
+ 'functions',CASE WHEN g.route_checks_pass THEN
+ (SELECT jsonb_agg(to_jsonb(m) || jsonb_build_object('comparison',
+ CASE WHEN m.oid IS NULL THEN 'MISSING_REQUIRES_EVIDENCE'
+ WHEN m.definition_sha256=m.expected_definition_sha256 AND m.body_sha256=m.expected_body_sha256 THEN 'MATCHES_HISTORICAL_ORIGINAL'
+ WHEN m.identity='public.combat2_party_depart_without_canary_gate(uuid,uuid,uuid)'
+ AND m.body_sha256='e01ed3c1d24627771f40a95960eecd1b39eed7d089c371b2eb5abdf0884de7b1' THEN 'MATCHES_LOCAL_QUALIFICATION_BODY_REVIEW_METADATA'
+ ELSE 'DIVERGENT_REVIEW' END) ORDER BY m.identity) FROM metadata m)
+ ELSE NULL END) AS review_envelope FROM gate g;

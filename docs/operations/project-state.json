@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T08:30:30.875Z",
-  "based_on_source_sha": "d5d92f2b27a96dfda41105ce178ab576aeb07978",
+  "updated_at": "2026-10-16T08:54:01.752Z",
+  "based_on_source_sha": "68169465c89851017f6c1160fb2a426445ee5e22",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2313,6 +2313,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Original private party source reproduces underlying42702/structured rollback under error; use_variable succeeds but reports last scalar cost5 for follower actually charged8MP. Explicit global/function/directive/cache tests distinguish compiler semantics. One fixture-only DO qualifies terminal member aggregate, guards exact source and preserves all pg_proc metadata/ACL/settings and complete effective F6 body.23 PostgreSQL18.6 tests PASS including3 observed independent-session HP/party/claim cases;34 accounting baseline tests PASS. Correction required for reviewed source determinism, not proof of hosted defect; fresh installed source/settings/authority and caller composition unresolved. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED. No production/history/runtime or hosted changes; all prior dispositions preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "68169465c89851017f6c1160fb2a426445ee5e22",
+      "timestamp": "2026-10-16T08:54:01.752Z",
+      "artifact": "docs/operations/legacy-001G4A11-party-installed-parity-plan.md",
+      "identity": "ENG-LEGACY-001G4A11 — party movement parity preparation; execution not authorized",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Three exact movement-function catalog targets and non-executable SELECT-only review artifact prepared. Historical F5/F9 not fresh installed parity. No database query executed; route BLOCKED pending named permitted enforced read-only execution approval. Original/already-corrected/divergent gates defined. G4A9-R1/G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; previous dispositions preserved."
     }
   ],
   "known_blockers": [
@@ -2545,14 +2556,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "d5d92f2b27a96dfda41105ce178ab576aeb07978",
-    "timestamp": "2026-10-16T08:30:30.875Z",
-    "artifact": "docs/operations/legacy-001G4A10-party-movement-sql-compatibility.md",
-    "identity": "PROPOSED — exact party movement helper installed-parity preparation before installable correction",
+    "sha": "68169465c89851017f6c1160fb2a426445ee5e22",
+    "timestamp": "2026-10-16T08:54:01.752Z",
+    "artifact": "docs/operations/legacy-001G4A11-party-installed-parity-plan.md",
+    "identity": "PROPOSED — separately approve exact party movement metadata route and artifact",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Separately authorize minimal read-only evidence preparation for exact combat2_party_depart_without_canary_gate identity/body/settings/EXECUTE and directly necessary wrapper/F6 compatibility. No approved hosted route established or query/execution authorized here; G3D remains BLOCKED. Fixture candidate is not installation SQL; G4A9-R1 stays OPEN. Full creature HP commit/effect/stance/Admin/maintenance composition remains a separate gate. No balance change, prior closure change or runtime claim."
+    "evidence": "Owner must separately name and approve permitted transactionally enforced read-only route, identity, project and exact review-script hash. No sandbox execution or read-write workaround. No route established; no execution or installation authorized. Review returned parity before any separately authorized forward correction."
   },
   "volatile_runtime_observations": [
     {
