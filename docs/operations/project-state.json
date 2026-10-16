@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T18:41:05.355Z",
-  "based_on_source_sha": "21620622adcea74ea11b229683533ce7f15e285a",
+  "updated_at": "2026-10-16T22:10:45.310Z",
+  "based_on_source_sha": "e0f7527463f3886a8c591b19d0520708fa142442",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2379,6 +2379,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Documentation-only architecture index, two Mermaid ownership/write-flow diagrams with source/evidence tables, explicit Admin operation/input/expected-state/transaction/retry/lock contracts and ordered readiness checklist. Reuses G4A15 evidence; no new DB/runtime testing. A-D stale form, retained deletion, NULL-node and save/reward atomicity recommendations remain PENDING, not approved policy. Exact replay/receipt promise requires review. Existing reward request-to-row lock order preserved in design; no nesting after dependent rows. Mermaid parser unavailable; structural/manual checks only. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; earlier closures/limitations/admin XP pause preserved. No implementation or installation authorization."
+    },
+    {
+      "status": "authored",
+      "sha": "e0f7527463f3886a8c591b19d0520708fa142442",
+      "timestamp": "2026-10-16T22:10:45.310Z",
+      "artifact": "docs/operations/legacy-001G4A17-admin-implementation-readiness.md",
+      "identity": "ENG-LEGACY-001G4A17 — owner-approved A-D/replay consolidated; concrete implementation readiness plan only",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Owner approves stale authored-field conflicts, retained-reference deletion refusal, limited quiet/unprojected/unreferenced NULL-node unassignment, separate metadata/config and reward transactions with partial-result reporting, durable consequential replay and metadata-only expected-field/already_matches without receipt or UUID conflict claims. Canonical spec and architecture now record approved policy, not installed behavior. Eight candidate RPC interfaces, exact source mapping, minimal shared authoring receipt recommendation, request/row lock order, creatures-only DML/known-helper containment plan and five dependent implementation slices documented; none executed. Exact receipt retention/cleanup pending. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 correction deferred; prior limitations/closures/admin XP pause unchanged. No runtime/SQL/grant/DB/hosted operations."
     }
   ],
   "known_blockers": [
@@ -2611,14 +2622,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "21620622adcea74ea11b229683533ce7f15e285a",
-    "timestamp": "2026-10-16T18:41:05.355Z",
-    "artifact": "docs/operations/legacy-001G4A16-admin-contract-architecture.md",
-    "identity": "OWNER DECISION PENDING — G4A16 A-D and scoped replay promise before local implementation",
+    "sha": "e0f7527463f3886a8c591b19d0520708fa142442",
+    "timestamp": "2026-10-16T22:10:45.310Z",
+    "artifact": "docs/operations/legacy-001G4A17-admin-implementation-readiness.md",
+    "identity": "PROPOSED — separately authorize G4A17 slice1 local metadata and raw-DML-containment proof",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Owner to approve/amend stale authored-field conflicts, retained-history deletion refusal, limited safe NULL-node unassignment and separate save/reward operations, plus explicit replay promise. Recommendations are not approval. Subsequent bounded contract-to-source/containment work needs separate authorization; no runtime/SQL/privilege/hosted changes or audit expansion permitted. All existing production gates remain."
+    "evidence": "A-D/replay policy approved; do not request it again. Next recommended task is isolated local metadata expected-field/already_matches authority and creature-only browser DML denial with positive owner/internal tests, using pinned source and explicit doubles. Separate implementation/testing authorization still required; no production RPC, UI, SQL, grant or hosted changes now. Exact new consequential-receipt retention/cleanup requires owner disposition before production activation, not reapproval of metadata policy."
   },
   "volatile_runtime_observations": [
     {
