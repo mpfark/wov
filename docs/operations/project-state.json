@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T15:06:58.940Z",
-  "based_on_source_sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
+  "updated_at": "2026-10-16T18:41:05.355Z",
+  "based_on_source_sha": "21620622adcea74ea11b229683533ce7f15e285a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2368,6 +2368,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "25 native PostgreSQL18.6 tests PASS including8 observed independent-session cases. Complete CreatureManager save/delete/decoder and NodeEditor assignment handlers execute with actual pure generation/boss modules through private transport; complete role helpers, reward RPC/trigger and prior canonical progression chain loaded. Raw full-object save locally reproduces healing/projection divergence; private explicit metadata/config guards preserve wounds, old-rate eligibility, missing HP, claims/generation/retained references. Actual worker death/XP still executes. Existing two-request partial-save semantics retained. Reduced Auth/RLS/schema, metadata-only translation, conservative delete/unassignment/creation, external/installed/runtime limitations explicit. No production/UI/history/grant/hosted changes. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; all prior limitations preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "21620622adcea74ea11b229683533ce7f15e285a",
+      "timestamp": "2026-10-16T18:41:05.355Z",
+      "artifact": "docs/operations/legacy-001G4A16-admin-contract-architecture.md",
+      "identity": "ENG-LEGACY-001G4A16 — proposed Creature Admin authority contract and visual architecture; decisions pending",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Documentation-only architecture index, two Mermaid ownership/write-flow diagrams with source/evidence tables, explicit Admin operation/input/expected-state/transaction/retry/lock contracts and ordered readiness checklist. Reuses G4A15 evidence; no new DB/runtime testing. A-D stale form, retained deletion, NULL-node and save/reward atomicity recommendations remain PENDING, not approved policy. Exact replay/receipt promise requires review. Existing reward request-to-row lock order preserved in design; no nesting after dependent rows. Mermaid parser unavailable; structural/manual checks only. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11 BLOCKED; G3 deferred/G3D BLOCKED; earlier closures/limitations/admin XP pause preserved. No implementation or installation authorization."
     }
   ],
   "known_blockers": [
@@ -2600,14 +2611,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
-    "timestamp": "2026-10-16T15:03:16.661Z",
-    "artifact": "docs/operations/legacy-001G4A15-creature-admin-configuration-integration.md",
-    "identity": "PROPOSED — bounded creature Admin input/authority contract for production authoring",
+    "sha": "21620622adcea74ea11b229683533ce7f15e285a",
+    "timestamp": "2026-10-16T18:41:05.355Z",
+    "artifact": "docs/operations/legacy-001G4A16-admin-contract-architecture.md",
+    "identity": "OWNER DECISION PENDING — G4A16 A-D and scoped replay promise before local implementation",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Separately authorize explicit metadata/config input and expected-state mapping for CreatureManager/NodeEditor/Populate, raw protected-write refusal design without late node locks, and owner disposition of retained deletion/unassignment. Reuse G4A15 source proof; no runtime/UI/SQL implementation, broader audit, reward redesign or hosted installation authorized. Existing G4A11 and other production gates unchanged."
+    "evidence": "Owner to approve/amend stale authored-field conflicts, retained-history deletion refusal, limited safe NULL-node unassignment and separate save/reward operations, plus explicit replay promise. Recommendations are not approval. Subsequent bounded contract-to-source/containment work needs separate authorization; no runtime/SQL/privilege/hosted changes or audit expansion permitted. All existing production gates remain."
   },
   "volatile_runtime_observations": [
     {
