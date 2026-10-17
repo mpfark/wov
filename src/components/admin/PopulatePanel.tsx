@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, Swords, X } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
+import { generateCreatureStats } from '@/lib/game-data';
 
 interface GeneratedCreature {
   temp_id?: string;
