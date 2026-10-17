@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-17T11:03:25.187Z",
-  "based_on_source_sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
+  "updated_at": "2026-10-17T14:48:44.738Z",
+  "based_on_source_sha": "61c4aadcb68451f8c2dbc8c54f5a123be6afee36",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2434,6 +2434,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Real resolver releases engagement only after last living present participant and pending work are gone; public SQL commit persists that generation/encounter-fenced transition. Consolidated replacement candidate wires existing public entry/hostile/claim/commit/solo-party movement/arrival/respawn functions and cuts over maintenance/wake healing. Full transaction executed in existing reduced PostgreSQL18.6 fixture;51 native cases,14 observed blocking cases (10 reused+4 new);49 compatibility tests and257 Combat2/application/state tests pass, not hosted evidence. Naked arrival without early coverage fails closed. Frontend gate OFF; installed source/authority/isolation parity and G4A9-R1/G4A11 remain release gates. No hosted operation, migrations/history edits, grants, deployment or frontend publication. G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/four progression limitations/admin XP grant pause preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "61c4aadcb68451f8c2dbc8c54f5a123be6afee36",
+      "timestamp": "2026-10-17T14:48:44.738Z",
+      "artifact": "docs/operations/legacy-001G4A22-creature-hp-release-readiness.md",
+      "identity": "ENG-LEGACY-001G4A22 — release procedure prepared; installation BLOCKED by route/parity/recovery gates",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Unchanged G4A21 SHA256 91092a0013fb325f2100797fa1d07d655b8d0a793400b959be382aa882857e3f verified against deterministic assembly. Existing local51 native/49 compatibility/257 application-state evidence reused, not hosted proof. No approved WoV read-only SQL interface exposed; no hosted call or rejected-route retry. Exact function/trigger/permission/caller/history preflight, staged database-first release, forward state-preserving recovery and disposable acceptance checklist prepared. G4A9-R1/party installed parity, actual caller isolation, unknown standalone/privileged routes and approved recovery controls remain gates. No code/SQL/migration/deployment/gate changes. All prior OPEN/BLOCKED/deferred statuses, closures, four progression limitations and administrative XP grant pause preserved."
     }
   ],
   "known_blockers": [
@@ -2665,15 +2676,15 @@
     }
   ],
   "next_approved_task": {
-    "status": "authored",
-    "sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
-    "timestamp": "2026-10-17T11:03:25.187Z",
-    "artifact": "docs/operations/legacy-001G4A21-public-hp-integration.md",
-    "identity": "PROPOSED — exact G4A21 candidate and permitted installed-parity readiness review",
+    "status": "blocked",
+    "sha": "61c4aadcb68451f8c2dbc8c54f5a123be6afee36",
+    "timestamp": "2026-10-17T14:48:44.738Z",
+    "artifact": "docs/operations/legacy-001G4A22-creature-hp-release-readiness.md",
+    "identity": "BLOCKED — operator approved read-only route attestation and bounded G4A22 metadata export",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Review exact consolidated source/ACL/locking prerequisites and recovery; prepare scoped installed parity only through an approved read-only route. Preserve G3D/G4A11 BLOCKED; do not invent a hosted access workaround. No installation, Edge deployment or frontend gate activation authorized. Unknown privileged/standalone arrival callers and isolated G4A10 party qualification remain explicit gates."
+    "evidence": "Operator must identify approved interface/principal/project context and already enforced read-only transactions, then supply exact bounded metadata evidence under the release checklist. No sandbox_exec, read-write workaround or new tooling experiment. If route unavailable stop at this external dependency. No installation, migration execution, Edge deployment, frontend gate activation or gameplay probe authorized."
   },
   "volatile_runtime_observations": [
     {
