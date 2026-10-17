@@ -1,5 +1,7 @@
 # Creature HP/Admin integration readiness
 
+Latest [G4A21 public-source integration](../operations/legacy-001G4A21-public-hp-integration.md): quiescent resolver/commit transition and shared accounting now authored in the actual public function composition and locally executed through the consolidated forward candidate. Installation/Edge deployment/activation remain unauthorized and gated by fresh permitted parity, caller isolation and retained party/privileged-path limitations. G4A19/G4A20 paragraphs below describe historical starting scope.
+
 Latest [G4A20 partial integration](../operations/legacy-001G4A20-shared-hp-integration.md) adds locally tested projected config/boss/reassignment compatibility and maintenance replacement.49 native tests pass through existing source adapters. Public caller hook promotion remains incomplete, and retained engagement prevents regeneration after a hostile retreat. **NO-GO for installation; activation OFF.** The G4A19 summary below is historical starting scope, not the latest candidate's complete capability list.
 
 Current [G4A19 implementation](../operations/legacy-001G4A19-simplified-admin-implementation.md) follows owner-approved G4A18 simplification. No replay-policy decision remains pending for routine authoring. No production installation or frontend publication occurred.

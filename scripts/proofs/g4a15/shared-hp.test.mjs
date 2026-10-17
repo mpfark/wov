@@ -92,11 +92,11 @@ test('G4A20 claim lease is blocked time even without an intervening maintenance 
  assert.equal((await commit(x.o,cl,p,5)).kind,'committed');
  await regen(x,8);assert.equal((await row(x.o)).hp,40);await regen(x,9);assert.equal((await row(x.o)).hp,42);
 });
-test('G4A20 concrete retained-engagement blocker: no fighters does not end active combat or authorize healing',opts,async()=>{
+test('G4A21 supersedes G4A20 retained-engagement blocker through real resolver quiescence',opts,async()=>{
  const x=await integrated();await x.o`UPDATE g4a6.node_creature SET engaged=true`;
- const result=await tick(x,0);assert.notEqual(result.p.status,'ended');
- await regen(x,20);assert.equal((await row(x.o)).hp,40);assert.equal((await row(x.o)).regen_eligible_since,null);
- console.log('BLOCKER: living engaged creature persists with no fighters; no invented encounter-ending policy.');
+ const result=await tick(x,0);assert.equal(result.p.status,'ended');
+ await regen(x,20);assert.equal((await row(x.o)).hp,50);
+ // The G4A20 archived output remains original evidence; this is current source.
 });
 test('G4A20 observed canonical death/reward commit versus maintenance preserves death and receipt replay',opts,async()=>{
  const x=await integrated();const d=await damage(x,{amount:40});

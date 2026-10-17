@@ -1587,6 +1587,11 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   for (const creature of creatures.values()) {
     const died = creature.row.is_alive && creature.hp === 0;
     if (died) {
+      // A dead caster already cannot act. Retire only its future cast/target
+      // state; damage/effects resolved earlier in this tick remain committed.
+      creature.pendingAction = null;
+      creature.engaged = false;
+      creature.tankFighterId = null;
       emit({
         kind: 'creature_died',
         actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
@@ -1707,6 +1712,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         hp: creature.hp,
         is_alive: creature.hp > 0,
         damaged: creature.damaged,
+        ...(died ? { engaged: false } : {}),
         pending_action: creature.pendingAction ?? null,
         tank_fighter_id: creature.tankFighterId,
       });
@@ -1789,10 +1795,29 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
   }
 
   // ── 5. encounter lifecycle ────────────────────────────────────
-  const anythingPending =
-    [...creatures.values()].some((c) => c.hp > 0 && c.row.is_alive && c.engaged) ||
-    snapshot.effects.some((e) => !['autoattack', 'stack_source'].includes(e.kind)
-      && e.config?.persistent_stance !== true && !expiredIds.has(e.id) && !e.is_reservation);
+  const keepsCombatOpen = (e: { kind: string; config?: Record<string, unknown>; is_reservation?: boolean }) =>
+    !['autoattack', 'stack_source'].includes(e.kind) && e.config?.persistent_stance !== true && !e.is_reservation;
+  const pendingWork =
+    [...creatures.values()].some(c => c.hp > 0 && c.row.is_alive && c.pendingAction !== null) ||
+    snapshot.effects.some(e => keepsCombatOpen(e) && !expiredIds.has(e.id) && !proposed.effects_delete.includes(e.id)) ||
+    proposed.effects_insert.some(keepsCombatOpen) ||
+    (snapshot.pending_events ?? []).some(e => !proposed.pending_event_ids.includes(e.id)) ||
+    snapshot.intents.some(i => !proposed.intent_ids.includes(i.id));
+  // Departure does not cancel a telegraph or an effect. Only after this tick
+  // has resolved/consumed its work may an empty encounter release engagement.
+  if (livingCharacters().size === 0 && !pendingWork) {
+    for (const creature of creatures.values()) {
+      if (!creature.engaged && creature.tankFighterId === null) continue;
+      creature.engaged = false;
+      creature.tankFighterId = null;
+      const patch = proposed.creatures.find(c => c.id === creature.row.id);
+      if (patch) Object.assign(patch, { engaged: false, tank_fighter_id: null });
+      else proposed.creatures.push({ id: creature.row.id, creature_id: creature.row.creature_id,
+        spawn_seq: creature.row.spawn_seq, engaged: false, tank_fighter_id: null });
+    }
+  }
+  const anythingPending = pendingWork ||
+    [...creatures.values()].some(c => c.hp > 0 && c.row.is_alive && c.engaged);
   if (!anythingPending) proposed.status = 'ended';
 
   // Synthetic character-stance projections never address node_effect rows.

@@ -153,7 +153,7 @@ export interface SnapshotCreature {
   spawn_seq: number;
   hp: number;
   is_alive: boolean;
-  /** Hostility for this exact node-creature life; monotonic until death/reset. */
+  /** Hostility for this life; released on death/reset or genuine quiescence. */
   engaged: boolean;
   pending_action: SnapshotPendingAction | null;
   tank_fighter_id: string | null;
@@ -384,6 +384,8 @@ export interface ProposedCreatureState {
   hp?: number;
   is_alive?: boolean;
   damaged?: boolean;
+  /** Cleared only by the quiescent no-participant lifecycle transition. */
+  engaged?: boolean;
   pending_action?: SnapshotPendingAction | null;
   tank_fighter_id?: string | null;
 }

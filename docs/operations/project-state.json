@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-17T08:57:48.636Z",
-  "based_on_source_sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
+  "updated_at": "2026-10-17T11:03:25.187Z",
+  "based_on_source_sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2423,6 +2423,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "49 PostgreSQL18.6 tests PASS (37 reused+12 new);12 observed independent-session cases (10 reused+2 new), not hosted evidence. New4s helper composed with complete source through existing local adapters; projected config, boss validation, safe-ended transfer and maintenance candidate added. Public transition hook promotion incomplete; actual resolver retains active engagement with no fighters, so hostile-retreat recovery is not proved and remains blocked. NO-GO installation/activation; existing client gate OFF. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN, G3 deferred, G3D/G4A11 BLOCKED; prior closures/four F limitations/admin XP grant pause preserved. No hosted SQL, installed migrations, runtime resolver/application changes, deployment or publication."
+    },
+    {
+      "status": "authored",
+      "sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
+      "timestamp": "2026-10-17T11:03:25.187Z",
+      "artifact": "docs/operations/legacy-001G4A21-public-hp-integration.md",
+      "identity": "ENG-LEGACY-001G4A21 — public HP transition wiring locally executed; not installed/deployed",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Real resolver releases engagement only after last living present participant and pending work are gone; public SQL commit persists that generation/encounter-fenced transition. Consolidated replacement candidate wires existing public entry/hostile/claim/commit/solo-party movement/arrival/respawn functions and cuts over maintenance/wake healing. Full transaction executed in existing reduced PostgreSQL18.6 fixture;51 native cases,14 observed blocking cases (10 reused+4 new);49 compatibility tests and257 Combat2/application/state tests pass, not hosted evidence. Naked arrival without early coverage fails closed. Frontend gate OFF; installed source/authority/isolation parity and G4A9-R1/G4A11 remain release gates. No hosted operation, migrations/history edits, grants, deployment or frontend publication. G4-R1/G4-R2/E13/G/parent OPEN; G3 deferred/G3D BLOCKED; prior closures/four progression limitations/admin XP grant pause preserved."
     }
   ],
   "known_blockers": [
@@ -2655,14 +2666,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
-    "timestamp": "2026-10-17T08:57:48.636Z",
-    "artifact": "docs/operations/legacy-001G4A20-shared-hp-integration.md",
-    "identity": "PROPOSED — resolve quiescent ending and promote shared accounting hooks before cutover",
+    "sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
+    "timestamp": "2026-10-17T11:03:25.187Z",
+    "artifact": "docs/operations/legacy-001G4A21-public-hp-integration.md",
+    "identity": "PROPOSED — exact G4A21 candidate and permitted installed-parity readiness review",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Partial candidate is not installable. Smallest next implementation: bounded resolver/commit quiescent-ending transition preserving pending work, then exact public entry/claim/commit/movement/respawn hook promotion using existing early coverage. No new HP owner. Keep activation OFF; authority, caller isolation, installed parity and forward review remain separate release gates. No automatic installation or reopening blocked hosted routes."
+    "evidence": "Review exact consolidated source/ACL/locking prerequisites and recovery; prepare scoped installed parity only through an approved read-only route. Preserve G3D/G4A11 BLOCKED; do not invent a hosted access workaround. No installation, Edge deployment or frontend gate activation authorized. Unknown privileged/standalone arrival callers and isolated G4A10 party qualification remain explicit gates."
   },
   "volatile_runtime_observations": [
     {
