@@ -13,7 +13,7 @@ const candidate=source.replaceAll('public.','g4a6.').replaceAll('auth.uid()','g4
  .replaceAll('pg_catalog,public,pg_temp','pg_catalog,g4a6,pg_temp').replace(/\bnow\(\)/g,'g4a6.test_now()');
 console.log('G4A19 EXACT SQL SHA256 '+createHash('sha256').update(source).digest('hex'));
 const opts={timeout:30000};
-async function fixture(){const x=await setup();
+async function fixture(sql=candidate){const x=await setup();
  await x.o.unsafe(`DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='anon') THEN CREATE ROLE anon; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated; END IF;
@@ -23,7 +23,7 @@ async function fixture(){const x=await setup();
  GRANT SELECT,INSERT,UPDATE,DELETE,TRUNCATE ON g4a6.creatures TO authenticated,anon,service_role;
  GRANT UPDATE(hp) ON g4a6.creatures TO authenticated;
  ALTER TABLE g4a6.characters ADD COLUMN IF NOT EXISTS active_contract jsonb;`);
- await x.o.unsafe(candidate);await auth(x.o);return x;}
+ await x.o.unsafe(sql);await auth(x.o);return x;}
 async function call(c,action,patch={},expected={},id=cid){await auth(c);return(await c`SELECT g4a6.admin_creature_mutate(${action},${id},${c.json(expected)},${c.json(patch)}) r`)[0].r;}
 async function fresh(x){await quiet(x);await x.o`DELETE FROM g4a6.node_creature`;}
 async function settle(c,t,id=cid){await clock(c,t);await c`SELECT g4a6.creature_regen_settle(${id},g4a6.test_now())`;}
@@ -135,3 +135,5 @@ test('G4A19 SQL generated maxima/stats/AC match actual formula across rarities',
    assert.equal(actual.max_hp,expected.hp);assert.equal(actual.ac,expected.ac);assert.deepEqual(actual.stats,expected.stats);
  }
 });
+
+export { fixture, call };

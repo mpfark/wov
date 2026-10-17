@@ -1,5 +1,7 @@
 # Creature HP/Admin integration readiness
 
+Latest [G4A20 partial integration](../operations/legacy-001G4A20-shared-hp-integration.md) adds locally tested projected config/boss/reassignment compatibility and maintenance replacement.49 native tests pass through existing source adapters. Public caller hook promotion remains incomplete, and retained engagement prevents regeneration after a hostile retreat. **NO-GO for installation; activation OFF.** The G4A19 summary below is historical starting scope, not the latest candidate's complete capability list.
+
 Current [G4A19 implementation](../operations/legacy-001G4A19-simplified-admin-implementation.md) follows owner-approved G4A18 simplification. No replay-policy decision remains pending for routine authoring. No production installation or frontend publication occurred.
 
 1. **Admin slice locally implemented, activation OFF.** One action RPC candidate and existing four client paths; direct runtime-field mutation removed. Candidate contains scoped browser DML denial. Metadata, unprojected safe config/create/delete and4-second accounting have local tests. Changed rich boss documents and retained projected config/moves fail closed. Do not enable by flipping a client flag against an incompatible backend.

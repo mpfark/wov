@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-16T22:55:47.622Z",
-  "based_on_source_sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
+  "updated_at": "2026-10-17T08:57:48.636Z",
+  "based_on_source_sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2412,6 +2412,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Owner approves G4A18 replay amendment and replaces60s/5% per minute with2% maxHP per4eligible seconds, configurable0–100/two decimals. Canonical updated; historical reports preserved. Single action RPC/scoped DML containment and exact fractional4s accounting candidate; existing four Admin callers converted/gated with no raw HP/stat fallback. 37 PostgreSQL18.6 tests PASS (25 historical+12 new),10 observed session cases (8 historical+2 new),24 focused application/state tests; no hosted proof. Full transition/healer cutover, retained projected protected edits, rich boss validation and fresh installed/caller parity remain incomplete/fail closed. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 deferred; all prior closures/limitations/admin XP grant pause preserved. No installed migrations, live grants, Edge deployment or frontend publication."
+    },
+    {
+      "status": "authored",
+      "sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
+      "timestamp": "2026-10-17T08:57:48.636Z",
+      "artifact": "docs/operations/legacy-001G4A20-shared-hp-integration.md",
+      "identity": "ENG-LEGACY-001G4A20 — partial shared HP integration; retained engagement/public hook release blockers",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "49 PostgreSQL18.6 tests PASS (37 reused+12 new);12 observed independent-session cases (10 reused+2 new), not hosted evidence. New4s helper composed with complete source through existing local adapters; projected config, boss validation, safe-ended transfer and maintenance candidate added. Public transition hook promotion incomplete; actual resolver retains active engagement with no fighters, so hostile-retreat recovery is not proved and remains blocked. NO-GO installation/activation; existing client gate OFF. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN, G3 deferred, G3D/G4A11 BLOCKED; prior closures/four F limitations/admin XP grant pause preserved. No hosted SQL, installed migrations, runtime resolver/application changes, deployment or publication."
     }
   ],
   "known_blockers": [
@@ -2644,14 +2655,14 @@
   ],
   "next_approved_task": {
     "status": "authored",
-    "sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
-    "timestamp": "2026-10-16T22:55:47.622Z",
-    "artifact": "docs/operations/legacy-001G4A19-simplified-admin-implementation.md",
-    "identity": "PROPOSED — finish existing HP transition/protected Admin compatibility, then separately authorized cutover",
+    "sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
+    "timestamp": "2026-10-17T08:57:48.636Z",
+    "artifact": "docs/operations/legacy-001G4A20-shared-hp-integration.md",
+    "identity": "PROPOSED — resolve quiescent ending and promote shared accounting hooks before cutover",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Reuse G4A7–15 composition and current candidate, no redesign. Integrate4-second helper at real transitions/settlement, legacy healer cutover, boss validator and safe projected operations or explicit disabled limitations. Keep frontend gate OFF. Fresh permitted installed parity/isolation/effective-authority and exact forward review required before separate database install/reconciliation; compatible frontend manual publication by Mik only. No automatic next implementation authorized."
+    "evidence": "Partial candidate is not installable. Smallest next implementation: bounded resolver/commit quiescent-ending transition preserving pending work, then exact public entry/claim/commit/movement/respawn hook promotion using existing early coverage. No new HP owner. Keep activation OFF; authority, caller isolation, installed parity and forward review remain separate release gates. No automatic installation or reopening blocked hosted routes."
   },
   "volatile_runtime_observations": [
     {

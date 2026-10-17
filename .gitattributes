@@ -50,3 +50,4 @@ docs/operations/legacy-001G2B-evidence/* -text
 
 # G4A19 reviewed local candidate bytes; not installed.
 docs/operations/legacy-001G4A19-admin-candidate.sql text eol=lf
+docs/operations/legacy-001G4A20-shared-hp-candidate.sql text eol=lf
