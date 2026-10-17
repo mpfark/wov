@@ -1,12 +1,15 @@
 # ENG-LEGACY-001G4A23 — Lovable installation handoff
 
+**G4A24 preparation update (2026-10-18):** the candidate now adds only the approved wake-healer browser EXECUTE revocation; current SHA-256 `a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523`. Earlier unchanged-candidate/test statements below describe the original review, not this updated artifact. [G4A24 plan](legacy-001G4A24-installation-plan.md) governs the two separately reviewed installation inputs. Separate [party qualification](legacy-001G4A24-party-cost-qualification.sql), SHA-256 `af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9`, must be reviewed/installed/verified first under later approval. Its body guard expects the original public body; already-corrected or divergent installed source stops for reconciliation, never blind replay. The party correction changes no ACL/settings; the HP candidate intentionally revokes only wake-healer EXECUTE from PUBLIC/anon/authenticated. This preparation does not establish fresh hosted parity or authorize any execution.
+
+
 Starting/synchronized SHA: `566abba05118440cbc25d8a6be1904510cf2b074`; recorded baseline is an ancestor; worktree initially clean. **Operator preparation only. No inspection, installation or deployment performed.** Engine rules preserved. External MCP OAuth is blocked; no repair or bypass is needed or authorized for this handoff.
 
 ## Operator decision now
 
 Give Lovable the [inspection prompt](legacy-001G4A23-lovable-inspection-prompt.md). Lovable must first establish its own supported, permitted, transactionally enforced read-only inspection route. If unavailable, return NO-GO and stop. This does not authorize arbitrary read/write SQL, sandbox_exec, role switching or a read-only SET workaround. G3D remains BLOCKED; this handoff does not assert that a route exists.
 
-Only installation input: [G4A21 consolidated SQL](legacy-001G4A21-shared-hp-candidate.sql), SHA-256 **91092a0013fb325f2100797fa1d07d655b8d0a793400b959be382aa882857e3f**, reviewed at the checkpoint above (implementation61c4aadcb68451f8c2dbc8c54f5a123be6afee36). G4A19/G4A20 and the hook fragment are superseded inputs: never install separately. Keep candidate bytes unchanged and outside automatic migrations.
+Only installation input: [G4A21 consolidated SQL](legacy-001G4A21-shared-hp-candidate.sql), SHA-256 **a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523**, reviewed at the checkpoint above (implementation61c4aadcb68451f8c2dbc8c54f5a123be6afee36). G4A19/G4A20 and the hook fragment are superseded inputs: never install separately. Keep candidate bytes unchanged and outside automatic migrations.
 
 ## Bounded inspection checklist
 

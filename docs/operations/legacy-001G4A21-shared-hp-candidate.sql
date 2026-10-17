@@ -771,4 +771,7 @@ END;
  IF before IS DISTINCT FROM after THEN RAISE EXCEPTION 'HP metadata drift: respawn_creatures'; END IF;
 END $hp_patch$;
 
+-- G4A24 approved wake-healer browser EXECUTE containment; trusted server rights retained.
+REVOKE EXECUTE ON FUNCTION public.heal_creatures_on_wake() FROM anon, authenticated, PUBLIC;
+
 COMMIT;

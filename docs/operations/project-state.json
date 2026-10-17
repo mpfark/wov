@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-17T18:05:40.686Z",
-  "based_on_source_sha": "566abba05118440cbc25d8a6be1904510cf2b074",
+  "updated_at": "2026-10-17T22:51:42.553Z",
+  "based_on_source_sha": "0e37519a913a8f8da67de4ca13d803836dccbeea",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2456,6 +2456,17 @@
       "reporting_actor": "Codex",
       "directly_verified": true,
       "evidence": "Unchanged G4A21 SHA256 91092a0013fb325f2100797fa1d07d655b8d0a793400b959be382aa882857e3f; exact G4A22 bounded inventory reused. Lovable must establish its own supported permitted read-only route and return GO/NO-GO; external MCP OAuth not repaired/bypassed. Inspection not executed; installation remains gated by route/parity/party/caller evidence and separately approved quiet-window/recovery controls. One standard Drizzle forward install, post-verification, both matching Edge deployments, backend gate, Admin activation, Mik manual publication and disposable acceptance remain distinct future authorizations. No runtime/SQL/migration changes or hosted operations. All prior OPEN/BLOCKED/deferred findings, closures, four progression limitations, F1 retry issue and administrative XP grant pause preserved."
+    },
+    {
+      "status": "authored",
+      "sha": "0e37519a913a8f8da67de4ca13d803836dccbeea",
+      "timestamp": "2026-10-17T22:51:42.553Z",
+      "artifact": "docs/operations/legacy-001G4A24-artifact-preparation.md",
+      "identity": "ENG-LEGACY-001G4A24 — separate party qualification and updated HP candidate prepared, not installed",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "evidence": "Party artifact SHA256 af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9: exact G4A10 qualification, guarded source and complete metadata preservation. HP candidate SHA256 a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523 adds only wake-healer PUBLIC/anon/authenticated EXECUTE revocation; deterministic assembly updated. Separate installation inputs outside migration channel. Existing Lovable plan reconciled as operator-supplied planning evidence, not new hosted verification. No installation/deployment/frontend or gameplay change; all existing dispositions and administrative XP grant pause preserved. PostgreSQL18.6:23 party cases (3 observed session cases) and51 public HP cases passed;3 project-state tests;23-entry chain, references, exact candidate diff/hash/assembly and whitespace verified. Initial sandbox initdb WAL rename denied; identical disposable-local tests passed outside sandbox, not hosted evidence."
     }
   ],
   "known_blockers": [
@@ -2688,14 +2699,14 @@
   ],
   "next_approved_task": {
     "status": "blocked",
-    "sha": "566abba05118440cbc25d8a6be1904510cf2b074",
-    "timestamp": "2026-10-17T18:05:40.686Z",
-    "artifact": "docs/operations/legacy-001G4A23-lovable-inspection-prompt.md",
-    "identity": "Lovable operator decision — establish supported read-only route and return bounded installation GO/NO-GO",
+    "sha": "0e37519a913a8f8da67de4ca13d803836dccbeea",
+    "timestamp": "2026-10-17T22:51:42.553Z",
+    "artifact": "docs/operations/legacy-001G4A24-installation-plan.md",
+    "identity": "Owner review — separate party correction and updated HP candidate before Lovable installation",
     "evidence_type": "repository",
     "reporting_actor": "Codex",
     "directly_verified": true,
-    "evidence": "Prepared prompt only; route not established and inspection not executed. Operator uses Lovable native supported read-only inspection; stop if unavailable. No external OAuth repair, sandbox_exec or read/write workaround. Installation/deployment/publication remain separately authorized future gates."
+    "evidence": "Preparation only; fresh supported read-only preflight/source/ACL/history reconciliation and quiet-window controls required. Owner must separately approve exact artifacts and installation; no hosted operation, deployment or frontend publication authorized."
   },
   "volatile_runtime_observations": [
     {

@@ -33,6 +33,9 @@ async function wired(){const x=await fixture('');const ts=targets();
  for(const t of ts)native=native.replace(patch(t).sql,()=>patch(t,adapt).sql);
  for(const t of legacyTargets())native=native.replace(legacyPatch(t),()=>legacyPatch(t,adapt));
  await x.o.unsafe(adapt(native));
+ // G4A24 executes the actual appended revocation in this fixture transaction.
+ for(const role of ['anon','authenticated'])assert.equal((await x.o`SELECT has_function_privilege(${role},'g4a6.heal_creatures_on_wake()','EXECUTE') allowed`)[0].allowed,false);
+ assert.equal((await x.o`SELECT has_function_privilege('postgres','g4a6.heal_creatures_on_wake()','EXECUTE') allowed`)[0].allowed,true);
  await x.o`SELECT set_config('g4a7.actor','',false)`;
  return x;
 }

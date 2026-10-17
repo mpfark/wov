@@ -1,8 +1,11 @@
 # Ready-to-paste Lovable prompt — G4A23 inspection only
 
+**G4A24 preparation update (2026-10-18):** the candidate now adds only the approved wake-healer browser EXECUTE revocation; current SHA-256 `a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523`. Earlier unchanged-candidate/test statements below describe the original review, not this updated artifact. [G4A24 plan](legacy-001G4A24-installation-plan.md) governs the two separately reviewed installation inputs. Separate [party qualification](legacy-001G4A24-party-cost-qualification.sql), SHA-256 `af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9`, must be reviewed/installed/verified first under later approval. Its body guard expects the original public body; already-corrected or divergent installed source stops for reconciliation, never blind replay. The party correction changes no ACL/settings; the HP candidate intentionally revokes only wake-healer EXECUTE from PUBLIC/anon/authenticated. This preparation does not establish fresh hosted parity or authorize any execution.
+
+
 Inspect the WoV Creature HP/Combat2 release candidate using your own supported safe database inspection tools. External Codex MCP is OAuth-blocked; do not repair/bypass it or require it.
 
-Reviewed GitHub checkpoint: **566abba05118440cbc25d8a6be1904510cf2b074** (implementation61c4aadcb68451f8c2dbc8c54f5a123be6afee36). Read the published G4A23 documentation from origin/main; confirm source descends from that checkpoint without relevant drift. Candidate: **docs/operations/legacy-001G4A21-shared-hp-candidate.sql**, SHA-256 **91092a0013fb325f2100797fa1d07d655b8d0a793400b959be382aa882857e3f**. Verify exact bytes. G4A19/G4A20/hook fragment must not be installed separately.
+Reviewed GitHub checkpoint: **566abba05118440cbc25d8a6be1904510cf2b074** (implementation61c4aadcb68451f8c2dbc8c54f5a123be6afee36). Read the published G4A23 documentation from origin/main; confirm source descends from that checkpoint without relevant drift. Candidate: **docs/operations/legacy-001G4A21-shared-hp-candidate.sql**, SHA-256 **a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523**. Verify exact bytes. G4A19/G4A20/hook fragment must not be installed separately.
 
 Read **docs/operations/legacy-001G4A23-lovable-installation-handoff.md** and **docs/operations/legacy-001G4A22-creature-hp-release-readiness.md**. Use their exact bounded inventory, guard fingerprints and stop conditions. This is inspection only, not permission to install, deploy or publish.
 

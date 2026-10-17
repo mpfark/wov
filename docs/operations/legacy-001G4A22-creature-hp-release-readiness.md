@@ -1,10 +1,13 @@
 # ENG-LEGACY-001G4A22 — Creature HP release readiness
 
+**G4A24 preparation update (2026-10-18):** the candidate now adds only the approved wake-healer browser EXECUTE revocation; current SHA-256 `a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523`. Earlier unchanged-candidate/test statements below describe the original review, not this updated artifact. [G4A24 plan](legacy-001G4A24-installation-plan.md) governs the two separately reviewed installation inputs. Separate [party qualification](legacy-001G4A24-party-cost-qualification.sql), SHA-256 `af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9`, must be reviewed/installed/verified first under later approval. Its body guard expects the original public body; already-corrected or divergent installed source stops for reconciliation, never blind replay. The party correction changes no ACL/settings; the HP candidate intentionally revokes only wake-healer EXECUTE from PUBLIC/anon/authenticated. This preparation does not establish fresh hosted parity or authorize any execution.
+
+
 Starting/fetched checkpoint: `61c4aadcb68451f8c2dbc8c54f5a123be6afee36`; local/origin ancestry verified. **Release procedure prepared; installation BLOCKED. No candidate, gameplay, migration, grant, Edge or frontend changes.** Engine rules preserved: approved shared HP/4-second regeneration contract and existing one-heartbeat decision. G4/ENG-LEGACY-001 remain OPEN.
 
 ## Candidate and evidence
 
-Only installation input: [G4A21 consolidated candidate](legacy-001G4A21-shared-hp-candidate.sql), SHA-256 **`91092a0013fb325f2100797fa1d07d655b8d0a793400b959be382aa882857e3f`**. Exact reviewed bytes and deterministic assembly verified locally. G4A19/G4A20 and the G4A21 hook fragment are **not additional installation steps**. Existing23-entry Drizzle chain is the local baseline; next append would normally be0023, subject to fresh hosted/source reconciliation. Do not precreate an automatic migration file.
+Only installation input: [G4A21 consolidated candidate](legacy-001G4A21-shared-hp-candidate.sql), SHA-256 **`a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523`**. Exact reviewed bytes and deterministic assembly verified locally. G4A19/G4A20 and the G4A21 hook fragment are **not additional installation steps**. Existing23-entry Drizzle chain is the local baseline; next append would normally be0023, subject to fresh hosted/source reconciliation. Do not precreate an automatic migration file.
 
 | Scope | Evidence disposition |
 |---|---|

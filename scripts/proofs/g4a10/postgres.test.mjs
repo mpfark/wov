@@ -28,7 +28,12 @@ const cid='00000000-0000-4000-8000-000000000001',node='00000000-0000-4000-8000-0
 const actor='00000000-0000-4000-8000-000000000011',user='00000000-0000-4000-8000-000000000012',request='00000000-0000-4000-8000-000000000013',effect='00000000-0000-4000-8000-000000000014';
 const at=t=>new Date(Date.UTC(2026,0,1)+t*1000).toISOString();let serial=0;const options={timeout:25000};
 async function clock(c,t){await c`SELECT set_config('g4a7.cutoff',${at(t)},false)`;}
-const candidate=await read('./candidate.sql');
+// Optional publication artifact: only namespace/body-hash fixture substitutions.
+const candidate=process.argv.includes('--g4a24')?(await read('../../../docs/operations/legacy-001G4A24-party-cost-qualification.sql'))
+ .replaceAll('public.','g4a6.')
+ .replaceAll('4b7f16cfd9da168704831ebf641740e9ce69cd206272a39244b076855adb1ea5','e63e6cedb61b36ae2553fc15d7c3784e95512aa467c8f09e7b2f41fda95183ca')
+ .replaceAll('e01ed3c1d24627771f40a95960eecd1b39eed7d089c371b2eb5abdf0884de7b1','954b8ca828392f285e9f5c3e676fae184c6ab2545c2248cfa80a3d96db97ae14')
+ .replaceAll('original source drift','original fixture source drift'):await read('./candidate.sql');
 async function setup({hp=40,aggressive=true,mode='error',corrected=false,functionMode=null}={}){
  assert(['error','use_column','use_variable'].includes(mode));assert(functionMode===null||['error','use_column','use_variable'].includes(functionMode));
  const db='g4a6_fixture_g4a10_'+(++serial);await admin.unsafe('CREATE DATABASE '+db);

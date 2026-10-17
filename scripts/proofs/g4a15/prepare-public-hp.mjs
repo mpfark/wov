@@ -71,5 +71,5 @@ export function buildPublicHP(){let base=read('docs/operations/legacy-001G4A20-s
  OR EXISTS(SELECT 1 FROM public.combat_sessions s WHERE s.node_id=c.node_id AND c.id=ANY(s.engaged_creature_ids))
  OR EXISTS(SELECT 1 FROM public.active_effects ae WHERE ae.target_id=c.id AND ae.expires_at>floor(extract(epoch FROM now())*1000)::bigint)));`);
  return base.replace(/-- G4A20[^\n]*\n-- Forward[^\n]*\n-- PARTIAL[^\n]*\n-- Replaces[^\n]*/, '-- G4A21 consolidated forward candidate. NOT INSTALLED; no automatic migration.\n-- Replaces uninstalled G4A19/G4A20 candidates, never apply sequentially.')
- .replace(/COMMIT;\s*$/,()=>read('docs/operations/legacy-001G4A21-shared-hp-hooks.sql')+'\n'+commitPatch()+ts.map(t=>patch(t).sql).join('\n')+'\nCOMMIT;\n');}
+ .replace(/COMMIT;\s*$/,()=>read('docs/operations/legacy-001G4A21-shared-hp-hooks.sql')+'\n'+commitPatch()+ts.map(t=>patch(t).sql).join('\n')+'\n-- G4A24 approved wake-healer browser EXECUTE containment; trusted server rights retained.\nREVOKE EXECUTE ON FUNCTION public.heal_creatures_on_wake() FROM anon, authenticated, PUBLIC;\n\nCOMMIT;\n');}
 if(process.argv.includes('--write'))fs.writeFileSync(new URL('docs/operations/legacy-001G4A21-shared-hp-candidate.sql',root),buildPublicHP());
