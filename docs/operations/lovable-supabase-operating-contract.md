@@ -17,6 +17,16 @@ the standard tool register it. Inspect automatic commits after both successful a
 failed operations; verify generated SQL, installed history, journal/snapshot and
 derived types separately. See the [B2 preparation procedure](migration-baseline-strategy.md#sql-preparation-and-tool-owned-registration-0007-evidence).
 
+## Delivery conventions
+
+Use the [delivery handoff template](handoff-template.md) for exact commit/artifact identity, local evidence, minimal hosted checks, authorization boundaries and STOP/recovery decisions. Keep extensive task evidence in linked reports. Reuse valid checks; repeat only when source/assumptions changed or a concrete gap requires it.
+
+The standard custom-SQL Drizzle tool owns the outer migration transaction: hand it SQL without top-level BEGIN/COMMIT. PL/pgSQL BEGIN/END blocks remain intact. If a reviewed artifact has outer transaction statements, prepare and separately review/hash a runner-compatible derivative; do not strip or reformat approved bytes silently. Stop if transaction/rollback semantics are uncertain. The G4A24 [runner-compatible artifact](legacy-001G4A24-shared-hp-candidate-no-txn.sql) and [subsequent delivery record](legacy-001G4A24-edge-deployment-handoff.md) illustrate the distinction; they are historical evidence, not fresh authorization.
+
+Codex prepares reviewed SQL outside automatic migrations; Lovable alone generates/registers the migration SQL, journal/snapshot and schema-derived types through the standard lane. Do not pre-generate that history, infer schema from the blank Drizzle placeholder, modify an executed prefix or create a second runner. Reconcile tool-generated Git changes after success or failure before retrying.
+
+Verify required SQL before deploying the named matching Edge Functions, including their shared imports, RPC contracts and existing auth/configuration. Do not expose secret values or assume old Edge/SQL combinations are compatible. Record deployment evidence and live-identity limits. Frontend activation follows compatible backend verification under its own approval; Mik alone manually publishes. Git push and preview/build success never substitute for any of these stages or for separately authorized gameplay acceptance.
+
 ## Role containment
 
 Require private objects to retain the reviewed owner, ACLs, RLS and policy contract. Direct nonowner/PUBLIC table or column grants are leaks even when the grantee is an administrator. Independently reject effective access for gameplay/application roles and their members; those principals never receive an administrative exemption.

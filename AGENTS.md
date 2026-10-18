@@ -9,3 +9,9 @@ Update the project-state JSON whenever work materially changes a tracked state, 
 Never claim that a Git push published the frontend. AI agents and Lovable must not publish it or instruct automatic publication. Mik performs frontend publication manually.
 
 Gameplay/engine tasks must identify affected specification sections and roadmap IDs, and state whether they preserve or intentionally change engine rules. Update the specification and roadmap in the same commit when rules or planned work change; keep operational evidence in project state. Never silently reinterpret an unresolved rule. The specification's one-authoritative-world-heartbeat decision remains binding unless Mik explicitly changes it.
+
+## Delivery handoff
+
+Use the [handoff template](docs/operations/handoff-template.md) and [Lovable/Supabase operating contract](docs/operations/lovable-supabase-operating-contract.md) for Codex → GitHub → Lovable delivery. Name the exact reviewed commit, artifacts/hashes, affected files, relevant checks, minimal hosted verification and authorized next action. Required SQL verification precedes matching Edge deployment, then compatible frontend activation and Mik's manual publication; each needs its scoped authorization.
+
+Lovable's standard custom-SQL Drizzle tool owns migration registration and the outer transaction. Prepare SQL outside automatic migrations without top-level BEGIN/COMMIT; preserve PL/pgSQL blocks. Do not pre-generate registered migration files/history, journal/snapshots or Cloud-derived types, replay historical migrations, or silently rewrite reviewed bytes for a runner. Link existing valid evidence; repeat audits/tests only for changed assumptions, failures or unresolved requirements. Use documentation checks for documentation-only work. Do not bundle unrelated fixes or turn a handoff into another broad audit.
