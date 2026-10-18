@@ -487,7 +487,7 @@
   {
    "identity": "0023_g4a24_party_cost_qualification",
    "status": "installed",
-   "sha": "af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9",
+   "sha": null,
    "timestamp": "2026-10-18T07:38:00.000Z",
    "evidence_type": "cloud_inspection",
    "reporting_actor": "Lovable",
