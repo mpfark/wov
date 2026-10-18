@@ -162,6 +162,13 @@
       "when": 1791972149269,
       "tag": "0022_legacy_001f6_party_combat_serialization",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792308756232,
+      "tag": "0023_g4a24_party_cost_qualification",
+      "breakpoints": true
     }
   ]
 }
