@@ -3208,6 +3208,11 @@ export type Database = {
           name: string
           node_id: string | null
           rarity: Database["public"]["Enums"]["creature_rarity"]
+          regen_accounted_at: string | null
+          regen_credit: number
+          regen_eligible_since: string | null
+          regen_generation: number | null
+          regen_percent_4s: number
           respawn_seconds: number
           rewards_awarded_at: string | null
           salvage_enabled: boolean
@@ -3243,6 +3248,11 @@ export type Database = {
           name: string
           node_id?: string | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
+          regen_accounted_at?: string | null
+          regen_credit?: number
+          regen_eligible_since?: string | null
+          regen_generation?: number | null
+          regen_percent_4s?: number
           respawn_seconds?: number
           rewards_awarded_at?: string | null
           salvage_enabled?: boolean
@@ -3278,6 +3288,11 @@ export type Database = {
           name?: string
           node_id?: string | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
+          regen_accounted_at?: string | null
+          regen_credit?: number
+          regen_eligible_since?: string | null
+          regen_generation?: number | null
+          regen_percent_4s?: number
           respawn_seconds?: number
           rewards_awarded_at?: string | null
           salvage_enabled?: boolean
@@ -6538,6 +6553,15 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_creature_mutate: {
+        Args: {
+          _action: string
+          _creature_id: string
+          _expected: Json
+          _patch: Json
+        }
+        Returns: Json
+      }
       admin_mutate_loot_table: {
         Args: {
           _desired_entries: Json
@@ -7427,6 +7451,27 @@ export type Database = {
       consume_material: {
         Args: { _character_id: string; _delta: number; _key: string }
         Returns: boolean
+      }
+      creature_admin_boss_valid: { Args: { cast_doc: Json }; Returns: boolean }
+      creature_admin_cover: {
+        Args: { cid: string; destination?: string }
+        Returns: undefined
+      }
+      creature_admin_referenced: { Args: { cid: string }; Returns: boolean }
+      creature_hp_account: { Args: { coverage: Json }; Returns: undefined }
+      creature_hp_cover: {
+        Args: { input_actors: string[]; input_nodes: string[] }
+        Returns: Json
+      }
+      creature_hp_discover: {
+        Args: { input_actors: string[]; input_nodes: string[] }
+        Returns: Json
+      }
+      creature_hp_maintain: { Args: never; Returns: undefined }
+      creature_regen_blocked: { Args: { cid: string }; Returns: boolean }
+      creature_regen_settle: {
+        Args: { cid: string; cutoff: string }
+        Returns: undefined
       }
       crown_king_slayer: { Args: { _character_id: string }; Returns: undefined }
       damage_party_member: {
