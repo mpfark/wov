@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-18T07:50:00.000Z",
+ "updated_at": "2026-10-18T10:57:35.000Z",
  "based_on_source_sha": "9db3d227a5a309b0a21d90e4e9ce5532a3f16370",
  "status_vocabulary": [
   "authored",
@@ -518,6 +518,17 @@
   "evidence": "D6 automatic regeneration adds only material_sale_internal five-argument signature/JSON result. Source delta directly verified; no privilege/runtime inference."
  },
  "edge_function_deployments": [
+  {
+   "identity": "G4A22 matching Combat2 workers after G4A24 database installation",
+   "status": "deployed",
+   "sha": "5f4d3f398592e68d087db3f9a721789627f1ff69",
+   "timestamp": "2026-10-18T10:57:35.000Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/legacy-001G4A24-edge-deployment-handoff.md",
+   "evidence": "Owner authorized only combat2-dispatch-once and combat2-tick-once at 10:55 UTC. Current HEAD equals freshly observed origin/main and descends from baseline 9db3d227 and actual G4A22 review checkpoint 61c4aadcb68451f8c2dbc8c54f5a123be6afee36. All 30 transitive local Edge files are byte-identical to that review checkpoint; sorted path/SHA-256 manifest hash 06a9501e169461cc1ef7ab05e852b0481f4e7c436bf2233fbc241ca2b1145ecd. Read-only hosted observation 10:56:30Z: principal supabase_read_only_user, transaction_read_only on, 25 Drizzle entries, row25 hash c39d078dea2e04d2be6375ff0f6c923ed4c207eb153fa4137c05feb689f9599f matches installed 0024; due-node/claim/commit signatures match worker contract. Supported deploy tool reports both successful; submitted files/settings SHA-256 dispatcher cb9160cf6dd5aab1b685a041e8ea27a7ee95cbafd768dcf3e750231ee33c67cf, tick e724138df24fe10697f578eb3d9d515fccd2b0aef8093d729fcd8bae6ae7857a. Essential live probes: both GET405 method_not_allowed and empty-Authorization POST401 unauthorized, before client creation/RPC in reviewed handlers. No valid worker request, gameplay RPC, schedule change, world wake, SQL install, frontend change or publication. No revision ID/live bundle export; submitted-source identity is not independently verified live bundle identity. Existing auth/config preserved. G4/ENG-LEGACY-001 remain OPEN; worker/caller isolation and hosted gameplay/concurrency remain unverified under existing accepted limitations. Extensive Codex tests reused, not repeated."
+  },
   {
    "identity": "combat2-tick-once",
    "status": "deployed",
@@ -2721,14 +2732,14 @@
  ],
  "next_approved_task": {
   "status": "blocked",
-  "sha": "9db3d227a5a309b0a21d90e4e9ce5532a3f16370",
-  "timestamp": "2026-10-18T07:50:00.000Z",
-  "artifact": "supabase/functions/combat2-dispatch-once and combat2-tick-once",
-  "identity": "Owner authorization - Edge deployment of combat2-dispatch-once and combat2-tick-once from reviewed checkpoint (G4A22 gate 5)",
+  "sha": "5f4d3f398592e68d087db3f9a721789627f1ff69",
+  "timestamp": "2026-10-18T10:57:35.000Z",
+  "artifact": "Await separate owner approval for subsequent G4A22 release gates; no gameplay, world controls, frontend activation or publication authorized",
+  "identity": "G4A22 post-Edge owner review and further release authorization",
   "evidence_type": "repository",
   "reporting_actor": "Lovable",
   "directly_verified": true,
-  "evidence": "G4A24 installation complete (0023 party qualification, 0024 shared creature HP). Stopped before Edge per plan; old Edge plus new SQL is conservative after departure, not an acceptance result. Frontend publication remains manual by Mik. Accepted limitations: worker/caller isolation (owner-accepted), live Edge bundle identity, sequential-smoke-only concurrency evidence."
+  "evidence": "G4A24 database installation and G4A22 gate5 matching worker deployment complete. Both workers deployed successfully with nonmutating GET405/POST401 checks. No release-blocking source mismatch found against actual G4A22 checkpoint. Stop for owner review; disposable hosted gameplay acceptance and narrow Admin frontend activation need separate approval, frontend publication remains manual by Mik. Accepted limitations remain: worker/caller isolation, live Edge bundle identity, sequential-smoke-only concurrency evidence. No world wake or valid worker execution authorized."
  },
  "volatile_runtime_observations": [
   {
