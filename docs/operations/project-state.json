@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-18T07:40:00.000Z",
+ "updated_at": "2026-10-18T07:50:00.000Z",
  "based_on_source_sha": "9db3d227a5a309b0a21d90e4e9ce5532a3f16370",
  "status_vocabulary": [
   "authored",
@@ -494,6 +494,17 @@
    "directly_verified": true,
    "artifact": "drizzle/migrations/0023_g4a24_party_cost_qualification.sql",
    "evidence": "Installed via standard Drizzle lane from the byte-identical reviewed artifact (SHA-256 af206f9f... verified before submission). Post-install hosted read confirms combat2_party_depart_without_canary_gate body SHA-256 e01ed3c1d24627771f40a95960eecd1b39eed7d089c371b2eb5abdf0884de7b1, exactly the G4A10-qualified target; function metadata preservation was enforced atomically by the artifact's own guards. G4A9-R1 aggregate ambiguity resolved. Ledger now 24 entries; prior 23 preserved."
+  },
+  {
+   "identity": "0024_g4a21_shared_creature_hp",
+   "status": "installed",
+   "sha": null,
+   "timestamp": "2026-10-18T07:48:00.000Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "drizzle/migrations/0024_g4a21_shared_creature_hp.sql",
+   "evidence": "Installed atomically via standard Drizzle lane from the owner-approved variant of the G4A21 candidate with only the outer BEGIN;/COMMIT; removed (approved variant SHA-256 8b3810dc0d9dd90f56e4ff052b9b11840f92737da69498788ebebdb2e03c9138; generated file 65711 bytes SHA-256 c39d078dea2e04d2be6375ff0f6c923ed4c207eb153fa4137c05feb689f9599f, exactly omitted final blank line, same class as 0022). Hosted verification: five regen_* columns present on creatures; ten new functions present, postgres-owned, helper EXECUTE denied to anon/authenticated/service_role; admin_creature_mutate EXECUTE authenticated-only; heal_creatures_on_wake EXECUTE denied to anon/authenticated/PUBLIC with service_role retained; regen_creature_hp and heal_creatures_on_wake rewrapped per candidate; eleven patched functions passed their own drift guards (installation succeeded atomically). Ledger 25 entries; prior 24 preserved. No Edge deployment, frontend change, publication or world wake."
   }
  ],
  "generated_supabase_types": {
@@ -2711,13 +2722,13 @@
  "next_approved_task": {
   "status": "blocked",
   "sha": "9db3d227a5a309b0a21d90e4e9ce5532a3f16370",
-  "timestamp": "2026-10-18T07:40:00.000Z",
-  "artifact": "docs/operations/legacy-001G4A21-shared-hp-candidate.sql",
-  "identity": "Owner decision - G4A21 candidate BEGIN/COMMIT wrapper vs migration lane transaction management",
+  "timestamp": "2026-10-18T07:50:00.000Z",
+  "artifact": "supabase/functions/combat2-dispatch-once and combat2-tick-once",
+  "identity": "Owner authorization - Edge deployment of combat2-dispatch-once and combat2-tick-once from reviewed checkpoint (G4A22 gate 5)",
   "evidence_type": "repository",
   "reporting_actor": "Lovable",
   "directly_verified": true,
-  "evidence": "G4A21 candidate (SHA-256 a126ae28...) verified byte-identical and prerequisites reconfirmed (23-entry prefix, schema prerequisites, quiet window). Installation NOT attempted: the reviewed artifact wraps itself in BEGIN;/COMMIT;, which the supported migration lane forbids (it manages the transaction). Submitting verbatim risks mid-migration failure; stripping the two lines changes the reviewed bytes. Awaiting owner decision: approve a transaction-wrapper-stripped variant (only BEGIN;/COMMIT; removed) or provide other direction. No retry attempted per stop-on-uncertainty instruction."
+  "evidence": "G4A24 installation complete (0023 party qualification, 0024 shared creature HP). Stopped before Edge per plan; old Edge plus new SQL is conservative after departure, not an acceptance result. Frontend publication remains manual by Mik. Accepted limitations: worker/caller isolation (owner-accepted), live Edge bundle identity, sequential-smoke-only concurrency evidence."
  },
  "volatile_runtime_observations": [
   {

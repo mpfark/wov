@@ -169,6 +169,13 @@
       "when": 1792308756232,
       "tag": "0023_g4a24_party_cost_qualification",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792316019615,
+      "tag": "0024_g4a21_shared_creature_hp",
+      "breakpoints": true
     }
   ]
 }
