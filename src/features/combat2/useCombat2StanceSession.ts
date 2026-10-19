@@ -1,3 +1,4 @@
+import { recordCombat2ResourceState } from './diagnostics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -73,6 +74,9 @@ export function useCombat2StanceSession(options: {
     if (current !== generation.current) return;
     setLoading(false);
     const decoded = !error ? decodeProjection(data) : null;
+    if (decoded?.characterId === characterId) recordCombat2ResourceState(() => ({ characterId,
+      layer: 'client_received', source: 'combat2_character_stances', player: { cp: decoded.rawCp,
+        maxCp: decoded.maxCp, reservedCp: decoded.reservedCp, spendableCp: decoded.spendableCp } }));
     setProjection(decoded?.characterId === characterId ? decoded : null);
   }, [characterId, enabled]);
 
@@ -123,6 +127,9 @@ export function useCombat2StanceSession(options: {
         attempt.current = null;
         return { status: 'error', reason: 'Malformed stance projection' };
       }
+      recordCombat2ResourceState(() => ({ characterId, layer: 'client_received', source: 'combat2_change_stance',
+        requestId: next.requestId, status: row.kind as string, player: { cp: decoded.rawCp,
+          maxCp: decoded.maxCp, reservedCp: decoded.reservedCp, spendableCp: decoded.spendableCp } }));
       setProjection(decoded); attempt.current = null;
       const delivered = currentResources.current;
       const hasNewerDelivery = delivered.readStartedAt != null

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { recordCombat2ResourceState, diagnosticPlayerResources } from '@/features/combat2/diagnostics';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { clampResourceUpdates } from '../utils/clampResources';
@@ -169,6 +170,10 @@ export function useCharacter(user: User | null) {
       // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
       // write could hide the post-login authoritative HP/CP/MP for several seconds.)
       const rows = (data as Character[]).map(latestLifecycleRow).filter(c => !c.deleted_at);
+      for (const row of rows) recordCombat2ResourceState(() => ({ characterId: row.id, nodeId: row.current_node_id,
+        layer: 'client_received', source: 'character_' + source, readStartedAt,
+        sourceUpdatedAt: (row as Character & { updated_at?: string }).updated_at,
+        player: diagnosticPlayerResources(row as unknown as Record<string,unknown>) }));
       const fetchedIds = new Set(rows.map(c => c.id));
       setSelectedCharacterId(previous => previous && !fetchedIds.has(previous) ? null : previous);
       for (const id of fetchedIds) {
@@ -297,6 +302,10 @@ export function useCharacter(user: User | null) {
           setCharacters(prev => [...prev, payload.new as Character]);
         } else {
           const incoming = payload.new as Character;
+          recordCombat2ResourceState(() => ({ characterId: incoming.id, nodeId: incoming.current_node_id,
+            layer: 'client_received', source: 'character_realtime',
+            sourceUpdatedAt: (incoming as Character & { updated_at?: string }).updated_at,
+            player: diagnosticPlayerResources(incoming as unknown as Record<string,unknown>) }));
           resourceRevisionRef.current.set(incoming.id, ++resourceRevisionCounterRef.current);
           const pendingFields = pendingWritesRef.current.get(incoming.id);
           const heldFields = heldFieldsRef.current.get(incoming.id);

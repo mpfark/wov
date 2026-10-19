@@ -19,6 +19,7 @@
  *   currently has no deployed internal caller (tracked separately).
  */
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react';
+import { recordCombat2ResourceState, diagnosticCreatureResources } from '@/features/combat2/diagnostics';
 import { supabase } from '@/integrations/supabase/client';
 import type { NodeChannelHandle } from '@/features/world';
 import type { GameNode } from '@/features/world';
@@ -315,6 +316,9 @@ export function useCreatures(
     }
 
     const outcome = await fetchNodeRoster(characterId);
+    if (outcome.kind === 'ok') recordCombat2ResourceState(() => ({ characterId, nodeId: outcome.data.node_id,
+      layer: 'client_received', source: 'node_creature_roster', requestId: `roster:${requestId}`,
+      status: 'received_before_scope_validation', creatures: outcome.data.creatures.map(c => diagnosticCreatureResources(c as unknown as Record<string,unknown>)) }));
     if (outcome.kind === 'ok') {
       // The server resolved the node itself; if it disagrees with the node we
       // are displaying the response belongs to a different (stale) position.
@@ -350,6 +354,9 @@ export function useCreatures(
       const updated = payload.new as Creature;
       const active = nodeIdRef.current;
       if (!updated || !active) return;
+      if (characterId) recordCombat2ResourceState(() => ({ characterId, nodeId: updated.node_id,
+        layer: 'client_received', source: 'creature_realtime',
+        creatures: [diagnosticCreatureResources(updated as unknown as Record<string,unknown>)] }));
       dispatch({ type: 'realtimeUpsert', nodeId: active, creature: updated });
     };
 
@@ -366,7 +373,7 @@ export function useCreatures(
       handle.onCreatureInsert.current = null;
       handle.onCreatureDelete.current = null;
     };
-  }, [handle, debouncedRefresh]);
+  }, [handle, debouncedRefresh, characterId]);
 
   // ── Node change: new generation ───────────────────────────────
   useEffect(() => {

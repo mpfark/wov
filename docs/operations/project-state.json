@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-18T10:57:35.000Z",
- "based_on_source_sha": "9db3d227a5a309b0a21d90e4e9ce5532a3f16370",
+ "updated_at": "2026-10-19T11:50:15.773Z",
+ "based_on_source_sha": "830c9cdecf94428dd140654e46bdb4f1080c0122",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2500,6 +2500,17 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "evidence": "Party artifact SHA256 af206f9fdf0d12de1f3d2b4a0b2acf71a0c45e71449a498f74c8fe010b0525e9: exact G4A10 qualification, guarded source and complete metadata preservation. HP candidate SHA256 a126ae28bc4767bd02b065af1d475a6804fedb9c9c599b3b3e82285830b96523 adds only wake-healer PUBLIC/anon/authenticated EXECUTE revocation; deterministic assembly updated. Separate installation inputs outside migration channel. Existing Lovable plan reconciled as operator-supplied planning evidence, not new hosted verification. No installation/deployment/frontend or gameplay change; all existing dispositions and administrative XP grant pause preserved. PostgreSQL18.6:23 party cases (3 observed session cases) and51 public HP cases passed;3 project-state tests;23-entry chain, references, exact candidate diff/hash/assembly and whitespace verified. Initial sandbox initdb WAL rename denied; identical disposable-local tests passed outside sandbox, not hosted evidence."
+  },
+  {
+   "identity": "combat2-resource-diagnostic-capture",
+   "status": "ready_for_manual_publish",
+   "sha": "830c9cdecf94428dd140654e46bdb4f1080c0122",
+   "timestamp": "2026-10-19T11:50:15.773Z",
+   "artifact": "docs/operations/combat2-resource-diagnostics-handoff.md",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "evidence": "Existing Start/Stop/Export extended with separate bounded200 resource-snapshot ring/16 creatures per sample; unchanged five-minute/500-client/2000-server event limits. Client-received character/sync/roster/stance values, merged character state and actual rendered player/creature values have explicit browser provenance, source labels, timestamp/identity fences and drop counts. No independent authoritative server resource state claimed. No extra polls/RPCs/tables/gameplay writes, formula changes, SQL/Edge/deployment/publication. Focused unit/render/transport tests, app typecheck/build pass; manual frontend publication and live symptom capture remain outstanding. Prior closures, accepted limitations, administrative XP grant pause and recovery stash preserved."
   }
  ],
  "known_blockers": [

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import type { Combat2ResourceInput } from '@/features/combat2/diagnostics';
+import { useCombat2ResourceCapture } from '@/features/combat2/useCombat2ResourceCapture';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
@@ -18,6 +20,7 @@ const BUFF_DURATIONS: Record<string, number> = {
 };
 
 export interface StatusBarsStripProps {
+  diagnosticContext?: Pick<Combat2ResourceInput, 'encounterId' | 'tick' | 'stateVersion' | 'status'>;
   character: Character;
   equipmentBonuses: Record<string, number>;
   inventoryCount?: number;
@@ -213,6 +216,7 @@ export default function StatusBarsStrip({
   authoritativeEffects,
   authoritativeWard,
   authoritativeStances,
+  diagnosticContext,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
@@ -225,6 +229,10 @@ export default function StatusBarsStrip({
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);
+  useCombat2ResourceCapture(() => ({ ...diagnosticContext, characterId: character.id, nodeId: character.current_node_id,
+    layer: 'ui_displayed', source: 'status_bars', player: { hp: character.hp, maxHp: effectiveMaxHp,
+      cp: rawCp, maxCp, mp, maxMp, displayedCp: cp, reservedCp: stanceReservedCp,
+      queuedCp: reservedCp, spendableCp: cpView.availableCp } }));
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 

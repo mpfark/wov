@@ -78,7 +78,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Problem or decision:** small intermittent delay is operator-reported but not separated into scheduler, claim, commit, delivery and render latency.
 - **Intended outcome:** bounded, sanitized measurements with no gameplay mutation beyond a controlled run.
 - **Dependencies:** existing bounded diagnostics.
-- **Evidence/current state:** prior automatic ticks and short sync transitions were operator-reported; current delay is not measured.
+- **Evidence/current state:** prior automatic ticks and short sync transitions were operator-reported; current delay is not measured. [Resource capture extension](../operations/combat2-resource-diagnostics-handoff.md) is locally tested and ready for Mik's manual publication; browser observations are explicitly separated from server evidence. Live resource inconsistencies and latency remain unverified.
 - **Acceptance criteria:** report distributions and outliers for each boundary; no credentials/fixture details; distinguish expected ≤heartbeat wait from defects.
 - **Specification sections:** Failure, diagnostics and verification; Creatures, targeting and initiation.
 

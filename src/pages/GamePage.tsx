@@ -59,6 +59,8 @@ import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
 import { useWimp } from '@/features/combat/hooks/useWimp';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
+import { useCombat2ResourceCapture } from '@/features/combat2/useCombat2ResourceCapture';
+import { diagnosticPlayerResources } from '@/features/combat2/diagnostics';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import CombatTimingPanel from '@/components/admin/CombatTimingPanel';
 import MovementPad from '@/features/world/components/MovementPad';
@@ -372,6 +374,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
     ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
     : null, [activeCombat2Presentation]);
+  useCombat2ResourceCapture(() => ({ characterId: character.id, nodeId: character.current_node_id,
+    encounterId: combat2.encounterId, layer: 'client_state', source: 'game_page_character',
+    status: combat2.sessionStatus, player: diagnosticPlayerResources(character as unknown as Record<string, unknown>) }));
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
@@ -1714,6 +1719,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
+                diagnosticContext: { encounterId: activeCombat2Presentation?.encounterId ?? null,
+                  tick: activeCombat2Presentation?.encounterTick ?? null,
+                  stateVersion: activeCombat2Presentation?.stateVersion ?? null, status: combat2.sessionStatus },
                 equipmentBonuses,
                 inventoryCount: getBagWeight(unequipped),
                 isAtInn: currentNode?.is_inn ?? false,

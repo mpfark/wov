@@ -26,6 +26,8 @@ export interface Combat2DiagnosticRecording {
   encounterId: string | null;
   events: Combat2DiagnosticEvent[];
   dropped: number;
+  resourceSnapshots?: Combat2ResourceSnapshot[];
+  droppedResourceSnapshots?: number;
 }
 
 export const COMBAT2_DIAGNOSTIC_MAX_EVENTS = 500;
@@ -41,10 +43,10 @@ function safeRead(): Combat2DiagnosticRecording | null {
   } catch { return null; }
 }
 
-function write(recording: Combat2DiagnosticRecording | null): void {
+function write(recording: Combat2DiagnosticRecording | null, notify = true): void {
   if (recording) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(recording));
   else sessionStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new Event('combat2-diagnostic-change'));
+  if (notify) window.dispatchEvent(new Event('combat2-diagnostic-change'));
 }
 
 /**
@@ -130,22 +132,97 @@ export function recordCombat2ClientEvent(event: Omit<Combat2DiagnosticEvent, 'si
   write({ ...recording, events: overflow ? next.slice(overflow) : next, dropped: recording.dropped + overflow });
 }
 
+
+// Resource observations are separate from the existing 500-event buffer.
+// No raw rows, names, credentials, effect JSON or arbitrary payloads are retained.
+export const COMBAT2_DIAGNOSTIC_MAX_RESOURCE_SNAPSHOTS = 200;
+export const COMBAT2_DIAGNOSTIC_MAX_RESOURCE_CREATURES = 16;
+export interface DiagnosticResourceValues {
+  hp?: number | null; maxHp?: number | null; cp?: number | null; maxCp?: number | null;
+  mp?: number | null; maxMp?: number | null; reservedCp?: number | null;
+  queuedCp?: number | null; displayedCp?: number | null; spendableCp?: number | null;
+}
+export interface DiagnosticCreatureResources { id: string; projectionId?: string | null; spawnSeq?: number | null; hp: number | null; maxHp: number | null }
+export interface Combat2ResourceInput {
+  characterId: string; nodeId?: string | null; encounterId?: string | null;
+  tick?: number | null; cursor?: number | null; stateVersion?: number | null; requestId?: string | null;
+  layer: 'client_received' | 'client_state' | 'ui_displayed'; source: string;
+  sourceUpdatedAt?: string | null; readStartedAt?: number | null; status?: string | null;
+  player?: DiagnosticResourceValues; creatures?: readonly DiagnosticCreatureResources[];
+}
+export interface Combat2ResourceSnapshot extends Combat2ResourceInput {
+  event: 'resource_snapshot'; side: 'client'; wallTime: string; monotonicMs: number;
+  omittedCreatures: number;
+}
+const finite = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
+const label = (value: unknown): string | null => typeof value === 'string' ? value.slice(0,128) : null;
+export function diagnosticPlayerResources(row: Record<string, unknown>): DiagnosticResourceValues {
+  return { hp: finite(row.hp), maxHp: finite(row.maxHp ?? row.max_hp),
+    cp: finite(row.cp), maxCp: finite(row.maxCp ?? row.max_cp),
+    mp: finite(row.mp), maxMp: finite(row.maxMp ?? row.max_mp) };
+}
+export function diagnosticCreatureResources(row: Record<string, unknown>): DiagnosticCreatureResources {
+  return { id: label(row.creatureId ?? row.id) ?? '', projectionId: label(row.creatureId ? row.id : null),
+    spawnSeq: finite(row.spawnSeq ?? row.spawn_seq), hp: finite(row.hp), maxHp: finite(row.maxHp ?? row.max_hp) };
+}
+/** Best effort and recording-scoped: observation must never affect gameplay. */
+export function recordCombat2ResourceState(snapshot: Combat2ResourceInput | (() => Combat2ResourceInput)): void {
+  try {
+    const recording = currentCombat2Recording();
+    if (!recording) return;
+    const input = typeof snapshot === 'function' ? snapshot() : snapshot;
+    if (input.characterId !== recording.characterId || !['client_received','client_state','ui_displayed'].includes(input.layer)) return;
+    // Only numeric allowlisted values; preserve over-cap/negative observations, not formulas/clamps.
+    const player = input.player ? Object.fromEntries(
+      ['hp','maxHp','cp','maxCp','mp','maxMp','reservedCp','queuedCp','displayedCp','spendableCp']
+        .filter(key => key in input.player!).map(key => [key,finite(input.player![key as keyof DiagnosticResourceValues])])) : undefined;
+    const creatures = input.creatures?.slice(0,COMBAT2_DIAGNOSTIC_MAX_RESOURCE_CREATURES).map(c => ({
+      id: label(c.id) ?? '', projectionId: label(c.projectionId), spawnSeq: finite(c.spawnSeq), hp: finite(c.hp), maxHp: finite(c.maxHp),
+    }));
+    const value: Combat2ResourceInput & { omittedCreatures: number } = {
+      characterId: recording.characterId, nodeId: label(input.nodeId), encounterId: label(input.encounterId),
+      tick: finite(input.tick), cursor: finite(input.cursor), stateVersion: finite(input.stateVersion), requestId: label(input.requestId),
+      layer: input.layer, source: label(input.source) ?? 'unknown', status: label(input.status),
+      sourceUpdatedAt: label(input.sourceUpdatedAt), readStartedAt: finite(input.readStartedAt),
+      player, creatures, omittedCreatures: Math.max(0,(input.creatures?.length ?? 0)-COMBAT2_DIAGNOSTIC_MAX_RESOURCE_CREATURES),
+    };
+    const snapshots = recording.resourceSnapshots ?? [];
+    const previous = [...snapshots].reverse().find(s => s.source === value.source && s.layer === value.layer);
+    const comparable = (v: Combat2ResourceInput) => {
+      const { sourceUpdatedAt: _updated, readStartedAt: _read, ...rest } = v; return JSON.stringify(rest);
+    };
+    if (previous) {
+      const { wallTime: _wall, monotonicMs: _mono, event: _event, side: _side, ...old } = previous;
+      if (comparable(old) === comparable(value)) return;
+    }
+    const next = [...snapshots,{ ...value, event: 'resource_snapshot' as const, side: 'client' as const,
+      wallTime: new Date().toISOString(), monotonicMs: performance.now() }];
+    const overflow = Math.max(0,next.length-COMBAT2_DIAGNOSTIC_MAX_RESOURCE_SNAPSHOTS);
+    // Do not dispatch a React change for each resource sample (or recurse through observers).
+    write({ ...recording, resourceSnapshots: next.slice(overflow),
+      droppedResourceSnapshots: (recording.droppedResourceSnapshots ?? 0)+overflow },false);
+  } catch { /* Storage/quota/diagnostic failures cannot interrupt a resource update. */ }
+}
+
 export function buildCombat2DiagnosticExport(recording: Combat2DiagnosticRecording, serverEvents: Combat2DiagnosticEvent[] = []) {
   const clientEvents = recording.events;
+  const resourceSnapshots = recording.resourceSnapshots ?? [];
   const key = (e: Combat2DiagnosticEvent) => e.requestId ?? (e.tick != null && e.encounterId ? `${e.encounterId}:${e.tick}` : null);
   const clientKeys = new Set(clientEvents.map(key).filter(Boolean));
   const serverKeys = new Set(serverEvents.map(key).filter(Boolean));
   const duplicates = [...clientKeys, ...serverKeys].filter((value, index, all) => all.indexOf(value) !== index);
-  const correlatedTimeline = [...clientEvents, ...serverEvents].map(event => ({ ...event, correlationId: key(event) }))
+  const correlatedTimeline = [...clientEvents, ...serverEvents, ...resourceSnapshots].map(event => ({ ...event, correlationId: key(event) }))
     .sort((a, b) => a.wallTime.localeCompare(b.wallTime));
-  const elapsed = correlatedTimeline.map(e => e.elapsedMs).filter((v): v is number => typeof v === 'number');
+  const elapsed = [...clientEvents, ...serverEvents].map(e => e.elapsedMs).filter((v): v is number => typeof v === 'number');
   return {
     metadata: { version: 1, sessionId: recording.sessionId, startedAt: recording.startedAt,
-      expiresAt: recording.expiresAt, note: 'Client and server clocks are independent; wall-clock ordering is descriptive only.', droppedClientEvents: recording.dropped },
-    clientEvents, serverEvents, correlatedTimeline,
+      expiresAt: recording.expiresAt, note: 'Client and server clocks are independent; wall-clock ordering is descriptive only.', droppedClientEvents: recording.dropped, droppedResourceSnapshots: recording.droppedResourceSnapshots ?? 0,
+      initialScope: { characterId: recording.characterId, nodeId: recording.nodeId, encounterId: recording.encounterId },
+      resourceEvidence: 'All resource snapshots are browser observations, not independently verified server state. UI values are render values, not animation samples. Source/tick/version identities take precedence over wall-clock ordering.' },
+    clientEvents, serverEvents, resourceSnapshots, correlatedTimeline,
     unmatchedClientEvents: clientEvents.filter(e => { const k=key(e); return k != null && !serverKeys.has(k); }),
     unmatchedServerEvents: serverEvents.filter(e => { const k=key(e); return k != null && !clientKeys.has(k); }),
-    summaryStatistics: { clientEventCount: clientEvents.length, serverEventCount: serverEvents.length,
+    summaryStatistics: { clientEventCount: clientEvents.length, serverEventCount: serverEvents.length, resourceSnapshotCount: resourceSnapshots.length,
       duplicateCorrelationIds: [...new Set(duplicates)], longestObservedPhaseMs: elapsed.length ? Math.max(...elapsed) : null },
   };
 }

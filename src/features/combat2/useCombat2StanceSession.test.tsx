@@ -1,3 +1,4 @@
+import { startCombat2Recording, recoverableCombat2Recording, clearCombat2Recording } from './diagnostics';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCombat2StanceSession } from './useCombat2StanceSession';
@@ -187,3 +188,20 @@ describe('useCombat2StanceSession', () => {
     expect(requestIds).toEqual([requestIds[0], requestIds[0], '33333333-3333-4333-8333-333333333332']);
   });
 });
+
+ it('records stance CP changes and reservation values without adding RPCs', async () => {
+   rpc.mockReset();
+   rpc.mockResolvedValueOnce({data:projection(A),error:null})
+     .mockResolvedValueOnce({data:{ok:true,kind:'activated',projection:projection(A,['force_shield'])},error:null});
+   startCombat2Recording(A,'node',null);
+   try {
+     const view=renderHook(() => useCombat2StanceSession({enabled:true,characterId:A}));
+     await waitFor(() => expect(view.result.current.ready).toBe(true));
+     await act(async () => { await view.result.current.change('force_shield','activate'); });
+     const resources=recoverableCombat2Recording()?.resourceSnapshots;
+     expect(resources?.map(s => s.source)).toEqual(['combat2_character_stances','combat2_change_stance']);
+     expect(resources?.at(-1)).toMatchObject({layer:'client_received',requestId:expect.any(String),
+       player:{cp:50,maxCp:100,reservedCp:10,spendableCp:40}});
+     expect(rpc).toHaveBeenCalledTimes(2); view.unmount();
+   } finally { clearCombat2Recording(); }
+ });

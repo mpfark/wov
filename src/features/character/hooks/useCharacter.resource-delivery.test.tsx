@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { startCombat2Recording, recoverableCombat2Recording } from '@/features/combat2/diagnostics';
 import { useCharacter, type Character } from './useCharacter';
 
 const CHARACTER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -136,6 +137,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('authoritative character resource delivery', () => {
   it('preserves newer realtime resources when an older read finishes afterward', async () => {
+    startCombat2Recording(CHARACTER,'node',null);
     let release!: (value: unknown) => void;
     mocks.query.mockReset().mockResolvedValueOnce({ data: [base(5)], error: null })
       .mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
@@ -148,6 +150,8 @@ describe('authoritative character resource delivery', () => {
     await act(async () => { release({ data: [base(9)], error: null }); });
     expect(result.current.character).toMatchObject({ hp: 17, cp: 17, mp: 17 });
     expect(result.current.resourceDelivery.readStartedAt).toBe(newerReadStartedAt);
+    expect(recoverableCombat2Recording()?.resourceSnapshots?.map(s => s.player?.hp)).toEqual([5,17,9]);
+    expect(recoverableCombat2Recording()?.resourceSnapshots?.every(s => s.layer === 'client_received')).toBe(true);
     unmount();
   });
 

@@ -1,3 +1,4 @@
+import { useCombat2ResourceCapture } from '@/features/combat2/useCombat2ResourceCapture';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
 import { PlayerPresence } from '@/features/world';
@@ -126,6 +127,10 @@ export default function NodeView({
   statusBarsProps,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
+  useCombat2ResourceCapture(() => ({ ...statusBarsProps?.diagnosticContext, characterId: character.id, nodeId: node.id,
+    layer: 'ui_displayed', source: 'node_view',
+    creatures: creatures.map(c => ({ id: c.id, spawnSeq: c.spawn_seq,
+      hp: creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp, maxHp: c.max_hp })) }));
   const [areaOpen, setAreaOpen] = useState(true);
   const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; family_name?: string | null; level: number; race?: string; class?: string; gender?: string; is_king_slayer?: boolean } | null>(null);
 

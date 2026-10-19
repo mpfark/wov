@@ -1,3 +1,4 @@
+import { startCombat2Recording, recoverableCombat2Recording, clearCombat2Recording } from './diagnostics';
 import { readFileSync } from 'node:fs';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -122,3 +123,22 @@ describe('useCombat2DeliverySession active lifecycle', () => {
     expect(factory).toHaveBeenCalledOnce();
   });
 });
+
+ it('records received resources with snapshot tick/version distinct from paged delivery cursor', async () => {
+   startCombat2Recording(CHARACTER,'node',ENCOUNTER);
+   try {
+     const c = controllers();
+     const view = renderHook(() => useCombat2DeliverySession({ enabled:true,characterId:CHARACTER,encounterId:ENCOUNTER,client:unusedClient,createController:c.factory }));
+     await waitFor(() => expect(c.options).toHaveLength(1));
+     const received = sync([2]); received.encounter = { ...received.encounter,tick:5,stateVersion:8 };
+     received.character = {hp:9,maxHp:20,cp:30,maxCp:100,mp:40,maxMp:100};
+     received.creatures = [{id:'projection',creatureId:'creature',spawnSeq:2,hp:7,maxHp:80}];
+     act(() => c.options[0].onSync?.(received));
+     expect(recoverableCombat2Recording()?.resourceSnapshots?.at(-1)).toMatchObject({
+       side:'client',layer:'client_received',source:'combat2_sync',tick:5,cursor:2,stateVersion:8,
+       player:{hp:9,cp:30,mp:40},creatures:[{id:'creature',projectionId:'projection',spawnSeq:2,hp:7,maxHp:80}],
+     });
+     expect(view.result.current.lastAppliedTick).toBe(2);
+     expect(unusedClient.rpc).not.toHaveBeenCalled(); view.unmount();
+   } finally { clearCombat2Recording(); }
+ });

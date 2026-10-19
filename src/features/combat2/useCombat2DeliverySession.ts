@@ -10,7 +10,7 @@ import {
   type Combat2SyncResult,
   type Combat2TickBatch,
 } from './delivery';
-import { recordCombat2ClientEvent } from './diagnostics';
+import { recordCombat2ClientEvent, recordCombat2ResourceState, diagnosticPlayerResources, diagnosticCreatureResources } from './diagnostics';
 
 export type Combat2DeliverySessionStatus =
   | 'disabled'
@@ -131,6 +131,10 @@ export function useCombat2DeliverySession({
       onError: applyError,
       onSync(result) {
         if (currentKeyRef.current !== key) return;
+        recordCombat2ResourceState(() => ({ characterId, layer: 'client_received', source: 'combat2_sync',
+          encounterId, tick: result.encounter.tick, cursor: result.returned_through_tick, stateVersion: result.encounter.stateVersion,
+          player: diagnosticPlayerResources(result.character),
+          creatures: result.creatures.map(diagnosticCreatureResources) }));
         recordCombat2ClientEvent({event:'snapshot_accepted',encounterId,cursor:result.returned_through_tick,tick:result.returned_through_tick});
         setActive((previous) => {
           if (previous?.sessionKey !== key) return previous;
