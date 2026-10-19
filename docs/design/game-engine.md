@@ -264,6 +264,8 @@ Scheduler, dispatcher and worker are separate failure domains. The scheduler ope
 
 Client timing distinguishes authoritative data age from short presentation transitions. Realtime is the preferred delivery path; bounded polling/reconnect recovery is fallback. Old-session responses cannot replace a current projection. Diagnostic recording is bounded, admin-controlled and must not reveal credentials.
 
+The visible event log is bounded in-memory presentation for the mounted character session; browser history is not automatically restored or accumulated. Persistent display preferences and temporary, manually exported diagnostic recordings are separate from authoritative server event history, delivery cursors and rewards.
+
 Verification levels are deliberately different:
 
 | Level | Proves |

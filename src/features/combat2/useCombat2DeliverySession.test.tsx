@@ -12,7 +12,7 @@ import {
 const CHARACTER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const ENCOUNTER = 'bbbbbbbb-0000-4000-8000-000000000001';
 const ENCOUNTER_2 = 'bbbbbbbb-0000-4000-8000-000000000002';
-const unusedClient = { rpc: vi.fn(), channel: vi.fn(), removeChannel: vi.fn() } as never;
+const unusedClient = { rpc: vi.fn(), channel: vi.fn(), removeChannel: vi.fn() };
 
 function sync(ticks: number[], encounterId = ENCOUNTER): Combat2SyncResult {
   const latest = ticks.at(-1) ?? 0;

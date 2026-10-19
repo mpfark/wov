@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-19T11:50:15.773Z",
- "based_on_source_sha": "830c9cdecf94428dd140654e46bdb4f1080c0122",
+ "updated_at": "2026-10-19T21:44:38.241Z",
+ "based_on_source_sha": "d78bad1db5d68b2b65bd2a5cfd56e726b2d3017d",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2511,6 +2511,17 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "evidence": "Existing Start/Stop/Export extended with separate bounded200 resource-snapshot ring/16 creatures per sample; unchanged five-minute/500-client/2000-server event limits. Client-received character/sync/roster/stance values, merged character state and actual rendered player/creature values have explicit browser provenance, source labels, timestamp/identity fences and drop counts. No independent authoritative server resource state claimed. No extra polls/RPCs/tables/gameplay writes, formula changes, SQL/Edge/deployment/publication. Focused unit/render/transport tests, app typecheck/build pass; manual frontend publication and live symptom capture remain outstanding. Prior closures, accepted limitations, administrative XP grant pause and recovery stash preserved."
+  },
+  {
+   "identity": "combat2-session-log-resource-handoff",
+   "status": "ready_for_manual_publish",
+   "sha": "d78bad1db5d68b2b65bd2a5cfd56e726b2d3017d",
+   "timestamp": "2026-10-19T21:44:38.241Z",
+   "artifact": "docs/operations/combat2-session-log-hp-review.md",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "evidence": "Supplied diagnostic ba7da199 recording shows received HP0/tick1537 then UI0→7→0 as session exits; browser observations with194 dropped resource samples, not independent hosted readback. Frontend retains last combat resources until post-release character-read delivery; no new polling/RPC/mutation. GamePage disconnected from IndexedDB event archive and character-keyed page state; existing bounded memory log, server delivery/history/rewards and temporary manual diagnostics unchanged. Manual frontend publication/live confirmation outstanding; prior limitations and administrative XP grant pause preserved."
   }
  ],
  "known_blockers": [

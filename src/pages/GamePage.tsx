@@ -68,7 +68,7 @@ import { useStatAllocation } from '@/features/character/hooks/useStatAllocation'
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import EventLogControls from '@/features/combat/components/EventLogControls';
 import { useEventLogDisplay } from '@/features/combat/hooks/useEventLogDisplay';
-import { useLogArchive } from '@/features/combat/hooks/useLogArchive';
+import { useCombat2ResourceHandoff } from '@/features/combat2/useCombat2ResourceHandoff';
 import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import OnlinePanel from '@/features/chat/components/OnlinePanel';
@@ -353,11 +353,14 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   [activeCombat2Presentation, combat2Stances.projection]);
   const authoritativeCombat2Reservations = authoritativeCombat2ReservationState.reservedBuffs;
   const authoritativeCombat2ReservedCp = authoritativeCombat2ReservationState.reservedCp;
+  const characterResourcePresentation = useCombat2ResourceHandoff({ enabled: combat2BlocksLegacy,
+    characterId: character.id, nodeId: character.current_node_id, sessionStatus: combat2.sessionStatus,
+    model: combat2.presentation.model, readStartedAt: resourceDelivery?.readStartedAt });
   const presentedCharacter = useMemo(() => {
     return selectCombat2Character(combat2BlocksLegacy,
-      combat2.sessionStatus === 'active' ? activeCombat2Presentation : null, character,
+      characterResourcePresentation, character,
       combat2Stances.acknowledgedResources);
-  }, [activeCombat2Presentation, character, combat2BlocksLegacy, combat2.sessionStatus, combat2Stances.acknowledgedResources]);
+  }, [characterResourcePresentation, character, combat2BlocksLegacy, combat2Stances.acknowledgedResources]);
   // The node roster is the only source of creature visibility. Encounter
   // membership refines runtime values but never removes a living creature from
   // ordinary presentation, so peaceful creatures stay listed while Combat2 owns
@@ -1423,13 +1426,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     return [...byId.values()].sort((a, b) => a.ts - b.ts).slice(-100);
   }, [filteredEventLog, combat2.presentation.model, combat2BlocksLegacy, combat2VisibleLog]);
 
-  // On-device archive: full personal log history with infinite scrollback.
-  const logArchive = useLogArchive(character.id, presentedEventLog);
-  const filteredOlderEvents = useMemo(() => {
-    if (!(isWideScreen && chatPanelOpen)) return logArchive.olderEvents;
-    return logArchive.olderEvents.filter(e => e.type !== 'speech' && e.type !== 'whisper');
-  }, [logArchive.olderEvents, isWideScreen, chatPanelOpen]);
-
+  // UI history is this mounted character session's bounded in-memory log only.
+  // Do not hydrate or mirror the retired browser archive; server delivery is unchanged.
 
   // ── Shared drop handler ────────────────────────────────────────
   const handleDropItem = useCallback(async (inventoryId: string) => {
@@ -1750,10 +1748,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
             filteredEventLog={presentedEventLog}
             display={eventLogDisplay}
             className="flex-[55]"
-            olderEvents={filteredOlderEvents}
-            hasMoreHistory={logArchive.hasMore}
-            loadingHistory={logArchive.loadingOlder}
-            onLoadOlder={logArchive.loadOlder}
           />
           <CommandInputBar
             chatInput={chatInput}

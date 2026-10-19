@@ -93,6 +93,7 @@ export default function GameRoute() {
 
   return (
     <GamePage
+      key={character.id}
       character={character}
       updateCharacter={updateCharacter}
       updateCharacterLocal={updateCharacterLocal}
