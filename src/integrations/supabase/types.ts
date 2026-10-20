@@ -7487,10 +7487,6 @@ export type Database = {
         Args: { _character_id: string }
         Returns: string
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       drop_item_to_ground: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: boolean
@@ -7541,7 +7537,6 @@ export type Database = {
         Returns: string
       }
       effects_transport_snapshot: { Args: { _node_id?: string }; Returns: Json }
-      email_queue_dispatch: { Args: never; Returns: undefined }
       encounter_apply_character_damage: {
         Args: {
           _amount: number
@@ -7735,10 +7730,6 @@ export type Database = {
         Args: { _encounter_id: string }
         Returns: boolean
       }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       expire_king_slayer: { Args: never; Returns: undefined }
       expire_marketplace_listings: { Args: never; Returns: number }
       final_maintenance_sweep: { Args: never; Returns: undefined }
@@ -7896,15 +7887,6 @@ export type Database = {
       move_follower: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
-      }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
       }
       node_creature_roster: { Args: { _character_id: string }; Returns: Json }
       node_encounter_bump_version: {
@@ -8127,14 +8109,6 @@ export type Database = {
       purge_creature_engagements: {
         Args: { _creature_id: string }
         Returns: undefined
-      }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
       }
       record_effects_catchup_result: {
         Args: {
