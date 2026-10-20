@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T22:55:02.930Z",
- "based_on_source_sha": "5737ca0b95be8058a46e5fb6fdee201feea44cd7",
+ "updated_at": "2026-10-20T23:09:25.409Z",
+ "based_on_source_sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -3181,6 +3181,17 @@
    "directly_verified": false,
    "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
    "evidence": "F10H observation time only: world asleep, Combat2 maintenance, dispatcher/idle jobs removed; empty stored active encounter not ticking and did not block shutdown. F10E authenticated party create/invite/accept, exact replay/no duplicate and six combat_active refusals reported PASS; F10F ordinary respawn/cancel/disband, no test memberships/invitations. E/F exact times/raw request IDs/transcripts not provided; separate phases not one snapshot. Not independently inspected by Codex or a current safe-window assertion. Awake empty-encounter lifecycle remains unresolved."
+  },
+  {
+   "identity": "Owner gameplay observations — combat log repetition, respawn delivery and passive re-entry",
+   "status": "unknown",
+   "sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
+   "timestamp": "2026-10-20T23:09:25.409Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik",
+   "directly_verified": false,
+   "artifact": "docs/operations/combat2-owner-log-lifecycle-observations.md",
+   "evidence": "Recorded2026-10-21; exact gameplay times/encounter IDs not supplied. ENG-UX-001 overlapping death/XP/gold/no-drop/Killing Blow feedback: identical XP amounts and owner verified XP NOT awarded twice; no confirmed duplicate XP accounting. Durability correctly decreases 1 per round; ordinary log repetition unwanted. ENG-DELIVERY-001 post-respawn logs appeared only after leaving/re-entering node; subscription/cursor/generation/presentation cause unknown. ENG-COMBAT-001/002 and G4 passive creature re-entry: original encounter active/ended state unknown, engagement/lifecycle verification required, no approved aggression change. Documentation only, no runtime/source investigation or fix; prior limitations/statuses unchanged."
   }
  ],
  "product_backlog": [

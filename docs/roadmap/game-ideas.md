@@ -283,6 +283,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
 - **Dependencies / overlaps:** measured Realtime recovery and gap visibility.
 - **001A mapping / current tracking:** ENG-DELIVERY-001 → ENG-DELIVERY-001; Roadmap; state evidence varies.
+- **Observation reference (2026-10-21):** Owner-reported respawn combat logs delayed until node re-entry; cause unknown; [bounded evidence](../operations/combat2-owner-log-lifecycle-observations.md). Existing status and implementation authorization unchanged.
 
 #### WOV-IDEA-010 — Sleep-consistent creature OOC regeneration
 
@@ -322,6 +323,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
 - **Dependencies / overlaps:** ENG-COMBAT-001, ENG-DIAG-002.
 - **001A mapping / current tracking:** ENG-UX-001 → ENG-UX-001; Roadmap; state evidence varies.
+- **Observation reference (2026-10-21):** Owner-reported overlapping reward feedback (not duplicate XP accounting) and repetitive durability lines; [bounded evidence](../operations/combat2-owner-log-lifecycle-observations.md). Existing status and implementation authorization unchanged.
 
 #### ENG-LEGACY-002 — Remove obsolete legacy runtime surfaces (remaining gates only)
 

@@ -51,6 +51,7 @@ This is the canonical backlog for engine authority, correctness and stabilizatio
 - **Evidence/current state:** forward migration `20260928100000_combat2_authoritative_arrival_hostile_initiation.sql` authors movement-completion entry, generic server-classified hostile initiation, newest-entry-only tank order and one documented lock order. Project state records direct installation evidence, and Mik reports the dependent frontend manually published. Arrival, hostile initiation and multiplayer tank order remain live-unverified.
 - **Acceptance criteria:** executable solo/party/reconnect concurrency tests, action-payload replay conflict tests, invalid-first-action rollback, follower-first/leader-last entry generations, unrelated newcomer tank, no duplicate encounter/fighter/intent/reward qualification, installed and bounded live proof.
 - **Specification sections:** Creatures, targeting and initiation; Movement and party movement; Combat resolution.
+- **Re-entry observation (2026-10-21):** a previously engaged passive creature did not act aggressively after node re-entry; original encounter active/ended state unknown. Cross-reference ENG-COMBAT-001 and G4 lifecycle, not an approved aggression-rule change or confirmed defect. [Evidence](../operations/combat2-owner-log-lifecycle-observations.md).
 
 ### ENG-HB-001 — Explicit global heartbeat identity
 
@@ -272,6 +273,7 @@ B–H are not implemented or authorized by 001A. Later task preparation may be d
 - **Evidence/current state:** delivery works without tab switching by operator report; intermittent delay remains.
 - **Acceptance criteria:** gap/reconnect SLO, no stale overwrite, safe fallback retained.
 - **Specification sections:** Failure, diagnostics and verification.
+- **New owner report (2026-10-21):** logs absent when fighting the same creature after respawn appeared after node exit/re-entry. Subscription/cursor/generation/presentation cause unestablished; investigate separately, retaining safe fallback and ENG-UX-001 distinction. [Evidence](../operations/combat2-owner-log-lifecycle-observations.md).
 
 ### ENG-UX-001 — Combat feedback refinement
 - **Engine area / status / priority:** presentation; `deferred`; 17.
@@ -281,6 +283,7 @@ B–H are not implemented or authorized by 001A. Later task preparation may be d
 - **Evidence/current state:** core logs/resources are delivered.
 - **Acceptance criteria:** accessible states, no flicker/duplicate lines, authoritative wording and focused UI tests.
 - **Specification sections:** Creatures, targeting and initiation; Failure, diagnostics and verification.
+- **New owner report (2026-10-21):** overlapping death/XP/gold/no-drop/Killing Blow feedback and per-round durability log noise. XP amounts were identical; owner verified XP was NOT awarded twice. Durability decreases correctly by 1 per round; requested refinement concerns ordinary-log repetition only. [Evidence and limits](../operations/combat2-owner-log-lifecycle-observations.md). No accounting defect or fix established.
 
 ### ENG-BALANCE-001 — Broader ability and balance audit
 - **Engine area / status / priority:** combat/content; `deferred`; 18.
