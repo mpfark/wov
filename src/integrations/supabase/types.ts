@@ -7747,6 +7747,16 @@ export type Database = {
         Args: { p_character_id: string; p_stats: Json }
         Returns: Json
       }
+      gem_application_internal: {
+        Args: {
+          _actor: string
+          _character_id: string
+          _completion_id: string
+          _gem_key: string
+          _inventory_id: string
+        }
+        Returns: Json
+      }
       get_app_secret: { Args: { _key: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       get_my_admin_role: { Args: never; Returns: string }
