@@ -11,4 +11,5 @@
 - [x] Verify exact reviewed artifact and 25-entry history; install 0025 through the standard tool.
 - [x] Verify body/security, unchanged canonical XP and exactly one appended migration; record results.
 - [x] Owner disposition of unexpected sandbox-principal EXECUTE grant: accepted as platform-managed default-ACL exception 2026-10-20 (docs/operations/idea-015-acl-exception-disposition.md); service_role-only contract retained.
-- [ ] Owner approval of forge-craft-base Edge Function deployment (next required approval; not yet authorized).
+- [x] forge-craft-base Edge deployed 2026-10-20; refusal checks PASS (docs/operations/idea-015-edge-deployment-result.md).
+- [ ] Mik manual frontend publication, then separately approved authenticated craft check.
