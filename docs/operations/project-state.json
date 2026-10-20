@@ -531,13 +531,13 @@
  ],
  "generated_supabase_types": {
   "status": "committed",
-  "sha": "0e21419036f3652aae2a04beb558a8964b927f0d",
-  "timestamp": "2026-10-13T06:07:17.458Z",
+  "sha": null,
+  "timestamp": "2026-10-20T23:22:45.000Z",
   "artifact": "src/integrations/supabase/types.ts",
-  "evidence_type": "repository",
-  "reporting_actor": "Codex",
+  "evidence_type": "cloud_inspection",
+  "reporting_actor": "Lovable migration tool; Lovable source verification",
   "directly_verified": true,
-  "evidence": "D6 automatic regeneration adds only material_sale_internal five-argument signature/JSON result. Source delta directly verified; no privilege/runtime inference."
+  "evidence": "0026 tool regenerated Cloud types; exact current file SHA25672c733e81305f4b48359722438fc363e4572afa3793e772f1847f614dd2dea6f. Compared with reviewed a57df3a54c80c79fdfedcd307b9f0cc391bc226f, only gem_application_internal five named arguments/Json result added; prior types preserved. Managed Git changes observed but exact resulting commit not recorded. This is type-generation evidence, not Edge deployment, frontend publication or runtime verification."
  },
  "edge_function_deployments": [
   {
