@@ -176,6 +176,13 @@
       "when": 1792316019615,
       "tag": "0024_g4a21_shared_creature_hp",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792476972530,
+      "tag": "0025_idea_015_base_crafting",
+      "breakpoints": true
     }
   ]
 }

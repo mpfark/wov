@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T05:27:56.619Z",
+ "updated_at": "2026-10-20T06:16:35Z",
  "based_on_source_sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
  "status_vocabulary": [
   "authored",
@@ -24,6 +24,17 @@
   "evidence": "Local R2 source/config/0006/journal/snapshot/runtime identity verified against checkpoint a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c. Closure reconciles operator evidence under R2 acceptance; docs/operations/progression-001F-closure.md. No runtime changes. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
  },
  "database_migrations": [
+  {
+   "identity": "0025_idea_015_base_crafting.sql",
+   "status": "installed",
+   "sha": "8441598f1773402e1a560a13dd3cf52dd8195b54",
+   "timestamp": "2026-10-20T06:16:27.577339Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-015-sql-installation-result.md",
+   "evidence": "Standard custom-SQL Drizzle tool installed exact reviewed SQL in one managed transaction; generated artifact and hosted row26 hash both 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407. Prior25 hosted identities/hashes/timestamps, local journal prefix and historical SQL/snapshots unchanged; exactly one appended entry, idx25/when1792476972530. Installed base_craft_internal body SHA256 b9d1e4408ab1c291453138c29117c6f35fd38aaaf7723376727d1742154a045f matches reviewed body; postgres-owned SECURITY DEFINER plpgsql/jsonb, search_path pg_catalog, public, pg_temp. PUBLIC/anon/authenticated EXECUTE denied, service_role allowed. Additional direct EXECUTE grant to project sandbox execution principal detected: STOP for owner disposition; no permission repair or retry. Canonical XP hash9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde, owner/security/settings/owner-only ACL unchanged. No gameplay, Edge deployment, frontend change, publication or world controls. Tool reports types regenerated; no net tracked types delta. WOV-IDEA-015 remains IN PROGRESS, activation blocked pending grant disposition and separate approvals."
+  },
   {
    "identity": "20261002190000_combat2_legacy_browser_privileges.sql",
    "status": "installed",
@@ -2532,10 +2543,21 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-base-crafting-handoff.md",
-   "evidence": "Confirmed intentional forge-craft-base HTTP503 cutover pause. Prepared atomic service-only base_craft_internal with ownership/active forge/tier/material/gold validation, stable completion UUID and private canonical craft_completion XP25 in one transaction; original tier prices retained, level1 tier1 salvage7/gold5. SQL SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407. Ten local PostgreSQL18.6 tests including cap/missing-action-receipt checks and two independently blocking sessions, plus nine focused Edge/caller tests. Database NOT installed, Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified. Owner authorizes local implementation/Git publication only. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
+   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant requires owner disposition; no automatic repair. Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
   }
  ],
  "known_blockers": [
+  {
+   "identity": "idea-015-post-install-extra-execute-grant",
+   "status": "blocked",
+   "sha": "8441598f1773402e1a560a13dd3cf52dd8195b54",
+   "timestamp": "2026-10-20T06:16:27.577339Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-015-sql-installation-result.md",
+   "evidence": "Migration0025 installed exactly and all SQL guards passed, but actual function ACL includes an additional direct EXECUTE grant to the project sandbox execution principal beyond reviewed postgres/service_role intent. Browser roles remain denied. No role classification or grant removal attempted; stop for owner disposition and separately scoped review/correction before Edge activation."
+  },
   {
    "identity": "eng-legacy-002-batch-c-history-reconciliation",
    "status": "committed",

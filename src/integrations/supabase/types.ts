@@ -6681,6 +6681,15 @@ export type Database = {
             }
             Returns: undefined
           }
+      base_craft_internal: {
+        Args: {
+          _actor: string
+          _character_id: string
+          _completion_id: string
+          _item_id: string
+        }
+        Returns: Json
+      }
       buy_unique_listing: {
         Args: { p_character_id: string; p_listing_id: string }
         Returns: Json
