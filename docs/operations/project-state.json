@@ -2550,7 +2550,7 @@
    "status": "deployed",
    "sha": "62b9f96ac1aefee6a8be13b087b6ff9eda0565ca",
    "timestamp": "2026-10-20T07:16:17Z",
-   "evidence_type": "hosted_observation",
+   "evidence_type": "cloud_inspection",
    "reporting_actor": "Lovable",
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-edge-deployment-result.md",
