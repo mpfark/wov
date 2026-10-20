@@ -17,6 +17,7 @@
 
 ## WOV-IDEA-033 canonical gem application
 - [x] Prepare local atomic SQL, Edge/caller retry recovery and focused rollback/concurrency/replay tests.
-- [ ] Separately approved installed-parity/default-ACL review and standard Drizzle installation.
+- [x] Bounded installed-parity/default-ACL review; owner accepted the exact gem-function platform exception.
+- [ ] Install the exact approved SQL once as 0026 and verify definition, privileges and preserved history; stop on uncertainty.
 - [ ] Matching forge-apply-gem deployment, then Mik manual frontend Publish.
 - [ ] Separately authorized runtime acceptance; see docs/operations/idea-033-gem-application-handoff.md.
