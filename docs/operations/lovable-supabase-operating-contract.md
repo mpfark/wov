@@ -37,6 +37,19 @@ This classification is an assertion boundary, not a role redesign or a guarantee
 
 For the application-member exception, use actual transitive `pg_auth_members` edges. A superuser's `pg_has_role(...,'MEMBER')` result can report authority over every role without a membership edge; do not misclassify unrelated administrators as application members. Global-data classification still uses effective USAGE, not catalog membership alone.
 
+### Project-scoped platform EXECUTE exception — WOV-IDEA-015 / 0025
+
+The [0025 installation record](idea-015-sql-installation-result.md) and [subsequent investigation and owner disposition](idea-015-acl-exception-disposition.md) document Lovable's platform-managed default privileges: new postgres-owned public functions can automatically receive an EXECUTE grant to the project-scoped sandbox principal. The verified principal for this project is `sandbox_exec_gpclaklkaolyzfnooajt`; on `public.base_craft_internal(uuid,uuid,uuid,uuid)` the grant was direct, from postgres, and not grantable. The supplied platform investigation established that this internal principal is not reachable through normal browser/PostgREST authentication or application Edge credentials. This is reported hosted evidence, not a fresh Codex inspection or proof about other projects.
+
+SQL installation verification may recognize this narrowly documented platform exception only after all of the following checks:
+
+- Resolve the **exact principal** in the target project and record its identity, grantor, privilege and grant option. Establish platform-managed origin through the applicable postgres/public function default ACL (`pg_default_acl`) and platform evidence; a matching `sandbox_exec_*` name alone is never sufficient.
+- Verify its role graph and platform access boundary: ordinary browser/PostgREST and application Edge principals must not inherit, assume or otherwise reach it. Use actual membership edges as above, not role-name or superuser membership shortcuts. Missing visibility or uncertain origin/reachability means STOP / REQUIRES EVIDENCE, not an automatic exemption.
+- Continue denying PUBLIC, anon and authenticated direct/effective EXECUTE on private RPCs, including access through memberships. Preserve each function's reviewed application/server execution contract; this exception does not grant service_role access to owner-only primitives.
+- Match the grant to its explicitly reviewed scope. The 0025 owner acceptance covers **only this principal's grant on base_craft_internal**. Any other unexpected principal, function grant, grant option or privilege expansion requires explicit review and disposition before acceptance; do not extend this precedent automatically.
+
+This exception concerns verified platform EXECUTE only, not table/column access, ownership, RLS or arbitrary sandbox-like roles. Do not change default privileges or hosted permissions to make verification pass. Existing drift guards, artifact/hash checks, migration transaction/history ownership, authorization and SQL → Edge → Mik publication gates remain binding. An unexpected grant still stops activation until resolved; an accepted grant does not authorize execution as that principal, use of `sandbox_exec`, or a non-read-only verification route. Earlier procedural deviations retain their recorded dispositions.
+
 ## Platform limitations and secret handling
 
 Known platform limitations: no native dry run; no disposable hosted database fixture; no reliable hosted concurrent-write test; no Edge revision ID or live bundle download. Lovable read roles may inherit global read/BYPASSRLS. Review exact SQL before authorized execution, verify installation afterward and describe unproved boundaries explicitly. A failed precondition with full rollback is an attempted operation, not an installed migration or surviving history entry.

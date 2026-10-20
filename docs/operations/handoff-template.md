@@ -19,6 +19,7 @@ Use this template for the task's actual scope; mark unused sections N/A. Link ex
 
 - Relevant local checks and results; environment failures and unexecuted checks separately:
 - SQL: exact signatures, privilege intent/owner/security/search_path, drift guards, transaction/rollback and data-preservation expectations. Keep reviewed SQL outside automatic migrations. Standard Drizzle tool owns the outer transaction: no top-level BEGIN/COMMIT; preserve PL/pgSQL blocks. Record any separately reviewed runner-compatible derivative and its own hash; never silently rewrite an approved artifact.
+- SQL ACL verification: record any platform default-EXECUTE exception using the [0025 exact-principal checks](lovable-supabase-operating-contract.md#project-scoped-platform-execute-exception--wov-idea-015--0025), including origin, application non-reachability and explicit acceptance scope. PUBLIC/anon/authenticated remain denied on private RPCs; other unexpected grants require review. A sandbox-like name is not an exemption or execution authorization.
 - Edge: exact function names, reviewed entrypoints/transitive shared imports, RPC argument/result dependencies, deployment configuration/auth requirements and required secret names only (no values). Identify functions to leave unchanged.
 - Frontend: matching backend prerequisite, any separately approved activation gate, relevant tests/typecheck/build or reused evidence, and manual publication requirement.
 
