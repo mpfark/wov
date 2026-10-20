@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T06:16:35Z",
+ "updated_at": "2026-10-20T06:53:00Z",
  "based_on_source_sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
  "status_vocabulary": [
   "authored",
@@ -2543,21 +2543,21 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-base-crafting-handoff.md",
-   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant requires owner disposition; no automatic repair. Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
+   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant investigated read-only and RESOLVED by owner acceptance2026-10-20 as a platform-managed default-ACL exception (docs/operations/idea-015-acl-exception-disposition.md); application-level contract remains service_role-only. Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
   }
  ],
  "known_blockers": [
   {
    "identity": "idea-015-post-install-extra-execute-grant",
-   "status": "blocked",
+   "status": "installed",
    "sha": "8441598f1773402e1a560a13dd3cf52dd8195b54",
-   "timestamp": "2026-10-20T06:16:27.577339Z",
-   "evidence_type": "cloud_inspection",
-   "reporting_actor": "Lovable",
+   "timestamp": "2026-10-20T06:53:00Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik (owner disposition); Lovable (read-only investigation)",
    "directly_verified": true,
-   "artifact": "docs/operations/idea-015-sql-installation-result.md",
-   "evidence": "Migration0025 installed exactly and all SQL guards passed, but actual function ACL includes an additional direct EXECUTE grant to the project sandbox execution principal beyond reviewed postgres/service_role intent. Browser roles remain denied. No role classification or grant removal attempted; stop for owner disposition and separately scoped review/correction before Edge activation."
-  },
+   "artifact": "docs/operations/idea-015-acl-exception-disposition.md",
+   "evidence": "RESOLVED by owner acceptance2026-10-20. Read-only investigation identified the grantee as the project-scoped sandbox execution principal sandbox_exec_gpclaklkaolyzfnooajt: a direct, non-grantable EXECUTE grant from grantor postgres, originating from platform default ACLs at function creation during migration0025, not from the reviewed SQL. The principal is not reachable through browser authentication, the Data API or the Edge runtime; anon/authenticated/PUBLIC remain denied. Classified as a platform-managed exception requiring explicit acceptance, not a security exposure. Owner accepted with scope limits: application-level contract stays service_role-only; acceptance covers only this exact grant on this exact function and does not authorize additional grants or weaken future ACL verification. No permissions or migration history changed."
+   },
   {
    "identity": "eng-legacy-002-batch-c-history-reconciliation",
    "status": "committed",

@@ -10,4 +10,5 @@
 ## WOV-IDEA-015 SQL installation
 - [x] Verify exact reviewed artifact and 25-entry history; install 0025 through the standard tool.
 - [x] Verify body/security, unchanged canonical XP and exactly one appended migration; record results.
-- [ ] Owner disposition of unexpected sandbox-principal EXECUTE grant; no further activation authorized.
+- [x] Owner disposition of unexpected sandbox-principal EXECUTE grant: accepted as platform-managed default-ACL exception 2026-10-20 (docs/operations/idea-015-acl-exception-disposition.md); service_role-only contract retained.
+- [ ] Owner approval of forge-craft-base Edge Function deployment (next required approval; not yet authorized).
