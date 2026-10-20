@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T23:22:45.000Z",
+ "updated_at": "2026-10-20T23:53:52.155411Z",
  "based_on_source_sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
  "status_vocabulary": [
   "authored",
@@ -540,6 +540,28 @@
   "evidence": "0026 tool regenerated Cloud types; exact current file SHA25672c733e81305f4b48359722438fc363e4572afa3793e772f1847f614dd2dea6f. Compared with reviewed a57df3a54c80c79fdfedcd307b9f0cc391bc226f, only gem_application_internal five named arguments/Json result added; prior types preserved. Managed Git changes observed but exact resulting commit not recorded. This is type-generation evidence, not Edge deployment, frontend publication or runtime verification."
  },
  "edge_function_deployments": [
+  {
+   "identity": "WOV-IDEA-033 forge-apply-gem canonical application deployment",
+   "status": "deployed",
+   "sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
+   "timestamp": "2026-10-20T23:53:52.155411Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-033-edge-deployment-result.md",
+   "evidence": "Only forge-apply-gem with reviewed shared handler deployed by supported tool after exact RPC/private dependency/ACL checks on observed read-only route. Starting HEAD/fresh remote tip2d6fd9ca7fe947e7a171766daaa6682429ad1f46 descends from review/baselinea57df3a5. Entry SHA25694c124b3b0109a3141f5570b932b44bbc868e7f32025aa29827c510f2fe294e8 and shared74c700be3fabacb9423d9f786d40a66cca23a91a9064c9a87245e2e4cadc6d02 exactly match review; configuration unchanged. Submitted files/settingsfd39e73a1b4f02718452a9cbbd8fc1227b7b9adbc3d1ff86c0fd6424a1d99b48; no revision ID/live bundle export. OPTIONS200 expected CORS, GET405 POST required, unauthenticated POST401 Sign in to apply gems; empty Authorization prevents preview token injection. OPTIONS tool unsupported, direct credential-free HTTP fallback passed. Old unconditional503 crafting_paused replaced by handler-specific refusals; full live byte identity remains unknown. Required managed runtime variable names confirmed from reviewed source, custom secret names-only listing does not independently attest managed variable existence; credential-dependent path intentionally untested. RPC body15e7099b and private XP9260bbbe/derived08359aa2 match exact handoff hashes/settings/ACLs; only previously accepted function-specific platform ACL present; history27/latest27 hash93a91367 unchanged. Frontend caller matches review, existing focused checks reused; ready for Mik manual publication, runtime separately authorized/unverified. No SQL/ACL/history/frontend/JWT/secret/unrelated Edge changes, gameplay calls or world controls. Timestamp is final endpoint observation, not recovered deployment execution time."
+  },
+  {
+   "identity": "WOV-IDEA-033 matching frontend readiness",
+   "status": "ready_for_manual_publish",
+   "sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
+   "timestamp": "2026-10-20T23:53:52.155411Z",
+   "evidence_type": "repository_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-033-edge-deployment-result.md",
+   "evidence": "Matching immutable request hook and shared Enhance controls unchanged from review; sole src delta is generated gem RPC types. SQL/ACL and matching Edge deployment/refusal stage PASS. Existing 11 focused Edge/hook/rendered Enhance checks and build evidence reused. Ready for Mik manual publication; NOT a publication or authenticated runtime claim. Prior frontend operator report preserved separately. Runtime credential availability, exact live bundle identity and gameplay acceptance remain unverified."
+  },
   {
    "identity": "G4A22 matching Combat2 workers after G4A24 database installation",
    "status": "deployed",
@@ -2587,7 +2609,7 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-033-gem-application-handoff.md",
-   "evidence": "Historical local evidence: D6/001D intentional forge-apply-gem503 pause; separate033 atomic canonical gem restoration, nineteen PostgreSQL18.6 cases including five independent-session cases,11 Edge/hook/rendered UI tests and6 containment tests. Fixture/source-order combat doubles are not hosted concurrency proof. Superseding hosted stage2026-10-20: bounded preflight and exact scoped ACL acceptance completed;0026 installed and essential definition/ACL/private-dependency/history verification PASS, see docs/operations/idea-033-sql-installation-result.md. SQL SHA25693a9136796b798f0e4e76ac9d3acab5c79b934a0620a1ccaa4de2f113423001f. Edge NOT DEPLOYED; matching frontend NOT PUBLISHED; runtime UNVERIFIED; feature IN PROGRESS. Next gate is separate approval for matching forge-apply-gem/shared handler deployment, then Mik manual publication and separately approved runtime acceptance. Other systems/closures/four OPEN progression limitations/admin XP pause/E13/G dispositions preserved."
+   "evidence": "Historical local evidence: D6/001D intentional forge-apply-gem503 pause; separate033 atomic canonical gem restoration, nineteen PostgreSQL18.6 cases including five independent-session cases,11 Edge/hook/rendered UI tests and6 containment tests. Fixture/source-order combat doubles are not hosted concurrency proof. Superseding hosted stage2026-10-20: bounded preflight and exact scoped ACL acceptance completed;0026 installed and essential definition/ACL/private-dependency/history verification PASS, see docs/operations/idea-033-sql-installation-result.md. SQL SHA25693a9136796b798f0e4e76ac9d3acab5c79b934a0620a1ccaa4de2f113423001f. Matching Edge DEPLOYED under separate owner authorization; exact sources and RPC/private dependencies matched, non-mutating OPTIONS200/GET405/POST401 PASS, old503 replaced; see docs/operations/idea-033-edge-deployment-result.md. Matching frontend ready for Mik manual publication, NOT PUBLISHED; runtime UNVERIFIED; feature IN PROGRESS. No live revision identity returned; managed runtime credential availability not independently attested by safe probes. Next gate is Mik manual publication and separately approved runtime acceptance. Other systems/closures/four OPEN progression limitations/admin XP pause/E13/G dispositions preserved."
   }
  ],
  "known_blockers": [
