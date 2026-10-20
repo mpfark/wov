@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { effectiveItemStats } from '@/shared/formulas/items';
 
@@ -49,11 +49,13 @@ export function getEffectiveStats(inv: Pick<InventoryItem, 'applied_gems' | 'sta
 
 interface UseInventoryOptions {
   onResourcesSynced?: () => void;
+  onEquipmentError?: (message: string) => void;
 }
 
 
 export function useInventory(characterId: string | null, options: UseInventoryOptions = {}) {
-  const { onResourcesSynced } = options;
+  const { onResourcesSynced, onEquipmentError } = options;
+  const equipmentBusy = useRef(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -82,52 +84,70 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   const syncResources = useCallback(async () => {
     if (!characterId) return;
     try {
-      await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+      const { error } = await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+      if (error) throw error;
       onResourcesSynced?.();
     } catch (e) {
-      console.error('Failed to sync character resources after gear change:', e);
+      onEquipmentError?.('Equipment changed, but resource synchronization failed. Refresh your character before continuing.');
+      onResourcesSynced?.();
     }
-  }, [characterId, onResourcesSynced]);
+  }, [characterId, onResourcesSynced, onEquipmentError]);
+
+  const changeEquipment = useCallback(async (action: 'equip' | 'unequip', inventoryId: string, slot: string | null) => {
+    if (!characterId || equipmentBusy.current) return;
+    equipmentBusy.current = true;
+    try {
+      const { data, error } = await supabase.rpc('character_inventory_action' as never, {
+        _character_id: characterId, _action: action, _inventory_id: inventoryId,
+        _slot: slot, _request_id: crypto.randomUUID(),
+      } as never);
+      if (error) throw new Error(error.message);
+      const result = data as { ok?: boolean; kind?: string } | null;
+      if (!result || typeof result.ok !== 'boolean') throw new Error('Unrecognized equipment response');
+      if (!result.ok) {
+        const messages: Record<string, string> = {
+          unavailable_while_dead: 'You cannot change equipment while dead.',
+          unavailable_while_in_combat: 'You cannot change equipment during combat.',
+          movement_pending: 'Finish moving before changing equipment.',
+          invalid_item: 'This item cannot be equipped. Check its type and durability.',
+          invalid_slot: 'This item cannot use that equipment slot.',
+          slot_conflict: 'Unequip your two-handed weapon before using the off hand.',
+          action_failed: 'The server refused the equipment change. Check active stances, including Shield Wall.',
+        };
+        onEquipmentError?.(messages[result?.kind ?? ''] ?? `Equipment change refused (${result?.kind ?? 'unknown response'}).`);
+        return;
+      }
+      await fetchInventory();
+      await syncResources();
+    } catch (error) {
+      onEquipmentError?.(`Could not confirm equipment change: ${error instanceof Error ? error.message : 'unknown error'}. Refresh inventory before retrying.`);
+      await fetchInventory();
+    } finally { equipmentBusy.current = false; }
+  }, [characterId, fetchInventory, syncResources, onEquipmentError]);
 
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
-    if (!characterId) return;
     const itemToEquip = inventory.find(i => i.id === inventoryId);
-    if (itemToEquip && itemToEquip.current_durability <= 0) return;
-
-    // Rings: item.slot === 'ring' but can occupy 'ring' or 'ring_2'.
-    // If caller passed the generic 'ring' slot, auto-pick the first open ring slot
-    // (so equipping a second ring fills ring_2 instead of replacing ring).
-    // Explicit 'ring_2' is always respected.
+    if (itemToEquip && itemToEquip.current_durability <= 0) {
+      onEquipmentError?.('Repair this broken item before equipping it.'); return;
+    }
     let targetSlot = slot;
     if (itemToEquip?.item.slot === 'ring' && targetSlot !== 'ring_2') {
       const ring1Taken = inventory.some(i => i.equipped_slot === 'ring');
       const ring2Taken = inventory.some(i => i.equipped_slot === 'ring_2');
       targetSlot = !ring1Taken ? 'ring' : !ring2Taken ? 'ring_2' : 'ring';
     }
-
     if (targetSlot === 'off_hand') {
       const mainHand = inventory.find(i => i.equipped_slot === 'main_hand');
-      if (mainHand && mainHand.item.hands === 2) return;
+      if (mainHand && mainHand.item.hands === 2) {
+        onEquipmentError?.('Unequip your two-handed weapon before using the off hand.'); return;
+      }
     }
-    const { data } = await supabase.rpc('character_inventory_action' as never, {
-      _character_id: characterId, _action: 'equip', _inventory_id: inventoryId,
-      _slot: targetSlot, _request_id: crypto.randomUUID(),
-    } as never);
-    if (!(data as { ok?: boolean } | null)?.ok) return;
-    await syncResources();
-    fetchInventory();
-  }, [characterId, inventory, fetchInventory, syncResources]);
+    await changeEquipment('equip', inventoryId, targetSlot);
+  }, [inventory, changeEquipment, onEquipmentError]);
 
   const unequipItem = useCallback(async (inventoryId: string) => {
-    if (!characterId) return;
-    const { data } = await supabase.rpc('character_inventory_action' as never, {
-      _character_id: characterId, _action: 'unequip', _inventory_id: inventoryId,
-      _slot: null, _request_id: crypto.randomUUID(),
-    } as never);
-    if (!(data as { ok?: boolean } | null)?.ok) return;
-    await syncResources();
-    fetchInventory();
-  }, [characterId, fetchInventory, syncResources]);
+    await changeEquipment('unequip', inventoryId, null);
+  }, [changeEquipment]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
     if (!characterId) return;

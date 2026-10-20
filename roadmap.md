@@ -12,4 +12,5 @@
 - [x] Verify body/security, unchanged canonical XP and exactly one appended migration; record results.
 - [x] Owner disposition of unexpected sandbox-principal EXECUTE grant: accepted as platform-managed default-ACL exception 2026-10-20 (docs/operations/idea-015-acl-exception-disposition.md); service_role-only contract retained.
 - [x] forge-craft-base Edge deployed 2026-10-20; refusal checks PASS (docs/operations/idea-015-edge-deployment-result.md).
-- [ ] Mik manual frontend publication, then separately approved authenticated craft check.
+- [x] Owner reports Mik manual frontend publication and successful production craft with Calikon: item creation and XP award observed.
+- [ ] Original bounded exact-delta, UUID replay/conflict and refusal acceptance remains unverified; see docs/operations/idea-015-runtime-equipment-regression.md. Equipment WOV-IDEA-013 is separate.

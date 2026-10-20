@@ -31,6 +31,7 @@ interface Props {
   equipped: InventoryItem[];
   unequipped: InventoryItem[];
   equipmentBonuses: Record<string, number>;
+  equipmentLockReason?: string | null;
   onEquip: (inventoryId: string, slot: string) => void;
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
@@ -328,11 +329,12 @@ export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin, onOpenMap,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
-  inCombat = false,
+  inCombat = false, equipmentLockReason,
   actionBindings: _actionBindings,
   soulringGlow = false,
   abilityLoadout,
 }: Props) {
+  const equipmentLocked = inCombat || !!equipmentLockReason;
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
   const { byCategory } = useMaterials(character.id);
@@ -388,6 +390,7 @@ export default function CharacterPanel({
             {/* Portrait tab temporarily disabled — feature coming later. */}
           </TabsList>
 
+          {equipmentLockReason && <p role="status" className="text-xs text-muted-foreground">{equipmentLockReason}</p>}
           {/* Gold — always visible */}
           <div className="flex justify-center">
             <span className="t-numeric text-primary text-xs">Gold {character.gold}</span>
@@ -400,7 +403,7 @@ export default function CharacterPanel({
               <div className="flex flex-col gap-1">
                 <EquipSlot
                   slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false}
-                  onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression}
+                  onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression}
                   badge={isProficient ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -412,7 +415,7 @@ export default function CharacterPanel({
                 />
                 <EquipSlot
                   slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded}
-                  onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression}
+                  onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression}
                   badge={offHandIsShield ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -422,13 +425,13 @@ export default function CharacterPanel({
                     </Tooltip>
                   ) : undefined}
                 />
-                <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring')?.item?.is_soulbound} />
-                <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring_2')?.item?.is_soulbound} />
+                <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring')?.item?.is_soulbound} />
+                <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={equipmentLocked} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring_2')?.item?.is_soulbound} />
               </div>
 
               {/* Belt-potion system removed with the belt slot. */}
@@ -647,7 +650,7 @@ export default function CharacterPanel({
                           </TooltipContent>
                         </Tooltip>
                         <div className="flex gap-0.5 shrink-0 ml-1">
-                          {!isBroken && !inCombat && inv.item.slot && (
+                          {!isBroken && !equipmentLocked && inv.item.slot && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
@@ -663,7 +666,7 @@ export default function CharacterPanel({
                           {/* Treat a missing `hands` value as one-handed — many unique
                               weapons never had the column set, and they were losing the
                               off-hand equip action entirely. */}
-                          {!isBroken && !inCombat && inv.item.slot === 'main_hand' && (inv.item.hands ?? 1) === 1 && (
+                          {!isBroken && !equipmentLocked && inv.item.slot === 'main_hand' && (inv.item.hands ?? 1) === 1 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
@@ -674,7 +677,7 @@ export default function CharacterPanel({
                               <TooltipContent side="top" className="text-xs">Equip Off Hand</TooltipContent>
                             </Tooltip>
                           )}
-                          {!isBroken && !inCombat && inv.item.slot === 'ring' && (
+                          {!isBroken && !equipmentLocked && inv.item.slot === 'ring' && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"

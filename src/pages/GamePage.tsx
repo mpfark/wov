@@ -84,6 +84,7 @@ import { useCombat2TestOwnership } from '@/features/combat2/useCombat2TestOwners
 import { checkCombat2SessionPreflight, heartbeatCombat2Presence, heartbeatCombat2TestPresence } from '@/features/combat2/session-access';
 import { COMBAT2_TEST_ARENA } from '@/features/combat2/arena-identity';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
+import { equipmentChangeReason } from '@/features/inventory/equipment-policy';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
@@ -392,9 +393,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const [legacySelectedTargetId, setLegacySelectedTargetId] = useState<string | null>(null);
   const selectedTargetId = combat2BlocksLegacy ? combat2Targets.selectedId : legacySelectedTargetId;
   const setSelectedTargetId = combat2BlocksLegacy ? combat2Targets.select : setLegacySelectedTargetId;
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem: legacyEquipItem, unequipItem: legacyUnequipItem, dropItem, useConsumable: legacyUseConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
-  const equipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyEquipItem);
-  const unequipItem = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUnequipItem);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem: inventoryEquipItem, unequipItem: inventoryUnequipItem, dropItem, useConsumable: legacyUseConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters, onEquipmentError: message => addLogEvent(buildErrorEvent(message)) });
   const useConsumable = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyUseConsumable);
   const { pendingSummons, acceptSummon: legacyAcceptSummon, declineSummon } = useSummonRequests(character.id);
   const acceptSummon = useControlledAction(legacyExecution.allowed, setCombat2Diagnostic, legacyAcceptSummon);
@@ -960,6 +959,19 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     fleeStopCombat, queueAbility, pendingCpCost, pendingAbility,
     pendingAbilityIndex, pendingAbilityStage } = combat;
 
+  // Inventory actions are authoritative RPCs, not the retired combat runtime.
+  const equipmentLockReason = equipmentChangeReason({ legacyCombat: inCombat, combat2Enabled: combat2BlocksLegacy,
+    transitioning: authoritativeDeparture.pending || authoritativeDeparture.recovering, sessionStatus: combat2.sessionStatus,
+    deliveryStatus: combat2.presentation.status, model: activeCombat2Presentation });
+  const equipItem = useCallback((id: string, slot: string) => {
+    if (equipmentLockReason) { addLogEvent(buildErrorEvent(equipmentLockReason)); return; }
+    return inventoryEquipItem(id, slot);
+  }, [equipmentLockReason, inventoryEquipItem, addLogEvent]);
+  const unequipItem = useCallback((id: string) => {
+    if (equipmentLockReason) { addLogEvent(buildErrorEvent(equipmentLockReason)); return; }
+    return inventoryUnequipItem(id);
+  }, [equipmentLockReason, inventoryUnequipItem, addLogEvent]);
+
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
 
@@ -1456,6 +1468,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     equipped,
     unequipped,
     equipmentBonuses,
+    equipmentLockReason,
     onEquip: equipItem,
     onUnequip: unequipItem,
     onDrop: handleDropItem,
@@ -1486,7 +1499,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
     regenTick,
-    inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
+    inCombat, equipmentLockReason, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
     damageBuff, partyRegenBuff, inspireBuff, soulringGlow, abilityLoadout,
   ]);

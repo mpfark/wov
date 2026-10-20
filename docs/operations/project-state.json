@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T07:16:17Z",
- "based_on_source_sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
+ "updated_at": "2026-10-20T21:44:13.514Z",
+ "based_on_source_sha": "18d917154aa8465375075e5ac5cf8ed9dc0f24bf",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -688,15 +688,15 @@
   }
  ],
  "frontend_publication": {
-  "identity": "ENG-LEGACY-001D9 owner manual frontend publication",
+  "identity": "WOV-IDEA-015 owner manual frontend publication and production craft observation",
   "status": "manually_published",
   "sha": null,
-  "timestamp": "2026-10-13T07:47:25.204Z",
+  "timestamp": "2026-10-20T21:44:13.514Z",
   "evidence_type": "operator_reported",
-  "reporting_actor": "Mik D10 owner report",
+  "reporting_actor": "Mik (owner report)",
   "directly_verified": false,
-  "artifact": "docs/operations/legacy-001D10-closeout.md",
-  "evidence": "Owner manually published2026-10-13; exact bundle/time unknown. Traveler Bread buy7gold/sell3gold observed, ordinary vendor smoke only, not atomic material sale. Crafting and level1 creature-kill problems unresolved, root causes unknown. Earlier manual publication evidence retained in history."
+  "artifact": "docs/operations/idea-015-runtime-equipment-regression.md",
+  "evidence": "Owner reports manual frontend Publish and successful production crafting with Calikon: item creation and XP award worked. Exact publication/observation times and bundle SHA not supplied; timestamp is recording time. No exact gold/material/XP deltas, UUID replay/conflict or refusal verification claimed. Earlier D9 vendor/publication evidence remains in docs/operations/legacy-001D10-closeout.md. This publication predates the new equipment frontend correction, which is not live."
  },
  "combat2_operational_work": [
   {
@@ -2543,7 +2543,7 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-base-crafting-handoff.md",
-   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant investigated read-only and RESOLVED by owner acceptance2026-10-20 as a platform-managed default-ACL exception (docs/operations/idea-015-acl-exception-disposition.md); application-level contract remains service_role-only. Edge forge-craft-base DEPLOYED 2026-10-20 (see docs/operations/idea-015-edge-deployment-result.md), frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
+   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant investigated read-only and RESOLVED by owner acceptance2026-10-20 as a platform-managed default-ACL exception (docs/operations/idea-015-acl-exception-disposition.md); application-level contract remains service_role-only. Edge forge-craft-base DEPLOYED 2026-10-20 (see docs/operations/idea-015-edge-deployment-result.md), Mik now reports manual frontend publication and production crafting with Calikon: item creation and XP award worked (owner-reported, not direct Codex verification; docs/operations/idea-015-runtime-equipment-regression.md). Exact resource/XP deltas, UUID replay/conflict and refusals remain unverified; IN PROGRESS only for that original bounded acceptance, not awaiting publication or basic runtime success. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
   },
   {
    "identity": "WOV-IDEA-015 forge-craft-base Edge deployment",
@@ -2555,6 +2555,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-edge-deployment-result.md",
    "evidence": "HEAD 62b9f96a (=origin/main) descends from reviewed 8441598f; forge-craft-base/index.ts (4af8f201...) and _shared/base-craft.ts (ba75d0b0...) byte-identical to 8441598f. Pre-deploy read-only (supabase_read_only_user, ro=on): base_craft_internal body b9d1e440... postgres-owned SECURITY DEFINER, service_role EXECUTE true, anon/authenticated false, 26 Drizzle entries. Deployed only forge-craft-base; submitted source SHA256 10252f7c046912a871adc3e3f6a8be41aa67bc241650b26073b9e718204f1b3d; config.toml and secrets unchanged (default JWT setting; handler verifies). Checks: OPTIONS 200 with reviewed CORS headers incl. x-supabase-client-* ; GET 405 'POST required'; POST without auth 401 'Sign in to craft.' (handler-specific messages identify reviewed handler). No live revision ID returned; live-bundle identity beyond handler responses REQUIRES EVIDENCE. No authenticated craft, gameplay write, frontend change or publication."
+  },
+  {
+   "identity": "WOV-IDEA-013 — Equip/Unequip legacy-fence no-op and silent refusal correction",
+   "status": "authored",
+   "sha": "18d917154aa8465375075e5ac5cf8ed9dc0f24bf",
+   "timestamp": "2026-10-20T21:44:13.514Z",
+   "evidence_type": "local_validation",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-015-runtime-equipment-regression.md",
+   "evidence": "Source-proven GamePage legacy fence blocked both equipment clicks before RPC dispatch whenever Combat2 rollout enabled; existed before crafting restoration. Local frontend patch routes equipment to existing character_inventory_action, retains actual combat/movement/sync UI locks and server authority, surfaces refusals/errors, reloads inventory and reports separate resource-sync failure. Drop/pickup/pin/crafting and SQL/Edge unchanged. Not yet manually published or equipment-runtime verified. Broader WOV-IDEA-012/013 synchronization/transactionality deferrals remain unresolved; previous closures/limitations preserved."
   }
  ],
  "known_blockers": [
@@ -3194,7 +3205,7 @@
   },
   {
    "identity": "Owner-reported crafting failure and level1 creature-kill problem — unresolved follow-up candidates",
-   "evidence": "D10 historical owner report retained. WOV-IDEA-015 now confirms intentional base-crafting 503 cutover pause; locally authorized canonical restoration is IN PROGRESS, not live; docs/operations/idea-015-base-crafting-handoff.md. Level1 creature-kill problem remains independent and unresolved.",
+   "evidence": "D10 historical owner report retained. WOV-IDEA-015 now confirms intentional base-crafting 503 cutover pause; restoration has owner-observed production item/XP success and remains IN PROGRESS only for bounded accounting/replay/refusal acceptance; docs/operations/idea-015-base-crafting-handoff.md. Level1 creature-kill problem remains independent and unresolved.",
    "artifact": "docs/operations/legacy-001D10-closeout.md"
   },
   {
