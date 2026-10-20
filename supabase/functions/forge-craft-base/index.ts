@@ -1,15 +1,14 @@
-// Prepared ENG-PROGRESSION-001D completion pause. Undeployed.
-// Re-enable only with reviewed atomic canonical crafting progression.
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { handleBaseCraft } from '../_shared/base-craft.ts';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  return new Response(JSON.stringify({ code: "crafting_paused", error: "Crafting is temporarily unavailable." }), {
-    status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-});
+Deno.serve(req => handleBaseCraft(req, async header => {
+  if (!header) return null;
+  const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: header } } });
+  const { data: { user }, error } = await client.auth.getUser();
+  return error ? null : user?.id ?? null;
+}, async args => {
+  // Never forward the player's JWT into the trusted canonical XP context.
+  const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  return await client.rpc('base_craft_internal', args);
+}));

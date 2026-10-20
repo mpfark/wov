@@ -57,7 +57,7 @@ const FORGE_SLOTS = [
 
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, onCharacterRefresh: _onCharacterRefresh, addLogEvent: parentAddLogEvent,
+  onGoldChange, onInventoryChange, onCharacterRefresh, addLogEvent: parentAddLogEvent,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
   const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
@@ -188,7 +188,7 @@ export default function BlacksmithPanel({
   const { craftBlock, craftBasesList, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
-    onGoldChange, onInventoryChange, addEvent,
+    onGoldChange, onInventoryChange, onCharacterRefresh, addEvent,
     craftNoun: 'Gear',
   });
 

@@ -9,6 +9,8 @@
  * forge-strip.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useBaseCraftRequest } from '../hooks/useBaseCraftRequest';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
@@ -54,14 +56,17 @@ interface Props {
   slots: { value: string; label: string }[];
   onGoldChange: (g: number) => void;
   onInventoryChange: () => void;
+  onCharacterRefresh?: () => void;
   addEvent: (event: GameLogEvent) => void;
   craftNoun?: string;
 }
 
 export function useForgeUpgradeView({
   characterId, characterLevel, gold, inventory, slots,
-  onGoldChange, onInventoryChange, addEvent, craftNoun = 'Base',
+  onGoldChange, onInventoryChange, onCharacterRefresh, addEvent, craftNoun = 'Base',
 }: Props) {
+  const { user } = useAuth();
+  const craft = useBaseCraftRequest(user?.id ?? null, characterId);
   const { counts, byCategory } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
@@ -117,23 +122,21 @@ export function useForgeUpgradeView({
   const craftGold = tierItemLevel * 5;
   const canAffordCraft = salvage >= craftSalvage && gold >= craftGold;
 
-  const handleCraft = async (base: PlainBase) => {
-    if (!canAffordCraft || working) return;
-    setWorking(`craft:${base.id}`);
+  const handleCraft = async (base: PlainBase | null) => {
+    if (working || craft.crafting) return;
+    setWorking('craft');
     try {
-      const { data, error } = await supabase.functions.invoke('forge-craft-base', {
-        body: { character_id: characterId, item_id: base.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await craft.submit(base?.id ?? null, canAffordCraft, payload =>
+        supabase.functions.invoke('forge-craft-base', { body: payload }));
+      if (!data) return;
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       onInventoryChange();
-      addEvent(buildSystemEvent(`Crafted ${data.base_name} (Lv${data.crafted_level}). Apply gems via the Enhance tab.`));
+      onCharacterRefresh?.();
+      addEvent(buildSystemEvent(`Crafted ${data.base_name} (Lv${data.crafted_level}); ${data.xp_awarded} XP.`));
     } catch (e: any) {
       addEvent(buildErrorEvent(`Craft failed: ${e.message || 'Unknown error'}`));
-    }
-    setWorking(null);
+    } finally { setWorking(null); }
   };
 
   const selectedInv = eligible.find(i => i.id === selectedInvId) || null;
@@ -221,6 +224,11 @@ Craft a Plain {craftNoun}
   const craftBasesList = (
     <div className="gap-group">
       <div className="t-label text-[10px]">Available bases</div>
+      {craft.recoveryError && <p role="alert">{craft.recoveryError}</p>}
+      {craft.pending && <div>
+        <p className="text-xs">An unresolved craft must be checked before starting another.</p>
+        <Button onClick={() => handleCraft(null)} disabled={!!working || craft.crafting || !!craft.recoveryError}>Retry pending craft</Button>
+      </div>}
       {!craftSlot && (
         <p className="text-[10px] text-muted-foreground italic">Pick a slot on the left to see craftable bases.</p>
       )}
@@ -239,7 +247,7 @@ Craft a Plain {craftNoun}
             return (
               <Button key={base.id} size="sm" variant="outline"
                 onClick={() => handleCraft(base)}
-                disabled={!canAffordCraft || !!working}
+                disabled={!canAffordCraft || !!working || craft.crafting || !!craft.pending || !!craft.recoveryError}
                 className="font-display text-xs h-auto py-2 w-full justify-between gap-2">
                 <span className="text-left">
                   <span className="block">{base.name}</span>
@@ -248,7 +256,7 @@ Craft a Plain {craftNoun}
                   )}
                 </span>
                 <span className="text-[10px] text-muted-foreground shrink-0">
-                  {working === `craft:${base.id}` ? '…' : 'Craft'}
+                  {working === 'craft' ? '…' : 'Craft'}
                 </span>
               </Button>
             );

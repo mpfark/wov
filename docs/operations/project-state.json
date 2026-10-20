@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-19T21:44:38.241Z",
- "based_on_source_sha": "d78bad1db5d68b2b65bd2a5cfd56e726b2d3017d",
+ "updated_at": "2026-10-20T05:27:56.619Z",
+ "based_on_source_sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2522,6 +2522,17 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "evidence": "Supplied diagnostic ba7da199 recording shows received HP0/tick1537 then UI0→7→0 as session exits; browser observations with194 dropped resource samples, not independent hosted readback. Frontend retains last combat resources until post-release character-read delivery; no new polling/RPC/mutation. GamePage disconnected from IndexedDB event archive and character-keyed page state; existing bounded memory log, server delivery/history/rewards and temporary manual diagnostics unchanged. Manual frontend publication/live confirmation outstanding; prior limitations and administrative XP grant pause preserved."
+  },
+  {
+   "identity": "WOV-IDEA-015 — IN PROGRESS canonical base-item crafting restoration",
+   "status": "authored",
+   "sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
+   "timestamp": "2026-10-20T05:27:56.621Z",
+   "evidence_type": "local_validation",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-015-base-crafting-handoff.md",
+   "evidence": "Confirmed intentional forge-craft-base HTTP503 cutover pause. Prepared atomic service-only base_craft_internal with ownership/active forge/tier/material/gold validation, stable completion UUID and private canonical craft_completion XP25 in one transaction; original tier prices retained, level1 tier1 salvage7/gold5. SQL SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407. Ten local PostgreSQL18.6 tests including cap/missing-action-receipt checks and two independently blocking sessions, plus nine focused Edge/caller tests. Database NOT installed, Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified. Owner authorizes local implementation/Git publication only. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
   }
  ],
  "known_blockers": [
@@ -3150,7 +3161,7 @@
   },
   {
    "identity": "Owner-reported crafting failure and level1 creature-kill problem \u2014 unresolved follow-up candidates",
-   "evidence": "D10 owner report; no root causes established; prevents material acquisition/live sale test. No repair authorized.",
+   "evidence": "D10 historical owner report retained. WOV-IDEA-015 now confirms intentional base-crafting 503 cutover pause; locally authorized canonical restoration is IN PROGRESS, not live; docs/operations/idea-015-base-crafting-handoff.md. Level1 creature-kill problem remains independent and unresolved.",
    "artifact": "docs/operations/legacy-001D10-closeout.md"
   },
   {

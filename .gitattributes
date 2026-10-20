@@ -53,3 +53,6 @@ docs/operations/legacy-001G4A19-admin-candidate.sql text eol=lf
 docs/operations/legacy-001G4A20-shared-hp-candidate.sql text eol=lf
 docs/operations/legacy-001G4A21-shared-hp-candidate.sql text eol=lf
 docs/operations/legacy-001G4A21-shared-hp-hooks.sql text eol=lf
+
+# Exact WOV-IDEA-015 prepared crafting artifact.
+docs/operations/idea-015-base-crafting.sql text eol=lf

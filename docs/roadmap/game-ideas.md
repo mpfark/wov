@@ -419,12 +419,12 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 #### WOV-IDEA-015 — Crafting functional failure
 
-- **Status / kind:** NEEDS AUDIT; Technical correction. Authoritative source disposition: 001A classification NEEDS AUDIT; see linked original report for exact decision.
-- **Intent:** Owner reports crafting does not work; affected operation/root cause unestablished.
-- **Approval evidence:** Documented proposal/finding or accepted limit; no new implementation approval established here. Source: [legacy-001D10-closeout.md:23](../operations/legacy-001D10-closeout.md) line23.
-- **Implementation/runtime boundary:** Owner-reported functional problem; cause unestablished, no repair or reproduction performed.
-- **Dependencies / overlaps:** Bounded UI/request/refusal evidence.
-- **001A mapping / current tracking:** INV-A15 → WOV-IDEA-015; State product_backlog; no dedicated engine ID.
+- **Status / kind:** IN PROGRESS; Technical correction. Owner authorized canonical base-item restoration locally and Git publication on 2026-10-20.
+- **Intent / confirmed cause:** forge-craft-base intentionally returns HTTP503 crafting_paused after the progression cutover; restore supported base crafting atomically, not deprecated XP writers. Level1 tier1 remains 7 salvage + 5gold / 25 canonical XP.
+- **Approval evidence:** Owner implementation request; original [D10 functional report](../operations/legacy-001D10-closeout.md), [implementation and delivery handoff](../operations/idea-015-base-crafting-handoff.md).
+- **Implementation/runtime boundary:** SQL, Edge and frontend prepared locally; NOT installed/deployed/manually published/runtime-verified by this work. Gem application/fusion stay paused. No crafting completion claim before all activation/acceptance gates.
+- **Dependencies / overlaps:** Canonical private craft_completion XP, existing private inventory-action ledger, database → Edge → Mik's manual frontend publication → authorized runtime verification. Costs/rules preserved; unrelated crafting and WOV-IDEA-016 excluded.
+- **001A mapping / current tracking:** INV-A15 → WOV-IDEA-015; project-state operational evidence and product backlog; no new engine ID.
 
 #### WOV-IDEA-017 — Vendor transaction atomicity
 
@@ -725,7 +725,7 @@ Other overlaps: project-state max-level XP/backlog aliases ENG-XP-001; return-ho
 2. ADM-015 old generic edit body versus newer D1–D4 containment/deferrals: retain narrowed remaining intents, not obsolete protected writers. WOV-IDEA-024/025 are scope decisions; per-tool implementation records can be split only after owner review, not silently enabled.
 3. ADM-025A/B implementation-complete language versus reward-model blocked/decision-needed rollout; decide using original authorities, not inventory status normalization. ENG-REWARD-001 remains blocked in its source even if001A called it IDEA.
 4. WOV-IDEA-003 older boss v3 approved-in-principle proposal is paused; current surviving mechanism/scope unclear. WOV-IDEA-005 non-stance batch status and WOV-IDEA-001 single-active-character policy details need review, not assumed approval.
-5. WOV-IDEA-016 level1 combat and015 crafting are separate owner-reported problems without established root causes; do not merge them into a balance fix. WOV-IDEA-021 bundles related unique-transfer/catalog authority questions in existing evidence; refine only with bounded scope/owner review, not new audit.
+5. WOV-IDEA-016 level1 combat remains separate from WOV-IDEA-015: crafting has a confirmed cutover pause and a locally prepared canonical restoration, not live verification; do not merge these into a balance fix. WOV-IDEA-021 bundles related unique-transfer/catalog authority questions in existing evidence; refine only with bounded scope/owner review, not new audit.
 6. WOV-IDEA-029 return-to-seller is only a possible extension; WOV-IDEA-002 personal bind is an extension of return-home. Registration does not approve either.
 7. Creature HP/DoT/regen direction is agreed but no concrete sleep settlement, balance values or implementation contract chosen. WOV-IDEA-019 transferred contract/quest findings stay unresolved; ENG-LEGACY-001G1 preparation and World audit have not begun.
 
