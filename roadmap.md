@@ -14,3 +14,9 @@
 - [x] forge-craft-base Edge deployed 2026-10-20; refusal checks PASS (docs/operations/idea-015-edge-deployment-result.md).
 - [x] Owner reports Mik manual frontend publication and successful production craft with Calikon: item creation and XP award observed.
 - [ ] Original bounded exact-delta, UUID replay/conflict and refusal acceptance remains unverified; see docs/operations/idea-015-runtime-equipment-regression.md. Equipment WOV-IDEA-013 is separate.
+
+## WOV-IDEA-033 canonical gem application
+- [x] Prepare local atomic SQL, Edge/caller retry recovery and focused rollback/concurrency/replay tests.
+- [ ] Separately approved installed-parity/default-ACL review and standard Drizzle installation.
+- [ ] Matching forge-apply-gem deployment, then Mik manual frontend Publish.
+- [ ] Separately authorized runtime acceptance; see docs/operations/idea-033-gem-application-handoff.md.

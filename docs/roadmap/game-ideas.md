@@ -426,6 +426,15 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Dependencies / overlaps:** Canonical private craft_completion XP, existing private inventory-action ledger, Database, Edge, manual publication and basic authenticated craft observed at their recorded evidence levels; only original bounded accounting/replay/refusal acceptance remains. Equipment regression is separate (WOV-IDEA-013), not a new crafting gate. Costs/rules preserved; unrelated crafting and WOV-IDEA-016 excluded.
 - **001A mapping / current tracking:** INV-A15 → WOV-IDEA-015; project-state operational evidence and product backlog; no new engine ID.
 
+#### WOV-IDEA-033 — Canonical gem application restoration
+
+- **Status / kind:** IN PROGRESS; Technical correction. Owner approved local implementation and Git publication on2026-10-21, not hosted activation.
+- **Intent:** Restore intentionally paused forge-apply-gem using one atomic service-authorized completion: +1 attribute, one gem, (2+item level) salvage, 2×level gold and25 XP offered through private craft_completion.
+- **Approval evidence / source:** Owner restoration instruction; historical [D6 pause inventory](../operations/legacy-001D1-inventory-items-crafting-writer-map.md) and [001D fence](../operations/progression-001D-cutover-plan.md); [local candidate and delivery handoff](../operations/idea-033-gem-application-handoff.md).
+- **Implementation/runtime boundary:** SQL/Edge/frontend prepared and tested locally, NOT installed/deployed/manually published/runtime-verified. Server validates owner/lifecycle/station/item/caps/budget/costs, serializes combat/equipment, binds completion UUID, synchronizes equipped resources and rolls all effects back on failure. No deprecated XP writer reactivated.
+- **Dependencies / overlaps:** Canonical XP/derived-resource private primitives, existing inventory-action ledger and Combat2/lifecycle/stance fences. Separate from015 base crafting,020 strip/trade and fusion;014 empty-override semantics and broader012/013 resource issues remain unchanged.
+- **Tracking / gates:** New stable ID033 (next after032); project-state operational evidence. Database parity/installation → matching forge-apply-gem deployment → Mik manual Publish → separately authorized runtime acceptance. No implementation priority or wider audit implied.
+
 #### WOV-IDEA-017 — Vendor transaction atomicity
 
 - **Status / kind:** DEFERRED; Technical correction. Authoritative source disposition: 001A classification DEFERRED; see linked original report for exact decision.

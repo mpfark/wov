@@ -70,7 +70,8 @@ async function handler(name){
  await import('data:text/javascript;base64,'+Buffer.from(output.outputFiles[0].text+'\n// '+name).toString('base64'));
  return {call:captured,counts:()=>({envReads,clientCalls,dbWrites})};
 }
-for(const name of ['forge-craft-base','forge-apply-gem','stonebinder-fuse'])test(`${name} actual handler pauses before client/body/economy access`,async()=>{
+// Base crafting (015) and gem application (033) now have canonical adapters; fusion stays paused.
+for(const name of ['stonebinder-fuse'])test(`${name} actual handler pauses before client/body/economy access`,async()=>{
  const h=await handler(name);
  for(const method of ['POST','GET']){
   const response=await h.call(new Request('https://local.invalid/'+name,{method,headers:{Authorization:'Bearer test'},...(method==='POST'?{body:'invalid JSON'}:{})}));
@@ -88,3 +89,5 @@ test('actual admin grant-xp handler rejects after admin validation without chara
  const block=source.slice(source.indexOf('// GRANT XP'),source.indexOf('if (action === "heal-character"'));
  assert.ok(block.includes('progression_awards_paused'));assert.ok(!block.includes('xpForNext'));
 });
+
+for(const name of ['forge-craft-base','forge-apply-gem'])test(`${name} restored canonical handler keeps HTTP/auth boundaries without legacy XP`,async()=>{const h=await handler(name);assert.equal((await h.call(new Request('https://local.invalid',{method:'OPTIONS'}))).status,200);assert.equal((await h.call(new Request('https://local.invalid',{method:'GET'}))).status,405);assert.equal((await h.call(new Request('https://local.invalid',{method:'POST',body:'{}'}))).status,401);assert.deepEqual(h.counts(),{envReads:0,clientCalls:0,dbWrites:0});const source=readFileSync('supabase/functions/'+name+'/index.ts','utf8');assert.ok(!source.includes('apply_crafting_xp'));assert.ok(!source.includes('.from('));});

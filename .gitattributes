@@ -56,3 +56,6 @@ docs/operations/legacy-001G4A21-shared-hp-hooks.sql text eol=lf
 
 # Exact WOV-IDEA-015 prepared crafting artifact.
 docs/operations/idea-015-base-crafting.sql text eol=lf
+
+# Exact reviewed gem application candidate; Lovable owns later migration registration.
+docs/operations/idea-033-gem-application.sql text eol=lf

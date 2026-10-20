@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBaseCraftRequest } from '../hooks/useBaseCraftRequest';
+import { useGemApplicationRequest } from '../hooks/useGemApplicationRequest';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
@@ -67,6 +68,7 @@ export function useForgeUpgradeView({
 }: Props) {
   const { user } = useAuth();
   const craft = useBaseCraftRequest(user?.id ?? null, characterId);
+  const gemApplication = useGemApplicationRequest(user?.id ?? null, characterId);
   const { counts, byCategory } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
@@ -141,24 +143,25 @@ export function useForgeUpgradeView({
 
   const selectedInv = eligible.find(i => i.id === selectedInvId) || null;
 
-  const applyGem = async (gemKey: GemKey) => {
-    if (!selectedInv || working) return;
-    setWorking(`apply:${gemKey}`);
+  const applyGem = async (gemKey: GemKey | null) => {
+    if (working || gemApplication.applying) return;
+    setWorking(`apply:${gemKey ?? 'pending'}`);
     try {
-      const { data, error } = await supabase.functions.invoke('forge-apply-gem', {
-        body: { character_id: characterId, inventory_id: selectedInv.id, gem_key: gemKey },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const level = selectedInv ? effectiveItemLevel(selectedInv.item.level, selectedInv.crafted_level) : 1;
+      const affordable = !!selectedInv && !!gemKey && (ownedGems[gemKey] || 0) >= 1
+        && salvage >= 2 + level && gold >= level * 2;
+      const data = await gemApplication.submit(gemKey ? selectedInv?.id ?? null : null, gemKey, affordable,
+        payload => supabase.functions.invoke('forge-apply-gem', { body: payload }));
+      if (!data) return;
       onGoldChange(data.gold_remaining);
       notifyMaterialsChanged(characterId);
       onInventoryChange();
-      const gemName = GEM_CATALOG[gemKey].name;
-      addEvent(buildSystemEvent(`Applied ${gemName} to ${selectedInv.item.name} (+1 ${attrForGem(gemKey).toUpperCase()}).`));
-    } catch (e: any) {
-      addEvent(buildErrorEvent(`${e.message || 'Could not apply gem'}`));
-    }
-    setWorking(null);
+      onCharacterRefresh?.();
+      const usedGem = data.gem_used as GemKey;
+      addEvent(buildSystemEvent(`Applied ${GEM_CATALOG[usedGem].name} (+1 ${attrForGem(usedGem).toUpperCase()}); ${data.xp_awarded} XP.`));
+    } catch (error) {
+      addEvent(buildErrorEvent(error instanceof Error ? error.message : 'Could not apply gem.'));
+    } finally { setWorking(null); }
   };
 
   const stripItem = async () => {
@@ -369,7 +372,7 @@ Craft a Plain {craftNoun}
               const wouldCost = used + 1;
               const atCap = current >= cap;
               const noBudget = wouldCost > budget;
-              const disabled = !!working || owned < 1 || atCap || noBudget || gold < applyGold || salvage < applySalvage;
+              const disabled = !!working || gemApplication.applying || !!gemApplication.pending || !!gemApplication.recoveryError || owned < 1 || atCap || noBudget || gold < applyGold || salvage < applySalvage;
               return (
                 <Button key={gk} size="sm" variant="outline"
                   onClick={() => applyGem(gk)} disabled={disabled}
@@ -395,5 +398,13 @@ Strip all gems ({stripSalvage} salvage + {stripGold}g — gems are destroyed)
     );
   }
 
-  return { craftBlock, craftBasesList, enhanceLeft, enhanceRight };
+  const enhanceWithRecovery = <>
+    {gemApplication.recoveryError && <p role="alert">{gemApplication.recoveryError}</p>}
+    {gemApplication.pending && <div>
+      <p className="text-xs">Resolve the pending gem application before applying another.</p>
+      <Button onClick={() => applyGem(null)} disabled={!!working || gemApplication.applying || !!gemApplication.recoveryError}>Retry pending gem application</Button>
+    </div>}
+    {enhanceRight}
+  </>;
+  return { craftBlock, craftBasesList, enhanceLeft, enhanceRight: enhanceWithRecovery };
 }
