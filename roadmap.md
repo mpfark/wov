@@ -19,6 +19,6 @@
 - [x] Prepare local atomic SQL, Edge/caller retry recovery and focused rollback/concurrency/replay tests.
 - [x] Bounded installed-parity/default-ACL review; owner accepted the exact gem-function platform exception.
 - [x] Install exact approved SQL once as 0026; definition/ACL/private dependencies and preserved 26-entry prefix PASS (docs/operations/idea-033-sql-installation-result.md).
-- [ ] Authorized matching forge-apply-gem deployment: verify reviewed files/RPC, deploy only that function, check non-mutating responses and record evidence.
+- [x] Matching forge-apply-gem deployed; reviewed files/RPC and non-mutating OPTIONS200/GET405/POST401 PASS (docs/operations/idea-033-edge-deployment-result.md).
 - [ ] Mik manual frontend Publish after backend verification.
 - [ ] Separately authorized runtime acceptance; see docs/operations/idea-033-gem-application-handoff.md.
