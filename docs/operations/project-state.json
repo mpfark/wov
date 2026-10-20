@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T06:53:00Z",
+ "updated_at": "2026-10-20T07:16:17Z",
  "based_on_source_sha": "dd85650094509c6d46eddb846b36f4ffe0593653",
  "status_vocabulary": [
   "authored",
@@ -252,8 +252,8 @@
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied hosted installation evidence; Codex local reconciliation",
    "directly_verified": false,
-   "identity": "0003_progression_001e_command_authority.sql \u2014 installed with one-space XP body deviation",
-   "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a\u20269968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved."
+   "identity": "0003_progression_001e_command_authority.sql — installed with one-space XP body deviation",
+   "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a…9968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved."
   },
   {
    "status": "authored",
@@ -272,11 +272,11 @@
    "reporting_actor": "Mik supplied hosted execution evidence; Codex repository reconciliation",
    "directly_verified": false,
    "status": "installed",
-   "identity": "0004_progression_001e_r2_xp_body_repair.sql \u2014 canonical XP authority installed and independently operator-verified",
-   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54\u201309:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43\u2026 identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification."
+   "identity": "0004_progression_001e_r2_xp_body_repair.sql — canonical XP authority installed and independently operator-verified",
+   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification."
   },
   {
-   "identity": "0005_progression_001f_canonical_renown_respec_authority.sql \u2014 installed; R1 ACL correction verified",
+   "identity": "0005_progression_001f_canonical_renown_respec_authority.sql — installed; R1 ACL correction verified",
    "status": "installed",
    "sha": "491677c891c22f81dab261b7c970dc044ad62bf3",
    "timestamp": "2026-10-07T18:34:56.637Z",
@@ -287,18 +287,18 @@
    "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. SUPERSEDED BLOCKER: R1 attempt2 now installed/verified as0006; service ACL regression repaired. Final Edge deployment/paused verification remains; see R2 handoff."
   },
   {
-   "identity": "0006_progression_001f_r1_restore_unprotected_service_updates.sql \u2014 R1 installed/verified",
+   "identity": "0006_progression_001f_r1_restore_unprotected_service_updates.sql — R1 installed/verified",
    "status": "installed",
    "sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
    "timestamp": "2026-10-07T20:57:42.327Z",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied Lovable evidence; Codex reconciliation",
    "directly_verified": false,
-   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43\u201320:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification.",
+   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification.",
    "artifact": "drizzle/migrations/0006_progression_001f_r1_restore_unprotected_service_updates.sql"
   },
   {
-   "identity": "0007_progression_001g_c2_private_creation_storage \u2014 installed (operator-reported)",
+   "identity": "0007_progression_001g_c2_private_creation_storage — installed (operator-reported)",
    "status": "installed",
    "sha": "011a026db7ae17deeeaa8a3601b7f7517f422efb",
    "timestamp": "2026-10-09T08:19:30Z",
@@ -306,10 +306,10 @@
    "reporting_actor": "Mik reported successful Lovable installation; Codex source reconciliation",
    "directly_verified": false,
    "artifact": "drizzle/migrations/0007_progression_001g_c2_private_creation_storage.sql",
-   "evidence": "Mik reports successful standard-tool installation from generated source011a026d, merged5ecc36c7. Recording timestamp only; execution timestamp and fresh installed ledger/ACL/runtime inspection not supplied. Generated SQL and preserved docs/operations reviewed input have identical committed bytes SHA2566eb30eedfab8544b1d80745c4b4a844323c9ec538c0441e23f578863d90b76cb/11371bytes. Journal idx7 and snapshot0007 chain verified locally; prior0\u20136 preserved. Two private empty storage tables/guards/ACLs only; no creation RPC, name/quota enforcement, initializer or activation. No Codex hosted access. Historical local22-test evidence remains in operational work."
+   "evidence": "Mik reports successful standard-tool installation from generated source011a026d, merged5ecc36c7. Recording timestamp only; execution timestamp and fresh installed ledger/ACL/runtime inspection not supplied. Generated SQL and preserved docs/operations reviewed input have identical committed bytes SHA2566eb30eedfab8544b1d80745c4b4a844323c9ec538c0441e23f578863d90b76cb/11371bytes. Journal idx7 and snapshot0007 chain verified locally; prior0–6 preserved. Two private empty storage tables/guards/ACLs only; no creation RPC, name/quota enforcement, initializer or activation. No Codex hosted access. Historical local22-test evidence remains in operational work."
   },
   {
-   "identity": "0008_progression_001g_c2_s2_name_identity \u2014 installed (operator-reported)",
+   "identity": "0008_progression_001g_c2_s2_name_identity — installed (operator-reported)",
    "status": "installed",
    "sha": "34ad8fe9d897d7691760798ff36f2e8bf97c8b29",
    "timestamp": "2026-10-09T09:40:04Z",
@@ -320,7 +320,7 @@
    "evidence": "P2-A user identifies0007/0008 as installed. Clean fast-forward source34ad8fe9 adds generated0008/journalidx8/snapshot only; committed SQL matches reviewed SHA256d6c53867de0c1a0503ce8fc41f75acc73370908d1a66df9d8dc4ca36c5fbc510. Recording timestamp only; actual installation time/current ledger/index/ACL/collision preflight report not supplied, no independent hosted inspection. Existing S2 local regression tests10/10 pass. No Codex installation or gameplay writes."
   },
   {
-   "identity": "0009_progression_001g_c2_p2_a_creation_authority \u2014 installed (operator-reported)",
+   "identity": "0009_progression_001g_c2_p2_a_creation_authority — installed (operator-reported)",
    "status": "installed",
    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
    "timestamp": "2026-10-09T12:36:59Z",
@@ -337,12 +337,12 @@
    "reporting_actor": "Mik supplied failure and rollback confirmation",
    "directly_verified": false,
    "artifact": "docs/operations/progression-001G-C2-P2-B-integration-handoff.md",
-   "identity": "P2-B inactive integration attempt1 \u2014 assertion failure/full rollback",
+   "identity": "P2-B inactive integration attempt1 — assertion failure/full rollback",
    "status": "blocked",
    "evidence": "Original reviewed900cb8dba532a6d779073425dd0abd0f0b9f008e1abf0cde0c3dbb3d0fe9ce11 failed: materials inherited browser write privilege: postgres. Owner is a member of authenticated and anon. Clean full rollback, no migration installed. Recording timestamp only; actual execution time not supplied. Fetched source still95d8b235, no new platform commit observed. No Codex hosted operation."
   },
   {
-   "identity": "0010_progression_001g_c2_p2_b_inactive_integration \u2014 installed (operator-reported)",
+   "identity": "0010_progression_001g_c2_p2_b_inactive_integration — installed (operator-reported)",
    "status": "installed",
    "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
    "timestamp": "2026-10-09T15:45:51.407Z",
@@ -350,10 +350,10 @@
    "reporting_actor": "Mik supplied installed baseline; Codex source reconciliation",
    "directly_verified": false,
    "artifact": "drizzle/migrations/0010_progression_001g_c2_p2_b_inactive_integration.sql",
-   "evidence": "Mik P2-C reports 0007\u20130010 installed and C2 inactive; P2-B cutover not installed. Recording timestamp only, installation time not supplied. Generated source b9d82b8f is a normal descendant and Git SQL blob matches reviewed b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. No independent hosted verification or Codex installation. Attempt1 failure/rollback evidence preserved."
+   "evidence": "Mik P2-C reports 0007–0010 installed and C2 inactive; P2-B cutover not installed. Recording timestamp only, installation time not supplied. Generated source b9d82b8f is a normal descendant and Git SQL blob matches reviewed b5de77f39106308c47509d77d20e29fd2bde9924ef5d269a0dae45ab722cec54. No independent hosted verification or Codex installation. Attempt1 failure/rollback evidence preserved."
   },
   {
-   "identity": "0011_progression_001g_c2_p2_c_inactive_lifecycle \u2014 installed (operator-reported)",
+   "identity": "0011_progression_001g_c2_p2_c_inactive_lifecycle — installed (operator-reported)",
    "status": "installed",
    "sha": "4526c11e2ee6e6c0a79b5b8f7232bb86c391c220",
    "timestamp": "2026-10-09T19:09:55.875Z",
@@ -361,7 +361,7 @@
    "reporting_actor": "Mik installed baseline; Codex source reconciliation",
    "directly_verified": false,
    "artifact": "drizzle/migrations/0011_progression_001g_c2_p2_c_inactive_lifecycle.sql",
-   "evidence": "Mik confirms 0007\u20130011 installed/private/inactive, cutover packages uninstalled. Recording time only; hosted installation time not supplied. Platform descendant4526c11e contains0011 SQL/journal/snapshot/generated types; Git SQL blob matches reviewed80e1259050b4f1ddb6309a236a910c96a9a3d3102e0b1e6f3a7d7565c0329b93. Source verified, no Codex hosted verification or installation."
+   "evidence": "Mik confirms 0007–0011 installed/private/inactive, cutover packages uninstalled. Recording time only; hosted installation time not supplied. Platform descendant4526c11e contains0011 SQL/journal/snapshot/generated types; Git SQL blob matches reviewed80e1259050b4f1ddb6309a236a910c96a9a3d3102e0b1e6f3a7d7565c0329b93. Source verified, no Codex hosted verification or installation."
   },
   {
    "identity": "0013_progression_001g_c2_reset_and_cutover",
@@ -375,7 +375,7 @@
    "evidence": "Mik reports C2 activation succeeded, hosted Drizzle history row14 and installed SQL SHA-256 c93fd93efb75dd9e2ab8478b8672678b2ecd40be846c46da62d19318cbc48b40; automatic commit9148e366 merged at01c65fda. Local LF-normalized0013 equals reviewed combined SQL exactly; journal idx13 and snapshot chain verified. Required generated RPC/lifecycle types already present; activation checkpoint contains no type regeneration. No independent hosted inspection. Targeted frontend readiness:26 creation/form/hook/Overlord UI tests pass, typecheck and production build pass. No live legacy creation/deletion calls; canonical RPCs, retained quota, authoritative read/selection and tombstone fencing present. GO for Mik manual frontend publication with bounded Auth/create/replay/resource/lifecycle smoke required before live-verification claim. Build-generated unrelated MCP Edge side effect restored. No hosted mutation, deployment/publication, commit/push by Codex. All four accepted F limitations retained."
   },
   {
-   "identity": "C2 lifecycle timestamp drift correction \u2014 prepared only",
+   "identity": "C2 lifecycle timestamp drift correction — prepared only",
    "status": "authored",
    "sha": "b8f3dfae58ad2b39f8c724cccce9ae04cabc2879",
    "timestamp": "2026-10-10T18:43:37.119Z",
@@ -386,7 +386,7 @@
    "evidence": "Owner reports creation/exact replay/duplicate prevention PASS; owner soft-delete P0001 lifecycle_character_drift, Canaryone version0/no receipt; remaining lifecycle checks not run. Source-defined updated_at trigger reproduces failure locally; patch excludes timestamp from JSON equality but separately requires transaction timestamp.64 isolated SQL tests pass including7 regressions, strict other-field mutation rejection and deferred rollback. Reviewed SQL8d329d18d1a1004551331104d49d89857b4d2906c896dcfe150c04e03b9a6608 outside migrations; function metadata/ACLs unchanged. No hosted inspection/mutation, installation, commit/push or deployment. Calikon and Canaryone untouched; four F limitations retained; C2 NOT COMPLETE."
   },
   {
-   "identity": "C2 hosted canary closeout \u2014 bounded operator results",
+   "identity": "C2 hosted canary closeout — bounded operator results",
    "status": "blocked",
    "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
    "timestamp": "2026-10-10T19:25:24.563Z",
@@ -397,7 +397,7 @@
    "evidence": "Owner reports canonical creation/resources, exact UUID replay/no duplicates, own soft-delete, retained quota/resources, unauthorized player restore refusal, reasoned Overlord restoration and original identity/resources preserved; Calikon unaffected. Canaryone active lifecycle_version2. Fetched0014 source matches reviewed timestamp correction8d329d18d1a1004551331104d49d89857b4d2906c896dcfe150c04e03b9a6608 after LF normalization; no independent hosted ledger/ACL inspection. Earlier frontend publication/login/selection/movement reported. Core bounded canary PASS; C2 NOT COMPLETE pending explicit P5 owner acceptance/addendum for remaining private-provenance/metadata/delegation/unarmed/name-quota concurrency/maintenance coverage. No new defect or hosted campaign indicated. Four F limitations unchanged; no hosted operations, commit/push or character edits."
   },
   {
-   "identity": "ENG-PROGRESSION-001G-C2 COMPLETE \u2014 P5 owner acceptance with retained limits",
+   "identity": "ENG-PROGRESSION-001G-C2 COMPLETE — P5 owner acceptance with retained limits",
    "status": "authored",
    "sha": "026655fb38f8f8bf8dd140e696cf82db20e12caf",
    "timestamp": "2026-10-10T19:34:06.320Z",
@@ -617,8 +617,8 @@
    "reporting_actor": "Mik supplied hosted execution evidence; Codex repository reconciliation",
    "directly_verified": false,
    "status": "deployed",
-   "identity": "progression-command \u2014 001E deployment after canonical R2 repair",
-   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54\u201309:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43\u2026 identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Reviewed local index.ts SHA9e6fe90de54ad2ecb0e92af55811631798ad2f69a9e947303abf03dbb60cfc7a;shared handler SHA15dd370b3ee6e816179c04e23d2191fd2c27d4d0a86fbdb57fc7e6c0cca9dbd4. Full local release identities match supplied9e6fe90d\u2026/15dd370b\u2026 abbreviations; no platform revision ID or direct deployed-source retrieval."
+   "identity": "progression-command — 001E deployment after canonical R2 repair",
+   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Reviewed local index.ts SHA9e6fe90de54ad2ecb0e92af55811631798ad2f69a9e947303abf03dbb60cfc7a;shared handler SHA15dd370b3ee6e816179c04e23d2191fd2c27d4d0a86fbdb57fc7e6c0cca9dbd4. Full local release identities match supplied9e6fe90d…/15dd370b… abbreviations; no platform revision ID or direct deployed-source retrieval."
   },
   {
    "identity": "progression-command 001F staged deployment",
@@ -632,7 +632,7 @@
    "artifact": "supabase/functions/progression-command/index.ts"
   },
   {
-   "identity": "admin-users D1 legacy progression containment \u2014 local only",
+   "identity": "admin-users D1 legacy progression containment — local only",
    "status": "authored",
    "sha": "f767a1ab9395c042875b0b212dfa9ff89ac140cf",
    "timestamp": "2026-10-10T19:42:24.482Z",
@@ -643,7 +643,7 @@
    "evidence": "Explicit post-auth HTTP410 retired set-level/reset-stats/grant-respec before gameplay access; HTTP403 mixed protected15 generic edits atomically refused. Legacy mutation branches removed; permitted generic/resource/economy/admin paths unchanged, XP503 pause and C2 lifecycle preserved. Level editor removed, reset/respec disabled, XP UI accurately paused.34 focused handler/UI/C2 preservation tests pass; app typecheck/build and project-state checks pass. Local only, NOT DEPLOYED/PUBLISHED; no migration, hosted operation, commit/push or character changes. Four F/C2 accepted limitations retained."
   },
   {
-   "identity": "admin-users D2 character convenience containment \u2014 local only",
+   "identity": "admin-users D2 character convenience containment — local only",
    "status": "authored",
    "sha": "17971bf7d8c1712f7d9c915f04bca160abe05927",
    "timestamp": "2026-10-10T20:40:58.239Z",
@@ -1290,7 +1290,7 @@
    "directly_verified": true
   },
   {
-   "identity": "ENG-PROGRESSION-001D local D1\u2013D3 exact-body completion",
+   "identity": "ENG-PROGRESSION-001D local D1–D3 exact-body completion",
    "status": "authored",
    "sha": "b3950cbb52f25c75242ec9f99a1ffc56b9adc722",
    "timestamp": "2026-10-06T12:45:33.562Z",
@@ -1305,7 +1305,7 @@
    "sha": "6e4ffb1d0f21a4ed2fe8af7215365beea2b76151",
    "timestamp": "2026-10-06T16:34:15.527Z",
    "evidence_type": "operator_reported",
-   "evidence": "ENG-PROGRESSION-001D CLOSED locally after exact source/tool-output reconciliation and acceptance. INSTALLED / VERIFIED / ACTIVATED. Activation window 2026-10-06 15:46:49\u201315:47:36 UTC: only combat_config.combat_mode maintenance\u2192open; combat_soak off; world intentionally asleep. Automatic dispatch is allowed when normal presence/world conditions permit; while asleep, world_asleep refusal is normal. No manual wake requirement. Zero schedules/claims at observation; no natural tick. NATURAL RUNTIME PATH NOT YET OBSERVED. The three crafting pauses and ordinary admin grant-xp pause remain; apply_crafting_xp is fenced owner-only. Privileged admin set-level/update-character remain noncanonical overrides deferred to 001G; train_renown_stat remains deferred to 001F. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. See progression-001D-closure.md for direct local proof and limits. No 001E/F/G/H authorization.",
+   "evidence": "ENG-PROGRESSION-001D CLOSED locally after exact source/tool-output reconciliation and acceptance. INSTALLED / VERIFIED / ACTIVATED. Activation window 2026-10-06 15:46:49–15:47:36 UTC: only combat_config.combat_mode maintenance→open; combat_soak off; world intentionally asleep. Automatic dispatch is allowed when normal presence/world conditions permit; while asleep, world_asleep refusal is normal. No manual wake requirement. Zero schedules/claims at observation; no natural tick. NATURAL RUNTIME PATH NOT YET OBSERVED. The three crafting pauses and ordinary admin grant-xp pause remain; apply_crafting_xp is fenced owner-only. Privileged admin set-level/update-character remain noncanonical overrides deferred to 001G; train_renown_stat remains deferred to 001F. HOSTED MULTI-SESSION BEHAVIOR: UNPROVEN. Operator-reported installation and verification: reviewed payload installed exactly once through standard Lovable Drizzle as 0002_progression_001d_canonical_xp_cutover.sql; journal idx 2, when 1791299913981; hosted row id 3, hash 680915c6e25bba22c81db88b9a48ed49efad365dd38ddbc924f10fcb4c47637f. Adapter postgres / SECURITY DEFINER / pg_catalog,public / owner-only. Replacement pg_get_functiondef SHA-256 6beb54b1e2d00f9147288145e4f09f1bb58c26233cd5d7c16e8fde098b6042fe. Only outer node_tick_commit retains service EXECUTE; old apply_crafting_xp, reviewed legacy/predecessors and 001C are owner-only. Characters, inventory, reward claims and encounter fingerprints unchanged; no progression function invoked during installation verification. This is supplied hosted evidence, not a Codex Cloud inspection. See progression-001D-closure.md for direct local proof and limits. No 001E/F/G/H authorization.",
    "reporting_actor": "Mik supplied hosted result; Codex local closure",
    "directly_verified": false
   },
@@ -1356,8 +1356,8 @@
    "reporting_actor": "Mik supplied hosted execution evidence; Codex repository reconciliation",
    "directly_verified": false,
    "status": "installed",
-   "identity": "ENG-PROGRESSION-001E-CLOSE \u2014 installation/verification/deployment evidence; commands paused",
-   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54\u201309:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43\u2026 identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification."
+   "identity": "ENG-PROGRESSION-001E-CLOSE — installation/verification/deployment evidence; commands paused",
+   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification."
   },
   {
    "status": "authored",
@@ -1523,7 +1523,7 @@
    "evidence": "Checkpoint includes completed next-implementation plan, B2 workflow/operating-contract follow-up, historical P1-B handoff reconciliation, S2 reviewed SQL/read-only preflight/handoff/isolated tests and project-state/roadmap tracking. Eleven related files only; no application code or migration-directory/history changes. Both S2 SQL artifacts preserved exactly: index SHA256d6c53867de0c1a0503ce8fc41f75acc73370908d1a66df9d8dc4ca36c5fbc510, preflight SHA25639db32f1e3cc05d980b85b767ad62446cffa4fdb5efa8490621c029cb7c56707. Source publication authorized only; actual final commit/push identity comes from Git return, not hosted installation evidence. No hosted preflight/install, creation RPC, gameplay writes, deployment or frontend publication. Recovery stash/four accepted F limitations preserved."
   },
   {
-   "identity": "ENG-PROGRESSION-001G-C2-P2-A prerequisite review \u2014 implementation not begun",
+   "identity": "ENG-PROGRESSION-001G-C2-P2-A prerequisite review — implementation not begun",
    "status": "authored",
    "sha": "34ad8fe9d897d7691760798ff36f2e8bf97c8b29",
    "timestamp": "2026-10-09T09:40:04Z",
@@ -1600,7 +1600,7 @@
    "evidence": "Choice-only C2 bridge frontend with persistent replay, authoritative row read and retained capacity; Overlord delegation/restore/purge controls; two owner-membership assertion fixes; dormant capacity/receipt/Auth-deletion support and single transaction cutover composition. Approved L10 founding/L1 joining shared-function guard. Existing P2-C cutover/runtime bytes unchanged. 80 SQL tests and29 frontend/tracking tests pass. No hosted operations, migration-history edits, deployment, activation, publication, commit or push. Four F limitations unchanged."
   },
   {
-   "identity": "C2 hosted preflight blocker resolution \u2014 local evidence preparation",
+   "identity": "C2 hosted preflight blocker resolution — local evidence preparation",
    "status": "authored",
    "sha": "e712a3f65ff3fbd67bb00712a0fef4aeb13f6369",
    "timestamp": "2026-10-09T23:30:00.060Z",
@@ -1611,7 +1611,7 @@
    "evidence": "Inspector-vs-installer preflight corrected to explicit postgres capabilities; orphan count reliability checks RLS. Source proves original materials character FK absent, unvalidated0010 preserves legacy rows, later present-fighter settlement correction and Force Shield wrapper omitted from old C2 runtime package. Three-function read-only inspection and exact203-row fail-closed cleanup template prepared, no snapshot filled. 45 existing/extended C2 SQL tests and5 cleanup tests pass. No runtime body/hash whitelist changed; A/B remain separate and unchanged. No hosted access, data/privilege/history changes, deployment, activation, publication, commit or push."
   },
   {
-   "identity": "C2 final cutover \u2014 exact CSV cleanup and verified settlement chain prepared",
+   "identity": "C2 final cutover — exact CSV cleanup and verified settlement chain prepared",
    "status": "authored",
    "sha": "ee64bb3ac16742702ea3a0bcd9a82017d436cdb5",
    "timestamp": "2026-10-10T07:04:29.528Z",
@@ -1622,7 +1622,7 @@
    "evidence": "203 CSV rows/29 UUIDs/1341 units verified; owner approved preparation including seven deviations. Historical MD5 unrecoverable/not executable. Bidirectional typed UTC-microsecond snapshot equality, locks, zero-orphan postcondition and FK readiness; no cleanup execution. Exact supplied three settlement body hashes reproduced; wrapper unchanged, corrected inner/helper tombstone predicates only; guards and composed cutover updated; A unchanged. 91 focused local SQL tests pass. No hosted concurrency/scheduler proof, installed migrations/history changes, commit, push, deployment or activation. Four F limitations unchanged."
   },
   {
-   "identity": "ENG-PROGRESSION-001G-D COMPLETE \u2014 explicit owner acceptance with retained limitations",
+   "identity": "ENG-PROGRESSION-001G-D COMPLETE — explicit owner acceptance with retained limitations",
    "status": "authored",
    "sha": "f6833b87fc4bd9c99eafa78c27d25a513768a9af",
    "timestamp": "2026-10-11T08:28:55.921Z",
@@ -1630,10 +1630,10 @@
    "reporting_actor": "Mik explicit D acceptance; Codex documentation reconciliation",
    "directly_verified": false,
    "artifact": "docs/operations/progression-001G-D-closeout-review.md",
-   "evidence": "Owner accepts D1\u2013D4 delivered/rolled-out scope and nonblocking unverified authenticated token awards/refusals/UUID replay, hosted ACL readback, actual cron expiry and privileged v3\u2192v2 uncertainty (neither contained nor exploitable proven). D COMPLETE with accepted limitations; approved tools/corrections deferred, C2 COMPLETE, four F limitations OPEN, overall001G OPEN. Broader review not prerequisite for E. No hosted actions or repair authorization."
+   "evidence": "Owner accepts D1–D4 delivered/rolled-out scope and nonblocking unverified authenticated token awards/refusals/UUID replay, hosted ACL readback, actual cron expiry and privileged v3→v2 uncertainty (neither contained nor exploitable proven). D COMPLETE with accepted limitations; approved tools/corrections deferred, C2 COMPLETE, four F limitations OPEN, overall001G OPEN. Broader review not prerequisite for E. No hosted actions or repair authorization."
   },
   {
-   "identity": "ENG-PROGRESSION-001G-E COMPLETE \u2014 E2 inventory / owner acceptance; no repairs",
+   "identity": "ENG-PROGRESSION-001G-E COMPLETE — E2 inventory / owner acceptance; no repairs",
    "status": "authored",
    "sha": "371b33437d374b21f324b0a944ff386c9c4dc1f5",
    "timestamp": "2026-10-11T09:13:09.185Z",
@@ -1644,7 +1644,7 @@
    "evidence": "Hosted read-only inventory role supabase_read_only_user;2 current characters both NO ISSUE for selected subset. No missing origins/progression sidecars, basic-state/version flags, repair candidates or unresolved anomalies. No mutations/repairs; E required no repairs. Owner accepts selected-invariant coverage, separate statement snapshots for metadata/inventory and excluded purged history. Not direct Codex hosted verification or exhaustive state proof. E COMPLETE with accepted limitations; C2/D complete, overall001G OPEN, four F limitations OPEN."
   },
   {
-   "identity": "ENG-PROGRESSION-001G and F COMPLETE \u2014 final explicit owner acceptance",
+   "identity": "ENG-PROGRESSION-001G and F COMPLETE — final explicit owner acceptance",
    "status": "authored",
    "sha": "9405f867db5e7380386b722e9fe0e92f1322c259",
    "timestamp": "2026-10-11T10:20:33.145Z",
@@ -1652,10 +1652,10 @@
    "reporting_actor": "Mik explicit consolidated001G/F acceptance; Codex documentation reconciliation",
    "directly_verified": false,
    "artifact": "docs/operations/progression-001G-F-closure-checklist.md",
-   "evidence": "Owner accepts001G including F COMPLETE with C2/D/E staged scope and E no-repair conclusion. Retain unverified behavior, privileged v3\u2192v2 uncertainty, deferred tools and all four OPEN F limitations; no universal runtime/ACL proof. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout. No gameplay code change, normal XP investigation, hosted action or repair."
+   "evidence": "Owner accepts001G including F COMPLETE with C2/D/E staged scope and E no-repair conclusion. Retain unverified behavior, privileged v3→v2 uncertainty, deferred tools and all four OPEN F limitations; no universal runtime/ACL proof. Administrative XP grants remain paused. Normal gameplay XP earning, including creature kill rewards, is not intentionally disabled by this policy. Its runtime behavior is not established by this closeout. No gameplay code change, normal XP investigation, hosted action or repair."
   },
   {
-   "identity": "ENG-PROGRESSION-001H COMPLETE \u2014 owner acceptance of retained restricted legacy paths",
+   "identity": "ENG-PROGRESSION-001H COMPLETE — owner acceptance of retained restricted legacy paths",
    "status": "authored",
    "sha": "16fbb59b1cad342c716e96db6f78e18c8afa5595",
    "timestamp": "2026-10-11T10:35:26.251Z",
@@ -1663,10 +1663,10 @@
    "reporting_actor": "Mik explicit H acceptance; Codex documentation reconciliation",
    "directly_verified": false,
    "artifact": "docs/operations/progression-001H1-legacy-dependency-inventory.md",
-   "evidence": "H1 bounded dependency inventory accepted. Owner retains410/503 refusals/disabled controls, legacy combat modules/test dependencies, restricted XP/Order/bond/Renown functions, legacy creation/deletion RPCs/service teleport and uncertain privileged v3\u2192v2 delegation. No secure/unrestricted/fully verified claim; physical removal deferred. Roadmap allows uncertain restricted wrappers; accepted D\u2013G prerequisites met.001H and agreed progression delivery sequence complete at staged evidence levels;001G/F/C2/D/E closure unchanged, four F limitations OPEN, deferred features remain deferred. Administrative XP grants paused only; normal gameplay XP not intentionally disabled or runtime-established. No code, SQL, hosted action or privilege change."
+   "evidence": "H1 bounded dependency inventory accepted. Owner retains410/503 refusals/disabled controls, legacy combat modules/test dependencies, restricted XP/Order/bond/Renown functions, legacy creation/deletion RPCs/service teleport and uncertain privileged v3→v2 delegation. No secure/unrestricted/fully verified claim; physical removal deferred. Roadmap allows uncertain restricted wrappers; accepted D–G prerequisites met.001H and agreed progression delivery sequence complete at staged evidence levels;001G/F/C2/D/E closure unchanged, four F limitations OPEN, deferred features remain deferred. Administrative XP grants paused only; normal gameplay XP not intentionally disabled or runtime-established. No code, SQL, hosted action or privilege change."
   },
   {
-   "identity": "ENG-LEGACY-001B COMPLETE WITH ACCEPTED LIMITATIONS \u2014 bounded Combat2 writer-chain audit",
+   "identity": "ENG-LEGACY-001B COMPLETE WITH ACCEPTED LIMITATIONS — bounded Combat2 writer-chain audit",
    "status": "authored",
    "sha": "8e9b506148ca0b0f8e0236842bb2251cee163237",
    "timestamp": "2026-10-12T06:12:09.957Z",
@@ -1710,7 +1710,7 @@
    "evidence": "One SELECT envelope for exact sync/derived/action/repair/restrict functions, direct/effective EXECUTE, all noninternal characters/inventory triggers including constraint triggers and full bound definitions, relevant columns/defaults/constraints and filtered isolation metadata. Five normalized source fingerprints computed; no installed parity assumed. PASS/FAIL/REQUIRES EVIDENCE and same-statement versus separate observations defined. No gameplay rows/calls, SQL execution, hosted operation, correction or publication. Prior C1/C2 work, closures and accepted limitations preserved. Validation:18 applicable tests PASS, one unchanged bash-dependent check FAILS with ENOENT; single-statement scope/privacy and five source hashes/links/whitespace pass. SQL not executed or compiled."
   },
   {
-   "identity": "ENG-LEGACY-001C3 hosted sync metadata received \u2014 owner report",
+   "identity": "ENG-LEGACY-001C3 hosted sync metadata received — owner report",
    "status": "authored",
    "sha": "4ee7994cbe1e19ea836b634e7dec28d386088844",
    "timestamp": "2026-10-12T08:41:24.753Z",
@@ -1765,7 +1765,7 @@
    "evidence": "Exact source/historical signatures: heal(uuid,uuid,integer), heal(uuid,uuid,integer,integer) fourth integer defaultNULL, damage(uuid,integer). SELECT-only exact metadata preflight and transactional ACL-only correction outside migrations prepared; revoke only PUBLIC/anon/authenticated, retain bodies/owner/service and other actual server ACL entries. Fingerprint/security/server prerequisite guards and effective browser/retained rights postconditions. Eight static regression checks pass; no SQL execution per restriction, no PostgreSQL rollback/inheritance/concurrency proof. Current hosted ACL/default/server-consumer evidence and separate publication/installation authorization pending. C open; existing closures/F/v3/XP policy preserved."
   },
   {
-   "identity": "ENG-LEGACY-001C6 \u2014 reconciliation complete; C closure proposal awaiting owner acceptance",
+   "identity": "ENG-LEGACY-001C6 — reconciliation complete; C closure proposal awaiting owner acceptance",
    "status": "authored",
    "sha": "07ec4fb204d844099748b7825a8cbdaafbc00084",
    "timestamp": "2026-10-12T12:02:17.676Z",
@@ -1776,7 +1776,7 @@
    "evidence": "C4/C5C installation metadata owner-reported; local ancestry, exact SQL and20-entry chain verified. No newly demonstrated material authority blocker. Proposed accepted limitations and inventory-domain deferrals require separate owner acceptance. Actual C remains OPEN, overall LEGACY001 OPEN; previous closures, F limitations and administrative-only XP pause unchanged."
   },
   {
-   "identity": "ENG-LEGACY-001C COMPLETE WITH ACCEPTED LIMITATIONS \u2014 C7 owner acceptance",
+   "identity": "ENG-LEGACY-001C COMPLETE WITH ACCEPTED LIMITATIONS — C7 owner acceptance",
    "status": "authored",
    "sha": "44779594c71ee042193457f193d031fd738ae9fe",
    "timestamp": "2026-10-12T13:02:46.032Z",
@@ -1787,7 +1787,7 @@
    "evidence": "Owner accepts C6 closure: visibility/isolation gaps, unverified multi-session concurrency, AC inconsistencies and privileged/server/external caller uncertainty retained. Equipment synchronization/missing paths, callback transactionality and empty-object overrides deferred to Inventory/Items/Crafting. C4/C5 installed corrections intact; no runtime proof inferred. Prior progression/B closures, four OPEN F limitations and administrative-only XP pause preserved. Overall LEGACY001 OPEN."
   },
   {
-   "identity": "ENG-LEGACY-001D1 \u2014 Inventory/Items/Crafting writer inventory prepared; D OPEN",
+   "identity": "ENG-LEGACY-001D1 — Inventory/Items/Crafting writer inventory prepared; D OPEN",
    "status": "authored",
    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
    "timestamp": "2026-10-12T14:46:58.564Z",
@@ -1798,7 +1798,7 @@
    "evidence": "Twelve bounded writer families reuse C deferrals and H/B evidence. Source sale handler ignores consume false; strip multi-request writes unchecked; deployed parity/ACL/runtime unknown. Equipment sync/callback transactionality/empty overrides retained. No SQL/code/hosted action; C and earlier closures/F limitations preserved."
   },
   {
-   "identity": "ENG-LEGACY-001D2 \u2014 material-sale atomicity proposal prepared; D OPEN",
+   "identity": "ENG-LEGACY-001D2 — material-sale atomicity proposal prepared; D OPEN",
    "status": "authored",
    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
    "timestamp": "2026-10-12T15:22:29.705Z",
@@ -1809,7 +1809,7 @@
    "evidence": "False consume result discarded before separate stale gold UPDATE; non-atomic refund/retry paths traced. Proposed service-only actor-bound sale transaction reuses material helper and existing inventory request ledger; character-first locks, additive gold, UUID replay. No code/SQL/hosted action or live exploit assertion. Installed dependency/ACL/type gates retained."
   },
   {
-   "identity": "ENG-LEGACY-001D3 \u2014 atomic material sale prepared locally; D OPEN",
+   "identity": "ENG-LEGACY-001D3 — atomic material sale prepared locally; D OPEN",
    "status": "authored",
    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
    "timestamp": "2026-10-12T15:52:09.375Z",
@@ -1820,7 +1820,7 @@
    "evidence": "New service-only SD sale uses existing ledger/helper, character-first lock, exact consumption/additive bounded gold and UUID replay. Edge and two callers prepared; isolated tests not hosted/concurrency proof. No installation/deployment or commit authorized. Prior closures/limitations preserved."
   },
   {
-   "identity": "ENG-LEGACY-001D3A \u2014 material-sale caller retry/refusal correction prepared",
+   "identity": "ENG-LEGACY-001D3A — material-sale caller retry/refusal correction prepared",
    "status": "authored",
    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
    "timestamp": "2026-10-12T17:30:18.581Z",
@@ -1831,7 +1831,7 @@
    "evidence": "Production shared hook replays immutable pending payload despite low stock; only explicit matching post-replay SQL refusal clears state. Timeout/HTTP-only errors retain UUID. Both panels expose retry and block new submission. Approved SQL unchanged; D OPEN, no hosted/commit/push."
   },
   {
-   "identity": "ENG-LEGACY-001D4 \u2014 material-sale source publication reviewed; no activation",
+   "identity": "ENG-LEGACY-001D4 — material-sale source publication reviewed; no activation",
    "status": "authored",
    "sha": "cd85386ba78ce57d227c97d0bb403f26a09bad6f",
    "timestamp": "2026-10-12T22:20:12.374Z",
@@ -1839,10 +1839,10 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/legacy-001D3-material-sale-handoff.md",
-   "evidence": "Final D1\u2013D3A source review GO, SQL hash unchanged. Shared caller/Edge refusal/retry and SQL rollback tests pass; remount/reload UUID persistence not guaranteed. No hosted/Edge/frontend activation; D OPEN and prior closures/F limitations preserved."
+   "evidence": "Final D1–D3A source review GO, SQL hash unchanged. Shared caller/Edge refusal/retry and SQL rollback tests pass; remount/reload UUID persistence not guaranteed. No hosted/Edge/frontend activation; D OPEN and prior closures/F limitations preserved."
   },
   {
-   "identity": "ENG-LEGACY-001D5/D5A \u2014 separately observed metadata preflights owner-reported",
+   "identity": "ENG-LEGACY-001D5/D5A — separately observed metadata preflights owner-reported",
    "status": "authored",
    "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
    "timestamp": "2026-10-12T22:47:59.955Z",
@@ -1853,7 +1853,7 @@
    "evidence": "D5 no count CHECK; consume public search_path/expected behavior/service-only EXECUTE, ledger/triggers/history passed. D5A separately catalog writes RLS limited steward/overlord. Exact observation times/roles/full-body fingerprints unavailable; recording time only, distinct snapshots not merged. No runtime proof."
   },
   {
-   "identity": "ENG-LEGACY-001D5B \u2014 unchanged SQL installation compatibility GO; D OPEN",
+   "identity": "ENG-LEGACY-001D5B — unchanged SQL installation compatibility GO; D OPEN",
    "status": "authored",
    "sha": "af1b91f75a054c2878335186169dfc5b028e65bb",
    "timestamp": "2026-10-12T22:47:59.955Z",
@@ -1864,7 +1864,7 @@
    "evidence": "Sale rejects existing negative balance, exact decrement prevents new negative count; local source public-qualified helper resolution and temp decoy probe support reported compatibility. No SQL change; installation depends on expected body/identity and no metadata drift. Full hosted definition parity not independently established. No hosted/install/deploy/commit authorization."
   },
   {
-   "identity": "ENG-LEGACY-001D7 \u2014 D6 reconciled; scoped session retry recovery prepared",
+   "identity": "ENG-LEGACY-001D7 — D6 reconciled; scoped session retry recovery prepared",
    "status": "authored",
    "sha": "8cededba6ef6fce89b57395662297ff1d5510e7f",
    "timestamp": "2026-10-13T06:07:17.458Z",
@@ -1875,7 +1875,7 @@
    "evidence": "Session storage scoped authenticated account/character, exact immutable pending payload, explicit retry, matching UUID outcomes; same-tab guard, no auto dispatch. Storage clearing/tab isolation limits remain. SQL unchanged; D OPEN, no commit/deploy/hosted action. Prior closures/F limitations/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001D COMPLETE WITH ACCEPTED LIMITATIONS \u2014 D10 bounded writer audit",
+   "identity": "ENG-LEGACY-001D COMPLETE WITH ACCEPTED LIMITATIONS — D10 bounded writer audit",
    "status": "authored",
    "sha": "5d9b7941e961f78d48bcbec39a396efe160569c8",
    "timestamp": "2026-10-13T07:47:25.204Z",
@@ -1886,7 +1886,7 @@
    "evidence": "Bounded map/trace/static guard and installed/deployed sale evidence meet staged audit closure, no new critical authority blocker demonstrated. Live material sale/concurrency/bundle identity unverified; session scope/count CHECK/search path/trigger/C3/equipment/override/transactionality/privileged findings accepted unresolved. Owner vendor smoke distinct; crafting/level1 combat problems follow-up candidates, no root cause. Prior closures/four OPEN F limits/admin-only XP pause preserved. Overall LEGACY001 OPEN."
   },
   {
-   "identity": "ENG-LEGACY-001 Progression-domain disposition \u2014 existing-work coverage recommended, not auto-closed",
+   "identity": "ENG-LEGACY-001 Progression-domain disposition — existing-work coverage recommended, not auto-closed",
    "status": "authored",
    "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
    "timestamp": "2026-10-13T08:10:21.484Z",
@@ -1894,10 +1894,10 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
-   "evidence": "001A domain3 requirements mapped to completed progression A\u2013H inventories/cutovers/accepted closures. Recommend covered by existing work with accepted limitations; no new mandatory uncovered writer identified, no duplicate full audit. Four F limits OPEN, RP earning/v3\u2192v2/bond/delegate/runtime gaps preserved. Formal reuse disposition needs owner acceptance; prior B/C/D/progression closures untouched."
+   "evidence": "001A domain3 requirements mapped to completed progression A–H inventories/cutovers/accepted closures. Recommend covered by existing work with accepted limitations; no new mandatory uncovered writer identified, no duplicate full audit. Four F limits OPEN, RP earning/v3→v2/bond/delegate/runtime gaps preserved. Formal reuse disposition needs owner acceptance; prior B/C/D/progression closures untouched."
   },
   {
-   "identity": "ENG-LEGACY-001 Progression domain COVERED BY EXISTING WORK WITH ACCEPTED LIMITATIONS \u2014 owner acceptance",
+   "identity": "ENG-LEGACY-001 Progression domain COVERED BY EXISTING WORK WITH ACCEPTED LIMITATIONS — owner acceptance",
    "status": "authored",
    "sha": "c9fc4e7296676294c046b50a24d0a349b66b355c",
    "timestamp": "2026-10-13T08:16:23.498Z",
@@ -1905,10 +1905,10 @@
    "reporting_actor": "Mik explicit Progression reuse acceptance; Codex documentation",
    "directly_verified": false,
    "artifact": "docs/operations/legacy-001-progression-domain-disposition.md",
-   "evidence": "Owner accepts completed A\u2013H evidence reuse, not full gameplay/security verification. Four F limits OPEN; RP earning, v3\u2192v2, external bond/helper, historical ACL and untested runtime/replay/cron preserved. Earlier closures unchanged, overall LEGACY001 OPEN. Administrative XP grants paused only; gameplay XP not intentionally disabled. Economy/Rewards next, no investigation begun."
+   "evidence": "Owner accepts completed A–H evidence reuse, not full gameplay/security verification. Four F limits OPEN; RP earning, v3→v2, external bond/helper, historical ACL and untested runtime/replay/cron preserved. Earlier closures unchanged, overall LEGACY001 OPEN. Administrative XP grants paused only; gameplay XP not intentionally disabled. Economy/Rewards next, no investigation begun."
   },
   {
-   "identity": "ENG-LEGACY-001E IN PROGRESS \u2014 E1 Economy/Rewards source inventory prepared",
+   "identity": "ENG-LEGACY-001E IN PROGRESS — E1 Economy/Rewards source inventory prepared",
    "status": "authored",
    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
    "timestamp": "2026-10-13T09:35:43.977Z",
@@ -1919,7 +1919,7 @@
    "evidence": "13 bounded writer families reuse B/C/D/progression maps. NPC gift configured-event/once inputs not validated, vendor read/delete-credit races, resolver salvage vs0002 composition gap identified at source, not hosted exploits/runtime defects proven. Recommend narrow NPC gift E2; other priority findings retained. E/overall OPEN; previous closures/four F limits/v3 uncertainty/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001E2 \u2014 NPC gift authority source investigation prepared; E IN PROGRESS",
+   "identity": "ENG-LEGACY-001E2 — NPC gift authority source investigation prepared; E IN PROGRESS",
    "status": "authored",
    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
    "timestamp": "2026-10-13T09:49:52.256Z",
@@ -1930,7 +1930,7 @@
    "evidence": "Admin JSON topics configure item/once; RPC ignores config, caller false/NULL skips once guard, NULL auth predicate fails open in source, no node lookup/character lock. FKs enforce identity, lifecycle/unique triggers may constrain mutation; current effective ACL/body not proven. Recommend same-RPC authoritative config validation and serialization, no correction yet; preserve E1 and previous closures/limits."
   },
   {
-   "identity": "ENG-LEGACY-001E3 \u2014 SELECT-only NPC gift metadata preflight prepared; E IN PROGRESS",
+   "identity": "ENG-LEGACY-001E3 — SELECT-only NPC gift metadata preflight prepared; E IN PROGRESS",
    "status": "authored",
    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
    "timestamp": "2026-10-13T10:12:53.065Z",
@@ -1941,7 +1941,7 @@
    "evidence": "Exact signature/source hash, six bounded table catalogs/bound triggers, effective ACL/RLS and separate runner history snapshots; no gameplay row reads/invocations. Proposed same-NPC/item equivalent topics collapse and conflicting flags refuse, pending owner approval. No correction/execution/push; prior E1/E2 and closures/F limits retained."
   },
   {
-   "identity": "ENG-LEGACY-001E4 \u2014 prepared E1\u2013E3 source publication and gift-pair policy approved",
+   "identity": "ENG-LEGACY-001E4 — prepared E1–E3 source publication and gift-pair policy approved",
    "status": "authored",
    "sha": "d03b4bb26b0e46f4961df880ca49da82370a14fe",
    "timestamp": "2026-10-13T10:19:53.892Z",
@@ -1952,7 +1952,7 @@
    "evidence": "Owner approves NPC/item pairs, equivalent duplicate collapse, conflicting once flags refusal and legitimate repeatable gifts. Source-only publication authorized. Metadata preflight SQL unchanged/SELECT-only, no gameplay rows/functions. No correction/hosted execution authorized; earlier closures/four F limits/admin-only XP pause and v3 uncertainty preserved. E IN PROGRESS, overall OPEN."
   },
   {
-   "identity": "ENG-LEGACY-001E5 \u2014 NPC gift metadata PASS/access finding owner-reported",
+   "identity": "ENG-LEGACY-001E5 — NPC gift metadata PASS/access finding owner-reported",
    "status": "authored",
    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
    "timestamp": "2026-10-13T11:02:44.020Z",
@@ -1963,7 +1963,7 @@
    "evidence": "E5 PASS with documented access finding supplied; exact observation times/role/ACL details/full hashes not available locally. Do not infer exact anonymous access or current body equality; recording time only. No Codex hosted read."
   },
   {
-   "identity": "ENG-LEGACY-001E6 \u2014 guarded same-signature NPC gift correction prepared locally",
+   "identity": "ENG-LEGACY-001E6 — guarded same-signature NPC gift correction prepared locally",
    "status": "authored",
    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
    "timestamp": "2026-10-13T11:02:44.020Z",
@@ -1974,7 +1974,7 @@
    "evidence": "Approved configured pair/duplicate/conflict/repeatable rule, owner/active/node checks, character-first serialized ledger/item mutation; PUBLIC/anon revoke and preserved existing server capability in proposed SQL.8 isolated tests not independent-session/runtime proof. Exact E5 hash/ACL/external caller/trigger reconciliation installation gate. No install/deploy/commit, E IN PROGRESS; previous closures/four F limits/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001E7 \u2014 targeted NPC gift SQL review LOCAL CORRECTION REQUIRED",
+   "identity": "ENG-LEGACY-001E7 — targeted NPC gift SQL review LOCAL CORRECTION REQUIRED",
    "status": "authored",
    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
    "timestamp": "2026-10-13T11:16:39.296Z",
@@ -1982,10 +1982,10 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/legacy-001E7-npc-gift-review.md",
-   "evidence": "E6 bytes unchanged. NULL proconfig bypasses IF NOT source guard confirmed in isolated probe; credible source NPC/item cascade\u2192lifecycle KEY SHARE vs gift FOR UPDATE inversion. Propose NULL-safe predicate and FOR NO KEY UPDATE, no SQL edits authorized. Repeatable/config semantics match approved pair rule; tested ACL variants pass. E IN PROGRESS, exact E5/server/installed trigger metadata still needed."
+   "evidence": "E6 bytes unchanged. NULL proconfig bypasses IF NOT source guard confirmed in isolated probe; credible source NPC/item cascade→lifecycle KEY SHARE vs gift FOR UPDATE inversion. Propose NULL-safe predicate and FOR NO KEY UPDATE, no SQL edits authorized. Repeatable/config semantics match approved pair rule; tested ACL variants pass. E IN PROGRESS, exact E5/server/installed trigger metadata still needed."
   },
   {
-   "identity": "ENG-LEGACY-001E8 \u2014 targeted NPC gift guard/lock corrected; READY FOR HOSTED PREFLIGHT",
+   "identity": "ENG-LEGACY-001E8 — targeted NPC gift guard/lock corrected; READY FOR HOSTED PREFLIGHT",
    "status": "authored",
    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
    "timestamp": "2026-10-13T11:40:08.828Z",
@@ -1996,7 +1996,7 @@
    "evidence": "Only NULL-safe complete-source predicate and FOR NO KEY UPDATE changed in SQL; exact reverse restores E6 hash. Focused isolated tests include defect reproduction/rejection, source lock compatibility, ACL variants and atomic install rollback. No hosted/concurrent-session proof. E IN PROGRESS; E5 actual body/ACL/triggers/server dependencies remain; no installation/publication authorization."
   },
   {
-   "identity": "ENG-LEGACY-001E9 \u2014 corrected NPC gift artifact source publication and targeted preflight handoff prepared",
+   "identity": "ENG-LEGACY-001E9 — corrected NPC gift artifact source publication and targeted preflight handoff prepared",
    "status": "authored",
    "sha": "b4f4614c3fe96bd39a93e40e55a0421b911cc544",
    "timestamp": "2026-10-13T11:48:41.633Z",
@@ -2004,10 +2004,10 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/legacy-001E9-npc-gift-installation-preflight.md",
-   "evidence": "E8 SQL unchanged hashc9265d\u2026; full E5 absent locally so handoff explicitly reuses Lovable original report before minimal missing exact metadata. Unknown external NULL-auth/server compatibility requires owner acceptance or concrete caller resolution, not automatic safety. No preflight/install/deploy dispatched. E IN PROGRESS and previous closures/F limits/admin-only XP pause preserved."
+   "evidence": "E8 SQL unchanged hashc9265d…; full E5 absent locally so handoff explicitly reuses Lovable original report before minimal missing exact metadata. Unknown external NULL-auth/server compatibility requires owner acceptance or concrete caller resolution, not automatic safety. No preflight/install/deploy dispatched. E IN PROGRESS and previous closures/F limits/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001E12 \u2014 NPC installed reconciliation; Economy closure OWNER DECISION REQUIRED",
+   "identity": "ENG-LEGACY-001E12 — NPC installed reconciliation; Economy closure OWNER DECISION REQUIRED",
    "status": "authored",
    "sha": "23283ede5ed3dc8880ded325cbfa6268d6c5ad8b",
    "timestamp": "2026-10-13T12:25:42.372Z",
@@ -2018,7 +2018,7 @@
    "evidence": "NPC correction resolved at source/owner installation metadata level. Unknown external callers, independent-session concurrency and uninspected duplicate/conflicting gift config owner-accepted. Vendor transaction risks, salvage source mismatch and contract/quest coverage not silently accepted; explicit owner follow-up/deferral decision needed. E IN PROGRESS, overall OPEN; prior closures/four F limits/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001E COMPLETE WITH ACCEPTED LIMITATIONS \u2014 E13 explicit owner closure",
+   "identity": "ENG-LEGACY-001E COMPLETE WITH ACCEPTED LIMITATIONS — E13 explicit owner closure",
    "status": "authored",
    "sha": "80ba7a524a57911b4f0419c5d57a4d61c7302c8f",
    "timestamp": "2026-10-13T12:46:32.602Z",
@@ -2026,10 +2026,10 @@
    "reporting_actor": "Mik E13 explicit closure/disposition acceptance; Codex documentation",
    "directly_verified": false,
    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
-   "evidence": "Vendor double-credit/stale/partial transaction risk and salvage source mismatch owner-accepted unresolved; separate deferred candidates. Contract/quest authority transferred unresolved to World/Creatures/Quests with receiving plan references. NPC0021 installed/reconciled; three unknown-caller/concurrency/config limits retained, no gameplay PASS. Other E1\u2013E12 findings retain original dispositions. Parent LEGACY001 OPEN; Parties next active planned domain, no audit begun. Previous closures/four OPEN F limits/admin-only XP pause preserved."
+   "evidence": "Vendor double-credit/stale/partial transaction risk and salvage source mismatch owner-accepted unresolved; separate deferred candidates. Contract/quest authority transferred unresolved to World/Creatures/Quests with receiving plan references. NPC0021 installed/reconciled; three unknown-caller/concurrency/config limits retained, no gameplay PASS. Other E1–E12 findings retain original dispositions. Parent LEGACY001 OPEN; Parties next active planned domain, no audit begun. Previous closures/four OPEN F limits/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F Parties IN PROGRESS \u2014 F1 source writer/authority map prepared",
+   "identity": "ENG-LEGACY-001F Parties IN PROGRESS — F1 source writer/authority map prepared",
    "status": "authored",
    "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
    "timestamp": "2026-10-13T19:12:29.196Z",
@@ -2040,7 +2040,7 @@
    "evidence": "11 bounded lifecycle/movement/entry/resource/reward/legacy families reuse prior audits. Canonical party_mutate global/request receipts, follow patch and immediate departure ordering mapped; leader transfer absent, tank metadata distinct. Guard/entry race and raw-service bypass capability unverified; malformed-client-response UUID clearing source weakness. No host/gameplay/code change; prior closures/four F limits/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F2 Parties IN PROGRESS \u2014 CONCRETE SOURCE GAP in accept versus entry",
+   "identity": "ENG-LEGACY-001F2 Parties IN PROGRESS — CONCRETE SOURCE GAP in accept versus entry",
    "status": "authored",
    "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
    "timestamp": "2026-10-13T19:46:01.281Z",
@@ -2051,7 +2051,7 @@
    "evidence": "Source schedule: accept guard passes, another accepted member enters without lifecycle lock, accept completes during active combat. Coordinated departure shares lifecycle lock; FK/child locks do not close accept window. No hosted race/exploit claim. Next bounded metadata parity and node-first correction design require authorization; F1 malformed-response UUID candidate remains separate. Prior closures, four OPEN progression limits and admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F3 Parties IN PROGRESS \u2014 parity preflight and node-first lock design prepared",
+   "identity": "ENG-LEGACY-001F3 Parties IN PROGRESS — parity preflight and node-first lock design prepared",
    "status": "authored",
    "sha": "24df5db3688cf429e8eb7033e8d74104bb80d9c8",
    "timestamp": "2026-10-13T20:10:32.807Z",
@@ -2062,7 +2062,7 @@
    "evidence": "Metadata-only single-SELECT parity/handoff prepared; no hosted result. Design: unlocked affected member/node/encounter discovery, sorted nodes before lifecycle, sorted encounters before UUID characters/member writes, abort on coverage drift; preserves replay, tank selection and movement. Two-session tests planned, not performed. F1 retry issue separate; Parties IN PROGRESS/parent OPEN, previous closures/four progression limitations/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F5B Parties IN PROGRESS \u2014 supplied F5/F5A reconciled; GO local correction",
+   "identity": "ENG-LEGACY-001F5B Parties IN PROGRESS — supplied F5/F5A reconciled; GO local correction",
    "status": "authored",
    "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
    "timestamp": "2026-10-13T21:36:31.402Z",
@@ -2073,7 +2073,7 @@
    "evidence": "Owner-supplied F5 raw JSON and F5A text archived byte-identically, separate observations. Membership changes no current_node_id and do not fire movement cleanup. F5A reports no new Combat2 lock dependency; retained Combat1 deadlock hazard temporarily owner-accepted, unresolved. Broad DML grants remain a criterion FAIL distinct from RLS default-denial; caller isolation/raw authority/runtime concurrency unverified. GO narrowly scoped local F3 implementation after separate authorization and isolated two-session tests; no installation/runtime sign-off. Prior closures/four OPEN progression limitations/admin-only XP pause retained."
   },
   {
-   "identity": "ENG-LEGACY-001F6 Parties IN PROGRESS \u2014 local SQL and native two-session tests PASS",
+   "identity": "ENG-LEGACY-001F6 Parties IN PROGRESS — local SQL and native two-session tests PASS",
    "status": "authored",
    "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
    "timestamp": "2026-10-13T22:37:51.614Z",
@@ -2084,7 +2084,7 @@
    "evidence": "F6/F6A current result: only party_mutate reviewed SQL outside migrations;14 PGlite SQL tests and6 executed independent-session native tests PASS on PostgreSQL18.6; initial skips superseded. Windows harness spawn/ignored stdio fix only; SQL39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d unchanged. No hosted/runtime proof; restricted caller/raw authority and accepted Combat1 hazard retained. Prior closures/four progression limitations/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F7 Parties IN PROGRESS \u2014 verified candidate and scoped metadata preflight publication",
+   "identity": "ENG-LEGACY-001F7 Parties IN PROGRESS — verified candidate and scoped metadata preflight publication",
    "status": "authored",
    "sha": "e29785bd84930b4658bddcd388eb8bee5e95315d",
    "timestamp": "2026-10-13T22:52:08.356Z",
@@ -2095,7 +2095,7 @@
    "evidence": "F5/F5A original evidence and F5B/F6/F6A reconciled. Candidate unchanged;14 SQL/6 native/4 preflight tests PASS. Prepared two SELECTs: scoped dependency/trigger/ACL/column metadata with F5 hash reuse; separate22-entry Drizzle source-prefix read. No hosted execution, install/deploy/Publish. GO separate metadata preflight after source publication, not installation/closure. Parties IN PROGRESS/parent OPEN; all accepted limits/stash preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F8 Parties IN PROGRESS \u2014 F7 hosted evidence reconciled; installation GO proposal",
+   "identity": "ENG-LEGACY-001F8 Parties IN PROGRESS — F7 hosted evidence reconciled; installation GO proposal",
    "status": "authored",
    "sha": "1a7ec70ecc51265795ef25d309956c537cc06644",
    "timestamp": "2026-10-14T07:36:22.598Z",
@@ -2106,7 +2106,7 @@
    "evidence": "Original statement1/2 text archived byte-identically. Owner reports initial sandbox_exec failure then unchanged success as supabase_read_only_user; separate04:48:02.680118Z catalog/04:49:22.045943Z ledger observations.48 function hashes/settings/owners,41 columns and25 trigger definitions/bindings match F5;22 ledger hashes match source.13 masked raw ACL records remain REQUIRES EVIDENCE; effective target rights observed and candidate atomically asserts actual ACL preservation. GO specific installation proposal with explicit limited-readback/privileged risk acknowledgment and separate authorization, not installed/runtime verified. Candidate39f559... unchanged; old risks/four progression limitations/admin-only XP pause retained. F8A owner explicitly approves unchanged hosted installation with retained limits; Codex task only publishes six documentation/evidence files, no installed status claimed. Masked ACLs still REQUIRES EVIDENCE; F1 retry/privileged/Combat1/progression limitations preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F9A Parties IN PROGRESS \u2014 installed/metadata-verified with accepted terminal-LF exception",
+   "identity": "ENG-LEGACY-001F9A Parties IN PROGRESS — installed/metadata-verified with accepted terminal-LF exception",
    "status": "authored",
    "sha": "bdcb3968422108aa9963fd287460d107f6d58cb3",
    "timestamp": "2026-10-14T10:11:55.717Z",
@@ -2117,7 +2117,7 @@
    "evidence": "INSTALLED AND METADATA-VERIFIED owner-reported SUCCESS/all metadata PASS, target normalized4db8db846b0099fb87518e48de84602794c544ba3c294aacea3b4b6990822fdd. Local canonical Git comparison: approved6767 bytes SHA39f5595fa1495a5033ef0fa921a15a0f8dc2f6402dd5e8885bc94e3822e1db1d; generated6766 bytes SHAbd35c28c379d6634d8017e26541de7b23f5608a18178b2ac6e13e558aa5ad27d, exactly omitted final LF, explicitly owner-accepted. Full ledger hash source-derived, no new hosted read/raw export; journal stores no SQL hash.23-entry source chain, prior22 preserved. Timestamp records reconciliation, not hosted observation. Hosted runtime/concurrency and masked ACL/caller limits outstanding. Prior closures/four OPEN progression limitations/admin-only XP pause/Combat1/privileged/F1 retry uncertainty retained; no Parties closure or gameplay/hosted operation."
   },
   {
-   "identity": "ENG-LEGACY-001F10 Parties IN PROGRESS \u2014 bounded runtime smoke plan authored, NOT EXECUTED",
+   "identity": "ENG-LEGACY-001F10 Parties IN PROGRESS — bounded runtime smoke plan authored, NOT EXECUTED",
    "status": "authored",
    "sha": "46cbfb4a16fd91c55a5b563917bc83c34ed37d6c",
    "timestamp": "2026-10-14T10:49:08.058Z",
@@ -2128,7 +2128,7 @@
    "evidence": "Plan only:3 explicitly owner-designated disposable actors across2 authenticated owner sessions; exact UUID acceptance/replay and six combat_active refusals, approved evidence/cleanup/stop conditions. Actual IDs, safe combat/exit fixture, exact-UUID caller and hosted write/read authorization still missing. Calikon/Canaryone/non-test data excluded; sequential smoke not hosted concurrency. F1 retry issue separate; prior closures/risks/four progression limits/admin-only XP pause preserved. F9A published46cbfb4a; F10 plan/state local only, no hosted/test execution or automatic closure."
   },
   {
-   "identity": "ENG-LEGACY-001F10A Parties IN PROGRESS \u2014 source fixture/caller readiness authored, NOT EXECUTED",
+   "identity": "ENG-LEGACY-001F10A Parties IN PROGRESS — source fixture/caller readiness authored, NOT EXECUTED",
    "status": "authored",
    "sha": "46cbfb4a16fd91c55a5b563917bc83c34ed37d6c",
    "timestamp": "2026-10-14T11:11:47.341Z",
@@ -2139,7 +2139,7 @@
    "evidence": "Local source establishes supported own-account C2 creation within retained quota and ordinary authenticated six-argument party RPC caller via existing Vite application, with immutable request replay. No actual fixture UUIDs selected, caller executed or hosted safety verified. Owner-nominated dedicated test identities/node/creature/exit and separately authorized bounded reads required first; setup/combat/party/cleanup writes require later explicit approval. No code changes or hosted operations. Parties IN PROGRESS, parent OPEN; prior limitations and protected-character exclusions preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F11 Parties IN PROGRESS \u2014 CONDITIONAL GO closure proposal; hosted sequential smoke reported PASS",
+   "identity": "ENG-LEGACY-001F11 Parties IN PROGRESS — CONDITIONAL GO closure proposal; hosted sequential smoke reported PASS",
    "status": "authored",
    "sha": "54bb1a51795845d951a9bd6ca1fe5bbdf9366456",
    "timestamp": "2026-10-14T18:40:16.500Z",
@@ -2150,7 +2150,7 @@
    "evidence": "Documentation assessment only: owner reports ordinary authenticated create/invite/accept, exact six-argument replay without duplicate membership and six combat_active refusals PASS; ordinary respawn/cancel/disband cleanup, no remaining test-party memberships/invitations. Hosted sequential smoke is not native independent-session or hosted concurrency proof. F10H asleep/maintenance/jobs removed at2026-10-14 16:00UTC; empty stored active encounter receives no ticks, awake lifecycle unresolved. F1 retry-UUID weakness remains unresolved; explicit closure acceptance/disposition required. Parties IN PROGRESS, parent OPEN. Separate future persistent creature HP/DoT/regen/sleep/completion direction NOT IMPLEMENTED. All prior risks/four progression limitations/admin-only XP pause preserved."
   },
   {
-   "identity": "ENG-LEGACY-001F12 Parties COMPLETE WITH ACCEPTED LIMITATIONS \u2014 explicit owner acceptance",
+   "identity": "ENG-LEGACY-001F12 Parties COMPLETE WITH ACCEPTED LIMITATIONS — explicit owner acceptance",
    "status": "authored",
    "sha": "5406e47776a9e9027816a38ebc17e058a3b33e23",
    "timestamp": "2026-10-14T19:07:36.386Z",
@@ -2158,10 +2158,10 @@
    "reporting_actor": "Owner F12 closure decision; Codex documentation reconciliation",
    "directly_verified": false,
    "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
-   "evidence": "Owner explicitly accepts bounded F1\u2013F11 closure. F1/F-R3 malformed-response/retry-UUID weakness remains OPEN deferred correction ENG-LEGACY-001F-R3-RETRY, NOT FIXED. Privileged/legacy callers, Combat1 risk, masked ACLs, unproven hosted concurrency and broader multiplayer coverage accepted/retained; exact replay/six refusals only reported sequential scope. Awake empty-encounter lifecycle and future HP/DoT/regen direction separate, NOT IMPLEMENTED. Parent LEGACY001 OPEN; prior closures/four OPEN progression limitations/admin-only XP pause preserved. Next proposed World/Creatures/Quests scope preparation, not begun."
+   "evidence": "Owner explicitly accepts bounded F1–F11 closure. F1/F-R3 malformed-response/retry-UUID weakness remains OPEN deferred correction ENG-LEGACY-001F-R3-RETRY, NOT FIXED. Privileged/legacy callers, Combat1 risk, masked ACLs, unproven hosted concurrency and broader multiplayer coverage accepted/retained; exact replay/six refusals only reported sequential scope. Awake empty-encounter lifecycle and future HP/DoT/regen direction separate, NOT IMPLEMENTED. Parent LEGACY001 OPEN; prior closures/four OPEN progression limitations/admin-only XP pause preserved. Next proposed World/Creatures/Quests scope preparation, not begun."
   },
   {
-   "identity": "ENG-LEGACY-001G2 through G2D \u2014 COMPLETE WITH EXPLICIT LIMITATIONS; owner disposition",
+   "identity": "ENG-LEGACY-001G2 through G2D — COMPLETE WITH EXPLICIT LIMITATIONS; owner disposition",
    "status": "authored",
    "sha": "6292734adccc619a00943b6a047a277ace5db186",
    "timestamp": "2026-10-15T10:59:38.542Z",
@@ -2172,7 +2172,7 @@
    "evidence": "Owner accepts the bounded investigation only, not deployed Assassin functionality. E13 transferred contract/quest authority and reward finding remains OPEN: no canonical producer located, non-atomic re-roll, unbound completion helper, unverified deployed/runtime completion and rewards, fresh parity/unknown callers. G2B sandbox_exec/read_only off deviation remains conditionally accepted observational evidence, procedurally noncompliant. Overall G/ENG-LEGACY-001 OPEN; all earlier closures, four OPEN progression F limitations, privileged delegation and OPEN deferred F1 retry correction preserved."
   },
   {
-   "identity": "ENG-LEGACY-001G3 \u2014 bounded world lifecycle/scheduling source review",
+   "identity": "ENG-LEGACY-001G3 — bounded world lifecycle/scheduling source review",
    "status": "authored",
    "sha": "6292734adccc619a00943b6a047a277ace5db186",
    "timestamp": "2026-10-15T10:59:38.542Z",
@@ -2183,7 +2183,7 @@
    "evidence": "Local source distinguishes canonical session activation/presence, idle shutdown, heartbeat scheduler and retained activity/watchdog paths. Empty active encounter alone does not block idle shutdown or imply a defect. F10 observations are owner-reported historical evidence, not current metadata/concurrency proof. Identified source idle-decision/activation interleaving candidate; not hosted-confirmed, fixed or silently accepted. Legacy rearming, in-flight shutdown, ACL/deployed parity gaps retained. Documentation only; no SQL, hosted action or gameplay change. Administrative XP grants remain paused; ordinary gameplay XP is not intentionally disabled or runtime-established here."
   },
   {
-   "identity": "ENG-LEGACY-001G3 \u2014 INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS; G3E owner disposition",
+   "identity": "ENG-LEGACY-001G3 — INVESTIGATION COMPLETE WITH ACCEPTED LIMITATIONS; G3E owner disposition",
    "status": "authored",
    "sha": "6c85cb4244281181c4779c18cf2496719ecbc994",
    "timestamp": "2026-10-15T20:10:31.067Z",
@@ -2194,7 +2194,7 @@
    "evidence": "Owner explicitly accepts deferring G3B production installation and the known source-proven READ COMMITTED idle-shutdown/session-activation race while continuing the audit. Candidate ec2ddfc2458c28d8ecb291c8f405f5091a8364708fd7c6097716ba51c97f233c unchanged;11 native PostgreSQL18.6 tests passed locally with dependency doubles, not hosted proof. Correction NOT INSTALLED; hosted runtime/concurrency verification absent. G3D remains BLOCKED/NOT EXECUTED: permitted read-only route and actual PostgREST/pg_cron isolation unresolved; fresh installed parity/ACL/caller uncertainty retained. Closure is of investigation, not a production fix. G4 creature authority/lifecycle next, not started. E13/G/parent OPEN; prior closures/risks, four OPEN progression limitations, OPEN F1 retry correction and admin-only XP pause unchanged."
   },
   {
-   "identity": "ENG-LEGACY-001G4 \u2014 bounded creature authority/lifecycle source review recorded; findings OPEN",
+   "identity": "ENG-LEGACY-001G4 — bounded creature authority/lifecycle source review recorded; findings OPEN",
    "status": "authored",
    "sha": "8b060e7ff19da8efc2beb19302720ee33119dd0f",
    "timestamp": "2026-10-15T20:56:18.820Z",
@@ -2205,7 +2205,7 @@
    "evidence": "Local source maps authored creatures UUID/generation and encounter node_creature projection; claim/commit mirrors HP/death and uses spawn-fenced rewards. Legacy regen/wake healing guard old combat tables and change only authored HP; direct Admin saves also write full generated HP. Source-confirmed ownership overlap, not proved hosted execution/exploit. Current maintenance ACL/jobs, runtime synchronization/concurrency and external callers unresolved.99 focused source/pure tests passed, no SQL/hosted/gameplay execution. Findings not automatically accepted or fixed; G4A proposed, not begun. G/parent and E13 OPEN; prior B-F/progression/G2/G3 dispositions, four OPEN progression limitations, F1 retry deferral and admin-only XP pause unchanged."
   },
   {
-   "identity": "ENG-LEGACY-001G4A \u2014 focused regeneration/Combat2 HP ownership source review; R1 OPEN",
+   "identity": "ENG-LEGACY-001G4A — focused regeneration/Combat2 HP ownership source review; R1 OPEN",
    "status": "authored",
    "sha": "a30927db8d57a4c5e955711d3dfab91b643bf19d",
    "timestamp": "2026-10-15T21:15:59.459Z",
@@ -2216,7 +2216,7 @@
    "evidence": "Reuses G3/G4: regen/wake heal write only authored HP using Combat1 guards; claim consumes runtime HP, seed retains same-generation rows even after encounter end, and helpers do not fence claimed versions. Source-implied lost healing/divergence, not a hosted reproduction. Active-only predicate or creatures-row lock alone insufficient. Options: owner-approved temporary containment of two healing writers with respawn retained, or coherent maintenance requiring explicit eligibility/lock/version design; none selected or implemented.93 existing source/pure tests passed; no PostgreSQL helper/concurrency execution, SQL candidate, migration, hosted access or G3D reopening. G3 accepted deferral, G2/E13 and all prior risks/statuses preserved; G/parent OPEN."
   },
   {
-   "identity": "ENG-LEGACY-001G4A2 \u2014 coherent creature HP/OOC design assessment prepared; recommendation NOT APPROVED",
+   "identity": "ENG-LEGACY-001G4A2 — coherent creature HP/OOC design assessment prepared; recommendation NOT APPROVED",
    "status": "authored",
    "sha": "d73948ed14de8ebe18c1f0e6cbf8093d0a1db09e",
    "timestamp": "2026-10-15T21:34:56.549Z",
@@ -2231,7 +2231,7 @@
    "sha": "8571ba136a4e0d6acd9b71cb2b1f7405a67ddfc8",
    "timestamp": "2026-10-15T21:52:28.225Z",
    "artifact": "docs/operations/legacy-001G4A3-creature-hp-contract-readiness.md",
-   "identity": "ENG-LEGACY-001G4A3 \u2014 owner-approved creature HP direction; configuration choices remain pending",
+   "identity": "ENG-LEGACY-001G4A3 — owner-approved creature HP direction; configuration choices remain pending",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik",
    "directly_verified": false,
@@ -2242,7 +2242,7 @@
    "sha": "8571ba136a4e0d6acd9b71cb2b1f7405a67ddfc8",
    "timestamp": "2026-10-15T21:52:28.225Z",
    "artifact": "docs/operations/legacy-001G4A3-creature-hp-contract-readiness.md",
-   "identity": "ENG-LEGACY-001G4A3 \u2014 creature/player regeneration source comparison and local readiness assessment",
+   "identity": "ENG-LEGACY-001G4A3 — creature/player regeneration source comparison and local readiness assessment",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2253,18 +2253,18 @@
    "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
    "timestamp": "2026-10-15T22:21:34.457Z",
    "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
-   "identity": "ENG-LEGACY-001G4A4 \u2014 owner-approved regeneration rate and fractional contract",
+   "identity": "ENG-LEGACY-001G4A4 — owner-approved regeneration rate and fractional contract",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik",
    "directly_verified": false,
-   "evidence": "Owner approves5% maxHP/minute default for new/existing creatures; decimal0\u2013100% inclusive; zero disables ordinary regen only; no historical initial healing; persistent fractional HP across settlements; no rate edits during active Combat2 attachment. Prior G4A3 HP authority/60second delay/sleep/respawn/reassignment rules preserved. Design approval and local isolated proof authorization only, not production implementation/install."
+   "evidence": "Owner approves5% maxHP/minute default for new/existing creatures; decimal0–100% inclusive; zero disables ordinary regen only; no historical initial healing; persistent fractional HP across settlements; no rate edits during active Combat2 attachment. Prior G4A3 HP authority/60second delay/sleep/respawn/reassignment rules preserved. Design approval and local isolated proof authorization only, not production implementation/install."
   },
   {
    "status": "authored",
    "sha": "8421f0f0ba7b7087b3bf3b61681cb108fd91946e",
    "timestamp": "2026-10-15T22:21:34.457Z",
    "artifact": "docs/operations/legacy-001G4A4-creature-regen-accounting-proof.md",
-   "identity": "ENG-LEGACY-001G4A4 \u2014 isolated exact-rational accounting and transition proof",
+   "identity": "ENG-LEGACY-001G4A4 — isolated exact-rational accounting and transition proof",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2278,7 +2278,7 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/legacy-001G4A5-creature-hp-transition-integration.md",
-   "identity": "ENG-LEGACY-001G4A5 \u2014 creature HP transition hooks and synchronization design prepared",
+   "identity": "ENG-LEGACY-001G4A5 — creature HP transition hooks and synchronization design prepared",
    "evidence": "Bounded source integration map: shared entry/hostile intent/stance, pre-claim, successful-new-commit, immediate departure/arrival, seed/ended reactivation, respawn and guarded Admin edit boundaries. Proposes one private node/generation accounting authority, early sorted node/encounter coverage, live-claim deferral/stale fencing, exact cutoff and atomic refusal/replay handling. Generic fullHP saves/direct reassignment and legacy full healing must be adapted before activation. Recommends preserving earned fractions, no-refill/clamp maxHP, bounded exact decimal/microsecond storage and initially deferred quiet-ended reassignment; all new policy choices pending owner decision. No production, proof-code, SQL, schema, migration, hosted operation or native concurrency test. G4-R1/E13/G/parent OPEN; G3 deferred/G3D BLOCKED and all previous closures/limitations preserved."
   },
   {
@@ -2286,18 +2286,18 @@
    "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
    "timestamp": "2026-10-15T23:06:57.341Z",
    "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
-   "identity": "ENG-LEGACY-001G4A6 \u2014 owner-approved two-decimal rate/combat reset/maxHP/reassignment contract",
+   "identity": "ENG-LEGACY-001G4A6 — owner-approved two-decimal rate/combat reset/maxHP/reassignment contract",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik",
    "directly_verified": false,
-   "evidence": "Owner approves at most two decimal percentage places over0\u2013100%; renewed combat keeps whole HP but discards fractional credit; wounded maxHP edits preserve missing HP subject to explicit living-boundary validation; safely ended reassignment allowed without effects/actions/outstanding claims. Prior durable authority/default5/60second delay/sleep/no historical credit/ordinary respawn/active edit refusal preserved. Floor1 explicitly evaluation-only pending confirmation. Local-only SQL/accounting candidate and independent-session tests authorized; no production or hosted changes."
+   "evidence": "Owner approves at most two decimal percentage places over0–100%; renewed combat keeps whole HP but discards fractional credit; wounded maxHP edits preserve missing HP subject to explicit living-boundary validation; safely ended reassignment allowed without effects/actions/outstanding claims. Prior durable authority/default5/60second delay/sleep/no historical credit/ordinary respawn/active edit refusal preserved. Floor1 explicitly evaluation-only pending confirmation. Local-only SQL/accounting candidate and independent-session tests authorized; no production or hosted changes."
   },
   {
    "status": "authored",
    "sha": "dc6c01834897d5fb7e8811e710e685925b9bb48e",
    "timestamp": "2026-10-15T23:06:57.341Z",
    "artifact": "docs/operations/legacy-001G4A6-local-creature-hp-candidate.md",
-   "identity": "ENG-LEGACY-001G4A6 \u2014 isolated SQL authority candidate locally exercised, production integration UNIMPLEMENTED",
+   "identity": "ENG-LEGACY-001G4A6 — isolated SQL authority candidate locally exercised, production integration UNIMPLEMENTED",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2308,7 +2308,7 @@
    "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
    "timestamp": "2026-10-16T06:27:14.829Z",
    "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
-   "identity": "ENG-LEGACY-001G4A7 \u2014 owner-approved living floor and rate-change accounting rules",
+   "identity": "ENG-LEGACY-001G4A7 — owner-approved living floor and rate-change accounting rules",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik",
    "directly_verified": false,
@@ -2319,7 +2319,7 @@
    "sha": "ac207c016e814d62fe273fa67af3710862322b1b",
    "timestamp": "2026-10-16T06:27:14.829Z",
    "artifact": "docs/operations/legacy-001G4A7-source-adapter-integration.md",
-   "identity": "ENG-LEGACY-001G4A7 \u2014 bounded local source-adapter integration exercised, production parity UNVERIFIED",
+   "identity": "ENG-LEGACY-001G4A7 — bounded local source-adapter integration exercised, production parity UNVERIFIED",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2330,7 +2330,7 @@
    "sha": "08cdeb99173653f29abbb6119b37477f93844fe0",
    "timestamp": "2026-10-16T06:54:05.053Z",
    "artifact": "docs/operations/legacy-001G4A8-arrival-departure-guarded-writers.md",
-   "identity": "ENG-LEGACY-001G4A8 \u2014 local arrival/departure/guarded-writer adapters exercised; production composition incomplete",
+   "identity": "ENG-LEGACY-001G4A8 — local arrival/departure/guarded-writer adapters exercised; production composition incomplete",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2341,7 +2341,7 @@
    "sha": "de27e6b0132d5cebd61eeeb92e44a6773ef8b26d",
    "timestamp": "2026-10-16T07:59:55.628Z",
    "artifact": "docs/operations/legacy-001G4A9-movement-party-coverage-integration.md",
-   "identity": "ENG-LEGACY-001G4A9 \u2014 source-bound movement requests/party lifecycle/early coverage exercised locally; production composition incomplete",
+   "identity": "ENG-LEGACY-001G4A9 — source-bound movement requests/party lifecycle/early coverage exercised locally; production composition incomplete",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2352,7 +2352,7 @@
    "sha": "d5d92f2b27a96dfda41105ce178ab576aeb07978",
    "timestamp": "2026-10-16T08:30:30.875Z",
    "artifact": "docs/operations/legacy-001G4A10-party-movement-sql-compatibility.md",
-   "identity": "ENG-LEGACY-001G4A10 \u2014 local party-result compatibility candidate validated; installed applicability unknown",
+   "identity": "ENG-LEGACY-001G4A10 — local party-result compatibility candidate validated; installed applicability unknown",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2363,7 +2363,7 @@
    "sha": "68169465c89851017f6c1160fb2a426445ee5e22",
    "timestamp": "2026-10-16T08:54:01.752Z",
    "artifact": "docs/operations/legacy-001G4A11-party-installed-parity-plan.md",
-   "identity": "ENG-LEGACY-001G4A11 \u2014 party movement parity preparation; execution not authorized",
+   "identity": "ENG-LEGACY-001G4A11 — party movement parity preparation; execution not authorized",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2374,7 +2374,7 @@
    "sha": "06897e02071b78eb27f2fe14548bbb6395ad1f8b",
    "timestamp": "2026-10-16T09:56:56.070Z",
    "artifact": "docs/operations/legacy-001G4A12-full-claim-commit-integration.md",
-   "identity": "ENG-LEGACY-001G4A12 \u2014 full source claim/resolver/single-node commit locally exercised; production composition incomplete",
+   "identity": "ENG-LEGACY-001G4A12 — full source claim/resolver/single-node commit locally exercised; production composition incomplete",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2385,7 +2385,7 @@
    "sha": "e87c93c2ee0a0d9d5db206fe126a1fff6e7d749b",
    "timestamp": "2026-10-16T11:28:17.370Z",
    "artifact": "docs/operations/legacy-001G4A13-in-tick-departure-coverage.md",
-   "identity": "ENG-LEGACY-001G4A13 \u2014 local in-tick departure multi-node coverage demonstrated; production gates remain",
+   "identity": "ENG-LEGACY-001G4A13 — local in-tick departure multi-node coverage demonstrated; production gates remain",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2396,7 +2396,7 @@
    "sha": "3e17bd6e1bc357a2eeff03f4bbe82a49b3a0509e",
    "timestamp": "2026-10-16T12:44:12.190Z",
    "artifact": "docs/operations/legacy-001G4A14-canonical-reward-progression-integration.md",
-   "identity": "ENG-LEGACY-001G4A14 \u2014 local canonical reward/progression source integration demonstrated; production gates remain",
+   "identity": "ENG-LEGACY-001G4A14 — local canonical reward/progression source integration demonstrated; production gates remain",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2407,7 +2407,7 @@
    "sha": "d2b03318356a84e5db3687d24bad4ffb60c239a3",
    "timestamp": "2026-10-16T15:03:16.661Z",
    "artifact": "docs/operations/legacy-001G4A15-creature-admin-configuration-integration.md",
-   "identity": "ENG-LEGACY-001G4A15 \u2014 local Creature Admin/configuration source integration demonstrated; production gates remain",
+   "identity": "ENG-LEGACY-001G4A15 — local Creature Admin/configuration source integration demonstrated; production gates remain",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2418,7 +2418,7 @@
    "sha": "21620622adcea74ea11b229683533ce7f15e285a",
    "timestamp": "2026-10-16T18:41:05.355Z",
    "artifact": "docs/operations/legacy-001G4A16-admin-contract-architecture.md",
-   "identity": "ENG-LEGACY-001G4A16 \u2014 proposed Creature Admin authority contract and visual architecture; decisions pending",
+   "identity": "ENG-LEGACY-001G4A16 — proposed Creature Admin authority contract and visual architecture; decisions pending",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2429,7 +2429,7 @@
    "sha": "e0f7527463f3886a8c591b19d0520708fa142442",
    "timestamp": "2026-10-16T22:10:45.310Z",
    "artifact": "docs/operations/legacy-001G4A17-admin-implementation-readiness.md",
-   "identity": "ENG-LEGACY-001G4A17 \u2014 owner-approved A-D/replay consolidated; concrete implementation readiness plan only",
+   "identity": "ENG-LEGACY-001G4A17 — owner-approved A-D/replay consolidated; concrete implementation readiness plan only",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2440,7 +2440,7 @@
    "sha": "1d2a725935feff13ef0bc2084e0bb4896b7e60bf",
    "timestamp": "2026-10-16T22:21:22.280Z",
    "artifact": "docs/operations/legacy-001G4A18-simplified-admin-hp-proposal.md",
-   "identity": "ENG-LEGACY-001G4A18 \u2014 simplified Admin/HP proposal; replay amendment requires owner approval",
+   "identity": "ENG-LEGACY-001G4A18 — simplified Admin/HP proposal; replay amendment requires owner approval",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2451,18 +2451,18 @@
    "sha": "64f568ba9c7542d196f2543b18403bb79eecbb48",
    "timestamp": "2026-10-16T22:55:47.622Z",
    "artifact": "docs/operations/legacy-001G4A19-simplified-admin-implementation.md",
-   "identity": "ENG-LEGACY-001G4A19 \u2014 simplified Admin locally implemented; new4-second regeneration candidate, activation OFF",
+   "identity": "ENG-LEGACY-001G4A19 — simplified Admin locally implemented; new4-second regeneration candidate, activation OFF",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
-   "evidence": "Owner approves G4A18 replay amendment and replaces60s/5% per minute with2% maxHP per4eligible seconds, configurable0\u2013100/two decimals. Canonical updated; historical reports preserved. Single action RPC/scoped DML containment and exact fractional4s accounting candidate; existing four Admin callers converted/gated with no raw HP/stat fallback. 37 PostgreSQL18.6 tests PASS (25 historical+12 new),10 observed session cases (8 historical+2 new),24 focused application/state tests; no hosted proof. Full transition/healer cutover, retained projected protected edits, rich boss validation and fresh installed/caller parity remain incomplete/fail closed. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 deferred; all prior closures/limitations/admin XP grant pause preserved. No installed migrations, live grants, Edge deployment or frontend publication."
+   "evidence": "Owner approves G4A18 replay amendment and replaces60s/5% per minute with2% maxHP per4eligible seconds, configurable0–100/two decimals. Canonical updated; historical reports preserved. Single action RPC/scoped DML containment and exact fractional4s accounting candidate; existing four Admin callers converted/gated with no raw HP/stat fallback. 37 PostgreSQL18.6 tests PASS (25 historical+12 new),10 observed session cases (8 historical+2 new),24 focused application/state tests; no hosted proof. Full transition/healer cutover, retained projected protected edits, rich boss validation and fresh installed/caller parity remain incomplete/fail closed. G4-R1/G4-R2/G4A9-R1/E13/G/parent OPEN; G4A11/G3D BLOCKED; G3 deferred; all prior closures/limitations/admin XP grant pause preserved. No installed migrations, live grants, Edge deployment or frontend publication."
   },
   {
    "status": "authored",
    "sha": "cc9b4d84303ca0fa4c2978ca536371245401d004",
    "timestamp": "2026-10-17T08:57:48.636Z",
    "artifact": "docs/operations/legacy-001G4A20-shared-hp-integration.md",
-   "identity": "ENG-LEGACY-001G4A20 \u2014 partial shared HP integration; retained engagement/public hook release blockers",
+   "identity": "ENG-LEGACY-001G4A20 — partial shared HP integration; retained engagement/public hook release blockers",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2473,7 +2473,7 @@
    "sha": "c342a3272bb5774dd702d2bd0876ffcbb4a0b4b5",
    "timestamp": "2026-10-17T11:03:25.187Z",
    "artifact": "docs/operations/legacy-001G4A21-public-hp-integration.md",
-   "identity": "ENG-LEGACY-001G4A21 \u2014 public HP transition wiring locally executed; not installed/deployed",
+   "identity": "ENG-LEGACY-001G4A21 — public HP transition wiring locally executed; not installed/deployed",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2484,7 +2484,7 @@
    "sha": "61c4aadcb68451f8c2dbc8c54f5a123be6afee36",
    "timestamp": "2026-10-17T14:48:44.738Z",
    "artifact": "docs/operations/legacy-001G4A22-creature-hp-release-readiness.md",
-   "identity": "ENG-LEGACY-001G4A22 \u2014 release procedure prepared; installation BLOCKED by route/parity/recovery gates",
+   "identity": "ENG-LEGACY-001G4A22 — release procedure prepared; installation BLOCKED by route/parity/recovery gates",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2495,7 +2495,7 @@
    "sha": "566abba05118440cbc25d8a6be1904510cf2b074",
    "timestamp": "2026-10-17T18:05:40.686Z",
    "artifact": "docs/operations/legacy-001G4A23-lovable-installation-handoff.md",
-   "identity": "ENG-LEGACY-001G4A23 \u2014 Lovable inspection prompt and gated installation handoff prepared",
+   "identity": "ENG-LEGACY-001G4A23 — Lovable inspection prompt and gated installation handoff prepared",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2506,7 +2506,7 @@
    "sha": "0e37519a913a8f8da67de4ca13d803836dccbeea",
    "timestamp": "2026-10-17T22:51:42.553Z",
    "artifact": "docs/operations/legacy-001G4A24-artifact-preparation.md",
-   "identity": "ENG-LEGACY-001G4A24 \u2014 separate party qualification and updated HP candidate prepared, not installed",
+   "identity": "ENG-LEGACY-001G4A24 — separate party qualification and updated HP candidate prepared, not installed",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
@@ -2543,7 +2543,18 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-base-crafting-handoff.md",
-   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant investigated read-only and RESOLVED by owner acceptance2026-10-20 as a platform-managed default-ACL exception (docs/operations/idea-015-acl-exception-disposition.md); application-level contract remains service_role-only. Edge NOT deployed, frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
+   "evidence": "Local implementation and tests retained at docs/operations/idea-015-base-crafting-handoff.md. SQL installed as0025 with exact reviewed SHA256 2c9488ccb2797114d8c31982aeece6f6910fce76d7d3a68bc39f062b36a5c407 on2026-10-20; see separate database installation evidence and docs/operations/idea-015-sql-installation-result.md. Post-install additional sandbox-principal EXECUTE grant investigated read-only and RESOLVED by owner acceptance2026-10-20 as a platform-managed default-ACL exception (docs/operations/idea-015-acl-exception-disposition.md); application-level contract remains service_role-only. Edge forge-craft-base DEPLOYED 2026-10-20 (see docs/operations/idea-015-edge-deployment-result.md), frontend NOT published, hosted gameplay NOT verified; overall IN PROGRESS/NOT LIVE. Gem/fusion pauses, administrative XP-grant pause, four OPEN progression limitations and all prior closures/open findings unchanged."
+  },
+  {
+   "identity": "WOV-IDEA-015 forge-craft-base Edge deployment",
+   "status": "deployed",
+   "sha": "62b9f96ac1aefee6a8be13b087b6ff9eda0565ca",
+   "timestamp": "2026-10-20T07:16:17Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-015-edge-deployment-result.md",
+   "evidence": "HEAD 62b9f96a (=origin/main) descends from reviewed 8441598f; forge-craft-base/index.ts (4af8f201...) and _shared/base-craft.ts (ba75d0b0...) byte-identical to 8441598f. Pre-deploy read-only (supabase_read_only_user, ro=on): base_craft_internal body b9d1e440... postgres-owned SECURITY DEFINER, service_role EXECUTE true, anon/authenticated false, 26 Drizzle entries. Deployed only forge-craft-base; submitted source SHA256 10252f7c046912a871adc3e3f6a8be41aa67bc241650b26073b9e718204f1b3d; config.toml and secrets unchanged (default JWT setting; handler verifies). Checks: OPTIONS 200 with reviewed CORS headers incl. x-supabase-client-* ; GET 405 'POST required'; POST without auth 401 'Sign in to craft.' (handler-specific messages identify reviewed handler). No live revision ID returned; live-bundle identity beyond handler responses REQUIRES EVIDENCE. No authenticated craft, gameplay write, frontend change or publication."
   }
  ],
  "known_blockers": [
@@ -2557,7 +2568,7 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-015-acl-exception-disposition.md",
    "evidence": "RESOLVED by owner acceptance2026-10-20. Read-only investigation identified the grantee as the project-scoped sandbox execution principal sandbox_exec_gpclaklkaolyzfnooajt: a direct, non-grantable EXECUTE grant from grantor postgres, originating from platform default ACLs at function creation during migration0025, not from the reviewed SQL. The principal is not reachable through browser authentication, the Data API or the Edge runtime; anon/authenticated/PUBLIC remain denied. Classified as a platform-managed exception requiring explicit acceptance, not a security exposure. Owner accepted with scope limits: application-level contract stays service_role-only; acceptance covers only this exact grant on this exact function and does not authorize additional grants or weaken future ACL verification. No permissions or migration history changed."
-   },
+  },
   {
    "identity": "eng-legacy-002-batch-c-history-reconciliation",
    "status": "committed",
@@ -2709,17 +2720,17 @@
    "directly_verified": false
   },
   {
-   "identity": "ENG-PROGRESSION-001F service_role characters UPDATE regression \u2014 resolved by installed0006",
+   "identity": "ENG-PROGRESSION-001F service_role characters UPDATE regression — resolved by installed0006",
    "status": "installed",
    "sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
    "timestamp": "2026-10-07T20:57:42.327Z",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied Lovable evidence; Codex reconciliation",
    "directly_verified": false,
-   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43\u201320:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification."
+   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification."
   },
   {
-   "identity": "C2 P2-B activation \u2014 deletion lifecycle and orphan validation",
+   "identity": "C2 P2-B activation — deletion lifecycle and orphan validation",
    "status": "blocked",
    "sha": "f3c357a24de85e254e41893242a90996bcf43987",
    "timestamp": "2026-10-09T12:36:59Z",
@@ -2730,7 +2741,7 @@
    "evidence": "A additive inactive installation can be separately authorized. B shutdown intentionally disables existing create/delete UI and grants no new public EXECUTE. Full approved soft-delete/30-day Overlord restore/controlled purge-account replay lifecycle absent; current hard delete and owner/steward deletion cannot substitute. Existing orphan counts unknown; cutover validation refuses any orphan, owner-approved disposition required only if present. Frontend choices/stable UUID/familyless result integration remains separate. No new creation-policy contradiction."
   },
   {
-   "identity": "C2 P2-C hosted lifecycle activation gates \u2014 purge policy resolved",
+   "identity": "C2 P2-C hosted lifecycle activation gates — purge policy resolved",
    "status": "blocked",
    "sha": "b9d82b8fab863688f84c4d2f34d318a28c3d284b",
    "timestamp": "2026-10-09T18:11:37.086Z",
@@ -2774,7 +2785,7 @@
    "evidence": "Earlier missing snapshot and settlement-definition evidence supplied and locally reconciled; exact MD5 unrecoverable, owner approved deterministic CSV comparison. Inspector reports postgres Auth/cron privileges and pg_cron1.6.4/no job collision. No hosted support/cleanup/cutover executed or independent concurrency, Auth lifecycle, scheduler, unarmed/Realtime canary verified. Require separately authorized sequence and stop on live evidence drift."
   },
   {
-   "identity": "C2 one-time full character reset \u2014 explicit local reset/cutover preparation",
+   "identity": "C2 one-time full character reset — explicit local reset/cutover preparation",
    "status": "authored",
    "sha": "5ee683b47a5978ec6ae9547f32458e5231ee1022",
    "timestamp": "2026-10-10T13:30:26.884Z",
@@ -3019,7 +3030,7 @@
   },
   {
    "status": "unknown",
-   "identity": "ENG-PROGRESSION-001E first hosted install attempt \u2014 supplied complete rollback",
+   "identity": "ENG-PROGRESSION-001E first hosted install attempt — supplied complete rollback",
    "sha": "06c888eb790ab9d1797d82f55cb4c2e216cdad6e",
    "timestamp": "2026-10-07T08:43:18.960Z",
    "evidence_type": "operator_reported",
@@ -3034,8 +3045,8 @@
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied hosted installation evidence; Codex local reconciliation",
    "directly_verified": false,
-   "identity": "ENG-PROGRESSION-001E second R1 installation \u2014 supplied containment and paused controls",
-   "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a\u20269968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved. Supplied historical post-install evidence recorded2026-10-07;not a fresh current safe-window assertion."
+   "identity": "ENG-PROGRESSION-001E second R1 installation — supplied containment and paused controls",
+   "evidence": "Second R1 attempt installed via standard Drizzle 0003_progression_001e_command_authority.sql,entry4/index3. Operator supplied migration SHA225cb43a…9968,size41674bytes/461lines; synchronized repository file and exact line340 extra-leading-ASCII-space model independently hash225cb43a26f63f8e9a5645bb60ab0b273847773a5c51310d75ac118721419968. Full hosted hash/body not directly retrieved. Reviewed R1 SHA734e6a1934372b548003e0336b9207998f6da8de01057e66ad63ef5950569b40,41673bytes/461LF unchanged. All final containment passed; growth/control installed postgres-owned owner-only/RLS/no policies; enabledfalse; command service-only,projection authenticated-only; legacy Order/bond/Renown/crafting and raw progression-write fences installed; XP owner-only; character fingerprint identical. No Edge deployment,runtime progression command or frontend publication. Known one-space XP body deviation requires R2 before Edge deployment. Supplied database-wide authority inventory pg_read_all_data,pg_write_all_data,supabase_read_only_user,supabase_etl_admin; no role change. Old pg_ exclusion means predefined roles themselves cannot match old scan. No direct hosted inspection. Retain hosted multi-session unproven and natural runtime unobserved. Supplied historical post-install evidence recorded2026-10-07;not a fresh current safe-window assertion."
   },
   {
    "sha": "639bb7ccef3a03bbc34a4e5ea8fc1b14fad21271",
@@ -3044,8 +3055,8 @@
    "reporting_actor": "Mik supplied hosted execution evidence; Codex repository reconciliation",
    "directly_verified": false,
    "status": "unknown",
-   "identity": "ENG-PROGRESSION-001E hosted verification window 2026-10-07 09:41:54\u201309:45:14 UTC",
-   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54\u201309:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43\u2026 identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Timestamped historical operator evidence;not a current safe operating-window assertion."
+   "identity": "ENG-PROGRESSION-001E hosted verification window 2026-10-07 09:41:54–09:45:14 UTC",
+   "evidence": "ENG-PROGRESSION-001E INSTALLED / VERIFIED / EDGE DEPLOYED / TRAINER-ORDER COMMANDS PAUSED. Hosted execution2026-10-07 09:41:54–09:45:14UTC per operator. 0004 standard Drizzle index4/row5 committed; precondition and final guard passed; normalized canonical XP prosrc9260bbbe8149a8d6f1cd8af1634fbe0d2bf01ce5cad1dc34183ee5bf7edafdde independently checked afterward; exact postgres/plpgsql/SECURITY DEFINER/search_path pg_catalog, public/scalar jsonb/VOLATILE/PARALLEL UNSAFE/args/default/owner-only direct and effective EXECUTE/one overload. Installed/checked-in0004 SHA c784b935b0178d8812605503e498276e0ef2ec09bc58ce679133281fbdd77201,11775bytes/136LF; only missing final newline relative to reviewed22c46ca442e625e67cf44c97c8f81dd8bba831ad3a7a45e73c4f5dcf5aa0452b,11776bytes/137LF,outside function. No historical rewrite. Other E objects fingerprint-identical,character fingerprintae4cec43… identical,sidecars0/0/0/0,no backfill. Controlfalse,commandservice-only,projectionauthenticated-only,legacy Order/Renown/crafting/bond functions fenced,raw-write fence intact. Only progression-command Edge deployed; no revision ID returned. Live no-token401/anon-key401/GET405/OPTIONS200; authenticated paused probe NOT executed because no safe identity. Frontend NOT published,no activation,F/G/H untouched. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED. Codex has performed no hosted work; supplied evidence is not direct Codex verification. Timestamped historical operator evidence;not a current safe operating-window assertion."
   },
   {
    "identity": "ENG-PROGRESSION-001F supplied preflight",
@@ -3068,7 +3079,7 @@
    "evidence": "ENG-PROGRESSION-001F INSTALLED / VERIFICATION BLOCKED BY SERVICE_ROLE CHARACTERS UPDATE REGRESSION. Mik reports atomic standard Drizzle0005 progression_001f_canonical_renown_respec_authority,row id6; installed bytes match reviewed c5c3c05341a7fc42678326d9572ed1442f04579e568d228b4d89f5eb811e18ff /57669bytes/693LF. Six canonical function identities,key containment,protected Renown raw fence and disposable HMAC probe passed; character/Renown fingerprints unchanged. Service lost ALL characters UPDATE, including unrelated hp/current_node_id. F Edge NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. Not CLOSED. No rollback/rewrite of0005. Operator evidence supplied with R1 request; execution timestamp not supplied,recording timestamp only. No Codex hosted access. Historical supplied observation,not a freshly inspected safe operating window."
   },
   {
-   "identity": "ENG-PROGRESSION-001F-R1 hosted attempt 1 \u2014 failed precondition/full rollback",
+   "identity": "ENG-PROGRESSION-001F-R1 hosted attempt 1 — failed precondition/full rollback",
    "status": "unknown",
    "sha": "10882d087b4e9197f455ee967de6570aa7d78f37",
    "timestamp": "2026-10-07T19:54:15.509Z",
@@ -3078,14 +3089,14 @@
    "evidence": "R1 HOSTED ATTEMPT 1: FAILED PRECONDITION / FULL TRANSACTION ROLLBACK. Mik supplies Lovable report at source10882d087b4e9197f455ee967de6570aa7d78f37: attempted a5471f1e249e22a40910ce132359c28fd782fcb6998e8d1e3242afdc14ffa51a /21577bytes/182LF raised P0001 in sidecar/key precondition before ACL repair. Drizzle remains six entries through0005; no R1 migration file/history entry/commit or ACL repair survived. Service still lacks characters table/column UPDATE; controlfalse; no data mutation,Edge deployment,activation or frontend publication. supabase_read_only_user/supabase_etl_admin inherit pg_read_all_data and have BYPASSRLS; latter also member supabase_privileged_role. Key postgres-owned,RLS,no policies,no direct nonowner table/column grants. Over-broad inherited-global-role assertion,not an object-level leak. Execution timestamp not supplied; this is the local recording timestamp,not fresh Codex hosted inspection."
   },
   {
-   "identity": "ENG-PROGRESSION-001F-R1 attempt2 installed/verified 2026-10-07 20:06:43\u201320:29:13 UTC",
+   "identity": "ENG-PROGRESSION-001F-R1 attempt2 installed/verified 2026-10-07 20:06:43–20:29:13 UTC",
    "status": "unknown",
    "sha": "cd4c109c31f7112bc9c149773a3865e6da501f87",
    "timestamp": "2026-10-07T20:29:13Z",
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied Lovable evidence; Codex reconciliation",
    "directly_verified": false,
-   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43\u201320:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification. Historical observation,not a fresh current safe deployment-window assertion."
+   "evidence": "ENG-PROGRESSION-001F INSTALLED; ENG-PROGRESSION-001F-R1 INSTALLED / VERIFIED; SERVICE_ROLE CHARACTER ACL REGRESSION REPAIRED. Operator-provided Lovable window2026-10-07 20:06:43–20:29:13UTC,source031b9514,platform97c1437ce reached origin via cd4c109c. Attempt2 standard Drizzle0006 progression_001f_r1_restore_unprotected_service_updates,row7 committed atomically,all assertions passed; reviewed/installed04a15bf91b8f7c629db0676a20de9e4ba06804d75ac62cbd308cce8db99da54f /22309bytes/192LF byte-identical. Service tableUPDATEfalse/protected15false/unprotected38true/exact53; browserSELECT/sixpreferences preserved/no tableUPDATE. Key postgres/RLS/no policies/no direct nonowner or PUBLIC table/column grants; gameplay effective access absent,expected platform authority distinguished; no key material selected/hashed/prefixed/printed. Six F identities/sole8args/service-only command/private+legacy Renown owner-only/browser projection authenticated-only/raw fence/receipt check preserved; controlfalse. Character/Renown fingerprints unchanged,sidecars0/0/0/0,one activev1 key with32-byte metadata; no gameplay/data mutation. F EDGE NOT DEPLOYED / COMMANDS PAUSED / FRONTEND NOT PUBLISHED. This is supplied hosted evidence,not independent Codex Cloud verification. Historical observation,not a fresh current safe deployment-window assertion."
   },
   {
    "identity": "ENG-PROGRESSION-001F supplied final paused deployment verification",
@@ -3115,7 +3126,7 @@
    "evidence_type": "operator_reported",
    "reporting_actor": "Mik supplied summary of Lovable read-only inspection",
    "directly_verified": false,
-   "evidence": "Supplied window 2026-10-08 15:41:37\u201315:42:25 UTC, metadata only/no writes/deployments. Full report unavailable in task evidence. Reported AFTER INSERT materials trigger 40salvage/six gems/conflict handling; no automatic progression sidecar or creation request/origin/receipt storage; characters.user_id account FK ON DELETE CASCADE. Materials character FK absent from returned result, NOT confirmed absent from database; own constraints require narrow follow-up. Reported anonymous/authenticated full direct material grants with owner/Steward read policies and service policy, preexisting privilege defect; exact effective exposure/runtime not independently verified. Original safe H2 output needed for remaining index/collation/ACL/provider/namespace facts. No Codex hosted access."
+   "evidence": "Supplied window 2026-10-08 15:41:37–15:42:25 UTC, metadata only/no writes/deployments. Full report unavailable in task evidence. Reported AFTER INSERT materials trigger 40salvage/six gems/conflict handling; no automatic progression sidecar or creation request/origin/receipt storage; characters.user_id account FK ON DELETE CASCADE. Materials character FK absent from returned result, NOT confirmed absent from database; own constraints require narrow follow-up. Reported anonymous/authenticated full direct material grants with owner/Steward read policies and service policy, preexisting privilege defect; exact effective exposure/runtime not independently verified. Original safe H2 output needed for remaining index/collation/ACL/provider/namespace facts. No Codex hosted access."
   },
   {
    "identity": "P2-A supplied hosted dependencies and containment facts",
@@ -3128,7 +3139,7 @@
    "evidence": "Owner confirms postgres-owned private origin/log and atomic definer writes to creation/progression tables; existing material trigger transactional. Confirms character_materials has no character FK, broad direct grants restricted by RLS; legacy character_create callable, service_role direct INSERT, active hard-delete. These are explicit containment/deletion gates; no silent correction. Full inspection timestamp/report not supplied; recording time only. Previously missing FK metadata is now resolved by supplied absence finding, not corrective migration. Initial canonical values and future Overlord-only revision approval supplied. No repeat hosted audit or independent Codex verification."
   },
   {
-   "identity": "D1\u2013D3 owner Admin availability smoke observation",
+   "identity": "D1–D3 owner Admin availability smoke observation",
    "status": "manually_published",
    "sha": "1b7e2ddfd5a962c4d7410b9c272b5415a8bc74f5",
    "timestamp": "2026-10-10T22:56:35.880Z",
@@ -3182,37 +3193,37 @@
    "directly_verified": true
   },
   {
-   "identity": "Owner-reported crafting failure and level1 creature-kill problem \u2014 unresolved follow-up candidates",
+   "identity": "Owner-reported crafting failure and level1 creature-kill problem — unresolved follow-up candidates",
    "evidence": "D10 historical owner report retained. WOV-IDEA-015 now confirms intentional base-crafting 503 cutover pause; locally authorized canonical restoration is IN PROGRESS, not live; docs/operations/idea-015-base-crafting-handoff.md. Level1 creature-kill problem remains independent and unresolved.",
    "artifact": "docs/operations/legacy-001D10-closeout.md"
   },
   {
-   "identity": "Deferred vendor transaction correction candidate \u2014 E13 accepted limitation",
+   "identity": "Deferred vendor transaction correction candidate — E13 accepted limitation",
    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
    "evidence": "Potential double-credit/stale writes/partial failure not fixed or proven exploitable; separately authorized narrow correction only."
   },
   {
-   "identity": "Deferred salvage/reward source composition investigation \u2014 E13 accepted limitation",
+   "identity": "Deferred salvage/reward source composition investigation — E13 accepted limitation",
    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
    "evidence": "Installed runtime inconclusive; no inferred cause or repair. Address only on specifically authorized salvage/reward task."
   },
   {
-   "identity": "Transferred contract/quest authority/reward-path findings \u2014 receiving World/Creatures/Quests",
+   "identity": "Transferred contract/quest authority/reward-path findings — receiving World/Creatures/Quests",
    "artifact": "docs/operations/legacy-001E13-economy-rewards-closeout.md",
    "evidence": "Unresolved event/completion/replay/privileged-helper coverage from E1/E12, transferred by owner E13; receiving001A order7 must reference. Not resolved or auto-accepted."
   },
   {
-   "identity": "ENG-LEGACY-001F-R3-RETRY \u2014 OPEN deferred malformed-response/retry-UUID correction",
+   "identity": "ENG-LEGACY-001F-R3-RETRY — OPEN deferred malformed-response/retry-UUID correction",
    "artifact": "docs/operations/legacy-001F11-evidence-and-closure-assessment.md",
    "evidence": "Original F1 risk register F-R3 at docs/operations/legacy-001F1-parties-writer-map.md: malformed response may clear a committed operation UUID; subsequent click can mint a new UUID. Actor/remount recovery also not durable. Owner F12 accepts deferral, not a fix or runtime proof. Separate future caller-state regression/correction authorization required."
   },
   {
-   "identity": "OPEN DEFERRED \u2014 G3 idle-shutdown/session-activation serialization correction; owner-accepted race risk",
+   "identity": "OPEN DEFERRED — G3 idle-shutdown/session-activation serialization correction; owner-accepted race risk",
    "artifact": "docs/operations/legacy-001G3E-owner-disposition-g4-handoff.md",
    "evidence": "Source-proven READ COMMITTED race; G3B candidate prepared/local independent-session regression passed, NOT INSTALLED or hosted-runtime-verified. G3E owner accepts deferral/continued risk, not resolution. G3D evidence gate remains BLOCKED for unestablished permitted read-only route and actual RPC/cron isolation; installed parity and retained caller/dependency limits remain. Resume only with separate scoped authorization and unchanged installation prerequisites."
   },
   {
-   "identity": "OPEN G4 creature authority findings \u2014 maintenance/Combat2 HP projection, Admin overlap and helper authority evidence",
+   "identity": "OPEN G4 creature authority findings — maintenance/Combat2 HP projection, Admin overlap and helper authority evidence",
    "artifact": "docs/operations/legacy-001G4-creature-authority-lifecycle.md",
    "evidence": "G4-R1 source legacy regen/wake-heal versus runtime HP mismatch; R2 Admin generic save/node/delete overlap; R3 effective maintenance EXECUTE evidence gap; R4 concurrency/projection risks and R5 installed/external-caller gaps. Not automatically owner-accepted, hosted-confirmed or fixed. Separate bounded follow-up authorization required; no creature behavior change."
   }
