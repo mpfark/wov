@@ -6,3 +6,8 @@
 - [x] Confirm reviewed worker source and installed G4A24 SQL compatibility.
 - [x] Deploy only combat2-dispatch-once and combat2-tick-once; verify nonmutating HTTP refusals.
 - [x] Update project state and handoff; no world wake, gameplay, frontend changes or publication.
+
+## WOV-IDEA-015 SQL installation
+- [x] Verify exact reviewed artifact and 25-entry history; install 0025 through the standard tool.
+- [x] Verify body/security, unchanged canonical XP and exactly one appended migration; record results.
+- [ ] Owner disposition of unexpected sandbox-principal EXECUTE grant; no further activation authorized.
