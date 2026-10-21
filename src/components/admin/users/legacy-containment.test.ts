@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import { handleAdminMaterialGrant } from '../../../../supabase/functions/_shared/admin-material-grant';
 
 const source = readFileSync('supabase/functions/admin-users/index.ts', 'utf8');
 function fixture(role = 'steward', authenticated = true, target: any = { id: 'char', deleted_at: null }) {
   const writes: unknown[] = [], tables: string[] = [];
   let handler: (request: Request) => Promise<Response>;
-  const admin = { rpc: async (name: string, args: unknown) => { writes.push({ rpc: name, args }); return { data: { kind: 'committed' }, error: null }; }, from(table: string) {
+  const admin = { rpc: async (name: string, args: unknown) => { writes.push({ rpc: name, args }); return { data: name === 'admin_material_grant' ? { grant_outcome:'committed',request_id:(args as any)._request,character_id:(args as any)._character,material_key:(args as any)._material,amount:(args as any)._amount,self_grant:false } : { kind: 'committed' }, error: null }; }, from(table: string) {
     tables.push(table);
     const chain = {
       select: () => chain, eq: () => chain, is: () => chain,
@@ -19,9 +20,9 @@ function fixture(role = 'steward', authenticated = true, target: any = { id: 'ch
   let client = 0;
   const code = ts.transpileModule(source.replace(/^import .*;\r?\n/gm, ''),
     { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
-  new Function('Deno', 'createClient', code)({
+  new Function('Deno', 'createClient', 'handleAdminMaterialGrant', code)({
     env: { get: () => 'local-test-only' }, serve: (value: typeof handler) => { handler = value; },
-  }, () => client++ % 2 === 0 ? admin : user);
+  }, () => client++ % 2 === 0 ? admin : user, handleAdminMaterialGrant);
   return { writes, tables, async request(action: string, body: unknown, method = 'POST') {
     const response = await handler!(new Request(`https://local.invalid/?action=${action}`, {
       method, headers: { Authorization: 'Bearer local-test' },
@@ -103,3 +104,5 @@ it('new token entry retains auth refusals',async()=>{
   const body={character_id:'00000000-0000-4000-8000-000000000001',request_id:'00000000-0000-4000-8000-000000000002',amount:1,reason:'Support'};
   for(const f of [fixture('player'),fixture('steward',false)]){expect([401,403]).toContain((await f.request('award-respec-token',body)).status);expect(f.writes).toEqual([]);}
 });
+
+it('canonical material action authenticates/derives actor and calls exactly one RPC; malformed and spoofed bodies refuse',async()=>{const body={character_id:'00000000-0000-4000-8000-000000000001',request_id:'00000000-0000-4000-8000-000000000002',material_key:'salvage',amount:10,reason:'Support'};const f=fixture();expect((await f.request('award-material',body)).status).toBe(200);expect(f.writes).toEqual([{rpc:'admin_material_grant',args:{_actor:'actor',_character:body.character_id,_request:body.request_id,_material:'salvage',_amount:10,_reason:'Support'}}]);for(const bad of [{...body,actor:'spoof'},{...body,material_key:'jade'},{...body,reason:''},{...body,amount:1.5}]){const f=fixture();expect((await f.request('award-material',bad)).status).toBe(400);expect(f.writes).toEqual([]);}for(const f of [fixture('player'),fixture('steward',false)]){expect([401,403]).toContain((await f.request('award-material',body)).status);expect(f.writes).toEqual([]);}expect((await fixture().request('award-material',{},'GET')).status).toBe(405);});

@@ -1,5 +1,7 @@
 # WOV-IDEA-025 — admin material grant policy gate
 
+**Superseded gate:** owner explicitly approved all listed caps, self-grant rules and the seven-key allowlist on2026-10-21. [Local implementation and staged handoff](idea-025-admin-material-grant-handoff.md) now supersedes the historical BLOCKED/not-implemented statements below; other convenience deferrals remain.
+
 2026-10-21; based on8b8703fca793ba24b4e8a3629387f26407a95ba6. Owner authorized bounded local restoration, conditional on resolving genuine policy decisions first. **Implementation BLOCKED on material-specific per-role caps. Proposal only: no SQL candidate, migration, Edge/frontend changes, installation or live grant prepared/performed.** Other025 convenience replacements remain deferred; this does not reopen progression D closure.
 
 ## Evidence reused and policy already settled

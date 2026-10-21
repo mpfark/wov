@@ -25,5 +25,6 @@
 - [ ] Exact cost deltas, UUID replay/conflict/refusal and hosted concurrency remain unverified; no complete acceptance claim.
 
 ## WOV-IDEA-025 canonical admin materials
-- [ ] Owner approve per-role material caps; docs/operations/idea-025-admin-material-grant-proposal.md. BLOCKED before implementation; existing self-reward rules retained.
-- [ ] After policy approval: bounded local SQL/Edge/UI and rollback/replay/concurrency tests; no installation or live grants authorized.
+- [x] Owner approved exact per-role caps, self-reward rules and seven material keys; docs/operations/idea-025-admin-material-grant-proposal.md.
+- [x] Local SQL/Edge/UI and rollback/replay/concurrency tests prepared; docs/operations/idea-025-admin-material-grant-handoff.md.
+- [ ] Fresh bounded preflight and separately authorized SQL → admin-users deployment → Mik manual Publish → runtime acceptance. No live grants authorized here.

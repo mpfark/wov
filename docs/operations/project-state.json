@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-21T11:34:15.363Z",
- "based_on_source_sha": "8b8703fca793ba24b4e8a3629387f26407a95ba6",
+ "updated_at": "2026-10-21T21:40:31.233Z",
+ "based_on_source_sha": "596de0d70b31ae53f9b6406d6bfb25640b201ccd",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2623,7 +2623,7 @@
    "evidence": "Bounded local UI/RPC/Edge/source investigation only. Teleport supported authenticated special-travel path, no blanket pause; root cause awaits response and installed parity. Class join uses canonical projection/Edge/private command and shared commands-paused control; no Templar-specific defect proven, blanket activation has other-operation impact. Admin materials disabled and410 pending replacement; recommend narrow role-authorized additive UUID-idempotent service grant, not legacy/raw writers. Proposed order salvage test unblocker, canonical class activation readiness, teleport response evidence; no implementation or hosted action authorized. All prior closures/limitations/admin XP pause preserved."
   },
   {
-   "identity": "WOV-IDEA-025 canonical admin materials — policy gate before implementation",
+   "identity": "Historical WOV-IDEA-025 cap gate — superseded by owner approval2026-10-21",
    "status": "blocked",
    "sha": "8b8703fca793ba24b4e8a3629387f26407a95ba6",
    "timestamp": "2026-10-21T11:34:15.363Z",
@@ -2631,7 +2631,18 @@
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-025-admin-material-grant-proposal.md",
-   "evidence": "Owner authorized bounded local implementation only if existing policy suffices. Reviewed material schema/current canonical six gems, existing role/self-grant policies, D4 token convention and crafting/sale/consume locks. Command contracts prohibit borrowing O1/O5/O6 caps for materials; no approved material-specific per-role caps located. Proposal only: Steward salvage1,000/gem25; Overlord salvage100,000/gem1,000 per action, configurable through reviewed policy revision. Not approved or implemented. Steward self-grants remain denied; Overlord own rewards permitted/flagged. Initial salvage plus six current gems, retired hybrid catalogue rows excluded pending explicit scope change. No SQL/Edge/frontend changes, tests of unimplemented behavior, hosted actions or live grants. Other025 conveniences deferred; all prior closures/limitations and admin-only XP pause preserved."
+   "evidence": "Owner authorized bounded local implementation only if existing policy suffices. Reviewed material schema/current canonical six gems, existing role/self-grant policies, D4 token convention and crafting/sale/consume locks. Command contracts prohibit borrowing O1/O5/O6 caps for materials; no approved material-specific per-role caps located. Proposal only: Steward salvage1,000/gem25; Overlord salvage100,000/gem1,000 per action, configurable through reviewed policy revision. Not approved or implemented. Steward self-grants remain denied; Overlord own rewards permitted/flagged. Initial salvage plus six current gems, retired hybrid catalogue rows excluded pending explicit scope change. No SQL/Edge/frontend changes, tests of unimplemented behavior, hosted actions or live grants. Other025 conveniences deferred; all prior closures/limitations and admin-only XP pause preserved. Historical blocked state superseded by explicit owner approval and local implementation in docs/operations/idea-025-admin-material-grant-handoff.md; not a current policy blocker."
+  },
+  {
+   "identity": "WOV-IDEA-025 canonical admin materials — owner-approved LOCAL implementation",
+   "status": "authored",
+   "sha": "596de0d70b31ae53f9b6406d6bfb25640b201ccd",
+   "timestamp": "2026-10-21T21:40:31.233Z",
+   "evidence_type": "local_validation",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
+   "evidence": "Owner approved salvage/six-key allowlist, Steward1000/25 and Overlord100000/1000 per-action caps, Steward self denial/Overlord self flag/no quotas/second approver. Prepared service-only atomic admin_material_grant with SQL role recheck, character NO KEY UPDATE/material row locking, additive bounds, UUID exact result replay/conflict, reason audit and12-month detail expiry plus minimal completion proof. New award-material action only; legacy routes410, no raw browser writer. Existing Admin controls now immutable session-storage retry and authoritative balance refresh.17 PostgreSQL18.6 tests,7 observed independent-session cases including actual canonical crafting/sale/consume, lifecycle KEY SHARE; reduced schema/auth/cron registration double.61 focused UI/Edge/legacy containment tests; app typecheck/build. SQL SHA2565cdca7630f0046849566ed37b789fe69999543c867e23ecad7406273fc14690e. NOT INSTALLED/DEPLOYED/PUBLISHED/RUNTIME VERIFIED; fresh installed parity/default-ACL/cron and separate activation gates remain. Prior closures/limitations/admin XP pause/recovery stash preserved."
   }
  ],
  "known_blockers": [

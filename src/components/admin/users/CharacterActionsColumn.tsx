@@ -12,7 +12,7 @@ import { AdminFormSection, AdminEmptyState } from '../common';
 import ItemPicker from '../ItemPicker';
 import NodePicker from '../NodePicker';
 import CharacterSummaryCard from './CharacterSummaryCard';
-import { GEM_CATALOG, PRIMARY_GEM_KEYS } from '@/shared/formulas/gems';
+import AdminMaterialGrantPanel, { type MaterialGrantPayload } from './AdminMaterialGrantPanel';
 import type { AdminCharacter, AdminUser, AdminNode } from './constants';
 
 interface Props {
@@ -36,15 +36,8 @@ interface Props {
   respecPending?: boolean;
   grantRespecAmount: number;
   setGrantRespecAmount: (n: number) => void;
-  grantSalvageAmount: number;
-  setGrantSalvageAmount: (n: number) => void;
   grantGoldAmount: number;
   setGrantGoldAmount: (n: number) => void;
-  grantGemKey: string;
-  setGrantGemKey: (k: string) => void;
-  grantGemAmount: number;
-  setGrantGemAmount: (n: number) => void;
-  onGrantGem: (charId: string) => void;
   removeItemId: string;
   setRemoveItemId: (id: string) => void;
 
@@ -52,8 +45,11 @@ interface Props {
   onTeleport: (charId: string) => void;
   onGrantXp: (charId: string) => void;
   onGrantRespec: (charId: string) => void;
-  onGrantSalvage: (charId: string) => void;
   onGrantGold: (charId: string) => void;
+  materialActorId: string | null;
+  materialRole: 'steward' | 'overlord';
+  onMaterialGrant: (payload: MaterialGrantPayload) => Promise<{body:any;ok:boolean}>;
+  refreshMaterials: () => Promise<unknown>;
   onRevive: (charId: string) => void;
   onResetStats: (charId: string) => void;
   onRemoveItem: () => void;
@@ -65,11 +61,10 @@ export default function CharacterActionsColumn({
   teleportNodeId, setTeleportNodeId,
   grantXpAmount, setGrantXpAmount,
   grantRespecAmount, setGrantRespecAmount, grantRespecReason, setGrantRespecReason, respecCap, onNewRespecIntent, respecPending,
-  grantSalvageAmount, setGrantSalvageAmount,
   grantGoldAmount, setGrantGoldAmount,
-  grantGemKey, setGrantGemKey, grantGemAmount, setGrantGemAmount,
   removeItemId, setRemoveItemId,
-  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold, onGrantGem,
+  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantGold,
+  materialActorId, materialRole, onMaterialGrant, refreshMaterials,
   onRevive, onResetStats, onRemoveItem,
 
 }: Props) {
@@ -98,7 +93,7 @@ export default function CharacterActionsColumn({
           {/* Character summary at top */}
           <CharacterSummaryCard character={selectedChar} nodeName={nodeName} />
 
-          <p className="text-xs text-muted-foreground">Character item grants/removal, economy grants, teleport and revive are unavailable pending replacement authorities.</p>
+          <p className="text-xs text-muted-foreground">Material grants use canonical authority below. Item grants/removal, gold grants, teleport and revive remain unavailable.</p>
           {/* Items & Inventory */}
           <AdminFormSection title="Items & Inventory">
             <div className="space-y-2">
@@ -173,16 +168,6 @@ export default function CharacterActionsColumn({
               <Button size="sm" variant="ghost" disabled={respecPending} onClick={onNewRespecIntent}>New token award</Button>
 
               <div className="flex gap-1">
-                <Input disabled type="number" min={1} value={grantSalvageAmount}
-                  onChange={e => setGrantSalvageAmount(parseInt(e.target.value) || 0)}
-                  className="h-7 text-[10px] w-20" placeholder="" />
-                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                  disabled title="Unavailable pending replacement authority" onClick={() => onGrantSalvage(selectedChar.id)}>
-Grant Salvage
-                </Button>
-              </div>
-
-              <div className="flex gap-1">
                 <Input disabled type="number" min={1} value={grantGoldAmount}
                   onChange={e => setGrantGoldAmount(parseInt(e.target.value) || 0)}
                   className="h-7 text-[10px] w-20" placeholder="Gold" />
@@ -192,30 +177,9 @@ Grant Salvage
                 </Button>
               </div>
 
-              <div className="flex gap-1">
-                <Input disabled type="number" min={1} max={1000} value={grantGemAmount}
-                  onChange={e => setGrantGemAmount(parseInt(e.target.value) || 0)}
-                  className="h-7 text-[10px] w-20" placeholder="Qty" />
-                <Select disabled value={grantGemKey} onValueChange={setGrantGemKey}>
-                  <SelectTrigger className="h-7 flex-1 text-[10px]">
-                    <SelectValue placeholder="Gem..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50">
-                    {PRIMARY_GEM_KEYS.map(k => (
-                      <SelectItem key={k} value={k} className="text-xs">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full" style={{ background: GEM_CATALOG[k].color }} />
-                          {GEM_CATALOG[k].name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                  disabled title="Unavailable pending replacement authority" onClick={() => onGrantGem(selectedChar.id)}>
-                  Grant Gem
-                </Button>
-              </div>
+              <AdminMaterialGrantPanel actorId={materialActorId} role={materialRole} characterId={selectedChar.id}
+                ownerId={selectedUser!.id} deleted={!!selectedChar.deleted_at} send={onMaterialGrant} refresh={refreshMaterials}/>
+
             </div>
           </AdminFormSection>
 

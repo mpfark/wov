@@ -606,13 +606,13 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 
 #### WOV-IDEA-025 — Disabled admin convenience replacements
 
-- **Status / kind:** IN PROGRESS for owner-authorized material-grant preparation, BLOCKED on per-role material caps; other convenience replacements remain DEFERRED. Feature / technical correction.
-- **Intent:** Inventory/economy/teleport/full-heal/normal-semantic revive replacements deferred; containment remains delivered.
-- **Approval evidence:** Explicit owner deferral in simplified D policy; not cancelled or approved for activation. Source: [progression-001G-D-simplified-admin-policy.md:25](../design/progression-001G-D-simplified-admin-policy.md) line25.
-- **Implementation/runtime boundary:** 2026-10-21 owner authorized narrow local canonical material restoration, conditional on policy readiness. [Policy gate and concrete cap proposal](../operations/idea-025-admin-material-grant-proposal.md): no SQL/Edge/frontend implementation yet. Steward self-grants denied; Overlord self-grants allowed/flagged under existing policy. Initial proposal excludes retired hybrid gems; salvage + six canonical gems only. No hosted activation or live grant.
+- **Status / kind:** IN PROGRESS for owner-approved canonical material grants; local implementation prepared, NOT installed/deployed/published/runtime-verified; other convenience replacements remain DEFERRED. Feature / technical correction.
+- **Intent:** Restore only approved canonical material grants. Other inventory/economy/teleport/full-heal/normal-semantic revive replacements stay deferred; containment remains delivered.
+- **Approval evidence:** Explicit owner approval2026-10-21 for local material implementation and caps; no hosted activation. Other convenience deferrals from simplified D policy remain. Source: [progression-001G-D-simplified-admin-policy.md:25](../design/progression-001G-D-simplified-admin-policy.md) line25.
+- **Implementation/runtime boundary:** owner approved the exact salvage/six-gem caps and self rules on2026-10-21. [Atomic SQL, admin-users integration, Admin UI recovery and local PostgreSQL tests prepared](../operations/idea-025-admin-material-grant-handoff.md). No hosted activation/live grant. Detailed audit expires after12 months; minimal completion proof prevents reuse. Other convenience routes stay retired.
 - **Dependencies / overlaps:** Narrow future contracts; C2/role invariants. Historical umbrella ADM-015; explicit owner deferrals supersede older generic-update wording.
 - **001A mapping / current tracking:** INV-A25 → WOV-IDEA-025; Progression D state/roadmap; overlaps ADM-015.
-- **Next owner decision:** approve proposed per-action caps (Steward salvage1,000 / each gem25; Overlord salvage100,000 / each gem1,000) or provide replacements; values are proposals, not implemented authority. No copying token/XP/RP caps.
+- **Approved policy / next gates:** Steward salvage1,000 / each gem25; Overlord salvage100,000 / each gem1,000 per action. Steward self denied; Overlord self flagged. No daily quota or second approver. Policy gate resolved; fresh schema/role/trigger/default-ACL/cron preflight → separately approved standard Drizzle installation → matching admin-users deployment → Mik manual Publish → authorized runtime acceptance.
 
 ### Resources and equipment
 

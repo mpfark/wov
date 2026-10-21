@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { handleAdminMaterialGrant } from '../_shared/admin-material-grant.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,10 @@ Deno.serve(async (req) => {
     const { adminClient, callerRole, userId } = await verifyAdmin(req);
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+
+    if (action === 'award-material') {
+      return handleAdminMaterialGrant(req, userId, callerRole, async args => await adminClient.rpc('admin_material_grant', args));
+    }
 
     // Retired reconstruction/raw grant routes fail after admin authentication,
     // before parsing their payload or accessing gameplay tables.

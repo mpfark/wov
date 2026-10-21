@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameContext } from '@/contexts/GameContext';
+import { useAuth } from '@/hooks/useAuth';
+import type { MaterialGrantPayload } from './AdminMaterialGrantPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
@@ -17,6 +19,7 @@ interface Props {
 
 export default function UserManager({ isValar }: Props) {
   useGameContext();
+  const { user } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -38,10 +41,7 @@ export default function UserManager({ isValar }: Props) {
   const [respecPending, setRespecPending] = useState(false);
   const [grantRespecReason, setGrantRespecReason] = useState('');
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
-  const [grantSalvageAmount, setGrantSalvageAmount] = useState<number>(100);
   const [grantGoldAmount, setGrantGoldAmount] = useState<number>(100);
-  const [grantGemKey, setGrantGemKey] = useState<string>('garnet');
-  const [grantGemAmount, setGrantGemAmount] = useState<number>(1);
 
   const [removeItemId, setRemoveItemId] = useState<string>('');
 
@@ -218,15 +218,6 @@ export default function UserManager({ isValar }: Props) {
     finally { respecBusy.current = false; setRespecPending(false); }
   };
 
-  const handleGrantSalvage = async (characterId: string) => {
-    if (!grantSalvageAmount || grantSalvageAmount <= 0) return;
-    try {
-      const data = await callAdmin('grant-salvage', 'POST', { character_id: characterId, amount: grantSalvageAmount });
-      toast.success(`Granted ${grantSalvageAmount} salvage (total: ${data.new_total})`);
-      loadUsers();
-    } catch (err: any) { toast.error(err.message); }
-  };
-
   const handleGrantGold = async (characterId: string) => {
     if (!grantGoldAmount || grantGoldAmount <= 0) return;
     try {
@@ -236,17 +227,15 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleGrantGem = async (characterId: string) => {
-    if (!grantGemKey || !grantGemAmount || grantGemAmount <= 0) return;
-    try {
-      const data = await callAdmin('grant-gem', 'POST', {
-        character_id: characterId, gem_key: grantGemKey, amount: grantGemAmount,
-      });
-      toast.success(`Granted ${grantGemAmount} ${grantGemKey} (total: ${data.new_total})`);
-      loadUsers();
-    } catch (err: any) { toast.error(err.message); }
+  const sendMaterialGrant = async (payload: MaterialGrantPayload) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.id !== user?.id) throw new Error('Admin account changed. Retain the pending grant.');
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users?action=award-material`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      body: JSON.stringify(payload),
+    });
+    return { body: await response.json(), ok: response.ok };
   };
-
 
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
   const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId) || null;
@@ -298,15 +287,8 @@ export default function UserManager({ isValar }: Props) {
           respecCap={isValar ? 5 : 1}
           grantRespecAmount={grantRespecAmount}
           setGrantRespecAmount={setGrantRespecAmount}
-          grantSalvageAmount={grantSalvageAmount}
-          setGrantSalvageAmount={setGrantSalvageAmount}
           grantGoldAmount={grantGoldAmount}
           setGrantGoldAmount={setGrantGoldAmount}
-          grantGemKey={grantGemKey}
-          setGrantGemKey={setGrantGemKey}
-          grantGemAmount={grantGemAmount}
-          setGrantGemAmount={setGrantGemAmount}
-          onGrantGem={handleGrantGem}
 
           removeItemId={removeItemId}
           setRemoveItemId={setRemoveItemId}
@@ -314,8 +296,11 @@ export default function UserManager({ isValar }: Props) {
           onTeleport={handleTeleport}
           onGrantXp={handleGrantXp}
           onGrantRespec={handleGrantRespec}
-          onGrantSalvage={handleGrantSalvage}
           onGrantGold={handleGrantGold}
+          materialActorId={user?.id ?? null}
+          materialRole={isValar ? 'overlord' : 'steward'}
+          onMaterialGrant={sendMaterialGrant}
+          refreshMaterials={() => loadUsers(true)}
           onRevive={handleRevive}
           onResetStats={handleResetStats}
           onRemoveItem={handleRemoveItem}
