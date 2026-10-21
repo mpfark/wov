@@ -27,4 +27,5 @@
 ## WOV-IDEA-025 canonical admin materials
 - [x] Owner approved exact per-role caps, self-reward rules and seven material keys; docs/operations/idea-025-admin-material-grant-proposal.md.
 - [x] Local SQL/Edge/UI and rollback/replay/concurrency tests prepared; docs/operations/idea-025-admin-material-grant-handoff.md.
-- [ ] Fresh bounded preflight and separately authorized SQL → admin-users deployment → Mik manual Publish → runtime acceptance. No live grants authorized here.
+- [ ] Reconfirm approved SQL and installation prerequisites; install once as 0027 and verify ACLs, retention and preserved history.
+- [ ] Separately authorized admin-users deployment → Mik manual Publish → runtime acceptance. No live grants authorized here.
