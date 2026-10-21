@@ -328,6 +328,80 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_material_grant_log: {
+        Row: {
+          actor_id: string
+          actor_role: string
+          amount: number
+          balance_after: number
+          balance_before: number
+          character_id: string
+          created_at: string
+          expires_at: string
+          material_key: string
+          policy_version: number
+          reason: string
+          request_id: string
+          self_grant: boolean
+        }
+        Insert: {
+          actor_id: string
+          actor_role: string
+          amount: number
+          balance_after: number
+          balance_before: number
+          character_id: string
+          created_at?: string
+          expires_at?: string
+          material_key: string
+          policy_version?: number
+          reason: string
+          request_id: string
+          self_grant: boolean
+        }
+        Update: {
+          actor_id?: string
+          actor_role?: string
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          character_id?: string
+          created_at?: string
+          expires_at?: string
+          material_key?: string
+          policy_version?: number
+          reason?: string
+          request_id?: string
+          self_grant?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_material_grant_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "admin_material_grant_replay"
+            referencedColumns: ["request_id"]
+          },
+        ]
+      }
+      admin_material_grant_replay: {
+        Row: {
+          request_digest: string
+          request_id: string
+          self_grant: boolean
+        }
+        Insert: {
+          request_digest: string
+          request_id: string
+          self_grant: boolean
+        }
+        Update: {
+          request_digest?: string
+          request_id?: string
+          self_grant?: boolean
+        }
+        Relationships: []
+      }
       admin_node_connection_request: {
         Row: {
           caller_id: string
@@ -6561,6 +6635,21 @@ export type Database = {
           _patch: Json
         }
         Returns: Json
+      }
+      admin_material_grant: {
+        Args: {
+          _actor: string
+          _amount: number
+          _character: string
+          _material: string
+          _reason: string
+          _request: string
+        }
+        Returns: Json
+      }
+      admin_material_grant_log_expire_internal: {
+        Args: never
+        Returns: undefined
       }
       admin_mutate_loot_table: {
         Args: {
