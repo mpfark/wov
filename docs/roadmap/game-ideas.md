@@ -613,6 +613,7 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 - **Dependencies / overlaps:** Narrow future contracts; C2/role invariants. Historical umbrella ADM-015; explicit owner deferrals supersede older generic-update wording.
 - **001A mapping / current tracking:** INV-A25 → WOV-IDEA-025; Progression D state/roadmap; overlaps ADM-015.
 - **Approved policy / next gates:** Steward salvage1,000 / each gem25; Overlord salvage100,000 / each gem1,000 per action. Steward self denied; Overlord self flagged. No daily quota or second approver. Policy gate resolved; fresh schema/role/trigger/default-ACL/cron preflight → separately approved standard Drizzle installation → matching admin-users deployment → Mik manual Publish → authorized runtime acceptance.
+- **ACL gate2026-10-22:** [explicit two-private-table platform SELECT/INSERT revocation prepared/tested](../operations/idea-025-platform-acl-correction.md); no default/function privilege changes. Installation remains NO-GO pending separate owner disposition of project-principal EXECUTE on both grant and expiry functions. Earlier0025/0026 exceptions do not cover these objects.
 
 ### Resources and equipment
 

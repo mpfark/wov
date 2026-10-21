@@ -52,6 +52,8 @@ This exception concerns verified platform EXECUTE only, not table/column access,
 
 ## Platform limitations and secret handling
 
+WOV-IDEA-025 clarification (2026-10-22): reported postgres/public defaults also grant table SELECT/INSERT to `sandbox_exec` and exact project principal `sandbox_exec_gpclaklkaolyzfnooajt`. The owner authorized [explicit revocation on its two new private grant tables only](idea-025-platform-acl-correction.md), with effective table/column denial checks. This is reviewed object-scoped containment in a future migration, not a table-access exception or authorization to alter platform default privileges, existing objects or memberships. Anticipated EXECUTE grants on the two new025 functions require separate explicit disposition;0025/0026 acceptances do not carry over. No new execution route is authorized.
+
 Known platform limitations: no native dry run; no disposable hosted database fixture; no reliable hosted concurrent-write test; no Edge revision ID or live bundle download. Lovable read roles may inherit global read/BYPASSRLS. Review exact SQL before authorized execution, verify installation afterward and describe unproved boundaries explicitly. A failed precondition with full rollback is an attempted operation, not an installed migration or surviving history entry.
 
 Never ask Lovable to select, hash, prefix or print key material, Vault secrets, Deno.env, service-role keys, passwords or session tokens. Verify secrets only through metadata, ACL/RLS, existence and non-revealing behavior. Keep diagnostic output free of secret values; administrative ability to read a secret does not authorize doing so.

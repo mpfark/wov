@@ -36,6 +36,10 @@ ALTER TABLE public.admin_material_grant_log OWNER TO postgres;
 ALTER TABLE public.admin_material_grant_replay ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_material_grant_log ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.admin_material_grant_replay,public.admin_material_grant_log FROM PUBLIC,anon,authenticated,service_role;
+-- Exact owner-authorized removal of reported platform table defaults on these NEW tables only.
+-- This does not change default privileges, function EXECUTE or any existing object.
+REVOKE SELECT,INSERT ON public.admin_material_grant_replay,public.admin_material_grant_log
+ FROM sandbox_exec,sandbox_exec_gpclaklkaolyzfnooajt;
 
 CREATE FUNCTION public.admin_material_grant(_actor uuid,_character uuid,_request uuid,_material text,_amount integer,_reason text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp AS $grant$
@@ -111,6 +115,12 @@ BEGIN
  OR has_function_privilege('service_role','public.admin_material_grant_log_expire_internal()','EXECUTE')
  OR EXISTS(SELECT 1 FROM pg_class r,LATERAL aclexplode(COALESCE(r.relacl,acldefault('r',r.relowner))) a
   WHERE r.oid IN('public.admin_material_grant_log'::regclass,'public.admin_material_grant_replay'::regclass) AND a.grantee<>r.relowner)
+ OR EXISTS(SELECT 1 FROM pg_roles role_entry CROSS JOIN pg_class private_table
+  WHERE role_entry.rolname IN('anon','authenticated','service_role','sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt')
+   AND private_table.oid IN('public.admin_material_grant_log'::regclass,'public.admin_material_grant_replay'::regclass)
+   AND (EXISTS(SELECT 1 FROM aclexplode(acldefault('r',private_table.relowner)) table_privilege
+       WHERE has_table_privilege(role_entry.oid,private_table.oid,table_privilege.privilege_type))
+     OR has_any_column_privilege(role_entry.oid,private_table.oid,'SELECT,INSERT,UPDATE,REFERENCES')))
  THEN RAISE EXCEPTION 'material_grant_authority_drift'; END IF;
 END $acl$;
 -- Existing pg_cron, daily bounded-purpose retention (separate from world scheduling).

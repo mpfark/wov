@@ -66,6 +66,18 @@ CREATE SCHEMA cron;CREATE TABLE cron.job(jobid bigserial PRIMARY KEY,jobname tex
 CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE sql AS $$ INSERT INTO cron.job(jobname,schedule,command) VALUES($1,$2,$3) RETURNING jobid $$;
 INSERT INTO public.materials(key,name) SELECT x,x FROM unnest(ARRAY['salvage','garnet','topaz','emerald','sapphire','pearl','amethyst','jade']) x;
 REVOKE ALL ON public.character_materials FROM PUBLIC,anon,authenticated;`);
+// Local simulation of owner-supplied postgres/public platform defaults; never executed hosted.
+await sql.unsafe(`CREATE ROLE sandbox_exec;CREATE ROLE sandbox_exec_gpclaklkaolyzfnooajt;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT ON TABLES TO sandbox_exec,sandbox_exec_gpclaklkaolyzfnooajt;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO sandbox_exec_gpclaklkaolyzfnooajt;
+CREATE TABLE public.platform_acl_control(id integer);`);
+const defaults=()=>sql`SELECT defaclrole::regrole::text owner,defaclnamespace,defaclobjtype,defaclacl::text acl FROM pg_default_acl ORDER BY defaclrole,defaclnamespace,defaclobjtype`;
+const originalDefaults=await defaults(),controlAcl=(await sql`SELECT relacl::text acl FROM pg_class WHERE oid='public.platform_acl_control'::regclass`)[0].acl;
+const original=(await promisify(execFile)('git',['show','aaf3cd533304a7b56df5b44fbed287567130dece:docs/operations/idea-025-admin-material-grant.sql'])).stdout;
+await assert.rejects(sql.begin(t=>t.unsafe(original)),/material_grant_authority_drift/);
+assert.equal((await sql`SELECT to_regclass('public.admin_material_grant_replay') id`)[0].id,null);
+assert.equal((await sql`SELECT count(*)::int n FROM cron.job`)[0].n,0);
+console.log('Original private-table ACL blocker reproduced; installation fully rolled back.');
 const candidate=await read('docs/operations/idea-025-admin-material-grant.sql');await sql.begin(t=>t.unsafe(candidate));
 assert.equal((await sql`SELECT encode(sha256(convert_to(prosrc,'UTF8')),'hex') hash FROM pg_proc WHERE oid='public.admin_material_grant(uuid,uuid,uuid,text,integer,text)'::regprocedure`)[0].hash,'dbc3ebacaa629839a3b91bbbe044e094f8f3ea9afe5369effeab22a31cf53c52');
 assert.equal((await sql`SELECT encode(sha256(convert_to(prosrc,'UTF8')),'hex') hash FROM pg_proc WHERE oid='public.admin_material_grant_log_expire_internal()'::regprocedure`)[0].hash,'2f98abe67a7a1a90981817134bea4600b671b1b5c36854f5747702a8b78e42bb');
@@ -98,3 +110,22 @@ test('independent sessions failed grant releases locks; waiting exact UUID retri
 test('ambiguous actor roles fail closed, successful direct service call and actual browser denial',async()=>{const id=await target();await sql`INSERT INTO public.user_roles VALUES(${steward},'overlord')`;await assert.rejects(grant(id),/unauthorized/);await sql`DELETE FROM public.user_roles WHERE user_id=${steward} AND role='overlord'`;const service=connect();await service.unsafe('SET ROLE service_role');await grant(id,{db:service});assert.equal(await balance(id),10);const browser=connect();await browser.unsafe('SET ROLE authenticated');await assert.rejects(grant(id,{db:browser}),e=>e.code==='42501');});
 test('material grants preserve character resources/progression/inventory, including a dead non-deleted lifecycle target',async()=>{const id=await target();await sql`UPDATE public.characters SET hp=0 WHERE id=${id}`;const before=(await sql`SELECT to_jsonb(c) state FROM public.characters c WHERE id=${id}`)[0].state;await grant(id);assert.deepEqual((await sql`SELECT to_jsonb(c) state FROM public.characters c WHERE id=${id}`)[0].state,before);assert.equal((await sql`SELECT count(*)::int n FROM public.character_inventory WHERE character_id=${id}`)[0].n,0);assert.equal((await sql`SELECT count(*)::int n FROM public.progression_receipt WHERE character_id=${id}`)[0].n,0);});
 test('independent sessions character lock permits lifecycle KEY SHARE while catalogue wait blocks grant',async()=>{const id=await target(20),{a,b,pid}=await pair();await a.unsafe('BEGIN');await a`SELECT key FROM public.materials WHERE key='salvage' FOR UPDATE`;const pending=grant(id,{db:b});await waitBlocked(pid);assert.equal((await a`SELECT public.consume_material(${id},'salvage',7) ok`)[0].ok,true);await a.unsafe('COMMIT');await pending;assert.equal(await balance(id),23);});
+
+test('exact platform table grants removed effectively; defaults/unrelated table and anticipated function grants unchanged',async()=>{
+ for(const table of ['admin_material_grant_replay','admin_material_grant_log']){
+  const meta=(await sql`SELECT relowner::regrole::text owner,relrowsecurity,relacl FROM pg_class WHERE oid=${('public.'+table)}::regclass`)[0];assert.equal(meta.owner,'postgres');assert.equal(meta.relrowsecurity,true);
+  for(const role of ['anon','authenticated','service_role','sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt']){
+   assert.equal((await sql`SELECT has_table_privilege(${role},${table},'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') ok`)[0].ok,false);
+   assert.equal((await sql`SELECT has_any_column_privilege(${role},${table},'SELECT,INSERT,UPDATE,REFERENCES') ok`)[0].ok,false);
+  }
+  assert.equal((await sql`SELECT count(*)::int n FROM pg_class r,LATERAL aclexplode(r.relacl) a WHERE r.oid=${('public.'+table)}::regclass AND a.grantee<>r.relowner`)[0].n,0);
+  assert.equal((await sql`SELECT count(*)::int n FROM pg_roles role_entry CROSS JOIN pg_class r,LATERAL aclexplode(acldefault('r',r.relowner)) a WHERE role_entry.rolname IN('anon','authenticated','service_role','sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt') AND r.oid=${('public.'+table)}::regclass AND has_table_privilege(role_entry.oid,r.oid,a.privilege_type)`)[0].n,0);
+ }
+ assert.deepEqual(await defaults(),originalDefaults);assert.equal((await sql`SELECT relacl::text acl FROM pg_class WHERE oid='public.platform_acl_control'::regclass`)[0].acl,controlAcl);
+ for(const f of ['public.admin_material_grant(uuid,uuid,uuid,text,integer,text)','public.admin_material_grant_log_expire_internal()'])assert.equal((await sql`SELECT has_function_privilege('sandbox_exec_gpclaklkaolyzfnooajt',${f},'EXECUTE') ok`)[0].ok,true);
+});
+test('unexpected inherited table access still stops installation instead of revoking unrelated role membership',async()=>{
+ await assert.rejects(sql.begin(async t=>{await t.unsafe(`DROP TABLE public.admin_material_grant_log;DROP TABLE public.admin_material_grant_replay;
+DROP FUNCTION public.admin_material_grant(uuid,uuid,uuid,text,integer,text);DROP FUNCTION public.admin_material_grant_log_expire_internal();DELETE FROM cron.job WHERE jobname='wov-admin-material-reason-retention';GRANT pg_read_all_data TO sandbox_exec;`);await t.unsafe(candidate);}),/material_grant_authority_drift/);
+ assert.deepEqual(await defaults(),originalDefaults);assert.equal((await sql`SELECT has_table_privilege('sandbox_exec','public.admin_material_grant_log','SELECT') ok`)[0].ok,false);
+});

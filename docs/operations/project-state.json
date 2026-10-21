@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-21T21:40:31.233Z",
- "based_on_source_sha": "596de0d70b31ae53f9b6406d6bfb25640b201ccd",
+ "updated_at": "2026-10-21T22:19:07.736Z",
+ "based_on_source_sha": "f9481a7e3adcbb89dfca7fcf766a4a93ff112857",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2643,6 +2643,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
    "evidence": "Owner approved salvage/six-key allowlist, Steward1000/25 and Overlord100000/1000 per-action caps, Steward self denial/Overlord self flag/no quotas/second approver. Prepared service-only atomic admin_material_grant with SQL role recheck, character NO KEY UPDATE/material row locking, additive bounds, UUID exact result replay/conflict, reason audit and12-month detail expiry plus minimal completion proof. New award-material action only; legacy routes410, no raw browser writer. Existing Admin controls now immutable session-storage retry and authoritative balance refresh.17 PostgreSQL18.6 tests,7 observed independent-session cases including actual canonical crafting/sale/consume, lifecycle KEY SHARE; reduced schema/auth/cron registration double.61 focused UI/Edge/legacy containment tests; app typecheck/build. SQL SHA2565cdca7630f0046849566ed37b789fe69999543c867e23ecad7406273fc14690e. NOT INSTALLED/DEPLOYED/PUBLISHED/RUNTIME VERIFIED; fresh installed parity/default-ACL/cron and separate activation gates remain. Prior closures/limitations/admin XP pause/recovery stash preserved."
+  },
+  {
+   "identity": "WOV-IDEA-025 platform table ACL correction — LOCAL; function EXECUTE acceptance outstanding",
+   "status": "blocked",
+   "sha": "f9481a7e3adcbb89dfca7fcf766a4a93ff112857",
+   "timestamp": "2026-10-21T22:19:07.736Z",
+   "evidence_type": "local_validation",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-platform-acl-correction.md",
+   "evidence": "Owner authorized exact SELECT/INSERT REVOKE on new admin_material_grant_replay/log for sandbox_exec and sandbox_exec_gpclaklkaolyzfnooajt only, plus effective table/column denial guards. SQL SHA2567a068b0823be493db75390096347c60246a104548a710dd3bf22df4e17b79d60. Grant/expiry bodies byte-identical; postgres/RLS/retention/replay/Edge/UI/default privileges/history unchanged. Local PostgreSQL18.6 reproduces original blocker/full rollback;19 tests including7 independent-session cases verify correction, defaults/control-table preservation, inherited-access refusal and unchanged anticipated project-function EXECUTE. NO-GO installation until explicit owner disposition of exact project-principal EXECUTE on admin_material_grant and admin_material_grant_log_expire_internal; old0025/0026 exceptions not extended. No hosted operation or material grant; all prior closures/limitations/admin XP pause preserved."
   }
  ],
  "known_blockers": [
@@ -3269,6 +3280,17 @@
    "directly_verified": false,
    "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
    "evidence": "Owner-observed normal gem application/+1/correct XP/no unexpected resource changes, manually Published. Salvage intended, normal workflow believed working, not exact gem/salvage/gold accounting. UUID replay/conflict/refusal and hosted concurrency unverified. Could not teleport to town/join Templar; admin materials unavailable. Local source shows canonical shared class-command pause and explicit admin UI/Edge retirement; actual class refusal/current flag and teleport cause unverified. No hosted probe, mutation, fix or grant."
+  },
+  {
+   "identity": "WOV-IDEA-025 Lovable read-only preflight — private-table default ACL blocker",
+   "status": "blocked",
+   "sha": "aaf3cd533304a7b56df5b44fbed287567130dece",
+   "timestamp": "2026-10-21T22:19:07.736Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik supplied Lovable preflight summary",
+   "directly_verified": false,
+   "artifact": "docs/operations/idea-025-platform-acl-correction.md",
+   "evidence": "Reported observation2026-10-21 22:05–22:06UTC, correct Cloud project/supabase_read_only_user/transaction_read_only=on. Commit/six artifact hashes, seven keys/schema/PK/FKs/role policies/browser material DML denial, canonical dependency/lifecycle composition, absent new objects/job, pg_cron1.6.4/two existing jobs and all27 Drizzle entries passed. Default postgres/public SELECT+INSERT grants to sandbox_exec and exact project principal block private-table ACL guard. No install/mutation; no raw results independently inspected. No application-role path to anticipated project-function EXECUTE reported; still separate owner acceptance required."
   }
  ],
  "product_backlog": [
