@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-21T09:58:19.142Z",
- "based_on_source_sha": "766ca765a32708fc4c70884a670ebb4e749a1582",
+ "updated_at": "2026-10-21T11:34:15.363Z",
+ "based_on_source_sha": "8b8703fca793ba24b4e8a3629387f26407a95ba6",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2621,6 +2621,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
    "evidence": "Bounded local UI/RPC/Edge/source investigation only. Teleport supported authenticated special-travel path, no blanket pause; root cause awaits response and installed parity. Class join uses canonical projection/Edge/private command and shared commands-paused control; no Templar-specific defect proven, blanket activation has other-operation impact. Admin materials disabled and410 pending replacement; recommend narrow role-authorized additive UUID-idempotent service grant, not legacy/raw writers. Proposed order salvage test unblocker, canonical class activation readiness, teleport response evidence; no implementation or hosted action authorized. All prior closures/limitations/admin XP pause preserved."
+  },
+  {
+   "identity": "WOV-IDEA-025 canonical admin materials — policy gate before implementation",
+   "status": "blocked",
+   "sha": "8b8703fca793ba24b4e8a3629387f26407a95ba6",
+   "timestamp": "2026-10-21T11:34:15.363Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-admin-material-grant-proposal.md",
+   "evidence": "Owner authorized bounded local implementation only if existing policy suffices. Reviewed material schema/current canonical six gems, existing role/self-grant policies, D4 token convention and crafting/sale/consume locks. Command contracts prohibit borrowing O1/O5/O6 caps for materials; no approved material-specific per-role caps located. Proposal only: Steward salvage1,000/gem25; Overlord salvage100,000/gem1,000 per action, configurable through reviewed policy revision. Not approved or implemented. Steward self-grants remain denied; Overlord own rewards permitted/flagged. Initial salvage plus six current gems, retired hybrid catalogue rows excluded pending explicit scope change. No SQL/Edge/frontend changes, tests of unimplemented behavior, hosted actions or live grants. Other025 conveniences deferred; all prior closures/limitations and admin-only XP pause preserved."
   }
  ],
  "known_blockers": [

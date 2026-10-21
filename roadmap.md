@@ -23,3 +23,7 @@
 - [x] Owner confirms Mik manual frontend Publish after backend verification.
 - [x] Owner observes normal gem application, +1 target attribute, correct XP and no unexpected HP/CP/MP changes; docs/operations/gem-runtime-and-gameplay-blockers.md.
 - [ ] Exact cost deltas, UUID replay/conflict/refusal and hosted concurrency remain unverified; no complete acceptance claim.
+
+## WOV-IDEA-025 canonical admin materials
+- [ ] Owner approve per-role material caps; docs/operations/idea-025-admin-material-grant-proposal.md. BLOCKED before implementation; existing self-reward rules retained.
+- [ ] After policy approval: bounded local SQL/Edge/UI and rollback/replay/concurrency tests; no installation or live grants authorized.

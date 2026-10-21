@@ -606,15 +606,15 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 
 #### WOV-IDEA-025 — Disabled admin convenience replacements
 
-- **Status / kind:** DEFERRED; Feature. Authoritative source disposition: 001A classification DEFERRED; see linked original report for exact decision.
+- **Status / kind:** IN PROGRESS for owner-authorized material-grant preparation, BLOCKED on per-role material caps; other convenience replacements remain DEFERRED. Feature / technical correction.
 - **Intent:** Inventory/economy/teleport/full-heal/normal-semantic revive replacements deferred; containment remains delivered.
 - **Approval evidence:** Explicit owner deferral in simplified D policy; not cancelled or approved for activation. Source: [progression-001G-D-simplified-admin-policy.md:25](../design/progression-001G-D-simplified-admin-policy.md) line25.
-- **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
+- **Implementation/runtime boundary:** 2026-10-21 owner authorized narrow local canonical material restoration, conditional on policy readiness. [Policy gate and concrete cap proposal](../operations/idea-025-admin-material-grant-proposal.md): no SQL/Edge/frontend implementation yet. Steward self-grants denied; Overlord self-grants allowed/flagged under existing policy. Initial proposal excludes retired hybrid gems; salvage + six canonical gems only. No hosted activation or live grant.
 - **Dependencies / overlaps:** Narrow future contracts; C2/role invariants. Historical umbrella ADM-015; explicit owner deferrals supersede older generic-update wording.
 - **001A mapping / current tracking:** INV-A25 → WOV-IDEA-025; Progression D state/roadmap; overlaps ADM-015.
+- **Next owner decision:** approve proposed per-action caps (Steward salvage1,000 / each gem25; Overlord salvage100,000 / each gem1,000) or provide replacements; values are proposals, not implemented authority. No copying token/XP/RP caps.
 
 ### Resources and equipment
-- **2026-10-21 focused follow-up:** owner reports salvage/material grants unavailable. Disabled controls and admin-users410 are intentional. Propose separately authorized salvage-first bounded service grant with role/key/amount/reason and UUID replay controls, not raw writers; [dependencies and required owner decisions](../operations/gem-runtime-and-gameplay-blockers.md#admin-salvagematerial-grants--reuse-wov-idea-025-adm-015-umbrella). Existing deferral remains until implementation is authorized.
 
 #### WOV-IDEA-011 — AC freshness and calculation differences
 
