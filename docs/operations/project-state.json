@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-20T23:53:52.155411Z",
- "based_on_source_sha": "a57df3a54c80c79fdfedcd307b9f0cc391bc226f",
+ "updated_at": "2026-10-21T09:58:19.142Z",
+ "based_on_source_sha": "766ca765a32708fc4c70884a670ebb4e749a1582",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -721,15 +721,15 @@
   }
  ],
  "frontend_publication": {
-  "identity": "WOV-IDEA-015 owner manual frontend publication and production craft observation",
+  "identity": "WOV-IDEA-033 owner manual frontend publication and normal gem application",
   "status": "manually_published",
   "sha": null,
-  "timestamp": "2026-10-20T21:44:13.514Z",
+  "timestamp": "2026-10-21T09:58:19.142Z",
   "evidence_type": "operator_reported",
-  "reporting_actor": "Mik (owner report)",
+  "reporting_actor": "Mik (owner)",
   "directly_verified": false,
-  "artifact": "docs/operations/idea-015-runtime-equipment-regression.md",
-  "evidence": "Owner reports manual frontend Publish and successful production crafting with Calikon: item creation and XP award worked. Exact publication/observation times and bundle SHA not supplied; timestamp is recording time. No exact gold/material/XP deltas, UUID replay/conflict or refusal verification claimed. Earlier D9 vendor/publication evidence remains in docs/operations/legacy-001D10-closeout.md. This publication predates the new equipment frontend correction, which is not live."
+  "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
+  "evidence": "Owner confirms manual Publish, successful equipment gem/+1 target attribute/correct XP/no unexpected HP/CP/MP changes. Recording time only; exact live bundle and observation times not supplied. Exact consumption/replay/conflict/refusal and hosted concurrency unverified. Prior015 publication/crafting evidence preserved in docs/operations/idea-015-runtime-equipment-regression.md and earlier state history."
  },
  "combat2_operational_work": [
   {
@@ -2610,6 +2610,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-033-gem-application-handoff.md",
    "evidence": "Historical local evidence: D6/001D intentional forge-apply-gem503 pause; separate033 atomic canonical gem restoration, nineteen PostgreSQL18.6 cases including five independent-session cases,11 Edge/hook/rendered UI tests and6 containment tests. Fixture/source-order combat doubles are not hosted concurrency proof. Superseding hosted stage2026-10-20: bounded preflight and exact scoped ACL acceptance completed;0026 installed and essential definition/ACL/private-dependency/history verification PASS, see docs/operations/idea-033-sql-installation-result.md. SQL SHA25693a9136796b798f0e4e76ac9d3acab5c79b934a0620a1ccaa4de2f113423001f. Matching Edge DEPLOYED under separate owner authorization; exact sources and RPC/private dependencies matched, non-mutating OPTIONS200/GET405/POST401 PASS, old503 replaced; see docs/operations/idea-033-edge-deployment-result.md. Matching frontend ready for Mik manual publication, NOT PUBLISHED; runtime UNVERIFIED; feature IN PROGRESS. No live revision identity returned; managed runtime credential availability not independently attested by safe probes. Next gate is Mik manual publication and separately approved runtime acceptance. Other systems/closures/four OPEN progression limitations/admin XP pause/E13/G dispositions preserved."
+  },
+  {
+   "identity": "Gameplay blocker disposition — WOV-IDEA-034 / ENG-PROGRESSION-001E-F / WOV-IDEA-025",
+   "status": "authored",
+   "sha": "766ca765a32708fc4c70884a670ebb4e749a1582",
+   "timestamp": "2026-10-21T09:58:19.142Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
+   "evidence": "Bounded local UI/RPC/Edge/source investigation only. Teleport supported authenticated special-travel path, no blanket pause; root cause awaits response and installed parity. Class join uses canonical projection/Edge/private command and shared commands-paused control; no Templar-specific defect proven, blanket activation has other-operation impact. Admin materials disabled and410 pending replacement; recommend narrow role-authorized additive UUID-idempotent service grant, not legacy/raw writers. Proposed order salvage test unblocker, canonical class activation readiness, teleport response evidence; no implementation or hosted action authorized. All prior closures/limitations/admin XP pause preserved."
   }
  ],
  "known_blockers": [
@@ -3225,6 +3236,17 @@
    "directly_verified": false,
    "artifact": "docs/operations/combat2-owner-log-lifecycle-observations.md",
    "evidence": "Recorded2026-10-21; exact gameplay times/encounter IDs not supplied. ENG-UX-001 overlapping death/XP/gold/no-drop/Killing Blow feedback: identical XP amounts and owner verified XP NOT awarded twice; no confirmed duplicate XP accounting. Durability correctly decreases 1 per round; ordinary log repetition unwanted. ENG-DELIVERY-001 post-respawn logs appeared only after leaving/re-entering node; subscription/cursor/generation/presentation cause unknown. ENG-COMBAT-001/002 and G4 passive creature re-entry: original encounter active/ended state unknown, engagement/lifecycle verification required, no approved aggression change. Documentation only, no runtime/source investigation or fix; prior limitations/statuses unchanged."
+  },
+  {
+   "identity": "WOV-IDEA-033 normal application PASS; teleport/class/admin material blockers",
+   "status": "unknown",
+   "sha": null,
+   "timestamp": "2026-10-21T09:58:19.142Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik (owner)",
+   "directly_verified": false,
+   "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
+   "evidence": "Owner-observed normal gem application/+1/correct XP/no unexpected resource changes, manually Published. Salvage intended, normal workflow believed working, not exact gem/salvage/gold accounting. UUID replay/conflict/refusal and hosted concurrency unverified. Could not teleport to town/join Templar; admin materials unavailable. Local source shows canonical shared class-command pause and explicit admin UI/Edge retirement; actual class refusal/current flag and teleport cause unverified. No hosted probe, mutation, fix or grant."
   }
  ],
  "product_backlog": [

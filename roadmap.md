@@ -20,5 +20,6 @@
 - [x] Bounded installed-parity/default-ACL review; owner accepted the exact gem-function platform exception.
 - [x] Install exact approved SQL once as 0026; definition/ACL/private dependencies and preserved 26-entry prefix PASS (docs/operations/idea-033-sql-installation-result.md).
 - [x] Matching forge-apply-gem deployed; reviewed files/RPC and non-mutating OPTIONS200/GET405/POST401 PASS (docs/operations/idea-033-edge-deployment-result.md).
-- [ ] Mik manual frontend Publish after backend verification.
-- [ ] Separately authorized runtime acceptance; see docs/operations/idea-033-gem-application-handoff.md.
+- [x] Owner confirms Mik manual frontend Publish after backend verification.
+- [x] Owner observes normal gem application, +1 target attribute, correct XP and no unexpected HP/CP/MP changes; docs/operations/gem-runtime-and-gameplay-blockers.md.
+- [ ] Exact cost deltas, UUID replay/conflict/refusal and hosted concurrency remain unverified; no complete acceptance claim.

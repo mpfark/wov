@@ -13,7 +13,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 ## Open records
 
-67 records:65 foundation records plus two owner-reviewed G2D ideas added after001A, including 6 existing-ID release/evidence records. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
+62 open records, including reused authoritative ENG IDs and later owner-reviewed additions. The001A inventory remains the foundation; later entries carry separate dated evidence. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
 
 ### Combat, abilities and creature runtime
 
@@ -354,6 +354,8 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 ### Progression and character lifecycle
 
+Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command activation (no new duplicate ID). Owner could not join Templar; shared commands-paused control is source/historically established, specific live refusal/configuration unknown. [Investigation and activation-scope gate](../operations/gem-runtime-and-gameplay-blockers.md#class-joining--templar--reuse-eng-progression-001e001f-command-activation). No blanket activation or legacy Order writer authorized.
+
 #### ENG-XP-001 — Max-level XP award verification and correction
 
 - **Status / kind:** IDEA; Technical correction / evidence work. Authoritative source disposition: progression/rewards; `planned`.
@@ -362,6 +364,14 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
 - **Dependencies / overlaps:** separately authorized read-only evidence distinguishing emitted log data from the persisted character row; no reward change is part of the stance design.
 - **001A mapping / current tracking:** ENG-XP-001 → ENG-XP-001; Roadmap; state evidence varies.
+
+#### WOV-IDEA-034 — Ordinary player teleport failure investigation
+
+- **Status / kind:** NEEDS AUDIT; Technical correction / evidence work. Owner authorized bounded local investigation only,2026-10-21.
+- **Intent:** Restore intended canonical player teleport if a concrete defect is established; owner could not return to town. No unconditional source pause located; actual failed response and installed composition unknown.
+- **Source / evidence boundary:** [Source chain, restrictions and next evidence](../operations/gem-runtime-and-gameplay-blockers.md#ordinary-player-teleport--wov-idea-034-needs-audit). UI calls character_special_travel with request UUID; destination/CP/party/combat/claim and lifecycle/arrival protections must remain. No hosted reproduction or fix performed.
+- **Dependencies / ownership:** ENG-MOVE-001 / ENG-COMBAT-002 and World G boundaries. Separate from025 admin teleport and002 future personal home/bind feature. New ID034 follows033; not a new travel design or priority approval.
+- **Next gate:** actual refusal/transport error, then narrowly authorized installed-parity evidence if needed; SQL/frontend need is conditional, no Edge path currently involved.
 
 #### WOV-IDEA-002 — Personal home / bind destination
 
@@ -430,12 +440,12 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 #### WOV-IDEA-033 — Canonical gem application restoration
 
-- **Status / kind:** IN PROGRESS; Technical correction. Owner approved local implementation and Git publication on2026-10-21, not hosted activation.
+- **Status / kind:** IN PROGRESS; Technical correction. Normal gem application owner-observed working; original bounded acceptance gates remain open.
 - **Intent:** Restore intentionally paused forge-apply-gem using one atomic service-authorized completion: +1 attribute, one gem, (2+item level) salvage, 2×level gold and25 XP offered through private craft_completion.
 - **Approval evidence / source:** Owner restoration instruction; historical [D6 pause inventory](../operations/legacy-001D1-inventory-items-crafting-writer-map.md) and [001D fence](../operations/progression-001D-cutover-plan.md); [local candidate and delivery handoff](../operations/idea-033-gem-application-handoff.md).
-- **Implementation/runtime boundary:** SQL/Edge/frontend prepared and tested locally, NOT installed/deployed/manually published/runtime-verified. Server validates owner/lifecycle/station/item/caps/budget/costs, serializes combat/equipment, binds completion UUID, synchronizes equipped resources and rolls all effects back on failure. No deprecated XP writer reactivated.
+- **Implementation/runtime boundary:** 0026 installed and Edge deployed per recorded Lovable evidence; Mik confirms manual Publish, successful gem application, +1 target attribute, correct XP and no unexpected HP/CP/MP changes. [Dated runtime evidence](../operations/gem-runtime-and-gameplay-blockers.md). Exact cost deltas, UUID replay/conflict/refusal, hosted concurrency and live revision identity remain unverified. Server validates owner/lifecycle/station/item/caps/budget/costs, serializes combat/equipment, binds completion UUID, synchronizes equipped resources and rolls all effects back on failure. No deprecated XP writer reactivated.
 - **Dependencies / overlaps:** Canonical XP/derived-resource private primitives, existing inventory-action ledger and Combat2/lifecycle/stance fences. Separate from015 base crafting,020 strip/trade and fusion;014 empty-override semantics and broader012/013 resource issues remain unchanged.
-- **Tracking / gates:** New stable ID033 (next after032); project-state operational evidence. Database parity/installation → matching forge-apply-gem deployment → Mik manual Publish → separately authorized runtime acceptance. No implementation priority or wider audit implied.
+- **Tracking / gates:** New stable ID033 (next after032); project-state operational evidence. Database/Edge/publication and normal application observed at their recorded evidence levels; retain remaining accounting/replay/refusal/concurrency acceptance. No implementation priority or wider audit implied.
 
 #### WOV-IDEA-017 — Vendor transaction atomicity
 
@@ -604,6 +614,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - **001A mapping / current tracking:** INV-A25 → WOV-IDEA-025; Progression D state/roadmap; overlaps ADM-015.
 
 ### Resources and equipment
+- **2026-10-21 focused follow-up:** owner reports salvage/material grants unavailable. Disabled controls and admin-users410 are intentional. Propose separately authorized salvage-first bounded service grant with role/key/amount/reason and UUID replay controls, not raw writers; [dependencies and required owner decisions](../operations/gem-runtime-and-gameplay-blockers.md#admin-salvagematerial-grants--reuse-wov-idea-025-adm-015-umbrella). Existing deferral remains until implementation is authorized.
 
 #### WOV-IDEA-011 — AC freshness and calculation differences
 
