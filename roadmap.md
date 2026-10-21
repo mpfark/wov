@@ -28,4 +28,6 @@
 - [x] Owner approved exact per-role caps, self-reward rules and seven material keys; docs/operations/idea-025-admin-material-grant-proposal.md.
 - [x] Local SQL/Edge/UI and rollback/replay/concurrency tests prepared; docs/operations/idea-025-admin-material-grant-handoff.md.
 - [x] Reconfirm approved SQL and installation prerequisites; install once as 0027 and verify ACLs, retention and preserved history. PASS; docs/operations/idea-025-sql-installation-result.md.
-- [ ] Separately authorized admin-users deployment → Mik manual Publish → runtime acceptance. No live grants authorized here.
+- [x] Deploy only reviewed admin-users/shared material handler under Mik's 2026-10-21 23:14 UTC authorization; record exact source/SQL and response evidence.
+- [ ] Complete non-mutating admin refusal checks: BLOCKED by authenticated GET403 instead of405; separate focused investigation authorization required. No retry or role change; docs/operations/idea-025-edge-deployment-result.md.
+- [ ] Mik manual Publish and separately authorized runtime acceptance: NO-GO recommendation until refusal verification completes. No live grants authorized here.

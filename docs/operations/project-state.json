@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-21T22:40:01Z",
+ "updated_at": "2026-10-21T23:16:15.236049Z",
  "based_on_source_sha": "fb4c3ff7fcc73b82c9f204d02c0287becc550bbb",
  "status_vocabulary": [
   "authored",
@@ -551,6 +551,28 @@
   "evidence": "0027 tool regenerated types; SHA25651f7a930ad45db283d078d20cd847b686db8734e8630ac59364ea2303b1c0af5. Against reviewed fb4c3ff7, only two new private-table shapes/FK and two RPC signatures added, prior types preserved. Managed source checkpoint9fcbd73c98512f33835491bbc5c5347ef7010f13; no Edge deployment/publication/runtime proof. Prior0026 type evidence preserved in its installation/deployment reports."
  },
  "edge_function_deployments": [
+  {
+   "identity": "WOV-IDEA-025 admin-users canonical material deployment",
+   "status": "deployed",
+   "sha": "aaf3cd533304a7b56df5b44fbed287567130dece",
+   "timestamp": "2026-10-21T23:16:15.236049Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-edge-deployment-result.md",
+   "evidence": "Supported tool deployed ONLY admin-users/shared reviewed handler; exact entry967a1400/shared4c99c97b/confige4572cad hashes match implementation review; HEAD/remoteed9d351e descendants of implementation/ACL review. Submitted files/settings SHA256a4fb18b548ed28d24c82251c96b6f3bc3ddfc80e051c7f03f4b849dafa788203; live revision/bundle identity unavailable. Fresh read-only project/RPC definition/body/security/ACL and28-entry history/prior27 preserved PASS. OPTIONS200/CORS and unauthenticated GET401 PASS. Authenticated owner-session GET403 instead of expected405 caused STOP; remaining checks not executed. Preferred tool POST returned gateway404, not verified handler refusal. No redeploy/retry/SQL/ACL/secrets/frontend/gameplay/world/unrelated Edge changes. Source preserves retired410 paths/unrelated actions; live authenticated path unverified. Overall verification BLOCKED; no publication recommendation."
+  },
+  {
+   "identity": "WOV-IDEA-025 post-deployment refusal verification and publication gate",
+   "status": "blocked",
+   "sha": "aaf3cd533304a7b56df5b44fbed287567130dece",
+   "timestamp": "2026-10-21T23:16:15.236049Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-edge-deployment-result.md",
+   "evidence": "Authenticated non-mutating award-material GET returned403 Forbidden, expected405. Cause unresolved; no role/token-shape assumptions. STOP before PUT/retired-action/paused-XP checks; unauthenticated POST tool gateway404 not handler proof. Requesting-owner session minted via --self for non-mutating checks; no target/payload/grant RPC/gameplay mutation. Exact reviewed frontend source hashes match; compatible source but NO-GO for Mik manual Publish until separately approved focused auth/routing investigation and completion of refusal checks. Live Edge revision identity unavailable; runtime acceptance remains separate."
+  },
   {
    "identity": "WOV-IDEA-033 forge-apply-gem canonical application deployment",
    "status": "deployed",
