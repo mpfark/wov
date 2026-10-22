@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-22T10:33:43.342Z",
- "based_on_source_sha": "2053fa68269f073ec601011b433e70f78ab7d874",
+ "updated_at": "2026-10-22T21:07:20.473Z",
+ "based_on_source_sha": "8fe138248c8e5cad95e4e99b9bb9c4ccb50f32ad",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -24,6 +24,17 @@
   "evidence": "Local R2 source/config/0006/journal/snapshot/runtime identity verified against checkpoint a4bd4e923dcdd86d73cdf550cbdc7bba65b3718c. Closure reconciles operator evidence under R2 acceptance; docs/operations/progression-001F-closure.md. No runtime changes. HOSTED MULTI-SESSION BEHAVIOR UNPROVEN; NATURAL RUNTIME PATH NOT YET OBSERVED; AUTHENTICATED COMMANDS-PAUSED RUNTIME PROBE NOT EXECUTED; RP EARNING AUTHORITY GAP."
  },
  "database_migrations": [
+  {
+   "identity": "0028_progression_selective_activation.sql",
+   "status": "installed",
+   "sha": "f72c2f9c697d77b752f219804da25b4884b97201",
+   "timestamp": "2026-10-22T21:07:20.473Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik; published Lovable installation report",
+   "directly_verified": false,
+   "artifact": "https://github.com/mpfark/wov/blob/e48b2ceb/docs/operations/progression-selective-installation-result.md",
+   "evidence": "Recorded from fetched origin/main e48b2ceb, not fresh Cloud inspection. 0028 installed once per Lovable~16:08UTC2026-10-22; exact SHA256cf75514d4f6d0345b7abcc6b38ca3aed4ef6a63e1d6a80b439c69658214139ff. History28→29/prior28 preserved; expected command/projection bodies/settings/ACL and controls all false at installation. Later controlled activation separately recorded. Local branch does not duplicate/generated migration history; official files remain on main. Recording timestamp, not recovered execution time."
+  },
   {
    "identity": "0027_idea_025_admin_material_grant.sql",
    "status": "installed",
@@ -2742,6 +2753,28 @@
    "directly_verified": true,
    "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
    "evidence": "Next candidate is selective first Class Join, Allocation and Respec under existing ENG-PROGRESSION-001E/F. This task authorizes documentation only; no coding, SQL activation, hosted checks or deployment. Retain master pause until separately approved command-specific gates/tests/release; Class Switching/Renown disabled. Previous G4A22 release authorization checkpoint remains historical; outstanding Admin activation/runtime gates persist."
+  },
+  {
+   "identity": "ENG-COMBAT-002 hostile ability idle readiness — local frontend correction",
+   "status": "authored",
+   "sha": "8fe138248c8e5cad95e4e99b9bb9c4ccb50f32ad",
+   "timestamp": "2026-10-22T21:07:20.473Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/templar-ability-and-admin-test-teleport.md",
+   "evidence": "Confirmed source bug: healthy idle delivery, including automatic no_engagement refusal on peaceful nodes, blocked first enemy ability before its canonical entry RPC. Shared across classes, not a demonstrated Templar-specific or SQL activation regression. Narrow readiness normalization routes valid intention through existing combat2_hostile_action; no fake snapshots/legacy fallback, active-delivery/ownership/movement/level/CP/target/stance restrictions retained.86 focused tests PASS including real adapter/hook mocked RPC paths; typecheck/build and state/link integrity checked. Local/source only, no SQL/Edge/Publish or hosted gameplay. WOV-IDEA-025 Admin/test teleport remains retired pending canonical scoped transaction; WOV-IDEA-034 ordinary teleport distinct. Publication on codex branch pending merge after auto-review rejected read-only main synchronization."
+  },
+  {
+   "identity": "ENG-PROGRESSION-001E/F selective activation — separately authorize bounded metadata preflight",
+   "status": "blocked",
+   "sha": "2053fa68269f073ec601011b433e70f78ab7d874",
+   "timestamp": "2026-10-22T10:33:43.342Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/progression-selective-handoff.md",
+   "evidence": "Local preparation complete; production installation/activation NOT AUTHORIZED by implementation task. Next narrowly authorized read-only parity/control/ACL/lock-composition/caller-isolation verification, then separate standard Drizzle installation of exact candidate with all flags off; matching frontend manual Publish and owner-only selective enablement require release approval. Existing Edge handler reusable unchanged; no switching/Renown enablement. No request to repeat broad audits or change G3D status."
   }
  ],
  "known_blockers": [
@@ -2984,15 +3017,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "ENG-PROGRESSION-001E/F selective activation — separately authorize bounded metadata preflight",
-  "status": "blocked",
-  "sha": "2053fa68269f073ec601011b433e70f78ab7d874",
-  "timestamp": "2026-10-22T10:33:43.342Z",
+  "identity": "Hostile ability frontend correction review and Admin/test teleport contract",
+  "status": "authored",
+  "sha": "8fe138248c8e5cad95e4e99b9bb9c4ccb50f32ad",
+  "timestamp": "2026-10-22T21:07:20.473Z",
   "evidence_type": "repository",
   "reporting_actor": "Codex",
   "directly_verified": true,
-  "artifact": "docs/operations/progression-selective-handoff.md",
-  "evidence": "Local preparation complete; production installation/activation NOT AUTHORIZED by implementation task. Next narrowly authorized read-only parity/control/ACL/lock-composition/caller-isolation verification, then separate standard Drizzle installation of exact candidate with all flags off; matching frontend manual Publish and owner-only selective enablement require release approval. Existing Edge handler reusable unchanged; no switching/Renown enablement. No request to repeat broad audits or change G3D status."
+  "artifact": "docs/operations/templar-ability-and-admin-test-teleport.md",
+  "evidence": "Review isolated frontend fix, merge then Mik manual Publish/bounded ability acceptance. No SQL/Edge deployment needed for ability fix. WOV-IDEA-025 teleport requires separately reviewed canonical authorization/target/locking/replay/arrival contract and later Lovable-only installed evidence; current retirement preserved. Selective progression activation now operator-reported live, Switching/Renown disabled; no change to controls or prior limitations."
  },
  "volatile_runtime_observations": [
   {
@@ -3390,6 +3423,17 @@
    "directly_verified": false,
    "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
    "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails. Owner also reports grant receipt/request ID in temporary central notification and movement processing status over inventory. Deferred low-priority ENG-UX-001 follow-ups only: concise success/admin details, routine status off normal player UI with errors/debug retained. No source/runtime cause investigation or UI change."
+  },
+  {
+   "identity": "Owner-confirmed selective progression live; published controlled activation evidence",
+   "status": "unknown",
+   "sha": "e48b2ceb68ea6d1221c3e55bc35650fd4fbe79db",
+   "timestamp": "2026-10-22T21:07:20.473Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik; published Lovable controlled activation report",
+   "directly_verified": false,
+   "artifact": "https://github.com/mpfark/wov/blob/e48b2ceb/docs/operations/progression-selective-activation-result.md",
+   "evidence": "Owner confirms manually published frontend and LIVE selective progression; Lovable~16:35UTC2026-10-22 records enabled/join/allocation/respec true, switch/Renown hard-refused, unchanged29-entry history/SQL/ACL. Owner accepted residual PostgREST isolation uncertainty for controlled test, not proof; live Edge identity unverified. Newly joined Templar ability issue reported, no response/snapshot/diagnostic supplied; not a finding that all class abilities or progression are verified. No Codex hosted reads, writes or flag changes."
   }
  ],
  "product_backlog": [

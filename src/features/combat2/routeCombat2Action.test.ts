@@ -173,7 +173,7 @@ describe('Combat2 deliberate action routing', () => {
     expect(page).toContain('readiness: combat2BlocksLegacy ? getCombat2AbilityReadiness(abilityIndex, targetId) : undefined');
     expect(page).toContain('getAbilityReadiness={combat2BlocksLegacy ? getCombat2AbilityReadiness : undefined}');
     expect(page).toContain('presentedCharacter.cp - authoritativeCombat2ReservedCp');
-    expect(page).toContain("['requires_active_combat', 'no_authoritative_snapshot'].includes(combat2.actionReadiness.reason)");
+    expect(page).toContain('deriveCombat2HostileEntryReadiness({ readiness: combat2.actionReadiness');
     expect(page).toContain('combat2.entry.engageAction(targetCreatureId, abilityKey)');
     expect(view).toContain('abilityAvailableCp ?? (character.cp ?? 0)');
     expect(view).toContain('const readiness = getAbilityReadiness?.(idx, resolvedTarget);');
