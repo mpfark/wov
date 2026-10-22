@@ -88,7 +88,7 @@ import { equipmentChangeReason } from '@/features/inventory/equipment-policy';
 import { useControlledAction, isCombatMutation } from '@/features/combat2/controlled-actions';
 import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
-import { deriveCombat2AbilityReadiness, type ActionReadiness } from '@/features/combat2/action-readiness';
+import { deriveCombat2AbilityReadiness, deriveCombat2HostileEntryReadiness, type ActionReadiness } from '@/features/combat2/action-readiness';
 import type { Combat2IntentAction } from '@/features/combat2/intent';
 import { getStanceReserveCost, isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
@@ -1100,9 +1100,12 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         : { ready: false as const, reason: 'no_authoritative_snapshot' as const,
             message: 'Waiting for authoritative stance state.' }
       : !combat2.actionsReady && ability.targetType === 'enemy'
-      && 'reason' in combat2.actionReadiness
-      && ['requires_active_combat', 'no_authoritative_snapshot'].includes(combat2.actionReadiness.reason)
-      ? { ready: true as const }
+      ? deriveCombat2HostileEntryReadiness({ readiness: combat2.actionReadiness,
+          sessionStatus: combat2.sessionStatus, entryStatus: combat2.entry.status, entryClassification: combat2.entry.classification,
+          presentationStatus: combat2.presentation.status, encounterId: combat2.encounterId,
+          hasModel: !!combat2.presentation.model, inputLocked: ownership.locked,
+          dead: character.hp <= 0 || combat2.dead, pendingMovement: combat2.pendingFlee,
+          rosterReady: rosterActionable })
       : combat2.actionReadiness;
     return deriveCombat2AbilityReadiness({
       session: sessionReadiness,
@@ -1119,7 +1122,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   }, [character.class, character.id, character.level, authoritativeCombat2Reservations,
     authoritativeCombat2ReservedCp, combat2.actionReadiness, combat2.intents.inFlightAction,
     combat2.intents.pending, combat2Targets, combat2.actionsReady, activeCombat2Presentation?.allies,
-    abilityTargetId, presentedCharacter.cp, presentedCharacter.max_cp, creatures, selectedTargetId, combat2Stances.ready]);
+    abilityTargetId, presentedCharacter.cp, presentedCharacter.max_cp, creatures, selectedTargetId, combat2Stances.ready,
+    combat2.sessionStatus, combat2.entry.status, combat2.entry.classification, combat2.presentation.status, combat2.encounterId,
+    combat2.presentation.model, ownership.locked, character.hp, combat2.dead, combat2.pendingFlee, rosterActionable]);
 
   const handlePlayerUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (combat2BlocksLegacy && actionEpochRef.current !== actionEpoch) return;

@@ -160,7 +160,7 @@ ENG-PROGRESSION-001F accepts refusal while a canonical stance is active or a sta
 
 ### Selective progression commands — local activation candidate
 
-ENG-PROGRESSION-001E/F now has a [local selective candidate](../operations/progression-selective-handoff.md): default-off first Join/Allocation/Respec controls under the retained master switch, exact committed replay before mutable gates, explicitly disabled Switching/Renown and encounter-before-character serialization. Recruiter/Trainer availability and account/character-scoped retry recovery are authored locally. Existing formulas, first-join bonds, proven-only one-token refunds, clamp-only resources and canonical security are preserved. Not installed or activated; fresh scoped parity/caller-isolation and separate installation/manual publication/control-enable acceptance are release gates. Earlier E/F staged closures and all four OPEN limitations are unchanged.
+ENG-PROGRESSION-001E/F now has a [local selective candidate](../operations/progression-selective-handoff.md): default-off first Join/Allocation/Respec controls under the retained master switch, exact committed replay before mutable gates, explicitly disabled Switching/Renown and encounter-before-character serialization. Recruiter/Trainer availability and account/character-scoped retry recovery are authored locally. Existing formulas, first-join bonds, proven-only one-token refunds, clamp-only resources and canonical security are preserved. Later [owner/published Lovable evidence](../operations/templar-ability-and-admin-test-teleport.md) records 0028 installation, manual frontend publication and selective activation. Caller-isolation uncertainty was explicitly accepted for controlled testing, not proven; broad gameplay acceptance is not inferred. Earlier E/F staged closures and all four OPEN limitations are unchanged.
 
 ### Transactional authority and integration
 
@@ -194,6 +194,10 @@ C2-P2-C owner-authorized lifecycle preparation implements own-character soft del
 No intentional dual XP authority during cutover: preparation can be split, activation must coordinate all reachable combat/crafting/admin XP writers. Invariant protection must reject invalid transitions rather than silently partially undo a successful-looking RPC. Local Codex never discovers credentials or administers hosted Supabase; Lovable handles later expressly authorized operations. 001B is read-only installed/runner preflight and installs nothing; the existing Cloud migration pause remains until evidence supports resolution. See the [001B handoff](../operations/progression-001B-lovable-preflight.md) and roadmap001A–H sequence.
 
 ## Creatures, targeting and initiation
+
+Source correction (ENG-COMBAT-002): [healthy idle hostile-ability readiness](../operations/templar-ability-and-admin-test-teleport.md) permits submission to the existing authoritative initiation RPC before the first snapshot, including peaceful no_engagement. It does not make ordinary encounter actions ready or bypass synchronization, movement, level/CP/target/stance checks. Rules unchanged; local frontend correction, not live acceptance.
+
+
 
 Visible node creatures are a location projection. Peaceful co-location does not itself create Combat2 ownership; a deliberate authoritative engage is required. Living aggressive creatures may cause automatic entry. Engaged encounter creatures, not browser list order, define viable combat targets. Client target/session responses are fenced by node, character, encounter and creature identity.
 

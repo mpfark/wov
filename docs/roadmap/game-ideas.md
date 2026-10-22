@@ -11,7 +11,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - Status vocabulary: IDEA (proposal/planned, no approval implied), DESIGN AGREED (explicit direction only), NEEDS AUDIT (evidence needed, no audit authorization), DEFERRED (intentionally retained/outside current scope), IN PROGRESS (documented ongoing work), UNKNOWN (unclear/conflicting scope/status). IMPLEMENTED items belong in references unless an independently open release/evidence gate is recorded under the same existing ID. Source-only implementation never proves installation, Edge deployment, manual frontend publication or runtime behavior.
 - Approval and deferral evidence is separate from status. A closure accepting a risk does not fix it or approve its correction. All rows link source and001A provenance; follow evidence dates in source rather than treating this register as a live hosted read.
 
-Selective progression update (2026-10-22): reuse **ENG-PROGRESSION-001E/001F**, not a new ID. [Local candidate and handoff](../operations/progression-selective-handoff.md) implements default-disabled first Join/Allocation/Respec with master retained, Switching/Renown refused and account-scoped retries. NOT INSTALLED/ACTIVATED/PUBLISHED; accepted closures/four F limitations preserved. This is the first agreed batch, with separately authorized preflight/release still required.
+Selective progression update (2026-10-22): reuse **ENG-PROGRESSION-001E/001F**, not a new ID. [Local candidate and handoff](../operations/progression-selective-handoff.md) implements default-disabled first Join/Allocation/Respec with master retained, Switching/Renown refused and account-scoped retries. Later owner/published Lovable evidence records 0028 installed, frontend manually published and selective first Join/Allocation/Respec enabled; Switching/Renown remain disabled. [Current activation and separate ability/teleport evidence](../operations/templar-ability-and-admin-test-teleport.md). Residual caller isolation is accepted for controlled testing, not proven; complete gameplay acceptance is not claimed. Historical preparation preserved.
 
 ## Tracked records and retained evidence gates
 
@@ -610,6 +610,8 @@ Current reconciliation: [recorded installation/deployment and bounded owner-obse
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
 - **Dependencies / overlaps:** Canonical growth/resource invariants and future per-tool authority. Historical umbrella ADM-015; explicit owner deferrals supersede older generic-update wording.
 - **001A mapping / current tracking:** INV-A24 → WOV-IDEA-024; Progression D policy/state/roadmap; overlaps ADM-015.
+
+Admin/test teleport investigation (2026-10-22): [existing Admin retirement and minimum canonical replacement boundary](../operations/templar-ability-and-admin-test-teleport.md#b--admintest-teleport-intentional-retirement-backend-contract-required). Reuses025/ADM-015, not ordinary travel034. No teleport implementation or grant; exact approved test identities/destinations, atomic lock/replay/arrival/party contract and later Lovable parity needed. Material-grant acceptance unchanged.
 
 #### WOV-IDEA-025 — Disabled admin convenience replacements
 

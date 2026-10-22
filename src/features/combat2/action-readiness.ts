@@ -53,6 +53,41 @@ export function combat2DeliveryPreservesPending(status: string): boolean {
   return status === 'live' || status === 'syncing';
 }
 
+/** Hostile entry creates the first snapshot; healthy idle is not failed delivery.
+ * This permits only an intention to the existing authoritative entry RPC, never
+ * an encounter-local action or a fabricated snapshot. */
+export function deriveCombat2HostileEntryReadiness(input: {
+  readiness: ActionReadiness;
+  sessionStatus: string;
+  entryStatus: string;
+  entryClassification: string | null;
+  presentationStatus: string;
+  encounterId: string | null;
+  hasModel: boolean;
+  inputLocked: boolean;
+  dead: boolean;
+  pendingMovement: boolean;
+  rosterReady: boolean;
+}): ActionReadiness {
+  const current = input.readiness;
+  if (input.dead) return blocked('incapacitated', 'You cannot act while incapacitated');
+  if (input.inputLocked || input.pendingMovement) return blocked('movement_pending', 'Wait for movement and location synchronization');
+  if (!input.rosterReady) return blocked('delivery_unavailable', 'Waiting for the current creature roster');
+  if (['uncertain', 'error', 'disabled'].includes(input.entryStatus)
+      || (input.entryStatus === 'refused' && input.entryClassification !== 'no_engagement')) {
+    return blocked('delivery_unavailable', 'Waiting for authoritative entry state');
+  }
+  if (!('reason' in current)) return current;
+  if ((current.reason === 'requires_active_combat' || current.reason === 'no_authoritative_snapshot')
+      && ['live', 'syncing'].includes(input.presentationStatus)) return ready();
+  const peacefulEntry = input.entryStatus === 'idle'
+    || (input.entryStatus === 'refused' && input.entryClassification === 'no_engagement');
+  if (current.reason === 'delivery_unavailable' && input.presentationStatus === 'idle'
+      && input.sessionStatus === 'idle' && peacefulEntry
+      && !input.encounterId && !input.hasModel) return ready();
+  return current;
+}
+
 export function deriveCombat2AbilityReadiness(input: {
   session: ActionReadiness;
   levelLocked: boolean;

@@ -2,7 +2,7 @@
 
 This is the canonical backlog for engine authority, correctness and stabilization. Rules live in the [engine specification](../design/game-engine.md); installation and verification evidence lives in [project state](../operations/project-state.md). Status vocabulary: `decision_needed`, `planned`, `ready`, `in_progress`, `implemented_source`, `installed`, `live_verification_pending`, `live_verified`, `blocked`, `deferred`.
 
-Current E/F implementation (2026-10-22): [selective progression candidate and staged handoff](../operations/progression-selective-handoff.md) is authored locally with default-off first Join/Allocation/Respec controls, master retained, Switching/Renown refused, availability UI and account-scoped retries. Local tests/typecheck/build pass; installation, live activation and manual Publish have not occurred. Existing E/F closure is preserved; next is separately authorized narrow installed-parity/readiness verification, not another audit.
+Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 0028 installed, matching frontend manually published and first Join/Allocation/Respec enabled; Switching/Renown remain refused. See [activation evidence and separate ability/teleport follow-up](../operations/templar-ability-and-admin-test-teleport.md). Residual caller isolation was explicitly accepted for controlled testing, not proven; earlier preparation-only reports remain historical. No activation/control change by this task.
 
 ## Current execution sequence — owner agreed 2026-10-22
 
@@ -49,6 +49,10 @@ Current E/F implementation (2026-10-22): [selective progression candidate and st
 - **Specification sections:** Creatures, targeting and initiation; One authoritative world heartbeat.
 
 ### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
+
+Current bounded follow-up: [hostile ability idle-readiness correction](../operations/templar-ability-and-admin-test-teleport.md) locally permits first enemy intention from healthy idle/peaceful no_engagement through the existing authoritative RPC; active/gap/movement/ownership and ability gates remain. Shared source bug, not proven Templar-specific or caused by progression activation. Frontend-only, pending merge/manual Publish/live acceptance.
+
+
 
 - **Engine area / status / priority:** entry/targeting/concurrency; `live_verification_pending`; 2.
 - **Problem or decision:** the source and installed contract now cover authoritative arrival, generic hostile first action and newest-entry tank priority; bounded live behavior remains unverified.
