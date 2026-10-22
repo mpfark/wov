@@ -15,6 +15,7 @@ import StonebinderPanel from '@/features/inventory/components/StonebinderPanel';
 import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
+import GameplayTestTeleport from '@/features/world/components/GameplayTestTeleport';
 import { useGroundLoot } from '@/features/inventory';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
@@ -1767,6 +1768,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
             display={eventLogDisplay}
             className="flex-[55]"
           />
+          <GameplayTestTeleport characterId={character.id} onMoved={() => refetchCharacters?.()} />
           <CommandInputBar
             chatInput={chatInput}
             onChatInputChange={setChatInput}

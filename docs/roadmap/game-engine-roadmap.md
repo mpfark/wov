@@ -10,6 +10,8 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 ## Now — engine stabilization
 
+Owner-approved bounded test support: [WOV-IDEA-025 scoped test teleport candidate](../operations/idea-025-test-teleport-handoff.md), `implemented_source`, review branch only. Existing gameplay login and private UUID approvals; no general teleport unlock, progression-control change or hosted activation. SQL/parity/enrollment → matching admin-users → Mik manual Publish remain separate gates. This reuses025/ADM-015 and does not replace the execution sequence or close material-grant acceptance.
+
 ### ENG-ABILITY-001 — Ability publication and semantic parity
 
 - **Engine area / status:** ability authority; `implemented_source`.

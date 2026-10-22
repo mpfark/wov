@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-22T21:07:20.473Z",
- "based_on_source_sha": "8fe138248c8e5cad95e4e99b9bb9c4ccb50f32ad",
+ "updated_at": "2026-10-22T21:50:07.146Z",
+ "based_on_source_sha": "d9b17399d1c7a307df538d7a092bb59caba73745",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2775,6 +2775,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/progression-selective-handoff.md",
    "evidence": "Local preparation complete; production installation/activation NOT AUTHORIZED by implementation task. Next narrowly authorized read-only parity/control/ACL/lock-composition/caller-isolation verification, then separate standard Drizzle installation of exact candidate with all flags off; matching frontend manual Publish and owner-only selective enablement require release approval. Existing Edge handler reusable unchanged; no switching/Renown enablement. No request to repeat broad audits or change G3D status."
+  },
+  {
+   "identity": "WOV-IDEA-025 scoped gameplay test teleport — local candidate",
+   "status": "authored",
+   "sha": "d9b17399d1c7a307df538d7a092bb59caba73745",
+   "timestamp": "2026-10-22T21:50:07.146Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-025-test-teleport-handoff.md",
+   "evidence": "Empty private exact-account/own-character/destination registry; service-only UUID-idempotent transaction uses installed0024 early coverage and canonical arrival. Solo only; lifecycle, movement, party/invitation, encounter/claim/effect refusal; strict ACL/drift guards. Existing admin-users and NodePicker/gameplay session reused, immutable account/character-scoped session recovery.11 PostgreSQL18.6 tests PASS including three observed independent-session conflicts;14 focused Vitest PASS; typecheck/build PASS. Accounting/mode/legacy scheduler doubles and unchanged Admin fixture failures separately documented. No hosted SQL, deployment, Publish, enrollment, gameplay or progression-control change. Fresh parity/exact approved UUID enrollment and separately authorized SQL/Edge/Publish/runtime acceptance outstanding. All prior closures/limitations and material acceptance preserved."
   }
  ],
  "known_blockers": [
@@ -3017,15 +3028,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "Hostile ability frontend correction review and Admin/test teleport contract",
+  "identity": "WOV-IDEA-025 scoped test teleport — review local candidate; hosted release not authorized",
   "status": "authored",
-  "sha": "8fe138248c8e5cad95e4e99b9bb9c4ccb50f32ad",
-  "timestamp": "2026-10-22T21:07:20.473Z",
+  "sha": "d9b17399d1c7a307df538d7a092bb59caba73745",
+  "timestamp": "2026-10-22T21:50:07.146Z",
   "evidence_type": "repository",
-  "reporting_actor": "Codex",
+  "reporting_actor": "Codex; owner local implementation scope",
   "directly_verified": true,
-  "artifact": "docs/operations/templar-ability-and-admin-test-teleport.md",
-  "evidence": "Review isolated frontend fix, merge then Mik manual Publish/bounded ability acceptance. No SQL/Edge deployment needed for ability fix. WOV-IDEA-025 teleport requires separately reviewed canonical authorization/target/locking/replay/arrival contract and later Lovable-only installed evidence; current retirement preserved. Selective progression activation now operator-reported live, Switching/Renown disabled; no change to controls or prior limitations."
+  "artifact": "docs/operations/idea-025-test-teleport-handoff.md",
+  "evidence": "Local candidate/test evidence prepared on review branch. Next owner decision: source review then separately authorize Lovable-only installed metadata parity and exact UUID enrollment. SQL installation, admin-users deployment, Mik manual Publish and runtime acceptance remain separate gates. No progression controls or existing closures/limitations changed."
  },
  "volatile_runtime_observations": [
   {
