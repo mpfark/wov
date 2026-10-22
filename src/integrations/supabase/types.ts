@@ -5997,15 +5997,24 @@ export type Database = {
       }
       progression_command_control: {
         Row: {
+          allocation_enabled: boolean
           enabled: boolean
+          join_enabled: boolean
+          respec_enabled: boolean
           singleton: boolean
         }
         Insert: {
+          allocation_enabled?: boolean
           enabled?: boolean
+          join_enabled?: boolean
+          respec_enabled?: boolean
           singleton?: boolean
         }
         Update: {
+          allocation_enabled?: boolean
           enabled?: boolean
+          join_enabled?: boolean
+          respec_enabled?: boolean
           singleton?: boolean
         }
         Relationships: []
