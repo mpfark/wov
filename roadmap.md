@@ -29,5 +29,7 @@
 - [x] Local SQL/Edge/UI and rollback/replay/concurrency tests prepared; docs/operations/idea-025-admin-material-grant-handoff.md.
 - [x] Reconfirm approved SQL and installation prerequisites; install once as 0027 and verify ACLs, retention and preserved history. PASS; docs/operations/idea-025-sql-installation-result.md.
 - [x] Deploy only reviewed admin-users/shared material handler under Mik's 2026-10-21 23:14 UTC authorization; record exact source/SQL and response evidence.
-- [ ] Complete non-mutating admin refusal checks: BLOCKED by authenticated GET403 instead of405; separate focused investigation authorization required. No retry or role change; docs/operations/idea-025-edge-deployment-result.md.
-- [ ] Mik manual Publish and separately authorized runtime acceptance: NO-GO recommendation until refusal verification completes. No live grants authorized here.
+- [ ] Earlier non-mutating refusal checks remain incomplete after minted-requester GET403 instead of405; do not generalize to the owner's now-working existing-admin account or claim these checks passed. Separate scoped verification if authorized; docs/operations/idea-025-edge-deployment-result.md.
+- [x] Mik confirms manually published game, existing administrator access and successful live salvage grant to own character; docs/operations/idea-025-admin-material-grant-handoff.md.
+- [ ] Partial acceptance only: gem grants, replay/conflict/refusal remain not fully live-tested; concurrency/retention/live revision limits retained. Earlier requester-session403/non-mutating-check gaps remain scoped and unresolved, not a claim that the owner's current admin path fails.
+- [ ] Deferred low-priority feedback polish under ENG-UX-001: concise grant success/admin technical details, and routine movement status outside player inventory. No implementation yet.

@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-21T23:16:15.236049Z",
- "based_on_source_sha": "fb4c3ff7fcc73b82c9f204d02c0287becc550bbb",
+ "updated_at": "2026-10-22T08:21:18.054Z",
+ "based_on_source_sha": "29c0bbe910a02c0aa2c554082e55795198ca0804",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -754,15 +754,15 @@
   }
  ],
  "frontend_publication": {
-  "identity": "WOV-IDEA-033 owner manual frontend publication and normal gem application",
+  "identity": "WOV-IDEA-025 manually published Admin materials — owner-observed salvage PASS",
   "status": "manually_published",
   "sha": null,
-  "timestamp": "2026-10-21T09:58:19.142Z",
+  "timestamp": "2026-10-22T08:21:18.054Z",
   "evidence_type": "operator_reported",
   "reporting_actor": "Mik (owner)",
   "directly_verified": false,
-  "artifact": "docs/operations/gem-runtime-and-gameplay-blockers.md",
-  "evidence": "Owner confirms manual Publish, successful equipment gem/+1 target attribute/correct XP/no unexpected HP/CP/MP changes. Recording time only; exact live bundle and observation times not supplied. Exact consumption/replay/conflict/refusal and hosted concurrency unverified. Prior015 publication/crafting evidence preserved in docs/operations/idea-015-runtime-equipment-regression.md and earlier state history."
+  "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
+  "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
  },
  "combat2_operational_work": [
   {
@@ -2687,6 +2687,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-025-sql-installation-result.md",
    "evidence": "PASS: approved/generated SQL byte-identical SHA2567a068b0823be493db75390096347c60246a104548a710dd3bf22df4e17b79d60,10285bytes; installed once in standard managed Drizzle transaction. History27→28,row28/idx27/when1792622346172; prior27 IDs/hashes/timestamps, journal prefix, old SQL/snapshots unchanged. Both expected bodies, owners/postgres/SECURITY DEFINER/fixed pg_catalog,public,pg_temp paths/signatures verified; grant service_role-only application EXECUTE, expiry owner-only. PUBLIC/anon/authenticated/generic sandbox denied; only exact owner-accepted direct non-grantable postgres/default EXECUTE to sandbox_exec_gpclaklkaolyzfnooajt OID58832 on each named function, zero application/API membership paths. No wildcard or table/default exception. Both private tables RLS/zero policies/no nonowner PUBLIC or column grants; effective application/both-sandbox table/column access denied. One exact retention job1350 at20 3 * * *,prior jobs1209/1226 unchanged. Canonical XP/resource/craft/sale/consume/lifecycle/trigger/security/constraint/default metadata and prior history hashes unchanged. Permitted read route supabase_read_only_user/read_only=on. No player rows/function execution/gameplay/Edge/frontend/publication/world controls/legacy XP activation. SQL PASS; GO for separately approved matching admin-users Edge deployment; runtime and retention execution unverified."
+  },
+  {
+   "identity": "WOV-IDEA-025 PARTIAL acceptance — existing Admin access/live salvage owner PASS",
+   "status": "manually_published",
+   "sha": "29c0bbe910a02c0aa2c554082e55795198ca0804",
+   "timestamp": "2026-10-22T08:21:18.054Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik (owner)",
+   "directly_verified": false,
+   "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
+   "evidence": "Reuses0027 installation PASS and admin-users deployment records at their scoped evidence levels. Owner now confirms published-game existing-admin access and successful salvage grant to own character. IN PROGRESS, not full closure: gem/replay/conflict/refusal, hosted concurrency/expiry/live revision gaps remain. Does not claim earlier requester-session403 fixed or unexecuted refusal checks passed. Two DEFERRED low-priority UI entries reuse ENG-UX-001; related ENG-MOVE-001/ENG-DELIVERY-001 and025 IDs/priorities preserved. Recommended next preparation follows existing gameplay blocker order: canonical class-join activation readiness ENG-PROGRESSION-001E/F, scoped shared-control impact; no automatic authorization or global roadmap reprioritization. Documentation only, no SQL/Edge/frontend/hosted changes."
   }
  ],
  "known_blockers": [
@@ -3324,6 +3335,17 @@
    "directly_verified": false,
    "artifact": "docs/operations/idea-025-platform-acl-correction.md",
    "evidence": "Reported observation2026-10-21 22:05–22:06UTC, correct Cloud project/supabase_read_only_user/transaction_read_only=on. Commit/six artifact hashes, seven keys/schema/PK/FKs/role policies/browser material DML denial, canonical dependency/lifecycle composition, absent new objects/job, pg_cron1.6.4/two existing jobs and all27 Drizzle entries passed. Default postgres/public SELECT+INSERT grants to sandbox_exec and exact project principal block private-table ACL guard. No install/mutation; no raw results independently inspected. No application-role path to anticipated project-function EXECUTE reported; still separate owner acceptance required."
+  },
+  {
+   "identity": "WOV-IDEA-025 partial live salvage acceptance and deferred UI observations",
+   "status": "unknown",
+   "sha": "29c0bbe910a02c0aa2c554082e55795198ca0804",
+   "timestamp": "2026-10-22T08:21:18.054Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik (owner)",
+   "directly_verified": false,
+   "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
+   "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails. Owner also reports grant receipt/request ID in temporary central notification and movement processing status over inventory. Deferred low-priority ENG-UX-001 follow-ups only: concise success/admin details, routine status off normal player UI with errors/debug retained. No source/runtime cause investigation or UI change."
   }
  ],
  "product_backlog": [
