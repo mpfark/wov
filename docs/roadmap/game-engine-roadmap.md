@@ -2,6 +2,10 @@
 
 This is the canonical backlog for engine authority, correctness and stabilization. Rules live in the [engine specification](../design/game-engine.md); installation and verification evidence lives in [project state](../operations/project-state.md). Status vocabulary: `decision_needed`, `planned`, `ready`, `in_progress`, `implemented_source`, `installed`, `live_verification_pending`, `live_verified`, `blocked`, `deferred`.
 
+## Current execution sequence — owner agreed 2026-10-22
+
+[Status reconciliation and evidence](../operations/roadmap-status-reconciliation-2026-10-22.md): selective first Class Join/Allocation/Respec → focused gameplay integration evidence → equipment/resource coherence → remaining crafting/gem/admin acceptance → deferred authority/content. Existing IDs and priority numbers remain; this is the current execution sequence, not implementation/activation authorization. Class Switching/Renown stay deferred. Historical checkpoint paragraphs below retain their dated scope; later project-state evidence governs current rollout.
+
 ## Now — engine stabilization
 
 ### ENG-ABILITY-001 — Ability publication and semantic parity
@@ -167,11 +171,11 @@ Bounded batch update (2026-10-12): [001B COMPLETE WITH ACCEPTED LIMITATIONS](../
 
 ### ENG-PROGRESSION-001 — Canonical character progression authority
 
-- **Engine area / status / priority:** progression; `implemented_source` for 001A contract/reference only; runtime authority remains planned; 10.
+- **Engine area / status / priority:** progression; `installed` canonical E/F authority, A–H COMPLETE WITH ACCEPTED LIMITATIONS; commands paused; 10.
 - **Problem or decision:** Combat2 raw XP, crafting/admin level math, fenced trainer/respec and conditional Renown/protection interactions have competing ownership. Approved rules now live in the canonical specification's Progression and rewards section.
 - **Intended outcome:** one private transactional PostgreSQL progression family with narrow domain entries, future provenance and shared resource synchronization, preserving existing opaque permanent state.
-- **Evidence/current state:** 001A types, non-persisting reference, literal golden vectors, contract tests and [read-only Lovable package](../operations/progression-001B-lovable-preflight.md). No runtime writer, SQL, fence, deployed behavior or Cloud state changed. Local test/build evidence belongs in project state; source is uncommitted until explicitly approved.
-- **Dependencies:** 001B installed inventory and migration-runner/history gate; later authorized SQL, role/concurrency/rollback verification and coordinated consumer activation. No local direct SQL access.
+- **Evidence/current state:** [E/F installed authority and deployed Edge closure](../operations/progression-001F-closure.md), [A–H accepted staged closeout](../operations/progression-001H1-legacy-dependency-inventory.md), and later canonical crafting/gem evidence in [current reconciliation](../operations/roadmap-status-reconciliation-2026-10-22.md) supersede the original 001A-only summary. Commands are still paused in source/historical evidence; fresh hosted activation is not established. Four F limitations remain OPEN.
+- **Dependencies:** Next bounded work is selective first Join/Allocation/Respec gating, compatible UI and focused enabled-command concurrency/refusal/replay coverage; fresh scoped parity and separate release authorization. No blanket switch/Renown activation or historical-data reconstruction.
 - **Acceptance criteria:** exactly-once XP→all affordable levels, configured forward growth, proven-only refunds, atomic Renown/resource state, no dual XP authority and no guessed historical reconstruction. Installed/live proof required after later tasks.
 - **Specification sections:** Progression and rewards; Resources and attributes; Character ownership and lifecycle; Effects and stances; Failure, diagnostics and verification. Shared heartbeat and current resource formulas are preserved; approved multi-level/cap/refund policy is target behavior, not a runtime release.
 

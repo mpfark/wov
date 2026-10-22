@@ -1,6 +1,6 @@
 # WoV Idea & Feature Register
 
-Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../operations/eng-roadmap-ideas-001a-inventory.md) at b043b510ff2808f89fabac3c48f27e57526d2801. Owner approves this register foundation, **not every listed idea or implementation**. Order is grouping, not priority. World / Creatures / Quests audit is not started.
+Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../operations/eng-roadmap-ideas-001a-inventory.md) at b043b510ff2808f89fabac3c48f27e57526d2801. Owner approves this register foundation, **not every listed idea or implementation**. Order is grouping, not priority. World / Creatures / Quests preparation is complete and bounded G-domain investigations have proceeded; the parent audit remains OPEN. See the current reconciliation below.
 
 ## Ownership and ID rules
 
@@ -11,9 +11,11 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 - Status vocabulary: IDEA (proposal/planned, no approval implied), DESIGN AGREED (explicit direction only), NEEDS AUDIT (evidence needed, no audit authorization), DEFERRED (intentionally retained/outside current scope), IN PROGRESS (documented ongoing work), UNKNOWN (unclear/conflicting scope/status). IMPLEMENTED items belong in references unless an independently open release/evidence gate is recorded under the same existing ID. Source-only implementation never proves installation, Edge deployment, manual frontend publication or runtime behavior.
 - Approval and deferral evidence is separate from status. A closure accepting a risk does not fix it or approve its correction. All rows link source and001A provenance; follow evidence dates in source rather than treating this register as a live hosted read.
 
-## Open records
+## Tracked records and retained evidence gates
 
-62 open records, including reused authoritative ENG IDs and later owner-reviewed additions. The001A inventory remains the foundation; later entries carry separate dated evidence. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
+69 identified register entries, including reused authoritative ENG IDs and later owner-reviewed additions; completed G1 is retained as reference context, so this is not a count of open implementations. The001A inventory remains the foundation; later entries carry separate dated evidence. Each includes explicit approval and evidence boundaries. The completed portions of those existing IDs are reference context, not new implementation work.
+
+Current status reconciliation: [2026-10-22 evidence and agreed development sequence](../operations/roadmap-status-reconciliation-2026-10-22.md). Later installed/deployed/owner-observed evidence supersedes preparation-only summaries without closing unverified acceptance gates. Historical foundation counts and reports below retain their original scope.
 
 ### Combat, abilities and creature runtime
 
@@ -124,7 +126,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 - **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
-- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Later G4A21/G4A24 composition supersedes that local checkpoint: project state records 0024 installed and matching workers deployed; Admin client activation remains OFF and full runtime acceptance is unverified. See [current evidence reconciliation](../operations/roadmap-status-reconciliation-2026-10-22.md). No automatic G4 finding closure.
 
 #### WOV-IDEA-008 — DoT suppression of ordinary creature regeneration
 
@@ -143,7 +145,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 - **G4A7 current policy / boundary:** [Approved floor/rate-reset and local source adapters](../operations/legacy-001G4A7-source-adapter-integration.md): living floor1 on missingHP-preserving max reduction; rate edit settles old eligible time/wholeHP, discards fraction, applies new rate and starts fresh accounting.24 native source-adapter tests, including6 session cases, do not establish full production/hosted parity. DESIGN AGREED remains; no runtime implementation/deployment claim.
 
-- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Later G4A21/G4A24 composition supersedes that local checkpoint: project state records 0024 installed and matching workers deployed; Admin client activation remains OFF and full runtime acceptance is unverified. See [current evidence reconciliation](../operations/roadmap-status-reconciliation-2026-10-22.md). No automatic G4 finding closure.
 
 #### WOV-IDEA-009 — Finish encounters after effects and actions resolve
 
@@ -304,7 +306,7 @@ Foundation: ENG-ROADMAP-IDEAS-001B,2026-10-14; based on [001A inventory](../oper
 
 ### Authority and legacy governance
 
-- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Simplified Admin clients/SQL are locally implemented and gated, not installed; full HP transition composition remains incomplete. DESIGN AGREED is not promoted to implemented/hosted verified.
+- **G4A19 current approved amendment / local candidate:** [Implementation and limits](../operations/legacy-001G4A19-simplified-admin-implementation.md) supersedes historical60s/5%-per-minute timing with default2% maxHP per4eligible seconds, per-creature0–100%/two decimals; no blocked/retroactive credit, exact fractional intervals and ordinary dead respawn preserved. Later G4A21/G4A24 composition supersedes that local checkpoint: project state records 0024 installed and matching workers deployed; Admin client activation remains OFF and full runtime acceptance is unverified. See [current evidence reconciliation](../operations/roadmap-status-reconciliation-2026-10-22.md). No automatic G4 finding closure.
 
 #### ENG-LEGACY-001 — Remaining gameplay-writer audit
 
@@ -435,11 +437,13 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 - **Status / kind:** IN PROGRESS; Technical correction. Owner authorized canonical base-item restoration locally and Git publication on 2026-10-20.
 - **Intent / confirmed cause:** forge-craft-base intentionally returns HTTP503 crafting_paused after the progression cutover; restore supported base crafting atomically, not deprecated XP writers. Level1 tier1 remains 7 salvage + 5gold / 25 canonical XP.
 - **Approval evidence:** Owner implementation request; original [D10 functional report](../operations/legacy-001D10-closeout.md), [implementation and delivery handoff](../operations/idea-015-base-crafting-handoff.md).
-- **Implementation/runtime boundary:** 0025 installed and forge-craft-base deployed per recorded Lovable evidence; Mik reports manual frontend publication and successful production crafting with Calikon (item creation and XP award). Exact deltas, UUID replay/conflict and refusals remain unverified. Functional restoration observed; bounded accounting/replay/refusal acceptance remains IN PROGRESS. See [runtime evidence](../operations/idea-015-runtime-equipment-regression.md). Gem application/fusion stay paused.
+- **Implementation/runtime boundary:** 0025 installed and forge-craft-base deployed per recorded Lovable evidence; Mik reports manual frontend publication and successful production crafting with Calikon (item creation and XP award). Exact deltas, UUID replay/conflict and refusals remain unverified. Functional restoration observed; bounded accounting/replay/refusal acceptance remains IN PROGRESS. See [runtime evidence](../operations/idea-015-runtime-equipment-regression.md). Gem application is restored under WOV-IDEA-033 with separate owner-observed evidence and remaining acceptance gates; fusion remains paused.
 - **Dependencies / overlaps:** Canonical private craft_completion XP, existing private inventory-action ledger, Database, Edge, manual publication and basic authenticated craft observed at their recorded evidence levels; only original bounded accounting/replay/refusal acceptance remains. Equipment regression is separate (WOV-IDEA-013), not a new crafting gate. Costs/rules preserved; unrelated crafting and WOV-IDEA-016 excluded.
 - **001A mapping / current tracking:** INV-A15 → WOV-IDEA-015; project-state operational evidence and product backlog; no new engine ID.
 
 #### WOV-IDEA-033 — Canonical gem application restoration
+
+Current reconciliation: [recorded installation/deployment and bounded owner-observed success](../operations/roadmap-status-reconciliation-2026-10-22.md); remaining acceptance belongs to the fourth agreed batch, not another restoration implementation.
 
 - **Status / kind:** IN PROGRESS; Technical correction. Normal gem application owner-observed working; original bounded acceptance gates remain open.
 - **Intent:** Restore intentionally paused forge-apply-gem using one atomic service-authorized completion: +1 attribute, one gem, (2+item level) salvage, 2×level gold and25 XP offered through private craft_completion.
@@ -687,12 +691,11 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 
 #### ENG-LEGACY-001G1 — World domain scope/evidence preparation
 
-- **Status / kind:** IDEA; Technical correction / evidence work. Authoritative source disposition: Source disposition described; INV IDs proposed discovery identifiers only.
-- **Intent:** Next proposed bounded preparation; reuse inventories and transferred quest findings, not started.
-- **Approval evidence:** Proposed next preparation only; F12 does not start audit. Source: [legacy-001F11-evidence-and-closure-assessment.md:75](../operations/legacy-001F11-evidence-and-closure-assessment.md) line75.
-- **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
-- **Dependencies / overlaps:** F12 closure and explicit next-task authorization.
-- **001A mapping / current tracking:** ENG-LEGACY-001G1 → ENG-LEGACY-001G1; State next_approved_task and engine roadmap.
+- **Status / kind:** IMPLEMENTED — completed documentation preparation, retained reference; technical evidence work, not gameplay implementation.
+- **Intent / evidence:** [Published G1 scope and current audit index](../operations/legacy-001G1-world-creatures-quests-preparation.md) and subsequent G2–G4 reports supersede the original not-started proposal.
+- **Implementation/runtime boundary:** Preparation complete; G/ENG-LEGACY-001 and E13 remain OPEN. No blanket installed/runtime or authority certification.
+- **Dependencies / overlaps:** Existing F12 closure, G2 accepted limitations, G3 deferral and G4 evidence; [current reconciliation](../operations/roadmap-status-reconciliation-2026-10-22.md).
+- **001A mapping / current tracking:** ENG-LEGACY-001G1 → ENG-LEGACY-001G1; retained ID and provenance, no replacement task.
 
 ## Completed references and retained limitations
 
@@ -700,7 +703,7 @@ These 17 source-complete/reference rows are **not new work**. Source implementat
 
 | Existing ID /001A mapping | Reference status and source | Remaining context |
 |---|---|---|
-| ENG-PROGRESSION-001 — Canonical character progression authority | progression; `implemented_source` for 001A contract/reference only; runtime authority remains planned; 10.; [game-engine-roadmap.md:143](game-engine-roadmap.md) line143 | Final A–H accepted closure supersedes historical body; all open limits below persist. |
+| ENG-PROGRESSION-001 — Canonical character progression authority | A–H staged completion with accepted limitations; E/F commands paused; 10.; [game-engine-roadmap.md:143](game-engine-roadmap.md) line143 | Final A–H accepted closure supersedes historical body; all open limits below persist. |
 | ADM-001 — Item Manager | completed; [admin-maintenance-backlog.md:7](../admin-maintenance-backlog.md) line7 | Repository safeguards only; exact deployment/runtime scope remains in dated source/state. |
 | ADM-002 — NPC Manager | completed; [admin-maintenance-backlog.md:8](../admin-maintenance-backlog.md) line8 | Repository safeguards only; exact deployment/runtime scope remains in dated source/state. |
 | ADM-003 — Race Manager | completed; [admin-maintenance-backlog.md:9](../admin-maintenance-backlog.md) line9 | Repository safeguards only; exact deployment/runtime scope remains in dated source/state. |
@@ -735,7 +738,7 @@ Administrative XP grants remain paused. Normal gameplay XP earning, including cr
 
 ## Alias and overlap reconciliation / complete001A mapping
 
-Every one of 001A's88 rows is accounted for: 65 open records + 17 references +4 limitation rows +2 aliases/umbrella rows =88. Every active record carries its original ID alias; every completed ID is listed above. The two non-record mappings are:
+Historical 001B foundation mapping (not the current register count): every one of 001A's88 rows is accounted for: 65 open records + 17 references +4 limitation rows +2 aliases/umbrella rows =88. Every active record carries its original ID alias; every completed ID is listed above. The two non-record mappings are:
 
 That mapping describes the001B foundation only. WOV-IDEA-031/032 were added from later owner-reviewed G2D input and are not retroactively inserted into001A's88-row inventory.
 
@@ -752,7 +755,7 @@ Other overlaps: project-state max-level XP/backlog aliases ENG-XP-001; return-ho
 4. WOV-IDEA-003 older boss v3 approved-in-principle proposal is paused; current surviving mechanism/scope unclear. WOV-IDEA-005 non-stance batch status and WOV-IDEA-001 single-active-character policy details need review, not assumed approval.
 5. WOV-IDEA-016 level1 combat remains separate from WOV-IDEA-015: crafting has a confirmed cutover cause and owner-observed production item/XP success after restoration, with bounded accounting/replay/refusal checks outstanding; do not merge these into a balance fix. WOV-IDEA-021 bundles related unique-transfer/catalog authority questions in existing evidence; refine only with bounded scope/owner review, not new audit.
 6. WOV-IDEA-029 return-to-seller is only a possible extension; WOV-IDEA-002 personal bind is an extension of return-home. Registration does not approve either.
-7. Creature HP/DoT/regen direction is agreed but no concrete sleep settlement, balance values or implementation contract chosen. WOV-IDEA-019 transferred contract/quest findings stay unresolved; ENG-LEGACY-001G1 preparation and World audit have not begun.
+7. Creature HP has an approved contract and later installed/deployed composition; remaining Admin activation/runtime gates are in project state. WOV-IDEA-019/E13 remains unresolved. G1 preparation is complete and G investigations have proceeded; G/parent remain OPEN.
 
 ## Adding conversation-derived ideas
 

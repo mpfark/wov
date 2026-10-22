@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-22T08:21:18.054Z",
- "based_on_source_sha": "29c0bbe910a02c0aa2c554082e55795198ca0804",
+ "updated_at": "2026-10-22T09:55:07.825Z",
+ "based_on_source_sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2698,6 +2698,28 @@
    "directly_verified": false,
    "artifact": "docs/operations/idea-025-admin-material-grant-handoff.md",
    "evidence": "Reuses0027 installation PASS and admin-users deployment records at their scoped evidence levels. Owner now confirms published-game existing-admin access and successful salvage grant to own character. IN PROGRESS, not full closure: gem/replay/conflict/refusal, hosted concurrency/expiry/live revision gaps remain. Does not claim earlier requester-session403 fixed or unexecuted refusal checks passed. Two DEFERRED low-priority UI entries reuse ENG-UX-001; related ENG-MOVE-001/ENG-DELIVERY-001 and025 IDs/priorities preserved. Recommended next preparation follows existing gameplay blocker order: canonical class-join activation readiness ENG-PROGRESSION-001E/F, scoped shared-control impact; no automatic authorization or global roadmap reprioritization. Documentation only, no SQL/Edge/frontend/hosted changes."
+  },
+  {
+   "status": "blocked",
+   "sha": "5f4d3f398592e68d087db3f9a721789627f1ff69",
+   "timestamp": "2026-10-18T10:57:35.000Z",
+   "artifact": "Await separate owner approval for subsequent G4A22 release gates; no gameplay, world controls, frontend activation or publication authorized",
+   "identity": "G4A22 post-Edge owner review and further release authorization",
+   "evidence_type": "repository",
+   "reporting_actor": "Lovable",
+   "directly_verified": true,
+   "evidence": "G4A24 database installation and G4A22 gate5 matching worker deployment complete. Both workers deployed successfully with nonmutating GET405/POST401 checks. No release-blocking source mismatch found against actual G4A22 checkpoint. Stop for owner review; disposable hosted gameplay acceptance and narrow Admin frontend activation need separate approval, frontend publication remains manual by Mik. Accepted limitations remain: worker/caller isolation, live Edge bundle identity, sequential-smoke-only concurrency evidence. No world wake or valid worker execution authorized."
+  },
+  {
+   "identity": "2026-10-22 current roadmap evidence reconciliation and agreed development sequence",
+   "status": "authored",
+   "sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
+   "timestamp": "2026-10-22T09:55:07.825Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; owner-approved documentation sequence",
+   "directly_verified": true,
+   "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
+   "evidence": "69 identified register entries; G1 completed preparation, G4 0023/0024 installed and matching workers deployed per existing records (Admin source gate OFF), E/F installed/deployed but commands paused; 015/033 and 025 retain bounded owner-observed working paths and incomplete acceptance. ADM-015 narrowed umbrella, no raw writer restoration. Historical entries/reports/IDs/closures preserved; no fresh hosted or runtime proof. Agreed sequence: selective first Class Join/Allocation/Respec; focused gameplay integration evidence; equipment/resource coherence; remaining crafting/gem/admin acceptance; deferred authority/content. Switching and Renown deferred; four F limitations, administrative XP pause, F1 OPEN, G3 deferred/G3D BLOCKED, E13/G/parent OPEN unchanged."
   }
  ],
  "known_blockers": [
@@ -2940,15 +2962,15 @@
   }
  ],
  "next_approved_task": {
-  "status": "blocked",
-  "sha": "5f4d3f398592e68d087db3f9a721789627f1ff69",
-  "timestamp": "2026-10-18T10:57:35.000Z",
-  "artifact": "Await separate owner approval for subsequent G4A22 release gates; no gameplay, world controls, frontend activation or publication authorized",
-  "identity": "G4A22 post-Edge owner review and further release authorization",
+  "identity": "Owner-agreed near-term progression preparation sequence — implementation authorization separate",
+  "status": "authored",
+  "sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
+  "timestamp": "2026-10-22T09:55:07.825Z",
   "evidence_type": "repository",
-  "reporting_actor": "Lovable",
+  "reporting_actor": "Codex; Mik sequence approval",
   "directly_verified": true,
-  "evidence": "G4A24 database installation and G4A22 gate5 matching worker deployment complete. Both workers deployed successfully with nonmutating GET405/POST401 checks. No release-blocking source mismatch found against actual G4A22 checkpoint. Stop for owner review; disposable hosted gameplay acceptance and narrow Admin frontend activation need separate approval, frontend publication remains manual by Mik. Accepted limitations remain: worker/caller isolation, live Edge bundle identity, sequential-smoke-only concurrency evidence. No world wake or valid worker execution authorized."
+  "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
+  "evidence": "Next candidate is selective first Class Join, Allocation and Respec under existing ENG-PROGRESSION-001E/F. This task authorizes documentation only; no coding, SQL activation, hosted checks or deployment. Retain master pause until separately approved command-specific gates/tests/release; Class Switching/Renown disabled. Previous G4A22 release authorization checkpoint remains historical; outstanding Admin activation/runtime gates persist."
  },
  "volatile_runtime_observations": [
   {
