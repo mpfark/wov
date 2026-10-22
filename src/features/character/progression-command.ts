@@ -7,21 +7,22 @@ export interface CommandResult { kind: 'committed' | 'replayed' | 'refused'; rea
   original?: { outcome?: 'success' | 'failure'; cost?: number; totalRefund?: number } }
 interface Transport { read: () => Promise<number>; send: (request: ProgressionRequest) => Promise<CommandResult> }
 const inFlight = new Set<string>();
-export function pendingProgressionAction(characterId: string): ProgressionAction | null {
+export function pendingProgressionAction(accountId: string, characterId: string): ProgressionAction | null {
   try {
-    const request = parseProgressionRequest(JSON.parse(sessionStorage.getItem(`wov:progression-request:${characterId}`) ?? 'null'));
+    const request = parseProgressionRequest(JSON.parse(sessionStorage.getItem(`wov:progression-request:${accountId}:${characterId}`) ?? 'null'));
     if (!request || request.characterId !== characterId) return null;
     return progressionAction(request);
   } catch { return null; }
 }
-export function pendingAllocation(characterId: string): Record<string, number> {
-  const action = pendingProgressionAction(characterId);
+export function pendingAllocation(accountId: string, characterId: string): Record<string, number> {
+  const action = pendingProgressionAction(accountId, characterId);
   return action && 'allocations' in action ? action.allocations : {};
 }
 /** Persist uncertain request identity; a retry cannot replace its payload or starting version. */
-export function createProgressionClient(characterId: string, transport: Transport,
+export function createProgressionClient(accountId: string, characterId: string, transport: Transport,
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>, makeUuid: () => string = () => crypto.randomUUID()) {
-  const key = `wov:progression-request:${characterId}`;
+  if (!accountId || !characterId) throw new Error('An authenticated account and character are required.');
+  const key = `wov:progression-request:${accountId}:${characterId}`;
   let running = false;
   return {
     async execute(action: ProgressionAction): Promise<CommandResult> {
@@ -33,7 +34,9 @@ export function createProgressionClient(characterId: string, transport: Transpor
         const pending = storage.getItem(key);
         let request: ProgressionRequest;
         if (pending) {
-          request = JSON.parse(pending);
+          const parsed = parseProgressionRequest(JSON.parse(pending));
+          if (!parsed || parsed.characterId !== characterId) throw new Error('Stored progression request requires reconciliation.');
+          request = parsed;
           const oldAction = progressionAction(request);
           if (JSON.stringify(oldAction) !== JSON.stringify(normalized)) throw new Error('Retry the pending progression command before changing your choices.');
         } else {
@@ -49,9 +52,14 @@ export function createProgressionClient(characterId: string, transport: Transpor
     },
   };
 }
-export function progressionClient(characterId: string) {
-  return createProgressionClient(characterId, {
+export function progressionClient(accountId: string, characterId: string) {
+  const verifyAccount = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.id !== accountId) throw new Error('Account changed. Reopen this character before retrying.');
+  };
+  return createProgressionClient(accountId, characterId, {
     async read() {
+      await verifyAccount();
       // Local boundary: official Cloud-derived types remain unchanged until installation.
       const { data, error } = await supabase.rpc('progression_command_projection' as never, { _character: characterId } as never);
       const result = data as unknown as { kind: string; projection?: { progressionVersion: number } };
@@ -60,7 +68,9 @@ export function progressionClient(characterId: string) {
       return result.projection!.progressionVersion;
     },
     async send(request) {
+      await verifyAccount();
       const { data, error } = await supabase.functions.invoke('progression-command', { body: request });
+      await verifyAccount();
       if (error) throw new Error('Command outcome is uncertain. Retry the same choices.');
       return data as CommandResult;
     },

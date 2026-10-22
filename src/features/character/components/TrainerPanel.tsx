@@ -7,6 +7,7 @@ import { StatPlannerBody } from '@/features/character/components/StatPlannerDial
 import { buildErrorEvent } from '@/features/combat/events/client-event-builder';
 import type { GameLogEvent } from '@/features/combat/events/log-event';
 import { Button } from '@/components/ui/button';
+import { useProgressionAvailability } from '../useProgressionAvailability';
 import { pendingProgressionAction } from '../progression-command';
 import type { ProgressionStat } from '../../../../supabase/functions/_shared/progression-command';
 
@@ -36,7 +37,7 @@ interface Props {
   npcFlavor?: string;
 }
 
-type TrainerTab = 'allocate' | 'renown' | 'leaderboard';
+type TrainerTab = 'allocate' | 'renown' | 'leaderboard' | 'unavailable';
 
 export default function TrainerPanel({
   open, onClose, character, equipmentBonuses, addLogEvent: parentAddLogEvent,
@@ -44,12 +45,13 @@ export default function TrainerPanel({
 }: Props) {
   const { entries: miniLog, addEvent } = useMiniLog(parentAddLogEvent);
 
-  const [tab, setTab] = useState<TrainerTab>('allocate');
-  const pending = pendingProgressionAction(character.id);
+  const [tab, setTab] = useState<TrainerTab>('unavailable');
+  const availability = useProgressionAvailability(character.user_id, character.id, open);
+  const pending = pendingProgressionAction(character.user_id, character.id);
   const [selectedStat, setSelectedStat] = useState<ProgressionStat>(() => pending && 'stat' in pending ? pending.stat : 'str');
   const [submitting, setSubmitting] = useState(false);
   const submit = async (operation: 'respec' | 'renown') => {
-    if (submitting) return;
+    if (submitting || operation === 'renown' || (!availability.respec && !(pending && 'operation' in pending && pending.operation === 'respec'))) return;
     setSubmitting(true);
     try { await (operation === 'respec' ? onFullRespec() : onRenown(selectedStat)); }
     finally { setSubmitting(false); }
@@ -59,12 +61,11 @@ export default function TrainerPanel({
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(false);
 
-  // Default tab: prefer Allocate if points pending or respec available, else Renown.
+  // Never select deferred Renown as the default. Allocation shows availability explicitly.
   useEffect(() => {
     if (!open) return;
-    if (character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) setTab('allocate');
-    else setTab('renown');
-  }, [open, character.unspent_stat_points, character.respec_points]);
+    setTab(availability.allocate || availability.respec || pending ? 'allocate' : 'unavailable');
+  }, [open, character.id, availability.allocate, availability.respec, !!pending]);
 
   // ── Leaderboard ──
   const fetchLeaderboard = useCallback(async () => {
@@ -106,27 +107,28 @@ export default function TrainerPanel({
   const tabsRow = (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TrainerTab)} className="w-full">
       <TabsList className="grid grid-cols-3 w-full bg-surface-3/60">
-        <TabsTrigger value="allocate" className="t-label text-[11px] data-[state=active]:text-primary relative">
+        <TabsTrigger disabled={!availability.allocate && !availability.respec && !pending} value="allocate" className="t-label text-[11px] data-[state=active]:text-primary relative">
           Allocate
           {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
           )}
         </TabsTrigger>
-        <TabsTrigger value="renown" className="t-label text-[11px] data-[state=active]:text-primary">Renown</TabsTrigger>
+        <TabsTrigger disabled value="renown" className="t-label text-[11px] data-[state=active]:text-primary">Renown</TabsTrigger>
         <TabsTrigger value="leaderboard" className="t-label text-[11px] data-[state=active]:text-primary">Board</TabsTrigger>
       </TabsList>
     </Tabs>
   );
 
   // ── Allocate tab (includes respec) ──
-  const respecAvailable = true;
+  const respecAvailable = availability.respec || !!(pending && 'operation' in pending && pending.operation === 'respec');
   const hasAnythingToDo = character.unspent_stat_points > 0 || respecAvailable;
 
-  const allocateContent = hasAnythingToDo ? (
+  const allocateContent = hasAnythingToDo || !availability.allocate ? (
     <StatPlannerBody
       character={character}
       equipmentBonuses={equipmentBonuses}
       onCommit={onBatchAllocateStats}
+      allocationAvailable={availability.allocate || !!(pending && 'allocations' in pending)}
       layout="split"
       respecAvailable={respecAvailable}
       respecPoints={character.respec_points || 0}
@@ -140,7 +142,7 @@ export default function TrainerPanel({
   );
 
   const renownContent = <div className="gap-group">
-    <p>Progression commands are paused pending authority release.</p>
+    <p>Renown training remains disabled.</p>
     <p>Renown balance: {character.bhp ?? 0} RP. Training requires level 30.</p>
     <p>Training ranks: {(['str','dex','con','int','wis','cha'] as const).map(stat => {
       const ranks = character.bhp_trained as Record<string, unknown> | null;
@@ -152,7 +154,7 @@ export default function TrainerPanel({
       {(['str','dex','con','int','wis','cha'] as const).map(stat => <option key={stat} value={stat}>{stat.toUpperCase()}</option>)}
     </select>
     <p>The server determines cost, chance and outcome. Failure spends RP.</p>
-    <Button disabled={submitting} onClick={() => { void submit('renown'); }}>Submit Renown training</Button>
+    <Button disabled onClick={() => { void submit('renown'); }}>Submit Renown training</Button>
   </div>;
 
   // ── Leaderboard tab ──
@@ -242,7 +244,8 @@ export default function TrainerPanel({
   const tabContent =
     tab === 'allocate' ? allocateContent
     : tab === 'renown' ? renownContent
-    : leaderboardContent;
+    : tab === 'leaderboard' ? leaderboardContent
+    : <ServicePanelEmpty>Allocation and Respec are currently unavailable. Renown remains disabled.</ServicePanelEmpty>;
 
   return (
     <>
@@ -258,7 +261,7 @@ export default function TrainerPanel({
       />
 
 
-      <p className="text-xs text-muted-foreground text-center">Commands are paused. Respec refunds only proven discretionary investment.</p>
+
     </>
   );
 }

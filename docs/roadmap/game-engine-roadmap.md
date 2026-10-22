@@ -2,6 +2,8 @@
 
 This is the canonical backlog for engine authority, correctness and stabilization. Rules live in the [engine specification](../design/game-engine.md); installation and verification evidence lives in [project state](../operations/project-state.md). Status vocabulary: `decision_needed`, `planned`, `ready`, `in_progress`, `implemented_source`, `installed`, `live_verification_pending`, `live_verified`, `blocked`, `deferred`.
 
+Current E/F implementation (2026-10-22): [selective progression candidate and staged handoff](../operations/progression-selective-handoff.md) is authored locally with default-off first Join/Allocation/Respec controls, master retained, Switching/Renown refused, availability UI and account-scoped retries. Local tests/typecheck/build pass; installation, live activation and manual Publish have not occurred. Existing E/F closure is preserved; next is separately authorized narrow installed-parity/readiness verification, not another audit.
+
 ## Current execution sequence — owner agreed 2026-10-22
 
 [Status reconciliation and evidence](../operations/roadmap-status-reconciliation-2026-10-22.md): selective first Class Join/Allocation/Respec → focused gameplay integration evidence → equipment/resource coherence → remaining crafting/gem/admin acceptance → deferred authority/content. Existing IDs and priority numbers remain; this is the current execution sequence, not implementation/activation authorization. Class Switching/Renown stay deferred. Historical checkpoint paragraphs below retain their dated scope; later project-state evidence governs current rollout.

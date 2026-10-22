@@ -1,4 +1,5 @@
 const refusals: Record<string, string> = {
+  operation_disabled: 'This progression operation is disabled.',
   commands_paused: 'Progression commands are paused.', not_at_trainer: 'Visit a trainer first.',
   renown_level_required: 'Renown training requires level 30.', dead: 'A living character is required.',
   active_combat: 'Finish combat before training.', unsafe_lifecycle: 'Finish movement and deactivate any stance before training.',

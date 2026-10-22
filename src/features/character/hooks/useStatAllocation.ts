@@ -11,7 +11,7 @@ interface UseStatAllocationArgs {
   onResourcesSynced?: () => unknown;
 }
 export function useStatAllocation({ character, addLogEvent, onResourcesSynced }: UseStatAllocationArgs) {
-  const client = useMemo(() => progressionClient(character.id), [character.id]);
+  const client = useMemo(() => progressionClient(character.user_id, character.id), [character.user_id, character.id]);
   const handleBatchAllocateStats = useCallback(async (allocations: Record<string, number>): Promise<boolean> => {
     try {
       const result = await client.execute({ allocations });

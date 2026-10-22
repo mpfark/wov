@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, renderHook, screen, waitFor, act } from '@testing-library/react';
-vi.mock('@/integrations/supabase/client', () => ({ supabase: { rpc: vi.fn(), functions: { invoke: vi.fn() }, from: vi.fn(() => ({ select: () => ({ eq: async () => ({ data: [] }) }) })) } }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'test-account' } } } }) }, rpc: vi.fn(), functions: { invoke: vi.fn() }, from: vi.fn(() => ({ select: () => ({ eq: async () => ({ data: [] }) }) })) } }));
 import { createProgressionClient, pendingAllocation } from '../progression-command';
 import { parseProgressionRequest, createProgressionCommandHandler } from '../../../../supabase/functions/_shared/progression-command';
 import { StatPlannerBody } from '../components/StatPlannerDialog';
@@ -12,7 +12,7 @@ const characterId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const requestId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const actor = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const base = { characterId, requestId, expectedVersion: 0 };
-const character = { id: characterId, class: 'classless', level: 1, str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, unspent_stat_points: 3 } as Character;
+const character = { user_id: 'test-account', id: characterId, class: 'classless', level: 1, str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, unspent_stat_points: 3 } as Character;
 afterEach(() => { cleanup(); sessionStorage.clear(); vi.clearAllMocks(); });
 describe('strict authenticated Edge boundary', () => {
   it('normalizes only six allocation stats; accepts narrow Order schema', () => {
@@ -41,20 +41,20 @@ describe('strict authenticated Edge boundary', () => {
 describe('stable browser requests', () => {
   it('uncertain retry after remount preserves UUID/version/payload; changed choice cannot replace it', async () => {
     const read = vi.fn().mockResolvedValue(7), send = vi.fn().mockRejectedValueOnce(Error('uncertain')).mockResolvedValue({ kind: 'replayed' });
-    const first = createProgressionClient(characterId, { read, send }, sessionStorage, () => requestId);
-    await expect(first.execute({ allocations: { str: 1 } })).rejects.toThrow('uncertain');expect(pendingAllocation(characterId).str).toBe(1);
-    const remount = createProgressionClient(characterId, { read, send }, sessionStorage, () => actor);
+    const first = createProgressionClient('test-account', characterId, { read, send }, sessionStorage, () => requestId);
+    await expect(first.execute({ allocations: { str: 1 } })).rejects.toThrow('uncertain');expect(pendingAllocation('test-account', characterId).str).toBe(1);
+    const remount = createProgressionClient('test-account', characterId, { read, send }, sessionStorage, () => actor);
     await expect(remount.execute({ allocations: { dex: 1 } })).rejects.toThrow('Retry the pending');
-    await expect(remount.execute({ allocations: { str: 1 } })).resolves.toEqual({ kind: 'replayed' });expect(read).toHaveBeenCalledTimes(1);expect(send.mock.calls[1][0]).toEqual(send.mock.calls[0][0]);expect(pendingAllocation(characterId)).toEqual({});
+    await expect(remount.execute({ allocations: { str: 1 } })).resolves.toEqual({ kind: 'replayed' });expect(read).toHaveBeenCalledTimes(1);expect(send.mock.calls[1][0]).toEqual(send.mock.calls[0][0]);expect(pendingAllocation('test-account', characterId)).toEqual({});
   });
   it('refused fresh command clears pending; next attempt fetches current version', async () => {
     const read = vi.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1), send = vi.fn().mockResolvedValueOnce({ kind: 'refused', reason: 'stale_state' }).mockResolvedValueOnce({ kind: 'committed' });
-    const client = createProgressionClient(characterId, { read, send }, sessionStorage, () => requestId);await client.execute({ allocations: { str: 1 } });await client.execute({ allocations: { str: 1 } });expect(send.mock.calls[1][0].expectedVersion).toBe(1);
+    const client = createProgressionClient('test-account', characterId, { read, send }, sessionStorage, () => requestId);await client.execute({ allocations: { str: 1 } });await client.execute({ allocations: { str: 1 } });expect(send.mock.calls[1][0].expectedVersion).toBe(1);
   });
   it('simultaneous duplicate clicks and malformed responses cannot discard an uncertain request', async () => {
     let finish!: (value: { kind: 'committed' }) => void;const send = vi.fn(() => new Promise<{ kind: 'committed' }>(r => { finish = r; }));
-    const client = createProgressionClient(characterId, { read: async () => 0, send }, sessionStorage, () => requestId);const first = client.execute({ allocations: { str: 1 } });await expect(client.execute({ allocations: { str: 1 } })).rejects.toThrow('already pending');const anotherPanel = createProgressionClient(characterId, { read: async () => 0, send }, sessionStorage, () => actor);await expect(anotherPanel.execute({ operation: 'join', targetClass: 'wizard' })).rejects.toThrow('already pending');await waitFor(() => expect(send).toHaveBeenCalledTimes(1));finish({ kind: 'committed' });await first;
-    const malformed = createProgressionClient(characterId, { read: async () => 1, send: async () => null! }, sessionStorage, () => actor);await expect(malformed.execute({ allocations: { dex: 1 } })).rejects.toThrow('uncertain');expect(pendingAllocation(characterId).dex).toBe(1);
+    const client = createProgressionClient('test-account', characterId, { read: async () => 0, send }, sessionStorage, () => requestId);const first = client.execute({ allocations: { str: 1 } });await expect(client.execute({ allocations: { str: 1 } })).rejects.toThrow('already pending');const anotherPanel = createProgressionClient('test-account', characterId, { read: async () => 0, send }, sessionStorage, () => actor);await expect(anotherPanel.execute({ operation: 'join', targetClass: 'wizard' })).rejects.toThrow('already pending');await waitFor(() => expect(send).toHaveBeenCalledTimes(1));finish({ kind: 'committed' });await first;
+    const malformed = createProgressionClient('test-account', characterId, { read: async () => 1, send: async () => null! }, sessionStorage, () => actor);await expect(malformed.execute({ allocations: { dex: 1 } })).rejects.toThrow('uncertain');expect(pendingAllocation('test-account', characterId).dex).toBe(1);
   });
 });
 describe('planner acknowledgment and refresh', () => {
@@ -66,27 +66,27 @@ describe('planner acknowledgment and refresh', () => {
     await act(async () => finish(false));expect(screen.getByRole('alert')).toBeInTheDocument();expect(screen.getByRole('button', { name: /Commit/i })).toBeEnabled();fireEvent.click(screen.getByRole('button', { name: /Commit/i }));expect(onCommit.mock.calls[1][0]).toEqual({ str: 1 });await act(async () => finish(true));expect(screen.getByRole('button', { name: /Commit/i })).toBeDisabled();
   });
   it('rehydrates the uncertain allocation when reopened', () => {
-    sessionStorage.setItem(`wov:progression-request:${characterId}`, JSON.stringify({ ...base, allocations: { str: 1, dex: 0, con: 0, int: 0, wis: 0, cha: 0 } }));render(<StatPlannerBody character={character} equipmentBonuses={{}} onCommit={vi.fn()} />);expect(screen.getByRole('button', { name: /Commit/i })).toBeEnabled();
+    sessionStorage.setItem(`wov:progression-request:test-account:${characterId}`, JSON.stringify({ ...base, allocations: { str: 1, dex: 0, con: 0, int: 0, wis: 0, cha: 0 } }));render(<StatPlannerBody character={character} equipmentBonuses={{}} onCommit={vi.fn()} />);expect(screen.getByRole('button', { name: /Commit/i })).toBeEnabled();
   });
   it('confirmed spend remains acknowledged if refresh fails; uncertain outcome logs no success', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValue({ data: { kind: 'current', projection: { progressionVersion: 0 } }, error: null } as never);
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: { kind: 'current', projection: { progressionVersion: 0 }, availability: { join: true, allocate: true, respec: true } }, error: null } as never);
     vi.mocked(supabase.functions.invoke).mockResolvedValue({ data: { kind: 'committed' }, error: null } as never);
     const addLogEvent = vi.fn(), refresh = vi.fn().mockRejectedValue(Error('refresh failed'));const { result } = renderHook(() => useStatAllocation({ character, addLogEvent, onResourcesSynced: refresh }));
-    expect(await result.current.handleBatchAllocateStats({ str: 1 })).toBe(true);expect(refresh).toHaveBeenCalled();expect(pendingAllocation(characterId)).toEqual({});
-    addLogEvent.mockClear();vi.mocked(supabase.functions.invoke).mockResolvedValue({ data: null, error: Error('transport') } as never);expect(await result.current.handleBatchAllocateStats({ dex: 1 })).toBe(false);expect(JSON.stringify(addLogEvent.mock.calls)).not.toContain('Stat allocation confirmed');expect(pendingAllocation(characterId).dex).toBe(1);
+    expect(await result.current.handleBatchAllocateStats({ str: 1 })).toBe(true);expect(refresh).toHaveBeenCalled();expect(pendingAllocation('test-account', characterId)).toEqual({});
+    addLogEvent.mockClear();vi.mocked(supabase.functions.invoke).mockResolvedValue({ data: null, error: Error('transport') } as never);expect(await result.current.handleBatchAllocateStats({ dex: 1 })).toBe(false);expect(JSON.stringify(addLogEvent.mock.calls)).not.toContain('Stat allocation confirmed');expect(pendingAllocation('test-account', characterId).dex).toBe(1);
   });
 });
 describe('Order caller selection', () => {
   it('can replay an uncertain join after current class or hall changes', async () => {
-    sessionStorage.setItem(`wov:progression-request:${characterId}`, JSON.stringify({ ...base, operation: 'join', targetClass: 'wizard' }));
+    sessionStorage.setItem(`wov:progression-request:test-account:${characterId}`, JSON.stringify({ ...base, operation: 'join', targetClass: 'wizard' }));
     vi.mocked(supabase.functions.invoke).mockResolvedValue({ data: { kind: 'replayed' }, error: null } as never);
-    const onJoined = vi.fn();render(<OrderRecruiterDialog open npc={null} hallClass="warrior" characterId={characterId} currentClass="wizard" onClose={vi.fn()} onJoined={onJoined} />);
-    const button = screen.getByRole('button', { name: 'Retry pending Order change' });await waitFor(() => expect(button).toBeEnabled());fireEvent.click(button);await waitFor(() => expect(onJoined).toHaveBeenCalledTimes(1));expect(vi.mocked(supabase.functions.invoke).mock.calls[0][1]?.body).toEqual({ ...base, operation: 'join', targetClass: 'wizard' });expect(supabase.rpc).not.toHaveBeenCalled();
+    const onJoined = vi.fn();render(<OrderRecruiterDialog accountId="test-account" open npc={null} hallClass="warrior" characterId={characterId} currentClass="wizard" onClose={vi.fn()} onJoined={onJoined} />);
+    const button = screen.getByRole('button', { name: 'Retry pending Order change' });await waitFor(() => expect(button).toBeEnabled());fireEvent.click(button);await waitFor(() => expect(onJoined).toHaveBeenCalledTimes(1));expect(vi.mocked(supabase.functions.invoke).mock.calls[0][1]?.body).toEqual({ ...base, operation: 'join', targetClass: 'wizard' });expect(supabase.rpc).toHaveBeenCalledWith('progression_command_projection', expect.anything());
   });
-  it.each(['classless', 'warrior'])('uses canonical operation for %s and awaits acknowledgment', async currentClass => {
-    vi.mocked(supabase.rpc).mockResolvedValue({ data: { kind: 'current', projection: { progressionVersion: 0 } }, error: null } as never);
+  it.each(['classless'])('uses canonical operation for %s and awaits acknowledgment', async currentClass => {
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: { kind: 'current', projection: { progressionVersion: 0 }, availability: { join: true, allocate: true, respec: true } }, error: null } as never);
     vi.mocked(supabase.functions.invoke).mockResolvedValue({ data: { kind: 'committed' }, error: null } as never);
-    let finish!: () => void;const onJoined = vi.fn(() => new Promise<void>(resolve => { finish = resolve; })), onClose = vi.fn();render(<OrderRecruiterDialog open npc={null} hallClass="wizard" characterId={characterId} currentClass={currentClass} onClose={onClose} onJoined={onJoined} />);
+    let finish!: () => void;const onJoined = vi.fn(() => new Promise<void>(resolve => { finish = resolve; })), onClose = vi.fn();render(<OrderRecruiterDialog accountId="test-account" open npc={null} hallClass="wizard" characterId={characterId} currentClass={currentClass} onClose={onClose} onJoined={onJoined} />);
     const button = screen.getByRole('button', { name: currentClass === 'classless' ? /Join the Wizard Order/ : /Switch to Wizard/ });await waitFor(() => expect(button).toBeEnabled());fireEvent.click(button);
     await waitFor(() => expect(onJoined).toHaveBeenCalledTimes(1));expect(vi.mocked(supabase.functions.invoke).mock.calls[0][1]?.body).toMatchObject({ operation: currentClass === 'classless' ? 'join' : 'switch', targetClass: 'wizard' });expect(onClose).not.toHaveBeenCalled();expect(button).toBeDisabled();await act(async () => finish());expect(onClose).toHaveBeenCalledTimes(1);
   });

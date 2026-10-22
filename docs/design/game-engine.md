@@ -158,6 +158,10 @@ Future allocation/respec use narrow server-authoritative owner RPCs; no broad br
 
 ENG-PROGRESSION-001F accepts refusal while a canonical stance is active or a stance request remains uncommitted. Training never clears stance or refunds stance CP. Fresh respec/Renown requires a living character at the same nodes.is_trainer boundary and the accepted E combat/movement/lifecycle exclusions. A zero refund consumes nothing, including when tokens are zero; a real refund requires one token and refuses if the resulting unspent pool exceeds200. No clipping or cap expansion. Destructive/downward admin overrides and historical repairs remain separate decisions.
 
+### Selective progression commands — local activation candidate
+
+ENG-PROGRESSION-001E/F now has a [local selective candidate](../operations/progression-selective-handoff.md): default-off first Join/Allocation/Respec controls under the retained master switch, exact committed replay before mutable gates, explicitly disabled Switching/Renown and encounter-before-character serialization. Recruiter/Trainer availability and account/character-scoped retry recovery are authored locally. Existing formulas, first-join bonds, proven-only one-token refunds, clamp-only resources and canonical security are preserved. Not installed or activated; fresh scoped parity/caller-isolation and separate installation/manual publication/control-enable acceptance are release gates. Earlier E/F staged closures and all four OPEN limitations are unchanged.
+
 ### Transactional authority and integration
 
 001C primitives are installed; the [001D closure](../operations/progression-001D-closure.md) records the canonical Combat2 XP authority as INSTALLED / VERIFIED / ACTIVATED from supplied operator evidence. Combat2 determines legitimate eligibility and amount; progression owns XP→level consequences in the same transaction only for a newly accepted claim UUID. Historical claim conflicts never backfill. The four original wrappers/lock ordering/resource-domain effects remain, and ordinary callers cannot invoke the private adapter/primitives or internal predecessors.

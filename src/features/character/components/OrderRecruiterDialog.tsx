@@ -5,6 +5,8 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { progressionClient, pendingProgressionAction } from '../progression-command';
+import { useProgressionAvailability } from '../useProgressionAvailability';
+import { progressionRefusal } from '../progression-messages';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 import { NPC } from '@/features/creatures';
 import {
@@ -20,6 +22,7 @@ interface Props {
   npc: NPC | null;
   hallClass: string | null;
   characterId: string;
+  accountId: string;
   currentClass: string;
   onJoined?: () => unknown;
   worldContext?: ResolverContext;
@@ -36,7 +39,7 @@ interface RosterRow {
 }
 
 export default function OrderRecruiterDialog({
-  open, onClose, npc, hallClass, characterId, currentClass, onJoined, worldContext,
+  open, onClose, npc, hallClass, characterId, accountId, currentClass, onJoined, worldContext,
 }: Props) {
   const [bonds, setBonds] = useState<BondRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,9 +48,10 @@ export default function OrderRecruiterDialog({
   const [roster, setRoster] = useState<RosterRow[] | null>(null);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [rosterError, setRosterError] = useState<string | null>(null);
-  const command = useMemo(() => progressionClient(characterId), [characterId]);
+  const command = useMemo(() => progressionClient(accountId, characterId), [accountId, characterId]);
+  const availability = useProgressionAvailability(accountId, characterId, open);
   const isClassless = currentClass === 'classless';
-  const pending = pendingProgressionAction(characterId);
+  const pending = pendingProgressionAction(accountId, characterId);
   const pendingOrder = pending && 'targetClass' in pending ? pending : null;
 
   const topics = useMemo(() => {
@@ -80,11 +84,12 @@ export default function OrderRecruiterDialog({
   const hallBond = bonds.find(b => b.class === hallClass)?.bond ?? 0;
 
   const handleJoin = async () => {
+    if (!pendingOrder && (!isClassless || !availability.join)) return;
     setActing(true);
     try {
       const action = pendingOrder ?? { operation: isClassless ? 'join' as const : 'switch' as const, targetClass: hallClass };
       const result = await command.execute(action);
-      if (result.kind === 'refused') throw new Error(`Order command refused: ${result.reason}`);
+      if (result.kind === 'refused') throw new Error(progressionRefusal(result.reason));
       toast.success(`You have joined the ${CLASS_LABELS[action.targetClass] || action.targetClass} order.`);
       try { await onJoined?.(); }
       catch { toast.error('Order change committed. Refresh character data before another command.'); }
@@ -255,11 +260,12 @@ Leaving the {oldLabel} order will permanently erase your bond of {oldBond}.
           );
         })()}
 
+        <p role="status" className="text-xs text-muted-foreground">{!isClassless ? 'Class switching is disabled.' : !availability.join ? 'First Class Join is currently unavailable.' : 'First Class Join is available here when the server eligibility checks pass.'}</p>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose} disabled={acting}>Leave</Button>
           <Button
             onClick={handleJoin}
-            disabled={acting || loading || (isCurrent && !pendingOrder)}
+            disabled={acting || loading || (!pendingOrder && (isCurrent || !isClassless || !availability.join))}
             variant={!isClassless && !isCurrent ? 'destructive' : 'default'}
             className="font-display"
           >

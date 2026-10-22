@@ -33,6 +33,7 @@ interface BodyProps {
   layout?: 'stacked' | 'split';
   /** Respec integration — when provided, a small Respec section is rendered under the allocator. */
   respecAvailable?: boolean;
+  allocationAvailable?: boolean;
   respecPoints?: number;
   onRequestRespec?: () => void;
 }
@@ -41,8 +42,8 @@ interface BodyProps {
  * Pure body of the stat planner — usable inside any container (dialog, panel,
  * service shell). Use <StatPlannerDialog> for the standalone modal version.
  */
-export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit, layout = 'stacked', respecAvailable, respecPoints, onRequestRespec }: BodyProps) {
-  const [planned, setPlanned] = useState<Record<string, number>>(() => pendingAllocation(character.id));
+export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit, layout = 'stacked', allocationAvailable = true, respecAvailable, respecPoints, onRequestRespec }: BodyProps) {
+  const [planned, setPlanned] = useState<Record<string, number>>(() => pendingAllocation(character.user_id, character.id));
   const [committing, setCommitting] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
 
@@ -113,7 +114,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
   }, [currentStats, plannedStats, equipmentBonuses, character]);
 
   const handleCommit = async () => {
-    if (totalSpent === 0 || committing) return;
+    if (!allocationAvailable || totalSpent === 0 || committing) return;
     const allocations: Record<string, number> = {};
     for (const [k, v] of Object.entries(planned)) {
       if (v > 0) allocations[k] = v;
@@ -207,16 +208,17 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       {/* Footer actions */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={committing || totalSpent === 0}>
+        <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={committing || !allocationAvailable || totalSpent === 0}>
           <RotateCcw className="w-3 h-3 mr-1" /> Reset
         </Button>
-        <Button size="sm" onClick={handleCommit} disabled={committing || totalSpent === 0}>
+        <Button size="sm" onClick={handleCommit} disabled={committing || !allocationAvailable || totalSpent === 0}>
           <Check className="w-3 h-3 mr-1" /> Commit {totalSpent} Point{totalSpent !== 1 ? 's' : ''}
         </Button>
       </div>
 
       {commitError && <p role="alert" className="text-xs text-destructive">{commitError}</p>}
 
+      {!allocationAvailable && <p role="status">Attribute allocation is currently unavailable.</p>}
       {/* Respec section (optional) */}
       {onRequestRespec && (
         <div className="border-t border-border-subtle pt-3 gap-row">
@@ -233,7 +235,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
           >
             {respecAvailable
               ? 'Request Proven Allocation Refund'
-              : 'No Respec Points Available'}
+              : 'Respec is currently unavailable'}
           </Button>
           <p className="text-[10px] text-muted-foreground italic leading-relaxed">
             The server refunds only recorded discretionary investment. A successful nonzero refund consumes one token. Historical attributes, class growth and Renown training are preserved.

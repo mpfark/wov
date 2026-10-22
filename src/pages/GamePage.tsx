@@ -2066,6 +2066,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         npc={activeServiceNpc?.service_role === 'recruiter' ? activeServiceNpc : null}
         hallClass={(currentNode as any)?.class_hall ?? null}
         characterId={character.id}
+        accountId={character.user_id}
         currentClass={character.class}
         onJoined={() => refetchCharacters?.()}
         worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}

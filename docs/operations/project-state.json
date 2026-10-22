@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-22T09:55:07.825Z",
- "based_on_source_sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
+ "updated_at": "2026-10-22T10:33:43.342Z",
+ "based_on_source_sha": "2053fa68269f073ec601011b433e70f78ab7d874",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2720,6 +2720,28 @@
    "directly_verified": true,
    "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
    "evidence": "69 identified register entries; G1 completed preparation, G4 0023/0024 installed and matching workers deployed per existing records (Admin source gate OFF), E/F installed/deployed but commands paused; 015/033 and 025 retain bounded owner-observed working paths and incomplete acceptance. ADM-015 narrowed umbrella, no raw writer restoration. Historical entries/reports/IDs/closures preserved; no fresh hosted or runtime proof. Agreed sequence: selective first Class Join/Allocation/Respec; focused gameplay integration evidence; equipment/resource coherence; remaining crafting/gem/admin acceptance; deferred authority/content. Switching and Renown deferred; four F limitations, administrative XP pause, F1 OPEN, G3 deferred/G3D BLOCKED, E13/G/parent OPEN unchanged."
+  },
+  {
+   "identity": "ENG-PROGRESSION-001E/F selective Join Allocation Respec — local default-disabled candidate",
+   "status": "authored",
+   "sha": "2053fa68269f073ec601011b433e70f78ab7d874",
+   "timestamp": "2026-10-22T10:33:43.342Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/progression-selective-handoff.md",
+   "evidence": "Local SQL SHA256 cf75514d4f6d0345b7abcc6b38ca3aed4ef6a63e1d6a80b439c69658214139ff adds private default-false join/allocation/respec controls, retains master=false prerequisite, exact receipt replay before mutable gates, explicit switch/Renown refusal and early node→encounter→character locking. Two existing functions retain all non-body metadata/grants; no new table/helper/migration history/Edge change. Recruiter/Trainer reflect availability, no unavailable default; immutable account/character session requests verify current account before dispatch/response. 54 focused tests +3 state tests,13 native PostgreSQL18.6 cases (five independent-session scenarios, four observed blocking barriers and actual archived claim SKIP LOCKED/refusal branches),2 static tests PASS. Reduced schema/auth/native pgcrypto1.3; no full worker or hosted concurrency proof. Typecheck/build PASS; final integrity/state/docs checks in handoff. NOT INSTALLED/ACTIVATED/PUBLISHED. Current installed composition/caller isolation/ACL parity and separate installation/control-enable/manual Publish/runtime acceptance gates remain. All four F limitations, administrative XP pause and previous closures/deferrals unchanged."
+  },
+  {
+   "identity": "Owner-agreed near-term progression preparation sequence — implementation authorization separate",
+   "status": "authored",
+   "sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
+   "timestamp": "2026-10-22T09:55:07.825Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; Mik sequence approval",
+   "directly_verified": true,
+   "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
+   "evidence": "Next candidate is selective first Class Join, Allocation and Respec under existing ENG-PROGRESSION-001E/F. This task authorizes documentation only; no coding, SQL activation, hosted checks or deployment. Retain master pause until separately approved command-specific gates/tests/release; Class Switching/Renown disabled. Previous G4A22 release authorization checkpoint remains historical; outstanding Admin activation/runtime gates persist."
   }
  ],
  "known_blockers": [
@@ -2962,15 +2984,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "Owner-agreed near-term progression preparation sequence — implementation authorization separate",
-  "status": "authored",
-  "sha": "5d2828ed609a8e385a97a62a7de823fb5a72687d",
-  "timestamp": "2026-10-22T09:55:07.825Z",
+  "identity": "ENG-PROGRESSION-001E/F selective activation — separately authorize bounded metadata preflight",
+  "status": "blocked",
+  "sha": "2053fa68269f073ec601011b433e70f78ab7d874",
+  "timestamp": "2026-10-22T10:33:43.342Z",
   "evidence_type": "repository",
-  "reporting_actor": "Codex; Mik sequence approval",
+  "reporting_actor": "Codex",
   "directly_verified": true,
-  "artifact": "docs/operations/roadmap-status-reconciliation-2026-10-22.md",
-  "evidence": "Next candidate is selective first Class Join, Allocation and Respec under existing ENG-PROGRESSION-001E/F. This task authorizes documentation only; no coding, SQL activation, hosted checks or deployment. Retain master pause until separately approved command-specific gates/tests/release; Class Switching/Renown disabled. Previous G4A22 release authorization checkpoint remains historical; outstanding Admin activation/runtime gates persist."
+  "artifact": "docs/operations/progression-selective-handoff.md",
+  "evidence": "Local preparation complete; production installation/activation NOT AUTHORIZED by implementation task. Next narrowly authorized read-only parity/control/ACL/lock-composition/caller-isolation verification, then separate standard Drizzle installation of exact candidate with all flags off; matching frontend manual Publish and owner-only selective enablement require release approval. Existing Edge handler reusable unchanged; no switching/Renown enablement. No request to repeat broad audits or change G3D status."
  },
  "volatile_runtime_observations": [
   {
