@@ -16,6 +16,7 @@ import {
 } from '@/lib/game-data';
 import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
+import { useServerWaymark } from './useServerWaymark';
 
 
 import { preheatNode } from '@/features/creatures/hooks/useCreatures';
@@ -210,7 +211,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     return current;
   };
   const p = params;
-  const [waymarkNodeId, setWaymarkNodeId] = useState<string | null>(null);
+  const { waymarkNodeId, refreshWaymark } = useServerWaymark(p.character.user_id, p.character.id, p.character.current_node_id);
   const [teleportOpen, setTeleportOpen] = useState(false);
   const [openHiddenConnections, setOpenHiddenConnections] = useState<Array<{
     destination_node_id: string; direction: string; opened_until: string;
@@ -221,7 +222,6 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const specialTravelGeneration = useRef(0);
   const specialTravel = useSpecialTravelRequest(p.character.user_id, p.character.id);
   useEffect(() => { specialTravelGeneration.current += 1; }, [p.character.id, p.character.current_node_id]);
-  useEffect(() => { setWaymarkNodeId(null); }, [p.character.id, p.character.user_id]);
 
   const refreshHiddenConnections = useCallback(async () => {
     const nodeId = p.character.current_node_id;
@@ -413,12 +413,17 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const reply = await specialTravel.submit(kind, nodeId, async payload => await supabase.rpc('character_special_travel' as never, payload as never));
       if (!reply || !current()) return;
       const { result, payload } = reply;
-      if (!result.ok) { p.addLogEvent(buildErrorEvent(movementIssueMessage('refused', result.kind))); return; }
+      if (!result.ok) {
+        void refreshWaymark();
+        p.addLogEvent(buildErrorEvent(result.kind === 'waymark_unavailable' ? 'Your waymark has expired or is no longer available.'
+          : result.kind === 'session_unavailable' ? 'Your login session is no longer active. Sign in again.' : movementIssueMessage('refused', result.kind)));
+        return;
+      }
       const target = p.getNode(payload._destination_node_id);
       preheatNode(payload._destination_node_id);
-      // Only a newly committed mark from this request; never revive an old SQL mark on replay/login.
-      if (payload._kind === 'waymark') setWaymarkNodeId(null);
-      else if (result.kind === 'moved' && result.waymark_node_id) setWaymarkNodeId(result.waymark_node_id);
+      // Recover only current server state, never a historical receipt's marker.
+      await refreshWaymark();
+      if (!current()) return;
       p.addLogEvent(buildMovementEvent(payload._kind === 'waymark'
         ? `You return to your waymark at ${target?.name ?? 'your destination'} for ${result.cp_cost} CP.`
         : `You teleport to ${target?.name ?? 'your destination'} for ${result.cp_cost} CP.`));
@@ -426,7 +431,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     } catch (e) {
       if (current()) p.addLogEvent(buildErrorEvent(e instanceof Error ? e.message : 'Teleport outcome uncertain; retry the pending request.'));
     }
-  }, [specialTravel, p.character, p.party, p.partyMembers, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
+  }, [specialTravel, refreshWaymark, p.character, p.party, p.partyMembers, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
   const handleTeleport = useCallback((nodeId: string, cpCost: number) => executeSpecialTravel('teleport',nodeId,cpCost),[executeSpecialTravel]);
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
     if (waymarkNodeId) await executeSpecialTravel('waymark',waymarkNodeId,cpCost);

@@ -1,5 +1,59 @@
 -- Forward candidate only. Lovable's standard Drizzle tool owns the outer transaction/history.
 -- Preserve the existing RPC identity, owner, settings and ACL; no legacy/Admin route is enabled.
+-- Supabase Auth session contract must be verified by Lovable before installation.
+DO $session_guard$ BEGIN
+ IF to_regprocedure('auth.jwt()') IS NULL OR to_regclass('auth.sessions') IS NULL
+ OR (SELECT count(*) FROM pg_attribute WHERE attrelid='auth.sessions'::regclass AND attname IN('id','user_id') AND atttypid='uuid'::regtype AND NOT attisdropped)<>2
+ THEN RAISE EXCEPTION 'waymark Auth session dependency unavailable'; END IF;
+ IF NOT has_table_privilege('postgres','auth.sessions','SELECT') OR NOT has_table_privilege('postgres','auth.sessions','UPDATE') THEN
+  RAISE EXCEPTION 'waymark owner cannot inspect/lock Auth session membership'; END IF;
+END $session_guard$;
+ALTER TABLE public.character_waymark ADD COLUMN auth_session_id uuid,
+ ADD COLUMN last_activity_at timestamptz NOT NULL DEFAULT now();
+-- Existing marks remain unbound/invalid: no retroactive session or inactivity credit.
+CREATE FUNCTION public.waymark_live_session() RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,public,auth,pg_temp AS $$
+DECLARE sid uuid;
+BEGIN
+ BEGIN sid:=nullif(auth.jwt()->>'session_id','')::uuid; EXCEPTION WHEN invalid_text_representation THEN RETURN NULL; END;
+ IF auth.uid() IS NULL OR sid IS NULL THEN RETURN NULL; END IF;
+ -- Key-share serializes a concurrent Auth sign-out deletion; never writes Auth schema/data.
+ PERFORM 1 FROM auth.sessions WHERE id=sid AND user_id=auth.uid() FOR KEY SHARE;
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ RETURN sid;
+END $$;
+CREATE FUNCTION public.character_waymark_state(_character_id uuid,_touch boolean DEFAULT false) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,auth,pg_temp AS $$
+DECLARE sid uuid; mark public.character_waymark;
+BEGIN
+ sid:=public.waymark_live_session();
+ IF sid IS NULL THEN RETURN jsonb_build_object('ok',false,'kind','session_unavailable'); END IF;
+ PERFORM 1 FROM public.characters WHERE id=_character_id AND user_id=auth.uid() AND deleted_at IS NULL AND hp>0 FOR NO KEY UPDATE;
+ IF NOT FOUND THEN RETURN jsonb_build_object('ok',false,'kind','not_authorized'); END IF;
+ SELECT * INTO mark FROM public.character_waymark WHERE character_id=_character_id FOR UPDATE;
+ IF NOT FOUND OR mark.auth_session_id IS DISTINCT FROM sid OR mark.last_activity_at<=clock_timestamp()-interval '20 minutes'
+ THEN RETURN jsonb_build_object('ok',true,'character_id',_character_id,'node_id',NULL); END IF;
+ IF _touch THEN
+  UPDATE public.character_waymark SET last_activity_at=clock_timestamp() WHERE character_id=_character_id RETURNING * INTO mark;
+ END IF;
+ RETURN jsonb_build_object('ok',true,'character_id',_character_id,'node_id',mark.node_id,'expires_at',mark.last_activity_at+interval '20 minutes');
+END $$;
+ALTER FUNCTION public.waymark_live_session() OWNER TO postgres;
+ALTER FUNCTION public.character_waymark_state(uuid,boolean) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.waymark_live_session(),public.character_waymark_state(uuid,boolean) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.character_waymark_state(uuid,boolean) TO authenticated;
+DO $waymark_acl$ DECLARE role_name text;
+BEGIN
+ FOREACH role_name IN ARRAY ARRAY['sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt'] LOOP
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN
+   EXECUTE format('REVOKE ALL ON FUNCTION public.waymark_live_session(),public.character_waymark_state(uuid,boolean) FROM %I',role_name);
+  END IF;
+ END LOOP;
+ IF EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+ WHERE p.oid IN('public.waymark_live_session()'::regprocedure,'public.character_waymark_state(uuid,boolean)'::regprocedure)
+ AND (a.grantee<>p.proowner AND NOT(p.oid='public.character_waymark_state(uuid,boolean)'::regprocedure AND a.grantee='authenticated'::regrole AND NOT a.is_grantable)))
+ THEN RAISE EXCEPTION 'unexpected waymark function authority'; END IF;
+END $waymark_acl$;
 DO $travel$
 DECLARE target regprocedure:=to_regprocedure('public.character_special_travel(uuid,text,uuid,uuid)');
  before record; after record; definition text; original text; body text; expected record; actual record;
@@ -61,6 +115,22 @@ BEGIN
  THEN RETURN jsonb_build_object('ok',false,'kind','party_following'); END IF;
 $coverage$);
  IF body=original THEN RAISE EXCEPTION 'player travel lock insertion drift'; END IF;
+ -- Receipt replay remains first. New personal/waymark travel needs a live Auth session.
+ body:=replace(body,' SELECT current_node_id INTO hp_origin',
+  ' hp_session:=public.waymark_live_session(); SELECT current_node_id INTO hp_origin');
+ body:=replace(body,' IF _kind=''teleport'' THEN', $waymark$
+ IF (_kind='waymark' OR (c.level>=22 AND NOT EXISTS(SELECT 1 FROM public.nodes WHERE id=c.current_node_id AND is_teleport))) AND hp_session IS NULL
+ THEN RETURN jsonb_build_object('ok',false,'kind','session_unavailable'); END IF;
+ IF _kind='teleport' THEN$waymark$);
+ body:=replace(body,'SELECT node_id INTO destination FROM public.character_waymark WHERE character_id=c.id;',
+  'SELECT node_id INTO destination FROM public.character_waymark WHERE character_id=c.id AND auth_session_id=hp_session AND last_activity_at>clock_timestamp()-interval ''20 minutes'';');
+ body:=replace(body,'INSERT INTO public.character_waymark(character_id,node_id) VALUES(c.id,c.current_node_id)',
+  'INSERT INTO public.character_waymark(character_id,node_id,auth_session_id,last_activity_at) VALUES(c.id,c.current_node_id,hp_session,clock_timestamp())');
+ body:=replace(body,'DO UPDATE SET node_id=excluded.node_id,set_at=now();',
+  'DO UPDATE SET node_id=excluded.node_id,set_at=now(),auth_session_id=excluded.auth_session_id,last_activity_at=excluded.last_activity_at;');
+ -- Returning never consumes/replaces the mark. Successful travel is activity, after expiry validation.
+ body:=replace(body,' INSERT INTO public.character_special_travel_request VALUES(',
+  ' UPDATE public.character_waymark SET last_activity_at=clock_timestamp() WHERE character_id=c.id AND auth_session_id=hp_session AND last_activity_at>clock_timestamp()-interval ''20 minutes''; INSERT INTO public.character_special_travel_request VALUES(');
  -- The existing party buttons already send a frozen destination-node UUID. Authorize that node
  -- only while another accepted, living, stationary member is there, under the covered row locks.
  body:=replace(body,'v.character_id=c.id AND v.node_id=n.id)))',$party$
@@ -87,7 +157,7 @@ $party$);
  body:=regexp_replace(body,'RETURN (jsonb_build_object\([^;]+\));','hp_result := \1; EXIT hp_travel;','g');
  IF position('RETURN ' IN body)>0 THEN RAISE EXCEPTION 'unhandled player travel return'; END IF;
  body:=$wrapper$
-DECLARE hp_scope jsonb; hp_origin uuid; hp_legacy record; hp_result jsonb;
+DECLARE hp_scope jsonb; hp_origin uuid; hp_legacy record; hp_result jsonb; hp_session uuid;
  hp_inherited text:=current_setting('app.creature_hp_coverage',true);
  hp_authorized text:=current_setting('app.combat2_depart_authorized',true);
 BEGIN
@@ -103,8 +173,7 @@ $wrapper$||body||';'||$wrapper$
   'destination_node_id',_destination_node_id,'outcome',CASE WHEN hp_result->>'ok'='true' THEN 'committed' ELSE 'not_committed' END);
  IF hp_result->>'ok'='true' THEN
   hp_result:=hp_result||jsonb_build_object('origin_node_id',(SELECT origin_node_id FROM public.character_special_travel_request WHERE request_id=_request_id),
-   'waymark_node_id',(SELECT w.node_id FROM public.character_waymark w JOIN public.character_special_travel_request r
-    ON r.character_id=w.character_id AND r.request_id=_request_id AND r.origin_node_id=w.node_id AND r.created_at=w.set_at));
+   'waymark_node_id',NULL);
  END IF;
  RETURN hp_result;
 END;

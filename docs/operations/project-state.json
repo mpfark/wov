@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-23T07:00:31.762Z",
- "based_on_source_sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
+ "updated_at": "2026-10-23T07:53:16.791Z",
+ "based_on_source_sha": "ea0f0d35fbd3538283968ac73ac89c1e36dbca1e",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2797,6 +2797,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
    "evidence": "Started clean from latest origin/main with025 PR4 merged; new codex/player-teleport review branch. Reproduced old RPC travel_failed/rollback against0024 arrival requiring early HP coverage; old-arrival control succeeds. Same RPC/receipt/owner/settings/ACL retained; sorted coverage/party-target locks, CP/arrival/rollback, guarded real-node discovery and immutable account/character-scoped retry. Existing party node selection authorized only at22 for an eligible accepted member; no arbitrary node unlock. Owner retained22 and10–30 regional CP formula.11 PostgreSQL18.6 tests including three observed independent-session cases,27 focused tests, typecheck/build PASS. Reduced fixture accounting/mode/scheduler doubles disclosed. No hosted SQL, migration, Edge, Publish, control or gameplay change;025 source/artifact and all earlier limitations preserved. Waymark expiry/logout/consumption remains unresolved, not permanent behavior approval or full034 completion."
+  },
+  {
+   "identity": "WOV-IDEA-034 reusable temporary waymarks — local candidate",
+   "status": "authored",
+   "sha": "ea0f0d35fbd3538283968ac73ac89c1e36dbca1e",
+   "timestamp": "2026-10-23T07:53:16.791Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; owner approved reusable personal-waymark rules",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
+   "evidence": "Continued codex/player-teleport, no new branch/main merge. Same RPC/storage with auth_session_id and server last_activity_at. Personal off-point creation/replacement, reusable nonconsuming return, live Auth session binding and20-minute inactivity cutoff; legacy unbound marks invalid. Auth session KEY SHARE precedes existing coverage; state/touch character→mark, no late node locks. Replay remains first and cannot revive expired/revoked mark.19 native PostgreSQL18.6 tests including six observed independent-session cases;32 focused tests. Auth/JWT/signout deletion simulated, not hosted GoTrue proof. New login cannot inherit old mark. Visible input only, throttled5seconds, no heartbeat/polling authority; up to5seconds conservative local-input difference. Failed/offline logout cannot guarantee immediate remote revocation. SQL SHA256 2c403af4ac5b36eef4fd61aea76cec17b3061f7e1b1fa21d2bff8a518e7618e2. Not installed/deployed/published/live verified; existing limitations retained."
   }
  ],
  "known_blockers": [
@@ -3038,27 +3049,27 @@
    "evidence": "Owner-reported combined attempt failed23502/issue_reports.character_name NOT NULL and rolled back completely; no independent hosted inspection. Local three-line correction clears only character_id and compares every other report field including historical name. Exact source issue/Arena/registry DDL strengthens fixture.57 SQL tests pass including11 reset/recovery scenarios, original23502 reproduction, unchanged report/account/content/status, successful combined cutover and late-failure rollback; metadata4/project-state3 total64. B unchanged7df1c1cd143433878019628d40d2bff6695df317e43cdb25105c1db31edf4fae. Reset 02da4e8aa9d884cf665456a3c32477b44a57e56705686f50c7b97151fd5f7122; combined c93fd93efb75dd9e2ab8478b8672678b2ecd40be846c46da62d19318cbc48b40. Fetched support0012 source registered at5ee683b4 is retained, not independently hosted-verified or replayed. No new hosted access/retry, installation, commit/push, deployment or history edits. All four F limitations preserved."
   },
   {
-   "identity": "WOV-IDEA-034 temporary-waymark lifetime contract — OPEN",
+   "identity": "WOV-IDEA-034 waymark Auth parity and hosted acceptance — OPEN",
    "status": "blocked",
-   "sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
-   "timestamp": "2026-10-23T07:00:31.762Z",
+   "sha": "ea0f0d35fbd3538283968ac73ac89c1e36dbca1e",
+   "timestamp": "2026-10-23T07:53:16.791Z",
    "evidence_type": "repository",
    "reporting_actor": "Codex",
    "directly_verified": true,
    "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
-   "evidence": "Required logout/inactivity expiry is absent from existing SQL. Source creates only personal off-point marks; UI hides on return/remount while SQL retains rows. Need explicit creation scope/consume-or-reuse and authoritative session/inactivity contract;20-minute unique offline and30-minute UI idle clocks differ. No expiry or permanent-marker policy invented. City/personal-party candidate is reviewable, not full034 activation acceptance; fresh installed parity and separate release authorization required."
+   "evidence": "Previous creation/consumption/lifetime owner-decision gap resolved by explicit approval and local implementation. Remaining installation gate: fresh original RPC/dependency/schema/ACL parity plus auth.jwt/auth.sessions identity and postgres SELECT/row-lock permission and RLS visibility; confirm platform sign-out removes affected sessions. No session/gameplay rows read locally. Actual logout,20-minute inactivity,CP/replay and concurrency remain hosted-unverified. Offline/failed server logout cannot invalidate immediately; require confirmed Auth revocation or server inactivity cutoff. No034 closure or activation authorization."
   }
  ],
  "next_approved_task": {
-  "identity": "WOV-IDEA-034 review local teleport repair and resolve waymark lifetime",
+  "identity": "WOV-IDEA-034 review reusable-waymark candidate and prepare authorized Lovable parity",
   "status": "authored",
-  "sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
-  "timestamp": "2026-10-23T07:00:31.762Z",
+  "sha": "ea0f0d35fbd3538283968ac73ac89c1e36dbca1e",
+  "timestamp": "2026-10-23T07:53:16.791Z",
   "evidence_type": "repository",
   "reporting_actor": "Codex; owner bounded implementation scope",
   "directly_verified": true,
   "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
-  "evidence": "Review pushed feature branch without automatic main merge. Decide remaining waymark lifetime contract; separately authorize Lovable-only parity/standard forward SQL, then Mik manual Publish and bounded acceptance. No Edge deployment or progression-control change.025 installed state remains unknown;034 does not depend on025 installation."
+  "evidence": "Review updated existing branch; no main merge. Owner gameplay decisions recorded. Separately authorize Lovable-only approved read-only parity, standard forward SQL, then Mik manual Publish and bounded gameplay/Auth acceptance. No Edge deployment, Auth settings change or progression-control change."
  },
  "volatile_runtime_observations": [
   {

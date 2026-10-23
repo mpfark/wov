@@ -7,6 +7,7 @@ import fs from 'node:fs';
 
 vi.mock('@/features/creatures/hooks/useCreatures', () => ({ preheatNode: vi.fn() }));
 vi.mock('@/features/world/utils/visitedNodesCache', () => ({ markNodeVisited: vi.fn() }));
+vi.mock('@/features/world/hooks/useServerWaymark', () => ({ useServerWaymark: () => ({ waymarkNodeId: null, refreshWaymark: async () => {} }) }));
 
 function params() {
   const write = vi.fn().mockResolvedValue(undefined);

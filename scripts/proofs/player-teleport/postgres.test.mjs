@@ -36,6 +36,9 @@ console.log((await sql`SELECT version() v`)[0].v);
 await sql.unsafe(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
 CREATE ROLE sandbox_exec; CREATE ROLE sandbox_exec_gpclaklkaolyzfnooajt;
 CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);
+-- Auth is a local dependency fixture, not execution of Supabase GoTrue sign-out.
+CREATE TABLE auth.sessions(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES auth.users(id));
+CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql AS $$ SELECT jsonb_build_object('session_id',nullif(current_setting('test.session_id',true),'')) $$;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$ SELECT current_setting('request.jwt.claim.role',true) $$;
 CREATE TABLE public.nodes(id uuid PRIMARY KEY,name text,region_id uuid);
 CREATE TABLE public.characters(id uuid PRIMARY KEY,user_id uuid,current_node_id uuid REFERENCES public.nodes,hp int DEFAULT 20,cp int DEFAULT 30,mp int DEFAULT 100,deleted_at timestamptz,movement_locked_until timestamptz);
@@ -133,10 +136,11 @@ CREATE TRIGGER character_lifecycle_child_fence BEFORE INSERT OR UPDATE OR DELETE
 await sql.unsafe(`CREATE TRIGGER character_lifecycle_child_fence BEFORE INSERT OR UPDATE OR DELETE ON public.character_visited_nodes FOR EACH ROW EXECUTE FUNCTION public.character_lifecycle_child_fence('character_id')`);
 const actor=randomUUID(),char=randomUUID(),a=randomUUID(),b=randomUUID(),d=randomUUID(),locked=randomUUID(),r1=randomUUID(),r2=randomUUID();
 await sql`INSERT INTO auth.users VALUES(${actor})`;
+const session=randomUUID();await sql`INSERT INTO auth.sessions VALUES(${session},${actor})`;
 await sql`INSERT INTO public.regions VALUES(${r1},1),(${r2},6)`;
 for(const n of [a,b,d,locked])await sql`INSERT INTO public.nodes(id,name,region_id,is_teleport,is_public_teleport) VALUES(${n},'Fixture',${n===d?r2:r1},true,${n!==locked})`;
 await sql`INSERT INTO public.characters(id,user_id,current_node_id,hp,cp,mp,level,max_hp,max_cp,max_mp,ac) VALUES(${char},${actor},${a},20,100,100,1,20,100,100,10)`;
-for(const c of [sql,other])await c`SELECT set_config('request.jwt.claim.sub',${actor},false),set_config('request.jwt.claim.role','authenticated',false),set_config('statement_timeout','8000',false),set_config('lock_timeout','6000',false)`;
+for(const c of [sql,other])await c`SELECT set_config('test.session_id',${session},false),set_config('request.jwt.claim.sub',${actor},false),set_config('request.jwt.claim.role','authenticated',false),set_config('statement_timeout','8000',false),set_config('lock_timeout','6000',false)`;
 const move=async(c=sql,dest=b,id=randomUUID(),kind='teleport')=>(await c`SELECT public.character_special_travel(${char},${kind},${dest},${id}) result`)[0].result;
 const position=async()=>(await sql`SELECT current_node_id,hp,cp,mp FROM public.characters WHERE id=${char}`)[0];
 const reset=async()=>{await sql`SELECT set_config('request.jwt.claim.sub','',false),set_config('app.combat2_depart_authorized','',false),set_config('app.creature_hp_coverage','',false)`;await sql`UPDATE public.characters SET current_node_id=${a},cp=100,level=1,movement_locked_until=NULL WHERE id=${char}`;await sql`SELECT set_config('request.jwt.claim.sub',${actor},false)`;};
@@ -154,6 +158,8 @@ const currentTravel=(await sql`SELECT pg_get_functiondef('public.character_speci
 await sql.unsafe(currentTravel.replace('BEGIN','BEGIN\n-- fixture-only source drift'));
 await assert.rejects(sql.begin(t=>t.unsafe(candidate)),/player travel source\/settings drift/);
 assert.equal((await sql`SELECT to_regprocedure('public.guard_visited_node_location()') id`)[0].id,null);
+assert.equal((await sql`SELECT to_regprocedure('public.waymark_live_session()') id`)[0].id,null);
+assert.equal((await sql`SELECT count(*)::int n FROM pg_attribute WHERE attrelid='public.character_waymark'::regclass AND attname='auth_session_id' AND NOT attisdropped`)[0].n,0);
 await sql.unsafe(currentTravel);
 await sql.begin(t=>t.unsafe(candidate));assert.deepEqual(await metadata(),before);
 console.log('Candidate SHA256 '+createHash('sha256').update(candidate).digest('hex'));
@@ -187,7 +193,7 @@ test('personal level22 creates a server waymark only on successful travel; exist
  await sql`UPDATE public.nodes SET is_teleport=false WHERE id=${a}`;
  // Privileged fixture seed only; the real owner-facing protection trigger remains enabled.
  await sql`SELECT set_config('request.jwt.claim.sub','',false)`;await sql`UPDATE public.characters SET level=22 WHERE id=${char}`;await sql`SELECT set_config('request.jwt.claim.sub',${actor},false)`;
- assert.equal((await move(sql,b)).waymark_node_id,a);assert.equal((await move(sql,a,randomUUID(),'waymark')).ok,true);
+ assert.equal((await move(sql,b)).ok,true);assert.equal((await sql`SELECT public.character_waymark_state(${char},false) r`)[0].r.node_id,a);assert.equal((await move(sql,a,randomUUID(),'waymark')).ok,true);
  await sql`UPDATE public.characters SET cp=0 WHERE id=${char}`;assert.equal((await move()).kind,'insufficient_cp');assert.equal((await position()).current_node_id,a);
  await sql`UPDATE public.nodes SET is_teleport=true WHERE id=${a}`;await reset();
 });
@@ -237,6 +243,76 @@ test('personal party teleport uses the existing node-bound RPC; level, following
  assert.equal((await move(sql,d)).kind,'invalid_destination');assert.equal((await move(sql,d,id)).ok,true);assert.equal((await position()).current_node_id,a);
  await sql`DELETE FROM public.party_members WHERE party_id=${party}`;await sql`DELETE FROM public.parties WHERE id=${party}`;await sql`UPDATE public.nodes SET is_teleport=true WHERE id=${d}`;await reset();
 });
+const markState=async(c=sql,touch=false)=>(await c`SELECT public.character_waymark_state(${char},${touch}) r`)[0].r;
+const personal=async()=>{await reset();await sql`SELECT set_config('request.jwt.claim.sub','',false)`;await sql`UPDATE public.characters SET level=22 WHERE id=${char}`;await sql`SELECT set_config('request.jwt.claim.sub',${actor},false)`;await sql`UPDATE public.nodes SET is_teleport=false WHERE id=${a}`;assert.equal((await move()).ok,true);};
+const endPersonal=async()=>{await sql`UPDATE public.nodes SET is_teleport=true WHERE id=${a}`;await reset();};
+test('reusable return preserves mark identity, replacement is one-per-character, city travel never replaces',async()=>{
+ await personal();const before=(await sql`SELECT node_id,set_at,auth_session_id FROM public.character_waymark WHERE character_id=${char}`)[0];
+ assert.equal((await move(sql,a,randomUUID(),'waymark')).ok,true);
+ assert.equal((await move(sql,a,randomUUID(),'waymark')).ok,true);
+ assert.deepEqual((await sql`SELECT node_id,set_at,auth_session_id FROM public.character_waymark WHERE character_id=${char}`)[0],before);
+ await sql`UPDATE public.nodes SET is_teleport=true WHERE id=${a}`;assert.equal((await move(sql,b)).ok,true);assert.equal((await markState()).node_id,a);
+ await sql`UPDATE public.nodes SET is_teleport=false WHERE id=${b}`;assert.equal((await move(sql,d)).ok,true);assert.equal((await markState()).node_id,b);
+ assert.equal((await sql`SELECT count(*)::int n FROM public.character_waymark WHERE character_id=${char}`)[0].n,1);
+ await sql`UPDATE public.nodes SET is_teleport=true WHERE id=${b}`;await endPersonal();
+});
+test('20-minute server cutoff cannot be revived by touch or stale replay; server received activity extends only live marks',async()=>{
+ await personal();const id=randomUUID();assert.equal((await move(sql,a,id,'waymark')).ok,true);
+ await sql`UPDATE public.character_waymark SET last_activity_at=clock_timestamp()-interval '19 minutes' WHERE character_id=${char}`;
+ assert.equal((await markState(sql,true)).node_id,a);
+ assert((await sql`SELECT last_activity_at>clock_timestamp()-interval '1 minute' fresh FROM public.character_waymark WHERE character_id=${char}`)[0].fresh);
+ await sql`UPDATE public.character_waymark SET last_activity_at=clock_timestamp()-interval '20 minutes' WHERE character_id=${char}`;
+ const cp=(await position()).cp;assert.equal((await markState(sql,true)).node_id,null);
+ assert.equal((await move(sql,a,randomUUID(),'waymark')).kind,'waymark_unavailable');assert.equal((await position()).cp,cp);
+ assert.equal((await move(sql,a,id,'waymark')).kind,'already_moved');assert.equal((await markState()).node_id,null);
+ await endPersonal();
+});
+test('server sign-out removes session: unexpired JWT cannot recover, create or return a mark; new session cannot inherit it',async()=>{
+ await personal();await observer`DELETE FROM auth.sessions WHERE id=${session}`;
+ assert.equal((await markState()).kind,'session_unavailable');assert.equal((await move(sql,a,randomUUID(),'waymark')).kind,'session_unavailable');
+ // A later login is distinct, not a waymark revival.
+ const next=randomUUID();await observer`INSERT INTO auth.sessions VALUES(${next},${actor})`;await sql`SELECT set_config('test.session_id',${next},false)`;
+ assert.equal((await markState()).node_id,null);assert.equal((await move(sql,a,randomUUID(),'waymark')).kind,'waymark_unavailable');
+ await observer`INSERT INTO auth.sessions VALUES(${session},${actor})`;await sql`SELECT set_config('test.session_id',${session},false)`;
+ await endPersonal();
+});
+test('missing/malformed/foreign sessions and legacy unbound marks fail closed without altering ordinary city travel',async()=>{
+ await personal();await sql`UPDATE public.character_waymark SET auth_session_id=NULL WHERE character_id=${char}`;assert.equal((await markState()).node_id,null);
+ for(const value of ['', 'not-a-uuid',randomUUID()]){await sql`SELECT set_config('test.session_id',${value},false)`;assert.equal((await markState()).kind,'session_unavailable');assert.equal((await move(sql,a,randomUUID(),'waymark')).kind,'session_unavailable');}
+ const foreign=randomUUID(),owner=randomUUID();await observer`INSERT INTO auth.users VALUES(${owner})`;await observer`INSERT INTO auth.sessions VALUES(${foreign},${owner})`;
+ await sql`SELECT set_config('test.session_id',${foreign},false)`;assert.equal((await markState()).kind,'session_unavailable');
+ await sql`SELECT set_config('test.session_id',${session},false)`;await endPersonal();
+});
+test('Auth sign-out waits for in-flight return then invalidates later calls',{timeout:15000},async()=>{
+ await personal();const pid=(await other`SELECT pg_backend_pid() pid`)[0].pid;let release,entered;
+ const gate=new Promise(r=>{release=r}),ready=new Promise(r=>{entered=r});
+ const first=sql.begin(async t=>{const result=await move(t,a,randomUUID(),'waymark');assert.equal(result.ok,true);entered();await gate;});
+ await ready;const logout=other`DELETE FROM auth.sessions WHERE id=${session}`.execute();try{await blocked(pid);}finally{release();}await Promise.all([first,logout]);
+ assert.equal((await move(sql,a,randomUUID(),'waymark')).kind,'session_unavailable');
+ await observer`INSERT INTO auth.sessions VALUES(${session},${actor})`;await endPersonal();
+});
+test('sign-out-first ordering blocks return, then refuses without CP debit',{timeout:15000},async()=>{
+ await personal();const cp=(await position()).cp,pid=(await other`SELECT pg_backend_pid() pid`)[0].pid;let release,entered;
+ const gate=new Promise(r=>{release=r}),ready=new Promise(r=>{entered=r});
+ const first=sql.begin(async t=>{await t`DELETE FROM auth.sessions WHERE id=${session}`;entered();await gate;});await ready;
+ const second=move(other,a,randomUUID(),'waymark');try{await blocked(pid);}finally{release();}await first;
+ assert.equal((await second).kind,'session_unavailable');assert.equal((await position()).cp,cp);
+ await observer`INSERT INTO auth.sessions VALUES(${session},${actor})`;await endPersonal();
+});
+test('concurrent exact waymark return replay pays once and never relocates or consumes mark',{timeout:15000},async()=>{
+ await personal();const cp=(await position()).cp,id=randomUUID(),pid=(await other`SELECT pg_backend_pid() pid`)[0].pid;let release,entered;
+ const gate=new Promise(r=>{release=r}),ready=new Promise(r=>{entered=r});
+ const first=sql.begin(async t=>{const result=await move(t,a,id,'waymark');entered();await gate;return result;});await ready;
+ const second=move(other,a,id,'waymark');try{await blocked(pid);}finally{release();}const results=await Promise.all([first,second]);assert(results.every(r=>r.ok));
+ assert.equal((await position()).cp,cp-10);assert.equal((await markState()).node_id,a);await endPersonal();
+});
+test('waymark helpers preserve strict function authority and expose no Auth session IDs',async()=>{
+ assert.equal((await sql`SELECT has_function_privilege('authenticated','public.character_waymark_state(uuid,boolean)','EXECUTE') allowed`)[0].allowed,true);
+ for(const role of ['anon','service_role','sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt'])assert.equal((await sql`SELECT has_function_privilege(${role},'public.character_waymark_state(uuid,boolean)','EXECUTE') allowed`)[0].allowed,false);
+ for(const role of ['anon','authenticated','service_role','sandbox_exec','sandbox_exec_gpclaklkaolyzfnooajt'])assert.equal((await sql`SELECT has_function_privilege(${role},'public.waymark_live_session()','EXECUTE') allowed`)[0].allowed,false);
+ assert(!JSON.stringify(await markState()).includes(session));
+});
+
 test('hostile city arrival uses full canonical entry, spawn and tank source',async()=>{
  await sql`INSERT INTO public.creatures(id,node_id,spawn_seq,is_alive,is_aggressive) VALUES(${randomUUID()},${b},1,true,true)`;
  assert.equal((await move()).ok,true);const rows=await sql`SELECT f.present,n.engaged FROM public.node_fighter f JOIN public.node_creature n ON n.encounter_id=f.encounter_id WHERE f.character_id=${char}`;
