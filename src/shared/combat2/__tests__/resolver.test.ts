@@ -1245,3 +1245,48 @@ describe('combat2 resolver', () => {
     expect(out!.effects_delete).toContain('auto-ch-1');
   });
 });
+
+
+describe('committed hostile-attempt proposals', () => {
+  const attempted = (out: ReturnType<typeof resolveNodeTick>) => out.creatures.filter(c => c.hostile_attempt).map(c => c.creature_id);
+  const passive = () => creature({ engaged: false, is_aggressive: false });
+  const basic = (): SnapshotIntent => ({ id: 'basic-start', seq: 1, character_id: 'ch-1', intent_kind: 'basic_attack',
+    ability_key: null, stance_key: null, target_creature_id: 'cr-1' });
+  const attackState = (): SnapshotEffect => ({ id: 'auto', kind: 'autoattack', effect_type: 'basic_attack', ability_key: null,
+    target_character_id: 'ch-1', target_creature_id: 'cr-1', source_character_id: 'ch-1', source_creature_id: null,
+    stacks: 1, magnitude: 0, config: { node_creature_id: 'nc-1', spawn_seq: 3 }, expires_at: null,
+    next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: false });
+  it.each([1, 20])('Basic Attack roll %s emits a validated attempt without altering heartbeat order', roll => {
+    const rolls = vi.spyOn(TickRandom.prototype, 'd20').mockReturnValue(roll);
+    try {
+      const out = resolveNodeTick(snapshot({ creatures: [passive()], effects: [attackState()], intents: [basic()] }), { abilities });
+      expect(out.events.find(e => e.meta?.basicAttack)?.hitQuality === 'miss').toBe(roll === 1);
+      expect(attempted(out)).toEqual(['cr-1']);
+      // Marker is a proposal field, not another attack/event or instant retaliation.
+      expect(out.events.filter(e => e.meta?.basicAttack)).toHaveLength(1);
+      expect(out.events.some(e => e.kind === 'hostile_attempt')).toBe(false);
+    } finally { rolls.mockRestore(); }
+  });
+  it('an accepted enemy ability miss marks only the validated target, not passive neighbors', () => {
+    const rolls = vi.spyOn(TickRandom.prototype, 'd20').mockReturnValue(1);
+    try {
+      const out = resolveNodeTick(snapshot({ creatures: [passive(), creature({ id: 'nc-2', creature_id: 'cr-2', engaged: false })],
+        intents: [abilityIntent('ability', 1, 'ch-1', 'power_strike', 'cr-1')], effects: [] }), { abilities });
+      expect(out.events).toContainEqual(expect.objectContaining({ kind: 'attack', hitQuality: 'miss', amount: 0 }));
+      expect(attempted(out)).toEqual(['cr-1']);
+    } finally { rolls.mockRestore(); }
+  });
+  it.each(['unknown', 'insufficient_cp', 'dead_actor', 'stale_basic'])('%s refusal emits no provocation', reason => {
+    const input = snapshot({ creatures: [passive()], effects: [], intents: [abilityIntent('ability', 1, 'ch-1', 'power_strike', 'cr-1')] });
+    if (reason === 'unknown') input.intents[0].ability_key = 'unknown';
+    if (reason === 'insufficient_cp') input.fighters[0].cp = 0;
+    if (reason === 'dead_actor') input.fighters[0].hp = 0;
+    if (reason === 'stale_basic') { input.intents = [basic()]; const effect = attackState(); effect.config.spawn_seq = 2; input.effects = [effect]; }
+    const out = resolveNodeTick(input, { abilities });
+    expect(out.events.some(e => e.kind === 'action_rejected')).toBe(true);
+    expect(attempted(out)).toEqual([]);
+  });
+  it('no intent/selection against an idle creature is not an attack', () => {
+    expect(attempted(resolveNodeTick(snapshot({ creatures: [passive()], intents: [], effects: [] }), { abilities }))).toEqual([]);
+  });
+});

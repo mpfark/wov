@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 
-it('the production drift guard matches the complete canonical core plus the installed 0024 engagement addition', () => {
+it('guards the exact original core and produces only the reviewed hostile-attempt SET addition', () => {
   const source = readFileSync('drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql', 'utf8').replace(/\r\n/g, '\n');
   const tail = source.slice(source.indexOf('CREATE OR REPLACE FUNCTION public.node_tick_commit_without_bounded_failure('));
   const tag = /AS (\$\w*\$)/.exec(tail)!;
@@ -16,4 +16,10 @@ it('the production drift guard matches the complete canonical core plus the inst
   const md5 = createHash('md5').update(body.replace(/\s+/g, ' ')).digest('hex');
   const candidate = readFileSync('docs/operations/combat2-persistent-aggression.sql', 'utf8');
   expect(candidate).toContain(`IS DISTINCT FROM '${md5}'`);
+  const needle = "       SET hp = GREATEST(COALESCE((rec->>'hp')::int, cr.hp), 0),";
+  const replacement = candidate.split('$change$')[1];
+  expect(replacement).toContain("COALESCE((rec->>'hostile_attempt')::boolean,false)");
+  expect(replacement).not.toContain("_proposed->'events'");
+  expect(createHash('md5').update(body.replace(needle, needle + replacement).replace(/\s+/g, ' ')).digest('hex'))
+    .toBe('d17163615c8ce101742c6bb698363a7d');
 });

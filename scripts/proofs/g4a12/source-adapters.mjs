@@ -32,12 +32,12 @@ export function buildFull(){manifest.length=0;let sql="DO $$ BEGIN IF current_da
  assert(!sql.includes('public.'),'fixture references only');return sql;
 }
 
-// G4A21 repin: resolver/type/mirror quiescent-ending implementation changed.
+// Persistent-aggression attempt revision repin: resolver/type add validated attempt proposals.
 // Historical G4A12–20 evidence retains its original runtime graph hash.
 // Pins the actual imported Edge worker/resolver graph and published catalogue.
 export function runtimeSources(){
  const seen=new Set();function visit(rel){if(seen.has(rel))return;seen.add(rel);const t=readFileSync(new URL(rel,root),'utf8');for(const m of t.matchAll(/(?:from\s*|import\s*)['"](\.[^'"]+)['"]/g)){const f=path.posix.normalize(path.posix.join(path.posix.dirname(rel),m[1]));if(/\.(ts|json)$/.test(f))visit(f);}}
  for(const p of ['supabase/functions/_shared/combat2/process-node-tick-once.ts','supabase/functions/_shared/combat2/dispatch-node-ticks-once.ts','supabase/functions/_shared/combat2/active-abilities.json'])visit(p);
  const rows=[...seen].sort().map(p=>({path:p,sha256:hash(readFileSync(new URL(p,root),'utf8').replace(/\r\n/g,'\n'))}));
- assert.equal(hash(JSON.stringify(rows)),'635fe3fa2006c9e32d4a20085b2253c48fd1e02ff75485c47e96f2d0563005e6','runtime source graph drift');return rows;
+ assert.equal(hash(JSON.stringify(rows)),'539fc530fa9ebace9f36b4723ddb699a0f39058d83eb1118df9030074c949263','runtime source graph drift');return rows;
 }

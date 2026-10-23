@@ -1,48 +1,74 @@
-# Persistent creature-life aggression — local candidate
+# Persistent creature-life aggression — revised attempt contract
 
-2026-10-23. **Implemented source / NOT INSTALLED / NOT LIVE-VERIFIED.** Based on `72547626950e61598e3d412adb784197a1443703`; dedicated branch `codex/persistent-creature-aggression`. The containing commit identifies the reviewed unit. Reuses ENG-COMBAT-001/002, G4 and [0024 transition evidence](legacy-001G4A21-public-hp-integration.md). This intentionally implements the newly approved temperament rule; HP, rewards, regeneration, encounter quiescence, respawn, locks and heartbeat rules are preserved. No hosted operation or branch merge/delete performed.
+2026-10-23. **Implemented locally / NOT INSTALLED / NOT DEPLOYED / NOT LIVE-VERIFIED.** Branch `codex/persistent-creature-aggression`; revision starts at `b43278fc90b3e8f2c34c088f977bd83f93c4b47a`, based on main `72547626950e61598e3d412adb784197a1443703`. The containing commit is the reviewed unit. ENG-COMBAT-001/002 and G4 remain the existing tracking. Owner's revised rule supersedes the earlier positive-direct-damage trigger; previous b43278f test evidence remains historical, not evidence for the new trigger.
 
-## Exact change and source boundary
+## Changed files
 
-- [Canonical core](../../drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql), creature mirror loop: already fences creature identity/generation and encounter membership under the existing claim/token/version/replay and node→encounter→dependent-row protocol. The0024 engagement addition is retained. The old core commits damaging attacks without updating durable aggression; the native original/corrected comparison reproduces this.
-- [Resolver](../../src/shared/combat2/resolver.ts), direct Basic Attack/ability damage and final creature proposal, plus [mechanics](../../src/shared/combat2/mechanics.ts): successful direct weapon/spell attacks emit positive `attack` events with character actor and creature target, and mark the damaged creature proposal. The candidate requires a surviving, currently alive, current-generation row, actual HP reduction, `damaged=true` and that positive non-miss event from an encounter fighter. It does not trust a browser aggression flag or reward qualification alone. Service commit callers remain trusted event producers, not independently authenticated damage proofs.
-- Add one nullable `creatures.provoked_spawn_seq` column (no backfill/history inference), change only that core's creature-mirror SET list, and add private row-local `creature_life_hostility()` trigger. The marker cannot be cleared during the same living generation. It projects through existing `is_aggressive`, including on metadata/default edits and regeneration, without changing `base_aggressive`. Death/generation change clears the marker; existing ordinary respawn restores `base_aggressive`. Existing runtime flags are not bulk-reset or retroactively certified.
-- [Existing arrival/hostile entry](../../supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql) and source `combat_enter` already use durable `is_aggressive`; no new entry/RPC family is needed. No fighter, tank, pending action/effect or encounter is kept alive for temperament. The trigger reads/writes only NEW/OLD, acquiring no additional locks; accepted commits retain existing claim/version fencing. Entry and competing commits serialize on existing early node coverage. Bounded tests are not global deadlock proof.
-- [Ordinary respawn body](../../supabase/migrations/20260629060824_a75ddfbf-a2d4-4e53-b368-b3f47ef8ebbe.sql), under0024 coverage, resets default temperament and existing generation logic. Legacy Combat1 already has survivor aggression in [its historical commit correction](../../supabase/migrations/20260825224759_6c59e886-405f-4e7b-a433-9672b55bf9c9.sql); it is not reactivated or rewritten.
+- `docs/operations/combat2-persistent-aggression.sql`
+- `docs/operations/combat2-persistent-aggression-handoff.md`
+- `src/shared/combat2/resolver.ts`
+- `src/shared/combat2/types.ts`
+- `supabase/functions/_shared/combat2/resolver.ts`
+- `supabase/functions/_shared/combat2/types.ts`
+- `src/shared/combat2/__tests__/resolver.test.ts`
+- `src/server/combat2/__tests__/persistent-aggression-candidate.test.ts`
+- `scripts/proofs/creature-aggression.test.mjs`
+- `scripts/proofs/g4a12/source-adapters.mjs`
+- `docs/design/game-engine.md`
+- `docs/roadmap/game-engine-roadmap.md`
+- `docs/operations/gameplay-evening-test-checklist.md`
+- `docs/operations/project-state.json`
+- `docs/operations/project-state.md`
 
-### Explicit unresolved trigger policy
+## Authoritative attempt boundary
 
-The resolver distinguishes direct `attack`, DoT `effect_pulse`, stance `consecrate_pulse`/orb/proc/retaliation events and `dot_applied`/debuff/heal events. Misses can qualify participation/rewards under existing rules; qualification is not successful damaging provocation. Pure DoT damage can occur after the source leaves. **Owner decision still needed:** should non-direct DoT, stance/proc and retaliation-only damage independently establish durable hostility? This candidate leaves those standalone paths unchanged. A direct damaging attack remains sufficient regardless of accompanying effects. No choice about their balance, instant retaliation or pending-effect resolution is invented. This does not block review of the approved direct-attack slice, but must not be represented as approval of all hostile-action triggers.
+[Resolver](../../src/shared/combat2/resolver.ts) and its [Edge mirror](../../supabase/functions/_shared/combat2/resolver.ts) set optional `ProposedCreatureState.hostile_attempt=true` only after a non-rejected Basic Attack outcome (explicit intent or server-owned continued swing), or a fully validated, non-rejected ordinary enemy ability outcome. Actor presence/life, target, CP, mechanic support and mechanic refusals are checked first. A rejected engagement opening never sets the marker. A miss/zero-damage outcome forces that exact creature's proposal even without HP change. Resolution alone has no persistent effect: the [canonical commit core](../../drizzle/migrations/0002_progression_001d_canonical_xp_cutover.sql) must accept its claim/token/tick/version/generation and commit the whole transaction. No browser field, queued intent or participation/reward qualification establishes provocation. The service worker remains a trusted proposal producer; SQL does not rerun mechanics.
 
-## Artifact, verification and deployment
+Current enemy mechanics receive one validated creature. `multi_attack` repeats attacks on that same creature; no encounter-wide fanout is added. Any future multi-creature mechanic must report each independently validated target before it may set this field. Standalone DoT ticks, Ignite/stance pulses, procs and retaliation do not set it; a valid hostile DoT-applying action such as `rend` does. Self/ally/party actions, selection and entry do not. No ordinary-log event is added and existing heartbeat, engagement opening and retaliation order are unchanged.
 
-[Forward SQL candidate](combat2-persistent-aggression.sql), SHA-256:
-`f19f5d54789809f9371a43786b7b2b97dbf7dc32b2283cd085b105d891e61940`
+## SQL scope, locking and lifetime
 
-Guarded identity: `public.node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb)`. Expected original normalized prosrc MD5 **`74d0800a416276d89e6495724c3c82d5`**, reconstructed from canonical0002 plus0024; expected result **`2a4614d25ba0d6e6c7dd6375941573f1`**. [Source guard test](../../src/server/combat2/__tests__/persistent-aggression-candidate.test.ts) independently checks that reconstruction, because native namespace substitutions necessarily recalculate the fixture guard. Existing function owner/security/settings/ACL must remain equal. The new trigger helper is postgres-owned/DEFINER, fixed search_path, owner-only EXECUTE; known platform grants are explicitly revoked only on it, other unexpected grants abort. Existing browser creature-write denial is required, not expanded.
+[Forward candidate](combat2-persistent-aggression.sql), exact SHA-256:
+`0054886416614623b3c5ff01ad0cc8603ea82d2242d7bd7d54671b1189743073`
 
-- **11 focused native cases PASS** on PostgreSQL18.6 (12 runner tests including container), including two observed independent-session blocking cases: exact attack-commit replay and next-attack claim waiting for preceding commit. Also original failure/control, departure→quiescence→regeneration→re-entry, other-character/repeated entry, neighbor independence, natural default, death/respawn, stale generation, transaction rollback, no-damage/miss branch, DoT-only boundary, and late installation-ACL failure rolling back schema/function changes.
-- [Native harness](../../scripts/proofs/creature-aggression.test.mjs) extracts unchanged setup/composition prefixes from G4A15, not their historical test registrations. Complete selected source bodies and actual decoder/catalogue/resolver execute. Explicit adaptations: reduced schema, namespace, deterministic clock, fixture Auth/search_path/INVOKER and matching fixture guard; existing intent authority is a double, so its omitted autoattack effect is explicitly seeded. Returning-character relocation is fixture setup with the fixture arrival trigger disabled, followed by the real automatic-entry function. Death setup updates durable/projected state together, then runs actual respawn. The negative miss branch is a deliberately adjusted valid proposal, not an observed missed-roll simulation. No full scheduler/RLS/hosted source parity or runtime proof. Initial harness/fixture failures were corrected; no production rule was changed to obtain green results.
-- **4 focused Vitest checks PASS** (source guard plus3 project-state tests). JSON/Markdown, references, source/history and whitespace checks pass. No frontend/Edge runtime change, so another application build is not required. Preserved migration prefix and derived types remain unchanged.
+Adds nullable `creatures.provoked_spawn_seq`, patches only the durable creature-mirror SET list and installs private row-local `creature_life_hostility()`. A surviving current-life creature is marked only when its accepted proposal carries `hostile_attempt=true`. No HP reduction or hit-quality inference is used. The existing encounter/projection/generation predicates and all earlier guards remain intact. Marker monotonicity, runtime `is_aggressive`, configured `base_aggressive`, death clearing and ordinary respawn reset are unchanged from the first candidate. No backfill, new RPC, scheduler or retained encounter ownership.
 
-Local command (existing local Node/postgres dependency): set `WOV_LOCAL_PG_BIN` to local PostgreSQL bin, then `node --test scripts/proofs/creature-aggression.test.mjs`. No hosted URL is accepted by the reused fixture.
+Guarded core: `public.node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb)`. Original normalized prosrc MD5 `74d0800a416276d89e6495724c3c82d5` (canonical0002 plus0024 engagement); expected revised result `d17163615c8ce101742c6bb698363a7d`. [Guard test](../../src/server/combat2/__tests__/persistent-aggression-candidate.test.ts) reconstructs the source independently. Core owner/security/settings/ACL are preserved exactly. Trigger helper is postgres-owned/DEFINER, fixed search_path and owner-only EXECUTE, including explicit revocation from the two already identified platform principals. Browser column-write denial and unexpected-grant aborts remain required.
 
-1. Owner reviews/merges exact commit. Separately authorize Lovable's permitted **read-only catalog** parity: exact core/source/settings/effective service-only ACL, creature columns/default/generation trigger and relevant existing trigger order; source0024 coverage/arrival/respawn identity where fresh evidence is missing. Confirm no new marker/helper already exists, no browser column-write route, and exact private-helper default ACL handling. Do not read gameplay rows, use sandbox_exec or repeat a broad audit. Stop on drift/masked visibility/unexpected grants; do not weaken guards.
-2. Separately authorize **one atomic standard custom-SQL Drizzle installation** from exact candidate bytes. Lovable owns outer transaction, next migration/journal/snapshot and derived types. No top-level BEGIN/COMMIT, pre-generated history or old migration replay. Verify new body fingerprint, strict helper ACL, trigger, column constraint, original metadata and unchanged prior history; failure must roll back all candidate changes. A newer valid main/history descendant is not a conflict.
-3. **No Edge deployment or frontend Publish required for this SQL-only rule.** Existing worker events and arrival/UI runtime flag are reused. Merely pushing/merging does not install it. Any incompatible installed worker/event contract is a STOP condition, not a reason to guess or redeploy unrelated functions.
-4. Owner runs the checks below after installation. Recovery is a separately reviewed forward correction preserving HP, generations and receipts; never reset creatures or reopen independent healers to repair this change.
+Existing [0024 coverage](legacy-001G4A21-public-hp-integration.md) node→encounter→dependent-row locking, claim invalidation and atomic rollback are reused. The trigger reads only OLD/NEW and adds no lock acquisition. Existing [arrival/entry](../../supabase/migrations/20260928100000_combat2_authoritative_arrival_hostile_initiation.sql) reads durable `is_aggressive`; [ordinary respawn](../../supabase/migrations/20260629060824_a75ddfbf-a2d4-4e53-b368-b3f47ef8ebbe.sql) restores configured defaults with generation fencing. No changes to HP, regeneration, rewards, tanks, quiescence or Combat1. Bounded tests are not global deadlock proof.
 
-All previous limitations, G4/E13 OPEN, G3 deferral/G3D BLOCKED, F1 retry issue, progression limitations and administrative XP pause remain unchanged. No production acceptance claimed.
+## Local evidence and limitations
 
-## Manual acceptance — all unexecuted
+- **17 native cases PASS**, PostgreSQL18.6 (18 including runner container): actual resolver damaging Basic Attack, Basic Attack miss, hostile `power_strike` miss and zero-direct-damage `rend`; refusal/no action; standalone DoT exclusion; leave/quiescence/regenerate/re-enter; another character; neighbor/default independence; death/respawn; stale generation; replay/rollback; late installation ACL rollback. Two independent-session cases observe advisory blocking: exact commit replay and following claim versus preceding commit.
+- [Proof harness](../../scripts/proofs/creature-aggression.test.mjs) reuses complete selected G4A21/G4A15 source composition, actual decoder/catalogue/Edge resolver. Current runtime graph is explicitly repinned in [source adapters](../../scripts/proofs/g4a12/source-adapters.mjs); historical proof results are not relabeled. Reduced schema/namespace/clock/Auth/INVOKER substitutions remain. Existing intent helper is a double, with its omitted autoattack state explicitly seeded. Test AC/class/CP/intent fixtures exercise real missed rolls and real published ability handlers; they do not hand-edit miss events. `rend` is an accepted non-damaging application, not a fabricated landed zero-damage strike (current direct-damage mechanics enforce minimum1). Stale-generation proposals and rollback setup are synthetic adversarial fixtures. Return relocation/death setup is fixture-only, followed by actual entry/respawn bodies. Full hosted scheduler/RLS/worker parity is not proven.
+- **89 focused Vitest checks PASS**:83 resolver,1 source guard,2 Edge packaging/mirror and3 project-state. Typecheck and production build PASS (existing large-chunk advisory only); state synchronization, documentation references, source/history and whitespace checks PASS. No gameplay acceptance has been executed. Initial import-extension, graph-pin and fixture-AC errors were corrected locally before final validation.
 
-- [ ] Enter near an untouched passive creature: it remains passive.
-- [ ] Resolve a positive damaging direct attack that it survives: normal retaliation occurs on existing combat timing, not an invented instant hit.
-- [ ] Leave safely; let pending work resolve and encounter quiesce. Return: that same living generation engages through normal aggressive-arrival rules.
-- [ ] Another controlled character arrives: the provoked creature engages normally; no borrowed old fighter/tank membership is needed.
-- [ ] Allow eligible OOC regeneration: HP heals under existing rules, temperament remains hostile.
-- [ ] Kill it, await ordinary respawn: the new life is configured passive again. Naturally aggressive defaults stay aggressive.
-- [ ] With multiple passive creatures, provoke only one: the others remain passive. Record creature/node/time and optional existing Diagnostics export; duplicate logs alone do not prove duplicate damage/rewards.
+Run native proof with local PostgreSQL bin in `WOV_LOCAL_PG_BIN`, then `node --test scripts/proofs/creature-aggression.test.mjs`. No hosted URL fallback is accepted.
+
+Reviewed Edge dependency file SHA-256 (exact repository artifact bytes):
+
+- Resolver: `3099daeba7cf83122988391648ecbba02a1b5a3fcffc2e5e82ce8f10d35d6adf`
+- Types: `4f9e87bee841d6d9e5ca910282670d36261076564efabb94fe6cd4a1a8319835`
+- Normalized complete transitive worker/catalogue source graph: `539fc530fa9ebace9f36b4723ddb699a0f39058d83eb1118df9030074c949263` (proof pin; not a deployed bundle fingerprint).
+
+## Minimal parity and exact installation sequence
+
+1. Owner reviews the exact final commit; no merge is performed here. Separately authorize permitted transactionally read-only Lovable catalog inspection: original core definition/MD5, owner/security/search_path/config/ACL and effective service-only authority; creature/generation fields and trigger order; relevant0024 coverage, arrival and respawn definitions only where fresh evidence is absent. Verify marker/helper absent and effective browser column writes denied. Compare current Drizzle prefix/dependencies. No player rows, gameplay calls, sandbox_exec or broad audit. Stop on drift, masked required visibility, unexpected grants or an already-installed earlier candidate; that requires a separate forward delta, not replay.
+2. Separately authorize **one atomic standard custom-SQL Drizzle installation** of the exact SQL hash above. Lovable owns outer transaction/history/snapshot/derived types; no top-level BEGIN/COMMIT or historical replay. Verify revised core MD5, unchanged metadata, strict helper ACL, trigger/constraint, generated bytes and unchanged prior history. All candidate changes must roll back on failure.
+3. After SQL verification, separately deploy **only `combat2-tick`** with its reviewed shared resolver/types dependencies. No dispatcher, secrets, schedules or progression changes. Record exact submitted commit/source hashes and distinguish deployment success from independently verified live bundle identity. Old worker omits the field and therefore does not provoke under revised SQL; database-first is compatible but the feature remains inactive until the matching worker is deployed. New worker against old database similarly cannot provide the rule. Coordinate the release; do not claim activation at the intermediate stage.
+4. **No frontend source change/manual Publish is required for this rule.** Pushing does not install/deploy. Owner separately performs gameplay acceptance below. Recovery is separately reviewed forward SQL/worker correction preserving HP, generations and receipts; do not reset world state or revive competing healers.
+
+All existing limitations remain: G4/E13 OPEN, G3 deferred/G3D BLOCKED, deferred F1 retry issue, progression limitations and administrative XP pause. No hosted operation, branch merge/delete, installation, deployment or publication was performed.
+
+## Manual acceptance — unexecuted
+
+- [ ] Untouched passive creatures remain passive on entry/selection/non-hostile ability use.
+- [ ] Basic hit and Basic miss provoke after commit, with ordinary heartbeat retaliation timing.
+- [ ] Valid hostile ability miss/zero-direct-damage application provokes; rejected/cancelled action does not.
+- [ ] Leave and return after encounter quiescence; same living generation remains hostile. Another controlled player sees the same behavior.
+- [ ] Eligible OOC regeneration heals HP without calming the creature.
+- [ ] Death/ordinary respawn restores passive default; naturally aggressive defaults remain aggressive.
+- [ ] Multiple passive creatures: only the valid target is provoked. Capture creature/node/time and existing Diagnostics if useful; logs alone do not prove accounting.
 
 ## Separate read-only remote-branch review
 

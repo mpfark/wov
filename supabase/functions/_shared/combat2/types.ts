@@ -384,6 +384,8 @@ export interface ProposedCreatureState {
   hp?: number;
   is_alive?: boolean;
   damaged?: boolean;
+  /** Resolver-only: validated hostile action against this exact spawn; never a queued intent. */
+  hostile_attempt?: boolean;
   /** Cleared only by the quiescent no-participant lifecycle transition. */
   engaged?: boolean;
   pending_action?: SnapshotPendingAction | null;

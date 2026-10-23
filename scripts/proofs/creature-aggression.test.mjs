@@ -94,14 +94,44 @@ await runCase('AGGRESSION stale generation refusal and transactional failure lea
  assert.equal((await row(x.o)).provoked_spawn_seq,null);
 });
 
-await runCase('AGGRESSION non-damaging and miss proposal branches cannot provoke',opts,async()=>{
+for(const [label,key,miss] of [['Basic Attack miss',null,true],['hostile ability miss','power_strike',true],['hostile ability zero direct damage','rend',false]]) {
+ await runCase('AGGRESSION actual resolver '+label+' provokes',opts,async()=>{
+  const x=await setup();await engage(x);
+  await x.o`UPDATE g4a6.characters SET class='warrior',cp=100 WHERE id=${actor}`;
+  if(key)await x.o`UPDATE g4a6.node_intent SET intent_kind='ability',ability_key=${key} WHERE character_id=${actor}`;
+  if(miss)await x.o`UPDATE g4a6.creatures SET ac=1000 WHERE id=${cid}`;
+  const cl=await claim(x),p=proposal(cl);
+  assert(p.creatures.some(c=>c.creature_id===cid&&c.hostile_attempt===true));
+  if(miss)assert(p.events.some(e=>e.kind==='attack'&&e.target?.id===cid&&e.hitQuality==='miss'),JSON.stringify(p.events));
+  else {assert(p.events.some(e=>e.kind==='dot_applied'));assert.equal(p.creatures.find(c=>c.creature_id===cid).hp,40);}
+  assert.equal((await row(x.o)).provoked_spawn_seq,null,'resolution alone is not commit');
+  assert.equal((await commit(x,cl,p)).kind,'committed');assert.equal((await row(x.o)).provoked_spawn_seq,1);
+  assert.equal((await commit(x,cl,p)).kind,'already_committed');
+ });
+}
+await runCase('AGGRESSION refused action and no-action selection cannot provoke',opts,async()=>{
+ const x=await setup();await engage(x);
+ await x.o`UPDATE g4a6.node_intent SET intent_kind='ability',ability_key='not_an_ability' WHERE character_id=${actor}`;
+ const cl=await claim(x),p=proposal(cl);assert(p.events.some(e=>e.kind==='action_rejected'));
+ assert(!p.creatures.some(c=>c.hostile_attempt));assert.equal((await commit(x,cl,p)).kind,'committed');assert.equal((await row(x.o)).provoked_spawn_seq,null);
+ const idle=await setup();const quiet=await claim(idle),noAction=proposal(quiet);
+ assert(!noAction.creatures.some(c=>c.hostile_attempt));assert.equal((await commit(idle,quiet,noAction)).kind,'committed');assert.equal((await row(idle.o)).provoked_spawn_seq,null);
+});
+await runCase('AGGRESSION accepted self heal does not provoke despite supplied creature target',opts,async()=>{
+ const x=await setup();await engage(x);
+ await x.o`UPDATE g4a6.characters SET class='healer',cp=100 WHERE id=${actor}`;
+ await x.o`UPDATE g4a6.node_intent SET intent_kind='ability',ability_key='heal' WHERE character_id=${actor}`;
+ const cl=await claim(x),p=proposal(cl);assert(p.events.some(e=>e.kind==='heal'));
+ assert(!p.creatures.some(c=>c.hostile_attempt));assert.equal((await commit(x,cl,p)).kind,'committed');assert.equal((await row(x.o)).provoked_spawn_seq,null);
+});
+await runCase('AGGRESSION attack events alone without explicit resolver attempt cannot provoke',opts,async()=>{
  const x=await setup();await engage(x);const cl=await claim(x),p=proposal(cl);
- // Explicit branch fixture, not a claimed end-to-end missed-roll test.
- for(const c of p.creatures){c.hp=40;c.damaged=false;}
- for(const event of p.events)if(event.kind==='attack'){event.hitQuality='miss';event.amount=0;}
+ // Synthetic old-worker compatibility fixture, not a different resolver outcome.
+ for(const c of p.creatures)delete c.hostile_attempt;
+ assert(p.events.some(e=>e.kind==='attack'&&e.amount>0));
  assert.equal((await commit(x,cl,p)).kind,'committed');assert.equal((await row(x.o)).provoked_spawn_seq,null);
 });
-await runCase('AGGRESSION DoT-only proposal retains existing behavior pending separate owner decision',opts,async()=>{
+await runCase('AGGRESSION DoT-only damage is not an independently validated hostile attempt',opts,async()=>{
  const x=await setup();const {cl,p}=await damage(x);
  assert(p.events.some(e=>e.kind==='effect_pulse'));assert.equal((await commit(x,cl,p)).kind,'committed');
  assert((await row(x.o)).hp<40);assert.equal((await row(x.o)).provoked_spawn_seq,null);
@@ -121,6 +151,16 @@ await runCase('AGGRESSION next attack tick waits for the preceding commit and re
   assert.equal(next.kind,'claimed');return commit(x,next,proposal(next),c);},async r=>{assert.ifError(r.error);assert.equal(r.value.kind,'committed');assert.equal((await row(x.o)).provoked_spawn_seq,1);});
 });
 
+await runCase('AGGRESSION old resolved attempt cannot provoke a respawned life',opts,async()=>{
+ const x=await setup();await engage(x);const cl=await claim(x),p=proposal(cl);
+ assert.equal(p.creatures[0].spawn_seq,1);assert.equal(p.creatures[0].hostile_attempt,true);
+ await x.o`UPDATE g4a6.creatures SET hp=0,is_alive=false,died_at=${at(0)} WHERE id=${cid}`;
+ await x.o`UPDATE g4a6.node_creature SET hp=0,is_alive=false WHERE creature_id=${cid}`;
+ await clock(x.o,400);await x.o`SELECT g4a6.respawn_creatures()`;
+ assert.equal((await row(x.o)).spawn_seq,2);
+ assert.notEqual((await commit(x,cl,p)).kind,'committed');
+ assert.equal((await row(x.o)).provoked_spawn_seq,null);assert.equal((await row(x.o)).is_aggressive,false);
+});
 await runCase('AGGRESSION late authority guard rolls back the entire installation candidate',opts,async()=>{
  const x=await setup(false);await x.o`GRANT UPDATE ON g4a6.creatures TO anon`;
  const before=(await x.o`SELECT prosrc FROM pg_proc WHERE oid=${core}::regprocedure`)[0].prosrc;

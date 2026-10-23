@@ -1,5 +1,5 @@
 -- Forward-only candidate; Lovable owns the outer transaction and Drizzle history.
--- Direct resolved damaging attacks only. DoT/proc/retaliation-only provocation is undecided.
+-- Validated resolved hostile attempts (including misses/zero damage); matching worker required.
 DO $aggression$
 DECLARE target regprocedure:=to_regprocedure('public.node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb)');
  body text; definition text; before record; after record;
@@ -16,14 +16,8 @@ BEGIN
  body:=replace(body,needle,needle||$change$
            provoked_spawn_seq = CASE
              WHEN cr.is_alive AND COALESCE((rec->>'is_alive')::boolean,true)
-               AND (rec->>'hp')::integer>0 AND (rec->>'hp')::integer<cr.hp
-               AND COALESCE((rec->>'damaged')::boolean,false)
-               AND EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(_proposed->'events','[]'::jsonb)) hit
-                 WHERE hit->>'kind'='attack' AND hit->'actor'->>'type'='character'
-                   AND hit->'target'->>'type'='creature' AND hit->'target'->>'id'=cr.id::text
-                   AND hit->>'hitQuality' IS DISTINCT FROM 'miss' AND (hit->>'amount')::numeric>0
-                   AND EXISTS(SELECT 1 FROM public.node_fighter attacker
-                     WHERE attacker.encounter_id=_encounter_id AND attacker.character_id=(hit->'actor'->>'id')::uuid))
+               AND (rec->>'hp')::integer>0
+               AND COALESCE((rec->>'hostile_attempt')::boolean,false)
              THEN cr.spawn_seq ELSE cr.provoked_spawn_seq END,
 $change$);
  -- Existing encounter/token/version/replay/proposal/generation gates stay before this mutation.
