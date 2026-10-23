@@ -372,11 +372,11 @@ Class joining follow-up reuses **ENG-PROGRESSION-001E/001F** canonical command a
 
 #### WOV-IDEA-034 — Ordinary player teleport failure investigation
 
-- **Status / kind:** NEEDS AUDIT; Technical correction / evidence work. Owner authorized bounded local investigation only,2026-10-21.
-- **Intent:** Restore intended canonical player teleport if a concrete defect is established; owner could not return to town. No unconditional source pause located; actual failed response and installed composition unknown.
-- **Source / evidence boundary:** [Source chain, restrictions and next evidence](../operations/gem-runtime-and-gameplay-blockers.md#ordinary-player-teleport--wov-idea-034-needs-audit). UI calls character_special_travel with request UUID; destination/CP/party/combat/claim and lifecycle/arrival protections must remain. No hosted reproduction or fix performed.
+- **Status / kind:** IN PROGRESS; Technical correction / evidence work. Owner authorized local implementation/review branch2026-10-23. City/personal-party repair prepared and locally tested; not installed/published/live-verified; temporary-waymark lifecycle remains OPEN.
+- **Intent:** Restore the existing canonical RPC, not a new teleport system. Preserve designated public/discovered points, server CP costs and combat/party/claim/lifecycle safety. Owner explicitly retained level22 and existing10–30 CP regional pricing for this repair; geographical node-distance pricing is not implemented or claimed.
+- **Source / evidence boundary:** [Original investigation](../operations/gem-runtime-and-gameplay-blockers.md#ordinary-player-teleport--wov-idea-034-needs-audit) preserved. [Local correction, proof and handoff](../operations/idea-034-player-teleport-handoff.md): reproduced missing0024 early-coverage failure/rollback; same character_special_travel signature/owner/settings/ACL/receipt retained, sorted coverage/target locks, real arrival, guarded discovery, exact account-scoped recovery and server-authorized existing party-node selection.11 PostgreSQL18.6 tests including three observed independent-session cases,27 focused tests, typecheck/build. No hosted reproduction/parity, installation or acceptance claim;025 unchanged.
 - **Dependencies / ownership:** ENG-MOVE-001 / ENG-COMBAT-002 and World G boundaries. Separate from025 admin teleport and002 future personal home/bind feature. New ID034 follows033; not a new travel design or priority approval.
-- **Next gate:** actual refusal/transport error, then narrowly authorized installed-parity evidence if needed; SQL/frontend need is conditional, no Edge path currently involved.
+- **Next gate:** source review; owner decision on waymark creation/return consumption and authoritative logout/inactivity lifetime (existing20-minute offline and30-minute UI clocks differ). Required temporariness is not fulfilled/accepted as permanent. Fresh Lovable-only parity → reviewed forward SQL → Mik manual Publish → bounded live acceptance, each separately authorized. No Edge deployment. Summon UI source level26/separate request path remains unmodified and unverified.
 
 #### WOV-IDEA-002 — Personal home / bind destination
 

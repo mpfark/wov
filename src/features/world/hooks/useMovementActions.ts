@@ -25,6 +25,7 @@ import { authorizeCombat2MovementFlee } from '@/features/combat2/flee-routing';
 import { useExecutionFence } from '@/features/combat2/execution-fence';
 import { MOVEMENT_UNAVAILABLE } from '@/features/combat2/controlled-actions';
 import { movementIssueMessage } from '@/features/combat2/movement-presentation';
+import { useSpecialTravelRequest } from './useSpecialTravelRequest';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers
@@ -218,14 +219,9 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const searchPending = useRef(false);
   const searchRequestId = useRef<string | null>(null);
   const specialTravelGeneration = useRef(0);
-  const specialTravelPending = useRef(false);
-  const specialTravelRequest = useRef<{ key: string; id: string } | null>(null);
-
-  useEffect(() => {
-    specialTravelGeneration.current += 1;
-    specialTravelPending.current = false;
-    specialTravelRequest.current = null;
-  }, [p.character.id, p.character.current_node_id]);
+  const specialTravel = useSpecialTravelRequest(p.character.user_id, p.character.id);
+  useEffect(() => { specialTravelGeneration.current += 1; }, [p.character.id, p.character.current_node_id]);
+  useEffect(() => { setWaymarkNodeId(null); }, [p.character.id, p.character.user_id]);
 
   const refreshHiddenConnections = useCallback(async () => {
     const nodeId = p.character.current_node_id;
@@ -400,98 +396,44 @@ export function useMovementActions(params: UseMovementActionsParams) {
     p.addLogEvent(buildErrorEvent('Movement requires the authoritative server contract.'));
   }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLogEvent, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.authorizeCombat2Flee, p.authorizeCombat2Depart, p.movementBlocked, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
-  // ── Teleport ───────────────────────────────────────────────────
-  const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
-    if (specialTravelPending.current) return;
+  // Existing canonical special travel only; no local position/resource mutation.
+  const executeSpecialTravel = useCallback(async (kind: 'teleport' | 'waymark', nodeId: string, cpCost: number) => {
     const generation = specialTravelGeneration.current;
-    const originNodeId = p.character.current_node_id;
-    const current = () => generation === specialTravelGeneration.current && originNodeId === p.character.current_node_id;
-    if (p.isDead) return;
-    if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
-      p.addLogEvent(buildErrorEvent('Party following does not support teleport travel.'));
-      return;
+    const current = () => generation === specialTravelGeneration.current;
+    const retry = specialTravel.pending?._kind === kind && specialTravel.pending?._destination_node_id === nodeId;
+    if (!retry) {
+      if (p.isDead) return;
+      if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
+        p.addLogEvent(buildErrorEvent('Party following does not support teleport travel.')); return;
+      }
+      if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
+      if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to teleport.')); return; }
     }
-    if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
-    if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to teleport.')); return; }
-    const targetNode = p.getNode(nodeId);
-    if (!targetNode) return;
-    preheatNode(nodeId);
-    const currentNodeObj = p.getNode(p.character.current_node_id!);
-    if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
-      setWaymarkNodeId(p.character.current_node_id!);
-      p.addLogEvent(buildMovementEvent(`You leave a hidden waymark at ${currentNodeObj.name}.`));
+    try {
+      const reply = await specialTravel.submit(kind, nodeId, async payload => await supabase.rpc('character_special_travel' as never, payload as never));
+      if (!reply || !current()) return;
+      const { result, payload } = reply;
+      if (!result.ok) { p.addLogEvent(buildErrorEvent(movementIssueMessage('refused', result.kind))); return; }
+      const target = p.getNode(payload._destination_node_id);
+      preheatNode(payload._destination_node_id);
+      // Only a newly committed mark from this request; never revive an old SQL mark on replay/login.
+      if (payload._kind === 'waymark') setWaymarkNodeId(null);
+      else if (result.kind === 'moved' && result.waymark_node_id) setWaymarkNodeId(result.waymark_node_id);
+      p.addLogEvent(buildMovementEvent(payload._kind === 'waymark'
+        ? `You return to your waymark at ${target?.name ?? 'your destination'} for ${result.cp_cost} CP.`
+        : `You teleport to ${target?.name ?? 'your destination'} for ${result.cp_cost} CP.`));
+      setTeleportOpen(false); await p.refreshCharacter?.();
+    } catch (e) {
+      if (current()) p.addLogEvent(buildErrorEvent(e instanceof Error ? e.message : 'Teleport outcome uncertain; retry the pending request.'));
     }
-    const requestKey = `teleport:${nodeId}`;
-    const requestId = specialTravelRequest.current?.key === requestKey
-      ? specialTravelRequest.current.id : crypto.randomUUID();
-    specialTravelRequest.current = { key: requestKey, id: requestId };
-    specialTravelPending.current = true;
-    const { data, error } = await supabase.rpc('character_special_travel' as never, {
-      _character_id: p.character.id,
-      _kind: 'teleport',
-      _destination_node_id: nodeId,
-      _request_id: requestId,
-    } as never);
-    if (generation === specialTravelGeneration.current) specialTravelPending.current = false;
-    if (!current()) return;
-    const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
-    if (error || !result?.ok || !result.destination_node_id) {
-      p.addLogEvent(buildErrorEvent(error
-        ? movementIssueMessage('error', 'transport_error')
-        : movementIssueMessage('refused', result?.kind)));
-      if (!error) specialTravelRequest.current = null;
-      return;
-    }
-    specialTravelRequest.current = null;
-    p.addLogEvent(buildMovementEvent(`You teleport to ${targetNode.name} for ${result.cp_cost ?? cpCost} CP.`));
-    setTeleportOpen(false);
-    await p.refreshCharacter?.();
-  }, [p.character, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
-
-  // ── Return to Waymark ──────────────────────────────────────────
+  }, [specialTravel, p.character, p.party, p.partyMembers, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
+  const handleTeleport = useCallback((nodeId: string, cpCost: number) => executeSpecialTravel('teleport',nodeId,cpCost),[executeSpecialTravel]);
   const handleReturnToWaymark = useCallback(async (cpCost: number) => {
-    if (specialTravelPending.current) return;
-    const generation = specialTravelGeneration.current;
-    const originNodeId = p.character.current_node_id;
-    const current = () => generation === specialTravelGeneration.current && originNodeId === p.character.current_node_id;
-    if (!waymarkNodeId) return;
-    const waymarkNode = p.getNode(waymarkNodeId);
-    if (!waymarkNode) { p.addLogEvent(buildErrorEvent('Your waymark has faded.')); setWaymarkNodeId(null); return; }
-    if (p.isDead) return;
-    if (p.party && p.partyMembers.some(m => m.character_id !== p.character.id && m.status === 'accepted' && m.is_following)) {
-      p.addLogEvent(buildErrorEvent('Party following does not support waymark travel.'));
-      return;
-    }
-    if (p.inCombat) { p.addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
-    if ((p.character.cp ?? 0) < cpCost) { p.addLogEvent(buildErrorEvent('Not enough CP to return to waymark.')); return; }
-    preheatNode(waymarkNodeId);
-    const requestKey = `waymark:${waymarkNodeId}`;
-    const requestId = specialTravelRequest.current?.key === requestKey
-      ? specialTravelRequest.current.id : crypto.randomUUID();
-    specialTravelRequest.current = { key: requestKey, id: requestId };
-    specialTravelPending.current = true;
-    const { data, error } = await supabase.rpc('character_special_travel' as never, {
-      _character_id: p.character.id,
-      _kind: 'waymark',
-      _destination_node_id: waymarkNodeId,
-      _request_id: requestId,
-    } as never);
-    if (generation === specialTravelGeneration.current) specialTravelPending.current = false;
-    if (!current()) return;
-    const result = data as { ok?: boolean; kind?: string; destination_node_id?: string; cp_cost?: number } | null;
-    if (error || !result?.ok || !result.destination_node_id) {
-      p.addLogEvent(buildErrorEvent(error
-        ? movementIssueMessage('error', 'transport_error')
-        : movementIssueMessage('refused', result?.kind)));
-      if (!error) specialTravelRequest.current = null;
-      return;
-    }
-    specialTravelRequest.current = null;
-    p.addLogEvent(buildMovementEvent(`You return to your waymark at ${waymarkNode.name} for ${result.cp_cost ?? cpCost} CP.`));
-    setWaymarkNodeId(null);
-    setTeleportOpen(false);
-    await p.refreshCharacter?.();
-  }, [waymarkNodeId, p.character, p.getNode, p.addLogEvent, p.isDead, p.inCombat, p.refreshCharacter]);
+    if (waymarkNodeId) await executeSpecialTravel('waymark',waymarkNodeId,cpCost);
+  },[waymarkNodeId,executeSpecialTravel]);
+  const retrySpecialTravel = useCallback(async () => {
+    if (specialTravel.pending) await executeSpecialTravel(specialTravel.pending._kind,specialTravel.pending._destination_node_id,0);
+  },[specialTravel.pending,executeSpecialTravel]);
 
   // ── Search ─────────────────────────────────────────────────────
   const handleSearch = useCallback(async (_keyword?: string) => {
@@ -531,5 +473,6 @@ export function useMovementActions(params: UseMovementActionsParams) {
   return {
     handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
     waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections,
+    pendingSpecialTravel: specialTravel.pending, specialTravelBusy: specialTravel.busy, specialTravelRecoveryError: specialTravel.recoveryError, retrySpecialTravel,
   };
 }

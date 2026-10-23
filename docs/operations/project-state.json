@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-22T21:50:07.146Z",
- "based_on_source_sha": "d9b17399d1c7a307df538d7a092bb59caba73745",
+ "updated_at": "2026-10-23T07:00:31.762Z",
+ "based_on_source_sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2786,6 +2786,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-025-test-teleport-handoff.md",
    "evidence": "Empty private exact-account/own-character/destination registry; service-only UUID-idempotent transaction uses installed0024 early coverage and canonical arrival. Solo only; lifecycle, movement, party/invitation, encounter/claim/effect refusal; strict ACL/drift guards. Existing admin-users and NodePicker/gameplay session reused, immutable account/character-scoped session recovery.11 PostgreSQL18.6 tests PASS including three observed independent-session conflicts;14 focused Vitest PASS; typecheck/build PASS. Accounting/mode/legacy scheduler doubles and unchanged Admin fixture failures separately documented. No hosted SQL, deployment, Publish, enrollment, gameplay or progression-control change. Fresh parity/exact approved UUID enrollment and separately authorized SQL/Edge/Publish/runtime acceptance outstanding. All prior closures/limitations and material acceptance preserved."
+  },
+  {
+   "identity": "WOV-IDEA-034 canonical city/personal-party teleport — local repair, lifetime gap OPEN",
+   "status": "authored",
+   "sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
+   "timestamp": "2026-10-23T07:00:31.762Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; Mik pricing/level retention decision",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
+   "evidence": "Started clean from latest origin/main with025 PR4 merged; new codex/player-teleport review branch. Reproduced old RPC travel_failed/rollback against0024 arrival requiring early HP coverage; old-arrival control succeeds. Same RPC/receipt/owner/settings/ACL retained; sorted coverage/party-target locks, CP/arrival/rollback, guarded real-node discovery and immutable account/character-scoped retry. Existing party node selection authorized only at22 for an eligible accepted member; no arbitrary node unlock. Owner retained22 and10–30 regional CP formula.11 PostgreSQL18.6 tests including three observed independent-session cases,27 focused tests, typecheck/build PASS. Reduced fixture accounting/mode/scheduler doubles disclosed. No hosted SQL, migration, Edge, Publish, control or gameplay change;025 source/artifact and all earlier limitations preserved. Waymark expiry/logout/consumption remains unresolved, not permanent behavior approval or full034 completion."
   }
  ],
  "known_blockers": [
@@ -3025,18 +3036,29 @@
    "directly_verified": true,
    "artifact": "docs/operations/progression-001G-C2-character-reset-preparation.md",
    "evidence": "Owner-reported combined attempt failed23502/issue_reports.character_name NOT NULL and rolled back completely; no independent hosted inspection. Local three-line correction clears only character_id and compares every other report field including historical name. Exact source issue/Arena/registry DDL strengthens fixture.57 SQL tests pass including11 reset/recovery scenarios, original23502 reproduction, unchanged report/account/content/status, successful combined cutover and late-failure rollback; metadata4/project-state3 total64. B unchanged7df1c1cd143433878019628d40d2bff6695df317e43cdb25105c1db31edf4fae. Reset 02da4e8aa9d884cf665456a3c32477b44a57e56705686f50c7b97151fd5f7122; combined c93fd93efb75dd9e2ab8478b8672678b2ecd40be846c46da62d19318cbc48b40. Fetched support0012 source registered at5ee683b4 is retained, not independently hosted-verified or replayed. No new hosted access/retry, installation, commit/push, deployment or history edits. All four F limitations preserved."
+  },
+  {
+   "identity": "WOV-IDEA-034 temporary-waymark lifetime contract — OPEN",
+   "status": "blocked",
+   "sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
+   "timestamp": "2026-10-23T07:00:31.762Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
+   "evidence": "Required logout/inactivity expiry is absent from existing SQL. Source creates only personal off-point marks; UI hides on return/remount while SQL retains rows. Need explicit creation scope/consume-or-reuse and authoritative session/inactivity contract;20-minute unique offline and30-minute UI idle clocks differ. No expiry or permanent-marker policy invented. City/personal-party candidate is reviewable, not full034 activation acceptance; fresh installed parity and separate release authorization required."
   }
  ],
  "next_approved_task": {
-  "identity": "WOV-IDEA-025 scoped test teleport — review local candidate; hosted release not authorized",
+  "identity": "WOV-IDEA-034 review local teleport repair and resolve waymark lifetime",
   "status": "authored",
-  "sha": "d9b17399d1c7a307df538d7a092bb59caba73745",
-  "timestamp": "2026-10-22T21:50:07.146Z",
+  "sha": "f418b5ebee9ce0c71fe35ff8fd987fb9625af14d",
+  "timestamp": "2026-10-23T07:00:31.762Z",
   "evidence_type": "repository",
-  "reporting_actor": "Codex; owner local implementation scope",
+  "reporting_actor": "Codex; owner bounded implementation scope",
   "directly_verified": true,
-  "artifact": "docs/operations/idea-025-test-teleport-handoff.md",
-  "evidence": "Local candidate/test evidence prepared on review branch. Next owner decision: source review then separately authorize Lovable-only installed metadata parity and exact UUID enrollment. SQL installation, admin-users deployment, Mik manual Publish and runtime acceptance remain separate gates. No progression controls or existing closures/limitations changed."
+  "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
+  "evidence": "Review pushed feature branch without automatic main merge. Decide remaining waymark lifetime contract; separately authorize Lovable-only parity/standard forward SQL, then Mik manual Publish and bounded acceptance. No Edge deployment or progression-control change.025 installed state remains unknown;034 does not depend on025 installation."
  },
  "volatile_runtime_observations": [
   {
