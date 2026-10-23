@@ -37,6 +37,10 @@ interface Props {
   onReturnToWaymark?: (cpCost: number) => void;
   partyMembers?: PartyMember[];
   myCharacterId?: string;
+  pendingTravel?: { _destination_node_id: string; _kind: 'teleport' | 'waymark' } | null;
+  travelBusy?: boolean;
+  recoveryError?: string | null;
+  onRetry?: () => void;
 }
 
 export function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
@@ -46,19 +50,25 @@ export function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion
   return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, characterId, onTeleport, waymark, onReturnToWaymark, partyMembers = [], myCharacterId }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, characterId, onTeleport, waymark, onReturnToWaymark, partyMembers = [], myCharacterId, pendingTravel, travelBusy, recoveryError, onRetry }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
+  const [visitError, setVisitError] = useState(false);
 
   useEffect(() => {
+    setVisitedIds(new Set()); setVisitError(false);
     if (!open || !characterId) return;
+    let active = true;
     supabase.from('character_visited_nodes').select('node_id').eq('character_id', characterId)
-      .then(({ data }) => {
-        if (data) {
+      .then(({ data, error }) => {
+        if (!active) return;
+        setVisitError(!!error);
+        if (data && !error) {
           const ids = data.map(r => r.node_id);
           setVisitedIds(new Set(ids));
           primeVisitedNodes(characterId, ids);
         }
       });
+    return () => { active = false; };
   }, [open, characterId]);
 
   const destinations: TeleportDestination[] = nodes
@@ -75,7 +85,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
   const canAffordWaymark = playerCp >= waymarkCpCost;
 
   const partyDestinations: PartyMemberDestination[] = partyMembers
-    .filter(m => m.character_id !== myCharacterId && m.character?.current_node_id && m.character.current_node_id !== currentNode.id)
+    .filter(m => characterLevel >= 22 && m.status === 'accepted' && m.character_id !== myCharacterId && m.character?.current_node_id && m.character.current_node_id !== currentNode.id)
     .map(m => {
       const node = nodes.find(n => n.id === m.character.current_node_id);
       if (!node) return null;
@@ -97,6 +107,12 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
 
   const left = (
     <div className="space-y-1.5">
+      {visitError && <p role="alert">Discovered destinations could not be loaded. Public city points remain available.</p>}
+      {recoveryError && <p role="alert">{recoveryError}</p>}
+      {pendingTravel && <div className="rounded border p-2">
+        <p>Unresolved {pendingTravel._kind} to {nodes.find(n => n.id === pendingTravel._destination_node_id)?.name ?? 'the original destination'}. Retry the same request to confirm its outcome.</p>
+        <Button disabled={travelBusy || !!recoveryError} onClick={onRetry}>Retry pending teleport</Button>
+      </div>}
       {/* Waymark Return Option */}
       {waymark && onReturnToWaymark && (
         <div className="flex items-center justify-between p-2 rounded border-2 border-primary/60 bg-primary/10 hover:bg-primary/20 transition-colors">
@@ -110,7 +126,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
           <Button
             size="sm"
             variant="outline"
-            disabled={!canAffordWaymark}
+            disabled={!canAffordWaymark || travelBusy || !!pendingTravel || !!recoveryError}
             onClick={() => onReturnToWaymark(waymarkCpCost)}
             className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAffordWaymark ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
           >
@@ -123,6 +139,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
       {partyDestinations.length > 0 && (
         <>
           <p className="text-[10px] text-muted-foreground font-display pt-1 flex items-center gap-1"><Users className="w-3 h-3 shrink-0" aria-hidden />Party Members</p>
+          <p className="text-xs text-muted-foreground">Travel uses the member's selected location. Refresh destinations if they move; combat or pending movement may prevent travel.</p>
           {partyDestinations.map(d => {
             const canAfford = playerCp >= d.cpCost;
             return (
@@ -138,8 +155,9 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={!canAfford}
+                  disabled={!canAfford || travelBusy || !!pendingTravel || !!recoveryError}
                   onClick={() => onTeleport(d.node.id, d.cpCost)}
+                  aria-label={`Teleport to ${d.member.character.name} (${d.cpCost} CP)`}
                   className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
                 >
                   <Zap className="w-3 h-3 mr-1 shrink-0" aria-hidden />
@@ -167,7 +185,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
             <Button
               size="sm"
               variant="outline"
-              disabled={!canAfford}
+              disabled={!canAfford || travelBusy || !!pendingTravel || !!recoveryError}
               onClick={() => onTeleport(d.node.id, d.cpCost)}
               className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
             >

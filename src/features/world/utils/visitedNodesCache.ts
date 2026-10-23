@@ -2,8 +2,9 @@
  * visitedNodesCache — client-side dedup for character_visited_nodes upserts.
  *
  * Background: every movement upserted into character_visited_nodes — the #1
- * DB hotspot (~42k calls). The table is append-only and only used for
- * "have I seen this node" map shading, so re-upserting a node that's
+ * DB hotspot (~42k calls). The table also gates teleport discovery.
+ * Authoritative arrivals record visits; browser upserts require current presence.
+ * Re-upserting a node that's
  * already visited is pure waste.
  *
  * This module keeps a per-character Set of visited node ids. It seeds
@@ -11,13 +12,14 @@
  * subsequent upserts. The upsert still runs for new nodes so the DB is
  * the source of truth.
  *
- * Gameplay impact: none. This only affects whether we send an upsert that
- * the DB would have absorbed as a no-op anyway.
+ * This cache is presentation/dedup only, never destination authority. Preserve
+ * the existing map-consumption callback even when the server already recorded a visit.
  */
 import { supabase } from '@/integrations/supabase/client';
 
 const visited = new Map<string, Set<string>>();
 const seeding = new Map<string, Promise<Set<string>>>();
+const mapsCheckedAt = new Map<string, string>();
 
 async function seed(characterId: string): Promise<Set<string>> {
   const existing = seeding.get(characterId);
@@ -43,19 +45,22 @@ async function seed(characterId: string): Promise<Set<string>> {
 export async function markNodeVisited(characterId: string, nodeId: string): Promise<void> {
   let set = visited.get(characterId);
   if (!set) set = await seed(characterId);
-  if (set.has(nodeId)) return;
-  set.add(nodeId);
-  const { error } = await supabase
-    .from('character_visited_nodes')
-    .upsert(
-      { character_id: characterId, node_id: nodeId },
-      { onConflict: 'character_id,node_id' },
-    );
-  if (error) {
-    // Roll the local cache back so a retry can happen next time.
-    set.delete(nodeId);
-    return;
+  if (!set.has(nodeId)) {
+    set.add(nodeId);
+    const { error } = await supabase
+      .from('character_visited_nodes')
+      .upsert(
+        { character_id: characterId, node_id: nodeId },
+        { onConflict: 'character_id,node_id' },
+      );
+    if (error) {
+      // Roll the local cache back so a retry can happen next time.
+      set.delete(nodeId);
+      return;
+    }
   }
+  if (mapsCheckedAt.get(characterId) === nodeId) return;
+  mapsCheckedAt.set(characterId, nodeId);
   // Reaching a node may consume any treasure-map quest items the player
   // owns that point at this node. Fire-and-forget; if any rows were
   // deleted, signal the inventory hook to refetch.

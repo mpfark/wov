@@ -1043,7 +1043,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // Wire ability executor ref (updated synchronously to avoid stale closures)
   executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);
 
-  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections } = movementActions;
+  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen, openHiddenConnections, pendingSpecialTravel, specialTravelBusy, specialTravelRecoveryError, retrySpecialTravel } = movementActions;
   const movementInputDisabled = isDead || authoritativeDeparture.pending || authoritativeDeparture.recovering;
   const handleMovementInput = useCallback((nodeId: string, direction?: Direction) => {
     if (movementInputDisabled) return;
@@ -1569,8 +1569,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     onOpenStonebinder: (currentNode as any)?.is_stonebinder ? () => setStonebinderOpen(true) : undefined,
     onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
-    onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
-      if (inCombat) { addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
+    onOpenTeleport: (currentNode?.is_teleport || character.level >= 22 || pendingSpecialTravel) ? () => {
+      if (inCombat && !pendingSpecialTravel) { addLogEvent(buildErrorEvent('You cannot teleport while in combat!')); return; }
       setTeleportOpen(true);
     } : undefined,
     searchDisabled: character.cp < 5 || creatures.length > 0,
@@ -2004,7 +2004,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
       )}
 
       {/* Teleport Dialog */}
-      {(currentNode.is_teleport || character.level >= 22) && (
+      {(currentNode.is_teleport || character.level >= 22 || pendingSpecialTravel) && (
         <TeleportDialog
           open={teleportOpen}
           onClose={() => setTeleportOpen(false)}
@@ -2018,6 +2018,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
           characterLevel={character.level}
           characterId={character.id}
           onTeleport={handleTeleport}
+          pendingTravel={pendingSpecialTravel}
+          travelBusy={specialTravelBusy}
+          recoveryError={specialTravelRecoveryError}
+          onRetry={retrySpecialTravel}
           waymark={waymarkNodeId ? { node: getNode(waymarkNodeId)!, region: getRegion(getNode(waymarkNodeId)?.region_id ?? '') } : null}
           onReturnToWaymark={waymarkNodeId ? handleReturnToWaymark : undefined}
           partyMembers={mergedPartyMembers}

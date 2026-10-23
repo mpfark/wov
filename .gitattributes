@@ -63,3 +63,4 @@ docs/operations/idea-033-gem-application.sql text eol=lf
 # Exact reviewed canonical admin material grant candidate.
 docs/operations/idea-025-admin-material-grant.sql text eol=lf
 docs/operations/idea-025-test-teleport.sql text eol=lf
+docs/operations/idea-034-player-teleport.sql text eol=lf

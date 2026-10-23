@@ -7,13 +7,14 @@ import fs from 'node:fs';
 
 vi.mock('@/features/creatures/hooks/useCreatures', () => ({ preheatNode: vi.fn() }));
 vi.mock('@/features/world/utils/visitedNodesCache', () => ({ markNodeVisited: vi.fn() }));
+vi.mock('@/features/world/hooks/useServerWaymark', () => ({ useServerWaymark: () => ({ waymarkNodeId: null, refreshWaymark: async () => {} }) }));
 
 function params() {
   const write = vi.fn().mockResolvedValue(undefined);
   const log = vi.fn();
   const node = { id: 'node', region_id: 'region', connections: [] };
   const options = {
-    character: { id: 'character', name: 'Tester', current_node_id: 'node', hp: 10, mp: 100, cp: 100, str: 10, level: 10 },
+    character: { id: 'character', user_id: 'account', name: 'Tester', current_node_id: 'node', hp: 10, mp: 100, cp: 100, str: 10, level: 10 },
     updateCharacter: write, addLogEvent: log, equipped: [], unequipped: [], equipmentBonuses: {},
     getNode: () => node, getRegion: () => ({ id: 'region' }), getNodeArea: () => null, currentNode: node,
     creatures: [], party: null, partyMembers: [], isLeader: false, inCombat: true, isDead: false,
@@ -23,7 +24,7 @@ function params() {
 }
 
 describe('controlled test movement lock', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); sessionStorage.clear(); });
 
   it('revalidates a visible party against server authority instead of trusting the legacy roster',()=>{
     const page=fs.readFileSync('src/pages/GamePage.tsx','utf8');
@@ -59,9 +60,9 @@ describe('controlled test movement lock', () => {
     const { options, write, log } = params();
     const refreshCharacter = vi.fn().mockResolvedValue(undefined);
     let finish!: (value: unknown) => void;
-    const rpc = vi.spyOn(supabase, 'rpc').mockImplementation(((name: string) => {
+    const rpc = vi.spyOn(supabase, 'rpc').mockImplementation(((name: string, args: any) => {
       if (name === 'hidden_path_openings') return Promise.resolve({ data: [], error: null });
-      return new Promise(resolve => { finish = resolve; });
+      return new Promise(resolve => { finish = (value: any) => resolve({ ...value, data: { ...value.data, request_id: args._request_id, account_id: 'account', character_id: args._character_id, travel_kind: args._kind, outcome: 'committed' } }); });
     }) as unknown as typeof supabase.rpc);
     const { result } = renderHook(() => useMovementActions({
       ...options, inCombat: false, movementBlocked: true, refreshCharacter,
@@ -82,13 +83,31 @@ describe('controlled test movement lock', () => {
     expect(JSON.stringify(log.mock.calls)).toContain('You teleport to Elsewhere');
   });
 
+  it('does not announce a waymark before commit; retains exact replay after CP/node/combat state changes',async()=>{
+    const {options,write,log}=params();const refresh=vi.fn();const calls:any[]=[];
+    vi.spyOn(supabase,'rpc').mockImplementation(((name:string,args:any)=>{
+      if(name==='hidden_path_openings')return Promise.resolve({data:[],error:null});
+      calls.push(args);if(calls.length===1)return Promise.resolve({data:null,error:{message:'response lost'}});
+      return Promise.resolve({data:{ok:true,kind:'already_moved',request_id:args._request_id,account_id:'account',character_id:args._character_id,
+        travel_kind:args._kind,destination_node_id:args._destination_node_id,outcome:'committed',cp_cost:10,waymark_node_id:'node'},error:null});
+    }) as unknown as typeof supabase.rpc);
+    const {result,rerender}=renderHook(({cp,node,combat})=>useMovementActions({...options,inCombat:combat,refreshCharacter:refresh,
+      character:{...options.character,cp,current_node_id:node,level:22},getNode:(id:string)=>({id,name:id,region_id:'region'})}),
+      {initialProps:{cp:100,node:'node',combat:false}});
+    await act(async()=>{await result.current.handleTeleport('other',10);});
+    expect(result.current.waymarkNodeId).toBeNull();expect(JSON.stringify(log.mock.calls)).not.toContain('leave a hidden waymark');
+    rerender({cp:0,node:'other',combat:true});await act(async()=>{await result.current.retrySpecialTravel();});
+    expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);expect(write).not.toHaveBeenCalled();expect(refresh).toHaveBeenCalledOnce();
+    expect(result.current.waymarkNodeId).toBeNull(); // historical replay is not a new live mark
+  });
+
   it('discards a special-travel response after the authoritative character location changes', async () => {
     const { options, write, log } = params();
     const refreshCharacter = vi.fn();
     let finish!: (value: unknown) => void;
-    vi.spyOn(supabase, 'rpc').mockImplementation(((name: string) => {
+    vi.spyOn(supabase, 'rpc').mockImplementation(((name: string, args: any) => {
       if (name === 'hidden_path_openings') return Promise.resolve({ data: [], error: null });
-      return new Promise(resolve => { finish = resolve; });
+      return new Promise(resolve => { finish = (value: any) => resolve({ ...value, data: { ...value.data, request_id: args._request_id, account_id: 'account', character_id: args._character_id, travel_kind: args._kind, outcome: 'committed' } }); });
     }) as unknown as typeof supabase.rpc);
     const { result, rerender } = renderHook(({ nodeId }) => useMovementActions({
       ...options, inCombat: false, movementBlocked: true, refreshCharacter,
