@@ -27,7 +27,7 @@
   {
    "identity": "0030_combat2_persistent_aggression",
    "status": "installed",
-   "sha": "23109024",
+   "sha": "23109024c5032ee9aed71942c57d17e6dc154150",
    "timestamp": "2026-10-24T00:00:00Z",
    "evidence_type": "cloud_inspection",
    "reporting_actor": "Lovable; Mik scoped installation authorization",
