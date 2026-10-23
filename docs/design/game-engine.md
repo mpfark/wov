@@ -126,6 +126,8 @@ Effective attributes include only valid equipped durable gear. Gems contribute e
 
 Movement cost is computed and charged atomically by the departure RPC from authoritative route/character state; the client only presents the returned cost. Death/respawn resources are owned by the respawn contract, not client recovery code.
 
+Scoped gameplay test relocation (WOV-IDEA-025) is a separately owner-authorized test exception, not normal travel: exact account/own-character/destination approvals, strictly safe solo state, no resource cost, immutable replay receipt and canonical arrival under early node/encounter coverage. The [local candidate and release gates](../operations/idea-025-test-teleport-handoff.md) do not establish installation or availability. Normal walking, CP-priced player teleport, combat/refusal rules and progression controls remain unchanged; the retired Admin raw relocation is not restored.
+
 ## Progression and rewards
 
 Approved ENG-PROGRESSION-001 rules, encoded by **001A contract/reference work only**. These rules define the future authority; they do not assert that current runtime writers implement them. Installed SQL, deployed consumers and historical character state remain separate verification gates. The reference under `src/shared/progression/` has no runtime importers and must not be used as a browser mutation authority.

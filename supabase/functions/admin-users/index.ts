@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleAdminMaterialGrant } from '../_shared/admin-material-grant.ts';
+import { handleGameplayTestTeleport } from '../_shared/gameplay-test-teleport.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,6 +49,22 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Exact test-only actions have their own SQL UUID allowlist, not an Admin-role bypass.
+    // All existing administrative actions still pass verifyAdmin below.
+    const testAction = new URL(req.url).searchParams.get('action');
+    if (testAction === 'test-teleport' || testAction === 'test-teleport-access') {
+      return await handleGameplayTestTeleport(req, async () => {
+        const header = req.headers.get('Authorization');
+        if (!header) return null;
+        const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: header } } });
+        const { data: { user }, error } = await client.auth.getUser();
+        return error ? null : user?.id ?? null;
+      }, async (name, args) => {
+        const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+        return await client.rpc(name, args);
+      });
+    }
     const { adminClient, callerRole, userId } = await verifyAdmin(req);
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
