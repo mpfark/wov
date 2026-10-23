@@ -64,3 +64,4 @@ docs/operations/idea-033-gem-application.sql text eol=lf
 docs/operations/idea-025-admin-material-grant.sql text eol=lf
 docs/operations/idea-025-test-teleport.sql text eol=lf
 docs/operations/idea-034-player-teleport.sql text eol=lf
+docs/operations/combat2-persistent-aggression.sql text eol=lf

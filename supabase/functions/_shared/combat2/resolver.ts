@@ -64,6 +64,7 @@ interface WorkingCreature {
   row: SnapshotCreature;
   hp: number;
   damaged: boolean;
+  hostileAttempt: boolean;
   killedBy: string | null;
   dirty: boolean;
   pendingAction: SnapshotCreature['pending_action'];
@@ -198,6 +199,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       row,
       hp: row.hp,
       damaged: false,
+      hostileAttempt: false,
       killedBy: null,
       dirty: false,
       pendingAction: row.pending_action,
@@ -779,6 +781,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         activeEffects: activeEffectsFor(actor.fighter.character_id), weaponProgression: deps.weaponProgression });
       if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
       else {
+        target.hostileAttempt = true; target.dirty = true;
         qualify(target, actor.fighter.character_id, 'damage');
         if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
         if (!outcome.missed) {
@@ -1031,6 +1034,14 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       continue;
     }
 
+    // Only a fully validated, non-rejected enemy action establishes an attempt.
+    // No queued intent, engagement opening, DoT, proc or retaliation sets this.
+    // Current mechanics address one validated creature (multi_attack repeats it).
+    if (spec.targetType === 'enemy' && targetCreature) {
+      targetCreature.hostileAttempt = true;
+      targetCreature.dirty = true; // Miss/zero damage still needs a committed life transition.
+    }
+
     if (outcome.cpCost) {
       actor.cp = Math.max(0, actor.cp - outcome.cpCost);
       actor.dirty = true;
@@ -1185,6 +1196,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       activeEffects: activeEffectsFor(actor.fighter.character_id), weaponProgression: deps.weaponProgression });
     if (outcome.rejected) emit({ kind: 'action_rejected', outcomeReason: outcome.rejected });
     else {
+      target.hostileAttempt = true; target.dirty = true;
       qualify(target, actor.fighter.character_id, 'damage');
       if (outcome.creatureDamage) { const applied = Math.min(target.hp, outcome.creatureDamage); target.hp -= applied; target.damaged = true; target.dirty = true; if (!target.hp) target.killedBy = actor.fighter.character_id; }
       if (!outcome.missed) {
@@ -1712,6 +1724,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         hp: creature.hp,
         is_alive: creature.hp > 0,
         damaged: creature.damaged,
+        ...(creature.hostileAttempt ? { hostile_attempt: true } : {}),
         ...(died ? { engaged: false } : {}),
         pending_action: creature.pendingAction ?? null,
         tank_fighter_id: creature.tankFighterId,

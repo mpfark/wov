@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-23T09:11:19.309Z",
- "based_on_source_sha": "1568d41d28e9bff6124e7904bcc12b422a17849e",
+ "updated_at": "2026-10-23T12:26:42.165Z",
+ "based_on_source_sha": "72547626950e61598e3d412adb784197a1443703",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2830,6 +2830,28 @@
    "directly_verified": true,
    "artifact": "docs/operations/gameplay-evening-test-checklist.md",
    "evidence": "Dedicated codex/gameplay-integration-evening from latest fetched origin/main. One reproduced frontend defect: ID-only selectCombat2Creatures overlay lets old dead-generation HP/alive overwrite a newer respawn roster row. Two new regressions failed first; require equal spawn generation, preserve unmatched/unknown roster data and existing same-generation projection.73 focused tests PASS across selector/presentation/target/resource-handoff/state. No second speculative correction. Manual checklist covers remaining initiation/passive lifecycle/movement/resources/reward/respawn/teleport and optional waymark/progression/party evidence. No backend/SQL/Edge/control changes or live execution; owner merge/manual Publish required. Prior limitations preserved; no claim this source defect caused the reported live incidents."
+  },
+  {
+   "identity": "ENG-COMBAT-001/002 — owner-approved persistent creature-life aggression",
+   "status": "authored",
+   "sha": "72547626950e61598e3d412adb784197a1443703",
+   "timestamp": "2026-10-23T12:26:42.165Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; owner approved direct damaging-attack persistence",
+   "directly_verified": true,
+   "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
+   "evidence": "HISTORICAL INITIAL CANDIDATE at b43278fc90b3e8f2c34c088f977bd83f93c4b47a; superseded by owner-approved hostile-attempt revision below. Dedicated codex/persistent-creature-aggression from current origin/main. Reuses existing is_aggressive/base_aggressive and spawn identity; one nullable provoked_spawn_seq column, guarded canonical core SET-list addition and row-local owner-only trigger. Positive surviving direct damage/attack provenance under existing encounter/token/version/generation gates; no retained combat ownership for temperament. Marker monotonic in living generation, death/respawn clears; ordinary arrival consumes existing runtime flag.11 focused PostgreSQL18.6 cases PASS (12 incl container), two observed independent-session blocking scenarios, original/control comparison, regeneration/quiescence/re-entry, other character, passive neighbor, respawn defaults, stale/replay/rollback and complete late-ACL install rollback.4 focused Vitest checks PASS. Reduced source fixture/Auth/clock/invoker substitutions; intent is a double with explicit autoattack seed, relocation/death fixture setup disclosed. Not installed/deployed/published/live verified. SQL SHA256 f19f5d54789809f9371a43786b7b2b97dbf7dc32b2283cd085b105d891e61940. DoT/proc/retaliation-only trigger policy remains owner decision; unchanged, not newly approved. No Edge/frontend change; all prior limitations preserved."
+  },
+  {
+   "identity": "ENG-COMBAT-001/002 — validated hostile-attempt aggression revision",
+   "status": "authored",
+   "sha": "b43278fc90b3e8f2c34c088f977bd83f93c4b47a",
+   "timestamp": "2026-10-23T19:23:19.362Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; owner approved committed hostile attempts including misses/zero damage",
+   "directly_verified": true,
+   "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
+   "evidence": "LOCAL SOURCE ONLY. Resolver sets optional exact-spawn hostile_attempt only after validated non-rejected Basic Attack/ordinary enemy ability outcomes; separate guarded commit persists marker under existing generation/claim/replay fences. Misses and zero-direct-damage applications provoke, standalone DoT/procs/retaliation and selection/non-hostile/refused actions do not.17 native PostgreSQL18.6 cases PASS (18 incl container), two observed independent-session blocking cases, actual resolver miss and rend zero-damage application, lifecycle/stale/replay/rollback and ACL rollback. Reduced source-fixture/intent-double limitations documented. SQL SHA256 0054886416614623b3c5ff01ad0cc8603ea82d2242d7bd7d54671b1189743073. Requires separately authorized SQL then matching combat2-tick deployment; no frontend change. Not installed/deployed/live-verified; all prior limitations preserved."
   }
  ],
  "known_blockers": [
@@ -3083,15 +3105,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "Owner review and evening gameplay acceptance — focused frontend integration",
+  "identity": "Review revised persistent hostile-attempt aggression candidate",
   "status": "authored",
-  "sha": "1568d41d28e9bff6124e7904bcc12b422a17849e",
-  "timestamp": "2026-10-23T09:11:19.309Z",
+  "sha": "b43278fc90b3e8f2c34c088f977bd83f93c4b47a",
+  "timestamp": "2026-10-23T19:23:19.365Z",
   "evidence_type": "repository",
-  "reporting_actor": "Codex; owner focused implementation scope",
+  "reporting_actor": "Codex; owner bounded implementation authorization",
   "directly_verified": true,
-  "artifact": "docs/operations/gameplay-evening-test-checklist.md",
-  "evidence": "Review dedicated branch; owner merges and Mik manually Publishes the compatible frontend correction once. No SQL/Edge deployment needed. Follow unexecuted checklist; optional waymark/progression/party cases only if eligible. Ordinary teleport owner-observed working; waymarks not verified. Do not activate paused features or assume unknown hosted causes."
+  "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
+  "evidence": "Owner reviews existing branch and exact artifact. Separately authorize Lovable-only read-only parity, exact atomic SQL installation and matching combat2-tick shared resolver deployment, then bounded manual acceptance. No frontend publication required. Old direct-damage-only trigger superseded; no standalone DoT/proc/retaliation provocation. No merge or Cloud execution authorized here."
  },
  "volatile_runtime_observations": [
   {
