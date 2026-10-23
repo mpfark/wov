@@ -27,8 +27,12 @@ $change$);
  SELECT proowner,prosecdef,proconfig,proacl INTO after FROM pg_proc WHERE oid=target;
  IF ROW(before.proowner,before.prosecdef,before.proconfig,before.proacl) IS DISTINCT FROM
     ROW(after.proowner,after.prosecdef,after.proconfig,after.proacl) THEN RAISE EXCEPTION 'Combat2 commit metadata changed'; END IF;
+ -- The outer SECURITY DEFINER node_tick_commit RPC delegates as postgres; this core is owner-only.
  IF has_function_privilege('anon',target,'EXECUTE') OR has_function_privilege('authenticated',target,'EXECUTE')
- OR NOT has_function_privilege('service_role',target,'EXECUTE') THEN RAISE EXCEPTION 'unexpected commit authority'; END IF;
+ OR has_function_privilege('service_role',target,'EXECUTE') OR NOT has_function_privilege('postgres',target,'EXECUTE')
+ OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+   WHERE p.oid=target AND a.grantee<>p.proowner)
+ THEN RAISE EXCEPTION 'unexpected private commit authority'; END IF;
 END $aggression$;
 
 CREATE FUNCTION public.creature_life_hostility() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER

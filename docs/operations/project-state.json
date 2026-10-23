@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-23T12:26:42.165Z",
- "based_on_source_sha": "72547626950e61598e3d412adb784197a1443703",
+ "updated_at": "2026-10-23T23:17:02.929Z",
+ "based_on_source_sha": "39d28bcccc936052fee4098d2f599e9f8145cbbb",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2852,6 +2852,28 @@
    "directly_verified": true,
    "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
    "evidence": "LOCAL SOURCE ONLY. Resolver sets optional exact-spawn hostile_attempt only after validated non-rejected Basic Attack/ordinary enemy ability outcomes; separate guarded commit persists marker under existing generation/claim/replay fences. Misses and zero-direct-damage applications provoke, standalone DoT/procs/retaliation and selection/non-hostile/refused actions do not.17 native PostgreSQL18.6 cases PASS (18 incl container), two observed independent-session blocking cases, actual resolver miss and rend zero-damage application, lifecycle/stale/replay/rollback and ACL rollback. Reduced source-fixture/intent-double limitations documented. SQL SHA256 0054886416614623b3c5ff01ad0cc8603ea82d2242d7bd7d54671b1189743073. Requires separately authorized SQL then matching combat2-tick deployment; no frontend change. Not installed/deployed/live-verified; all prior limitations preserved."
+  },
+  {
+   "identity": "Persistent aggression 2026-10-23 production ACL preflight — owner supplied",
+   "status": "blocked",
+   "sha": "39d28bcccc936052fee4098d2f599e9f8145cbbb",
+   "timestamp": "2026-10-23",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Owner relaying authorized Lovable read-only preflight",
+   "directly_verified": false,
+   "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
+   "evidence": "Reported core normalized MD5 74d0800a416276d89e6495724c3c82d5, postgres owner, SECURITY DEFINER/search_path=public, ACL {postgres=X/postgres}, effective service_role EXECUTE false and browser denied. Creature/generation schema matched; marker/helper absent;30 Drizzle migrations matched through0029, next0030. Old candidate 0054886416614623b3c5ff01ad0cc8603ea82d2242d7bd7d54671b1189743073 incorrectly required service_role core EXECUTE and would abort. No installation/deployment. Full original report/exact observation time not supplied; no fresh Codex Cloud inspection. Core ACL is intended private authority, not a grant defect."
+  },
+  {
+   "identity": "ENG-COMBAT-001/002 — private-core ACL installation guard corrected locally",
+   "status": "authored",
+   "sha": "39d28bcccc936052fee4098d2f599e9f8145cbbb",
+   "timestamp": "2026-10-23T23:17:02.929Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex; bounded owner-authorized ACL guard correction",
+   "directly_verified": true,
+   "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
+   "evidence": "From current main39d28bcc PR7 squash merge; reviewed SQL/resolver bytes equal04f847da.0002 final ACL block revokes every non-owner from private commit chain and grants only outer node_tick_commit to service_role; source DEFINER wrappers delegate as postgres. Revised guard requires effective postgres access, denies effective service_role/anon/authenticated and every non-owner ACL grant; exact before/after metadata preserved. No GRANT, core/resolver gameplay-body change or historical migration edit. New SQL SHA25625b9940bd5ba84dd600715562a00485b211d4df8f463c2328e228f3d25c14c26; core result MD5 remains d17163615c8ce101742c6bb698363a7d.23 native PostgreSQL18.6 cases PASS (24 incl container), service direct-core denial/outer-definer success, metadata preservation, five unexpected-grant rollback cases and existing resolver/lifecycle/concurrency proof;6 focused SQL/invocation/project-state checks PASS. Fixture substitutions disclosed. Correct release targets are combat2-dispatch-once and combat2-tick-once, not nonexistent combat2-tick. One fresh read-only metadata result for four installed wrappers remains before installation; reuse supplied core/schema/history evidence. No Cloud operation, installation, Edge deployment, merge or Publish. Prior risks and gameplay rules unchanged."
   }
  ],
  "known_blockers": [
@@ -3105,15 +3127,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "Review revised persistent hostile-attempt aggression candidate",
+  "identity": "Review private-core ACL correction and verify four installed commit wrappers",
   "status": "authored",
-  "sha": "b43278fc90b3e8f2c34c088f977bd83f93c4b47a",
-  "timestamp": "2026-10-23T19:23:19.365Z",
+  "sha": "39d28bcccc936052fee4098d2f599e9f8145cbbb",
+  "timestamp": "2026-10-23T23:17:02.929Z",
   "evidence_type": "repository",
   "reporting_actor": "Codex; owner bounded implementation authorization",
   "directly_verified": true,
   "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
-  "evidence": "Owner reviews existing branch and exact artifact. Separately authorize Lovable-only read-only parity, exact atomic SQL installation and matching combat2-tick shared resolver deployment, then bounded manual acceptance. No frontend publication required. Old direct-damage-only trigger superseded; no standalone DoT/proc/retaliation provocation. No merge or Cloud execution authorized here."
+  "evidence": "Review dedicated codex/persistent-aggression-acl-guard and exact new SQL hash. Separately authorize one permitted read-only catalog result for four installed commit wrappers: definition/call edges, postgres owner/DEFINER, config/ACL, service outer EXECUTE true/private false/browser denied. Core/schema/history observations reused. After PASS and separate owner installation authorization, standard Drizzle append0030 if prefix unchanged, then separately deploy matching shared resolver with combat2-dispatch-once/combat2-tick-once. No frontend change or publication needed; no permissions expansion. No hosted execution is authorized by this local task."
  },
  "volatile_runtime_observations": [
   {

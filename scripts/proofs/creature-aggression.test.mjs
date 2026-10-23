@@ -29,7 +29,7 @@ const source=readFileSync(new URL('../../docs/operations/combat2-persistent-aggr
 const core='g4a6.node_tick_commit_without_bounded_failure(uuid,uuid,integer,integer,bigint,uuid[],jsonb)';
 async function setup(install=true){const x=await wired();
  await x.o`UPDATE g4a6.creatures SET base_aggressive=false WHERE id=${cid}`;
- await x.o.unsafe(`REVOKE ALL ON FUNCTION ${core} FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION ${core} TO service_role`);
+ await x.o.unsafe(`REVOKE ALL ON FUNCTION ${core} FROM PUBLIC,anon,authenticated,service_role`);
  const md5=(await x.o`SELECT md5(regexp_replace(prosrc,'[[:space:]]+',' ','g')) h FROM pg_proc WHERE oid=${core}::regprocedure`)[0].h;
  // Namespace, deterministic clock and invoker fixture substitutions only; exact source otherwise.
  const sql=source.replaceAll('public.','g4a6.').replaceAll('74d0800a416276d89e6495724c3c82d5',md5)
@@ -161,6 +161,33 @@ await runCase('AGGRESSION old resolved attempt cannot provoke a respawned life',
  assert.notEqual((await commit(x,cl,p)).kind,'committed');
  assert.equal((await row(x.o)).provoked_spawn_seq,null);assert.equal((await row(x.o)).is_aggressive,false);
 });
+await runCase('AGGRESSION owner-only core metadata preserved; service uses definer outer wrapper',opts,async()=>{
+ const x=await setup(false);
+ const metadata=async()=> (await x.o`SELECT proowner,prosecdef,proconfig,proacl FROM pg_proc WHERE oid=${core}::regprocedure`)[0];
+ const before=await metadata();await x.o.begin(t=>t.unsafe(x.candidate));assert.deepEqual(await metadata(),before);
+ assert.equal((await x.o`SELECT has_function_privilege('service_role',${core},'EXECUTE') allowed`)[0].allowed,false);
+ // Restore the source outer wrapper's DEFINER context only for this isolated service-role test.
+ // Other namespace/Auth/clock substitutions and reduced schema remain disclosed fixture adapters.
+ const outer='g4a6.node_tick_commit(uuid,uuid,integer,integer,bigint,uuid[],jsonb)';
+ await x.o.unsafe(`ALTER FUNCTION ${outer} SECURITY DEFINER; REVOKE ALL ON FUNCTION ${outer} FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION ${outer} TO service_role; GRANT USAGE ON SCHEMA g4a6 TO service_role`);
+ await assert.rejects(x.o.begin(async t=>{await t.unsafe('SET LOCAL ROLE service_role');await t.unsafe(`SELECT g4a6.node_tick_commit_without_bounded_failure(NULL,NULL,0,0,0,ARRAY[]::uuid[],'{}'::jsonb)`);}),/permission denied for function node_tick_commit_without_bounded_failure/);
+ await engage(x);const cl=await claim(x),p=proposal(cl);
+ const result=await x.o.begin(async t=>{await t.unsafe('SET LOCAL ROLE service_role');return commit(x,cl,p,t);});
+ assert.equal(result.kind,'committed',JSON.stringify(result));assert.equal((await row(x.o)).provoked_spawn_seq,1);
+ assert.deepEqual(await metadata(),before);
+});
+for(const role of ['PUBLIC','anon','authenticated','service_role','aggression_other']) {
+ await runCase('AGGRESSION unexpected core EXECUTE '+role+' refuses with atomic rollback',opts,async()=>{
+  const x=await setup(false);
+  if(role==='aggression_other')await x.o.unsafe(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='aggression_other') THEN CREATE ROLE aggression_other NOLOGIN; END IF; END $$`);
+  await x.o.unsafe(`GRANT EXECUTE ON FUNCTION ${core} TO ${role}`);
+  const before=(await x.o`SELECT prosrc,proowner,prosecdef,proconfig,proacl FROM pg_proc WHERE oid=${core}::regprocedure`)[0];
+  await assert.rejects(x.o.begin(t=>t.unsafe(x.candidate)),/unexpected private commit authority/);
+  assert.deepEqual((await x.o`SELECT prosrc,proowner,prosecdef,proconfig,proacl FROM pg_proc WHERE oid=${core}::regprocedure`)[0],before);
+  assert.equal((await x.o`SELECT count(*)::int n FROM pg_attribute WHERE attrelid='g4a6.creatures'::regclass AND attname='provoked_spawn_seq' AND NOT attisdropped`)[0].n,0);
+  assert.equal((await x.o`SELECT to_regprocedure('g4a6.creature_life_hostility()') f`)[0].f,null);
+ });
+}
 await runCase('AGGRESSION late authority guard rolls back the entire installation candidate',opts,async()=>{
  const x=await setup(false);await x.o`GRANT UPDATE ON g4a6.creatures TO anon`;
  const before=(await x.o`SELECT prosrc FROM pg_proc WHERE oid=${core}::regprocedure`)[0].prosrc;
