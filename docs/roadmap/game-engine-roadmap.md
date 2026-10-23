@@ -67,6 +67,7 @@ Current bounded follow-up: [hostile ability idle-readiness correction](../operat
 - **Acceptance criteria:** executable solo/party/reconnect concurrency tests, action-payload replay conflict tests, invalid-first-action rollback, follower-first/leader-last entry generations, unrelated newcomer tank, no duplicate encounter/fighter/intent/reward qualification, installed and bounded live proof.
 - **Specification sections:** Creatures, targeting and initiation; Movement and party movement; Combat resolution.
 - **Re-entry observation (2026-10-21):** a previously engaged passive creature did not act aggressively after node re-entry; original encounter active/ended state unknown. Cross-reference ENG-COMBAT-001 and G4 lifecycle, not an approved aggression-rule change or confirmed defect. [Evidence](../operations/combat2-owner-log-lifecycle-observations.md).
+- **Superseding rule approval2026-10-23:** owner now approves life-scoped persistent aggression after resolved direct damaging attacks. [Local SQL/handoff and manual checks](../operations/combat2-persistent-aggression-handoff.md) add a generation marker, guarded commit transition and row-local temperament projection; no permanent encounter, new scheduler or Edge/frontend change. Source-only, installation/live acceptance pending; earlier observation is not retrospectively a hosted defect. DoT/proc/retaliation-only policy remains undecided. Reuses ENG-COMBAT-001/002 and G4, without reopening earlier closures.
 
 ### ENG-HB-001 — Explicit global heartbeat identity
 
