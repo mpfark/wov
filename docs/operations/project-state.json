@@ -25,6 +25,17 @@
  },
  "database_migrations": [
   {
+   "identity": "0030_combat2_persistent_aggression",
+   "status": "installed",
+   "sha": "23109024c5032ee9aed71942c57d17e6dc154150",
+   "timestamp": "2026-10-24T00:00:00Z",
+   "evidence_type": "cloud_inspection",
+   "reporting_actor": "Lovable; Mik scoped installation authorization",
+   "directly_verified": true,
+   "artifact": "drizzle/migrations/0030_combat2_persistent_aggression.sql",
+   "evidence": "Installed once through managed Drizzle transaction from reviewed main; candidate SHA256 25b9940bd5ba84dd600715562a00485b211d4df8f463c2328e228f3d25c14c26 matched. History 30->31; row 30 (0029) hash 2c403af4ac5b36eef4fd61aea76cec17b3061f7e1b1fa21d2bff8a518e7618e2 unchanged. Post-install: creatures.provoked_spawn_seq present with its CHECK; zz_creature_life_hostility trigger enabled; private core normalized body MD5 d17163615c8ce101742c6bb698363a7d as expected; core owner postgres/SECURITY DEFINER/ACL {postgres=X/postgres} unchanged; helper postgres-owned DEFINER, search_path pg_catalog,public,pg_temp, ACL postgres-only, anon/authenticated/service_role EXECUTE false. Generated migration bytes SHA256 caebc91cbbd9049f843a165b332919a6391ef9f76daa416843084182185b5dcf differ from the reviewed artifact only by leading whitespace on some continuation lines (transcription drift); all in-SQL guards passed and installed objects verified. Feature inactive until matching worker Edge deployment, separately authorized. No Edge, publication, controls or gameplay execution."
+  },
+  {
    "identity": "0029_idea_034_player_teleport",
    "status": "installed",
    "sha": "cc1c82dbece59851295e40ffb3cc2947cf93e39b",
