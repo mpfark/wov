@@ -26,7 +26,7 @@ export function selectCombat2Character(
 
 /**
  * Ordinary node presentation. The authoritative encounter model may only refine
- * runtime values (hp/max hp/alive) for creatures it actually contains; it must
+ * runtime values (hp/max hp/alive) for the same creature spawn generation; it must
  * never decide which creatures on the node are visible. Engagement and encounter
  * membership govern the combat lifecycle only, so a living peaceful creature that
  * was never pulled into an encounter stays listed exactly like any other.
@@ -40,7 +40,7 @@ export function selectCombat2Creatures(
   const byDefinition = new Map(model.creatures.map((creature) => [creature.creatureId, creature]));
   return legacy.map((creature) => {
     const authoritative = byDefinition.get(creature.id);
-    return authoritative ? {
+    return authoritative && creature.spawn_seq === authoritative.spawnSeq ? {
       ...creature,
       hp: authoritative.hp,
       max_hp: authoritative.maxHp,

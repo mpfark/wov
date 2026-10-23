@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "updated_at": "2026-10-23T08:47:16.577Z",
- "based_on_source_sha": "cc1c82dbece59851295e40ffb3cc2947cf93e39b",
+ "updated_at": "2026-10-23T09:11:19.309Z",
+ "based_on_source_sha": "1568d41d28e9bff6124e7904bcc12b422a17849e",
  "status_vocabulary": [
   "authored",
   "committed",
@@ -2819,6 +2819,17 @@
    "directly_verified": true,
    "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
    "evidence": "Continued codex/player-teleport, no new branch/main merge. Same RPC/storage with auth_session_id and server last_activity_at. Personal off-point creation/replacement, reusable nonconsuming return, live Auth session binding and20-minute inactivity cutoff; legacy unbound marks invalid. Auth session KEY SHARE precedes existing coverage; state/touch character→mark, no late node locks. Replay remains first and cannot revive expired/revoked mark.19 native PostgreSQL18.6 tests including six observed independent-session cases;32 focused tests. Auth/JWT/signout deletion simulated, not hosted GoTrue proof. New login cannot inherit old mark. Visible input only, throttled5seconds, no heartbeat/polling authority; up to5seconds conservative local-input difference. Failed/offline logout cannot guarantee immediate remote revocation. SQL SHA256 2c403af4ac5b36eef4fd61aea76cec17b3061f7e1b1fa21d2bff8a518e7618e2. Not installed/deployed/published/live verified; existing limitations retained."
+  },
+  {
+   "identity": "ENG-COMBAT-001/002 and ENG-MOVE-001 — focused evening integration preparation",
+   "status": "authored",
+   "sha": "1568d41d28e9bff6124e7904bcc12b422a17849e",
+   "timestamp": "2026-10-23T09:11:19.309Z",
+   "evidence_type": "repository",
+   "reporting_actor": "Codex",
+   "directly_verified": true,
+   "artifact": "docs/operations/gameplay-evening-test-checklist.md",
+   "evidence": "Dedicated codex/gameplay-integration-evening from latest fetched origin/main. One reproduced frontend defect: ID-only selectCombat2Creatures overlay lets old dead-generation HP/alive overwrite a newer respawn roster row. Two new regressions failed first; require equal spawn generation, preserve unmatched/unknown roster data and existing same-generation projection.73 focused tests PASS across selector/presentation/target/resource-handoff/state. No second speculative correction. Manual checklist covers remaining initiation/passive lifecycle/movement/resources/reward/respawn/teleport and optional waymark/progression/party evidence. No backend/SQL/Edge/control changes or live execution; owner merge/manual Publish required. Prior limitations preserved; no claim this source defect caused the reported live incidents."
   }
  ],
  "known_blockers": [
@@ -3072,15 +3083,15 @@
   }
  ],
  "next_approved_task": {
-  "identity": "WOV-IDEA-034 review reusable-waymark candidate and prepare authorized Lovable parity",
+  "identity": "Owner review and evening gameplay acceptance — focused frontend integration",
   "status": "authored",
-  "sha": "ea0f0d35fbd3538283968ac73ac89c1e36dbca1e",
-  "timestamp": "2026-10-23T07:53:16.791Z",
+  "sha": "1568d41d28e9bff6124e7904bcc12b422a17849e",
+  "timestamp": "2026-10-23T09:11:19.309Z",
   "evidence_type": "repository",
-  "reporting_actor": "Codex; owner bounded implementation scope",
+  "reporting_actor": "Codex; owner focused implementation scope",
   "directly_verified": true,
-  "artifact": "docs/operations/idea-034-player-teleport-handoff.md",
-  "evidence": "Review updated existing branch; no main merge. Owner gameplay decisions recorded. Separately authorize Lovable-only approved read-only parity, standard forward SQL, then Mik manual Publish and bounded gameplay/Auth acceptance. No Edge deployment, Auth settings change or progression-control change."
+  "artifact": "docs/operations/gameplay-evening-test-checklist.md",
+  "evidence": "Review dedicated branch; owner merges and Mik manually Publishes the compatible frontend correction once. No SQL/Edge deployment needed. Follow unexecuted checklist; optional waymark/progression/party cases only if eligible. Ordinary teleport owner-observed working; waymarks not verified. Do not activate paused features or assume unknown hosted causes."
  },
  "volatile_runtime_observations": [
   {
@@ -3489,6 +3500,17 @@
    "directly_verified": false,
    "artifact": "https://github.com/mpfark/wov/blob/e48b2ceb/docs/operations/progression-selective-activation-result.md",
    "evidence": "Owner confirms manually published frontend and LIVE selective progression; Lovable~16:35UTC2026-10-22 records enabled/join/allocation/respec true, switch/Renown hard-refused, unchanged29-entry history/SQL/ACL. Owner accepted residual PostgREST isolation uncertainty for controlled test, not proof; live Edge identity unverified. Newly joined Templar ability issue reported, no response/snapshot/diagnostic supplied; not a finding that all class abilities or progression are verified. No Codex hosted reads, writes or flag changes."
+  },
+  {
+   "identity": "WOV-IDEA-034 ordinary teleport — owner-observed working, waymarks untested",
+   "status": "unknown",
+   "sha": null,
+   "timestamp": "2026-10-23T09:11:19.309Z",
+   "evidence_type": "operator_reported",
+   "reporting_actor": "Mik",
+   "directly_verified": false,
+   "artifact": "docs/operations/gameplay-evening-test-checklist.md",
+   "evidence": "Owner reports ordinary teleport works live and0029 was installed successfully; installed migration evidence already exists above. This is recording time, not recovered gameplay time. Exact frontend revision,resource deltas,replay/refusal/concurrency and personal waymarks are not established by this report. No fresh hosted inspection or teleport correction performed."
   }
  ],
  "product_backlog": [

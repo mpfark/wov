@@ -6,7 +6,7 @@ import type { Creature } from '@/features/creatures';
 function creature(id: string, aggressive: boolean): Creature {
   return {
     id, name: `creature-${id}`, node_id: 'node-1', hp: 10, max_hp: 10,
-    is_alive: true, is_aggressive: aggressive,
+    is_alive: true, is_aggressive: aggressive, spawn_seq: 1,
   } as unknown as Creature;
 }
 
@@ -24,6 +24,21 @@ describe('node creature visibility is independent from combat ownership', () => 
   const peaceful = creature('peaceful-1', false);
   const aggressive = creature('aggressive-1', true);
   const roster = [peaceful, aggressive];
+
+  it('does not hide a respawned creature under a dead previous-generation snapshot', () => {
+    const respawned = { ...aggressive, spawn_seq: 2, hp: 10, is_alive: true };
+    const presented = selectCombat2Creatures(true, model([{ creatureId: aggressive.id, hp: 0, engaged: false }]), [respawned]);
+    expect(presented[0]).toBe(respawned);
+    expect(presented[0]).toMatchObject({ spawn_seq: 2, hp: 10, is_alive: true });
+  });
+
+  it('does not mix different or unknown roster generations with encounter resource values', () => {
+    const projection = model([{ creatureId: aggressive.id, hp: 3, engaged: true }]);
+    for (const spawn_seq of [0, null, undefined]) {
+      const row = { ...aggressive, spawn_seq };
+      expect(selectCombat2Creatures(true, projection, [row])[0]).toBe(row);
+    }
+  });
 
   it('keeps living peaceful creatures visible while an encounter is owned', () => {
     const presented = selectCombat2Creatures(true, model([{ creatureId: 'aggressive-1', hp: 4, engaged: true }]), roster);
