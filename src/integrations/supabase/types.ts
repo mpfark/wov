@@ -1546,17 +1546,23 @@ export type Database = {
       }
       character_waymark: {
         Row: {
+          auth_session_id: string | null
           character_id: string
+          last_activity_at: string
           node_id: string
           set_at: string
         }
         Insert: {
+          auth_session_id?: string | null
           character_id: string
+          last_activity_at?: string
           node_id: string
           set_at?: string
         }
         Update: {
+          auth_session_id?: string | null
           character_id?: string
+          last_activity_at?: string
           node_id?: string
           set_at?: string
         }
@@ -7000,6 +7006,10 @@ export type Database = {
         }
         Returns: Json
       }
+      character_waymark_state: {
+        Args: { _character_id: string; _touch?: boolean }
+        Returns: Json
+      }
       check_family_name: { Args: { _display: string }; Returns: Json }
       claim_encounter_tick: {
         Args: {
@@ -8392,6 +8402,7 @@ export type Database = {
         Returns: string
       }
       wake_world: { Args: never; Returns: Json }
+      waymark_live_session: { Args: never; Returns: string }
       world_is_awake: { Args: never; Returns: boolean }
       world_state_is_awake: { Args: never; Returns: boolean }
       world_watchdog: { Args: never; Returns: undefined }

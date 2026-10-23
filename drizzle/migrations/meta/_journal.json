@@ -204,6 +204,13 @@
       "when": 1792685307647,
       "tag": "0028_progression_selective_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792745223514,
+      "tag": "0029_idea_034_player_teleport",
+      "breakpoints": true
     }
   ]
 }
