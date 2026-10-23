@@ -3287,6 +3287,7 @@ export type Database = {
           max_hp: number
           name: string
           node_id: string | null
+          provoked_spawn_seq: number | null
           rarity: Database["public"]["Enums"]["creature_rarity"]
           regen_accounted_at: string | null
           regen_credit: number
@@ -3327,6 +3328,7 @@ export type Database = {
           max_hp?: number
           name: string
           node_id?: string | null
+          provoked_spawn_seq?: number | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           regen_accounted_at?: string | null
           regen_credit?: number
@@ -3367,6 +3369,7 @@ export type Database = {
           max_hp?: number
           name?: string
           node_id?: string | null
+          provoked_spawn_seq?: number | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           regen_accounted_at?: string | null
           regen_credit?: number

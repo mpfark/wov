@@ -211,6 +211,13 @@
       "when": 1792745223514,
       "tag": "0029_idea_034_player_teleport",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792798920724,
+      "tag": "0030_combat2_persistent_aggression",
+      "breakpoints": true
     }
   ]
 }
