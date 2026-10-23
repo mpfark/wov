@@ -419,7 +419,7 @@ describe('Combat2 authoritative presentation model', () => {
   it('preserves exact legacy references while disabled and overlays only projected fields while enabled', () => {
     const model = buildCombat2Presentation(delivery());
     const character = { id: CHARACTER, hp: 99, cp: 99, mp: 99, level: 99, xp: 999, gold: 999 } as Character;
-    const creature = { id: CREATURE, hp: 99, max_hp: 99, is_alive: true } as Creature;
+    const creature = { id: CREATURE, hp: 99, max_hp: 99, is_alive: true, spawn_seq: 4 } as Creature;
     const events: GameLogEvent[] = [];
     expect(selectCombat2Character(false, model, character)).toBe(character);
     expect(selectCombat2Creatures(false, model, [creature])[0]).toBe(creature);

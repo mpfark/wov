@@ -53,6 +53,8 @@ Owner-approved bounded test support: [WOV-IDEA-025 scoped test teleport candidat
 
 ### ENG-COMBAT-002 — Authoritative arrival and generic hostile first action
 
+- **Focused integration follow-up2026-10-23:** [evening checklist and local evidence](../operations/gameplay-evening-test-checklist.md). One frontend source correction fences creature HP/alive overlays by spawn generation so an old dead projection cannot hide a new respawn. Two regressions reproduced before correction; existing same-generation/target/resource behavior retained. No SQL/Edge dependency or live incident-root-cause claim. Owner review/merge/manual Publish and checklist acceptance remain; all historical observations/limitations preserved.
+
 Current bounded follow-up: [hostile ability idle-readiness correction](../operations/templar-ability-and-admin-test-teleport.md) locally permits first enemy intention from healthy idle/peaceful no_engagement through the existing authoritative RPC; active/gap/movement/ownership and ability gates remain. Shared source bug, not proven Templar-specific or caused by progression activation. Frontend-only, pending merge/manual Publish/live acceptance.
 
 
