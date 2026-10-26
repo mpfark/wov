@@ -5,15 +5,8 @@ export type Combat2EntryClassification =
   | 'already_entered'
   | 'already_present';
 
-export type Combat2EntryRefusal =
-  | 'maintenance'
-  | 'no_living_creatures'
-  | 'not_authorized'
-  | 'no_node'
-  | 'node_changed'
-  | 'invalid_request'
-  | 'no_engagement'
-  | 'refused';
+/** Bounded machine code validated by decodeCombat2Entry; a refusal never grants readiness. */
+export type Combat2EntryRefusal = string;
 
 export type Combat2EntryOutcome =
   | {
@@ -102,19 +95,7 @@ export function decodeCombat2Entry(value: unknown): Combat2EntryOutcome {
   if (row.ok === false) {
     const classification: Combat2EntryRefusal = row.kind === 'mode_refused' && row.reason === 'maintenance'
       ? 'maintenance'
-      : row.kind === 'no_living_creatures'
-        ? 'no_living_creatures'
-        : row.kind === 'not_authorized'
-          ? 'not_authorized'
-          : row.kind === 'no_node'
-            ? 'no_node'
-            : row.kind === 'node_changed'
-              ? 'node_changed'
-            : row.kind === 'invalid_request'
-                ? 'invalid_request'
-                : row.kind === 'no_engagement'
-                  ? 'no_engagement'
-                : 'refused';
+      : /^[a-z][a-z0-9_]{0,79}$/.test(row.kind) ? row.kind : 'refused';
     return { status: 'refused', classification, reason: typeof row.reason === 'string' ? row.reason : null };
   }
 

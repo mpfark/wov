@@ -322,7 +322,8 @@ export function useCreatures(
     if (outcome.kind === 'ok') {
       // The server resolved the node itself; if it disagrees with the node we
       // are displaying the response belongs to a different (stale) position.
-      if (outcome.data.node_id !== myNodeId) return;
+      if (outcome.data.node_id !== myNodeId || nodeIdRef.current !== myNodeId
+        || requestIdRef.current !== requestId) return;
       prefetchCache.set(myNodeId, { data: outcome.data.creatures, ts: Date.now() });
       dispatch({ type: 'resolved', nodeId: myNodeId, requestId, data: outcome.data });
       return;
@@ -447,11 +448,12 @@ export function useCreatures(
   }, []);
 
   const visibleCreatures = useMemo(() => {
+    if (roster.nodeId !== nodeId) return [];
     let list = roster.creatures;
     if (locallyRemoved.size > 0) list = list.filter(c => !locallyRemoved.has(c.id));
     if (softDeadIds && softDeadIds.size > 0) list = list.filter(c => !softDeadIds.has(c.id));
     return list;
-  }, [roster.creatures, locallyRemoved, softDeadIds]);
+  }, [roster.nodeId, nodeId, roster.creatures, locallyRemoved, softDeadIds]);
 
   /** Attack may only be offered for an authoritative roster of this node. */
   const rosterActionable = roster.authoritative
@@ -460,13 +462,13 @@ export function useCreatures(
 
   return {
     creatures: visibleCreatures,
-    creaturesLoading: roster.status === 'loading',
+    creaturesLoading: roster.nodeId !== nodeId ? !!nodeId : roster.status === 'loading',
     prefetchedCreatureCount,
     removeCreatureLocal,
-    rosterStatus: roster.status,
+    rosterStatus: roster.nodeId !== nodeId ? (nodeId ? 'loading' : 'idle') : roster.status,
     rosterActionable,
-    rosterAuthoritative: roster.authoritative,
-    rosterError: roster.error,
+    rosterAuthoritative: roster.nodeId === nodeId && roster.authoritative,
+    rosterError: roster.nodeId === nodeId ? roster.error : null,
     realmAwake: roster.realmAwake,
     respawnPending: roster.respawnPending,
     refreshRoster: () => loadRoster(true),

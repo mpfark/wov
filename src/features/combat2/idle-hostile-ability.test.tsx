@@ -42,7 +42,7 @@ describe('hostile ability initiation before the first snapshot',()=>{
   expect(deriveCombat2HostileEntryReadiness({...idle,entryStatus:result.current.status,
    entryClassification:result.current.classification}).ready).toBe(true);
  });
- it.each(['maintenance','not_authorized','node_changed','no_living_creatures','refused'])(
+ it.each(['maintenance','not_authorized','node_changed','no_living_creatures','refused','ability_unavailable','non_hostile_action','invalid_target','future_refusal'])(
   'does not reinterpret server refusal %s as peaceful entry',entryClassification=>{
    expect(deriveCombat2HostileEntryReadiness({...idle,entryStatus:'refused',entryClassification}).ready).toBe(false);
   });

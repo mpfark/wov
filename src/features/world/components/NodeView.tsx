@@ -130,7 +130,7 @@ export default function NodeView({
   useCombat2ResourceCapture(() => ({ ...statusBarsProps?.diagnosticContext, characterId: character.id, nodeId: node.id,
     layer: 'ui_displayed', source: 'node_view',
     creatures: creatures.map(c => ({ id: c.id, spawnSeq: c.spawn_seq,
-      hp: creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp, maxHp: c.max_hp })) }));
+      hp: creatureHpOverrides[c.id] ?? (rosterActionable ? c.hp : null), maxHp: rosterActionable || creatureHpOverrides[c.id] !== undefined ? c.max_hp : null })) }));
   const [areaOpen, setAreaOpen] = useState(true);
   const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; family_name?: string | null; level: number; race?: string; class?: string; gender?: string; is_king_slayer?: boolean } | null>(null);
 
@@ -309,7 +309,8 @@ export default function NodeView({
                       ? engagedCreatureIds.includes(c.id)
                       : !!inCombat && engagedCreatureIds.includes(c.id);
                     const isSelected = (authoritativeTargetSelection || (!isActiveTarget && !isEngaged)) && selectedTargetId === c.id;
-                    const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
+                    const hpReady = rosterActionable || creatureHpOverrides[c.id] !== undefined;
+                    const displayHp = creatureHpOverrides[c.id] ?? c.hp;
                     const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
                     const creaturePoisonStacks = poisonStacks[c.id];
                     const hasPoisonStacks = authoritativeCreatureEffects === undefined && creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
@@ -440,7 +441,7 @@ export default function NodeView({
                                 <div
                                   className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
                                   style={{
-                                    width: `${hpPct}%`,
+                                    width: hpReady ? `${hpPct}%` : '0%',
                                     backgroundColor: isBleeding
                                       ? 'hsl(var(--dot-bleed))'
                                       : hasIgniteStacks
@@ -473,7 +474,7 @@ export default function NodeView({
                               )}
                             </div>
 
-                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpReady ? `${displayHp}/${c.max_hp}` : <span role="status" aria-label={`Loading HP for ${c.name}`} className="animate-pulse">HP…</span>}</span>
                             {shouldShowAttackControl({
                               authoritative: authoritativeTargetSelection,
                               living: displayHp > 0,
@@ -647,8 +648,10 @@ export default function NodeView({
                   const availableCp = abilityAvailableCp ?? (character.cp ?? 0);
                   const notEnoughCp = !stanceActive && availableCp < ability.cpCost;
                   const needsTarget = ability.type === 'hp_transfer';
-                  const selfFallback = ability.targetType === 'ally' ? character.id : undefined;
-                  const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
+                  const resolvedTarget = ability.targetType === 'enemy'
+                    ? creatures.find(c => c.id === selectedTargetId && c.is_alive)?.id
+                    : ability.targetType === 'ally' ? abilityTargetId ?? character.id
+                    : ability.targetType === 'self' ? character.id : undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
                   const isPending = pendingAbilityIndex === idx;
                   const readiness = getAbilityReadiness?.(idx, resolvedTarget);
